@@ -36,7 +36,7 @@ pub struct NcnConfig {
 }
 
 impl Discriminator for NcnConfig {
-    const DISCRIMINATOR: u8 = Discriminators::Config as u8;
+    const DISCRIMINATOR: u8 = Discriminators::NCNConfig as u8;
 }
 
 impl NcnConfig {
