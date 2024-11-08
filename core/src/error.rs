@@ -32,6 +32,10 @@ pub enum TipRouterError {
     WeightMintsDoNotMatchMintHash,
     #[error("Invalid mint for weight table")]
     InvalidMintForWeightTable,
+    #[error("Config supported mints do not match NCN Vault Count")]
+    ConfigMintsNotUpdated,
+    #[error("NCN config vaults are at capacity")]
+    ConfigMintListFull,
     #[error("Fee cap exceeded")]
     FeeCapExceeded = 0x2300,
     #[error("Incorrect NCN Admin")]

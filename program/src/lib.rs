@@ -1,6 +1,7 @@
 mod admin_update_weight_table;
 mod initialize_ncn_config;
 mod initialize_weight_table;
+mod register_mint;
 mod set_config_fees;
 mod set_new_admin;
 
@@ -18,7 +19,7 @@ use solana_security_txt::security_txt;
 use crate::{
     admin_update_weight_table::process_admin_update_weight_table,
     initialize_ncn_config::process_initialize_ncn_config,
-    initialize_weight_table::process_initialize_weight_table,
+    initialize_weight_table::process_initialize_weight_table, register_mint::process_register_mint,
     set_config_fees::process_set_config_fees,
 };
 
@@ -100,6 +101,10 @@ pub fn process_instruction(
         WeightTableInstruction::SetNewAdmin { role } => {
             msg!("Instruction: SetNewAdmin");
             process_set_new_admin(program_id, accounts, role)
+        }
+        WeightTableInstruction::RegisterMint => {
+            msg!("Instruction: RegisterMint");
+            process_register_mint(program_id, accounts)
         }
     }
 }

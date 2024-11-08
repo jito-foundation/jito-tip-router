@@ -5,7 +5,7 @@ use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
 };
-use jito_restaking_core::config::Config;
+use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
     error::TipRouterError, ncn_config::NcnConfig, weight_table::WeightTable,
 };
@@ -29,6 +29,7 @@ pub fn process_initialize_weight_table(
 
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     Config::load(restaking_program_id.key, restaking_config, false)?;
+    Ncn::load(restaking_program_id.key, ncn, false)?;
 
     let ncn_epoch_length = {
         let config_data = restaking_config.data.borrow();
@@ -36,11 +37,14 @@ pub fn process_initialize_weight_table(
         config.epoch_length()
     };
 
-    let _todo_pubkeys = {
-        let ncn_config_data = ncn_config.data.borrow();
-        let ncn_config = NcnConfig::try_from_slice_unchecked(&ncn_config_data)?;
-        ncn_config.bump
+    let vault_count = {
+        let ncn_data = ncn.data.borrow();
+        let ncn = Ncn::try_from_slice_unchecked(&ncn_data)?;
+        ncn.vault_count()
     };
+
+    let ncn_config_data: std::cell::Ref<'_, &mut [u8]> = ncn_config.data.borrow();
+    let ncn_config = NcnConfig::try_from_slice_unchecked(&ncn_config_data)?;
 
     load_system_account(weight_table, true)?;
     load_system_program(system_program)?;
@@ -75,6 +79,11 @@ pub fn process_initialize_weight_table(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    if vault_count as usize != ncn_config.mint_count() {
+        msg!("Vault count does not match supported mint count");
+        return Err(ProgramError::InvalidAccountData);
+    }
+
     msg!(
         "Initializing Weight Table {} for NCN: {} at epoch: {}",
         weight_table.key,
@@ -97,8 +106,7 @@ pub fn process_initialize_weight_table(
 
     *weight_table_account = WeightTable::new(*ncn.key, ncn_epoch, current_slot, weight_table_bump);
 
-    //TODO pass in st_mint list from config
-    weight_table_account.initalize_weight_table(&[])?;
+    weight_table_account.initalize_weight_table(&ncn_config.get_unique_mints())?;
 
     Ok(())
 }

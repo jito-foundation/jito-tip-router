@@ -7,10 +7,11 @@
 pub(crate) mod r#admin_update_weight_table;
 pub(crate) mod r#initialize_n_c_n_config;
 pub(crate) mod r#initialize_weight_table;
+pub(crate) mod r#register_mint;
 pub(crate) mod r#set_config_fees;
 pub(crate) mod r#set_new_admin;
 
 pub use self::{
     r#admin_update_weight_table::*, r#initialize_n_c_n_config::*, r#initialize_weight_table::*,
-    r#set_config_fees::*, r#set_new_admin::*,
+    r#register_mint::*, r#set_config_fees::*, r#set_new_admin::*,
 };

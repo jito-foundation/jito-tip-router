@@ -51,6 +51,12 @@ pub enum JitoTipRouterError {
     /// 8712 - Invalid mint for weight table
     #[error("Invalid mint for weight table")]
     InvalidMintForWeightTable = 0x2208,
+    /// 8713 - Config supported mints do not match NCN Vault Count
+    #[error("Config supported mints do not match NCN Vault Count")]
+    ConfigMintsNotUpdated = 0x2209,
+    /// 8714 - NCN config vaults are at capacity
+    #[error("NCN config vaults are at capacity")]
+    ConfigMintListFull = 0x220A,
     /// 8960 - Fee cap exceeded
     #[error("Fee cap exceeded")]
     FeeCapExceeded = 0x2300,

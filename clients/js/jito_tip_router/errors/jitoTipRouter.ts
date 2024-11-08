@@ -42,6 +42,10 @@ export const JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH = 0x2206; /
 export const JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH = 0x2207; // 8711
 /** InvalidMintForWeightTable: Invalid mint for weight table */
 export const JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE = 0x2208; // 8712
+/** ConfigMintsNotUpdated: Config supported mints do not match NCN Vault Count */
+export const JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED = 0x2209; // 8713
+/** ConfigMintListFull: NCN config vaults are at capacity */
+export const JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL = 0x220a; // 8714
 /** FeeCapExceeded: Fee cap exceeded */
 export const JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED = 0x2300; // 8960
 /** IncorrectNcnAdmin: Incorrect NCN Admin */
@@ -55,6 +59,8 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
+  | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL
+  | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED
   | typeof JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED
@@ -77,6 +83,8 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW]: `Overflow`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
+    [JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL]: `NCN config vaults are at capacity`,
+    [JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED]: `Config supported mints do not match NCN Vault Count`,
     [JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO]: `Zero in the denominator`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE]: `Duplicate mints in table`,
     [JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED]: `Fee cap exceeded`,

@@ -262,6 +262,56 @@
         "type": "u8",
         "value": 4
       }
+    },
+    {
+      "name": "RegisterMint",
+      "accounts": [
+        {
+          "name": "restakingConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncnConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultNcnTicket",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncnVaultTicket",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "restakingProgramId",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultProgramId",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 5
+      }
     }
   ],
   "accounts": [
@@ -286,6 +336,17 @@
             "name": "fees",
             "type": {
               "defined": "Fees"
+            }
+          },
+          {
+            "name": "mintList",
+            "type": {
+              "array": [
+                {
+                  "defined": "MintEntry"
+                },
+                64
+              ]
             }
           },
           {
@@ -403,6 +464,24 @@
           },
           {
             "name": "activationEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "MintEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "publicKey"
+          },
+          {
+            "name": "vaultIndex",
             "type": {
               "defined": "PodU64"
             }
@@ -534,6 +613,16 @@
       "code": 8712,
       "name": "InvalidMintForWeightTable",
       "msg": "Invalid mint for weight table"
+    },
+    {
+      "code": 8713,
+      "name": "ConfigMintsNotUpdated",
+      "msg": "Config supported mints do not match NCN Vault Count"
+    },
+    {
+      "code": 8714,
+      "name": "ConfigMintListFull",
+      "msg": "NCN config vaults are at capacity"
     },
     {
       "code": 8960,

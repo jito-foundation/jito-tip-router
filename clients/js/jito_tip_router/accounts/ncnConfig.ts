@@ -37,8 +37,12 @@ import {
 import {
   getFeesDecoder,
   getFeesEncoder,
+  getMintEntryDecoder,
+  getMintEntryEncoder,
   type Fees,
   type FeesArgs,
+  type MintEntry,
+  type MintEntryArgs,
 } from '../types';
 
 export type NcnConfig = {
@@ -47,6 +51,7 @@ export type NcnConfig = {
   tieBreakerAdmin: Address;
   feeAdmin: Address;
   fees: Fees;
+  mintList: Array<MintEntry>;
   bump: number;
   reserved: Array<number>;
 };
@@ -57,6 +62,7 @@ export type NcnConfigArgs = {
   tieBreakerAdmin: Address;
   feeAdmin: Address;
   fees: FeesArgs;
+  mintList: Array<MintEntryArgs>;
   bump: number;
   reserved: Array<number>;
 };
@@ -68,6 +74,7 @@ export function getNcnConfigEncoder(): Encoder<NcnConfigArgs> {
     ['tieBreakerAdmin', getAddressEncoder()],
     ['feeAdmin', getAddressEncoder()],
     ['fees', getFeesEncoder()],
+    ['mintList', getArrayEncoder(getMintEntryEncoder(), { size: 64 })],
     ['bump', getU8Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 127 })],
   ]);
@@ -80,6 +87,7 @@ export function getNcnConfigDecoder(): Decoder<NcnConfig> {
     ['tieBreakerAdmin', getAddressDecoder()],
     ['feeAdmin', getAddressDecoder()],
     ['fees', getFeesDecoder()],
+    ['mintList', getArrayDecoder(getMintEntryDecoder(), { size: 64 })],
     ['bump', getU8Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 127 })],
   ]);
