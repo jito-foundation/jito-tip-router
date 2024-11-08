@@ -3,7 +3,7 @@ use jito_bytemuck::types::PodU64;
 use shank::ShankType;
 use solana_program::pubkey::Pubkey;
 
-use crate::{error::TipRouterError, MAX_FEE_BPS};
+use crate::{constants::MAX_FEE_BPS, error::TipRouterError};
 
 /// Fee account. Allows for fee updates to take place in a future epoch without requiring an update.
 /// This is important so all operators calculate the same Merkle root regardless of when fee changes take place.

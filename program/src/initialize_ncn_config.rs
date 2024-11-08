@@ -4,7 +4,9 @@ use jito_jsm_core::{
     loader::{load_signer, load_system_account, load_system_program},
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
-use jito_tip_router_core::{error::TipRouterError, fees::Fees, ncn_config::NcnConfig, MAX_FEE_BPS};
+use jito_tip_router_core::{
+    constants::MAX_FEE_BPS, error::TipRouterError, fees::Fees, ncn_config::NcnConfig,
+};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
