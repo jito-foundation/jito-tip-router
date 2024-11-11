@@ -1,12 +1,14 @@
 mod admin_update_weight_table;
+mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
+mod initialize_operator_snapshot;
 mod initialize_weight_table;
 mod set_config_fees;
 mod set_new_admin;
 
 use borsh::BorshDeserialize;
 use const_str_to_pubkey::str_to_pubkey;
-use jito_tip_router_core::instruction::WeightTableInstruction;
+use jito_tip_router_core::instruction::TipRouterInstruction;
 use set_new_admin::process_set_new_admin;
 use solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult, msg,
@@ -17,7 +19,9 @@ use solana_security_txt::security_txt;
 
 use crate::{
     admin_update_weight_table::process_admin_update_weight_table,
+    initialize_epoch_snapshot::process_initialize_epoch_snapshot,
     initialize_ncn_config::process_initialize_ncn_config,
+    initialize_operator_snapshot::process_initialize_operator_snapshot,
     initialize_weight_table::process_initialize_weight_table,
     set_config_fees::process_set_config_fees,
 };
@@ -48,13 +52,13 @@ pub fn process_instruction(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    let instruction = WeightTableInstruction::try_from_slice(instruction_data)?;
+    let instruction = TipRouterInstruction::try_from_slice(instruction_data)?;
 
     match instruction {
         // ------------------------------------------
         // Initialization
         // ------------------------------------------
-        WeightTableInstruction::InitializeNCNConfig {
+        TipRouterInstruction::InitializeNCNConfig {
             dao_fee_bps,
             ncn_fee_bps,
             block_engine_fee_bps,
@@ -68,20 +72,32 @@ pub fn process_instruction(
                 block_engine_fee_bps,
             )
         }
-        WeightTableInstruction::InitializeWeightTable {
+        TipRouterInstruction::InitializeWeightTable {
             first_slot_of_ncn_epoch,
         } => {
             msg!("Instruction: InitializeWeightTable");
             process_initialize_weight_table(program_id, accounts, first_slot_of_ncn_epoch)
         }
+        TipRouterInstruction::InitializeEpochSnapshot {
+            first_slot_of_ncn_epoch,
+        } => {
+            msg!("Instruction: InitializeEpochSnapshot");
+            process_initialize_epoch_snapshot(program_id, accounts, first_slot_of_ncn_epoch)
+        }
+        TipRouterInstruction::InitializeOperatorSnapshot {
+            first_slot_of_ncn_epoch,
+        } => {
+            msg!("Instruction: InitializeOperatorSnapshot");
+            process_initialize_operator_snapshot(program_id, accounts, first_slot_of_ncn_epoch)
+        }
         // ------------------------------------------
         // Update
         // ------------------------------------------
-        WeightTableInstruction::AdminUpdateWeightTable { ncn_epoch, weight } => {
+        TipRouterInstruction::AdminUpdateWeightTable { ncn_epoch, weight } => {
             msg!("Instruction: UpdateWeightTable");
             process_admin_update_weight_table(program_id, accounts, ncn_epoch, weight)
         }
-        WeightTableInstruction::SetConfigFees {
+        TipRouterInstruction::SetConfigFees {
             new_dao_fee_bps,
             new_ncn_fee_bps,
             new_block_engine_fee_bps,
@@ -97,7 +113,7 @@ pub fn process_instruction(
                 new_fee_wallet,
             )
         }
-        WeightTableInstruction::SetNewAdmin { role } => {
+        TipRouterInstruction::SetNewAdmin { role } => {
             msg!("Instruction: SetNewAdmin");
             process_set_new_admin(program_id, accounts, role)
         }

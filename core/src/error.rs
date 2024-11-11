@@ -33,13 +33,17 @@ pub enum TipRouterError {
     #[error("Invalid mint for weight table")]
     InvalidMintForWeightTable,
     #[error("Fee cap exceeded")]
-    FeeCapExceeded = 0x2300,
+    FeeCapExceeded,
     #[error("Incorrect NCN Admin")]
-    IncorrectNcnAdmin = 0x2400,
+    IncorrectNcnAdmin,
     #[error("Incorrect NCN")]
-    IncorrectNcn = 0x2401,
+    IncorrectNcn,
     #[error("Incorrect fee admin")]
-    IncorrectFeeAdmin = 0x2402,
+    IncorrectFeeAdmin,
+    #[error("Weight table not finalized")]
+    WeightTableNotFinalized,
+    #[error("Weight not found")]
+    WeightNotFound,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

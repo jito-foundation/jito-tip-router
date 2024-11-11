@@ -4,6 +4,7 @@ use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use spl_math::precise_number::PreciseNumber;
 
 use crate::{discriminators::Discriminators, error::TipRouterError, weight_entry::WeightEntry};
 
@@ -134,19 +135,17 @@ impl WeightTable {
             })
     }
 
+    pub fn get_precise_weight(&self, mint: &Pubkey) -> Result<PreciseNumber, TipRouterError> {
+        let weight = self.get_weight(mint)?;
+        PreciseNumber::new(weight).ok_or(TipRouterError::NewPreciseNumberError)
+    }
+
     pub fn get_mints(&self) -> Vec<Pubkey> {
         self.table
             .iter()
             .filter(|entry| !entry.is_empty())
             .map(|entry| entry.mint())
             .collect()
-    }
-
-    pub fn find_weight(&self, mint: &Pubkey) -> Option<u128> {
-        self.table
-            .iter()
-            .find(|entry| entry.mint() == *mint)
-            .map(|entry| entry.weight())
     }
 
     pub fn mint_count(&self) -> usize {

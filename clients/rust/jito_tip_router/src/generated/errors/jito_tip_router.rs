@@ -51,18 +51,24 @@ pub enum JitoTipRouterError {
     /// 8712 - Invalid mint for weight table
     #[error("Invalid mint for weight table")]
     InvalidMintForWeightTable = 0x2208,
-    /// 8960 - Fee cap exceeded
+    /// 8713 - Fee cap exceeded
     #[error("Fee cap exceeded")]
-    FeeCapExceeded = 0x2300,
-    /// 9216 - Incorrect NCN Admin
+    FeeCapExceeded = 0x2209,
+    /// 8714 - Incorrect NCN Admin
     #[error("Incorrect NCN Admin")]
-    IncorrectNcnAdmin = 0x2400,
-    /// 9217 - Incorrect NCN
+    IncorrectNcnAdmin = 0x220A,
+    /// 8715 - Incorrect NCN
     #[error("Incorrect NCN")]
-    IncorrectNcn = 0x2401,
-    /// 9218 - Incorrect fee admin
+    IncorrectNcn = 0x220B,
+    /// 8716 - Incorrect fee admin
     #[error("Incorrect fee admin")]
-    IncorrectFeeAdmin = 0x2402,
+    IncorrectFeeAdmin = 0x220C,
+    /// 8717 - Weight table not finalized
+    #[error("Weight table not finalized")]
+    WeightTableNotFinalized = 0x220D,
+    /// 8718 - Weight not found
+    #[error("Weight not found")]
+    WeightNotFound = 0x220E,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

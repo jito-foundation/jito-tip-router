@@ -2,13 +2,14 @@ use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::config::Config;
 use jito_tip_router_client::{
     instructions::{
-        AdminUpdateWeightTableBuilder, InitializeNCNConfigBuilder, InitializeWeightTableBuilder,
-        SetConfigFeesBuilder, SetNewAdminBuilder,
+        AdminUpdateWeightTableBuilder, InitializeEpochSnapshotBuilder, InitializeNCNConfigBuilder,
+        InitializeWeightTableBuilder, SetConfigFeesBuilder, SetNewAdminBuilder,
     },
     types::ConfigAdminRole,
 };
 use jito_tip_router_core::{
-    error::TipRouterError, ncn_config::NcnConfig, weight_table::WeightTable,
+    epoch_snapshot::EpochSnapshot, error::TipRouterError, ncn_config::NcnConfig,
+    weight_table::WeightTable,
 };
 use solana_program::{
     instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
@@ -296,6 +297,52 @@ impl TipRouterClient {
             .mint(mint)
             .restaking_program_id(jito_restaking_program::id())
             .weight(weight)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_initialize_epoch_snapshot(
+        &mut self,
+        ncn: Pubkey,
+        current_slot: u64,
+    ) -> TestResult<()> {
+        self.initialize_epoch_snapshot(ncn, current_slot).await
+    }
+
+    pub async fn initialize_epoch_snapshot(
+        &mut self,
+        ncn: Pubkey,
+        current_slot: u64,
+    ) -> TestResult<()> {
+        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
+
+        let restaking_config_account = self.get_restaking_config().await?;
+        let ncn_epoch = current_slot / restaking_config_account.epoch_length();
+
+        let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+        let weight_table =
+            WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
+
+        let epoch_snapshot =
+            EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
+
+        let ix = InitializeEpochSnapshotBuilder::new()
+            .restaking_config(restaking_config)
+            .ncn_config(config_pda)
+            .ncn(ncn)
+            .weight_table(weight_table)
+            .epoch_snapshot(epoch_snapshot)
+            .payer(self.payer.pubkey())
+            .restaking_program_id(jito_restaking_program::id())
+            .system_program(system_program::id())
             .instruction();
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;

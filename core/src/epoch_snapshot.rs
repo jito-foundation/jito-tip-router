@@ -1,13 +1,16 @@
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
-    types::{PodU128, PodU16, PodU64},
+    types::{PodBool, PodU128, PodU16, PodU64},
     AccountDeserialize, Discriminator,
 };
 use jito_vault_core::delegation_state::DelegationState;
 use shank::{ShankAccount, ShankType};
-use solana_program::pubkey::Pubkey;
+use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use spl_math::precise_number::PreciseNumber;
 
-use crate::{discriminators::Discriminators, fees::Fees};
+use crate::{
+    discriminators::Discriminators, error::TipRouterError, fees::Fees, weight_table::WeightTable,
+};
 
 // PDA'd ["EPOCH_SNAPSHOT", NCN, NCN_EPOCH_SLOT]
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
@@ -26,20 +29,98 @@ pub struct EpochSnapshot {
     /// Bump seed for the PDA
     bump: u8,
 
-    /// Reserved space
-    reserved: [u8; 128],
-
     ncn_fees: Fees,
 
-    num_operators: PodU16,
-    operators_registered: PodU16,
+    operator_count: PodU64,
+    operators_registered: PodU64,
 
     /// Counted as each delegate gets added
     total_votes: PodU128,
+
+    /// Reserved space
+    reserved: [u8; 128],
 }
 
 impl Discriminator for EpochSnapshot {
     const DISCRIMINATOR: u8 = Discriminators::EpochSnapshot as u8;
+}
+
+impl EpochSnapshot {
+    pub fn new(
+        ncn: Pubkey,
+        ncn_epoch: u64,
+        current_slot: u64,
+        ncn_fees: Fees,
+        num_operators: u64,
+    ) -> Self {
+        Self {
+            ncn,
+            ncn_epoch: PodU64::from(ncn_epoch),
+            slot_created: PodU64::from(current_slot),
+            bump: 0,
+            ncn_fees,
+            operator_count: PodU64::from(num_operators),
+            operators_registered: PodU64::from(0),
+            total_votes: PodU128::from(0),
+            reserved: [0; 128],
+        }
+    }
+
+    pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
+        Vec::from_iter(
+            [
+                b"EPOCH_SNAPSHOT".to_vec(),
+                ncn.to_bytes().to_vec(),
+                ncn_epoch.to_le_bytes().to_vec(),
+            ]
+            .iter()
+            .cloned(),
+        )
+    }
+
+    pub fn find_program_address(
+        program_id: &Pubkey,
+        ncn: &Pubkey,
+        ncn_epoch: u64,
+    ) -> (Pubkey, u8, Vec<Vec<u8>>) {
+        let seeds = Self::seeds(ncn, ncn_epoch);
+        let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
+        let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
+        (pda, bump, seeds)
+    }
+
+    pub fn load(
+        program_id: &Pubkey,
+        ncn: &Pubkey,
+        ncn_epoch: u64,
+        epoch_snapshot: &AccountInfo,
+        expect_writable: bool,
+    ) -> Result<(), ProgramError> {
+        if epoch_snapshot.owner.ne(program_id) {
+            msg!("Epoch Snapshot account has an invalid owner");
+            return Err(ProgramError::InvalidAccountOwner);
+        }
+        if epoch_snapshot.data_is_empty() {
+            msg!("Epoch Snapshot account data is empty");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if expect_writable && !epoch_snapshot.is_writable {
+            msg!("Epoch Snapshot account is not writable");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if epoch_snapshot.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
+            msg!("Epoch Snapshot account discriminator is invalid");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if epoch_snapshot
+            .key
+            .ne(&Self::find_program_address(program_id, ncn, ncn_epoch).0)
+        {
+            msg!("Epoch Snapshot account is not at the correct PDA");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        Ok(())
+    }
 }
 
 // PDA'd ["OPERATOR_SNAPSHOT", OPERATOR, NCN, NCN_EPOCH_SLOT]
@@ -53,6 +134,8 @@ pub struct OperatorSnapshot {
 
     bump: u8,
 
+    is_active: PodBool,
+
     operator_fee_bps: PodU16,
 
     total_votes: PodU128,
@@ -61,22 +144,178 @@ pub struct OperatorSnapshot {
     vault_operator_delegations_registered: PodU16,
 
     slot_set: PodU64,
-    vault_operator_delegations: [VaultOperatorDelegationSnapshot; 256],
+    //TODO check upper limit of vaults
+    vault_operator_delegations: [VaultOperatorDelegationSnapshot; 32],
+    reserved: [u8; 128],
 }
 
 impl Discriminator for OperatorSnapshot {
     const DISCRIMINATOR: u8 = Discriminators::OperatorSnapshot as u8;
 }
 
-// Operators effectively cast N types of votes,
-// where N is the number of supported mints
+impl OperatorSnapshot {
+    pub fn new(
+        operator: Pubkey,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+        is_active: bool,
+        current_slot: u64,
+        operator_fee_bps: u16,
+    ) -> Self {
+        Self {
+            operator,
+            ncn,
+            ncn_epoch: PodU64::from(ncn_epoch),
+            slot_created: PodU64::from(0),
+            bump: 0,
+            operator_fee_bps: PodU16::from(operator_fee_bps),
+            total_votes: PodU128::from(0),
+            is_active: PodBool::from(is_active),
+            num_vault_operator_delegations: PodU16::from(0),
+            vault_operator_delegations_registered: PodU16::from(0),
+            slot_set: PodU64::from(current_slot),
+            vault_operator_delegations: [VaultOperatorDelegationSnapshot::default(); 32],
+            reserved: [0; 128],
+        }
+    }
+
+    pub fn seeds(operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
+        Vec::from_iter(
+            [
+                b"OPERATOR_SNAPSHOT".to_vec(),
+                operator.to_bytes().to_vec(),
+                ncn.to_bytes().to_vec(),
+                ncn_epoch.to_le_bytes().to_vec(),
+            ]
+            .iter()
+            .cloned(),
+        )
+    }
+
+    pub fn find_program_address(
+        program_id: &Pubkey,
+        operator: &Pubkey,
+        ncn: &Pubkey,
+        ncn_epoch: u64,
+    ) -> (Pubkey, u8, Vec<Vec<u8>>) {
+        let seeds = Self::seeds(operator, ncn, ncn_epoch);
+        let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
+        let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
+        (pda, bump, seeds)
+    }
+
+    pub fn load(
+        program_id: &Pubkey,
+        operator: &Pubkey,
+        ncn: &Pubkey,
+        ncn_epoch: u64,
+        operator_snapshot: &AccountInfo,
+        expect_writable: bool,
+    ) -> Result<(), ProgramError> {
+        if operator_snapshot.owner.ne(program_id) {
+            msg!("Operator Snapshot account has an invalid owner");
+            return Err(ProgramError::InvalidAccountOwner);
+        }
+        if operator_snapshot.data_is_empty() {
+            msg!("Operator Snapshot account data is empty");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if expect_writable && !operator_snapshot.is_writable {
+            msg!("Operator Snapshot account is not writable");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if operator_snapshot.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
+            msg!("Operator Snapshot account discriminator is invalid");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if operator_snapshot
+            .key
+            .ne(&Self::find_program_address(program_id, operator, ncn, ncn_epoch).0)
+        {
+            msg!("Operator Snapshot account is not at the correct PDA");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct VaultOperatorDelegationSnapshot {
     vault: Pubkey,
     st_mint: Pubkey,
-    delegation_state: DelegationState,
+    total_security: PodU64,
     total_votes: PodU128,
     slot_set: PodU64,
     reserved: [u8; 128],
+}
+
+impl Default for VaultOperatorDelegationSnapshot {
+    fn default() -> Self {
+        Self {
+            vault: Pubkey::default(),
+            st_mint: Pubkey::default(),
+            total_security: PodU64::from(0),
+            total_votes: PodU128::from(0),
+            slot_set: PodU64::from(0),
+            reserved: [0; 128],
+        }
+    }
+}
+
+impl VaultOperatorDelegationSnapshot {
+    pub fn new(
+        vault: Pubkey,
+        st_mint: Pubkey,
+        total_security: u64,
+        total_votes: u128,
+        current_slot: u64,
+    ) -> Self {
+        Self {
+            vault,
+            st_mint,
+            total_security: PodU64::from(total_security),
+            total_votes: PodU128::from(total_votes),
+            slot_set: PodU64::from(current_slot),
+            reserved: [0; 128],
+        }
+    }
+
+    pub fn create_snapshot(
+        vault: Pubkey,
+        st_mint: Pubkey,
+        delegation_state: &DelegationState,
+        weight_table: &WeightTable,
+        current_slot: u64,
+    ) -> Result<Self, ProgramError> {
+        let total_security = delegation_state.total_security()?;
+        let precise_total_security = PreciseNumber::new(total_security as u128)
+            .ok_or(TipRouterError::NewPreciseNumberError)?;
+
+        let precise_weight = weight_table.get_precise_weight(&st_mint)?;
+
+        let precise_total_votes = precise_total_security
+            .checked_mul(&precise_weight)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        let total_votes = precise_total_votes
+            .to_imprecise()
+            .ok_or(TipRouterError::CastToImpreciseNumberError)?;
+
+        Ok(Self::new(
+            vault,
+            st_mint,
+            total_security,
+            total_votes,
+            current_slot,
+        ))
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.slot_set.eq(&PodU64::from(0))
+    }
+
+    pub fn total_votes(&self) -> u128 {
+        self.total_votes.into()
+    }
 }

@@ -14,6 +14,7 @@ import {
 } from '@solana/web3.js';
 import {
   type ParsedAdminUpdateWeightTableInstruction,
+  type ParsedInitializeEpochSnapshotInstruction,
   type ParsedInitializeNCNConfigInstruction,
   type ParsedInitializeWeightTableInstruction,
   type ParsedSetConfigFeesInstruction,
@@ -24,6 +25,8 @@ export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
   'Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaSH' as Address<'Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaSH'>;
 
 export enum JitoTipRouterAccount {
+  EpochSnapshot,
+  OperatorSnapshot,
   NcnConfig,
   WeightTable,
 }
@@ -34,6 +37,7 @@ export enum JitoTipRouterInstruction {
   SetNewAdmin,
   InitializeWeightTable,
   AdminUpdateWeightTable,
+  InitializeEpochSnapshot,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -54,6 +58,9 @@ export function identifyJitoTipRouterInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(4), 0)) {
     return JitoTipRouterInstruction.AdminUpdateWeightTable;
+  }
+  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
+    return JitoTipRouterInstruction.InitializeEpochSnapshot;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -77,4 +84,7 @@ export type ParsedJitoTipRouterInstruction<
     } & ParsedInitializeWeightTableInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.AdminUpdateWeightTable;
-    } & ParsedAdminUpdateWeightTableInstruction<TProgram>);
+    } & ParsedAdminUpdateWeightTableInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeEpochSnapshot;
+    } & ParsedInitializeEpochSnapshotInstruction<TProgram>);

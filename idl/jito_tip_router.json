@@ -262,9 +262,209 @@
         "type": "u8",
         "value": 4
       }
+    },
+    {
+      "name": "InitializeEpochSnapshot",
+      "accounts": [
+        {
+          "name": "ncnConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "restakingConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "weightTable",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "epochSnapshot",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "restakingProgramId",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "firstSlotOfNcnEpoch",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 5
+      }
     }
   ],
   "accounts": [
+    {
+      "name": "EpochSnapshot",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncnEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "ncnFees",
+            "type": {
+              "defined": "Fees"
+            }
+          },
+          {
+            "name": "operatorCount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "operatorsRegistered",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "totalVotes",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperatorSnapshot",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operator",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncnEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "operatorFeeBps",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "totalVotes",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "numVaultOperatorDelegations",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "vaultOperatorDelegationsRegistered",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "slotSet",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "vaultOperatorDelegations",
+            "type": {
+              "array": [
+                {
+                  "defined": "VaultOperatorDelegationSnapshot"
+                },
+                32
+              ]
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
     {
       "name": "NcnConfig",
       "type": {
@@ -354,6 +554,49 @@
     }
   ],
   "types": [
+    {
+      "name": "VaultOperatorDelegationSnapshot",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "stMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "totalSecurity",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "totalVotes",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "slotSet",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
     {
       "name": "Fees",
       "type": {
@@ -536,24 +779,34 @@
       "msg": "Invalid mint for weight table"
     },
     {
-      "code": 8960,
+      "code": 8713,
       "name": "FeeCapExceeded",
       "msg": "Fee cap exceeded"
     },
     {
-      "code": 9216,
+      "code": 8714,
       "name": "IncorrectNcnAdmin",
       "msg": "Incorrect NCN Admin"
     },
     {
-      "code": 9217,
+      "code": 8715,
       "name": "IncorrectNcn",
       "msg": "Incorrect NCN"
     },
     {
-      "code": 9218,
+      "code": 8716,
       "name": "IncorrectFeeAdmin",
       "msg": "Incorrect fee admin"
+    },
+    {
+      "code": 8717,
+      "name": "WeightTableNotFinalized",
+      "msg": "Weight table not finalized"
+    },
+    {
+      "code": 8718,
+      "name": "WeightNotFound",
+      "msg": "Weight not found"
     }
   ],
   "metadata": {

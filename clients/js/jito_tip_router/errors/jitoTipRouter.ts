@@ -43,13 +43,17 @@ export const JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH = 0x2207
 /** InvalidMintForWeightTable: Invalid mint for weight table */
 export const JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE = 0x2208; // 8712
 /** FeeCapExceeded: Fee cap exceeded */
-export const JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED = 0x2300; // 8960
+export const JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED = 0x2209; // 8713
 /** IncorrectNcnAdmin: Incorrect NCN Admin */
-export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN = 0x2400; // 9216
+export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN = 0x220a; // 8714
 /** IncorrectNcn: Incorrect NCN */
-export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN = 0x2401; // 9217
+export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN = 0x220b; // 8715
 /** IncorrectFeeAdmin: Incorrect fee admin */
-export const JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN = 0x2402; // 9218
+export const JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN = 0x220c; // 8716
+/** WeightTableNotFinalized: Weight table not finalized */
+export const JITO_TIP_ROUTER_ERROR__WEIGHT_TABLE_NOT_FINALIZED = 0x220d; // 8717
+/** WeightNotFound: Weight not found */
+export const JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND = 0x220e; // 8718
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
@@ -69,7 +73,9 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH
-  | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_TABLE_ALREADY_INITIALIZED;
+  | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND
+  | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_TABLE_ALREADY_INITIALIZED
+  | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_TABLE_NOT_FINALIZED;
 
 let jitoTipRouterErrorMessages: Record<JitoTipRouterError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
@@ -91,7 +97,9 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE]: `Too many mints for table`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH]: `Weight mints do not match - length`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH]: `Weight mints do not match - mint hash`,
+    [JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND]: `Weight not found`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_TABLE_ALREADY_INITIALIZED]: `Weight table already initialized`,
+    [JITO_TIP_ROUTER_ERROR__WEIGHT_TABLE_NOT_FINALIZED]: `Weight table not finalized`,
   };
 }
 
