@@ -44,6 +44,8 @@ pub enum TipRouterError {
     WeightTableNotFinalized,
     #[error("Weight not found")]
     WeightNotFound,
+    #[error("No operators in ncn")]
+    NoOperators,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

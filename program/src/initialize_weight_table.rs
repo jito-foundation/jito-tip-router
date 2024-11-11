@@ -7,8 +7,7 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    error::TipRouterError, loaders::load_ncn_epoch, ncn_config::NcnConfig,
-    weight_table::WeightTable,
+    loaders::load_ncn_epoch, ncn_config::NcnConfig, weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,

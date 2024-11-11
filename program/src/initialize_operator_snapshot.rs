@@ -8,11 +8,8 @@ use jito_restaking_core::{
 };
 use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
-    error::TipRouterError,
-    fees,
     loaders::load_ncn_epoch,
     ncn_config::NcnConfig,
-    weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -99,16 +96,13 @@ pub fn process_initialize_operator_snapshot(
         &operator_snapshot_seeds,
     )?;
 
-    let ncn_fees: fees::Fees = {
-        let ncn_config_data = ncn_config.data.borrow();
-        let ncn_config_account = NcnConfig::try_from_slice_unchecked(&ncn_config_data)?;
-        ncn_config_account.fees
-    };
-
-    let operator_count: u64 = {
-        let ncn_data = ncn.data.borrow();
-        let ncn_account = Ncn::try_from_slice_unchecked(&ncn_data)?;
-        ncn_account.operator_count()
+    let (operator_fee_bps, vault_count): (u16, u64) = {
+        let operator_data = operator.data.borrow();
+        let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
+        (
+            operator_account.operator_fee_bps.into(),
+            operator_account.vault_count(),
+        )
     };
 
     let mut operator_snapshot_data: std::cell::RefMut<'_, &mut [u8]> =
@@ -117,8 +111,34 @@ pub fn process_initialize_operator_snapshot(
     let operator_snapshot_account =
         OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
 
-    *operator_snapshot_account =
-        OperatorSnapshot::new(*ncn.key, ncn_epoch, current_slot, ncn_fees, operator_count);
+    *operator_snapshot_account = if is_active {
+        OperatorSnapshot::new_active(
+            *operator.key,
+            *ncn.key,
+            ncn_epoch,
+            operator_snapshot_bump,
+            current_slot,
+            operator_fee_bps,
+            vault_count,
+        )
+    } else {
+        OperatorSnapshot::new_inactive(
+            *operator.key,
+            *ncn.key,
+            ncn_epoch,
+            operator_snapshot_bump,
+            current_slot,
+        )
+    };
+
+    // Increment operator registration for an inactive operator
+    if !is_active {
+        let mut epoch_snapshot_data = epoch_snapshot.try_borrow_mut_data()?;
+        let epoch_snapshot_account =
+            EpochSnapshot::try_from_slice_unchecked_mut(&mut epoch_snapshot_data)?;
+
+        epoch_snapshot_account.increment_operator_registration(current_slot, 0, 0)?;
+    }
 
     Ok(())
 }

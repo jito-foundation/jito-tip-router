@@ -23,18 +23,21 @@ pub struct EpochSnapshot {
     /// The NCN epoch for which the Epoch snapshot is valid
     ncn_epoch: PodU64,
 
-    /// Slot Epoch snapshot was created
-    slot_created: PodU64,
-
     /// Bump seed for the PDA
     bump: u8,
+
+    /// Slot Epoch snapshot was created
+    slot_created: PodU64,
+    slot_finalized: PodU64,
 
     ncn_fees: Fees,
 
     operator_count: PodU64,
     operators_registered: PodU64,
+    valid_operator_vault_delegations: PodU64,
 
     /// Counted as each delegate gets added
+    ///TODO What happens if `finalized() && total_votes() == 0`?
     total_votes: PodU128,
 
     /// Reserved space
@@ -49,6 +52,7 @@ impl EpochSnapshot {
     pub fn new(
         ncn: Pubkey,
         ncn_epoch: u64,
+        bump: u8,
         current_slot: u64,
         ncn_fees: Fees,
         num_operators: u64,
@@ -57,10 +61,12 @@ impl EpochSnapshot {
             ncn,
             ncn_epoch: PodU64::from(ncn_epoch),
             slot_created: PodU64::from(current_slot),
-            bump: 0,
+            slot_finalized: PodU64::from(0),
+            bump,
             ncn_fees,
             operator_count: PodU64::from(num_operators),
             operators_registered: PodU64::from(0),
+            valid_operator_vault_delegations: PodU64::from(0),
             total_votes: PodU128::from(0),
             reserved: [0; 128],
         }
@@ -121,6 +127,57 @@ impl EpochSnapshot {
         }
         Ok(())
     }
+
+    pub fn operator_count(&self) -> u64 {
+        self.operator_count.into()
+    }
+
+    pub fn operators_registered(&self) -> u64 {
+        self.operators_registered.into()
+    }
+
+    pub fn valid_operator_vault_delegations(&self) -> u64 {
+        self.valid_operator_vault_delegations.into()
+    }
+
+    pub fn total_votes(&self) -> u128 {
+        self.total_votes.into()
+    }
+
+    pub fn finalized(&self) -> bool {
+        self.operators_registered() == self.operator_count()
+    }
+
+    pub fn increment_operator_registration(
+        &mut self,
+        current_slot: u64,
+        vault_operator_delegations: u64,
+        votes: u128,
+    ) -> Result<(), TipRouterError> {
+        self.operators_registered = PodU64::from(
+            self.operators_registered()
+                .checked_add(1)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+
+        self.valid_operator_vault_delegations = PodU64::from(
+            self.valid_operator_vault_delegations()
+                .checked_add(vault_operator_delegations)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+
+        self.total_votes = PodU128::from(
+            self.total_votes()
+                .checked_add(votes)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+
+        if self.finalized() {
+            self.slot_finalized = PodU64::from(current_slot);
+        }
+
+        Ok(())
+    }
 }
 
 // PDA'd ["OPERATOR_SNAPSHOT", OPERATOR, NCN, NCN_EPOCH_SLOT]
@@ -130,22 +187,22 @@ pub struct OperatorSnapshot {
     operator: Pubkey,
     ncn: Pubkey,
     ncn_epoch: PodU64,
-    slot_created: PodU64,
-
     bump: u8,
+
+    slot_created: PodU64,
+    slot_finalized: PodU64,
 
     is_active: PodBool,
 
     operator_fee_bps: PodU16,
 
+    vault_operator_delegation_count: PodU64,
+    vault_operator_delegations_registered: PodU64,
+
     total_votes: PodU128,
 
-    num_vault_operator_delegations: PodU16,
-    vault_operator_delegations_registered: PodU16,
-
-    slot_set: PodU64,
     //TODO check upper limit of vaults
-    vault_operator_delegations: [VaultOperatorDelegationSnapshot; 32],
+    vault_operator_delegations: [VaultOperatorDelegationSnapshot; 64],
     reserved: [u8; 128],
 }
 
@@ -158,25 +215,61 @@ impl OperatorSnapshot {
         operator: Pubkey,
         ncn: Pubkey,
         ncn_epoch: u64,
-        is_active: bool,
+        bump: u8,
         current_slot: u64,
+        is_active: bool,
         operator_fee_bps: u16,
+        vault_operator_delegation_count: u64,
     ) -> Self {
         Self {
             operator,
             ncn,
             ncn_epoch: PodU64::from(ncn_epoch),
-            slot_created: PodU64::from(0),
-            bump: 0,
+            bump,
+            slot_created: PodU64::from(current_slot),
+            slot_finalized: PodU64::from(0),
             operator_fee_bps: PodU16::from(operator_fee_bps),
             total_votes: PodU128::from(0),
             is_active: PodBool::from(is_active),
-            num_vault_operator_delegations: PodU16::from(0),
-            vault_operator_delegations_registered: PodU16::from(0),
-            slot_set: PodU64::from(current_slot),
-            vault_operator_delegations: [VaultOperatorDelegationSnapshot::default(); 32],
+            vault_operator_delegation_count: PodU64::from(vault_operator_delegation_count),
+            vault_operator_delegations_registered: PodU64::from(0),
+            vault_operator_delegations: [VaultOperatorDelegationSnapshot::default(); 64],
             reserved: [0; 128],
         }
+    }
+
+    pub fn new_active(
+        operator: Pubkey,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+        bump: u8,
+        current_slot: u64,
+        operator_fee_bps: u16,
+        vault_count: u64,
+    ) -> Self {
+        Self::new(
+            operator,
+            ncn,
+            ncn_epoch,
+            bump,
+            current_slot,
+            true,
+            operator_fee_bps,
+            vault_count,
+        )
+    }
+
+    pub fn new_inactive(
+        operator: Pubkey,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+        bump: u8,
+        current_slot: u64,
+    ) -> Self {
+        let mut snapshot = Self::new(operator, ncn, ncn_epoch, bump, current_slot, true, 0, 0);
+
+        snapshot.slot_finalized = PodU64::from(current_slot);
+        snapshot
     }
 
     pub fn seeds(operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {

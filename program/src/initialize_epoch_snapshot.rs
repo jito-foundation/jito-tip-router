@@ -94,14 +94,25 @@ pub fn process_initialize_epoch_snapshot(
         ncn_account.operator_count()
     };
 
+    if operator_count == 0 {
+        msg!("No operators to snapshot");
+        return Err(TipRouterError::NoOperators.into());
+    }
+
     let mut epoch_snapshot_data: std::cell::RefMut<'_, &mut [u8]> =
         epoch_snapshot.try_borrow_mut_data()?;
     epoch_snapshot_data[0] = EpochSnapshot::DISCRIMINATOR;
     let epoch_snapshot_account =
         EpochSnapshot::try_from_slice_unchecked_mut(&mut epoch_snapshot_data)?;
 
-    *epoch_snapshot_account =
-        EpochSnapshot::new(*ncn.key, ncn_epoch, current_slot, ncn_fees, operator_count);
+    *epoch_snapshot_account = EpochSnapshot::new(
+        *ncn.key,
+        ncn_epoch,
+        epoch_snapshot_bump,
+        current_slot,
+        ncn_fees,
+        operator_count,
+    );
 
     Ok(())
 }
