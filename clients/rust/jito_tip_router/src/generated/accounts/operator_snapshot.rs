@@ -7,8 +7,6 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::VaultOperatorDelegationSnapshot;
-
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct OperatorSnapshot {
@@ -24,14 +22,15 @@ pub struct OperatorSnapshot {
     )]
     pub ncn: Pubkey,
     pub ncn_epoch: u64,
-    pub slot_created: u64,
     pub bump: u8,
+    pub slot_created: u64,
+    pub slot_finalized: u64,
+    pub is_active: bool,
     pub operator_fee_bps: u16,
+    pub vault_operator_delegation_count: u64,
+    pub vault_operator_delegations_registered: u64,
+    pub valid_operator_vault_delegations: u64,
     pub total_votes: u128,
-    pub num_vault_operator_delegations: u16,
-    pub vault_operator_delegations_registered: u16,
-    pub slot_set: u64,
-    pub vault_operator_delegations: [VaultOperatorDelegationSnapshot; 32],
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 128],
 }

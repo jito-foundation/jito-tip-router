@@ -155,7 +155,7 @@ impl EpochSnapshot {
         votes: u128,
     ) -> Result<(), TipRouterError> {
         if self.finalized() {
-            return Err(TipRouterError::OperatorFinalized.into());
+            return Err(TipRouterError::OperatorFinalized);
         }
 
         self.operators_registered = PodU64::from(
@@ -214,6 +214,7 @@ impl Discriminator for OperatorSnapshot {
 }
 
 impl OperatorSnapshot {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         operator: Pubkey,
         ncn: Pubkey,
@@ -361,7 +362,7 @@ impl OperatorSnapshot {
         votes: u128,
     ) -> Result<(), TipRouterError> {
         if self.finalized() {
-            return Err(TipRouterError::VaultOperatorDelegationFinalized.into());
+            return Err(TipRouterError::VaultOperatorDelegationFinalized);
         }
 
         self.vault_operator_delegations_registered = PodU64::from(
@@ -416,6 +417,7 @@ impl Discriminator for VaultOperatorDelegationSnapshot {
 }
 
 impl VaultOperatorDelegationSnapshot {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         vault: Pubkey,
         operator: Pubkey,
@@ -442,7 +444,7 @@ impl VaultOperatorDelegationSnapshot {
             reserved: [0; 128],
         }
     }
-
+    #[allow(clippy::too_many_arguments)]
     pub fn new_active(
         vault: Pubkey,
         operator: Pubkey,
@@ -491,6 +493,7 @@ impl VaultOperatorDelegationSnapshot {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn create_snapshot(
         vault: Pubkey,
         operator: Pubkey,

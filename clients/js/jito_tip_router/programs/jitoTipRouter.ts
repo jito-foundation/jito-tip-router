@@ -16,6 +16,8 @@ import {
   type ParsedAdminUpdateWeightTableInstruction,
   type ParsedInitializeEpochSnapshotInstruction,
   type ParsedInitializeNCNConfigInstruction,
+  type ParsedInitializeOperatorSnapshotInstruction,
+  type ParsedInitializeVaultOperatorDelegationSnapshotInstruction,
   type ParsedInitializeWeightTableInstruction,
   type ParsedSetConfigFeesInstruction,
   type ParsedSetNewAdminInstruction,
@@ -27,6 +29,7 @@ export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
 export enum JitoTipRouterAccount {
   EpochSnapshot,
   OperatorSnapshot,
+  VaultOperatorDelegationSnapshot,
   NcnConfig,
   WeightTable,
 }
@@ -38,6 +41,8 @@ export enum JitoTipRouterInstruction {
   InitializeWeightTable,
   AdminUpdateWeightTable,
   InitializeEpochSnapshot,
+  InitializeOperatorSnapshot,
+  InitializeVaultOperatorDelegationSnapshot,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -61,6 +66,12 @@ export function identifyJitoTipRouterInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(5), 0)) {
     return JitoTipRouterInstruction.InitializeEpochSnapshot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
+    return JitoTipRouterInstruction.InitializeOperatorSnapshot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
+    return JitoTipRouterInstruction.InitializeVaultOperatorDelegationSnapshot;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -87,4 +98,10 @@ export type ParsedJitoTipRouterInstruction<
     } & ParsedAdminUpdateWeightTableInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.InitializeEpochSnapshot;
-    } & ParsedInitializeEpochSnapshotInstruction<TProgram>);
+    } & ParsedInitializeEpochSnapshotInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeOperatorSnapshot;
+    } & ParsedInitializeOperatorSnapshotInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeVaultOperatorDelegationSnapshot;
+    } & ParsedInitializeVaultOperatorDelegationSnapshotInstruction<TProgram>);

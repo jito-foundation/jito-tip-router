@@ -54,6 +54,12 @@ export const JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN = 0x220c; // 8716
 export const JITO_TIP_ROUTER_ERROR__WEIGHT_TABLE_NOT_FINALIZED = 0x220d; // 8717
 /** WeightNotFound: Weight not found */
 export const JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND = 0x220e; // 8718
+/** NoOperators: No operators in ncn */
+export const JITO_TIP_ROUTER_ERROR__NO_OPERATORS = 0x220f; // 8719
+/** VaultOperatorDelegationFinalized: Vault operator delegation is already finalized - should not happen */
+export const JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED = 0x2210; // 8720
+/** OperatorFinalized: Operator is already finalized - should not happen */
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED = 0x2211; // 8721
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
@@ -70,7 +76,10 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW
   | typeof JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE
+  | typeof JITO_TIP_ROUTER_ERROR__NO_OPERATORS
+  | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE
+  | typeof JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND
@@ -94,7 +103,10 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW]: `Modulo Overflow`,
     [JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR]: `New precise number error`,
     [JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE]: `There are no mints in the table`,
+    [JITO_TIP_ROUTER_ERROR__NO_OPERATORS]: `No operators in ncn`,
+    [JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED]: `Operator is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE]: `Too many mints for table`,
+    [JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED]: `Vault operator delegation is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH]: `Weight mints do not match - length`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH]: `Weight mints do not match - mint hash`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND]: `Weight not found`,

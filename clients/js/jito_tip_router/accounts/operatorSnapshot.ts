@@ -17,6 +17,8 @@ import {
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
+  getBoolDecoder,
+  getBoolEncoder,
   getStructDecoder,
   getStructEncoder,
   getU128Decoder,
@@ -38,26 +40,21 @@ import {
   type MaybeAccount,
   type MaybeEncodedAccount,
 } from '@solana/web3.js';
-import {
-  getVaultOperatorDelegationSnapshotDecoder,
-  getVaultOperatorDelegationSnapshotEncoder,
-  type VaultOperatorDelegationSnapshot,
-  type VaultOperatorDelegationSnapshotArgs,
-} from '../types';
 
 export type OperatorSnapshot = {
   discriminator: bigint;
   operator: Address;
   ncn: Address;
   ncnEpoch: bigint;
-  slotCreated: bigint;
   bump: number;
+  slotCreated: bigint;
+  slotFinalized: bigint;
+  isActive: number;
   operatorFeeBps: number;
+  vaultOperatorDelegationCount: bigint;
+  vaultOperatorDelegationsRegistered: bigint;
+  validOperatorVaultDelegations: bigint;
   totalVotes: bigint;
-  numVaultOperatorDelegations: number;
-  vaultOperatorDelegationsRegistered: number;
-  slotSet: bigint;
-  vaultOperatorDelegations: Array<VaultOperatorDelegationSnapshot>;
   reserved: Array<number>;
 };
 
@@ -66,14 +63,15 @@ export type OperatorSnapshotArgs = {
   operator: Address;
   ncn: Address;
   ncnEpoch: number | bigint;
-  slotCreated: number | bigint;
   bump: number;
+  slotCreated: number | bigint;
+  slotFinalized: number | bigint;
+  isActive: number;
   operatorFeeBps: number;
+  vaultOperatorDelegationCount: number | bigint;
+  vaultOperatorDelegationsRegistered: number | bigint;
+  validOperatorVaultDelegations: number | bigint;
   totalVotes: number | bigint;
-  numVaultOperatorDelegations: number;
-  vaultOperatorDelegationsRegistered: number;
-  slotSet: number | bigint;
-  vaultOperatorDelegations: Array<VaultOperatorDelegationSnapshotArgs>;
   reserved: Array<number>;
 };
 
@@ -83,19 +81,15 @@ export function getOperatorSnapshotEncoder(): Encoder<OperatorSnapshotArgs> {
     ['operator', getAddressEncoder()],
     ['ncn', getAddressEncoder()],
     ['ncnEpoch', getU64Encoder()],
-    ['slotCreated', getU64Encoder()],
     ['bump', getU8Encoder()],
+    ['slotCreated', getU64Encoder()],
+    ['slotFinalized', getU64Encoder()],
+    ['isActive', getBoolEncoder()],
     ['operatorFeeBps', getU16Encoder()],
+    ['vaultOperatorDelegationCount', getU64Encoder()],
+    ['vaultOperatorDelegationsRegistered', getU64Encoder()],
+    ['validOperatorVaultDelegations', getU64Encoder()],
     ['totalVotes', getU128Encoder()],
-    ['numVaultOperatorDelegations', getU16Encoder()],
-    ['vaultOperatorDelegationsRegistered', getU16Encoder()],
-    ['slotSet', getU64Encoder()],
-    [
-      'vaultOperatorDelegations',
-      getArrayEncoder(getVaultOperatorDelegationSnapshotEncoder(), {
-        size: 32,
-      }),
-    ],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
   ]);
 }
@@ -106,19 +100,15 @@ export function getOperatorSnapshotDecoder(): Decoder<OperatorSnapshot> {
     ['operator', getAddressDecoder()],
     ['ncn', getAddressDecoder()],
     ['ncnEpoch', getU64Decoder()],
-    ['slotCreated', getU64Decoder()],
     ['bump', getU8Decoder()],
+    ['slotCreated', getU64Decoder()],
+    ['slotFinalized', getU64Decoder()],
+    ['isActive', getBoolDecoder()],
     ['operatorFeeBps', getU16Decoder()],
+    ['vaultOperatorDelegationCount', getU64Decoder()],
+    ['vaultOperatorDelegationsRegistered', getU64Decoder()],
+    ['validOperatorVaultDelegations', getU64Decoder()],
     ['totalVotes', getU128Decoder()],
-    ['numVaultOperatorDelegations', getU16Decoder()],
-    ['vaultOperatorDelegationsRegistered', getU16Decoder()],
-    ['slotSet', getU64Decoder()],
-    [
-      'vaultOperatorDelegations',
-      getArrayDecoder(getVaultOperatorDelegationSnapshotDecoder(), {
-        size: 32,
-      }),
-    ],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
   ]);
 }

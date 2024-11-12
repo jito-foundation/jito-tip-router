@@ -17,6 +17,8 @@ import {
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
+  getBoolDecoder,
+  getBoolEncoder,
   getStructDecoder,
   getStructEncoder,
   getU128Decoder,
@@ -36,124 +38,137 @@ import {
   type MaybeAccount,
   type MaybeEncodedAccount,
 } from '@solana/web3.js';
-import {
-  getFeesDecoder,
-  getFeesEncoder,
-  type Fees,
-  type FeesArgs,
-} from '../types';
 
-export type EpochSnapshot = {
+export type VaultOperatorDelegationSnapshot = {
   discriminator: bigint;
+  vault: Address;
+  operator: Address;
   ncn: Address;
   ncnEpoch: bigint;
   bump: number;
   slotCreated: bigint;
-  slotFinalized: bigint;
-  ncnFees: Fees;
-  operatorCount: bigint;
-  operatorsRegistered: bigint;
-  validOperatorVaultDelegations: bigint;
+  isActive: number;
+  stMint: Address;
+  totalSecurity: bigint;
   totalVotes: bigint;
   reserved: Array<number>;
 };
 
-export type EpochSnapshotArgs = {
+export type VaultOperatorDelegationSnapshotArgs = {
   discriminator: number | bigint;
+  vault: Address;
+  operator: Address;
   ncn: Address;
   ncnEpoch: number | bigint;
   bump: number;
   slotCreated: number | bigint;
-  slotFinalized: number | bigint;
-  ncnFees: FeesArgs;
-  operatorCount: number | bigint;
-  operatorsRegistered: number | bigint;
-  validOperatorVaultDelegations: number | bigint;
+  isActive: number;
+  stMint: Address;
+  totalSecurity: number | bigint;
   totalVotes: number | bigint;
   reserved: Array<number>;
 };
 
-export function getEpochSnapshotEncoder(): Encoder<EpochSnapshotArgs> {
+export function getVaultOperatorDelegationSnapshotEncoder(): Encoder<VaultOperatorDelegationSnapshotArgs> {
   return getStructEncoder([
     ['discriminator', getU64Encoder()],
+    ['vault', getAddressEncoder()],
+    ['operator', getAddressEncoder()],
     ['ncn', getAddressEncoder()],
     ['ncnEpoch', getU64Encoder()],
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
-    ['slotFinalized', getU64Encoder()],
-    ['ncnFees', getFeesEncoder()],
-    ['operatorCount', getU64Encoder()],
-    ['operatorsRegistered', getU64Encoder()],
-    ['validOperatorVaultDelegations', getU64Encoder()],
+    ['isActive', getBoolEncoder()],
+    ['stMint', getAddressEncoder()],
+    ['totalSecurity', getU64Encoder()],
     ['totalVotes', getU128Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
   ]);
 }
 
-export function getEpochSnapshotDecoder(): Decoder<EpochSnapshot> {
+export function getVaultOperatorDelegationSnapshotDecoder(): Decoder<VaultOperatorDelegationSnapshot> {
   return getStructDecoder([
     ['discriminator', getU64Decoder()],
+    ['vault', getAddressDecoder()],
+    ['operator', getAddressDecoder()],
     ['ncn', getAddressDecoder()],
     ['ncnEpoch', getU64Decoder()],
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
-    ['slotFinalized', getU64Decoder()],
-    ['ncnFees', getFeesDecoder()],
-    ['operatorCount', getU64Decoder()],
-    ['operatorsRegistered', getU64Decoder()],
-    ['validOperatorVaultDelegations', getU64Decoder()],
+    ['isActive', getBoolDecoder()],
+    ['stMint', getAddressDecoder()],
+    ['totalSecurity', getU64Decoder()],
     ['totalVotes', getU128Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
   ]);
 }
 
-export function getEpochSnapshotCodec(): Codec<
-  EpochSnapshotArgs,
-  EpochSnapshot
+export function getVaultOperatorDelegationSnapshotCodec(): Codec<
+  VaultOperatorDelegationSnapshotArgs,
+  VaultOperatorDelegationSnapshot
 > {
-  return combineCodec(getEpochSnapshotEncoder(), getEpochSnapshotDecoder());
-}
-
-export function decodeEpochSnapshot<TAddress extends string = string>(
-  encodedAccount: EncodedAccount<TAddress>
-): Account<EpochSnapshot, TAddress>;
-export function decodeEpochSnapshot<TAddress extends string = string>(
-  encodedAccount: MaybeEncodedAccount<TAddress>
-): MaybeAccount<EpochSnapshot, TAddress>;
-export function decodeEpochSnapshot<TAddress extends string = string>(
-  encodedAccount: EncodedAccount<TAddress> | MaybeEncodedAccount<TAddress>
-): Account<EpochSnapshot, TAddress> | MaybeAccount<EpochSnapshot, TAddress> {
-  return decodeAccount(
-    encodedAccount as MaybeEncodedAccount<TAddress>,
-    getEpochSnapshotDecoder()
+  return combineCodec(
+    getVaultOperatorDelegationSnapshotEncoder(),
+    getVaultOperatorDelegationSnapshotDecoder()
   );
 }
 
-export async function fetchEpochSnapshot<TAddress extends string = string>(
+export function decodeVaultOperatorDelegationSnapshot<
+  TAddress extends string = string,
+>(
+  encodedAccount: EncodedAccount<TAddress>
+): Account<VaultOperatorDelegationSnapshot, TAddress>;
+export function decodeVaultOperatorDelegationSnapshot<
+  TAddress extends string = string,
+>(
+  encodedAccount: MaybeEncodedAccount<TAddress>
+): MaybeAccount<VaultOperatorDelegationSnapshot, TAddress>;
+export function decodeVaultOperatorDelegationSnapshot<
+  TAddress extends string = string,
+>(
+  encodedAccount: EncodedAccount<TAddress> | MaybeEncodedAccount<TAddress>
+):
+  | Account<VaultOperatorDelegationSnapshot, TAddress>
+  | MaybeAccount<VaultOperatorDelegationSnapshot, TAddress> {
+  return decodeAccount(
+    encodedAccount as MaybeEncodedAccount<TAddress>,
+    getVaultOperatorDelegationSnapshotDecoder()
+  );
+}
+
+export async function fetchVaultOperatorDelegationSnapshot<
+  TAddress extends string = string,
+>(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<Account<EpochSnapshot, TAddress>> {
-  const maybeAccount = await fetchMaybeEpochSnapshot(rpc, address, config);
+): Promise<Account<VaultOperatorDelegationSnapshot, TAddress>> {
+  const maybeAccount = await fetchMaybeVaultOperatorDelegationSnapshot(
+    rpc,
+    address,
+    config
+  );
   assertAccountExists(maybeAccount);
   return maybeAccount;
 }
 
-export async function fetchMaybeEpochSnapshot<TAddress extends string = string>(
+export async function fetchMaybeVaultOperatorDelegationSnapshot<
+  TAddress extends string = string,
+>(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<MaybeAccount<EpochSnapshot, TAddress>> {
+): Promise<MaybeAccount<VaultOperatorDelegationSnapshot, TAddress>> {
   const maybeAccount = await fetchEncodedAccount(rpc, address, config);
-  return decodeEpochSnapshot(maybeAccount);
+  return decodeVaultOperatorDelegationSnapshot(maybeAccount);
 }
 
-export async function fetchAllEpochSnapshot(
+export async function fetchAllVaultOperatorDelegationSnapshot(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<Account<EpochSnapshot>[]> {
-  const maybeAccounts = await fetchAllMaybeEpochSnapshot(
+): Promise<Account<VaultOperatorDelegationSnapshot>[]> {
+  const maybeAccounts = await fetchAllMaybeVaultOperatorDelegationSnapshot(
     rpc,
     addresses,
     config
@@ -162,11 +177,13 @@ export async function fetchAllEpochSnapshot(
   return maybeAccounts;
 }
 
-export async function fetchAllMaybeEpochSnapshot(
+export async function fetchAllMaybeVaultOperatorDelegationSnapshot(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<MaybeAccount<EpochSnapshot>[]> {
+): Promise<MaybeAccount<VaultOperatorDelegationSnapshot>[]> {
   const maybeAccounts = await fetchEncodedAccounts(rpc, addresses, config);
-  return maybeAccounts.map((maybeAccount) => decodeEpochSnapshot(maybeAccount));
+  return maybeAccounts.map((maybeAccount) =>
+    decodeVaultOperatorDelegationSnapshot(maybeAccount)
+  );
 }

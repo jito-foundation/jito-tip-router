@@ -9,5 +9,4 @@
 export * from './configAdminRole';
 export * from './fee';
 export * from './fees';
-export * from './vaultOperatorDelegationSnapshot';
 export * from './weightEntry';

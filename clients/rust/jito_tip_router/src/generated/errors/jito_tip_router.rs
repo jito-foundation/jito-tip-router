@@ -69,6 +69,15 @@ pub enum JitoTipRouterError {
     /// 8718 - Weight not found
     #[error("Weight not found")]
     WeightNotFound = 0x220E,
+    /// 8719 - No operators in ncn
+    #[error("No operators in ncn")]
+    NoOperators = 0x220F,
+    /// 8720 - Vault operator delegation is already finalized - should not happen
+    #[error("Vault operator delegation is already finalized - should not happen")]
+    VaultOperatorDelegationFinalized = 0x2210,
+    /// 8721 - Operator is already finalized - should not happen
+    #[error("Operator is already finalized - should not happen")]
+    OperatorFinalized = 0x2211,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

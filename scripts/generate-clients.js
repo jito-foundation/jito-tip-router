@@ -81,6 +81,22 @@ weightTableKinobi.update(kinobi.bottomUpTransformerVisitor([
             };
         },
     },
+    {
+        // PodBool -> bool
+        select: (node) => {
+            return (
+                kinobi.isNode(node, "structFieldTypeNode") &&
+                node.type.name === "podBool"
+            );
+        },
+        transform: (node) => {
+            kinobi.assertIsNode(node, "structFieldTypeNode");
+            return {
+                ...node,
+                type: kinobi.numberTypeNode("bool"),
+            };
+        },
+    },
     // add 8 byte discriminator to accountNode
     {
         select: (node) => {

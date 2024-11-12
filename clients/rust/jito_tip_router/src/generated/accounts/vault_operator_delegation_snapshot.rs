@@ -7,12 +7,20 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::Fees;
-
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct EpochSnapshot {
+pub struct VaultOperatorDelegationSnapshot {
     pub discriminator: u64,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub vault: Pubkey,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub operator: Pubkey,
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
@@ -21,17 +29,19 @@ pub struct EpochSnapshot {
     pub ncn_epoch: u64,
     pub bump: u8,
     pub slot_created: u64,
-    pub slot_finalized: u64,
-    pub ncn_fees: Fees,
-    pub operator_count: u64,
-    pub operators_registered: u64,
-    pub valid_operator_vault_delegations: u64,
+    pub is_active: bool,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub st_mint: Pubkey,
+    pub total_security: u64,
     pub total_votes: u128,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 128],
 }
 
-impl EpochSnapshot {
+impl VaultOperatorDelegationSnapshot {
     #[inline(always)]
     pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
         let mut data = data;
@@ -39,7 +49,9 @@ impl EpochSnapshot {
     }
 }
 
-impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for EpochSnapshot {
+impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>>
+    for VaultOperatorDelegationSnapshot
+{
     type Error = std::io::Error;
 
     fn try_from(
@@ -51,26 +63,26 @@ impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for EpochSnapsh
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountDeserialize for EpochSnapshot {
+impl anchor_lang::AccountDeserialize for VaultOperatorDelegationSnapshot {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         Ok(Self::deserialize(buf)?)
     }
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountSerialize for EpochSnapshot {}
+impl anchor_lang::AccountSerialize for VaultOperatorDelegationSnapshot {}
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::Owner for EpochSnapshot {
+impl anchor_lang::Owner for VaultOperatorDelegationSnapshot {
     fn owner() -> Pubkey {
         crate::JITO_TIP_ROUTER_ID
     }
 }
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::IdlBuild for EpochSnapshot {}
+impl anchor_lang::IdlBuild for VaultOperatorDelegationSnapshot {}
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::Discriminator for EpochSnapshot {
+impl anchor_lang::Discriminator for VaultOperatorDelegationSnapshot {
     const DISCRIMINATOR: [u8; 8] = [0; 8];
 }
