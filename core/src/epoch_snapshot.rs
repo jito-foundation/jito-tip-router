@@ -270,7 +270,7 @@ impl OperatorSnapshot {
         bump: u8,
         current_slot: u64,
     ) -> Self {
-        let mut snapshot = Self::new(operator, ncn, ncn_epoch, bump, current_slot, true, 0, 0);
+        let mut snapshot = Self::new(operator, ncn, ncn_epoch, bump, current_slot, false, 0, 0);
 
         snapshot.slot_finalized = PodU64::from(current_slot);
         snapshot
