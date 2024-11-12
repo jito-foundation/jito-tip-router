@@ -56,19 +56,6 @@ pub fn process_initialize_operator_snapshot(
 
     EpochSnapshot::load(program_id, ncn.key, ncn_epoch, epoch_snapshot, true)?;
 
-    let is_active: bool = {
-        let ncn_operator_state_data = ncn_operator_state.data.borrow();
-        let ncn_operator_state_account =
-            NcnOperatorState::try_from_slice_unchecked(&ncn_operator_state_data)?;
-
-        ncn_operator_state_account
-            .ncn_opt_in_state
-            .is_active(current_slot, ncn_epoch_length)
-            && ncn_operator_state_account
-                .operator_opt_in_state
-                .is_active(current_slot, ncn_epoch_length)
-    };
-
     let (operator_snapshot_pubkey, operator_snapshot_bump, mut operator_snapshot_seeds) =
         EpochSnapshot::find_program_address(program_id, ncn.key, ncn_epoch);
     operator_snapshot_seeds.push(vec![operator_snapshot_bump]);
@@ -96,22 +83,38 @@ pub fn process_initialize_operator_snapshot(
         &operator_snapshot_seeds,
     )?;
 
-    let (operator_fee_bps, vault_count): (u16, u64) = {
-        let operator_data = operator.data.borrow();
-        let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
-        (
-            operator_account.operator_fee_bps.into(),
-            operator_account.vault_count(),
-        )
+    let is_active: bool = {
+        let ncn_operator_state_data = ncn_operator_state.data.borrow();
+        let ncn_operator_state_account =
+            NcnOperatorState::try_from_slice_unchecked(&ncn_operator_state_data)?;
+
+        let ncn_operator_okay = ncn_operator_state_account
+            .ncn_opt_in_state
+            .is_active(current_slot, ncn_epoch_length);
+
+        let operator_ncn_okay = ncn_operator_state_account
+            .operator_opt_in_state
+            .is_active(current_slot, ncn_epoch_length);
+
+        ncn_operator_okay && operator_ncn_okay
     };
 
     let mut operator_snapshot_data: std::cell::RefMut<'_, &mut [u8]> =
         operator_snapshot.try_borrow_mut_data()?;
-    operator_snapshot_data[0] = EpochSnapshot::DISCRIMINATOR;
+    operator_snapshot_data[0] = OperatorSnapshot::DISCRIMINATOR;
     let operator_snapshot_account =
         OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
 
     *operator_snapshot_account = if is_active {
+        let (operator_fee_bps, vault_count): (u16, u64) = {
+            let operator_data = operator.data.borrow();
+            let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
+            (
+                operator_account.operator_fee_bps.into(),
+                operator_account.vault_count(),
+            )
+        };
+
         OperatorSnapshot::new_active(
             *operator.key,
             *ncn.key,

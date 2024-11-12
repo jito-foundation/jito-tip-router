@@ -4,4 +4,5 @@ pub enum Discriminators {
     WeightTable = 2,
     EpochSnapshot = 3,
     OperatorSnapshot = 4,
+    VaultOperatorDelegationSnapshot = 5,
 }
