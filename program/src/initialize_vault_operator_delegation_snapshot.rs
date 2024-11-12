@@ -126,6 +126,12 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
         &vault_operator_delegation_snapshot_seeds,
     )?;
 
+    let st_mint = {
+        let vault_data = vault.data.borrow();
+        let vault_account = Vault::try_from_slice_unchecked(&vault_data)?;
+        vault_account.supported_mint
+    };
+
     let is_active: bool = {
         let vault_ncn_ticket_data = vault_ncn_ticket.data.borrow();
         let vault_ncn_ticket_account =
@@ -157,43 +163,59 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
         )?;
 
     *vault_operator_delegation_snapshot_account = if is_active {
-        let (operator_fee_bps, vault_count): (u16, u64) = {
-            let operator_data = operator.data.borrow();
-            let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
-            (
-                operator_account.operator_fee_bps.into(),
-                operator_account.vault_count(),
-            )
-        };
+        let vault_operator_delegation_data = vault_operator_delegation.data.borrow();
+        let vault_operator_delegation_account =
+            VaultOperatorDelegation::try_from_slice_unchecked(&vault_operator_delegation_data)?;
+
+        let weight_table_data = weight_table.data.borrow();
+        let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
 
         //TODO Ending here for the day
-        VaultOperatorDelegationSnapshot::new_active(
+        VaultOperatorDelegationSnapshot::create_snapshot(
             *vault.key,
             *operator.key,
             *ncn.key,
             ncn_epoch,
             vault_operator_delegation_snapshot_bump,
             current_slot,
-            operator_fee_bps,
-            vault_count,
-        )
+            st_mint,
+            vault_operator_delegation_account,
+            weight_table_account,
+        )?
     } else {
         VaultOperatorDelegationSnapshot::new_inactive(
+            *vault.key,
             *operator.key,
             *ncn.key,
             ncn_epoch,
             vault_operator_delegation_snapshot_bump,
             current_slot,
+            st_mint,
         )
     };
 
-    // Increment operator registration for an inactive operator
-    if !is_active {
+    // Increment vault operator delegation
+    let mut operator_snapshot_data = operator_snapshot.try_borrow_mut_data()?;
+    let operator_snapshot_account =
+        OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
+
+    operator_snapshot_account.increment_vault_operator_delegation_registration(
+        current_slot,
+        vault_operator_delegation_snapshot_account.total_security(),
+        vault_operator_delegation_snapshot_account.total_votes(),
+    )?;
+
+    // If operator is finalized, increment operator registration
+    if operator_snapshot_account.finalized() {
         let mut epoch_snapshot_data = epoch_snapshot.try_borrow_mut_data()?;
         let epoch_snapshot_account =
             EpochSnapshot::try_from_slice_unchecked_mut(&mut epoch_snapshot_data)?;
 
-        epoch_snapshot_account.increment_operator_registration(current_slot, 0, 0)?;
+        epoch_snapshot_account.increment_operator_registration(
+            current_slot,
+            operator_snapshot_account.valid_operator_vault_delegations(),
+            operator_snapshot_account.total_votes(),
+        )?;
     }
 
     Ok(())

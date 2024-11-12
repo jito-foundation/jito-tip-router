@@ -3,10 +3,14 @@ use jito_bytemuck::{
     types::{PodBool, PodU128, PodU16, PodU64},
     AccountDeserialize, Discriminator,
 };
+use jito_vault_core::vault_operator_delegation::VaultOperatorDelegation;
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use spl_math::precise_number::PreciseNumber;
 
-use crate::{discriminators::Discriminators, error::TipRouterError, fees::Fees};
+use crate::{
+    discriminators::Discriminators, error::TipRouterError, fees::Fees, weight_table::WeightTable,
+};
 
 // PDA'd ["EPOCH_SNAPSHOT", NCN, NCN_EPOCH_SLOT]
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
@@ -150,6 +154,10 @@ impl EpochSnapshot {
         vault_operator_delegations: u64,
         votes: u128,
     ) -> Result<(), TipRouterError> {
+        if self.finalized() {
+            return Err(TipRouterError::OperatorFinalized.into());
+        }
+
         self.operators_registered = PodU64::from(
             self.operators_registered()
                 .checked_add(1)
@@ -352,6 +360,10 @@ impl OperatorSnapshot {
         vault_operator_delegations: u64,
         votes: u128,
     ) -> Result<(), TipRouterError> {
+        if self.finalized() {
+            return Err(TipRouterError::VaultOperatorDelegationFinalized.into());
+        }
+
         self.vault_operator_delegations_registered = PodU64::from(
             self.vault_operator_delegations_registered()
                 .checked_add(1)
@@ -479,6 +491,46 @@ impl VaultOperatorDelegationSnapshot {
         )
     }
 
+    pub fn create_snapshot(
+        vault: Pubkey,
+        operator: Pubkey,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+        bump: u8,
+        current_slot: u64,
+        st_mint: Pubkey,
+        vault_operator_delegation: &VaultOperatorDelegation,
+        weight_table: &WeightTable,
+    ) -> Result<Self, ProgramError> {
+        let total_security = vault_operator_delegation
+            .delegation_state
+            .total_security()?;
+        let precise_total_security = PreciseNumber::new(total_security as u128)
+            .ok_or(TipRouterError::NewPreciseNumberError)?;
+
+        let precise_weight = weight_table.get_precise_weight(&st_mint)?;
+
+        let precise_total_votes = precise_total_security
+            .checked_mul(&precise_weight)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        let total_votes = precise_total_votes
+            .to_imprecise()
+            .ok_or(TipRouterError::CastToImpreciseNumberError)?;
+
+        Ok(Self::new_active(
+            vault,
+            operator,
+            ncn,
+            ncn_epoch,
+            bump,
+            current_slot,
+            st_mint,
+            total_security,
+            total_votes,
+        ))
+    }
+
     pub fn seeds(vault: &Pubkey, operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -539,5 +591,13 @@ impl VaultOperatorDelegationSnapshot {
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
+    }
+
+    pub fn total_security(&self) -> u64 {
+        self.total_security.into()
+    }
+
+    pub fn total_votes(&self) -> u128 {
+        self.total_votes.into()
     }
 }

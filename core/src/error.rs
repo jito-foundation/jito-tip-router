@@ -46,6 +46,10 @@ pub enum TipRouterError {
     WeightNotFound,
     #[error("No operators in ncn")]
     NoOperators,
+    #[error("Vault operator delegation is already finalized - should not happen")]
+    VaultOperatorDelegationFinalized,
+    #[error("Operator is already finalized - should not happen")]
+    OperatorFinalized,
 }
 
 impl<T> DecodeError<T> for TipRouterError {
