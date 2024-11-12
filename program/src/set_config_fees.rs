@@ -15,15 +15,15 @@ pub fn process_set_config_fees(
     new_block_engine_fee_bps: Option<u64>,
     new_fee_wallet: Option<Pubkey>,
 ) -> ProgramResult {
-    let [restaking_config, config, ncn_account, fee_admin, restaking_program_id] = accounts else {
+    let [restaking_config, config, ncn_account, fee_admin, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     load_signer(fee_admin, true)?;
 
     NcnConfig::load(program_id, ncn_account.key, config, true)?;
-    Ncn::load(restaking_program_id.key, ncn_account, false)?;
-    Config::load(restaking_program_id.key, restaking_config, false)?;
+    Ncn::load(restaking_program.key, ncn_account, false)?;
+    Config::load(restaking_program.key, restaking_config, false)?;
 
     let ncn_epoch_length = {
         let config_data = restaking_config.data.borrow();

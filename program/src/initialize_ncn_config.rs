@@ -19,7 +19,7 @@ pub fn process_initialize_ncn_config(
     ncn_fee_bps: u64,
     block_engine_fee_bps: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn_account, fee_wallet, ncn_admin, tie_breaker_admin, restaking_program_id, system_program] =
+    let [restaking_config, ncn_config, ncn_account, fee_wallet, ncn_admin, tie_breaker_admin, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -29,8 +29,8 @@ pub fn process_initialize_ncn_config(
     load_system_program(system_program)?;
     load_signer(ncn_admin, false)?;
 
-    Ncn::load(restaking_program_id.key, ncn_account, false)?;
-    Config::load(restaking_program_id.key, restaking_config, false)?;
+    Ncn::load(restaking_program.key, ncn_account, false)?;
+    Config::load(restaking_program.key, restaking_config, false)?;
 
     let ncn_epoch_length = {
         let config_data = restaking_config.data.borrow();

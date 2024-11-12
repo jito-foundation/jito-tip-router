@@ -49,7 +49,7 @@ export type InitializeWeightTableInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgramId extends string | IAccountMeta<string> = string,
+  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -72,9 +72,9 @@ export type InitializeWeightTableInstruction<
         ? WritableSignerAccount<TAccountPayer> &
             IAccountSignerMeta<TAccountPayer>
         : TAccountPayer,
-      TAccountRestakingProgramId extends string
-        ? ReadonlyAccount<TAccountRestakingProgramId>
-        : TAccountRestakingProgramId,
+      TAccountRestakingProgram extends string
+        ? ReadonlyAccount<TAccountRestakingProgram>
+        : TAccountRestakingProgram,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -127,7 +127,7 @@ export type InitializeWeightTableInput<
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
   TAccountPayer extends string = string,
-  TAccountRestakingProgramId extends string = string,
+  TAccountRestakingProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
@@ -135,7 +135,7 @@ export type InitializeWeightTableInput<
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   payer: TransactionSigner<TAccountPayer>;
-  restakingProgramId: Address<TAccountRestakingProgramId>;
+  restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   firstSlotOfNcnEpoch: InitializeWeightTableInstructionDataArgs['firstSlotOfNcnEpoch'];
 };
@@ -146,7 +146,7 @@ export function getInitializeWeightTableInstruction<
   TAccountNcn extends string,
   TAccountWeightTable extends string,
   TAccountPayer extends string,
-  TAccountRestakingProgramId extends string,
+  TAccountRestakingProgram extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
@@ -156,7 +156,7 @@ export function getInitializeWeightTableInstruction<
     TAccountNcn,
     TAccountWeightTable,
     TAccountPayer,
-    TAccountRestakingProgramId,
+    TAccountRestakingProgram,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -167,7 +167,7 @@ export function getInitializeWeightTableInstruction<
   TAccountNcn,
   TAccountWeightTable,
   TAccountPayer,
-  TAccountRestakingProgramId,
+  TAccountRestakingProgram,
   TAccountSystemProgram
 > {
   // Program address.
@@ -184,8 +184,8 @@ export function getInitializeWeightTableInstruction<
     ncn: { value: input.ncn ?? null, isWritable: false },
     weightTable: { value: input.weightTable ?? null, isWritable: true },
     payer: { value: input.payer ?? null, isWritable: true },
-    restakingProgramId: {
-      value: input.restakingProgramId ?? null,
+    restakingProgram: {
+      value: input.restakingProgram ?? null,
       isWritable: false,
     },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
@@ -212,7 +212,7 @@ export function getInitializeWeightTableInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.payer),
-      getAccountMeta(accounts.restakingProgramId),
+      getAccountMeta(accounts.restakingProgram),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -226,7 +226,7 @@ export function getInitializeWeightTableInstruction<
     TAccountNcn,
     TAccountWeightTable,
     TAccountPayer,
-    TAccountRestakingProgramId,
+    TAccountRestakingProgram,
     TAccountSystemProgram
   >;
 
@@ -244,7 +244,7 @@ export type ParsedInitializeWeightTableInstruction<
     ncn: TAccountMetas[2];
     weightTable: TAccountMetas[3];
     payer: TAccountMetas[4];
-    restakingProgramId: TAccountMetas[5];
+    restakingProgram: TAccountMetas[5];
     systemProgram: TAccountMetas[6];
   };
   data: InitializeWeightTableInstructionData;
@@ -276,7 +276,7 @@ export function parseInitializeWeightTableInstruction<
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
       payer: getNextAccount(),
-      restakingProgramId: getNextAccount(),
+      restakingProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeWeightTableInstructionDataDecoder().decode(

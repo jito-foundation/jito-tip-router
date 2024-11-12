@@ -20,7 +20,7 @@ pub enum TipRouterInstruction {
     #[account(3, signer, name = "ncn_admin")]
     #[account(4, name = "fee_wallet")]
     #[account(5, name = "tie_breaker_admin")]
-    #[account(6, name = "restaking_program_id")]
+    #[account(6, name = "restaking_program")]
     #[account(7, name = "system_program")]
     InitializeNCNConfig {
         dao_fee_bps: u64,
@@ -33,7 +33,7 @@ pub enum TipRouterInstruction {
     #[account(1, writable, name = "config")]
     #[account(2, name = "ncn")]
     #[account(3, signer, name = "ncn_admin")]
-    #[account(4, name = "restaking_program_id")]
+    #[account(4, name = "restaking_program")]
     SetConfigFees {
         new_dao_fee_bps: Option<u64>,
         new_ncn_fee_bps: Option<u64>,
@@ -46,7 +46,7 @@ pub enum TipRouterInstruction {
     #[account(1, name = "ncn")]
     #[account(2, signer, name = "ncn_admin")]
     #[account(3, name = "new_admin")]
-    #[account(4, name = "restaking_program_id")]
+    #[account(4, name = "restaking_program")]
     SetNewAdmin {
         role: ConfigAdminRole,
     },
@@ -57,7 +57,7 @@ pub enum TipRouterInstruction {
     #[account(2, name = "ncn")]
     #[account(3, writable, name = "weight_table")]
     #[account(4, writable, signer, name = "payer")]
-    #[account(5, name = "restaking_program_id")]
+    #[account(5, name = "restaking_program")]
     #[account(6, name = "system_program")]
     InitializeWeightTable{
         first_slot_of_ncn_epoch: Option<u64>,
@@ -68,7 +68,7 @@ pub enum TipRouterInstruction {
     #[account(1, writable, name = "weight_table")]
     #[account(2, signer, name = "weight_table_admin")]
     #[account(3, name = "mint")]
-    #[account(4, name = "restaking_program_id")]
+    #[account(4, name = "restaking_program")]
     AdminUpdateWeightTable{
         ncn_epoch: u64,
         weight: u128,
@@ -81,7 +81,7 @@ pub enum TipRouterInstruction {
     #[account(3, name = "weight_table")]
     #[account(4, writable, name = "epoch_snapshot")]
     #[account(5, writable, signer, name = "payer")]
-    #[account(6, name = "restaking_program_id")]
+    #[account(6, name = "restaking_program")]
     #[account(7, name = "system_program")]
     InitializeEpochSnapshot{
         first_slot_of_ncn_epoch: Option<u64>,
@@ -96,7 +96,7 @@ pub enum TipRouterInstruction {
     #[account(5, writable, name = "epoch_snapshot")]
     #[account(6, writable, name = "operator_snapshot")]
     #[account(7, writable, signer, name = "payer")]
-    #[account(8, name = "restaking_program_id")]
+    #[account(8, name = "restaking_program")]
     #[account(9, name = "system_program")]
     InitializeOperatorSnapshot{
         first_slot_of_ncn_epoch: Option<u64>,
@@ -116,8 +116,9 @@ pub enum TipRouterInstruction {
     #[account(10, writable, name = "operator_snapshot")]
     #[account(11, writable, name = "vault_operator_delegation_snapshot")]
     #[account(12, writable, signer, name = "payer")]
-    #[account(13, name = "restaking_program_id")]
-    #[account(14, name = "system_program")]
+    #[account(13, name = "vault_program")]
+    #[account(14, name = "restaking_program")]
+    #[account(15, name = "system_program")]
     InitializeVaultOperatorDelegationSnapshot{
         first_slot_of_ncn_epoch: Option<u64>,
     },

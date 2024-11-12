@@ -36,7 +36,7 @@
           "isSigner": false
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -89,7 +89,7 @@
           "isSigner": true
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -149,7 +149,7 @@
           "isSigner": false
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -196,7 +196,7 @@
           "isSigner": true
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -243,7 +243,7 @@
           "isSigner": false
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -297,7 +297,7 @@
           "isSigner": true
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -364,7 +364,7 @@
           "isSigner": true
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -456,7 +456,12 @@
           "isSigner": true
         },
         {
-          "name": "restakingProgramId",
+          "name": "vaultProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         },

@@ -24,7 +24,7 @@ pub struct InitializeOperatorSnapshot {
 
     pub payer: solana_program::pubkey::Pubkey,
 
-    pub restaking_program_id: solana_program::pubkey::Pubkey,
+    pub restaking_program: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
@@ -74,7 +74,7 @@ impl InitializeOperatorSnapshot {
             self.payer, true,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program_id,
+            self.restaking_program,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -131,7 +131,7 @@ pub struct InitializeOperatorSnapshotInstructionArgs {
 ///   5. `[writable]` epoch_snapshot
 ///   6. `[writable]` operator_snapshot
 ///   7. `[writable, signer]` payer
-///   8. `[]` restaking_program_id
+///   8. `[]` restaking_program
 ///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeOperatorSnapshotBuilder {
@@ -143,7 +143,7 @@ pub struct InitializeOperatorSnapshotBuilder {
     epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
     operator_snapshot: Option<solana_program::pubkey::Pubkey>,
     payer: Option<solana_program::pubkey::Pubkey>,
-    restaking_program_id: Option<solana_program::pubkey::Pubkey>,
+    restaking_program: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     first_slot_of_ncn_epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -203,11 +203,11 @@ impl InitializeOperatorSnapshotBuilder {
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn restaking_program(
         &mut self,
-        restaking_program_id: solana_program::pubkey::Pubkey,
+        restaking_program: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.restaking_program_id = Some(restaking_program_id);
+        self.restaking_program = Some(restaking_program);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -255,9 +255,9 @@ impl InitializeOperatorSnapshotBuilder {
                 .operator_snapshot
                 .expect("operator_snapshot is not set"),
             payer: self.payer.expect("payer is not set"),
-            restaking_program_id: self
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+            restaking_program: self
+                .restaking_program
+                .expect("restaking_program is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -288,7 +288,7 @@ pub struct InitializeOperatorSnapshotCpiAccounts<'a, 'b> {
 
     pub payer: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
@@ -314,7 +314,7 @@ pub struct InitializeOperatorSnapshotCpi<'a, 'b> {
 
     pub payer: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -337,7 +337,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
             epoch_snapshot: accounts.epoch_snapshot,
             operator_snapshot: accounts.operator_snapshot,
             payer: accounts.payer,
-            restaking_program_id: accounts.restaking_program_id,
+            restaking_program: accounts.restaking_program,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -409,7 +409,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
             true,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program_id.key,
+            *self.restaking_program.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -444,7 +444,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
         account_infos.push(self.epoch_snapshot.clone());
         account_infos.push(self.operator_snapshot.clone());
         account_infos.push(self.payer.clone());
-        account_infos.push(self.restaking_program_id.clone());
+        account_infos.push(self.restaking_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -470,7 +470,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
 ///   5. `[writable]` epoch_snapshot
 ///   6. `[writable]` operator_snapshot
 ///   7. `[writable, signer]` payer
-///   8. `[]` restaking_program_id
+///   8. `[]` restaking_program
 ///   9. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
@@ -489,7 +489,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
             epoch_snapshot: None,
             operator_snapshot: None,
             payer: None,
-            restaking_program_id: None,
+            restaking_program: None,
             system_program: None,
             first_slot_of_ncn_epoch: None,
             __remaining_accounts: Vec::new(),
@@ -555,11 +555,11 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn restaking_program(
         &mut self,
-        restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.restaking_program_id = Some(restaking_program_id);
+        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -651,10 +651,10 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
 
             payer: self.instruction.payer.expect("payer is not set"),
 
-            restaking_program_id: self
+            restaking_program: self
                 .instruction
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+                .restaking_program
+                .expect("restaking_program is not set"),
 
             system_program: self
                 .instruction
@@ -680,7 +680,7 @@ struct InitializeOperatorSnapshotCpiBuilderInstruction<'a, 'b> {
     epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program_id: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     first_slot_of_ncn_epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

@@ -17,7 +17,7 @@ pub struct SetConfigFees {
 
     pub ncn_admin: solana_program::pubkey::Pubkey,
 
-    pub restaking_program_id: solana_program::pubkey::Pubkey,
+    pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
 impl SetConfigFees {
@@ -50,7 +50,7 @@ impl SetConfigFees {
             true,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program_id,
+            self.restaking_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -100,14 +100,14 @@ pub struct SetConfigFeesInstructionArgs {
 ///   1. `[writable]` config
 ///   2. `[]` ncn
 ///   3. `[signer]` ncn_admin
-///   4. `[]` restaking_program_id
+///   4. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct SetConfigFeesBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     ncn_admin: Option<solana_program::pubkey::Pubkey>,
-    restaking_program_id: Option<solana_program::pubkey::Pubkey>,
+    restaking_program: Option<solana_program::pubkey::Pubkey>,
     new_dao_fee_bps: Option<u64>,
     new_ncn_fee_bps: Option<u64>,
     new_block_engine_fee_bps: Option<u64>,
@@ -143,11 +143,11 @@ impl SetConfigFeesBuilder {
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn restaking_program(
         &mut self,
-        restaking_program_id: solana_program::pubkey::Pubkey,
+        restaking_program: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.restaking_program_id = Some(restaking_program_id);
+        self.restaking_program = Some(restaking_program);
         self
     }
     /// `[optional argument]`
@@ -199,9 +199,9 @@ impl SetConfigFeesBuilder {
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             ncn_admin: self.ncn_admin.expect("ncn_admin is not set"),
-            restaking_program_id: self
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+            restaking_program: self
+                .restaking_program
+                .expect("restaking_program is not set"),
         };
         let args = SetConfigFeesInstructionArgs {
             new_dao_fee_bps: self.new_dao_fee_bps.clone(),
@@ -224,7 +224,7 @@ pub struct SetConfigFeesCpiAccounts<'a, 'b> {
 
     pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `set_config_fees` CPI instruction.
@@ -240,7 +240,7 @@ pub struct SetConfigFeesCpi<'a, 'b> {
 
     pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: SetConfigFeesInstructionArgs,
 }
@@ -257,7 +257,7 @@ impl<'a, 'b> SetConfigFeesCpi<'a, 'b> {
             config: accounts.config,
             ncn: accounts.ncn,
             ncn_admin: accounts.ncn_admin,
-            restaking_program_id: accounts.restaking_program_id,
+            restaking_program: accounts.restaking_program,
             __args: args,
         }
     }
@@ -312,7 +312,7 @@ impl<'a, 'b> SetConfigFeesCpi<'a, 'b> {
             true,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program_id.key,
+            *self.restaking_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -337,7 +337,7 @@ impl<'a, 'b> SetConfigFeesCpi<'a, 'b> {
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.ncn_admin.clone());
-        account_infos.push(self.restaking_program_id.clone());
+        account_infos.push(self.restaking_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -358,7 +358,7 @@ impl<'a, 'b> SetConfigFeesCpi<'a, 'b> {
 ///   1. `[writable]` config
 ///   2. `[]` ncn
 ///   3. `[signer]` ncn_admin
-///   4. `[]` restaking_program_id
+///   4. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct SetConfigFeesCpiBuilder<'a, 'b> {
     instruction: Box<SetConfigFeesCpiBuilderInstruction<'a, 'b>>,
@@ -372,7 +372,7 @@ impl<'a, 'b> SetConfigFeesCpiBuilder<'a, 'b> {
             config: None,
             ncn: None,
             ncn_admin: None,
-            restaking_program_id: None,
+            restaking_program: None,
             new_dao_fee_bps: None,
             new_ncn_fee_bps: None,
             new_block_engine_fee_bps: None,
@@ -411,11 +411,11 @@ impl<'a, 'b> SetConfigFeesCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn restaking_program(
         &mut self,
-        restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.restaking_program_id = Some(restaking_program_id);
+        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     /// `[optional argument]`
@@ -503,10 +503,10 @@ impl<'a, 'b> SetConfigFeesCpiBuilder<'a, 'b> {
 
             ncn_admin: self.instruction.ncn_admin.expect("ncn_admin is not set"),
 
-            restaking_program_id: self
+            restaking_program: self
                 .instruction
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+                .restaking_program
+                .expect("restaking_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -523,7 +523,7 @@ struct SetConfigFeesCpiBuilderInstruction<'a, 'b> {
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program_id: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     new_dao_fee_bps: Option<u64>,
     new_ncn_fee_bps: Option<u64>,
     new_block_engine_fee_bps: Option<u64>,

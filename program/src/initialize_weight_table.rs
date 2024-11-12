@@ -21,20 +21,20 @@ pub fn process_initialize_weight_table(
     accounts: &[AccountInfo],
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn, weight_table, payer, restaking_program_id, system_program] =
+    let [restaking_config, ncn_config, ncn, weight_table, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program_id.key.ne(&jito_restaking_program::id()) {
+    if restaking_program.key.ne(&jito_restaking_program::id()) {
         msg!("Incorrect restaking program ID");
         return Err(ProgramError::InvalidAccountData);
     }
 
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    Config::load(restaking_program_id.key, restaking_config, false)?;
-    Ncn::load(restaking_program_id.key, ncn, false)?;
+    Config::load(restaking_program.key, restaking_config, false)?;
+    Ncn::load(restaking_program.key, ncn, false)?;
 
     load_system_account(weight_table, true)?;
     load_system_program(system_program)?;

@@ -1,15 +1,23 @@
 use jito_bytemuck::AccountDeserialize;
-use jito_restaking_core::config::Config;
+use jito_restaking_core::{
+    config::Config, ncn_operator_state::NcnOperatorState, ncn_vault_ticket::NcnVaultTicket,
+};
 use jito_tip_router_client::{
     instructions::{
         AdminUpdateWeightTableBuilder, InitializeEpochSnapshotBuilder, InitializeNCNConfigBuilder,
+        InitializeOperatorSnapshotBuilder, InitializeVaultOperatorDelegationSnapshotBuilder,
         InitializeWeightTableBuilder, SetConfigFeesBuilder, SetNewAdminBuilder,
     },
     types::ConfigAdminRole,
 };
 use jito_tip_router_core::{
-    epoch_snapshot::EpochSnapshot, error::TipRouterError, ncn_config::NcnConfig,
+    epoch_snapshot::{EpochSnapshot, OperatorSnapshot, VaultOperatorDelegationSnapshot},
+    error::TipRouterError,
+    ncn_config::NcnConfig,
     weight_table::WeightTable,
+};
+use jito_vault_core::{
+    vault_ncn_ticket::VaultNcnTicket, vault_operator_delegation::VaultOperatorDelegation,
 };
 use solana_program::{
     instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
@@ -114,7 +122,7 @@ impl TipRouterClient {
             .ncn_admin(ncn_admin.pubkey())
             .fee_wallet(fee_wallet)
             .tie_breaker_admin(tie_breaker_admin)
-            .restaking_program_id(jito_restaking_program::id())
+            .restaking_program(jito_restaking_program::id())
             .dao_fee_bps(dao_fee_bps)
             .ncn_fee_bps(ncn_fee_bps)
             .block_engine_fee_bps(block_engine_fee_bps)
@@ -168,7 +176,7 @@ impl TipRouterClient {
             .config(config_pda)
             .ncn(ncn_root.ncn_pubkey)
             .ncn_admin(ncn_root.ncn_admin.pubkey())
-            .restaking_program_id(jito_restaking_program::id())
+            .restaking_program(jito_restaking_program::id())
             .new_dao_fee_bps(dao_fee_bps)
             .new_ncn_fee_bps(ncn_fee_bps)
             .new_block_engine_fee_bps(block_engine_fee_bps)
@@ -210,7 +218,7 @@ impl TipRouterClient {
             .ncn(ncn_root.ncn_pubkey)
             .ncn_admin(ncn_root.ncn_admin.pubkey())
             .new_admin(new_admin)
-            .restaking_program_id(jito_restaking_program::id())
+            .restaking_program(jito_restaking_program::id())
             .role(role)
             .instruction();
 
@@ -252,7 +260,7 @@ impl TipRouterClient {
             .ncn(ncn)
             .weight_table(weight_table)
             .payer(self.payer.pubkey())
-            .restaking_program_id(jito_restaking_program::id())
+            .restaking_program(jito_restaking_program::id())
             .system_program(system_program::id())
             .instruction();
 
@@ -295,7 +303,7 @@ impl TipRouterClient {
             .weight_table(weight_table)
             .weight_table_admin(self.payer.pubkey())
             .mint(mint)
-            .restaking_program_id(jito_restaking_program::id())
+            .restaking_program(jito_restaking_program::id())
             .weight(weight)
             .instruction();
 
@@ -309,23 +317,15 @@ impl TipRouterClient {
         .await
     }
 
-    pub async fn do_initialize_epoch_snapshot(
-        &mut self,
-        ncn: Pubkey,
-        current_slot: u64,
-    ) -> TestResult<()> {
-        self.initialize_epoch_snapshot(ncn, current_slot).await
+    pub async fn do_initialize_epoch_snapshot(&mut self, ncn: Pubkey, slot: u64) -> TestResult<()> {
+        self.initialize_epoch_snapshot(ncn, slot).await
     }
 
-    pub async fn initialize_epoch_snapshot(
-        &mut self,
-        ncn: Pubkey,
-        current_slot: u64,
-    ) -> TestResult<()> {
+    pub async fn initialize_epoch_snapshot(&mut self, ncn: Pubkey, slot: u64) -> TestResult<()> {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let restaking_config_account = self.get_restaking_config().await?;
-        let ncn_epoch = current_slot / restaking_config_account.epoch_length();
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
 
         let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let weight_table =
@@ -335,14 +335,168 @@ impl TipRouterClient {
             EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
 
         let ix = InitializeEpochSnapshotBuilder::new()
-            .restaking_config(restaking_config)
             .ncn_config(config_pda)
+            .restaking_config(restaking_config)
             .ncn(ncn)
             .weight_table(weight_table)
             .epoch_snapshot(epoch_snapshot)
             .payer(self.payer.pubkey())
-            .restaking_program_id(jito_restaking_program::id())
+            .restaking_program(jito_restaking_program::id())
             .system_program(system_program::id())
+            .first_slot_of_ncn_epoch(slot)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_initalize_operator_snapshot(
+        &mut self,
+        operator: Pubkey,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        self.initalize_operator_snapshot(operator, ncn, slot).await
+    }
+
+    pub async fn initalize_operator_snapshot(
+        &mut self,
+        operator: Pubkey,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
+
+        let restaking_config_account = self.get_restaking_config().await?;
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
+
+        let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
+        let epoch_snapshot =
+            EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
+
+        let ncn_operator_state =
+            NcnOperatorState::find_program_address(&jito_restaking_program::id(), &ncn, &operator)
+                .0;
+
+        let operator_snapshot = OperatorSnapshot::find_program_address(
+            &jito_tip_router_program::id(),
+            &operator,
+            &ncn,
+            ncn_epoch,
+        )
+        .0;
+
+        let ix = InitializeOperatorSnapshotBuilder::new()
+            .ncn_config(config_pda)
+            .restaking_config(restaking_config)
+            .ncn(ncn)
+            .operator(operator)
+            .ncn_operator_state(ncn_operator_state)
+            .epoch_snapshot(epoch_snapshot)
+            .operator_snapshot(operator_snapshot)
+            .payer(self.payer.pubkey())
+            .restaking_program(jito_restaking_program::id())
+            .system_program(system_program::id())
+            .first_slot_of_ncn_epoch(slot)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_initalize_vault_operator_delegation_snapshot(
+        &mut self,
+        vault: Pubkey,
+        operator: Pubkey,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        self.initalize_vault_operator_delegation_snapshot(vault, operator, ncn, slot)
+            .await
+    }
+
+    pub async fn initalize_vault_operator_delegation_snapshot(
+        &mut self,
+        vault: Pubkey,
+        operator: Pubkey,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
+
+        let restaking_config_account = self.get_restaking_config().await?;
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
+
+        let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
+        let epoch_snapshot =
+            EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
+
+        let operator_snapshot = OperatorSnapshot::find_program_address(
+            &jito_tip_router_program::id(),
+            &operator,
+            &ncn,
+            ncn_epoch,
+        )
+        .0;
+
+        let vault_ncn_ticket =
+            VaultNcnTicket::find_program_address(&jito_vault_program::id(), &vault, &ncn).0;
+
+        let ncn_vault_ticket =
+            NcnVaultTicket::find_program_address(&jito_restaking_program::id(), &ncn, &vault).0;
+
+        let vault_operator_delegation = VaultOperatorDelegation::find_program_address(
+            &jito_vault_program::id(),
+            &vault,
+            &operator,
+        )
+        .0;
+
+        let weight_table =
+            WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
+
+        let vault_operator_delegation_snapshot =
+            VaultOperatorDelegationSnapshot::find_program_address(
+                &jito_tip_router_program::id(),
+                &vault,
+                &operator,
+                &ncn,
+                ncn_epoch,
+            )
+            .0;
+
+        let ix = InitializeVaultOperatorDelegationSnapshotBuilder::new()
+            .ncn_config(config_pda)
+            .restaking_config(restaking_config)
+            .ncn(ncn)
+            .operator(operator)
+            .vault(vault)
+            .vault_ncn_ticket(vault_ncn_ticket)
+            .ncn_vault_ticket(ncn_vault_ticket)
+            .vault_operator_delegation(vault_operator_delegation)
+            .weight_table(weight_table)
+            .epoch_snapshot(epoch_snapshot)
+            .operator_snapshot(operator_snapshot)
+            .vault_operator_delegation_snapshot(vault_operator_delegation_snapshot)
+            .payer(self.payer.pubkey())
+            .vault_program(jito_vault_program::id())
+            .restaking_program(jito_restaking_program::id())
+            .system_program(system_program::id())
+            .first_slot_of_ncn_epoch(slot)
             .instruction();
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;

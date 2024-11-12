@@ -26,43 +26,44 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
     accounts: &[AccountInfo],
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    let [ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_operator_delegation_snapshot, payer, restaking_program_id, system_program] =
+    let [ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_operator_delegation_snapshot, payer, vault_program, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program_id.key.ne(&jito_restaking_program::id()) {
+    if vault_program.key.ne(&jito_vault_program::id()) {
+        msg!("Incorrect vault program ID");
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    if restaking_program.key.ne(&jito_restaking_program::id()) {
         msg!("Incorrect restaking program ID");
         return Err(ProgramError::InvalidAccountData);
     }
 
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    Config::load(restaking_program_id.key, restaking_config, false)?;
-    Ncn::load(restaking_program_id.key, ncn, false)?;
-    Operator::load(restaking_program_id.key, operator, false)?;
-    Vault::load(restaking_program_id.key, vault, false)?;
+    Config::load(restaking_program.key, restaking_config, false)?;
+    Ncn::load(restaking_program.key, ncn, false)?;
+    Operator::load(restaking_program.key, operator, false)?;
+    Vault::load(vault_program.key, vault, false)?;
 
-    VaultNcnTicket::load(
-        restaking_program_id.key,
-        vault_ncn_ticket,
+    VaultOperatorDelegation::load(
+        vault_program.key,
+        vault_operator_delegation,
         vault,
-        ncn,
+        operator,
         false,
     )?;
-    NcnVaultTicket::load(
-        restaking_program_id.key,
-        ncn_vault_ticket,
-        ncn,
-        vault,
-        false,
-    )?;
+    VaultNcnTicket::load(vault_program.key, vault_ncn_ticket, vault, ncn, false)?;
+    NcnVaultTicket::load(restaking_program.key, ncn_vault_ticket, ncn, vault, false)?;
 
     //TODO check that st mint is supported?
     //TODO may not exist
+    //TODO what happens if a new Vault is added inbetween weight table creation and this? - There could be a count mismatch
     if !vault_operator_delegation.data_is_empty() {
         VaultOperatorDelegation::load(
-            restaking_program_id.key,
+            restaking_program.key,
             vault_operator_delegation,
             vault,
             operator,
