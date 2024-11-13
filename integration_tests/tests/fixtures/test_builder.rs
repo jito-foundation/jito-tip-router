@@ -102,15 +102,6 @@ impl TestBuilder {
         )
     }
 
-    pub async fn setup_ncn(&mut self) -> TestResult<NcnRoot> {
-        let mut restaking_program_client = self.restaking_program_client();
-
-        restaking_program_client.do_initialize_config().await?;
-        let ncn_root = restaking_program_client.do_initialize_ncn().await?;
-
-        Ok(ncn_root)
-    }
-
     pub async fn transfer(&mut self, to: &Pubkey, sol: f64) -> Result<(), BanksClientError> {
         let blockhash = self.context.banks_client.get_latest_blockhash().await?;
         self.context
@@ -129,6 +120,19 @@ impl TestBuilder {
                 CommitmentLevel::Processed,
             )
             .await
+    }
+
+    pub async fn setup_ncn(&mut self) -> TestResult<NcnRoot> {
+        let mut restaking_program_client = self.restaking_program_client();
+
+        restaking_program_client.do_initialize_config().await?;
+        let ncn_root = restaking_program_client.do_initialize_ncn().await?;
+
+        Ok(ncn_root)
+    }
+
+    pub async fn add_vault_to_ncn(&mut self, ncn_root: &NcnRoot) {
+        //TODO start here
     }
 
     /// Configures a vault with an NCN and operators fully configured
