@@ -42,29 +42,41 @@ export const JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH = 0x2206; /
 export const JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH = 0x2207; // 8711
 /** InvalidMintForWeightTable: Invalid mint for weight table */
 export const JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE = 0x2208; // 8712
+/** ConfigMintsNotUpdated: Config supported mints do not match NCN Vault Count */
+export const JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED = 0x2209; // 8713
+/** ConfigMintListFull: NCN config vaults are at capacity */
+export const JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL = 0x220a; // 8714
+/** TrackedMintListFull: Tracked mints are at capacity */
+export const JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL = 0x220b; // 8715
+/** TrackedMintsLocked: Tracked mints are locked for the epoch */
+export const JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_LOCKED = 0x220c; // 8716
+/** VaultIndexAlreadyInUse: Vault index already in use by a different mint */
+export const JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE = 0x220d; // 8717
 /** FeeCapExceeded: Fee cap exceeded */
-export const JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED = 0x2209; // 8713
+export const JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED = 0x220e; // 8718
 /** IncorrectNcnAdmin: Incorrect NCN Admin */
-export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN = 0x220a; // 8714
+export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN = 0x220f; // 8719
 /** IncorrectNcn: Incorrect NCN */
-export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN = 0x220b; // 8715
+export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN = 0x2210; // 8720
 /** IncorrectFeeAdmin: Incorrect fee admin */
-export const JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN = 0x220c; // 8716
+export const JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN = 0x2211; // 8721
 /** WeightTableNotFinalized: Weight table not finalized */
-export const JITO_TIP_ROUTER_ERROR__WEIGHT_TABLE_NOT_FINALIZED = 0x220d; // 8717
+export const JITO_TIP_ROUTER_ERROR__WEIGHT_TABLE_NOT_FINALIZED = 0x2212; // 8722
 /** WeightNotFound: Weight not found */
-export const JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND = 0x220e; // 8718
+export const JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND = 0x2213; // 8723
 /** NoOperators: No operators in ncn */
-export const JITO_TIP_ROUTER_ERROR__NO_OPERATORS = 0x220f; // 8719
+export const JITO_TIP_ROUTER_ERROR__NO_OPERATORS = 0x2214; // 8724
 /** VaultOperatorDelegationFinalized: Vault operator delegation is already finalized - should not happen */
-export const JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED = 0x2210; // 8720
+export const JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED = 0x2215; // 8725
 /** OperatorFinalized: Operator is already finalized - should not happen */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED = 0x2211; // 8721
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED = 0x2216; // 8726
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
+  | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL
+  | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED
   | typeof JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED
@@ -79,6 +91,9 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__NO_OPERATORS
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE
+  | typeof JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL
+  | typeof JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_LOCKED
+  | typeof JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH
@@ -92,6 +107,8 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW]: `Overflow`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
+    [JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL]: `NCN config vaults are at capacity`,
+    [JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED]: `Config supported mints do not match NCN Vault Count`,
     [JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO]: `Zero in the denominator`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE]: `Duplicate mints in table`,
     [JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED]: `Fee cap exceeded`,
@@ -106,6 +123,9 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__NO_OPERATORS]: `No operators in ncn`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED]: `Operator is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE]: `Too many mints for table`,
+    [JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL]: `Tracked mints are at capacity`,
+    [JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_LOCKED]: `Tracked mints are locked for the epoch`,
+    [JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE]: `Vault index already in use by a different mint`,
     [JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED]: `Vault operator delegation is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH]: `Weight mints do not match - length`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH]: `Weight mints do not match - mint hash`,

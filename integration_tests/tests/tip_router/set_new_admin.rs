@@ -29,6 +29,8 @@ mod tests {
             .await?;
         assert_eq!(config.fee_admin, new_fee_admin);
 
+        fixture.warp_slot_incremental(1).await?;
+
         let new_tie_breaker = Pubkey::new_unique();
         tip_router_client
             .do_set_new_admin(ConfigAdminRole::TieBreakerAdmin, new_tie_breaker, &ncn_root)

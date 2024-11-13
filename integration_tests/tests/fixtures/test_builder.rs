@@ -95,6 +95,13 @@ impl TestBuilder {
         )
     }
 
+    pub fn vault_client(&self) -> VaultProgramClient {
+        VaultProgramClient::new(
+            self.context.banks_client.clone(),
+            self.context.payer.insecure_clone(),
+        )
+    }
+
     pub fn vault_program_client(&self) -> VaultProgramClient {
         VaultProgramClient::new(
             self.context.banks_client.clone(),

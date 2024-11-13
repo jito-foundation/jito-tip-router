@@ -51,33 +51,48 @@ pub enum JitoTipRouterError {
     /// 8712 - Invalid mint for weight table
     #[error("Invalid mint for weight table")]
     InvalidMintForWeightTable = 0x2208,
-    /// 8713 - Fee cap exceeded
+    /// 8713 - Config supported mints do not match NCN Vault Count
+    #[error("Config supported mints do not match NCN Vault Count")]
+    ConfigMintsNotUpdated = 0x2209,
+    /// 8714 - NCN config vaults are at capacity
+    #[error("NCN config vaults are at capacity")]
+    ConfigMintListFull = 0x220A,
+    /// 8715 - Tracked mints are at capacity
+    #[error("Tracked mints are at capacity")]
+    TrackedMintListFull = 0x220B,
+    /// 8716 - Tracked mints are locked for the epoch
+    #[error("Tracked mints are locked for the epoch")]
+    TrackedMintsLocked = 0x220C,
+    /// 8717 - Vault index already in use by a different mint
+    #[error("Vault index already in use by a different mint")]
+    VaultIndexAlreadyInUse = 0x220D,
+    /// 8718 - Fee cap exceeded
     #[error("Fee cap exceeded")]
-    FeeCapExceeded = 0x2209,
-    /// 8714 - Incorrect NCN Admin
+    FeeCapExceeded = 0x220E,
+    /// 8719 - Incorrect NCN Admin
     #[error("Incorrect NCN Admin")]
-    IncorrectNcnAdmin = 0x220A,
-    /// 8715 - Incorrect NCN
+    IncorrectNcnAdmin = 0x220F,
+    /// 8720 - Incorrect NCN
     #[error("Incorrect NCN")]
-    IncorrectNcn = 0x220B,
-    /// 8716 - Incorrect fee admin
+    IncorrectNcn = 0x2210,
+    /// 8721 - Incorrect fee admin
     #[error("Incorrect fee admin")]
-    IncorrectFeeAdmin = 0x220C,
-    /// 8717 - Weight table not finalized
+    IncorrectFeeAdmin = 0x2211,
+    /// 8722 - Weight table not finalized
     #[error("Weight table not finalized")]
-    WeightTableNotFinalized = 0x220D,
-    /// 8718 - Weight not found
+    WeightTableNotFinalized = 0x2212,
+    /// 8723 - Weight not found
     #[error("Weight not found")]
-    WeightNotFound = 0x220E,
-    /// 8719 - No operators in ncn
+    WeightNotFound = 0x2213,
+    /// 8724 - No operators in ncn
     #[error("No operators in ncn")]
-    NoOperators = 0x220F,
-    /// 8720 - Vault operator delegation is already finalized - should not happen
+    NoOperators = 0x2214,
+    /// 8725 - Vault operator delegation is already finalized - should not happen
     #[error("Vault operator delegation is already finalized - should not happen")]
-    VaultOperatorDelegationFinalized = 0x2210,
-    /// 8721 - Operator is already finalized - should not happen
+    VaultOperatorDelegationFinalized = 0x2215,
+    /// 8726 - Operator is already finalized - should not happen
     #[error("Operator is already finalized - should not happen")]
-    OperatorFinalized = 0x2211,
+    OperatorFinalized = 0x2216,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

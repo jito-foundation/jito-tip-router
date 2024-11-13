@@ -2,8 +2,10 @@ mod admin_update_weight_table;
 mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
 mod initialize_operator_snapshot;
+mod initialize_tracked_mints;
 mod initialize_vault_operator_delegation_snapshot;
 mod initialize_weight_table;
+mod register_mint;
 mod set_config_fees;
 mod set_new_admin;
 
@@ -23,8 +25,9 @@ use crate::{
     initialize_epoch_snapshot::process_initialize_epoch_snapshot,
     initialize_ncn_config::process_initialize_ncn_config,
     initialize_operator_snapshot::process_initialize_operator_snapshot,
+    initialize_tracked_mints::process_initialize_tracked_mints,
     initialize_vault_operator_delegation_snapshot::process_initialize_vault_operator_delegation_snapshot,
-    initialize_weight_table::process_initialize_weight_table,
+    initialize_weight_table::process_initialize_weight_table, register_mint::process_register_mint,
     set_config_fees::process_set_config_fees,
 };
 
@@ -128,6 +131,14 @@ pub fn process_instruction(
         TipRouterInstruction::SetNewAdmin { role } => {
             msg!("Instruction: SetNewAdmin");
             process_set_new_admin(program_id, accounts, role)
+        }
+        TipRouterInstruction::RegisterMint => {
+            msg!("Instruction: RegisterMint");
+            process_register_mint(program_id, accounts)
+        }
+        TipRouterInstruction::InitializeTrackedMints => {
+            msg!("Instruction: InitializeTrackedMints");
+            process_initialize_tracked_mints(program_id, accounts)
         }
     }
 }

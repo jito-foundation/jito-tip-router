@@ -2,7 +2,8 @@
 pub enum Discriminators {
     NCNConfig = 1,
     WeightTable = 2,
-    EpochSnapshot = 3,
-    OperatorSnapshot = 4,
-    VaultOperatorDelegationSnapshot = 5,
+    TrackedMints = 3,
+    EpochSnapshot = 4,
+    OperatorSnapshot = 5,
+    VaultOperatorDelegationSnapshot = 6,
 }

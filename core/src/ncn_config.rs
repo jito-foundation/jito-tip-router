@@ -1,14 +1,3 @@
-// Global configuration for the tip router
-
-// Contains:
-// Main NCN address - updatable?
-// Admins
-// - config admin - should this be here? or just use main NCN admin?
-// - Weight table upload admin (hot wallet) (this exists in NCN, do we want it here too? since custom weight table)
-// - Tie breaker admin (hot wallet) (depending on tie breaker process?)
-// DAO fee share
-// NCN fee share
-
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
@@ -30,8 +19,7 @@ pub struct NcnConfig {
 
     /// Bump seed for the PDA
     pub bump: u8,
-
-    /// Reserved space
+    // /// Reserved space
     reserved: [u8; 127],
 }
 
@@ -61,7 +49,7 @@ impl NcnConfig {
     }
 
     pub fn find_program_address(program_id: &Pubkey, ncn: &Pubkey) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = vec![b"config".to_vec(), ncn.to_bytes().to_vec()];
+        let seeds = Self::seeds(ncn);
         let (address, bump) = Pubkey::find_program_address(
             &seeds.iter().map(|s| s.as_slice()).collect::<Vec<_>>(),
             program_id,

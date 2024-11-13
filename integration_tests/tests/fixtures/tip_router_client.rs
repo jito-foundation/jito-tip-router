@@ -5,8 +5,9 @@ use jito_restaking_core::{
 use jito_tip_router_client::{
     instructions::{
         AdminUpdateWeightTableBuilder, InitializeEpochSnapshotBuilder, InitializeNCNConfigBuilder,
-        InitializeOperatorSnapshotBuilder, InitializeVaultOperatorDelegationSnapshotBuilder,
-        InitializeWeightTableBuilder, SetConfigFeesBuilder, SetNewAdminBuilder,
+        InitializeOperatorSnapshotBuilder, InitializeTrackedMintsBuilder,
+        InitializeVaultOperatorDelegationSnapshotBuilder, InitializeWeightTableBuilder,
+        RegisterMintBuilder, SetConfigFeesBuilder, SetNewAdminBuilder,
     },
     types::ConfigAdminRole,
 };
@@ -14,6 +15,7 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot, VaultOperatorDelegationSnapshot},
     error::TipRouterError,
     ncn_config::NcnConfig,
+    tracked_mints::TrackedMints,
     weight_table::WeightTable,
 };
 use jito_vault_core::{
@@ -25,6 +27,7 @@ use solana_program::{
 };
 use solana_program_test::BanksClient;
 use solana_sdk::{
+    clock::Clock,
     commitment_config::CommitmentLevel,
     signature::{Keypair, Signer},
     system_program,
@@ -73,6 +76,14 @@ impl TipRouterClient {
         Ok(())
     }
 
+    pub async fn setup_tip_router(&mut self, ncn_root: &NcnRoot) -> TestResult<()> {
+        self.do_initialize_config(ncn_root.ncn_pubkey, &ncn_root.ncn_admin)
+            .await?;
+        self.do_initialize_tracked_mints(ncn_root.ncn_pubkey)
+            .await?;
+        Ok(())
+    }
+
     pub async fn get_restaking_config(&mut self) -> TestResult<Config> {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
         let restaking_config_data = self
@@ -88,6 +99,17 @@ impl TipRouterClient {
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_pubkey).0;
         let config = self.banks_client.get_account(config_pda).await?.unwrap();
         Ok(*NcnConfig::try_from_slice_unchecked(config.data.as_slice()).unwrap())
+    }
+
+    pub async fn get_tracked_mints(&mut self, ncn_pubkey: Pubkey) -> TestResult<TrackedMints> {
+        let tracked_mints_pda =
+            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn_pubkey).0;
+        let tracked_mints = self
+            .banks_client
+            .get_account(tracked_mints_pda)
+            .await?
+            .unwrap();
+        Ok(*TrackedMints::try_from_slice_unchecked(tracked_mints.data.as_slice()).unwrap())
     }
 
     pub async fn do_initialize_config(
@@ -250,13 +272,14 @@ impl TipRouterClient {
         let restaking_config_account = self.get_restaking_config().await?;
         let ncn_epoch = current_slot / restaking_config_account.epoch_length();
 
-        let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+        let tracked_mints_pda =
+            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
 
         let ix = InitializeWeightTableBuilder::new()
             .restaking_config(restaking_config)
-            .ncn_config(config_pda)
+            .tracked_mints(tracked_mints_pda)
             .ncn(ncn)
             .weight_table(weight_table)
             .payer(self.payer.pubkey())
@@ -305,6 +328,101 @@ impl TipRouterClient {
             .mint(mint)
             .restaking_program(jito_restaking_program::id())
             .weight(weight)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_initialize_tracked_mints(&mut self, ncn: Pubkey) -> TestResult<()> {
+        let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+        let tracked_mints =
+            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
+        self.initialize_tracked_mints(&ncn_config, &tracked_mints, &ncn)
+            .await
+    }
+
+    pub async fn initialize_tracked_mints(
+        &mut self,
+        ncn_config: &Pubkey,
+        tracked_mints: &Pubkey,
+        ncn: &Pubkey,
+    ) -> TestResult<()> {
+        let ix = InitializeTrackedMintsBuilder::new()
+            .ncn_config(*ncn_config)
+            .tracked_mints(*tracked_mints)
+            .ncn(*ncn)
+            .payer(self.payer.pubkey())
+            .system_program(system_program::id())
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_register_mint(
+        &mut self,
+        ncn: Pubkey,
+        vault: Pubkey,
+        vault_ncn_ticket: Pubkey,
+        ncn_vault_ticket: Pubkey,
+    ) -> TestResult<()> {
+        let restaking_config_address =
+            Config::find_program_address(&jito_restaking_program::id()).0;
+        let tracked_mints =
+            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
+        let restaking_config = self.get_restaking_config().await?;
+        let current_slot = self.banks_client.get_sysvar::<Clock>().await?.slot;
+        let ncn_epoch = current_slot / restaking_config.epoch_length();
+        let weight_table =
+            WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
+
+        self.register_mint(
+            restaking_config_address,
+            tracked_mints,
+            ncn,
+            weight_table,
+            vault,
+            vault_ncn_ticket,
+            ncn_vault_ticket,
+        )
+        .await
+    }
+
+    pub async fn register_mint(
+        &mut self,
+        restaking_config: Pubkey,
+        tracked_mints: Pubkey,
+        ncn: Pubkey,
+        weight_table: Pubkey,
+        vault: Pubkey,
+        vault_ncn_ticket: Pubkey,
+        ncn_vault_ticket: Pubkey,
+    ) -> TestResult<()> {
+        let ix = RegisterMintBuilder::new()
+            .restaking_config(restaking_config)
+            .tracked_mints(tracked_mints)
+            .ncn(ncn)
+            .weight_table(weight_table)
+            .vault(vault)
+            .vault_ncn_ticket(vault_ncn_ticket)
+            .ncn_vault_ticket(ncn_vault_ticket)
+            .restaking_program_id(jito_restaking_program::id())
+            .vault_program_id(jito_vault_program::id())
             .instruction();
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;

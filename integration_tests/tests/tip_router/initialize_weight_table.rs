@@ -13,10 +13,7 @@ mod tests {
 
         let slot = fixture.clock().await.slot;
 
-        //TODO fix when config has mints
-        tip_router_client
-            .do_initialize_config(ncn_root.ncn_pubkey, &ncn_root.ncn_admin)
-            .await?;
+        tip_router_client.setup_tip_router(&ncn_root).await?;
 
         tip_router_client
             .do_initialize_weight_table(ncn_root.ncn_pubkey, slot)

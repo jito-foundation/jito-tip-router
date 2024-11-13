@@ -9,5 +9,6 @@
 export * from './epochSnapshot';
 export * from './ncnConfig';
 export * from './operatorSnapshot';
+export * from './trackedMints';
 export * from './vaultOperatorDelegationSnapshot';
 export * from './weightTable';

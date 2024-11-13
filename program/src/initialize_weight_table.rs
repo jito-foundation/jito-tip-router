@@ -7,7 +7,7 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    loaders::load_ncn_epoch, ncn_config::NcnConfig, weight_table::WeightTable,
+    loaders::load_ncn_epoch, tracked_mints::TrackedMints, weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -21,7 +21,7 @@ pub fn process_initialize_weight_table(
     accounts: &[AccountInfo],
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn, weight_table, payer, restaking_program, system_program] =
+    let [restaking_config, tracked_mints, ncn, weight_table, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -32,7 +32,7 @@ pub fn process_initialize_weight_table(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
+    TrackedMints::load(program_id, ncn.key, tracked_mints, false)?;
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
@@ -43,11 +43,22 @@ pub fn process_initialize_weight_table(
     let current_slot = Clock::get()?.slot;
     let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
 
-    let _todo_pubkeys = {
-        let ncn_config_data = ncn_config.data.borrow();
-        let ncn_config = NcnConfig::try_from_slice_unchecked(&ncn_config_data)?;
-        ncn_config.bump
+    let vault_count = {
+        let ncn_data = ncn.data.borrow();
+        let ncn = Ncn::try_from_slice_unchecked(&ncn_data)?;
+        ncn.vault_count()
     };
+
+    let (tracked_mint_count, unique_mints) = {
+        let tracked_mints_data = tracked_mints.data.borrow();
+        let tracked_mints = TrackedMints::try_from_slice_unchecked(&tracked_mints_data)?;
+        (tracked_mints.mint_count(), tracked_mints.get_unique_mints())
+    };
+
+    if vault_count != tracked_mint_count {
+        msg!("Vault count does not match supported mint count");
+        return Err(ProgramError::InvalidAccountData);
+    }
 
     let (weight_table_pubkey, weight_table_bump, mut weight_table_seeds) =
         WeightTable::find_program_address(program_id, ncn.key, ncn_epoch);
@@ -80,8 +91,7 @@ pub fn process_initialize_weight_table(
 
     *weight_table_account = WeightTable::new(*ncn.key, ncn_epoch, current_slot, weight_table_bump);
 
-    //TODO pass in st_mint list from config
-    weight_table_account.initalize_weight_table(&[])?;
+    weight_table_account.initalize_weight_table(&unique_mints)?;
 
     Ok(())
 }

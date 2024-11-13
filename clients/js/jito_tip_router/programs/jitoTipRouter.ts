@@ -17,8 +17,10 @@ import {
   type ParsedInitializeEpochSnapshotInstruction,
   type ParsedInitializeNCNConfigInstruction,
   type ParsedInitializeOperatorSnapshotInstruction,
+  type ParsedInitializeTrackedMintsInstruction,
   type ParsedInitializeVaultOperatorDelegationSnapshotInstruction,
   type ParsedInitializeWeightTableInstruction,
+  type ParsedRegisterMintInstruction,
   type ParsedSetConfigFeesInstruction,
   type ParsedSetNewAdminInstruction,
 } from '../instructions';
@@ -31,6 +33,7 @@ export enum JitoTipRouterAccount {
   OperatorSnapshot,
   VaultOperatorDelegationSnapshot,
   NcnConfig,
+  TrackedMints,
   WeightTable,
 }
 
@@ -43,6 +46,8 @@ export enum JitoTipRouterInstruction {
   InitializeEpochSnapshot,
   InitializeOperatorSnapshot,
   InitializeVaultOperatorDelegationSnapshot,
+  RegisterMint,
+  InitializeTrackedMints,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -72,6 +77,12 @@ export function identifyJitoTipRouterInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(7), 0)) {
     return JitoTipRouterInstruction.InitializeVaultOperatorDelegationSnapshot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
+    return JitoTipRouterInstruction.RegisterMint;
+  }
+  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
+    return JitoTipRouterInstruction.InitializeTrackedMints;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -104,4 +115,10 @@ export type ParsedJitoTipRouterInstruction<
     } & ParsedInitializeOperatorSnapshotInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.InitializeVaultOperatorDelegationSnapshot;
-    } & ParsedInitializeVaultOperatorDelegationSnapshotInstruction<TProgram>);
+    } & ParsedInitializeVaultOperatorDelegationSnapshotInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.RegisterMint;
+    } & ParsedRegisterMintInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeTrackedMints;
+    } & ParsedInitializeTrackedMintsInstruction<TProgram>);
