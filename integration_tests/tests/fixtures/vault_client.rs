@@ -49,6 +49,15 @@ pub struct VaultRoot {
     pub vault_admin: Keypair,
 }
 
+impl Clone for VaultRoot {
+    fn clone(&self) -> Self {
+        Self {
+            vault_pubkey: self.vault_pubkey,
+            vault_admin: self.vault_admin.insecure_clone(),
+        }
+    }
+}
+
 impl Debug for VaultRoot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(

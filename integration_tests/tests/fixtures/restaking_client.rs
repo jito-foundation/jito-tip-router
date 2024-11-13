@@ -36,10 +36,28 @@ pub struct NcnRoot {
     pub ncn_admin: Keypair,
 }
 
+impl Clone for NcnRoot {
+    fn clone(&self) -> Self {
+        Self {
+            ncn_pubkey: self.ncn_pubkey,
+            ncn_admin: self.ncn_admin.insecure_clone(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct OperatorRoot {
     pub operator_pubkey: Pubkey,
     pub operator_admin: Keypair,
+}
+
+impl Clone for OperatorRoot {
+    fn clone(&self) -> Self {
+        Self {
+            operator_pubkey: self.operator_pubkey,
+            operator_admin: self.operator_admin.insecure_clone(),
+        }
+    }
 }
 
 pub struct RestakingProgramClient {
