@@ -423,21 +423,24 @@ impl OperatorSnapshot {
         self.vault_operator_delegations_registered() == self.vault_operator_delegation_count()
     }
 
+    pub fn contains_vault_index(&self, vault_index: u64) -> bool {
+        self.vault_operator_votes
+            .iter()
+            .any(|v| v.vault_index() == vault_index)
+    }
+
     pub fn insert_vault_operator_votes(
         &mut self,
         vault: Pubkey,
         vault_index: u64,
         votes: u128,
     ) -> Result<(), TipRouterError> {
-        // Check for duplicate vaults
-        for vault_operator_vote in self.vault_operator_votes.iter_mut() {
-            if vault_operator_vote.vault_index() == vault_index {
-                return Err(TipRouterError::DuplicateVaultOperatorDelegation);
-            }
-        }
-
         if self.vault_operator_delegations_registered() > Self::MAX_VAULT_OPERATOR_VOTES as u64 {
             return Err(TipRouterError::TooManyVaultOperatorDelegations);
+        }
+
+        if self.contains_vault_index(vault_index) {
+            return Err(TipRouterError::DuplicateVaultOperatorDelegation);
         }
 
         self.vault_operator_votes[self.vault_operator_delegations_registered() as usize] =
