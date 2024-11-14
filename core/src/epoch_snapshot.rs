@@ -488,134 +488,16 @@ impl OperatorSnapshot {
 
         Ok(())
     }
-}
 
-// PDA'd ["OPERATOR_SNAPSHOT", VAULT, OPERATOR, NCN, NCN_EPOCH_SLOT]
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
-#[repr(C)]
-pub struct VaultOperatorDelegationSnapshot {
-    vault: Pubkey,
-    operator: Pubkey,
-    ncn: Pubkey,
-    ncn_epoch: PodU64,
-    bump: u8,
-
-    slot_created: PodU64,
-
-    is_active: PodBool,
-
-    vault_index: PodU64,
-
-    st_mint: Pubkey,
-    total_security: PodU64,
-    total_votes: PodU128,
-
-    reserved: [u8; 128],
-}
-
-impl Discriminator for VaultOperatorDelegationSnapshot {
-    const DISCRIMINATOR: u8 = Discriminators::VaultOperatorDelegationSnapshot as u8;
-}
-
-impl VaultOperatorDelegationSnapshot {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        vault: Pubkey,
-        operator: Pubkey,
-        ncn: Pubkey,
-        ncn_epoch: u64,
-        bump: u8,
-        current_slot: u64,
-        is_active: bool,
-        vault_index: u64,
-        st_mint: Pubkey,
-        total_security: u64,
-        total_votes: u128,
-    ) -> Self {
-        Self {
-            vault,
-            operator,
-            ncn,
-            ncn_epoch: PodU64::from(ncn_epoch),
-            bump,
-            slot_created: PodU64::from(current_slot),
-            is_active: PodBool::from(is_active),
-            vault_index: PodU64::from(vault_index),
-            st_mint,
-            total_security: PodU64::from(total_security),
-            total_votes: PodU128::from(total_votes),
-            reserved: [0; 128],
-        }
-    }
-    #[allow(clippy::too_many_arguments)]
-    pub fn new_active(
-        vault: Pubkey,
-        operator: Pubkey,
-        ncn: Pubkey,
-        ncn_epoch: u64,
-        bump: u8,
-        current_slot: u64,
-        st_mint: Pubkey,
-        vault_index: u64,
-        total_security: u64,
-        total_votes: u128,
-    ) -> Self {
-        Self::new(
-            vault,
-            operator,
-            ncn,
-            ncn_epoch,
-            bump,
-            current_slot,
-            true,
-            vault_index,
-            st_mint,
-            total_security,
-            total_votes,
-        )
-    }
-
-    pub fn new_inactive(
-        vault: Pubkey,
-        operator: Pubkey,
-        ncn: Pubkey,
-        ncn_epoch: u64,
-        bump: u8,
-        current_slot: u64,
-        vault_index: u64,
-        st_mint: Pubkey,
-    ) -> Self {
-        Self::new(
-            vault,
-            operator,
-            ncn,
-            ncn_epoch,
-            bump,
-            current_slot,
-            false,
-            vault_index,
-            st_mint,
-            0,
-            0,
-        )
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn create_snapshot(
-        vault: Pubkey,
-        operator: Pubkey,
-        ncn: Pubkey,
-        ncn_epoch: u64,
-        bump: u8,
-        current_slot: u64,
-        vault_index: u64,
-        st_mint: Pubkey,
+    pub fn calculate_total_votes(
         vault_operator_delegation: &VaultOperatorDelegation,
         weight_table: &WeightTable,
-    ) -> Result<Self, ProgramError> {
+        st_mint: &Pubkey,
+    ) -> Result<u128, ProgramError> {
         let total_security = vault_operator_delegation
             .delegation_state
             .total_security()?;
+
         let precise_total_security = PreciseNumber::new(total_security as u128)
             .ok_or(TipRouterError::NewPreciseNumberError)?;
 
@@ -629,95 +511,6 @@ impl VaultOperatorDelegationSnapshot {
             .to_imprecise()
             .ok_or(TipRouterError::CastToImpreciseNumberError)?;
 
-        Ok(Self::new_active(
-            vault,
-            operator,
-            ncn,
-            ncn_epoch,
-            bump,
-            current_slot,
-            st_mint,
-            vault_index,
-            total_security,
-            total_votes,
-        ))
-    }
-
-    pub fn seeds(vault: &Pubkey, operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
-        Vec::from_iter(
-            [
-                b"VAULT_OPERATOR_DELEGATION_SNAPSHOT".to_vec(),
-                vault.to_bytes().to_vec(),
-                operator.to_bytes().to_vec(),
-                ncn.to_bytes().to_vec(),
-                ncn_epoch.to_le_bytes().to_vec(),
-            ]
-            .iter()
-            .cloned(),
-        )
-    }
-
-    pub fn find_program_address(
-        program_id: &Pubkey,
-        vault: &Pubkey,
-        operator: &Pubkey,
-        ncn: &Pubkey,
-        ncn_epoch: u64,
-    ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(vault, operator, ncn, ncn_epoch);
-        let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
-        let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
-        (pda, bump, seeds)
-    }
-
-    pub fn load(
-        program_id: &Pubkey,
-        vault: &Pubkey,
-        operator: &Pubkey,
-        ncn: &Pubkey,
-        ncn_epoch: u64,
-        vault_operator_delegation_snapshot: &AccountInfo,
-        expect_writable: bool,
-    ) -> Result<(), ProgramError> {
-        if vault_operator_delegation_snapshot.owner.ne(program_id) {
-            msg!("Operator Snapshot account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-        if vault_operator_delegation_snapshot.data_is_empty() {
-            msg!("Operator Snapshot account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if expect_writable && !vault_operator_delegation_snapshot.is_writable {
-            msg!("Operator Snapshot account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if vault_operator_delegation_snapshot.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Operator Snapshot account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if vault_operator_delegation_snapshot
-            .key
-            .ne(&Self::find_program_address(program_id, vault, operator, ncn, ncn_epoch).0)
-        {
-            msg!("Operator Snapshot account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
-    }
-
-    pub fn total_security(&self) -> u64 {
-        self.total_security.into()
-    }
-
-    pub fn total_votes(&self) -> u128 {
-        self.total_votes.into()
-    }
-
-    pub fn vault_index(&self) -> u64 {
-        self.vault_index.into()
-    }
-
-    pub fn vault(&self) -> Pubkey {
-        self.vault
+        Ok(total_votes)
     }
 }

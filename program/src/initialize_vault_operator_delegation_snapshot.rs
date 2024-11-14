@@ -1,13 +1,9 @@
 use jito_bytemuck::AccountDeserialize;
-use jito_jsm_core::{
-    create_account,
-    loader::{load_signer, load_system_account, load_system_program},
-};
 use jito_restaking_core::{
     config::Config, ncn::Ncn, ncn_vault_ticket::NcnVaultTicket, operator::Operator,
 };
 use jito_tip_router_core::{
-    epoch_snapshot::{EpochSnapshot, OperatorSnapshot, VaultOperatorDelegationSnapshot},
+    epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     loaders::load_ncn_epoch,
     ncn_config::NcnConfig,
     weight_table::WeightTable,
@@ -18,7 +14,7 @@ use jito_vault_core::{
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
 pub fn process_initialize_vault_operator_delegation_snapshot(
@@ -27,7 +23,7 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
     //TODO remove payer, system_program, and vault_operator_delegation_snapshot
-    let [ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_operator_delegation_snapshot, payer, vault_program, restaking_program, system_program] =
+    let [ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -72,12 +68,6 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
         )?;
     }
 
-    //TODO redact
-    // load_system_account(vault_operator_delegation_snapshot, true)?;
-    // load_system_program(system_program)?;
-    // //TODO check that it is not writable
-    // load_signer(payer, false)?;
-
     let current_slot = Clock::get()?.slot;
     let (ncn_epoch, ncn_epoch_length) =
         load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
@@ -92,43 +82,6 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
         epoch_snapshot,
         true,
     )?;
-
-    let (
-        vault_operator_delegation_snapshot_pubkey,
-        vault_operator_delegation_snapshot_bump,
-        mut vault_operator_delegation_snapshot_seeds,
-    ) = VaultOperatorDelegationSnapshot::find_program_address(
-        program_id,
-        vault.key,
-        operator.key,
-        ncn.key,
-        ncn_epoch,
-    );
-    vault_operator_delegation_snapshot_seeds.push(vec![vault_operator_delegation_snapshot_bump]);
-
-    if vault_operator_delegation_snapshot_pubkey.ne(operator_snapshot.key) {
-        msg!("Incorrect vault operator delegation snapshot PDA");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    //TODO redact
-    // msg!(
-    //     "Initializing vault operator delegation snapshot {} for NCN: {} at epoch: {}",
-    //     epoch_snapshot.key,
-    //     ncn.key,
-    //     ncn_epoch
-    // );
-    // create_account(
-    //     payer,
-    //     operator_snapshot,
-    //     system_program,
-    //     program_id,
-    //     &Rent::get()?,
-    //     8_u64
-    //         .checked_add(std::mem::size_of::<OperatorSnapshot>() as u64)
-    //         .unwrap(),
-    //     &vault_operator_delegation_snapshot_seeds,
-    // )?;
 
     let (vault_index, st_mint) = {
         let vault_data = vault.data.borrow();
@@ -158,16 +111,7 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
         vault_ncn_okay && ncn_vault_okay && delegation_dne
     };
 
-    // let mut vault_operator_delegation_snapshot_data: std::cell::RefMut<'_, &mut [u8]> =
-    //     operator_snapshot.try_borrow_mut_data()?;
-    // vault_operator_delegation_snapshot_data[0] = VaultOperatorDelegationSnapshot::DISCRIMINATOR;
-    // let vault_operator_delegation_snapshot_account =
-    //     VaultOperatorDelegationSnapshot::try_from_slice_unchecked_mut(
-    //         &mut vault_operator_delegation_snapshot_data,
-    //     )?;
-
-    // *vault_operator_delegation_snapshot_account = if is_active {
-    let vault_operator_delegation_snapshot_account = if is_active {
+    let total_votes: u128 = if is_active {
         let vault_operator_delegation_data = vault_operator_delegation.data.borrow();
         let vault_operator_delegation_account =
             VaultOperatorDelegation::try_from_slice_unchecked(&vault_operator_delegation_data)?;
@@ -175,30 +119,15 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
         let weight_table_data = weight_table.data.borrow();
         let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
 
-        //TODO Ending here for the day
-        VaultOperatorDelegationSnapshot::create_snapshot(
-            *vault.key,
-            *operator.key,
-            *ncn.key,
-            ncn_epoch,
-            vault_operator_delegation_snapshot_bump,
-            current_slot,
-            vault_index,
-            st_mint,
-            vault_operator_delegation_account,
-            weight_table_account,
-        )?
+        let total_votes = OperatorSnapshot::calculate_total_votes(
+            &vault_operator_delegation_account,
+            &weight_table_account,
+            &st_mint,
+        )?;
+
+        total_votes
     } else {
-        VaultOperatorDelegationSnapshot::new_inactive(
-            *vault.key,
-            *operator.key,
-            *ncn.key,
-            ncn_epoch,
-            vault_operator_delegation_snapshot_bump,
-            current_slot,
-            vault_index,
-            st_mint,
-        )
+        0u128
     };
 
     // Increment vault operator delegation
@@ -208,9 +137,9 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
 
     operator_snapshot_account.increment_vault_operator_delegation_registration(
         current_slot,
-        vault_operator_delegation_snapshot_account.vault(),
-        vault_operator_delegation_snapshot_account.vault_index(),
-        vault_operator_delegation_snapshot_account.total_votes(),
+        *vault.key,
+        vault_index,
+        total_votes,
     )?;
 
     // If operator is finalized, increment operator registration

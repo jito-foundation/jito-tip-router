@@ -12,7 +12,7 @@ use jito_tip_router_client::{
     types::ConfigAdminRole,
 };
 use jito_tip_router_core::{
-    epoch_snapshot::{EpochSnapshot, OperatorSnapshot, VaultOperatorDelegationSnapshot},
+    epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     error::TipRouterError,
     ncn_config::NcnConfig,
     tracked_mints::TrackedMints,
@@ -587,16 +587,6 @@ impl TipRouterClient {
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
 
-        let vault_operator_delegation_snapshot =
-            VaultOperatorDelegationSnapshot::find_program_address(
-                &jito_tip_router_program::id(),
-                &vault,
-                &operator,
-                &ncn,
-                ncn_epoch,
-            )
-            .0;
-
         let ix = InitializeVaultOperatorDelegationSnapshotBuilder::new()
             .ncn_config(config_pda)
             .restaking_config(restaking_config)
@@ -609,11 +599,8 @@ impl TipRouterClient {
             .weight_table(weight_table)
             .epoch_snapshot(epoch_snapshot)
             .operator_snapshot(operator_snapshot)
-            .vault_operator_delegation_snapshot(vault_operator_delegation_snapshot)
-            .payer(self.payer.pubkey())
             .vault_program(jito_vault_program::id())
             .restaking_program(jito_restaking_program::id())
-            .system_program(system_program::id())
             .first_slot_of_ncn_epoch(slot)
             .instruction();
 
