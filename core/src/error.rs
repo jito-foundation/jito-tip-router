@@ -60,6 +60,10 @@ pub enum TipRouterError {
     VaultOperatorDelegationFinalized,
     #[error("Operator is already finalized - should not happen")]
     OperatorFinalized,
+    #[error("Too many vault operator delegations")]
+    TooManyVaultOperatorDelegations,
+    #[error("Duplicate vault operator delegation")]
+    DuplicateVaultOperatorDelegation,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

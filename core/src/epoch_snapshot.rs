@@ -198,6 +198,7 @@ pub struct OperatorSnapshot {
 
     is_active: PodBool,
 
+    operator_index: PodU64,
     operator_fee_bps: PodU16,
 
     vault_operator_delegation_count: PodU64,
@@ -205,8 +206,53 @@ pub struct OperatorSnapshot {
     valid_operator_vault_delegations: PodU64,
 
     total_votes: PodU128,
+    reserved: [u8; 256],
 
-    reserved: [u8; 128],
+    // needs to be last item in struct such that it can grow later
+    vault_operator_votes: [VaultOperatorVotes; 64],
+}
+
+#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[repr(C)]
+pub struct VaultOperatorVotes {
+    vault: Pubkey,
+    votes: PodU128,
+    vault_index: PodU64,
+    reserved: [u8; 32],
+}
+
+impl Default for VaultOperatorVotes {
+    fn default() -> Self {
+        Self {
+            vault: Pubkey::default(),
+            vault_index: PodU64::from(u64::MAX),
+            votes: PodU128::from(0),
+            reserved: [0; 32],
+        }
+    }
+}
+
+impl VaultOperatorVotes {
+    pub fn new(vault: Pubkey, votes: u128, vault_index: u64) -> Self {
+        Self {
+            vault,
+            vault_index: PodU64::from(vault_index),
+            votes: PodU128::from(votes),
+            reserved: [0; 32],
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.vault_index() == u64::MAX
+    }
+
+    pub fn vault_index(&self) -> u64 {
+        self.vault_index.into()
+    }
+
+    pub fn votes(&self) -> u128 {
+        self.votes.into()
+    }
 }
 
 impl Discriminator for OperatorSnapshot {
@@ -214,6 +260,8 @@ impl Discriminator for OperatorSnapshot {
 }
 
 impl OperatorSnapshot {
+    pub const MAX_VAULT_OPERATOR_VOTES: usize = 64;
+
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         operator: Pubkey,
@@ -222,10 +270,15 @@ impl OperatorSnapshot {
         bump: u8,
         current_slot: u64,
         is_active: bool,
+        operator_index: u64,
         operator_fee_bps: u16,
         vault_operator_delegation_count: u64,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, TipRouterError> {
+        if vault_operator_delegation_count > Self::MAX_VAULT_OPERATOR_VOTES as u64 {
+            return Err(TipRouterError::TooManyVaultOperatorDelegations);
+        }
+
+        Ok(Self {
             operator,
             ncn,
             ncn_epoch: PodU64::from(ncn_epoch),
@@ -233,13 +286,15 @@ impl OperatorSnapshot {
             slot_created: PodU64::from(current_slot),
             slot_finalized: PodU64::from(0),
             is_active: PodBool::from(is_active),
+            operator_index: PodU64::from(operator_index),
             operator_fee_bps: PodU16::from(operator_fee_bps),
             vault_operator_delegation_count: PodU64::from(vault_operator_delegation_count),
             vault_operator_delegations_registered: PodU64::from(0),
             valid_operator_vault_delegations: PodU64::from(0),
             total_votes: PodU128::from(0),
-            reserved: [0; 128],
-        }
+            reserved: [0; 256],
+            vault_operator_votes: [VaultOperatorVotes::default(); 64],
+        })
     }
 
     pub fn new_active(
@@ -248,9 +303,10 @@ impl OperatorSnapshot {
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
+        operator_index: u64,
         operator_fee_bps: u16,
         vault_count: u64,
-    ) -> Self {
+    ) -> Result<Self, TipRouterError> {
         Self::new(
             operator,
             ncn,
@@ -258,6 +314,7 @@ impl OperatorSnapshot {
             bump,
             current_slot,
             true,
+            operator_index,
             operator_fee_bps,
             vault_count,
         )
@@ -269,11 +326,22 @@ impl OperatorSnapshot {
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
-    ) -> Self {
-        let mut snapshot = Self::new(operator, ncn, ncn_epoch, bump, current_slot, false, 0, 0);
+        operator_index: u64,
+    ) -> Result<Self, TipRouterError> {
+        let mut snapshot = Self::new(
+            operator,
+            ncn,
+            ncn_epoch,
+            bump,
+            current_slot,
+            false,
+            operator_index,
+            0,
+            0,
+        )?;
 
         snapshot.slot_finalized = PodU64::from(current_slot);
-        snapshot
+        Ok(snapshot)
     }
 
     pub fn seeds(operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
@@ -355,15 +423,41 @@ impl OperatorSnapshot {
         self.vault_operator_delegations_registered() == self.vault_operator_delegation_count()
     }
 
+    pub fn insert_vault_operator_votes(
+        &mut self,
+        vault: Pubkey,
+        vault_index: u64,
+        votes: u128,
+    ) -> Result<(), TipRouterError> {
+        // Check for duplicate vaults
+        for vault_operator_vote in self.vault_operator_votes.iter_mut() {
+            if vault_operator_vote.vault_index() == vault_index {
+                return Err(TipRouterError::DuplicateVaultOperatorDelegation);
+            }
+        }
+
+        if self.vault_operator_delegations_registered() > Self::MAX_VAULT_OPERATOR_VOTES as u64 {
+            return Err(TipRouterError::TooManyVaultOperatorDelegations);
+        }
+
+        self.vault_operator_votes[self.vault_operator_delegations_registered() as usize] =
+            VaultOperatorVotes::new(vault, votes, vault_index);
+
+        Ok(())
+    }
+
     pub fn increment_vault_operator_delegation_registration(
         &mut self,
         current_slot: u64,
-        vault_operator_delegations: u64,
+        vault: Pubkey,
+        vault_index: u64,
         votes: u128,
     ) -> Result<(), TipRouterError> {
         if self.finalized() {
             return Err(TipRouterError::VaultOperatorDelegationFinalized);
         }
+
+        self.insert_vault_operator_votes(vault, vault_index, votes)?;
 
         self.vault_operator_delegations_registered = PodU64::from(
             self.vault_operator_delegations_registered()
@@ -371,11 +465,13 @@ impl OperatorSnapshot {
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
 
-        self.valid_operator_vault_delegations = PodU64::from(
-            self.valid_operator_vault_delegations()
-                .checked_add(vault_operator_delegations)
-                .ok_or(TipRouterError::ArithmeticOverflow)?,
-        );
+        if votes > 0 {
+            self.valid_operator_vault_delegations = PodU64::from(
+                self.valid_operator_vault_delegations()
+                    .checked_add(1)
+                    .ok_or(TipRouterError::ArithmeticOverflow)?,
+            );
+        }
 
         self.total_votes = PodU128::from(
             self.total_votes()
@@ -405,6 +501,8 @@ pub struct VaultOperatorDelegationSnapshot {
 
     is_active: PodBool,
 
+    vault_index: PodU64,
+
     st_mint: Pubkey,
     total_security: PodU64,
     total_votes: PodU128,
@@ -426,6 +524,7 @@ impl VaultOperatorDelegationSnapshot {
         bump: u8,
         current_slot: u64,
         is_active: bool,
+        vault_index: u64,
         st_mint: Pubkey,
         total_security: u64,
         total_votes: u128,
@@ -438,6 +537,7 @@ impl VaultOperatorDelegationSnapshot {
             bump,
             slot_created: PodU64::from(current_slot),
             is_active: PodBool::from(is_active),
+            vault_index: PodU64::from(vault_index),
             st_mint,
             total_security: PodU64::from(total_security),
             total_votes: PodU128::from(total_votes),
@@ -453,6 +553,7 @@ impl VaultOperatorDelegationSnapshot {
         bump: u8,
         current_slot: u64,
         st_mint: Pubkey,
+        vault_index: u64,
         total_security: u64,
         total_votes: u128,
     ) -> Self {
@@ -464,6 +565,7 @@ impl VaultOperatorDelegationSnapshot {
             bump,
             current_slot,
             true,
+            vault_index,
             st_mint,
             total_security,
             total_votes,
@@ -477,6 +579,7 @@ impl VaultOperatorDelegationSnapshot {
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
+        vault_index: u64,
         st_mint: Pubkey,
     ) -> Self {
         Self::new(
@@ -487,6 +590,7 @@ impl VaultOperatorDelegationSnapshot {
             bump,
             current_slot,
             false,
+            vault_index,
             st_mint,
             0,
             0,
@@ -501,6 +605,7 @@ impl VaultOperatorDelegationSnapshot {
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
+        vault_index: u64,
         st_mint: Pubkey,
         vault_operator_delegation: &VaultOperatorDelegation,
         weight_table: &WeightTable,
@@ -529,6 +634,7 @@ impl VaultOperatorDelegationSnapshot {
             bump,
             current_slot,
             st_mint,
+            vault_index,
             total_security,
             total_votes,
         ))
@@ -602,5 +708,13 @@ impl VaultOperatorDelegationSnapshot {
 
     pub fn total_votes(&self) -> u128 {
         self.total_votes.into()
+    }
+
+    pub fn vault_index(&self) -> u64 {
+        self.vault_index.into()
+    }
+
+    pub fn vault(&self) -> Pubkey {
+        self.vault
     }
 }

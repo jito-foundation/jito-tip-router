@@ -99,6 +99,16 @@ pub fn process_initialize_operator_snapshot(
         ncn_operator_okay && operator_ncn_okay
     };
 
+    let (operator_fee_bps, vault_count, operator_index): (u16, u64, u64) = {
+        let operator_data = operator.data.borrow();
+        let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
+        (
+            operator_account.operator_fee_bps.into(),
+            operator_account.vault_count(),
+            operator_account.index(),
+        )
+    };
+
     let mut operator_snapshot_data: std::cell::RefMut<'_, &mut [u8]> =
         operator_snapshot.try_borrow_mut_data()?;
     operator_snapshot_data[0] = OperatorSnapshot::DISCRIMINATOR;
@@ -106,24 +116,16 @@ pub fn process_initialize_operator_snapshot(
         OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
 
     *operator_snapshot_account = if is_active {
-        let (operator_fee_bps, vault_count): (u16, u64) = {
-            let operator_data = operator.data.borrow();
-            let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
-            (
-                operator_account.operator_fee_bps.into(),
-                operator_account.vault_count(),
-            )
-        };
-
         OperatorSnapshot::new_active(
             *operator.key,
             *ncn.key,
             ncn_epoch,
             operator_snapshot_bump,
             current_slot,
+            operator_index,
             operator_fee_bps,
             vault_count,
-        )
+        )?
     } else {
         OperatorSnapshot::new_inactive(
             *operator.key,
@@ -131,7 +133,8 @@ pub fn process_initialize_operator_snapshot(
             ncn_epoch,
             operator_snapshot_bump,
             current_slot,
-        )
+            operator_index,
+        )?
     };
 
     // Increment operator registration for an inactive operator
