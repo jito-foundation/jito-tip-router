@@ -147,7 +147,9 @@ impl TestBuilder {
 
         vault_program_client.do_initialize_config().await?;
         restaking_program_client.do_initialize_config().await?;
-        let ncn_root = restaking_program_client.do_initialize_ncn().await?;
+        let ncn_root = restaking_program_client
+            .do_initialize_ncn(Some(self.context.payer.insecure_clone()))
+            .await?;
 
         Ok(ncn_root)
     }
@@ -160,7 +162,9 @@ impl TestBuilder {
 
         vault_program_client.do_initialize_config().await?;
         restaking_program_client.do_initialize_config().await?;
-        let ncn_root = restaking_program_client.do_initialize_ncn().await?;
+        let ncn_root = restaking_program_client
+            .do_initialize_ncn(Some(self.context.payer.insecure_clone()))
+            .await?;
 
         tip_router_client.setup_tip_router(&ncn_root).await?;
 

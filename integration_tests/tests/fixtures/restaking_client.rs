@@ -276,8 +276,14 @@ impl RestakingProgramClient {
         .await
     }
 
-    pub async fn do_initialize_ncn(&mut self) -> TestResult<NcnRoot> {
-        let ncn_admin = Keypair::new();
+    pub async fn do_initialize_ncn(&mut self, ncn_admin: Option<Keypair>) -> TestResult<NcnRoot> {
+        let ncn_admin = {
+            if let Some(ncn_admin) = ncn_admin {
+                ncn_admin
+            } else {
+                self.payer.insecure_clone()
+            }
+        };
         let ncn_base = Keypair::new();
 
         self.airdrop(&ncn_admin.pubkey(), 1.0).await?;
