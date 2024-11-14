@@ -40,6 +40,12 @@ import {
   type MaybeAccount,
   type MaybeEncodedAccount,
 } from '@solana/web3.js';
+import {
+  getVaultOperatorVotesDecoder,
+  getVaultOperatorVotesEncoder,
+  type VaultOperatorVotes,
+  type VaultOperatorVotesArgs,
+} from '../types';
 
 export type OperatorSnapshot = {
   discriminator: bigint;
@@ -50,12 +56,14 @@ export type OperatorSnapshot = {
   slotCreated: bigint;
   slotFinalized: bigint;
   isActive: number;
+  operatorIndex: bigint;
   operatorFeeBps: number;
   vaultOperatorDelegationCount: bigint;
   vaultOperatorDelegationsRegistered: bigint;
   validOperatorVaultDelegations: bigint;
   totalVotes: bigint;
   reserved: Array<number>;
+  vaultOperatorVotes: Array<VaultOperatorVotes>;
 };
 
 export type OperatorSnapshotArgs = {
@@ -67,12 +75,14 @@ export type OperatorSnapshotArgs = {
   slotCreated: number | bigint;
   slotFinalized: number | bigint;
   isActive: number;
+  operatorIndex: number | bigint;
   operatorFeeBps: number;
   vaultOperatorDelegationCount: number | bigint;
   vaultOperatorDelegationsRegistered: number | bigint;
   validOperatorVaultDelegations: number | bigint;
   totalVotes: number | bigint;
   reserved: Array<number>;
+  vaultOperatorVotes: Array<VaultOperatorVotesArgs>;
 };
 
 export function getOperatorSnapshotEncoder(): Encoder<OperatorSnapshotArgs> {
@@ -85,12 +95,17 @@ export function getOperatorSnapshotEncoder(): Encoder<OperatorSnapshotArgs> {
     ['slotCreated', getU64Encoder()],
     ['slotFinalized', getU64Encoder()],
     ['isActive', getBoolEncoder()],
+    ['operatorIndex', getU64Encoder()],
     ['operatorFeeBps', getU16Encoder()],
     ['vaultOperatorDelegationCount', getU64Encoder()],
     ['vaultOperatorDelegationsRegistered', getU64Encoder()],
     ['validOperatorVaultDelegations', getU64Encoder()],
     ['totalVotes', getU128Encoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 256 })],
+    [
+      'vaultOperatorVotes',
+      getArrayEncoder(getVaultOperatorVotesEncoder(), { size: 64 }),
+    ],
   ]);
 }
 
@@ -104,12 +119,17 @@ export function getOperatorSnapshotDecoder(): Decoder<OperatorSnapshot> {
     ['slotCreated', getU64Decoder()],
     ['slotFinalized', getU64Decoder()],
     ['isActive', getBoolDecoder()],
+    ['operatorIndex', getU64Decoder()],
     ['operatorFeeBps', getU16Decoder()],
     ['vaultOperatorDelegationCount', getU64Decoder()],
     ['vaultOperatorDelegationsRegistered', getU64Decoder()],
     ['validOperatorVaultDelegations', getU64Decoder()],
     ['totalVotes', getU128Decoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 256 })],
+    [
+      'vaultOperatorVotes',
+      getArrayDecoder(getVaultOperatorVotesDecoder(), { size: 64 }),
+    ],
   ]);
 }
 

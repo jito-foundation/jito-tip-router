@@ -691,6 +691,12 @@
             }
           },
           {
+            "name": "operatorIndex",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
             "name": "operatorFeeBps",
             "type": {
               "defined": "PodU16"
@@ -725,74 +731,18 @@
             "type": {
               "array": [
                 "u8",
-                128
+                256
               ]
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "VaultOperatorDelegationSnapshot",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "publicKey"
           },
           {
-            "name": "operator",
-            "type": "publicKey"
-          },
-          {
-            "name": "ncn",
-            "type": "publicKey"
-          },
-          {
-            "name": "ncnEpoch",
-            "type": {
-              "defined": "PodU64"
-            }
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          },
-          {
-            "name": "slotCreated",
-            "type": {
-              "defined": "PodU64"
-            }
-          },
-          {
-            "name": "isActive",
-            "type": {
-              "defined": "PodBool"
-            }
-          },
-          {
-            "name": "stMint",
-            "type": "publicKey"
-          },
-          {
-            "name": "totalSecurity",
-            "type": {
-              "defined": "PodU64"
-            }
-          },
-          {
-            "name": "totalVotes",
-            "type": {
-              "defined": "PodU128"
-            }
-          },
-          {
-            "name": "reserved",
+            "name": "vaultOperatorVotes",
             "type": {
               "array": [
-                "u8",
-                128
+                {
+                  "defined": "VaultOperatorVotes"
+                },
+                64
               ]
             }
           }
@@ -924,6 +874,39 @@
     }
   ],
   "types": [
+    {
+      "name": "VaultOperatorVotes",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "votes",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "vaultIndex",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
     {
       "name": "Fees",
       "type": {
@@ -1201,6 +1184,16 @@
       "code": 8726,
       "name": "OperatorFinalized",
       "msg": "Operator is already finalized - should not happen"
+    },
+    {
+      "code": 8727,
+      "name": "TooManyVaultOperatorDelegations",
+      "msg": "Too many vault operator delegations"
+    },
+    {
+      "code": 8728,
+      "name": "DuplicateVaultOperatorDelegation",
+      "msg": "Duplicate vault operator delegation"
     }
   ],
   "metadata": {

@@ -93,6 +93,12 @@ pub enum JitoTipRouterError {
     /// 8726 - Operator is already finalized - should not happen
     #[error("Operator is already finalized - should not happen")]
     OperatorFinalized = 0x2216,
+    /// 8727 - Too many vault operator delegations
+    #[error("Too many vault operator delegations")]
+    TooManyVaultOperatorDelegations = 0x2217,
+    /// 8728 - Duplicate vault operator delegation
+    #[error("Duplicate vault operator delegation")]
+    DuplicateVaultOperatorDelegation = 0x2218,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

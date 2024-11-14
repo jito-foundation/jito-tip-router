@@ -8,10 +8,9 @@ pub(crate) mod r#epoch_snapshot;
 pub(crate) mod r#ncn_config;
 pub(crate) mod r#operator_snapshot;
 pub(crate) mod r#tracked_mints;
-pub(crate) mod r#vault_operator_delegation_snapshot;
 pub(crate) mod r#weight_table;
 
 pub use self::{
     r#epoch_snapshot::*, r#ncn_config::*, r#operator_snapshot::*, r#tracked_mints::*,
-    r#vault_operator_delegation_snapshot::*, r#weight_table::*,
+    r#weight_table::*,
 };
