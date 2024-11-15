@@ -70,6 +70,8 @@ mod tests {
             .get_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
             .await?;
 
+        assert!(epoch_snapshot.finalized());
+
         Ok(())
     }
 
