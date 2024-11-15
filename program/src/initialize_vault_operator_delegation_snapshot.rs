@@ -22,7 +22,6 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
     accounts: &[AccountInfo],
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    //TODO remove payer, system_program, and vault_operator_delegation_snapshot
     let [ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
         accounts
     else {
@@ -60,7 +59,7 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
     //TODO what happens if a new Vault is added inbetween weight table creation and this? - There could be a count mismatch
     if !vault_operator_delegation.data_is_empty() {
         VaultOperatorDelegation::load(
-            restaking_program.key,
+            vault_program.key,
             vault_operator_delegation,
             vault,
             operator,
@@ -79,7 +78,7 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
         operator.key,
         ncn.key,
         ncn_epoch,
-        epoch_snapshot,
+        operator_snapshot,
         true,
     )?;
 
@@ -119,13 +118,11 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
         let weight_table_data = weight_table.data.borrow();
         let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
 
-        let total_votes = OperatorSnapshot::calculate_total_votes(
-            &vault_operator_delegation_account,
-            &weight_table_account,
+        OperatorSnapshot::calculate_total_votes(
+            vault_operator_delegation_account,
+            weight_table_account,
             &st_mint,
-        )?;
-
-        total_votes
+        )?
     } else {
         0u128
     };

@@ -22,16 +22,13 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type Option,
   type OptionOrNullable,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -59,15 +56,8 @@ export type InitializeVaultOperatorDelegationSnapshotInstruction<
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountEpochSnapshot extends string | IAccountMeta<string> = string,
   TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
-  TAccountVaultOperatorDelegationSnapshot extends
-    | string
-    | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountVaultProgram extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
-  TAccountSystemProgram extends
-    | string
-    | IAccountMeta<string> = '11111111111111111111111111111111',
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -104,22 +94,12 @@ export type InitializeVaultOperatorDelegationSnapshotInstruction<
       TAccountOperatorSnapshot extends string
         ? WritableAccount<TAccountOperatorSnapshot>
         : TAccountOperatorSnapshot,
-      TAccountVaultOperatorDelegationSnapshot extends string
-        ? WritableAccount<TAccountVaultOperatorDelegationSnapshot>
-        : TAccountVaultOperatorDelegationSnapshot,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
       TAccountVaultProgram extends string
         ? ReadonlyAccount<TAccountVaultProgram>
         : TAccountVaultProgram,
       TAccountRestakingProgram extends string
         ? ReadonlyAccount<TAccountRestakingProgram>
         : TAccountRestakingProgram,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -176,11 +156,8 @@ export type InitializeVaultOperatorDelegationSnapshotInput<
   TAccountWeightTable extends string = string,
   TAccountEpochSnapshot extends string = string,
   TAccountOperatorSnapshot extends string = string,
-  TAccountVaultOperatorDelegationSnapshot extends string = string,
-  TAccountPayer extends string = string,
   TAccountVaultProgram extends string = string,
   TAccountRestakingProgram extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   ncnConfig: Address<TAccountNcnConfig>;
   restakingConfig: Address<TAccountRestakingConfig>;
@@ -193,11 +170,8 @@ export type InitializeVaultOperatorDelegationSnapshotInput<
   weightTable: Address<TAccountWeightTable>;
   epochSnapshot: Address<TAccountEpochSnapshot>;
   operatorSnapshot: Address<TAccountOperatorSnapshot>;
-  vaultOperatorDelegationSnapshot: Address<TAccountVaultOperatorDelegationSnapshot>;
-  payer: TransactionSigner<TAccountPayer>;
   vaultProgram: Address<TAccountVaultProgram>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  systemProgram?: Address<TAccountSystemProgram>;
   firstSlotOfNcnEpoch: InitializeVaultOperatorDelegationSnapshotInstructionDataArgs['firstSlotOfNcnEpoch'];
 };
 
@@ -213,11 +187,8 @@ export function getInitializeVaultOperatorDelegationSnapshotInstruction<
   TAccountWeightTable extends string,
   TAccountEpochSnapshot extends string,
   TAccountOperatorSnapshot extends string,
-  TAccountVaultOperatorDelegationSnapshot extends string,
-  TAccountPayer extends string,
   TAccountVaultProgram extends string,
   TAccountRestakingProgram extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeVaultOperatorDelegationSnapshotInput<
@@ -232,11 +203,8 @@ export function getInitializeVaultOperatorDelegationSnapshotInstruction<
     TAccountWeightTable,
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot,
-    TAccountVaultOperatorDelegationSnapshot,
-    TAccountPayer,
     TAccountVaultProgram,
-    TAccountRestakingProgram,
-    TAccountSystemProgram
+    TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): InitializeVaultOperatorDelegationSnapshotInstruction<
@@ -252,11 +220,8 @@ export function getInitializeVaultOperatorDelegationSnapshotInstruction<
   TAccountWeightTable,
   TAccountEpochSnapshot,
   TAccountOperatorSnapshot,
-  TAccountVaultOperatorDelegationSnapshot,
-  TAccountPayer,
   TAccountVaultProgram,
-  TAccountRestakingProgram,
-  TAccountSystemProgram
+  TAccountRestakingProgram
 > {
   // Program address.
   const programAddress =
@@ -284,17 +249,11 @@ export function getInitializeVaultOperatorDelegationSnapshotInstruction<
       value: input.operatorSnapshot ?? null,
       isWritable: true,
     },
-    vaultOperatorDelegationSnapshot: {
-      value: input.vaultOperatorDelegationSnapshot ?? null,
-      isWritable: true,
-    },
-    payer: { value: input.payer ?? null, isWritable: true },
     vaultProgram: { value: input.vaultProgram ?? null, isWritable: false },
     restakingProgram: {
       value: input.restakingProgram ?? null,
       isWritable: false,
     },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -303,12 +262,6 @@ export function getInitializeVaultOperatorDelegationSnapshotInstruction<
 
   // Original args.
   const args = { ...input };
-
-  // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
-  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
@@ -324,11 +277,8 @@ export function getInitializeVaultOperatorDelegationSnapshotInstruction<
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.epochSnapshot),
       getAccountMeta(accounts.operatorSnapshot),
-      getAccountMeta(accounts.vaultOperatorDelegationSnapshot),
-      getAccountMeta(accounts.payer),
       getAccountMeta(accounts.vaultProgram),
       getAccountMeta(accounts.restakingProgram),
-      getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
     data: getInitializeVaultOperatorDelegationSnapshotInstructionDataEncoder().encode(
@@ -347,11 +297,8 @@ export function getInitializeVaultOperatorDelegationSnapshotInstruction<
     TAccountWeightTable,
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot,
-    TAccountVaultOperatorDelegationSnapshot,
-    TAccountPayer,
     TAccountVaultProgram,
-    TAccountRestakingProgram,
-    TAccountSystemProgram
+    TAccountRestakingProgram
   >;
 
   return instruction;
@@ -374,11 +321,8 @@ export type ParsedInitializeVaultOperatorDelegationSnapshotInstruction<
     weightTable: TAccountMetas[8];
     epochSnapshot: TAccountMetas[9];
     operatorSnapshot: TAccountMetas[10];
-    vaultOperatorDelegationSnapshot: TAccountMetas[11];
-    payer: TAccountMetas[12];
-    vaultProgram: TAccountMetas[13];
-    restakingProgram: TAccountMetas[14];
-    systemProgram: TAccountMetas[15];
+    vaultProgram: TAccountMetas[11];
+    restakingProgram: TAccountMetas[12];
   };
   data: InitializeVaultOperatorDelegationSnapshotInstructionData;
 };
@@ -394,7 +338,7 @@ export function parseInitializeVaultOperatorDelegationSnapshotInstruction<
   TProgram,
   TAccountMetas
 > {
-  if (instruction.accounts.length < 16) {
+  if (instruction.accounts.length < 13) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -418,11 +362,8 @@ export function parseInitializeVaultOperatorDelegationSnapshotInstruction<
       weightTable: getNextAccount(),
       epochSnapshot: getNextAccount(),
       operatorSnapshot: getNextAccount(),
-      vaultOperatorDelegationSnapshot: getNextAccount(),
-      payer: getNextAccount(),
       vaultProgram: getNextAccount(),
       restakingProgram: getNextAccount(),
-      systemProgram: getNextAccount(),
     },
     data: getInitializeVaultOperatorDelegationSnapshotInstructionDataDecoder().decode(
       instruction.data

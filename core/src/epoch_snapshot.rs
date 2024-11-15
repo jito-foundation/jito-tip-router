@@ -297,6 +297,7 @@ impl OperatorSnapshot {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_active(
         operator: Pubkey,
         ncn: Pubkey,
@@ -501,7 +502,7 @@ impl OperatorSnapshot {
         let precise_total_security = PreciseNumber::new(total_security as u128)
             .ok_or(TipRouterError::NewPreciseNumberError)?;
 
-        let precise_weight = weight_table.get_precise_weight(&st_mint)?;
+        let precise_weight = weight_table.get_precise_weight(st_mint)?;
 
         let precise_total_votes = precise_total_security
             .checked_mul(&precise_weight)

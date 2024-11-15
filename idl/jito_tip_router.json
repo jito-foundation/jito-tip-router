@@ -446,27 +446,12 @@
           "isSigner": false
         },
         {
-          "name": "vaultOperatorDelegationSnapshot",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "payer",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
           "name": "vaultProgram",
           "isMut": false,
           "isSigner": false
         },
         {
           "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }

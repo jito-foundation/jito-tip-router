@@ -45,7 +45,7 @@ pub fn process_initialize_operator_snapshot(
         false,
     )?;
 
-    load_system_account(epoch_snapshot, true)?;
+    load_system_account(operator_snapshot, true)?;
     load_system_program(system_program)?;
     //TODO check that it is not writable
     load_signer(payer, false)?;
@@ -57,7 +57,7 @@ pub fn process_initialize_operator_snapshot(
     EpochSnapshot::load(program_id, ncn.key, ncn_epoch, epoch_snapshot, true)?;
 
     let (operator_snapshot_pubkey, operator_snapshot_bump, mut operator_snapshot_seeds) =
-        EpochSnapshot::find_program_address(program_id, ncn.key, ncn_epoch);
+        OperatorSnapshot::find_program_address(program_id, operator.key, ncn.key, ncn_epoch);
     operator_snapshot_seeds.push(vec![operator_snapshot_bump]);
 
     if operator_snapshot_pubkey.ne(operator_snapshot.key) {

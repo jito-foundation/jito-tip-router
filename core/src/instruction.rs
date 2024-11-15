@@ -114,11 +114,8 @@ pub enum TipRouterInstruction {
     #[account(8, name = "weight_table")]
     #[account(9, writable, name = "epoch_snapshot")]
     #[account(10, writable, name = "operator_snapshot")]
-    #[account(11, writable, name = "vault_operator_delegation_snapshot")]
-    #[account(12, writable, signer, name = "payer")]
-    #[account(13, name = "vault_program")]
-    #[account(14, name = "restaking_program")]
-    #[account(15, name = "system_program")]
+    #[account(11, name = "vault_program")]
+    #[account(12, name = "restaking_program")]
     InitializeVaultOperatorDelegationSnapshot{
         first_slot_of_ncn_epoch: Option<u64>,
     },

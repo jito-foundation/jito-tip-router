@@ -1,7 +1,9 @@
 mod admin_update_weight_table;
 mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
+mod initialize_operator_snapshot;
 mod initialize_tracked_mints;
+mod initialize_vault_operator_delegation_snapshot;
 mod initialize_weight_table;
 mod register_mint;
 mod set_config_fees;

@@ -1,6 +1,9 @@
 use std::fmt::{Debug, Formatter};
 
-use jito_restaking_core::ncn_vault_ticket::{self, NcnVaultTicket};
+use jito_restaking_core::{
+    config::Config,
+    ncn_vault_ticket::{self, NcnVaultTicket},
+};
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use jito_vault_sdk::inline_mpl_token_metadata;
 use solana_program::{
@@ -216,9 +219,9 @@ impl TestBuilder {
         let mut vault_program_client = self.vault_program_client();
         let mut restaking_program_client = self.restaking_program_client();
 
-        const DEPOSIT_FEE_BPS: u16 = 10;
-        const WITHDRAWAL_FEE_BPS: u16 = 10;
-        const REWARD_FEE_BPS: u16 = 10;
+        const DEPOSIT_FEE_BPS: u16 = 0;
+        const WITHDRAWAL_FEE_BPS: u16 = 0;
+        const REWARD_FEE_BPS: u16 = 0;
         const MINT_AMOUNT: u64 = 1_000_000;
 
         for _ in 0..vault_count {
@@ -308,12 +311,32 @@ impl TestBuilder {
     // 5. Setup Tracked Mints
     pub async fn add_tracked_mints_to_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
-        let mut vault_client = self.vault_program_client();
         let mut restaking_client = self.restaking_program_client();
+        let mut vault_client = self.vault_program_client();
+
+        let restaking_config_address =
+            Config::find_program_address(&jito_restaking_program::id()).0;
+        let restaking_config = restaking_client
+            .get_config(&restaking_config_address)
+            .await?;
+
+        let epoch_length = restaking_config.epoch_length();
+
+        self.warp_slot_incremental(epoch_length * 2).await.unwrap();
 
         for vault in test_ncn.vaults.iter() {
             let ncn = test_ncn.ncn_root.ncn_pubkey;
             let vault = vault.vault_pubkey;
+
+            let operators = test_ncn
+                .operators
+                .iter()
+                .map(|operator| operator.operator_pubkey)
+                .collect::<Vec<Pubkey>>();
+
+            vault_client
+                .do_full_vault_update(&vault, &operators)
+                .await?;
 
             let vault_ncn_ticket =
                 VaultNcnTicket::find_program_address(&jito_vault_program::id(), &vault, &ncn).0;
@@ -327,5 +350,21 @@ impl TestBuilder {
         }
 
         Ok(())
+    }
+
+    pub async fn setup_full_test_ncn(
+        &mut self,
+        operator_count: usize,
+        vault_count: usize,
+    ) -> TestResult<TestNcn> {
+        let mut test_ncn = self.create_test_ncn().await?;
+        self.add_operators_to_test_ncn(&mut test_ncn, operator_count)
+            .await?;
+        self.add_vaults_to_test_ncn(&mut test_ncn, vault_count)
+            .await?;
+        self.add_delegation_in_test_ncn(&test_ncn, 100).await?;
+        self.add_tracked_mints_to_test_ncn(&test_ncn).await?;
+
+        Ok(test_ncn)
     }
 }

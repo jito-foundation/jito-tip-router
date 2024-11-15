@@ -30,15 +30,9 @@ pub struct InitializeVaultOperatorDelegationSnapshot {
 
     pub operator_snapshot: solana_program::pubkey::Pubkey,
 
-    pub vault_operator_delegation_snapshot: solana_program::pubkey::Pubkey,
-
-    pub payer: solana_program::pubkey::Pubkey,
-
     pub vault_program: solana_program::pubkey::Pubkey,
 
     pub restaking_program: solana_program::pubkey::Pubkey,
-
-    pub system_program: solana_program::pubkey::Pubkey,
 }
 
 impl InitializeVaultOperatorDelegationSnapshot {
@@ -54,7 +48,7 @@ impl InitializeVaultOperatorDelegationSnapshot {
         args: InitializeVaultOperatorDelegationSnapshotInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(13 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn_config,
             false,
@@ -97,23 +91,12 @@ impl InitializeVaultOperatorDelegationSnapshot {
             self.operator_snapshot,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.vault_operator_delegation_snapshot,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.payer, true,
-        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.vault_program,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_program,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.system_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -169,11 +152,8 @@ pub struct InitializeVaultOperatorDelegationSnapshotInstructionArgs {
 ///   8. `[]` weight_table
 ///   9. `[writable]` epoch_snapshot
 ///   10. `[writable]` operator_snapshot
-///   11. `[writable]` vault_operator_delegation_snapshot
-///   12. `[writable, signer]` payer
-///   13. `[]` vault_program
-///   14. `[]` restaking_program
-///   15. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   11. `[]` vault_program
+///   12. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct InitializeVaultOperatorDelegationSnapshotBuilder {
     ncn_config: Option<solana_program::pubkey::Pubkey>,
@@ -187,11 +167,8 @@ pub struct InitializeVaultOperatorDelegationSnapshotBuilder {
     weight_table: Option<solana_program::pubkey::Pubkey>,
     epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
     operator_snapshot: Option<solana_program::pubkey::Pubkey>,
-    vault_operator_delegation_snapshot: Option<solana_program::pubkey::Pubkey>,
-    payer: Option<solana_program::pubkey::Pubkey>,
     vault_program: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
-    system_program: Option<solana_program::pubkey::Pubkey>,
     first_slot_of_ncn_epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -271,19 +248,6 @@ impl InitializeVaultOperatorDelegationSnapshotBuilder {
         self
     }
     #[inline(always)]
-    pub fn vault_operator_delegation_snapshot(
-        &mut self,
-        vault_operator_delegation_snapshot: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.vault_operator_delegation_snapshot = Some(vault_operator_delegation_snapshot);
-        self
-    }
-    #[inline(always)]
-    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
-        self
-    }
-    #[inline(always)]
     pub fn vault_program(&mut self, vault_program: solana_program::pubkey::Pubkey) -> &mut Self {
         self.vault_program = Some(vault_program);
         self
@@ -294,12 +258,6 @@ impl InitializeVaultOperatorDelegationSnapshotBuilder {
         restaking_program: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
         self.restaking_program = Some(restaking_program);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.system_program = Some(system_program);
         self
     }
     /// `[optional argument]`
@@ -344,17 +302,10 @@ impl InitializeVaultOperatorDelegationSnapshotBuilder {
             operator_snapshot: self
                 .operator_snapshot
                 .expect("operator_snapshot is not set"),
-            vault_operator_delegation_snapshot: self
-                .vault_operator_delegation_snapshot
-                .expect("vault_operator_delegation_snapshot is not set"),
-            payer: self.payer.expect("payer is not set"),
             vault_program: self.vault_program.expect("vault_program is not set"),
             restaking_program: self
                 .restaking_program
                 .expect("restaking_program is not set"),
-            system_program: self
-                .system_program
-                .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
         };
         let args = InitializeVaultOperatorDelegationSnapshotInstructionArgs {
             first_slot_of_ncn_epoch: self.first_slot_of_ncn_epoch.clone(),
@@ -388,15 +339,9 @@ pub struct InitializeVaultOperatorDelegationSnapshotCpiAccounts<'a, 'b> {
 
     pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub vault_operator_delegation_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub vault_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `initialize_vault_operator_delegation_snapshot` CPI instruction.
@@ -426,15 +371,9 @@ pub struct InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
 
     pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub vault_operator_delegation_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub vault_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: InitializeVaultOperatorDelegationSnapshotInstructionArgs,
 }
@@ -458,11 +397,8 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
             weight_table: accounts.weight_table,
             epoch_snapshot: accounts.epoch_snapshot,
             operator_snapshot: accounts.operator_snapshot,
-            vault_operator_delegation_snapshot: accounts.vault_operator_delegation_snapshot,
-            payer: accounts.payer,
             vault_program: accounts.vault_program,
             restaking_program: accounts.restaking_program,
-            system_program: accounts.system_program,
             __args: args,
         }
     }
@@ -499,7 +435,7 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(13 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn_config.key,
             false,
@@ -544,24 +480,12 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
             *self.operator_snapshot.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.vault_operator_delegation_snapshot.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.payer.key,
-            true,
-        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.vault_program.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_program.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.system_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -582,7 +506,7 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(16 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(13 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.ncn_config.clone());
         account_infos.push(self.restaking_config.clone());
@@ -595,11 +519,8 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
         account_infos.push(self.weight_table.clone());
         account_infos.push(self.epoch_snapshot.clone());
         account_infos.push(self.operator_snapshot.clone());
-        account_infos.push(self.vault_operator_delegation_snapshot.clone());
-        account_infos.push(self.payer.clone());
         account_infos.push(self.vault_program.clone());
         account_infos.push(self.restaking_program.clone());
-        account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -627,11 +548,8 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
 ///   8. `[]` weight_table
 ///   9. `[writable]` epoch_snapshot
 ///   10. `[writable]` operator_snapshot
-///   11. `[writable]` vault_operator_delegation_snapshot
-///   12. `[writable, signer]` payer
-///   13. `[]` vault_program
-///   14. `[]` restaking_program
-///   15. `[]` system_program
+///   11. `[]` vault_program
+///   12. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct InitializeVaultOperatorDelegationSnapshotCpiBuilder<'a, 'b> {
     instruction: Box<InitializeVaultOperatorDelegationSnapshotCpiBuilderInstruction<'a, 'b>>,
@@ -653,11 +571,8 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpiBuilder<'a, 'b> {
                 weight_table: None,
                 epoch_snapshot: None,
                 operator_snapshot: None,
-                vault_operator_delegation_snapshot: None,
-                payer: None,
                 vault_program: None,
                 restaking_program: None,
-                system_program: None,
                 first_slot_of_ncn_epoch: None,
                 __remaining_accounts: Vec::new(),
             },
@@ -747,20 +662,6 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn vault_operator_delegation_snapshot(
-        &mut self,
-        vault_operator_delegation_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.vault_operator_delegation_snapshot =
-            Some(vault_operator_delegation_snapshot);
-        self
-    }
-    #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
-        self
-    }
-    #[inline(always)]
     pub fn vault_program(
         &mut self,
         vault_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -774,14 +675,6 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpiBuilder<'a, 'b> {
         restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.restaking_program = Some(restaking_program);
-        self
-    }
-    #[inline(always)]
-    pub fn system_program(
-        &mut self,
-        system_program: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.system_program = Some(system_program);
         self
     }
     /// `[optional argument]`
@@ -880,13 +773,6 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpiBuilder<'a, 'b> {
                 .operator_snapshot
                 .expect("operator_snapshot is not set"),
 
-            vault_operator_delegation_snapshot: self
-                .instruction
-                .vault_operator_delegation_snapshot
-                .expect("vault_operator_delegation_snapshot is not set"),
-
-            payer: self.instruction.payer.expect("payer is not set"),
-
             vault_program: self
                 .instruction
                 .vault_program
@@ -896,11 +782,6 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpiBuilder<'a, 'b> {
                 .instruction
                 .restaking_program
                 .expect("restaking_program is not set"),
-
-            system_program: self
-                .instruction
-                .system_program
-                .expect("system_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -924,11 +805,8 @@ struct InitializeVaultOperatorDelegationSnapshotCpiBuilderInstruction<'a, 'b> {
     weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    vault_operator_delegation_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     first_slot_of_ncn_epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

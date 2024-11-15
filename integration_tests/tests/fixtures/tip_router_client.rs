@@ -328,6 +328,7 @@ impl TipRouterClient {
             .mint(mint)
             .restaking_program(jito_restaking_program::id())
             .weight(weight)
+            .ncn_epoch(ncn_epoch)
             .instruction();
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;
@@ -496,12 +497,12 @@ impl TipRouterClient {
 
         let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
-        let epoch_snapshot =
-            EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
-
         let ncn_operator_state =
             NcnOperatorState::find_program_address(&jito_restaking_program::id(), &ncn, &operator)
                 .0;
+
+        let epoch_snapshot =
+            EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
 
         let operator_snapshot = OperatorSnapshot::find_program_address(
             &jito_tip_router_program::id(),

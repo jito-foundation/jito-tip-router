@@ -153,7 +153,7 @@ impl WeightTable {
     }
 
     pub fn weight_count(&self) -> usize {
-        self.table.iter().filter(|entry| !entry.is_set()).count()
+        self.table.iter().filter(|entry| entry.is_set()).count()
     }
 
     pub const fn ncn(&self) -> Pubkey {
