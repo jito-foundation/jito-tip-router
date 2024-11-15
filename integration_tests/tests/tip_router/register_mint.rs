@@ -13,12 +13,10 @@ mod tests {
         let mut vault_client = fixture.vault_client();
         let mut restaking_client = fixture.restaking_program_client();
         let ncn_root = fixture.setup_ncn().await?;
-
-        // Setup initial state
+        // // Setup initial state
         tip_router_client.setup_tip_router(&ncn_root).await?;
 
-        // Setup vault and tickets
-        let _ = vault_client.do_initialize_config().await?;
+        // // Setup vault and tickets
         let vault_root = vault_client
             .do_initialize_vault(0, 0, 0, 9, &ncn_root.ncn_pubkey)
             .await?;
@@ -114,7 +112,6 @@ mod tests {
         tip_router_client.setup_tip_router(&ncn_root).await?;
 
         // Setup vault and tickets
-        let _ = vault_client.do_initialize_config().await?;
         let vault_root = vault_client
             .do_initialize_vault(0, 0, 0, 9, &ncn_root.ncn_pubkey)
             .await?;
@@ -195,7 +192,6 @@ mod tests {
 
         tip_router_client.setup_tip_router(&ncn_root).await?;
 
-        let _ = vault_client.do_initialize_config().await?;
         let vault_root = vault_client
             .do_initialize_vault(0, 0, 0, 9, &ncn_root.ncn_pubkey)
             .await?;
