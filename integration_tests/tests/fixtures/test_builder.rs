@@ -352,7 +352,8 @@ impl TestBuilder {
         Ok(())
     }
 
-    pub async fn setup_full_test_ncn(
+    // Intermission: setup just NCN
+    pub async fn create_initial_test_ncn(
         &mut self,
         operator_count: usize,
         vault_count: usize,
@@ -366,5 +367,102 @@ impl TestBuilder {
         self.add_tracked_mints_to_test_ncn(&test_ncn).await?;
 
         Ok(test_ncn)
+    }
+
+    // 6. Set weights
+    pub async fn add_weights_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+        let mut vault_client = self.vault_program_client();
+
+        const WEIGHT: u128 = 100;
+
+        // Not sure if this is needed
+        self.warp_slot_incremental(1000).await?;
+
+        let slot = self.clock().await.slot;
+        tip_router_client
+            .do_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, slot)
+            .await?;
+
+        for vault_root in test_ncn.vaults.iter() {
+            let vault = vault_client.get_vault(&vault_root.vault_pubkey).await?;
+
+            let mint = vault.supported_mint;
+
+            tip_router_client
+                .do_admin_update_weight_table(test_ncn.ncn_root.ncn_pubkey, slot, mint, WEIGHT)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    // 7. Create Epoch Snapshot
+    pub async fn add_epoch_snapshot_to_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+
+        let slot = self.clock().await.slot;
+
+        tip_router_client
+            .do_initialize_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, slot)
+            .await?;
+
+        Ok(())
+    }
+
+    // 8. Create all operator snapshots
+    pub async fn add_operator_snapshots_to_test_ncn(
+        &mut self,
+        test_ncn: &TestNcn,
+    ) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+
+        let slot = self.clock().await.slot;
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+
+        for operator_root in test_ncn.operators.iter() {
+            let operator = operator_root.operator_pubkey;
+
+            tip_router_client
+                .do_initalize_operator_snapshot(operator, ncn, slot)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    // 9. Take all VaultOperatorDelegation snapshots
+    pub async fn add_vault_operator_delegation_snapshots_to_test_ncn(
+        &mut self,
+        test_ncn: &TestNcn,
+    ) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+
+        let slot = self.clock().await.slot;
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+
+        for operator_root in test_ncn.operators.iter() {
+            let operator = operator_root.operator_pubkey;
+            for vault_root in test_ncn.vaults.iter() {
+                let vault = vault_root.vault_pubkey;
+
+                tip_router_client
+                    .do_initalize_vault_operator_delegation_snapshot(vault, operator, ncn, slot)
+                    .await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    // Intermission 2 - all snapshots are taken
+    pub async fn snapshot_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        self.add_weights_for_test_ncn(&test_ncn).await?;
+        self.add_epoch_snapshot_to_test_ncn(&test_ncn).await?;
+        self.add_operator_snapshots_to_test_ncn(&test_ncn).await?;
+        self.add_vault_operator_delegation_snapshots_to_test_ncn(&test_ncn)
+            .await?;
+
+        Ok(())
     }
 }

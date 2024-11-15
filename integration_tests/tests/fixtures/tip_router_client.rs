@@ -112,6 +112,58 @@ impl TipRouterClient {
         Ok(*TrackedMints::try_from_slice_unchecked(tracked_mints.data.as_slice()).unwrap())
     }
 
+    pub async fn get_weight_table(
+        &mut self,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+    ) -> TestResult<WeightTable> {
+        let address =
+            WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
+
+        let raw_account = self.banks_client.get_account(address).await?.unwrap();
+
+        let account = WeightTable::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap();
+
+        Ok(*account)
+    }
+
+    pub async fn get_epoch_snapshot(
+        &mut self,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+    ) -> TestResult<EpochSnapshot> {
+        let address =
+            EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
+
+        let raw_account = self.banks_client.get_account(address).await?.unwrap();
+
+        let account = EpochSnapshot::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap();
+
+        Ok(*account)
+    }
+
+    pub async fn get_operator_snapshot(
+        &mut self,
+        operator: Pubkey,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+    ) -> TestResult<OperatorSnapshot> {
+        let address = OperatorSnapshot::find_program_address(
+            &jito_tip_router_program::id(),
+            &operator,
+            &ncn,
+            ncn_epoch,
+        )
+        .0;
+
+        let raw_account = self.banks_client.get_account(address).await?.unwrap();
+
+        let account =
+            OperatorSnapshot::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap();
+
+        Ok(*account)
+    }
+
     pub async fn do_initialize_config(
         &mut self,
         ncn: Pubkey,
