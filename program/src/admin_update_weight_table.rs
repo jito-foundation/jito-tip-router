@@ -25,7 +25,7 @@ pub fn process_admin_update_weight_table(
         ncn.weight_table_admin
     };
 
-    load_signer(weight_table_admin, true)?;
+    load_signer(weight_table_admin, false)?;
     load_token_mint(mint)?;
     WeightTable::load(program_id, weight_table, ncn, ncn_epoch, true)?;
 

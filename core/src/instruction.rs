@@ -17,7 +17,7 @@ pub enum WeightTableInstruction {
     #[account(0, name = "restaking_config")]
     #[account(1, writable, name = "ncn_config")]
     #[account(2, name = "ncn")]
-    #[account(3, signer, name = "ncn_admin")]
+    #[account(3, writable, signer, name = "ncn_admin")]
     #[account(4, name = "fee_wallet")]
     #[account(5, name = "tie_breaker_admin")]
     #[account(6, name = "restaking_program_id")]

@@ -19,7 +19,7 @@ pub fn process_set_config_fees(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    load_signer(fee_admin, true)?;
+    load_signer(fee_admin, false)?;
 
     NcnConfig::load(program_id, ncn_account.key, config, true)?;
     Ncn::load(restaking_program_id.key, ncn_account, false)?;
