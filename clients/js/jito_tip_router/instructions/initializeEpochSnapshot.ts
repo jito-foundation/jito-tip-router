@@ -47,6 +47,7 @@ export type InitializeEpochSnapshotInstruction<
   TAccountNcnConfig extends string | IAccountMeta<string> = string,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
+  TAccountTrackedMints extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountEpochSnapshot extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
@@ -66,6 +67,9 @@ export type InitializeEpochSnapshotInstruction<
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
+      TAccountTrackedMints extends string
+        ? ReadonlyAccount<TAccountTrackedMints>
+        : TAccountTrackedMints,
       TAccountWeightTable extends string
         ? ReadonlyAccount<TAccountWeightTable>
         : TAccountWeightTable,
@@ -129,6 +133,7 @@ export type InitializeEpochSnapshotInput<
   TAccountNcnConfig extends string = string,
   TAccountRestakingConfig extends string = string,
   TAccountNcn extends string = string,
+  TAccountTrackedMints extends string = string,
   TAccountWeightTable extends string = string,
   TAccountEpochSnapshot extends string = string,
   TAccountPayer extends string = string,
@@ -138,6 +143,7 @@ export type InitializeEpochSnapshotInput<
   ncnConfig: Address<TAccountNcnConfig>;
   restakingConfig: Address<TAccountRestakingConfig>;
   ncn: Address<TAccountNcn>;
+  trackedMints: Address<TAccountTrackedMints>;
   weightTable: Address<TAccountWeightTable>;
   epochSnapshot: Address<TAccountEpochSnapshot>;
   payer: TransactionSigner<TAccountPayer>;
@@ -150,6 +156,7 @@ export function getInitializeEpochSnapshotInstruction<
   TAccountNcnConfig extends string,
   TAccountRestakingConfig extends string,
   TAccountNcn extends string,
+  TAccountTrackedMints extends string,
   TAccountWeightTable extends string,
   TAccountEpochSnapshot extends string,
   TAccountPayer extends string,
@@ -161,6 +168,7 @@ export function getInitializeEpochSnapshotInstruction<
     TAccountNcnConfig,
     TAccountRestakingConfig,
     TAccountNcn,
+    TAccountTrackedMints,
     TAccountWeightTable,
     TAccountEpochSnapshot,
     TAccountPayer,
@@ -173,6 +181,7 @@ export function getInitializeEpochSnapshotInstruction<
   TAccountNcnConfig,
   TAccountRestakingConfig,
   TAccountNcn,
+  TAccountTrackedMints,
   TAccountWeightTable,
   TAccountEpochSnapshot,
   TAccountPayer,
@@ -191,6 +200,7 @@ export function getInitializeEpochSnapshotInstruction<
       isWritable: false,
     },
     ncn: { value: input.ncn ?? null, isWritable: false },
+    trackedMints: { value: input.trackedMints ?? null, isWritable: false },
     weightTable: { value: input.weightTable ?? null, isWritable: false },
     epochSnapshot: { value: input.epochSnapshot ?? null, isWritable: true },
     payer: { value: input.payer ?? null, isWritable: true },
@@ -220,6 +230,7 @@ export function getInitializeEpochSnapshotInstruction<
       getAccountMeta(accounts.ncnConfig),
       getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.ncn),
+      getAccountMeta(accounts.trackedMints),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.epochSnapshot),
       getAccountMeta(accounts.payer),
@@ -235,6 +246,7 @@ export function getInitializeEpochSnapshotInstruction<
     TAccountNcnConfig,
     TAccountRestakingConfig,
     TAccountNcn,
+    TAccountTrackedMints,
     TAccountWeightTable,
     TAccountEpochSnapshot,
     TAccountPayer,
@@ -254,11 +266,12 @@ export type ParsedInitializeEpochSnapshotInstruction<
     ncnConfig: TAccountMetas[0];
     restakingConfig: TAccountMetas[1];
     ncn: TAccountMetas[2];
-    weightTable: TAccountMetas[3];
-    epochSnapshot: TAccountMetas[4];
-    payer: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
-    systemProgram: TAccountMetas[7];
+    trackedMints: TAccountMetas[3];
+    weightTable: TAccountMetas[4];
+    epochSnapshot: TAccountMetas[5];
+    payer: TAccountMetas[6];
+    restakingProgram: TAccountMetas[7];
+    systemProgram: TAccountMetas[8];
   };
   data: InitializeEpochSnapshotInstructionData;
 };
@@ -271,7 +284,7 @@ export function parseInitializeEpochSnapshotInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeEpochSnapshotInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 9) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -287,6 +300,7 @@ export function parseInitializeEpochSnapshotInstruction<
       ncnConfig: getNextAccount(),
       restakingConfig: getNextAccount(),
       ncn: getNextAccount(),
+      trackedMints: getNextAccount(),
       weightTable: getNextAccount(),
       epochSnapshot: getNextAccount(),
       payer: getNextAccount(),

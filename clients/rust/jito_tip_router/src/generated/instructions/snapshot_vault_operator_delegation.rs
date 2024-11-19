@@ -7,7 +7,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
-pub struct InitializeVaultOperatorDelegationSnapshot {
+pub struct SnapshotVaultOperatorDelegation {
     pub ncn_config: solana_program::pubkey::Pubkey,
 
     pub restaking_config: solana_program::pubkey::Pubkey,
@@ -35,17 +35,17 @@ pub struct InitializeVaultOperatorDelegationSnapshot {
     pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
-impl InitializeVaultOperatorDelegationSnapshot {
+impl SnapshotVaultOperatorDelegation {
     pub fn instruction(
         &self,
-        args: InitializeVaultOperatorDelegationSnapshotInstructionArgs,
+        args: SnapshotVaultOperatorDelegationInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: InitializeVaultOperatorDelegationSnapshotInstructionArgs,
+        args: SnapshotVaultOperatorDelegationInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
         let mut accounts = Vec::with_capacity(13 + remaining_accounts.len());
@@ -100,7 +100,7 @@ impl InitializeVaultOperatorDelegationSnapshot {
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = InitializeVaultOperatorDelegationSnapshotInstructionData::new()
+        let mut data = SnapshotVaultOperatorDelegationInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -115,17 +115,17 @@ impl InitializeVaultOperatorDelegationSnapshot {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct InitializeVaultOperatorDelegationSnapshotInstructionData {
+pub struct SnapshotVaultOperatorDelegationInstructionData {
     discriminator: u8,
 }
 
-impl InitializeVaultOperatorDelegationSnapshotInstructionData {
+impl SnapshotVaultOperatorDelegationInstructionData {
     pub fn new() -> Self {
         Self { discriminator: 7 }
     }
 }
 
-impl Default for InitializeVaultOperatorDelegationSnapshotInstructionData {
+impl Default for SnapshotVaultOperatorDelegationInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -133,11 +133,11 @@ impl Default for InitializeVaultOperatorDelegationSnapshotInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct InitializeVaultOperatorDelegationSnapshotInstructionArgs {
+pub struct SnapshotVaultOperatorDelegationInstructionArgs {
     pub first_slot_of_ncn_epoch: Option<u64>,
 }
 
-/// Instruction builder for `InitializeVaultOperatorDelegationSnapshot`.
+/// Instruction builder for `SnapshotVaultOperatorDelegation`.
 ///
 /// ### Accounts:
 ///
@@ -155,7 +155,7 @@ pub struct InitializeVaultOperatorDelegationSnapshotInstructionArgs {
 ///   11. `[]` vault_program
 ///   12. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
-pub struct InitializeVaultOperatorDelegationSnapshotBuilder {
+pub struct SnapshotVaultOperatorDelegationBuilder {
     ncn_config: Option<solana_program::pubkey::Pubkey>,
     restaking_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
@@ -173,7 +173,7 @@ pub struct InitializeVaultOperatorDelegationSnapshotBuilder {
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl InitializeVaultOperatorDelegationSnapshotBuilder {
+impl SnapshotVaultOperatorDelegationBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -286,7 +286,7 @@ impl InitializeVaultOperatorDelegationSnapshotBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = InitializeVaultOperatorDelegationSnapshot {
+        let accounts = SnapshotVaultOperatorDelegation {
             ncn_config: self.ncn_config.expect("ncn_config is not set"),
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
@@ -307,7 +307,7 @@ impl InitializeVaultOperatorDelegationSnapshotBuilder {
                 .restaking_program
                 .expect("restaking_program is not set"),
         };
-        let args = InitializeVaultOperatorDelegationSnapshotInstructionArgs {
+        let args = SnapshotVaultOperatorDelegationInstructionArgs {
             first_slot_of_ncn_epoch: self.first_slot_of_ncn_epoch.clone(),
         };
 
@@ -315,8 +315,8 @@ impl InitializeVaultOperatorDelegationSnapshotBuilder {
     }
 }
 
-/// `initialize_vault_operator_delegation_snapshot` CPI accounts.
-pub struct InitializeVaultOperatorDelegationSnapshotCpiAccounts<'a, 'b> {
+/// `snapshot_vault_operator_delegation` CPI accounts.
+pub struct SnapshotVaultOperatorDelegationCpiAccounts<'a, 'b> {
     pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
@@ -344,8 +344,8 @@ pub struct InitializeVaultOperatorDelegationSnapshotCpiAccounts<'a, 'b> {
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `initialize_vault_operator_delegation_snapshot` CPI instruction.
-pub struct InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
+/// `snapshot_vault_operator_delegation` CPI instruction.
+pub struct SnapshotVaultOperatorDelegationCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -375,14 +375,14 @@ pub struct InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
 
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: InitializeVaultOperatorDelegationSnapshotInstructionArgs,
+    pub __args: SnapshotVaultOperatorDelegationInstructionArgs,
 }
 
-impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
+impl<'a, 'b> SnapshotVaultOperatorDelegationCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: InitializeVaultOperatorDelegationSnapshotCpiAccounts<'a, 'b>,
-        args: InitializeVaultOperatorDelegationSnapshotInstructionArgs,
+        accounts: SnapshotVaultOperatorDelegationCpiAccounts<'a, 'b>,
+        args: SnapshotVaultOperatorDelegationInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
@@ -495,7 +495,7 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = InitializeVaultOperatorDelegationSnapshotInstructionData::new()
+        let mut data = SnapshotVaultOperatorDelegationInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
@@ -533,7 +533,7 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `InitializeVaultOperatorDelegationSnapshot` via CPI.
+/// Instruction builder for `SnapshotVaultOperatorDelegation` via CPI.
 ///
 /// ### Accounts:
 ///
@@ -551,32 +551,30 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpi<'a, 'b> {
 ///   11. `[]` vault_program
 ///   12. `[]` restaking_program
 #[derive(Clone, Debug)]
-pub struct InitializeVaultOperatorDelegationSnapshotCpiBuilder<'a, 'b> {
-    instruction: Box<InitializeVaultOperatorDelegationSnapshotCpiBuilderInstruction<'a, 'b>>,
+pub struct SnapshotVaultOperatorDelegationCpiBuilder<'a, 'b> {
+    instruction: Box<SnapshotVaultOperatorDelegationCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpiBuilder<'a, 'b> {
+impl<'a, 'b> SnapshotVaultOperatorDelegationCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(
-            InitializeVaultOperatorDelegationSnapshotCpiBuilderInstruction {
-                __program: program,
-                ncn_config: None,
-                restaking_config: None,
-                ncn: None,
-                operator: None,
-                vault: None,
-                vault_ncn_ticket: None,
-                ncn_vault_ticket: None,
-                vault_operator_delegation: None,
-                weight_table: None,
-                epoch_snapshot: None,
-                operator_snapshot: None,
-                vault_program: None,
-                restaking_program: None,
-                first_slot_of_ncn_epoch: None,
-                __remaining_accounts: Vec::new(),
-            },
-        );
+        let instruction = Box::new(SnapshotVaultOperatorDelegationCpiBuilderInstruction {
+            __program: program,
+            ncn_config: None,
+            restaking_config: None,
+            ncn: None,
+            operator: None,
+            vault: None,
+            vault_ncn_ticket: None,
+            ncn_vault_ticket: None,
+            vault_operator_delegation: None,
+            weight_table: None,
+            epoch_snapshot: None,
+            operator_snapshot: None,
+            vault_program: None,
+            restaking_program: None,
+            first_slot_of_ncn_epoch: None,
+            __remaining_accounts: Vec::new(),
+        });
         Self { instruction }
     }
     #[inline(always)]
@@ -724,10 +722,10 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = InitializeVaultOperatorDelegationSnapshotInstructionArgs {
+        let args = SnapshotVaultOperatorDelegationInstructionArgs {
             first_slot_of_ncn_epoch: self.instruction.first_slot_of_ncn_epoch.clone(),
         };
-        let instruction = InitializeVaultOperatorDelegationSnapshotCpi {
+        let instruction = SnapshotVaultOperatorDelegationCpi {
             __program: self.instruction.__program,
 
             ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
@@ -792,7 +790,7 @@ impl<'a, 'b> InitializeVaultOperatorDelegationSnapshotCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct InitializeVaultOperatorDelegationSnapshotCpiBuilderInstruction<'a, 'b> {
+struct SnapshotVaultOperatorDelegationCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,

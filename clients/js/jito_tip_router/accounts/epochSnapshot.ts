@@ -52,9 +52,10 @@ export type EpochSnapshot = {
   slotFinalized: bigint;
   ncnFees: Fees;
   operatorCount: bigint;
+  vaultCount: bigint;
   operatorsRegistered: bigint;
   validOperatorVaultDelegations: bigint;
-  totalVotes: bigint;
+  stakeWeight: bigint;
   reserved: Array<number>;
 };
 
@@ -67,9 +68,10 @@ export type EpochSnapshotArgs = {
   slotFinalized: number | bigint;
   ncnFees: FeesArgs;
   operatorCount: number | bigint;
+  vaultCount: number | bigint;
   operatorsRegistered: number | bigint;
   validOperatorVaultDelegations: number | bigint;
-  totalVotes: number | bigint;
+  stakeWeight: number | bigint;
   reserved: Array<number>;
 };
 
@@ -83,9 +85,10 @@ export function getEpochSnapshotEncoder(): Encoder<EpochSnapshotArgs> {
     ['slotFinalized', getU64Encoder()],
     ['ncnFees', getFeesEncoder()],
     ['operatorCount', getU64Encoder()],
+    ['vaultCount', getU64Encoder()],
     ['operatorsRegistered', getU64Encoder()],
     ['validOperatorVaultDelegations', getU64Encoder()],
-    ['totalVotes', getU128Encoder()],
+    ['stakeWeight', getU128Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
   ]);
 }
@@ -100,9 +103,10 @@ export function getEpochSnapshotDecoder(): Decoder<EpochSnapshot> {
     ['slotFinalized', getU64Decoder()],
     ['ncnFees', getFeesDecoder()],
     ['operatorCount', getU64Decoder()],
+    ['vaultCount', getU64Decoder()],
     ['operatorsRegistered', getU64Decoder()],
     ['validOperatorVaultDelegations', getU64Decoder()],
-    ['totalVotes', getU128Decoder()],
+    ['stakeWeight', getU128Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
   ]);
 }

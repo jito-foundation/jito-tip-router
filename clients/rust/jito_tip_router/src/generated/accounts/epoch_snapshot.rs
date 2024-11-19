@@ -24,9 +24,10 @@ pub struct EpochSnapshot {
     pub slot_finalized: u64,
     pub ncn_fees: Fees,
     pub operator_count: u64,
+    pub vault_count: u64,
     pub operators_registered: u64,
     pub valid_operator_vault_delegations: u64,
-    pub total_votes: u128,
+    pub stake_weight: u128,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 128],
 }

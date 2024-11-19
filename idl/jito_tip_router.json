@@ -282,6 +282,11 @@
           "isSigner": false
         },
         {
+          "name": "trackedMints",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "weightTable",
           "isMut": false,
           "isSigner": false
@@ -388,7 +393,7 @@
       }
     },
     {
-      "name": "InitializeVaultOperatorDelegationSnapshot",
+      "name": "SnapshotVaultOperatorDelegation",
       "accounts": [
         {
           "name": "ncnConfig",
@@ -605,6 +610,12 @@
             }
           },
           {
+            "name": "vaultCount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
             "name": "operatorsRegistered",
             "type": {
               "defined": "PodU64"
@@ -617,7 +628,7 @@
             }
           },
           {
-            "name": "totalVotes",
+            "name": "stakeWeight",
             "type": {
               "defined": "PodU128"
             }
@@ -706,7 +717,7 @@
             }
           },
           {
-            "name": "totalVotes",
+            "name": "stakeWeight",
             "type": {
               "defined": "PodU128"
             }
@@ -721,13 +732,13 @@
             }
           },
           {
-            "name": "vaultOperatorVotes",
+            "name": "vaultOperatorStakeWeight",
             "type": {
               "array": [
                 {
-                  "defined": "VaultOperatorVotes"
+                  "defined": "VaultOperatorStakeWeight"
                 },
-                64
+                32
               ]
             }
           }
@@ -860,7 +871,7 @@
   ],
   "types": [
     {
-      "name": "VaultOperatorVotes",
+      "name": "VaultOperatorStakeWeight",
       "type": {
         "kind": "struct",
         "fields": [
@@ -869,7 +880,7 @@
             "type": "publicKey"
           },
           {
-            "name": "votes",
+            "name": "stakeWeight",
             "type": {
               "defined": "PodU128"
             }

@@ -78,11 +78,12 @@ pub enum TipRouterInstruction {
     #[account(0, name = "ncn_config")]
     #[account(1, name = "restaking_config")]
     #[account(2, name = "ncn")]
-    #[account(3, name = "weight_table")]
-    #[account(4, writable, name = "epoch_snapshot")]
-    #[account(5, writable, signer, name = "payer")]
-    #[account(6, name = "restaking_program")]
-    #[account(7, name = "system_program")]
+    #[account(3, name = "tracked_mints")]
+    #[account(4, name = "weight_table")]
+    #[account(5, writable, name = "epoch_snapshot")]
+    #[account(6, writable, signer, name = "payer")]
+    #[account(7, name = "restaking_program")]
+    #[account(8, name = "system_program")]
     InitializeEpochSnapshot{
         first_slot_of_ncn_epoch: Option<u64>,
     },
@@ -116,7 +117,7 @@ pub enum TipRouterInstruction {
     #[account(10, writable, name = "operator_snapshot")]
     #[account(11, name = "vault_program")]
     #[account(12, name = "restaking_program")]
-    InitializeVaultOperatorDelegationSnapshot{
+    SnapshotVaultOperatorDelegation{
         first_slot_of_ncn_epoch: Option<u64>,
     },
     /// Registers a mint with the NCN config

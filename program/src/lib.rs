@@ -3,11 +3,11 @@ mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
 mod initialize_operator_snapshot;
 mod initialize_tracked_mints;
-mod initialize_vault_operator_delegation_snapshot;
 mod initialize_weight_table;
 mod register_mint;
 mod set_config_fees;
 mod set_new_admin;
+mod snapshot_vault_operator_delegation;
 
 use borsh::BorshDeserialize;
 use const_str_to_pubkey::str_to_pubkey;
@@ -26,9 +26,9 @@ use crate::{
     initialize_ncn_config::process_initialize_ncn_config,
     initialize_operator_snapshot::process_initialize_operator_snapshot,
     initialize_tracked_mints::process_initialize_tracked_mints,
-    initialize_vault_operator_delegation_snapshot::process_initialize_vault_operator_delegation_snapshot,
     initialize_weight_table::process_initialize_weight_table, register_mint::process_register_mint,
     set_config_fees::process_set_config_fees,
+    snapshot_vault_operator_delegation::process_snapshot_vault_operator_delegation,
 };
 
 declare_id!(str_to_pubkey(env!("TIP_ROUTER_PROGRAM_ID")));
@@ -95,11 +95,11 @@ pub fn process_instruction(
             msg!("Instruction: InitializeOperatorSnapshot");
             process_initialize_operator_snapshot(program_id, accounts, first_slot_of_ncn_epoch)
         }
-        TipRouterInstruction::InitializeVaultOperatorDelegationSnapshot {
+        TipRouterInstruction::SnapshotVaultOperatorDelegation {
             first_slot_of_ncn_epoch,
         } => {
             msg!("Instruction: InitializeVaultOperatorDelegationSnapshot");
-            process_initialize_vault_operator_delegation_snapshot(
+            process_snapshot_vault_operator_delegation(
                 program_id,
                 accounts,
                 first_slot_of_ncn_epoch,

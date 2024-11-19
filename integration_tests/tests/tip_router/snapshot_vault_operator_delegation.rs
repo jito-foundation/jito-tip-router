@@ -43,7 +43,7 @@ mod tests {
             .await?;
 
         tip_router_client
-            .do_initalize_vault_operator_delegation_snapshot(vault_address, operator, ncn, slot)
+            .do_snapshot_vault_operator_delegation(vault_address, operator, ncn, slot)
             .await?;
 
         Ok(())

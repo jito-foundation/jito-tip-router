@@ -14,6 +14,8 @@ pub struct InitializeEpochSnapshot {
 
     pub ncn: solana_program::pubkey::Pubkey,
 
+    pub tracked_mints: solana_program::pubkey::Pubkey,
+
     pub weight_table: solana_program::pubkey::Pubkey,
 
     pub epoch_snapshot: solana_program::pubkey::Pubkey,
@@ -38,7 +40,7 @@ impl InitializeEpochSnapshot {
         args: InitializeEpochSnapshotInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn_config,
             false,
@@ -49,6 +51,10 @@ impl InitializeEpochSnapshot {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.tracked_mints,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.weight_table,
@@ -114,16 +120,18 @@ pub struct InitializeEpochSnapshotInstructionArgs {
 ///   0. `[]` ncn_config
 ///   1. `[]` restaking_config
 ///   2. `[]` ncn
-///   3. `[]` weight_table
-///   4. `[writable]` epoch_snapshot
-///   5. `[writable, signer]` payer
-///   6. `[]` restaking_program
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   3. `[]` tracked_mints
+///   4. `[]` weight_table
+///   5. `[writable]` epoch_snapshot
+///   6. `[writable, signer]` payer
+///   7. `[]` restaking_program
+///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeEpochSnapshotBuilder {
     ncn_config: Option<solana_program::pubkey::Pubkey>,
     restaking_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
+    tracked_mints: Option<solana_program::pubkey::Pubkey>,
     weight_table: Option<solana_program::pubkey::Pubkey>,
     epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
     payer: Option<solana_program::pubkey::Pubkey>,
@@ -153,6 +161,11 @@ impl InitializeEpochSnapshotBuilder {
     #[inline(always)]
     pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
         self.ncn = Some(ncn);
+        self
+    }
+    #[inline(always)]
+    pub fn tracked_mints(&mut self, tracked_mints: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.tracked_mints = Some(tracked_mints);
         self
     }
     #[inline(always)]
@@ -214,6 +227,7 @@ impl InitializeEpochSnapshotBuilder {
             ncn_config: self.ncn_config.expect("ncn_config is not set"),
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
+            tracked_mints: self.tracked_mints.expect("tracked_mints is not set"),
             weight_table: self.weight_table.expect("weight_table is not set"),
             epoch_snapshot: self.epoch_snapshot.expect("epoch_snapshot is not set"),
             payer: self.payer.expect("payer is not set"),
@@ -240,6 +254,8 @@ pub struct InitializeEpochSnapshotCpiAccounts<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
@@ -261,6 +277,8 @@ pub struct InitializeEpochSnapshotCpi<'a, 'b> {
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -286,6 +304,7 @@ impl<'a, 'b> InitializeEpochSnapshotCpi<'a, 'b> {
             ncn_config: accounts.ncn_config,
             restaking_config: accounts.restaking_config,
             ncn: accounts.ncn,
+            tracked_mints: accounts.tracked_mints,
             weight_table: accounts.weight_table,
             epoch_snapshot: accounts.epoch_snapshot,
             payer: accounts.payer,
@@ -327,7 +346,7 @@ impl<'a, 'b> InitializeEpochSnapshotCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn_config.key,
             false,
@@ -338,6 +357,10 @@ impl<'a, 'b> InitializeEpochSnapshotCpi<'a, 'b> {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.tracked_mints.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -378,11 +401,12 @@ impl<'a, 'b> InitializeEpochSnapshotCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(9 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.ncn_config.clone());
         account_infos.push(self.restaking_config.clone());
         account_infos.push(self.ncn.clone());
+        account_infos.push(self.tracked_mints.clone());
         account_infos.push(self.weight_table.clone());
         account_infos.push(self.epoch_snapshot.clone());
         account_infos.push(self.payer.clone());
@@ -407,11 +431,12 @@ impl<'a, 'b> InitializeEpochSnapshotCpi<'a, 'b> {
 ///   0. `[]` ncn_config
 ///   1. `[]` restaking_config
 ///   2. `[]` ncn
-///   3. `[]` weight_table
-///   4. `[writable]` epoch_snapshot
-///   5. `[writable, signer]` payer
-///   6. `[]` restaking_program
-///   7. `[]` system_program
+///   3. `[]` tracked_mints
+///   4. `[]` weight_table
+///   5. `[writable]` epoch_snapshot
+///   6. `[writable, signer]` payer
+///   7. `[]` restaking_program
+///   8. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeEpochSnapshotCpiBuilder<'a, 'b> {
     instruction: Box<InitializeEpochSnapshotCpiBuilderInstruction<'a, 'b>>,
@@ -424,6 +449,7 @@ impl<'a, 'b> InitializeEpochSnapshotCpiBuilder<'a, 'b> {
             ncn_config: None,
             restaking_config: None,
             ncn: None,
+            tracked_mints: None,
             weight_table: None,
             epoch_snapshot: None,
             payer: None,
@@ -453,6 +479,14 @@ impl<'a, 'b> InitializeEpochSnapshotCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.ncn = Some(ncn);
+        self
+    }
+    #[inline(always)]
+    pub fn tracked_mints(
+        &mut self,
+        tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.tracked_mints = Some(tracked_mints);
         self
     }
     #[inline(always)]
@@ -554,6 +588,11 @@ impl<'a, 'b> InitializeEpochSnapshotCpiBuilder<'a, 'b> {
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
+            tracked_mints: self
+                .instruction
+                .tracked_mints
+                .expect("tracked_mints is not set"),
+
             weight_table: self
                 .instruction
                 .weight_table
@@ -590,6 +629,7 @@ struct InitializeEpochSnapshotCpiBuilderInstruction<'a, 'b> {
     ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    tracked_mints: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,

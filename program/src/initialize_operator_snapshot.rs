@@ -99,12 +99,17 @@ pub fn process_initialize_operator_snapshot(
         ncn_operator_okay && operator_ncn_okay
     };
 
-    let (operator_fee_bps, vault_count, operator_index): (u16, u64, u64) = {
+    let vault_count = {
+        let epoch_snapshot_data = epoch_snapshot.data.borrow();
+        let epoch_snapshot_account = EpochSnapshot::try_from_slice_unchecked(&epoch_snapshot_data)?;
+        epoch_snapshot_account.vault_count()
+    };
+
+    let (operator_fee_bps, operator_index): (u16, u64) = {
         let operator_data = operator.data.borrow();
         let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
         (
             operator_account.operator_fee_bps.into(),
-            operator_account.vault_count(),
             operator_account.index(),
         )
     };

@@ -17,7 +17,7 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
-pub fn process_initialize_vault_operator_delegation_snapshot(
+pub fn process_snapshot_vault_operator_delegation(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     first_slot_of_ncn_epoch: Option<u64>,
@@ -54,9 +54,6 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
     VaultNcnTicket::load(vault_program.key, vault_ncn_ticket, vault, ncn, false)?;
     NcnVaultTicket::load(restaking_program.key, ncn_vault_ticket, ncn, vault, false)?;
 
-    //TODO check that st mint is supported?
-    //TODO may not exist
-    //TODO what happens if a new Vault is added inbetween weight table creation and this? - There could be a count mismatch
     if !vault_operator_delegation.data_is_empty() {
         VaultOperatorDelegation::load(
             vault_program.key,
@@ -107,7 +104,7 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
 
         let delegation_dne = vault_operator_delegation.data_is_empty();
 
-        vault_ncn_okay && ncn_vault_okay && delegation_dne
+        vault_ncn_okay && ncn_vault_okay && !delegation_dne
     };
 
     let total_votes: u128 = if is_active {
@@ -118,7 +115,7 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
         let weight_table_data = weight_table.data.borrow();
         let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
 
-        OperatorSnapshot::calculate_total_votes(
+        OperatorSnapshot::calculate_total_stake_weight(
             vault_operator_delegation_account,
             weight_table_account,
             &st_mint,
@@ -148,7 +145,7 @@ pub fn process_initialize_vault_operator_delegation_snapshot(
         epoch_snapshot_account.increment_operator_registration(
             current_slot,
             operator_snapshot_account.valid_operator_vault_delegations(),
-            operator_snapshot_account.total_votes(),
+            operator_snapshot_account.stake_weight(),
         )?;
     }
 

@@ -447,7 +447,7 @@ impl TestBuilder {
                 let vault = vault_root.vault_pubkey;
 
                 tip_router_client
-                    .do_initalize_vault_operator_delegation_snapshot(vault, operator, ncn, slot)
+                    .do_snapshot_vault_operator_delegation(vault, operator, ncn, slot)
                     .await?;
             }
         }

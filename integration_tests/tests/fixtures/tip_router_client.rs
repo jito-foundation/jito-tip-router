@@ -6,8 +6,8 @@ use jito_tip_router_client::{
     instructions::{
         AdminUpdateWeightTableBuilder, InitializeEpochSnapshotBuilder, InitializeNCNConfigBuilder,
         InitializeOperatorSnapshotBuilder, InitializeTrackedMintsBuilder,
-        InitializeVaultOperatorDelegationSnapshotBuilder, InitializeWeightTableBuilder,
-        RegisterMintBuilder, SetConfigFeesBuilder, SetNewAdminBuilder,
+        InitializeWeightTableBuilder, RegisterMintBuilder, SetConfigFeesBuilder,
+        SetNewAdminBuilder, SnapshotVaultOperatorDelegationBuilder,
     },
     types::ConfigAdminRole,
 };
@@ -15,7 +15,7 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     error::TipRouterError,
     ncn_config::NcnConfig,
-    tracked_mints::TrackedMints,
+    tracked_mints::{self, TrackedMints},
     weight_table::WeightTable,
 };
 use jito_vault_core::{
@@ -499,6 +499,8 @@ impl TipRouterClient {
         let ncn_epoch = slot / restaking_config_account.epoch_length();
 
         let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+        let tracked_mints =
+            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
 
@@ -509,6 +511,7 @@ impl TipRouterClient {
             .ncn_config(config_pda)
             .restaking_config(restaking_config)
             .ncn(ncn)
+            .tracked_mints(tracked_mints)
             .weight_table(weight_table)
             .epoch_snapshot(epoch_snapshot)
             .payer(self.payer.pubkey())
@@ -588,18 +591,18 @@ impl TipRouterClient {
         .await
     }
 
-    pub async fn do_initalize_vault_operator_delegation_snapshot(
+    pub async fn do_snapshot_vault_operator_delegation(
         &mut self,
         vault: Pubkey,
         operator: Pubkey,
         ncn: Pubkey,
         slot: u64,
     ) -> TestResult<()> {
-        self.initalize_vault_operator_delegation_snapshot(vault, operator, ncn, slot)
+        self.snapshot_vault_operator_delegation(vault, operator, ncn, slot)
             .await
     }
 
-    pub async fn initalize_vault_operator_delegation_snapshot(
+    pub async fn snapshot_vault_operator_delegation(
         &mut self,
         vault: Pubkey,
         operator: Pubkey,
@@ -640,7 +643,7 @@ impl TipRouterClient {
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
 
-        let ix = InitializeVaultOperatorDelegationSnapshotBuilder::new()
+        let ix = SnapshotVaultOperatorDelegationBuilder::new()
             .ncn_config(config_pda)
             .restaking_config(restaking_config)
             .ncn(ncn)

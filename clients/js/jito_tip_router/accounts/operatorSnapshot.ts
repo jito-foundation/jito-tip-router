@@ -41,10 +41,10 @@ import {
   type MaybeEncodedAccount,
 } from '@solana/web3.js';
 import {
-  getVaultOperatorVotesDecoder,
-  getVaultOperatorVotesEncoder,
-  type VaultOperatorVotes,
-  type VaultOperatorVotesArgs,
+  getVaultOperatorStakeWeightDecoder,
+  getVaultOperatorStakeWeightEncoder,
+  type VaultOperatorStakeWeight,
+  type VaultOperatorStakeWeightArgs,
 } from '../types';
 
 export type OperatorSnapshot = {
@@ -61,9 +61,9 @@ export type OperatorSnapshot = {
   vaultOperatorDelegationCount: bigint;
   vaultOperatorDelegationsRegistered: bigint;
   validOperatorVaultDelegations: bigint;
-  totalVotes: bigint;
+  stakeWeight: bigint;
   reserved: Array<number>;
-  vaultOperatorVotes: Array<VaultOperatorVotes>;
+  vaultOperatorStakeWeight: Array<VaultOperatorStakeWeight>;
 };
 
 export type OperatorSnapshotArgs = {
@@ -80,9 +80,9 @@ export type OperatorSnapshotArgs = {
   vaultOperatorDelegationCount: number | bigint;
   vaultOperatorDelegationsRegistered: number | bigint;
   validOperatorVaultDelegations: number | bigint;
-  totalVotes: number | bigint;
+  stakeWeight: number | bigint;
   reserved: Array<number>;
-  vaultOperatorVotes: Array<VaultOperatorVotesArgs>;
+  vaultOperatorStakeWeight: Array<VaultOperatorStakeWeightArgs>;
 };
 
 export function getOperatorSnapshotEncoder(): Encoder<OperatorSnapshotArgs> {
@@ -100,11 +100,11 @@ export function getOperatorSnapshotEncoder(): Encoder<OperatorSnapshotArgs> {
     ['vaultOperatorDelegationCount', getU64Encoder()],
     ['vaultOperatorDelegationsRegistered', getU64Encoder()],
     ['validOperatorVaultDelegations', getU64Encoder()],
-    ['totalVotes', getU128Encoder()],
+    ['stakeWeight', getU128Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 256 })],
     [
-      'vaultOperatorVotes',
-      getArrayEncoder(getVaultOperatorVotesEncoder(), { size: 64 }),
+      'vaultOperatorStakeWeight',
+      getArrayEncoder(getVaultOperatorStakeWeightEncoder(), { size: 32 }),
     ],
   ]);
 }
@@ -124,11 +124,11 @@ export function getOperatorSnapshotDecoder(): Decoder<OperatorSnapshot> {
     ['vaultOperatorDelegationCount', getU64Decoder()],
     ['vaultOperatorDelegationsRegistered', getU64Decoder()],
     ['validOperatorVaultDelegations', getU64Decoder()],
-    ['totalVotes', getU128Decoder()],
+    ['stakeWeight', getU128Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 256 })],
     [
-      'vaultOperatorVotes',
-      getArrayDecoder(getVaultOperatorVotesDecoder(), { size: 64 }),
+      'vaultOperatorStakeWeight',
+      getArrayDecoder(getVaultOperatorStakeWeightDecoder(), { size: 32 }),
     ],
   ]);
 }

@@ -27,44 +27,44 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/web3.js';
 
-export type VaultOperatorVotes = {
+export type VaultOperatorStakeWeight = {
   vault: Address;
-  votes: bigint;
+  stakeWeight: bigint;
   vaultIndex: bigint;
   reserved: ReadonlyUint8Array;
 };
 
-export type VaultOperatorVotesArgs = {
+export type VaultOperatorStakeWeightArgs = {
   vault: Address;
-  votes: number | bigint;
+  stakeWeight: number | bigint;
   vaultIndex: number | bigint;
   reserved: ReadonlyUint8Array;
 };
 
-export function getVaultOperatorVotesEncoder(): Encoder<VaultOperatorVotesArgs> {
+export function getVaultOperatorStakeWeightEncoder(): Encoder<VaultOperatorStakeWeightArgs> {
   return getStructEncoder([
     ['vault', getAddressEncoder()],
-    ['votes', getU128Encoder()],
+    ['stakeWeight', getU128Encoder()],
     ['vaultIndex', getU64Encoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 32)],
   ]);
 }
 
-export function getVaultOperatorVotesDecoder(): Decoder<VaultOperatorVotes> {
+export function getVaultOperatorStakeWeightDecoder(): Decoder<VaultOperatorStakeWeight> {
   return getStructDecoder([
     ['vault', getAddressDecoder()],
-    ['votes', getU128Decoder()],
+    ['stakeWeight', getU128Decoder()],
     ['vaultIndex', getU64Decoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 
-export function getVaultOperatorVotesCodec(): Codec<
-  VaultOperatorVotesArgs,
-  VaultOperatorVotes
+export function getVaultOperatorStakeWeightCodec(): Codec<
+  VaultOperatorStakeWeightArgs,
+  VaultOperatorStakeWeight
 > {
   return combineCodec(
-    getVaultOperatorVotesEncoder(),
-    getVaultOperatorVotesDecoder()
+    getVaultOperatorStakeWeightEncoder(),
+    getVaultOperatorStakeWeightDecoder()
   );
 }

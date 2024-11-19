@@ -18,11 +18,11 @@ import {
   type ParsedInitializeNCNConfigInstruction,
   type ParsedInitializeOperatorSnapshotInstruction,
   type ParsedInitializeTrackedMintsInstruction,
-  type ParsedInitializeVaultOperatorDelegationSnapshotInstruction,
   type ParsedInitializeWeightTableInstruction,
   type ParsedRegisterMintInstruction,
   type ParsedSetConfigFeesInstruction,
   type ParsedSetNewAdminInstruction,
+  type ParsedSnapshotVaultOperatorDelegationInstruction,
 } from '../instructions';
 
 export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
@@ -44,7 +44,7 @@ export enum JitoTipRouterInstruction {
   AdminUpdateWeightTable,
   InitializeEpochSnapshot,
   InitializeOperatorSnapshot,
-  InitializeVaultOperatorDelegationSnapshot,
+  SnapshotVaultOperatorDelegation,
   RegisterMint,
   InitializeTrackedMints,
 }
@@ -75,7 +75,7 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.InitializeOperatorSnapshot;
   }
   if (containsBytes(data, getU8Encoder().encode(7), 0)) {
-    return JitoTipRouterInstruction.InitializeVaultOperatorDelegationSnapshot;
+    return JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
   }
   if (containsBytes(data, getU8Encoder().encode(8), 0)) {
     return JitoTipRouterInstruction.RegisterMint;
@@ -113,8 +113,8 @@ export type ParsedJitoTipRouterInstruction<
       instructionType: JitoTipRouterInstruction.InitializeOperatorSnapshot;
     } & ParsedInitializeOperatorSnapshotInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.InitializeVaultOperatorDelegationSnapshot;
-    } & ParsedInitializeVaultOperatorDelegationSnapshotInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
+    } & ParsedSnapshotVaultOperatorDelegationInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.RegisterMint;
     } & ParsedRegisterMintInstruction<TProgram>)

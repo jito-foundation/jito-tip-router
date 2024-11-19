@@ -33,15 +33,15 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_VAULT_OPERATOR_DELEGATION_SNAPSHOT_DISCRIMINATOR = 7;
+export const SNAPSHOT_VAULT_OPERATOR_DELEGATION_DISCRIMINATOR = 7;
 
-export function getInitializeVaultOperatorDelegationSnapshotDiscriminatorBytes() {
+export function getSnapshotVaultOperatorDelegationDiscriminatorBytes() {
   return getU8Encoder().encode(
-    INITIALIZE_VAULT_OPERATOR_DELEGATION_SNAPSHOT_DISCRIMINATOR
+    SNAPSHOT_VAULT_OPERATOR_DELEGATION_DISCRIMINATOR
   );
 }
 
-export type InitializeVaultOperatorDelegationSnapshotInstruction<
+export type SnapshotVaultOperatorDelegationInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountNcnConfig extends string | IAccountMeta<string> = string,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
@@ -104,16 +104,16 @@ export type InitializeVaultOperatorDelegationSnapshotInstruction<
     ]
   >;
 
-export type InitializeVaultOperatorDelegationSnapshotInstructionData = {
+export type SnapshotVaultOperatorDelegationInstructionData = {
   discriminator: number;
   firstSlotOfNcnEpoch: Option<bigint>;
 };
 
-export type InitializeVaultOperatorDelegationSnapshotInstructionDataArgs = {
+export type SnapshotVaultOperatorDelegationInstructionDataArgs = {
   firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
 };
 
-export function getInitializeVaultOperatorDelegationSnapshotInstructionDataEncoder(): Encoder<InitializeVaultOperatorDelegationSnapshotInstructionDataArgs> {
+export function getSnapshotVaultOperatorDelegationInstructionDataEncoder(): Encoder<SnapshotVaultOperatorDelegationInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
@@ -121,30 +121,29 @@ export function getInitializeVaultOperatorDelegationSnapshotInstructionDataEncod
     ]),
     (value) => ({
       ...value,
-      discriminator:
-        INITIALIZE_VAULT_OPERATOR_DELEGATION_SNAPSHOT_DISCRIMINATOR,
+      discriminator: SNAPSHOT_VAULT_OPERATOR_DELEGATION_DISCRIMINATOR,
     })
   );
 }
 
-export function getInitializeVaultOperatorDelegationSnapshotInstructionDataDecoder(): Decoder<InitializeVaultOperatorDelegationSnapshotInstructionData> {
+export function getSnapshotVaultOperatorDelegationInstructionDataDecoder(): Decoder<SnapshotVaultOperatorDelegationInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
   ]);
 }
 
-export function getInitializeVaultOperatorDelegationSnapshotInstructionDataCodec(): Codec<
-  InitializeVaultOperatorDelegationSnapshotInstructionDataArgs,
-  InitializeVaultOperatorDelegationSnapshotInstructionData
+export function getSnapshotVaultOperatorDelegationInstructionDataCodec(): Codec<
+  SnapshotVaultOperatorDelegationInstructionDataArgs,
+  SnapshotVaultOperatorDelegationInstructionData
 > {
   return combineCodec(
-    getInitializeVaultOperatorDelegationSnapshotInstructionDataEncoder(),
-    getInitializeVaultOperatorDelegationSnapshotInstructionDataDecoder()
+    getSnapshotVaultOperatorDelegationInstructionDataEncoder(),
+    getSnapshotVaultOperatorDelegationInstructionDataDecoder()
   );
 }
 
-export type InitializeVaultOperatorDelegationSnapshotInput<
+export type SnapshotVaultOperatorDelegationInput<
   TAccountNcnConfig extends string = string,
   TAccountRestakingConfig extends string = string,
   TAccountNcn extends string = string,
@@ -172,10 +171,10 @@ export type InitializeVaultOperatorDelegationSnapshotInput<
   operatorSnapshot: Address<TAccountOperatorSnapshot>;
   vaultProgram: Address<TAccountVaultProgram>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  firstSlotOfNcnEpoch: InitializeVaultOperatorDelegationSnapshotInstructionDataArgs['firstSlotOfNcnEpoch'];
+  firstSlotOfNcnEpoch: SnapshotVaultOperatorDelegationInstructionDataArgs['firstSlotOfNcnEpoch'];
 };
 
-export function getInitializeVaultOperatorDelegationSnapshotInstruction<
+export function getSnapshotVaultOperatorDelegationInstruction<
   TAccountNcnConfig extends string,
   TAccountRestakingConfig extends string,
   TAccountNcn extends string,
@@ -191,7 +190,7 @@ export function getInitializeVaultOperatorDelegationSnapshotInstruction<
   TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: InitializeVaultOperatorDelegationSnapshotInput<
+  input: SnapshotVaultOperatorDelegationInput<
     TAccountNcnConfig,
     TAccountRestakingConfig,
     TAccountNcn,
@@ -207,7 +206,7 @@ export function getInitializeVaultOperatorDelegationSnapshotInstruction<
     TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): InitializeVaultOperatorDelegationSnapshotInstruction<
+): SnapshotVaultOperatorDelegationInstruction<
   TProgramAddress,
   TAccountNcnConfig,
   TAccountRestakingConfig,
@@ -281,10 +280,10 @@ export function getInitializeVaultOperatorDelegationSnapshotInstruction<
       getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
-    data: getInitializeVaultOperatorDelegationSnapshotInstructionDataEncoder().encode(
-      args as InitializeVaultOperatorDelegationSnapshotInstructionDataArgs
+    data: getSnapshotVaultOperatorDelegationInstructionDataEncoder().encode(
+      args as SnapshotVaultOperatorDelegationInstructionDataArgs
     ),
-  } as InitializeVaultOperatorDelegationSnapshotInstruction<
+  } as SnapshotVaultOperatorDelegationInstruction<
     TProgramAddress,
     TAccountNcnConfig,
     TAccountRestakingConfig,
@@ -304,7 +303,7 @@ export function getInitializeVaultOperatorDelegationSnapshotInstruction<
   return instruction;
 }
 
-export type ParsedInitializeVaultOperatorDelegationSnapshotInstruction<
+export type ParsedSnapshotVaultOperatorDelegationInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -324,20 +323,17 @@ export type ParsedInitializeVaultOperatorDelegationSnapshotInstruction<
     vaultProgram: TAccountMetas[11];
     restakingProgram: TAccountMetas[12];
   };
-  data: InitializeVaultOperatorDelegationSnapshotInstructionData;
+  data: SnapshotVaultOperatorDelegationInstructionData;
 };
 
-export function parseInitializeVaultOperatorDelegationSnapshotInstruction<
+export function parseSnapshotVaultOperatorDelegationInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedInitializeVaultOperatorDelegationSnapshotInstruction<
-  TProgram,
-  TAccountMetas
-> {
+): ParsedSnapshotVaultOperatorDelegationInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 13) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -365,7 +361,7 @@ export function parseInitializeVaultOperatorDelegationSnapshotInstruction<
       vaultProgram: getNextAccount(),
       restakingProgram: getNextAccount(),
     },
-    data: getInitializeVaultOperatorDelegationSnapshotInstructionDataDecoder().decode(
+    data: getSnapshotVaultOperatorDelegationInstructionDataDecoder().decode(
       instruction.data
     ),
   };
