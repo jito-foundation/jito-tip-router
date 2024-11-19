@@ -1447,10 +1447,6 @@ impl VaultProgramClient {
     }
 
     async fn _process_transaction(&mut self, tx: &Transaction) -> Result<(), TestError> {
-        println!(
-            "Vault Client processing transaction: {:?}",
-            tx.signatures[0]
-        );
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 tx.clone(),

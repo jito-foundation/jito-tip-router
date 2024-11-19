@@ -51,10 +51,6 @@ impl TipRouterClient {
     }
 
     pub async fn process_transaction(&mut self, tx: &Transaction) -> TestResult<()> {
-        println!(
-            "Tip Router Client processing transaction: {:?}",
-            tx.signatures[0]
-        );
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 tx.clone(),
