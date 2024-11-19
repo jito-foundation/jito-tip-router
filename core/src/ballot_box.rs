@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
-    types::{PodU128, PodU64},
+    types::{PodBool, PodU128, PodU16, PodU64},
     AccountDeserialize, Discriminator,
 };
 use shank::{ShankAccount, ShankType};
@@ -13,8 +13,7 @@ use crate::{constants::PRECISE_CONSENSUS, discriminators::Discriminators, error:
 #[repr(C)]
 pub struct Ballot {
     merkle_root: [u8; 32],
-    max_total_claim: PodU64,
-    max_node_count: PodU64,
+    is_cast: PodBool,
     reserved: [u8; 64],
 }
 
@@ -22,19 +21,17 @@ impl Default for Ballot {
     fn default() -> Self {
         Self {
             merkle_root: [0; 32],
-            max_total_claim: PodU64::from(0),
-            max_node_count: PodU64::from(0),
+            is_cast: PodBool::from(false),
             reserved: [0; 64],
         }
     }
 }
 
 impl Ballot {
-    pub fn new(root: [u8; 32], max_total_claim: u64, max_num_nodes: u64) -> Self {
+    pub fn new(root: [u8; 32]) -> Self {
         Self {
             merkle_root: root,
-            max_total_claim: PodU64::from(max_total_claim),
-            max_node_count: PodU64::from(max_num_nodes),
+            is_cast: PodBool::from(true),
             reserved: [0; 64],
         }
     }
@@ -43,12 +40,8 @@ impl Ballot {
         self.merkle_root
     }
 
-    pub fn max_total_claim(&self) -> u64 {
-        self.max_total_claim.into()
-    }
-
-    pub fn max_node_count(&self) -> u64 {
-        self.max_node_count.into()
+    pub fn is_cast(&self) -> bool {
+        self.is_cast.into()
     }
 }
 
@@ -120,7 +113,7 @@ pub struct OperatorVote {
     operator: Pubkey,
     slot_voted: PodU64,
     stake_weight: PodU128,
-    ballot: Ballot,
+    ballot_index: PodU16,
     reserved: [u8; 64],
 }
 
@@ -130,17 +123,22 @@ impl Default for OperatorVote {
             operator: Pubkey::default(),
             slot_voted: PodU64::from(0),
             stake_weight: PodU128::from(0),
-            ballot: Ballot::default(),
+            ballot_index: PodU16::from(0),
             reserved: [0; 64],
         }
     }
 }
 
 impl OperatorVote {
-    pub fn new(ballot: Ballot, operator: Pubkey, current_slot: u64, stake_weight: u128) -> Self {
+    pub fn new(
+        ballot_index: usize,
+        operator: Pubkey,
+        current_slot: u64,
+        stake_weight: u128,
+    ) -> Self {
         Self {
             operator,
-            ballot,
+            ballot_index: PodU16::from(ballot_index as u16),
             slot_voted: PodU64::from(current_slot),
             stake_weight: PodU128::from(stake_weight),
             reserved: [0; 64],
@@ -159,8 +157,8 @@ impl OperatorVote {
         self.stake_weight.into()
     }
 
-    pub const fn ballot(&self) -> Ballot {
-        self.ballot
+    pub fn ballot_index(&self) -> u16 {
+        self.ballot_index.into()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -186,6 +184,8 @@ pub struct BallotBox {
     operators_voted: PodU64,
     unique_ballots: PodU64,
 
+    winning_ballot: Ballot,
+
     //TODO fix 32 -> MAX_OPERATORS
     operator_votes: [OperatorVote; 32],
     ballot_tallies: [BallotTally; 32],
@@ -205,6 +205,7 @@ impl BallotBox {
             slot_consensus_reached: PodU64::from(0),
             operators_voted: PodU64::from(0),
             unique_ballots: PodU64::from(0),
+            winning_ballot: Ballot::default(),
             //TODO fix 32 -> MAX_OPERATORS
             operator_votes: [OperatorVote::default(); 32],
             ballot_tallies: [BallotTally::default(); 32],
@@ -268,30 +269,44 @@ impl BallotBox {
         Ok(())
     }
 
-    fn slot_consensus_reached(&self) -> u64 {
+    pub fn slot_consensus_reached(&self) -> u64 {
         self.slot_consensus_reached.into()
     }
 
-    fn unique_ballots(&self) -> u64 {
+    pub fn unique_ballots(&self) -> u64 {
         self.unique_ballots.into()
     }
 
-    fn operators_voted(&self) -> u64 {
+    pub fn operators_voted(&self) -> u64 {
         self.operators_voted.into()
+    }
+
+    pub fn is_consensus_reached(&self) -> bool {
+        self.slot_consensus_reached() == 0
+    }
+
+    pub fn get_winning_ballot(&self) -> Result<Ballot, TipRouterError> {
+        if self.winning_ballot.is_cast() {
+            Ok(self.winning_ballot)
+        } else {
+            Err(TipRouterError::ConsensusNotReached)
+        }
     }
 
     fn increment_or_create_ballot_tally(
         &mut self,
-        operator_vote: &OperatorVote,
-    ) -> Result<(), TipRouterError> {
+        ballot: &Ballot,
+        stake_weight: u128,
+    ) -> Result<usize, TipRouterError> {
+        let mut tally_index: usize = 0;
         for tally in self.ballot_tallies.iter_mut() {
-            if tally.ballot.root().eq(&operator_vote.ballot().root()) {
-                tally.increment_tally(operator_vote.stake_weight())?;
-                return Ok(());
+            if tally.ballot.eq(ballot) {
+                tally.increment_tally(stake_weight)?;
+                return Ok(tally_index);
             }
 
             if tally.is_empty() {
-                *tally = BallotTally::new(operator_vote.ballot(), operator_vote.stake_weight());
+                *tally = BallotTally::new(*ballot, stake_weight);
 
                 self.unique_ballots = PodU64::from(
                     self.unique_ballots()
@@ -299,8 +314,12 @@ impl BallotBox {
                         .ok_or(TipRouterError::ArithmeticOverflow)?,
                 );
 
-                return Ok(());
+                return Ok(tally_index);
             }
+
+            tally_index = tally_index
+                .checked_add(1)
+                .ok_or(TipRouterError::ArithmeticOverflow)?;
         }
 
         Err(TipRouterError::BallotTallyFull)
@@ -313,16 +332,17 @@ impl BallotBox {
         stake_weight: u128,
         current_slot: u64,
     ) -> Result<(), TipRouterError> {
+        let ballot_index = self.increment_or_create_ballot_tally(&ballot, stake_weight)?;
+
         for vote in self.operator_votes.iter_mut() {
             if vote.operator().eq(&operator) {
                 return Err(TipRouterError::DuplicateVoteCast);
             }
 
             if vote.is_empty() {
-                let operator_vote = OperatorVote::new(ballot, operator, current_slot, stake_weight);
+                let operator_vote =
+                    OperatorVote::new(ballot_index, operator, current_slot, stake_weight);
                 *vote = operator_vote;
-
-                self.increment_or_create_ballot_tally(&operator_vote)?;
 
                 self.operators_voted = PodU64::from(
                     self.operators_voted()
@@ -337,14 +357,14 @@ impl BallotBox {
         Err(TipRouterError::OperatorVotesFull)
     }
 
-    //Not sure where/how this should be used
+    // Should be called anytime a new vote is cast
     pub fn tally_votes(
         &mut self,
         total_stake_weight: u128,
         current_slot: u64,
     ) -> Result<(), TipRouterError> {
         if self.slot_consensus_reached() != 0 {
-            return Err(TipRouterError::ConsensusAlreadyReached);
+            return Ok(());
         }
 
         let max_tally = self
@@ -371,6 +391,8 @@ impl BallotBox {
 
         if consensus_reached {
             self.slot_consensus_reached = PodU64::from(current_slot);
+
+            self.winning_ballot = max_tally.ballot();
         }
 
         Ok(())

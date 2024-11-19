@@ -619,6 +619,12 @@
             }
           },
           {
+            "name": "winningBallot",
+            "type": {
+              "defined": "Ballot"
+            }
+          },
+          {
             "name": "operatorVotes",
             "type": {
               "array": [
@@ -962,15 +968,9 @@
             }
           },
           {
-            "name": "maxTotalClaim",
+            "name": "isCast",
             "type": {
-              "defined": "PodU64"
-            }
-          },
-          {
-            "name": "maxNodeCount",
-            "type": {
-              "defined": "PodU64"
+              "defined": "PodBool"
             }
           },
           {
@@ -1042,9 +1042,9 @@
             }
           },
           {
-            "name": "ballot",
+            "name": "ballotIndex",
             "type": {
-              "defined": "Ballot"
+              "defined": "PodU16"
             }
           },
           {
@@ -1394,6 +1394,16 @@
       "code": 8731,
       "name": "BallotTallyFull",
       "msg": "Merkle root tally full"
+    },
+    {
+      "code": 8732,
+      "name": "ConsensusAlreadyReached",
+      "msg": "Consensus already reached"
+    },
+    {
+      "code": 8733,
+      "name": "ConsensusNotReached",
+      "msg": "Consensus not reached"
     }
   ],
   "metadata": {

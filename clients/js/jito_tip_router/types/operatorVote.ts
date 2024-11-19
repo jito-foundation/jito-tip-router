@@ -18,6 +18,8 @@ import {
   getStructEncoder,
   getU128Decoder,
   getU128Encoder,
+  getU16Decoder,
+  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
   type Address,
@@ -26,18 +28,12 @@ import {
   type Encoder,
   type ReadonlyUint8Array,
 } from '@solana/web3.js';
-import {
-  getBallotDecoder,
-  getBallotEncoder,
-  type Ballot,
-  type BallotArgs,
-} from '.';
 
 export type OperatorVote = {
   operator: Address;
   slotVoted: bigint;
   stakeWeight: bigint;
-  ballot: Ballot;
+  ballotIndex: number;
   reserved: ReadonlyUint8Array;
 };
 
@@ -45,7 +41,7 @@ export type OperatorVoteArgs = {
   operator: Address;
   slotVoted: number | bigint;
   stakeWeight: number | bigint;
-  ballot: BallotArgs;
+  ballotIndex: number;
   reserved: ReadonlyUint8Array;
 };
 
@@ -54,7 +50,7 @@ export function getOperatorVoteEncoder(): Encoder<OperatorVoteArgs> {
     ['operator', getAddressEncoder()],
     ['slotVoted', getU64Encoder()],
     ['stakeWeight', getU128Encoder()],
-    ['ballot', getBallotEncoder()],
+    ['ballotIndex', getU16Encoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 64)],
   ]);
 }
@@ -64,7 +60,7 @@ export function getOperatorVoteDecoder(): Decoder<OperatorVote> {
     ['operator', getAddressDecoder()],
     ['slotVoted', getU64Decoder()],
     ['stakeWeight', getU128Decoder()],
-    ['ballot', getBallotDecoder()],
+    ['ballotIndex', getU16Decoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 64)],
   ]);
 }

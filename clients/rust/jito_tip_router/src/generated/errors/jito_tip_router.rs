@@ -108,6 +108,12 @@ pub enum JitoTipRouterError {
     /// 8731 - Merkle root tally full
     #[error("Merkle root tally full")]
     BallotTallyFull = 0x221B,
+    /// 8732 - Consensus already reached
+    #[error("Consensus already reached")]
+    ConsensusAlreadyReached = 0x221C,
+    /// 8733 - Consensus not reached
+    #[error("Consensus not reached")]
+    ConsensusNotReached = 0x221D,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

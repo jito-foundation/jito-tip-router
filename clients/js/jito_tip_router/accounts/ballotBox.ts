@@ -35,10 +35,14 @@ import {
   type MaybeEncodedAccount,
 } from '@solana/web3.js';
 import {
+  getBallotDecoder,
+  getBallotEncoder,
   getBallotTallyDecoder,
   getBallotTallyEncoder,
   getOperatorVoteDecoder,
   getOperatorVoteEncoder,
+  type Ballot,
+  type BallotArgs,
   type BallotTally,
   type BallotTallyArgs,
   type OperatorVote,
@@ -55,6 +59,7 @@ export type BallotBox = {
   reserved: Array<number>;
   operatorsVoted: bigint;
   uniqueBallots: bigint;
+  winningBallot: Ballot;
   operatorVotes: Array<OperatorVote>;
   ballotTallies: Array<BallotTally>;
 };
@@ -69,6 +74,7 @@ export type BallotBoxArgs = {
   reserved: Array<number>;
   operatorsVoted: number | bigint;
   uniqueBallots: number | bigint;
+  winningBallot: BallotArgs;
   operatorVotes: Array<OperatorVoteArgs>;
   ballotTallies: Array<BallotTallyArgs>;
 };
@@ -84,6 +90,7 @@ export function getBallotBoxEncoder(): Encoder<BallotBoxArgs> {
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
     ['operatorsVoted', getU64Encoder()],
     ['uniqueBallots', getU64Encoder()],
+    ['winningBallot', getBallotEncoder()],
     ['operatorVotes', getArrayEncoder(getOperatorVoteEncoder(), { size: 32 })],
     ['ballotTallies', getArrayEncoder(getBallotTallyEncoder(), { size: 32 })],
   ]);
@@ -100,6 +107,7 @@ export function getBallotBoxDecoder(): Decoder<BallotBox> {
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
     ['operatorsVoted', getU64Decoder()],
     ['uniqueBallots', getU64Decoder()],
+    ['winningBallot', getBallotDecoder()],
     ['operatorVotes', getArrayDecoder(getOperatorVoteDecoder(), { size: 32 })],
     ['ballotTallies', getArrayDecoder(getBallotTallyDecoder(), { size: 32 })],
   ]);

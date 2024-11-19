@@ -72,6 +72,8 @@ pub enum TipRouterError {
     BallotTallyFull,
     #[error("Consensus already reached")]
     ConsensusAlreadyReached,
+    #[error("Consensus not reached")]
+    ConsensusNotReached,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

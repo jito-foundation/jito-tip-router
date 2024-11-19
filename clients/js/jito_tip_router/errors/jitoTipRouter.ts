@@ -80,6 +80,10 @@ export const JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST = 0x2219; // 8729
 export const JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL = 0x221a; // 8730
 /** BallotTallyFull: Merkle root tally full */
 export const JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL = 0x221b; // 8731
+/** ConsensusAlreadyReached: Consensus already reached */
+export const JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED = 0x221c; // 8732
+/** ConsensusNotReached: Consensus not reached */
+export const JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED = 0x221d; // 8733
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
@@ -88,6 +92,8 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL
   | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED
+  | typeof JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED
+  | typeof JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED
   | typeof JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION
@@ -125,6 +131,8 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL]: `NCN config vaults are at capacity`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED]: `Config supported mints do not match NCN Vault Count`,
+    [JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED]: `Consensus already reached`,
+    [JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED]: `Consensus not reached`,
     [JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO]: `Zero in the denominator`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE]: `Duplicate mints in table`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION]: `Duplicate vault operator delegation`,

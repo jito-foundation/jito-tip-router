@@ -10,12 +10,12 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
+  getBoolDecoder,
+  getBoolEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
-  getU64Decoder,
-  getU64Encoder,
   type Codec,
   type Decoder,
   type Encoder,
@@ -24,23 +24,16 @@ import {
 
 export type Ballot = {
   merkleRoot: ReadonlyUint8Array;
-  maxTotalClaim: bigint;
-  maxNodeCount: bigint;
+  isCast: number;
   reserved: ReadonlyUint8Array;
 };
 
-export type BallotArgs = {
-  merkleRoot: ReadonlyUint8Array;
-  maxTotalClaim: number | bigint;
-  maxNodeCount: number | bigint;
-  reserved: ReadonlyUint8Array;
-};
+export type BallotArgs = Ballot;
 
 export function getBallotEncoder(): Encoder<BallotArgs> {
   return getStructEncoder([
     ['merkleRoot', fixEncoderSize(getBytesEncoder(), 32)],
-    ['maxTotalClaim', getU64Encoder()],
-    ['maxNodeCount', getU64Encoder()],
+    ['isCast', getBoolEncoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 64)],
   ]);
 }
@@ -48,8 +41,7 @@ export function getBallotEncoder(): Encoder<BallotArgs> {
 export function getBallotDecoder(): Decoder<Ballot> {
   return getStructDecoder([
     ['merkleRoot', fixDecoderSize(getBytesDecoder(), 32)],
-    ['maxTotalClaim', getU64Decoder()],
-    ['maxNodeCount', getU64Decoder()],
+    ['isCast', getBoolDecoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 64)],
   ]);
 }
