@@ -29,6 +29,7 @@ export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
   'Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaSH' as Address<'Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaSH'>;
 
 export enum JitoTipRouterAccount {
+  BallotBox,
   EpochSnapshot,
   OperatorSnapshot,
   NcnConfig,

@@ -7,11 +7,7 @@ use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 use spl_math::precise_number::PreciseNumber;
 
-use crate::{
-    constants::{MAX_OPERATORS, PRECISE_CONSENSUS},
-    discriminators::Discriminators,
-    error::TipRouterError,
-};
+use crate::{constants::PRECISE_CONSENSUS, discriminators::Discriminators, error::TipRouterError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
 #[repr(C)]
@@ -43,7 +39,7 @@ impl Ballot {
         }
     }
 
-    pub fn root(&self) -> [u8; 32] {
+    pub const fn root(&self) -> [u8; 32] {
         self.merkle_root
     }
 
@@ -86,7 +82,7 @@ impl BallotTally {
         }
     }
 
-    pub fn ballot(&self) -> Ballot {
+    pub const fn ballot(&self) -> Ballot {
         self.ballot
     }
 
@@ -151,7 +147,7 @@ impl OperatorVote {
         }
     }
 
-    pub fn operator(&self) -> Pubkey {
+    pub const fn operator(&self) -> Pubkey {
         self.operator
     }
 
@@ -163,7 +159,7 @@ impl OperatorVote {
         self.stake_weight.into()
     }
 
-    pub fn ballot(&self) -> Ballot {
+    pub const fn ballot(&self) -> Ballot {
         self.ballot
     }
 
@@ -190,8 +186,9 @@ pub struct BallotBox {
     operators_voted: PodU64,
     unique_ballots: PodU64,
 
-    operator_votes: [OperatorVote; 256],
-    ballot_tallies: [BallotTally; 256],
+    //TODO fix 32 -> MAX_OPERATORS
+    operator_votes: [OperatorVote; 32],
+    ballot_tallies: [BallotTally; 32],
 }
 
 impl Discriminator for BallotBox {
@@ -208,8 +205,9 @@ impl BallotBox {
             slot_consensus_reached: PodU64::from(0),
             operators_voted: PodU64::from(0),
             unique_ballots: PodU64::from(0),
-            operator_votes: [OperatorVote::default(); MAX_OPERATORS],
-            ballot_tallies: [BallotTally::default(); MAX_OPERATORS],
+            //TODO fix 32 -> MAX_OPERATORS
+            operator_votes: [OperatorVote::default(); 32],
+            ballot_tallies: [BallotTally::default(); 32],
             reserved: [0; 128],
         }
     }
@@ -305,7 +303,7 @@ impl BallotBox {
             }
         }
 
-        Err(TipRouterError::BallotTallyFull.into())
+        Err(TipRouterError::BallotTallyFull)
     }
 
     pub fn cast_vote(
@@ -317,7 +315,7 @@ impl BallotBox {
     ) -> Result<(), TipRouterError> {
         for vote in self.operator_votes.iter_mut() {
             if vote.operator().eq(&operator) {
-                return Err(TipRouterError::DuplicateVoteCast.into());
+                return Err(TipRouterError::DuplicateVoteCast);
             }
 
             if vote.is_empty() {
@@ -336,7 +334,7 @@ impl BallotBox {
             }
         }
 
-        Err(TipRouterError::OperatorVotesFull.into())
+        Err(TipRouterError::OperatorVotesFull)
     }
 
     //Not sure where/how this should be used
@@ -345,6 +343,10 @@ impl BallotBox {
         total_stake_weight: u128,
         current_slot: u64,
     ) -> Result<(), TipRouterError> {
+        if self.slot_consensus_reached() != 0 {
+            return Err(TipRouterError::ConsensusAlreadyReached);
+        }
+
         let max_tally = self
             .ballot_tallies
             .iter()
@@ -367,7 +369,7 @@ impl BallotBox {
         let consensus_reached =
             ballot_percentage_of_total.greater_than_or_equal(&target_precise_percentage);
 
-        if consensus_reached && self.slot_consensus_reached() != 0 {
+        if consensus_reached {
             self.slot_consensus_reached = PodU64::from(current_slot);
         }
 

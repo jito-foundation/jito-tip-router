@@ -74,9 +74,16 @@ export const JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED = 0x2216; // 8726
 export const JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS = 0x2217; // 8727
 /** DuplicateVaultOperatorDelegation: Duplicate vault operator delegation */
 export const JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION = 0x2218; // 8728
+/** DuplicateVoteCast: Duplicate Vote Cast */
+export const JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST = 0x2219; // 8729
+/** OperatorVotesFull: Operator votes full */
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL = 0x221a; // 8730
+/** BallotTallyFull: Merkle root tally full */
+export const JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL = 0x221b; // 8731
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
+  | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL
@@ -84,6 +91,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION
+  | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST
   | typeof JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN
@@ -95,6 +103,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__NO_OPERATORS
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED
+  | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS
   | typeof JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL
@@ -111,6 +120,7 @@ let jitoTipRouterErrorMessages: Record<JitoTipRouterError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   jitoTipRouterErrorMessages = {
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW]: `Overflow`,
+    [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL]: `Merkle root tally full`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL]: `NCN config vaults are at capacity`,
@@ -118,6 +128,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO]: `Zero in the denominator`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE]: `Duplicate mints in table`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION]: `Duplicate vault operator delegation`,
+    [JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST]: `Duplicate Vote Cast`,
     [JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED]: `Fee cap exceeded`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN]: `Incorrect fee admin`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN]: `Incorrect NCN`,
@@ -129,6 +140,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE]: `There are no mints in the table`,
     [JITO_TIP_ROUTER_ERROR__NO_OPERATORS]: `No operators in ncn`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED]: `Operator is already finalized - should not happen`,
+    [JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL]: `Operator votes full`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE]: `Too many mints for table`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS]: `Too many vault operator delegations`,
     [JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL]: `Tracked mints are at capacity`,
