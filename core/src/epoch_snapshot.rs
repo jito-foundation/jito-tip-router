@@ -12,7 +12,7 @@ use crate::{
     discriminators::Discriminators, error::TipRouterError, fees::Fees, weight_table::WeightTable,
 };
 
-// PDA'd ["EPOCH_SNAPSHOT", NCN, NCN_EPOCH_SLOT]
+// PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct EpochSnapshot {
@@ -191,7 +191,7 @@ impl EpochSnapshot {
     }
 }
 
-// PDA'd ["OPERATOR_SNAPSHOT", OPERATOR, NCN, NCN_EPOCH_SLOT]
+// PDA'd ["operator_snapshot", OPERATOR, NCN, NCN_EPOCH_SLOT]
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct OperatorSnapshot {

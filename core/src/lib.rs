@@ -1,3 +1,4 @@
+pub mod ballot_box;
 pub mod constants;
 pub mod discriminators;
 pub mod epoch_snapshot;
