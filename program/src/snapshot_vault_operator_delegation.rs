@@ -85,6 +85,7 @@ pub fn process_snapshot_vault_operator_delegation(
         (vault_account.vault_index(), vault_account.supported_mint)
     };
 
+    //TODO move to helper function
     let is_active: bool = {
         let vault_ncn_ticket_data = vault_ncn_ticket.data.borrow();
         let vault_ncn_ticket_account =

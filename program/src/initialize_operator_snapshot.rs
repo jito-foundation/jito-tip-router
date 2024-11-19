@@ -83,6 +83,7 @@ pub fn process_initialize_operator_snapshot(
         &operator_snapshot_seeds,
     )?;
 
+    //TODO move to helper function
     let is_active: bool = {
         let ncn_operator_state_data = ncn_operator_state.data.borrow();
         let ncn_operator_state_account =
