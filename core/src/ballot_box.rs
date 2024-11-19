@@ -1,103 +1,105 @@
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
-    types::{PodBool, PodU128, PodU64},
+    types::{PodU128, PodU64},
     AccountDeserialize, Discriminator,
 };
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    constants::MAX_OPERATORS, discriminators::Discriminators, error::TipRouterError, fees::Fees,
+    constants::{MAX_OPERATORS, PRECISE_CONSENSUS},
+    discriminators::Discriminators,
+    error::TipRouterError,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
 #[repr(C)]
-pub struct MerkleRoot {
-    root: [u8; 32],
+pub struct Ballot {
+    merkle_root: [u8; 32],
     max_total_claim: PodU64,
-    max_num_nodes: PodU64,
+    max_node_count: PodU64,
     reserved: [u8; 64],
 }
 
-impl Default for MerkleRoot {
+impl Default for Ballot {
     fn default() -> Self {
         Self {
-            root: [0; 32],
+            merkle_root: [0; 32],
             max_total_claim: PodU64::from(0),
-            max_num_nodes: PodU64::from(0),
+            max_node_count: PodU64::from(0),
             reserved: [0; 64],
         }
     }
 }
 
-impl MerkleRoot {
+impl Ballot {
     pub fn new(root: [u8; 32], max_total_claim: u64, max_num_nodes: u64) -> Self {
         Self {
-            root,
+            merkle_root: root,
             max_total_claim: PodU64::from(max_total_claim),
-            max_num_nodes: PodU64::from(max_num_nodes),
+            max_node_count: PodU64::from(max_num_nodes),
             reserved: [0; 64],
         }
     }
 
     pub fn root(&self) -> [u8; 32] {
-        self.root
+        self.merkle_root
     }
 
     pub fn max_total_claim(&self) -> u64 {
         self.max_total_claim.into()
     }
 
-    pub fn max_num_nodes(&self) -> u64 {
-        self.max_num_nodes.into()
+    pub fn max_node_count(&self) -> u64 {
+        self.max_node_count.into()
     }
 }
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
 #[repr(C)]
-pub struct MerkleRootTally {
-    merkle_root: MerkleRoot,
+pub struct BallotTally {
+    ballot: Ballot,
     stake_weight: PodU128,
-    vote_count: PodU64,
+    tally: PodU64,
     reserved: [u8; 64],
 }
 
-impl Default for MerkleRootTally {
+impl Default for BallotTally {
     fn default() -> Self {
         Self {
-            merkle_root: MerkleRoot::default(),
+            ballot: Ballot::default(),
             stake_weight: PodU128::from(0),
-            vote_count: PodU64::from(0),
+            tally: PodU64::from(0),
             reserved: [0; 64],
         }
     }
 }
 
-impl MerkleRootTally {
-    pub fn new(
-        root: [u8; 32],
-        max_total_claim: u64,
-        max_num_nodes: u64,
-        stake_weight: u128,
-    ) -> Self {
+impl BallotTally {
+    pub fn new(ballot: Ballot, stake_weight: u128) -> Self {
         Self {
-            merkle_root: MerkleRoot::new(root, max_total_claim, max_num_nodes),
+            ballot,
             stake_weight: PodU128::from(stake_weight),
-            vote_count: PodU64::from(1),
+            tally: PodU64::from(1),
             reserved: [0; 64],
         }
     }
 
-    pub fn merkle_root(&self) -> MerkleRoot {
-        self.merkle_root
+    pub fn ballot(&self) -> Ballot {
+        self.ballot
     }
 
     pub fn stake_weight(&self) -> u128 {
         self.stake_weight.into()
     }
 
-    pub fn vote_count(&self) -> u64 {
-        self.vote_count.into()
+    pub fn tally(&self) -> u64 {
+        self.tally.into()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.stake_weight() == 0
     }
 
     pub fn increment_tally(&mut self, stake_weight: u128) -> Result<(), TipRouterError> {
@@ -106,8 +108,8 @@ impl MerkleRootTally {
                 .checked_add(stake_weight)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
-        self.vote_count = PodU64::from(
-            self.vote_count()
+        self.tally = PodU64::from(
+            self.tally()
                 .checked_add(1)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
@@ -122,7 +124,7 @@ pub struct OperatorVote {
     operator: Pubkey,
     slot_voted: PodU64,
     stake_weight: PodU128,
-    merkle_root: MerkleRoot,
+    ballot: Ballot,
     reserved: [u8; 64],
 }
 
@@ -132,24 +134,17 @@ impl Default for OperatorVote {
             operator: Pubkey::default(),
             slot_voted: PodU64::from(0),
             stake_weight: PodU128::from(0),
-            merkle_root: MerkleRoot::default(),
+            ballot: Ballot::default(),
             reserved: [0; 64],
         }
     }
 }
 
 impl OperatorVote {
-    pub fn new(
-        root: [u8; 32],
-        max_total_claim: u64,
-        max_num_nodes: u64,
-        operator: Pubkey,
-        current_slot: u64,
-        stake_weight: u128,
-    ) -> Self {
+    pub fn new(ballot: Ballot, operator: Pubkey, current_slot: u64, stake_weight: u128) -> Self {
         Self {
             operator,
-            merkle_root: MerkleRoot::new(root, max_total_claim, max_num_nodes),
+            ballot,
             slot_voted: PodU64::from(current_slot),
             stake_weight: PodU128::from(stake_weight),
             reserved: [0; 64],
@@ -168,8 +163,12 @@ impl OperatorVote {
         self.stake_weight.into()
     }
 
-    pub fn merkle_root(&self) -> MerkleRoot {
-        self.merkle_root
+    pub fn ballot(&self) -> Ballot {
+        self.ballot
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.stake_weight() == 0
     }
 }
 
@@ -189,10 +188,10 @@ pub struct BallotBox {
     reserved: [u8; 128],
 
     operators_voted: PodU64,
-    unique_merkle_roots: PodU64,
+    unique_ballots: PodU64,
 
     operator_votes: [OperatorVote; 256],
-    merkle_root_tallies: [MerkleRootTally; 256],
+    ballot_tallies: [BallotTally; 256],
 }
 
 impl Discriminator for BallotBox {
@@ -208,9 +207,9 @@ impl BallotBox {
             slot_created: PodU64::from(current_slot),
             slot_consensus_reached: PodU64::from(0),
             operators_voted: PodU64::from(0),
-            unique_merkle_roots: PodU64::from(0),
+            unique_ballots: PodU64::from(0),
             operator_votes: [OperatorVote::default(); MAX_OPERATORS],
-            merkle_root_tallies: [MerkleRootTally::default(); MAX_OPERATORS],
+            ballot_tallies: [BallotTally::default(); MAX_OPERATORS],
             reserved: [0; 128],
         }
     }
@@ -271,10 +270,107 @@ impl BallotBox {
         Ok(())
     }
 
-    fn insert_or_create_merkle_root_tally(
+    fn slot_consensus_reached(&self) -> u64 {
+        self.slot_consensus_reached.into()
+    }
+
+    fn unique_ballots(&self) -> u64 {
+        self.unique_ballots.into()
+    }
+
+    fn operators_voted(&self) -> u64 {
+        self.operators_voted.into()
+    }
+
+    fn increment_or_create_ballot_tally(
         &mut self,
-        merkle_root: &MerkleRoot,
+        operator_vote: &OperatorVote,
     ) -> Result<(), TipRouterError> {
+        for tally in self.ballot_tallies.iter_mut() {
+            if tally.ballot.root().eq(&operator_vote.ballot().root()) {
+                tally.increment_tally(operator_vote.stake_weight())?;
+                return Ok(());
+            }
+
+            if tally.is_empty() {
+                *tally = BallotTally::new(operator_vote.ballot(), operator_vote.stake_weight());
+
+                self.unique_ballots = PodU64::from(
+                    self.unique_ballots()
+                        .checked_add(1)
+                        .ok_or(TipRouterError::ArithmeticOverflow)?,
+                );
+
+                return Ok(());
+            }
+        }
+
+        Err(TipRouterError::BallotTallyFull.into())
+    }
+
+    pub fn cast_vote(
+        &mut self,
+        operator: Pubkey,
+        ballot: Ballot,
+        stake_weight: u128,
+        current_slot: u64,
+    ) -> Result<(), TipRouterError> {
+        for vote in self.operator_votes.iter_mut() {
+            if vote.operator().eq(&operator) {
+                return Err(TipRouterError::DuplicateVoteCast.into());
+            }
+
+            if vote.is_empty() {
+                let operator_vote = OperatorVote::new(ballot, operator, current_slot, stake_weight);
+                *vote = operator_vote;
+
+                self.increment_or_create_ballot_tally(&operator_vote)?;
+
+                self.operators_voted = PodU64::from(
+                    self.operators_voted()
+                        .checked_add(1)
+                        .ok_or(TipRouterError::ArithmeticOverflow)?,
+                );
+
+                return Ok(());
+            }
+        }
+
+        Err(TipRouterError::OperatorVotesFull.into())
+    }
+
+    //Not sure where/how this should be used
+    pub fn tally_votes(
+        &mut self,
+        total_stake_weight: u128,
+        current_slot: u64,
+    ) -> Result<(), TipRouterError> {
+        let max_tally = self
+            .ballot_tallies
+            .iter()
+            .max_by_key(|t| t.stake_weight())
+            .unwrap();
+
+        let ballot_stake_weight = max_tally.stake_weight();
+        let precise_ballot_stake_weight =
+            PreciseNumber::new(ballot_stake_weight).ok_or(TipRouterError::NewPreciseNumberError)?;
+        let precise_total_stake_weight =
+            PreciseNumber::new(total_stake_weight).ok_or(TipRouterError::NewPreciseNumberError)?;
+
+        let ballot_percentage_of_total = precise_ballot_stake_weight
+            .checked_div(&precise_total_stake_weight)
+            .ok_or(TipRouterError::DenominatorIsZero)?;
+
+        let target_precise_percentage =
+            PreciseNumber::new(PRECISE_CONSENSUS).ok_or(TipRouterError::NewPreciseNumberError)?;
+
+        let consensus_reached =
+            ballot_percentage_of_total.greater_than_or_equal(&target_precise_percentage);
+
+        if consensus_reached && self.slot_consensus_reached() != 0 {
+            self.slot_consensus_reached = PodU64::from(current_slot);
+        }
+
         Ok(())
     }
 }

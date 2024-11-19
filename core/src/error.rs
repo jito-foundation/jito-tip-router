@@ -64,6 +64,12 @@ pub enum TipRouterError {
     TooManyVaultOperatorDelegations,
     #[error("Duplicate vault operator delegation")]
     DuplicateVaultOperatorDelegation,
+    #[error("Duplicate Vote Cast")]
+    DuplicateVoteCast,
+    #[error("Operator votes full")]
+    OperatorVotesFull,
+    #[error("Merkle root tally full")]
+    BallotTallyFull,
 }
 
 impl<T> DecodeError<T> for TipRouterError {
