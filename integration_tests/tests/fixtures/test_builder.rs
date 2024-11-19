@@ -1,29 +1,14 @@
 use std::fmt::{Debug, Formatter};
 
-use jito_restaking_core::{
-    config::Config,
-    ncn_vault_ticket::{self, NcnVaultTicket},
-};
+use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
-use jito_vault_sdk::inline_mpl_token_metadata;
 use solana_program::{
     clock::Clock, native_token::sol_to_lamports, pubkey::Pubkey, system_instruction::transfer,
 };
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
-use solana_sdk::{
-    commitment_config::CommitmentLevel,
-    signature::{Keypair, Signer},
-    transaction::Transaction,
-};
-use spl_associated_token_account::{
-    get_associated_token_address, instruction::create_associated_token_account_idempotent,
-};
+use solana_sdk::{commitment_config::CommitmentLevel, signature::Signer, transaction::Transaction};
 
-use super::{
-    restaking_client::{self, NcnRoot},
-    tip_router_client::TipRouterClient,
-    vault_client,
-};
+use super::{restaking_client::NcnRoot, tip_router_client::TipRouterClient};
 use crate::fixtures::{
     restaking_client::{OperatorRoot, RestakingProgramClient},
     vault_client::{VaultProgramClient, VaultRoot},
@@ -37,6 +22,8 @@ pub struct TestNcn {
 }
 
 //TODO implement for more fine-grained relationship control
+#[allow(dead_code)]
+
 pub struct TestNcnNode {
     pub ncn_root: NcnRoot,
     pub operator_root: OperatorRoot,
@@ -124,6 +111,7 @@ impl TestBuilder {
         )
     }
 
+    #[allow(dead_code)]
     pub async fn transfer(&mut self, to: &Pubkey, sol: f64) -> Result<(), BanksClientError> {
         let blockhash = self.context.banks_client.get_latest_blockhash().await?;
         self.context

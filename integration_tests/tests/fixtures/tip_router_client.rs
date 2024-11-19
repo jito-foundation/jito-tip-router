@@ -15,7 +15,7 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     error::TipRouterError,
     ncn_config::NcnConfig,
-    tracked_mints::{self, TrackedMints},
+    tracked_mints::TrackedMints,
     weight_table::WeightTable,
 };
 use jito_vault_core::{
@@ -112,6 +112,7 @@ impl TipRouterClient {
         Ok(*TrackedMints::try_from_slice_unchecked(tracked_mints.data.as_slice()).unwrap())
     }
 
+    #[allow(dead_code)]
     pub async fn get_weight_table(
         &mut self,
         ncn: Pubkey,
@@ -142,6 +143,7 @@ impl TipRouterClient {
         Ok(*account)
     }
 
+    #[allow(dead_code)]
     pub async fn get_operator_snapshot(
         &mut self,
         operator: Pubkey,
