@@ -1462,7 +1462,8 @@ impl VaultProgramClient {
             .banks_client
             .get_new_latest_blockhash(&blockhash)
             .await
-            .map_err(|e| e.into())?;
+            .unwrap();
+
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 Transaction::new_signed_with_payer(
