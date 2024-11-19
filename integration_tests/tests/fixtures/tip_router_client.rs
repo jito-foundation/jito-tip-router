@@ -25,7 +25,7 @@ use solana_program::{
     instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
     system_instruction::transfer,
 };
-use solana_program_test::BanksClient;
+use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 use solana_sdk::{
     clock::Clock,
     commitment_config::CommitmentLevel,
@@ -51,6 +51,10 @@ impl TipRouterClient {
     }
 
     pub async fn process_transaction(&mut self, tx: &Transaction) -> TestResult<()> {
+        println!(
+            "Tip Router Client processing transaction: {:?}",
+            tx.signatures[0]
+        );
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 tx.clone(),
@@ -62,13 +66,18 @@ impl TipRouterClient {
 
     pub async fn airdrop(&mut self, to: &Pubkey, sol: f64) -> TestResult<()> {
         let blockhash = self.banks_client.get_latest_blockhash().await?;
+        let new_blockhash = self
+            .banks_client
+            .get_new_latest_blockhash(&blockhash)
+            .await
+            .unwrap();
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 Transaction::new_signed_with_payer(
                     &[transfer(&self.payer.pubkey(), to, sol_to_lamports(sol))],
                     Some(&self.payer.pubkey()),
                     &[&self.payer],
-                    blockhash,
+                    new_blockhash,
                 ),
                 CommitmentLevel::Processed,
             )

@@ -29,7 +29,7 @@ use solana_program::{
     rent::Rent,
     system_instruction::{create_account, transfer},
 };
-use solana_program_test::{BanksClient, BanksClientError};
+use solana_program_test::{BanksClient, BanksClientError, ProgramTestBanksClientExt};
 use solana_sdk::{
     commitment_config::CommitmentLevel,
     instruction::InstructionError,
@@ -1447,6 +1447,10 @@ impl VaultProgramClient {
     }
 
     async fn _process_transaction(&mut self, tx: &Transaction) -> Result<(), TestError> {
+        println!(
+            "Vault Client processing transaction: {:?}",
+            tx.signatures[0]
+        );
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 tx.clone(),
@@ -1458,13 +1462,18 @@ impl VaultProgramClient {
 
     pub async fn airdrop(&mut self, to: &Pubkey, sol: f64) -> Result<(), TestError> {
         let blockhash = self.banks_client.get_latest_blockhash().await?;
+        let new_blockhash = self
+            .banks_client
+            .get_new_latest_blockhash(&blockhash)
+            .await
+            .map_err(|e| e.into())?;
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 Transaction::new_signed_with_payer(
                     &[transfer(&self.payer.pubkey(), to, sol_to_lamports(sol))],
                     Some(&self.payer.pubkey()),
                     &[&self.payer],
-                    blockhash,
+                    new_blockhash,
                 ),
                 CommitmentLevel::Processed,
             )
