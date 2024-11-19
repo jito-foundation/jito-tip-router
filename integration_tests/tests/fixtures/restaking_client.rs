@@ -17,7 +17,6 @@ use jito_restaking_sdk::{
         warmup_operator_vault_ticket,
     },
 };
-use log::debug;
 use solana_program::{
     instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
     system_instruction::transfer,
