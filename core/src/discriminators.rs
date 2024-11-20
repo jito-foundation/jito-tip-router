@@ -10,4 +10,6 @@ pub enum Discriminators {
     // Voting
     BallotBox = 0x20,
     // Distribution
+    RewardRouter = 0x30,
+    OperatorRewardRouter = 0x31,
 }

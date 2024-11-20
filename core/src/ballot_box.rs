@@ -9,6 +9,12 @@ use spl_math::precise_number::PreciseNumber;
 
 use crate::{constants::PRECISE_CONSENSUS, discriminators::Discriminators, error::TipRouterError};
 
+// vote_stake_weight
+// reward_stake_weight
+
+// to make calculations easier, we can calculate the operator percentage when
+// the ballot box is closed.
+
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
 #[repr(C)]
 pub struct Ballot {
@@ -280,6 +286,10 @@ impl BallotBox {
 
     pub fn is_consensus_reached(&self) -> bool {
         self.slot_consensus_reached() > 0
+    }
+
+    pub fn ballot_tallies(&self) -> &[BallotTally; 32] {
+        &self.ballot_tallies
     }
 
     pub fn get_winning_ballot(&self) -> Result<Ballot, TipRouterError> {
