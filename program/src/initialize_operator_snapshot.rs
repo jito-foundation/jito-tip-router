@@ -84,7 +84,7 @@ pub fn process_initialize_operator_snapshot(
     )?;
 
     //TODO move to helper function
-    let is_active: bool = {
+    let (is_active, ncn_operator_index): (bool, u64) = {
         let ncn_operator_state_data = ncn_operator_state.data.borrow();
         let ncn_operator_state_account =
             NcnOperatorState::try_from_slice_unchecked(&ncn_operator_state_data)?;
@@ -97,7 +97,9 @@ pub fn process_initialize_operator_snapshot(
             .operator_opt_in_state
             .is_active(current_slot, ncn_epoch_length);
 
-        ncn_operator_okay && operator_ncn_okay
+        let ncn_operator_index = ncn_operator_state_account.index();
+
+        (ncn_operator_okay && operator_ncn_okay, ncn_operator_index)
     };
 
     let vault_count = {
@@ -128,6 +130,7 @@ pub fn process_initialize_operator_snapshot(
             ncn_epoch,
             operator_snapshot_bump,
             current_slot,
+            ncn_operator_index,
             operator_index,
             operator_fee_bps,
             vault_count,
@@ -139,6 +142,7 @@ pub fn process_initialize_operator_snapshot(
             ncn_epoch,
             operator_snapshot_bump,
             current_slot,
+            ncn_operator_index,
             operator_index,
         )?
     };

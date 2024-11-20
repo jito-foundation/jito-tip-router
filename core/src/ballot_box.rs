@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
-    types::{PodBool, PodU128, PodU16, PodU64},
+    types::{PodU128, PodU16, PodU64},
     AccountDeserialize, Discriminator,
 };
 use shank::{ShankAccount, ShankType};
@@ -13,7 +13,6 @@ use crate::{constants::PRECISE_CONSENSUS, discriminators::Discriminators, error:
 #[repr(C)]
 pub struct Ballot {
     merkle_root: [u8; 32],
-    is_cast: PodBool,
     reserved: [u8; 64],
 }
 
@@ -21,17 +20,15 @@ impl Default for Ballot {
     fn default() -> Self {
         Self {
             merkle_root: [0; 32],
-            is_cast: PodBool::from(false),
             reserved: [0; 64],
         }
     }
 }
 
 impl Ballot {
-    pub fn new(root: [u8; 32]) -> Self {
+    pub const fn new(root: [u8; 32]) -> Self {
         Self {
             merkle_root: root,
-            is_cast: PodBool::from(true),
             reserved: [0; 64],
         }
     }
@@ -40,8 +37,8 @@ impl Ballot {
         self.merkle_root
     }
 
-    pub fn is_cast(&self) -> bool {
-        self.is_cast.into()
+    pub fn is_valid(&self) -> bool {
+        self.merkle_root.iter().any(|&b| b != 0)
     }
 }
 
@@ -282,11 +279,11 @@ impl BallotBox {
     }
 
     pub fn is_consensus_reached(&self) -> bool {
-        self.slot_consensus_reached() == 0
+        self.slot_consensus_reached() > 0
     }
 
     pub fn get_winning_ballot(&self) -> Result<Ballot, TipRouterError> {
-        if self.winning_ballot.is_cast() {
+        if self.winning_ballot.is_valid() {
             Ok(self.winning_ballot)
         } else {
             Err(TipRouterError::ConsensusNotReached)

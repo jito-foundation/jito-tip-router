@@ -205,6 +205,7 @@ pub struct OperatorSnapshot {
 
     is_active: PodBool,
 
+    ncn_operator_index: PodU64,
     operator_index: PodU64,
     operator_fee_bps: PodU16,
 
@@ -277,6 +278,7 @@ impl OperatorSnapshot {
         bump: u8,
         current_slot: u64,
         is_active: bool,
+        ncn_operator_index: u64,
         operator_index: u64,
         operator_fee_bps: u16,
         vault_operator_delegation_count: u64,
@@ -293,6 +295,7 @@ impl OperatorSnapshot {
             slot_created: PodU64::from(current_slot),
             slot_finalized: PodU64::from(0),
             is_active: PodBool::from(is_active),
+            ncn_operator_index: PodU64::from(ncn_operator_index),
             operator_index: PodU64::from(operator_index),
             operator_fee_bps: PodU16::from(operator_fee_bps),
             vault_operator_delegation_count: PodU64::from(vault_operator_delegation_count),
@@ -311,6 +314,7 @@ impl OperatorSnapshot {
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
+        ncn_operator_index: u64,
         operator_index: u64,
         operator_fee_bps: u16,
         vault_count: u64,
@@ -322,6 +326,7 @@ impl OperatorSnapshot {
             bump,
             current_slot,
             true,
+            ncn_operator_index,
             operator_index,
             operator_fee_bps,
             vault_count,
@@ -334,6 +339,7 @@ impl OperatorSnapshot {
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
+        ncn_operator_index: u64,
         operator_index: u64,
     ) -> Result<Self, TipRouterError> {
         let mut snapshot = Self::new(
@@ -343,6 +349,7 @@ impl OperatorSnapshot {
             bump,
             current_slot,
             false,
+            ncn_operator_index,
             operator_index,
             0,
             0,

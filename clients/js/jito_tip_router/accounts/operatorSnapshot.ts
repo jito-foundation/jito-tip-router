@@ -56,6 +56,7 @@ export type OperatorSnapshot = {
   slotCreated: bigint;
   slotFinalized: bigint;
   isActive: number;
+  ncnOperatorIndex: bigint;
   operatorIndex: bigint;
   operatorFeeBps: number;
   vaultOperatorDelegationCount: bigint;
@@ -75,6 +76,7 @@ export type OperatorSnapshotArgs = {
   slotCreated: number | bigint;
   slotFinalized: number | bigint;
   isActive: number;
+  ncnOperatorIndex: number | bigint;
   operatorIndex: number | bigint;
   operatorFeeBps: number;
   vaultOperatorDelegationCount: number | bigint;
@@ -95,6 +97,7 @@ export function getOperatorSnapshotEncoder(): Encoder<OperatorSnapshotArgs> {
     ['slotCreated', getU64Encoder()],
     ['slotFinalized', getU64Encoder()],
     ['isActive', getBoolEncoder()],
+    ['ncnOperatorIndex', getU64Encoder()],
     ['operatorIndex', getU64Encoder()],
     ['operatorFeeBps', getU16Encoder()],
     ['vaultOperatorDelegationCount', getU64Encoder()],
@@ -119,6 +122,7 @@ export function getOperatorSnapshotDecoder(): Decoder<OperatorSnapshot> {
     ['slotCreated', getU64Decoder()],
     ['slotFinalized', getU64Decoder()],
     ['isActive', getBoolDecoder()],
+    ['ncnOperatorIndex', getU64Decoder()],
     ['operatorIndex', getU64Decoder()],
     ['operatorFeeBps', getU16Decoder()],
     ['vaultOperatorDelegationCount', getU64Decoder()],

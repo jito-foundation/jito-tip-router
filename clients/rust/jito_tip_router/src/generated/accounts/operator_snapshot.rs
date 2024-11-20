@@ -28,6 +28,7 @@ pub struct OperatorSnapshot {
     pub slot_created: u64,
     pub slot_finalized: u64,
     pub is_active: bool,
+    pub ncn_operator_index: u64,
     pub operator_index: u64,
     pub operator_fee_bps: u16,
     pub vault_operator_delegation_count: u64,
