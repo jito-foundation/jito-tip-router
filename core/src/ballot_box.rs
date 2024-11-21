@@ -189,7 +189,7 @@ pub struct BallotBox {
 }
 
 impl Discriminator for BallotBox {
-    const DISCRIMINATOR: u8 = Discriminators::EpochSnapshot as u8;
+    const DISCRIMINATOR: u8 = Discriminators::BallotBox as u8;
 }
 
 impl BallotBox {
