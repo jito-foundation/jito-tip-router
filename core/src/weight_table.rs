@@ -53,7 +53,7 @@ impl WeightTable {
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
-                b"WEIGHT_TABLE".to_vec(),
+                b"weight_table".to_vec(),
                 ncn.to_bytes().to_vec(),
                 ncn_epoch.to_le_bytes().to_vec(),
             ]
