@@ -46,7 +46,7 @@ export type AdminUpdateWeightTableInstruction<
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountWeightTableAdmin extends string | IAccountMeta<string> = string,
   TAccountMint extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgramId extends string | IAccountMeta<string> = string,
+  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -63,9 +63,9 @@ export type AdminUpdateWeightTableInstruction<
       TAccountMint extends string
         ? ReadonlyAccount<TAccountMint>
         : TAccountMint,
-      TAccountRestakingProgramId extends string
-        ? ReadonlyAccount<TAccountRestakingProgramId>
-        : TAccountRestakingProgramId,
+      TAccountRestakingProgram extends string
+        ? ReadonlyAccount<TAccountRestakingProgram>
+        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -118,13 +118,13 @@ export type AdminUpdateWeightTableInput<
   TAccountWeightTable extends string = string,
   TAccountWeightTableAdmin extends string = string,
   TAccountMint extends string = string,
-  TAccountRestakingProgramId extends string = string,
+  TAccountRestakingProgram extends string = string,
 > = {
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   weightTableAdmin: TransactionSigner<TAccountWeightTableAdmin>;
   mint: Address<TAccountMint>;
-  restakingProgramId: Address<TAccountRestakingProgramId>;
+  restakingProgram: Address<TAccountRestakingProgram>;
   ncnEpoch: AdminUpdateWeightTableInstructionDataArgs['ncnEpoch'];
   weight: AdminUpdateWeightTableInstructionDataArgs['weight'];
 };
@@ -134,7 +134,7 @@ export function getAdminUpdateWeightTableInstruction<
   TAccountWeightTable extends string,
   TAccountWeightTableAdmin extends string,
   TAccountMint extends string,
-  TAccountRestakingProgramId extends string,
+  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: AdminUpdateWeightTableInput<
@@ -142,7 +142,7 @@ export function getAdminUpdateWeightTableInstruction<
     TAccountWeightTable,
     TAccountWeightTableAdmin,
     TAccountMint,
-    TAccountRestakingProgramId
+    TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): AdminUpdateWeightTableInstruction<
@@ -151,7 +151,7 @@ export function getAdminUpdateWeightTableInstruction<
   TAccountWeightTable,
   TAccountWeightTableAdmin,
   TAccountMint,
-  TAccountRestakingProgramId
+  TAccountRestakingProgram
 > {
   // Program address.
   const programAddress =
@@ -166,8 +166,8 @@ export function getAdminUpdateWeightTableInstruction<
       isWritable: false,
     },
     mint: { value: input.mint ?? null, isWritable: false },
-    restakingProgramId: {
-      value: input.restakingProgramId ?? null,
+    restakingProgram: {
+      value: input.restakingProgram ?? null,
       isWritable: false,
     },
   };
@@ -186,7 +186,7 @@ export function getAdminUpdateWeightTableInstruction<
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.weightTableAdmin),
       getAccountMeta(accounts.mint),
-      getAccountMeta(accounts.restakingProgramId),
+      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getAdminUpdateWeightTableInstructionDataEncoder().encode(
@@ -198,7 +198,7 @@ export function getAdminUpdateWeightTableInstruction<
     TAccountWeightTable,
     TAccountWeightTableAdmin,
     TAccountMint,
-    TAccountRestakingProgramId
+    TAccountRestakingProgram
   >;
 
   return instruction;
@@ -214,7 +214,7 @@ export type ParsedAdminUpdateWeightTableInstruction<
     weightTable: TAccountMetas[1];
     weightTableAdmin: TAccountMetas[2];
     mint: TAccountMetas[3];
-    restakingProgramId: TAccountMetas[4];
+    restakingProgram: TAccountMetas[4];
   };
   data: AdminUpdateWeightTableInstructionData;
 };
@@ -244,7 +244,7 @@ export function parseAdminUpdateWeightTableInstruction<
       weightTable: getNextAccount(),
       weightTableAdmin: getNextAccount(),
       mint: getNextAccount(),
-      restakingProgramId: getNextAccount(),
+      restakingProgram: getNextAccount(),
     },
     data: getAdminUpdateWeightTableInstructionDataDecoder().decode(
       instruction.data

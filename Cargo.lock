@@ -2553,6 +2553,7 @@ dependencies = [
  "jito-restaking-sdk",
  "jito-tip-router-core",
  "jito-vault-core",
+ "jito-vault-program",
  "jito-vault-sdk",
  "shank",
  "solana-program 1.18.26",

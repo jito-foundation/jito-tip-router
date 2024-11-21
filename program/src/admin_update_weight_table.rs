@@ -14,11 +14,11 @@ pub fn process_admin_update_weight_table(
     ncn_epoch: u64,
     weight: u128,
 ) -> ProgramResult {
-    let [ncn, weight_table, weight_table_admin, mint, restaking_program_id] = accounts else {
+    let [ncn, weight_table, weight_table_admin, mint, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    Ncn::load(restaking_program_id.key, ncn, false)?;
+    Ncn::load(restaking_program.key, ncn, false)?;
     let ncn_weight_table_admin = {
         let ncn_data = ncn.data.borrow();
         let ncn = Ncn::try_from_slice_unchecked(&ncn_data)?;
@@ -29,7 +29,7 @@ pub fn process_admin_update_weight_table(
     load_token_mint(mint)?;
     WeightTable::load(program_id, weight_table, ncn, ncn_epoch, true)?;
 
-    if restaking_program_id.key.ne(&jito_restaking_program::id()) {
+    if restaking_program.key.ne(&jito_restaking_program::id()) {
         msg!("Incorrect restaking program ID");
         return Err(ProgramError::InvalidAccountData);
     }

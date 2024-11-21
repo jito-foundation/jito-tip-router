@@ -43,13 +43,37 @@ pub enum TipRouterError {
     #[error("Vault index already in use by a different mint")]
     VaultIndexAlreadyInUse,
     #[error("Fee cap exceeded")]
-    FeeCapExceeded = 0x2300,
+    FeeCapExceeded,
     #[error("Incorrect NCN Admin")]
-    IncorrectNcnAdmin = 0x2400,
+    IncorrectNcnAdmin,
     #[error("Incorrect NCN")]
-    IncorrectNcn = 0x2401,
+    IncorrectNcn,
     #[error("Incorrect fee admin")]
-    IncorrectFeeAdmin = 0x2402,
+    IncorrectFeeAdmin,
+    #[error("Weight table not finalized")]
+    WeightTableNotFinalized,
+    #[error("Weight not found")]
+    WeightNotFound,
+    #[error("No operators in ncn")]
+    NoOperators,
+    #[error("Vault operator delegation is already finalized - should not happen")]
+    VaultOperatorDelegationFinalized,
+    #[error("Operator is already finalized - should not happen")]
+    OperatorFinalized,
+    #[error("Too many vault operator delegations")]
+    TooManyVaultOperatorDelegations,
+    #[error("Duplicate vault operator delegation")]
+    DuplicateVaultOperatorDelegation,
+    #[error("Duplicate Vote Cast")]
+    DuplicateVoteCast,
+    #[error("Operator votes full")]
+    OperatorVotesFull,
+    #[error("Merkle root tally full")]
+    BallotTallyFull,
+    #[error("Consensus already reached")]
+    ConsensusAlreadyReached,
+    #[error("Consensus not reached")]
+    ConsensusNotReached,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

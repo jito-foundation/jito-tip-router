@@ -14,18 +14,24 @@ import {
 } from '@solana/web3.js';
 import {
   type ParsedAdminUpdateWeightTableInstruction,
+  type ParsedInitializeEpochSnapshotInstruction,
   type ParsedInitializeNCNConfigInstruction,
+  type ParsedInitializeOperatorSnapshotInstruction,
   type ParsedInitializeTrackedMintsInstruction,
   type ParsedInitializeWeightTableInstruction,
   type ParsedRegisterMintInstruction,
   type ParsedSetConfigFeesInstruction,
   type ParsedSetNewAdminInstruction,
+  type ParsedSnapshotVaultOperatorDelegationInstruction,
 } from '../instructions';
 
 export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
   'Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaSH' as Address<'Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaSH'>;
 
 export enum JitoTipRouterAccount {
+  BallotBox,
+  EpochSnapshot,
+  OperatorSnapshot,
   NcnConfig,
   TrackedMints,
   WeightTable,
@@ -37,6 +43,9 @@ export enum JitoTipRouterInstruction {
   SetNewAdmin,
   InitializeWeightTable,
   AdminUpdateWeightTable,
+  InitializeEpochSnapshot,
+  InitializeOperatorSnapshot,
+  SnapshotVaultOperatorDelegation,
   RegisterMint,
   InitializeTrackedMints,
 }
@@ -61,9 +70,18 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.AdminUpdateWeightTable;
   }
   if (containsBytes(data, getU8Encoder().encode(5), 0)) {
-    return JitoTipRouterInstruction.RegisterMint;
+    return JitoTipRouterInstruction.InitializeEpochSnapshot;
   }
   if (containsBytes(data, getU8Encoder().encode(6), 0)) {
+    return JitoTipRouterInstruction.InitializeOperatorSnapshot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
+    return JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
+  }
+  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
+    return JitoTipRouterInstruction.RegisterMint;
+  }
+  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
     return JitoTipRouterInstruction.InitializeTrackedMints;
   }
   throw new Error(
@@ -89,6 +107,15 @@ export type ParsedJitoTipRouterInstruction<
   | ({
       instructionType: JitoTipRouterInstruction.AdminUpdateWeightTable;
     } & ParsedAdminUpdateWeightTableInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeEpochSnapshot;
+    } & ParsedInitializeEpochSnapshotInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeOperatorSnapshot;
+    } & ParsedInitializeOperatorSnapshotInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
+    } & ParsedSnapshotVaultOperatorDelegationInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.RegisterMint;
     } & ParsedRegisterMintInstruction<TProgram>)

@@ -16,7 +16,7 @@ pub struct AdminUpdateWeightTable {
 
     pub mint: solana_program::pubkey::Pubkey,
 
-    pub restaking_program_id: solana_program::pubkey::Pubkey,
+    pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
 impl AdminUpdateWeightTable {
@@ -48,7 +48,7 @@ impl AdminUpdateWeightTable {
             self.mint, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program_id,
+            self.restaking_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -98,14 +98,14 @@ pub struct AdminUpdateWeightTableInstructionArgs {
 ///   1. `[writable]` weight_table
 ///   2. `[signer]` weight_table_admin
 ///   3. `[]` mint
-///   4. `[]` restaking_program_id
+///   4. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct AdminUpdateWeightTableBuilder {
     ncn: Option<solana_program::pubkey::Pubkey>,
     weight_table: Option<solana_program::pubkey::Pubkey>,
     weight_table_admin: Option<solana_program::pubkey::Pubkey>,
     mint: Option<solana_program::pubkey::Pubkey>,
-    restaking_program_id: Option<solana_program::pubkey::Pubkey>,
+    restaking_program: Option<solana_program::pubkey::Pubkey>,
     ncn_epoch: Option<u64>,
     weight: Option<u128>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -139,11 +139,11 @@ impl AdminUpdateWeightTableBuilder {
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn restaking_program(
         &mut self,
-        restaking_program_id: solana_program::pubkey::Pubkey,
+        restaking_program: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.restaking_program_id = Some(restaking_program_id);
+        self.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -183,9 +183,9 @@ impl AdminUpdateWeightTableBuilder {
                 .weight_table_admin
                 .expect("weight_table_admin is not set"),
             mint: self.mint.expect("mint is not set"),
-            restaking_program_id: self
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+            restaking_program: self
+                .restaking_program
+                .expect("restaking_program is not set"),
         };
         let args = AdminUpdateWeightTableInstructionArgs {
             ncn_epoch: self.ncn_epoch.clone().expect("ncn_epoch is not set"),
@@ -206,7 +206,7 @@ pub struct AdminUpdateWeightTableCpiAccounts<'a, 'b> {
 
     pub mint: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `admin_update_weight_table` CPI instruction.
@@ -222,7 +222,7 @@ pub struct AdminUpdateWeightTableCpi<'a, 'b> {
 
     pub mint: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AdminUpdateWeightTableInstructionArgs,
 }
@@ -239,7 +239,7 @@ impl<'a, 'b> AdminUpdateWeightTableCpi<'a, 'b> {
             weight_table: accounts.weight_table,
             weight_table_admin: accounts.weight_table_admin,
             mint: accounts.mint,
-            restaking_program_id: accounts.restaking_program_id,
+            restaking_program: accounts.restaking_program,
             __args: args,
         }
     }
@@ -294,7 +294,7 @@ impl<'a, 'b> AdminUpdateWeightTableCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program_id.key,
+            *self.restaking_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -321,7 +321,7 @@ impl<'a, 'b> AdminUpdateWeightTableCpi<'a, 'b> {
         account_infos.push(self.weight_table.clone());
         account_infos.push(self.weight_table_admin.clone());
         account_infos.push(self.mint.clone());
-        account_infos.push(self.restaking_program_id.clone());
+        account_infos.push(self.restaking_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -342,7 +342,7 @@ impl<'a, 'b> AdminUpdateWeightTableCpi<'a, 'b> {
 ///   1. `[writable]` weight_table
 ///   2. `[signer]` weight_table_admin
 ///   3. `[]` mint
-///   4. `[]` restaking_program_id
+///   4. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct AdminUpdateWeightTableCpiBuilder<'a, 'b> {
     instruction: Box<AdminUpdateWeightTableCpiBuilderInstruction<'a, 'b>>,
@@ -356,7 +356,7 @@ impl<'a, 'b> AdminUpdateWeightTableCpiBuilder<'a, 'b> {
             weight_table: None,
             weight_table_admin: None,
             mint: None,
-            restaking_program_id: None,
+            restaking_program: None,
             ncn_epoch: None,
             weight: None,
             __remaining_accounts: Vec::new(),
@@ -390,11 +390,11 @@ impl<'a, 'b> AdminUpdateWeightTableCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn restaking_program(
         &mut self,
-        restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.restaking_program_id = Some(restaking_program_id);
+        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -473,10 +473,10 @@ impl<'a, 'b> AdminUpdateWeightTableCpiBuilder<'a, 'b> {
 
             mint: self.instruction.mint.expect("mint is not set"),
 
-            restaking_program_id: self
+            restaking_program: self
                 .instruction
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+                .restaking_program
+                .expect("restaking_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -493,7 +493,7 @@ struct AdminUpdateWeightTableCpiBuilderInstruction<'a, 'b> {
     weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     weight_table_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program_id: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_epoch: Option<u64>,
     weight: Option<u128>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

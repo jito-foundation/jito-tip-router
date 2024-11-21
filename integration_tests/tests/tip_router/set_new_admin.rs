@@ -55,7 +55,7 @@ mod tests {
 
         fixture.warp_slot_incremental(1).await?;
         let mut restaking_program_client = fixture.restaking_program_client();
-        let wrong_ncn_root = restaking_program_client.do_initialize_ncn().await?;
+        let wrong_ncn_root = restaking_program_client.do_initialize_ncn(None).await?;
 
         let result = tip_router_client
             .set_new_admin(

@@ -48,7 +48,7 @@ export type SetNewAdminInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountNcnAdmin extends string | IAccountMeta<string> = string,
   TAccountNewAdmin extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgramId extends string | IAccountMeta<string> = string,
+  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -65,9 +65,9 @@ export type SetNewAdminInstruction<
       TAccountNewAdmin extends string
         ? ReadonlyAccount<TAccountNewAdmin>
         : TAccountNewAdmin,
-      TAccountRestakingProgramId extends string
-        ? ReadonlyAccount<TAccountRestakingProgramId>
-        : TAccountRestakingProgramId,
+      TAccountRestakingProgram extends string
+        ? ReadonlyAccount<TAccountRestakingProgram>
+        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -111,13 +111,13 @@ export type SetNewAdminInput<
   TAccountNcn extends string = string,
   TAccountNcnAdmin extends string = string,
   TAccountNewAdmin extends string = string,
-  TAccountRestakingProgramId extends string = string,
+  TAccountRestakingProgram extends string = string,
 > = {
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
   newAdmin: Address<TAccountNewAdmin>;
-  restakingProgramId: Address<TAccountRestakingProgramId>;
+  restakingProgram: Address<TAccountRestakingProgram>;
   role: SetNewAdminInstructionDataArgs['role'];
 };
 
@@ -126,7 +126,7 @@ export function getSetNewAdminInstruction<
   TAccountNcn extends string,
   TAccountNcnAdmin extends string,
   TAccountNewAdmin extends string,
-  TAccountRestakingProgramId extends string,
+  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: SetNewAdminInput<
@@ -134,7 +134,7 @@ export function getSetNewAdminInstruction<
     TAccountNcn,
     TAccountNcnAdmin,
     TAccountNewAdmin,
-    TAccountRestakingProgramId
+    TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): SetNewAdminInstruction<
@@ -143,7 +143,7 @@ export function getSetNewAdminInstruction<
   TAccountNcn,
   TAccountNcnAdmin,
   TAccountNewAdmin,
-  TAccountRestakingProgramId
+  TAccountRestakingProgram
 > {
   // Program address.
   const programAddress =
@@ -155,8 +155,8 @@ export function getSetNewAdminInstruction<
     ncn: { value: input.ncn ?? null, isWritable: false },
     ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
     newAdmin: { value: input.newAdmin ?? null, isWritable: false },
-    restakingProgramId: {
-      value: input.restakingProgramId ?? null,
+    restakingProgram: {
+      value: input.restakingProgram ?? null,
       isWritable: false,
     },
   };
@@ -175,7 +175,7 @@ export function getSetNewAdminInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.ncnAdmin),
       getAccountMeta(accounts.newAdmin),
-      getAccountMeta(accounts.restakingProgramId),
+      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getSetNewAdminInstructionDataEncoder().encode(
@@ -187,7 +187,7 @@ export function getSetNewAdminInstruction<
     TAccountNcn,
     TAccountNcnAdmin,
     TAccountNewAdmin,
-    TAccountRestakingProgramId
+    TAccountRestakingProgram
   >;
 
   return instruction;
@@ -203,7 +203,7 @@ export type ParsedSetNewAdminInstruction<
     ncn: TAccountMetas[1];
     ncnAdmin: TAccountMetas[2];
     newAdmin: TAccountMetas[3];
-    restakingProgramId: TAccountMetas[4];
+    restakingProgram: TAccountMetas[4];
   };
   data: SetNewAdminInstructionData;
 };
@@ -233,7 +233,7 @@ export function parseSetNewAdminInstruction<
       ncn: getNextAccount(),
       ncnAdmin: getNextAccount(),
       newAdmin: getNextAccount(),
-      restakingProgramId: getNextAccount(),
+      restakingProgram: getNextAccount(),
     },
     data: getSetNewAdminInstructionDataDecoder().decode(instruction.data),
   };

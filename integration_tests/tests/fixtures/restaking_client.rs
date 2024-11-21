@@ -21,7 +21,7 @@ use solana_program::{
     instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
     system_instruction::transfer,
 };
-use solana_program_test::BanksClient;
+use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 use solana_sdk::{
     commitment_config::CommitmentLevel,
     signature::{Keypair, Signer},
@@ -36,10 +36,28 @@ pub struct NcnRoot {
     pub ncn_admin: Keypair,
 }
 
+impl Clone for NcnRoot {
+    fn clone(&self) -> Self {
+        Self {
+            ncn_pubkey: self.ncn_pubkey,
+            ncn_admin: self.ncn_admin.insecure_clone(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct OperatorRoot {
     pub operator_pubkey: Pubkey,
     pub operator_admin: Keypair,
+}
+
+impl Clone for OperatorRoot {
+    fn clone(&self) -> Self {
+        Self {
+            operator_pubkey: self.operator_pubkey,
+            operator_admin: self.operator_admin.insecure_clone(),
+        }
+    }
 }
 
 pub struct RestakingProgramClient {
@@ -55,6 +73,7 @@ impl RestakingProgramClient {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn get_ncn(&mut self, ncn: &Pubkey) -> TestResult<Ncn> {
         let account = self
             .banks_client
@@ -70,6 +89,14 @@ impl RestakingProgramClient {
         Ok(*Config::try_from_slice_unchecked(account.data.as_slice())?)
     }
 
+    pub async fn get_ncn_epoch(&mut self, slot: u64) -> TestResult<u64> {
+        let restaking_config_address =
+            Config::find_program_address(&jito_restaking_program::id()).0;
+        let config = self.get_config(&restaking_config_address).await.unwrap();
+        Ok(config.get_epoch_from_slot(slot).unwrap())
+    }
+
+    #[allow(dead_code)]
     pub async fn get_ncn_vault_ticket(
         &mut self,
         ncn: &Pubkey,
@@ -83,6 +110,7 @@ impl RestakingProgramClient {
         )?)
     }
 
+    #[allow(dead_code)]
     pub async fn get_ncn_operator_state(
         &mut self,
         ncn: &Pubkey,
@@ -96,6 +124,7 @@ impl RestakingProgramClient {
         )?)
     }
 
+    #[allow(dead_code)]
     pub async fn get_operator(&mut self, account: &Pubkey) -> TestResult<Operator> {
         let account = self.banks_client.get_account(*account).await?.unwrap();
         Ok(*Operator::try_from_slice_unchecked(
@@ -103,6 +132,7 @@ impl RestakingProgramClient {
         )?)
     }
 
+    #[allow(dead_code)]
     pub async fn get_operator_vault_ticket(
         &mut self,
         operator: &Pubkey,
@@ -258,8 +288,14 @@ impl RestakingProgramClient {
         .await
     }
 
-    pub async fn do_initialize_ncn(&mut self) -> TestResult<NcnRoot> {
-        let ncn_admin = Keypair::new();
+    pub async fn do_initialize_ncn(&mut self, ncn_admin: Option<Keypair>) -> TestResult<NcnRoot> {
+        let ncn_admin = {
+            if let Some(ncn_admin) = ncn_admin {
+                ncn_admin
+            } else {
+                self.payer.insecure_clone()
+            }
+        };
         let ncn_base = Keypair::new();
 
         self.airdrop(&ncn_admin.pubkey(), 1.0).await?;
@@ -419,6 +455,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn do_ncn_cooldown_operator(
         &mut self,
         ncn_root: &NcnRoot,
@@ -537,6 +574,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn do_operator_cooldown_ncn(
         &mut self,
         operator_root: &OperatorRoot,
@@ -606,6 +644,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn do_initialize_ncn_vault_slasher_ticket(
         &mut self,
         ncn_root: &NcnRoot,
@@ -641,6 +680,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn do_warmup_ncn_vault_slasher_ticket(
         &mut self,
         ncn_root: &NcnRoot,
@@ -817,6 +857,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn ncn_set_admin(
         &mut self,
         ncn: &Pubkey,
@@ -839,6 +880,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn operator_set_admin(
         &mut self,
         operator: &Pubkey,
@@ -861,6 +903,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn operator_set_secondary_admin(
         &mut self,
         operator: &Pubkey,
@@ -939,6 +982,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn operator_set_fee(
         &mut self,
         config: &Pubkey,
@@ -963,6 +1007,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn ncn_delegate_token_account(
         &mut self,
         ncn_pubkey: &Pubkey,
@@ -990,6 +1035,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn operator_delegate_token_account(
         &mut self,
         operator_pubkey: &Pubkey,
@@ -1029,13 +1075,18 @@ impl RestakingProgramClient {
 
     pub async fn airdrop(&mut self, to: &Pubkey, sol: f64) -> TestResult<()> {
         let blockhash = self.banks_client.get_latest_blockhash().await?;
+        let new_blockhash = self
+            .banks_client
+            .get_new_latest_blockhash(&blockhash)
+            .await
+            .unwrap();
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 Transaction::new_signed_with_payer(
                     &[transfer(&self.payer.pubkey(), to, sol_to_lamports(sol))],
                     Some(&self.payer.pubkey()),
                     &[&self.payer],
-                    blockhash,
+                    new_blockhash,
                 ),
                 CommitmentLevel::Processed,
             )
@@ -1043,6 +1094,7 @@ impl RestakingProgramClient {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn set_config_admin(
         &mut self,
         config: &Pubkey,
@@ -1067,6 +1119,7 @@ impl RestakingProgramClient {
 
 #[track_caller]
 #[inline(always)]
+#[allow(dead_code)]
 pub fn assert_restaking_error<T>(
     test_error: Result<T, TestError>,
     restaking_error: RestakingError,

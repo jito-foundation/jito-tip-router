@@ -4,7 +4,9 @@ use jito_jsm_core::{
     loader::{load_signer, load_system_account, load_system_program},
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
-use jito_tip_router_core::{error::TipRouterError, fees::Fees, ncn_config::NcnConfig, MAX_FEE_BPS};
+use jito_tip_router_core::{
+    constants::MAX_FEE_BPS, error::TipRouterError, fees::Fees, ncn_config::NcnConfig,
+};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
@@ -17,7 +19,7 @@ pub fn process_initialize_ncn_config(
     ncn_fee_bps: u64,
     block_engine_fee_bps: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn_account, fee_wallet, ncn_admin, tie_breaker_admin, restaking_program_id, system_program] =
+    let [restaking_config, ncn_config, ncn_account, fee_wallet, ncn_admin, tie_breaker_admin, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -27,8 +29,8 @@ pub fn process_initialize_ncn_config(
     load_system_program(system_program)?;
     load_signer(ncn_admin, true)?;
 
-    Ncn::load(restaking_program_id.key, ncn_account, false)?;
-    Config::load(restaking_program_id.key, restaking_config, false)?;
+    Ncn::load(restaking_program.key, ncn_account, false)?;
+    Config::load(restaking_program.key, restaking_config, false)?;
 
     let ncn_epoch_length = {
         let config_data = restaking_config.data.borrow();

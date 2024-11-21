@@ -103,11 +103,11 @@ impl TrackedMints {
         Ok(())
     }
 
-    pub fn mint_count(&self) -> usize {
+    pub fn mint_count(&self) -> u64 {
         self.st_mint_list
             .iter()
             .filter(|m| m.st_mint != Pubkey::default())
-            .count()
+            .count() as u64
     }
 
     pub fn get_unique_mints(&self) -> Vec<Pubkey> {
@@ -185,7 +185,7 @@ mod tests {
         assert!(tracked_mints.add_mint(mint2, 1).is_err());
 
         // Adding to a full list should fail
-        for i in tracked_mints.mint_count()..tracked_mints.st_mint_list.len() {
+        for i in (tracked_mints.mint_count() as usize)..tracked_mints.st_mint_list.len() {
             tracked_mints
                 .add_mint(Pubkey::new_unique(), i as u64)
                 .unwrap();

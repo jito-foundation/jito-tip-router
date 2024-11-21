@@ -89,7 +89,7 @@ pub struct RegisterMintInstructionData {
 
 impl RegisterMintInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 5 }
+        Self { discriminator: 8 }
     }
 }
 

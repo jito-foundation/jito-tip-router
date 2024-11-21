@@ -67,7 +67,7 @@ pub struct InitializeTrackedMintsInstructionData {
 
 impl InitializeTrackedMintsInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 6 }
+        Self { discriminator: 9 }
     }
 }
 

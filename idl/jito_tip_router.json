@@ -36,7 +36,7 @@
           "isSigner": false
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -89,7 +89,7 @@
           "isSigner": true
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -149,7 +149,7 @@
           "isSigner": false
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -196,7 +196,7 @@
           "isSigner": true
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -243,7 +243,7 @@
           "isSigner": false
         },
         {
-          "name": "restakingProgramId",
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -261,6 +261,217 @@
       "discriminant": {
         "type": "u8",
         "value": 4
+      }
+    },
+    {
+      "name": "InitializeEpochSnapshot",
+      "accounts": [
+        {
+          "name": "ncnConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "restakingConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "trackedMints",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "weightTable",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "epochSnapshot",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "firstSlotOfNcnEpoch",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 5
+      }
+    },
+    {
+      "name": "InitializeOperatorSnapshot",
+      "accounts": [
+        {
+          "name": "ncnConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "restakingConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "operator",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncnOperatorState",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "epochSnapshot",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "operatorSnapshot",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "firstSlotOfNcnEpoch",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 6
+      }
+    },
+    {
+      "name": "SnapshotVaultOperatorDelegation",
+      "accounts": [
+        {
+          "name": "ncnConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "restakingConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "operator",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultNcnTicket",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncnVaultTicket",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultOperatorDelegation",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "weightTable",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "epochSnapshot",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "operatorSnapshot",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "firstSlotOfNcnEpoch",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 7
       }
     },
     {
@@ -315,7 +526,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 5
+        "value": 8
       }
     },
     {
@@ -350,11 +561,279 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 6
+        "value": 9
       }
     }
   ],
   "accounts": [
+    {
+      "name": "BallotBox",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncnEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slotConsensusReached",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          },
+          {
+            "name": "operatorsVoted",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "uniqueBallots",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "winningBallot",
+            "type": {
+              "defined": "Ballot"
+            }
+          },
+          {
+            "name": "operatorVotes",
+            "type": {
+              "array": [
+                {
+                  "defined": "OperatorVote"
+                },
+                32
+              ]
+            }
+          },
+          {
+            "name": "ballotTallies",
+            "type": {
+              "array": [
+                {
+                  "defined": "BallotTally"
+                },
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EpochSnapshot",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncnEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slotFinalized",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "ncnFees",
+            "type": {
+              "defined": "Fees"
+            }
+          },
+          {
+            "name": "operatorCount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "vaultCount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "operatorsRegistered",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "validOperatorVaultDelegations",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "stakeWeight",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperatorSnapshot",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operator",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncnEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slotFinalized",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "isActive",
+            "type": {
+              "defined": "PodBool"
+            }
+          },
+          {
+            "name": "ncnOperatorIndex",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "operatorIndex",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "operatorFeeBps",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "vaultOperatorDelegationCount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "vaultOperatorDelegationsRegistered",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "validOperatorVaultDelegations",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "stakeWeight",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                256
+              ]
+            }
+          },
+          {
+            "name": "vaultOperatorStakeWeight",
+            "type": {
+              "array": [
+                {
+                  "defined": "VaultOperatorStakeWeight"
+                },
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
     {
       "name": "NcnConfig",
       "type": {
@@ -480,6 +959,139 @@
     }
   ],
   "types": [
+    {
+      "name": "Ballot",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "merkleRoot",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BallotTally",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ballot",
+            "type": {
+              "defined": "Ballot"
+            }
+          },
+          {
+            "name": "stakeWeight",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "tally",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperatorVote",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operator",
+            "type": "publicKey"
+          },
+          {
+            "name": "slotVoted",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "stakeWeight",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "ballotIndex",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultOperatorStakeWeight",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "stakeWeight",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "vaultIndex",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
     {
       "name": "Fees",
       "type": {
@@ -714,24 +1326,84 @@
       "msg": "Vault index already in use by a different mint"
     },
     {
-      "code": 8960,
+      "code": 8718,
       "name": "FeeCapExceeded",
       "msg": "Fee cap exceeded"
     },
     {
-      "code": 9216,
+      "code": 8719,
       "name": "IncorrectNcnAdmin",
       "msg": "Incorrect NCN Admin"
     },
     {
-      "code": 9217,
+      "code": 8720,
       "name": "IncorrectNcn",
       "msg": "Incorrect NCN"
     },
     {
-      "code": 9218,
+      "code": 8721,
       "name": "IncorrectFeeAdmin",
       "msg": "Incorrect fee admin"
+    },
+    {
+      "code": 8722,
+      "name": "WeightTableNotFinalized",
+      "msg": "Weight table not finalized"
+    },
+    {
+      "code": 8723,
+      "name": "WeightNotFound",
+      "msg": "Weight not found"
+    },
+    {
+      "code": 8724,
+      "name": "NoOperators",
+      "msg": "No operators in ncn"
+    },
+    {
+      "code": 8725,
+      "name": "VaultOperatorDelegationFinalized",
+      "msg": "Vault operator delegation is already finalized - should not happen"
+    },
+    {
+      "code": 8726,
+      "name": "OperatorFinalized",
+      "msg": "Operator is already finalized - should not happen"
+    },
+    {
+      "code": 8727,
+      "name": "TooManyVaultOperatorDelegations",
+      "msg": "Too many vault operator delegations"
+    },
+    {
+      "code": 8728,
+      "name": "DuplicateVaultOperatorDelegation",
+      "msg": "Duplicate vault operator delegation"
+    },
+    {
+      "code": 8729,
+      "name": "DuplicateVoteCast",
+      "msg": "Duplicate Vote Cast"
+    },
+    {
+      "code": 8730,
+      "name": "OperatorVotesFull",
+      "msg": "Operator votes full"
+    },
+    {
+      "code": 8731,
+      "name": "BallotTallyFull",
+      "msg": "Merkle root tally full"
+    },
+    {
+      "code": 8732,
+      "name": "ConsensusAlreadyReached",
+      "msg": "Consensus already reached"
+    },
+    {
+      "code": 8733,
+      "name": "ConsensusNotReached",
+      "msg": "Consensus not reached"
     }
   ],
   "metadata": {

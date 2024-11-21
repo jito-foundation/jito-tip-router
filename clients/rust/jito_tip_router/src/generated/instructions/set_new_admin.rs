@@ -18,7 +18,7 @@ pub struct SetNewAdmin {
 
     pub new_admin: solana_program::pubkey::Pubkey,
 
-    pub restaking_program_id: solana_program::pubkey::Pubkey,
+    pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
 impl SetNewAdmin {
@@ -51,7 +51,7 @@ impl SetNewAdmin {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program_id,
+            self.restaking_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -98,14 +98,14 @@ pub struct SetNewAdminInstructionArgs {
 ///   1. `[]` ncn
 ///   2. `[signer]` ncn_admin
 ///   3. `[]` new_admin
-///   4. `[]` restaking_program_id
+///   4. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct SetNewAdminBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     ncn_admin: Option<solana_program::pubkey::Pubkey>,
     new_admin: Option<solana_program::pubkey::Pubkey>,
-    restaking_program_id: Option<solana_program::pubkey::Pubkey>,
+    restaking_program: Option<solana_program::pubkey::Pubkey>,
     role: Option<ConfigAdminRole>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -135,11 +135,11 @@ impl SetNewAdminBuilder {
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn restaking_program(
         &mut self,
-        restaking_program_id: solana_program::pubkey::Pubkey,
+        restaking_program: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.restaking_program_id = Some(restaking_program_id);
+        self.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -172,9 +172,9 @@ impl SetNewAdminBuilder {
             ncn: self.ncn.expect("ncn is not set"),
             ncn_admin: self.ncn_admin.expect("ncn_admin is not set"),
             new_admin: self.new_admin.expect("new_admin is not set"),
-            restaking_program_id: self
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+            restaking_program: self
+                .restaking_program
+                .expect("restaking_program is not set"),
         };
         let args = SetNewAdminInstructionArgs {
             role: self.role.clone().expect("role is not set"),
@@ -194,7 +194,7 @@ pub struct SetNewAdminCpiAccounts<'a, 'b> {
 
     pub new_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `set_new_admin` CPI instruction.
@@ -210,7 +210,7 @@ pub struct SetNewAdminCpi<'a, 'b> {
 
     pub new_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: SetNewAdminInstructionArgs,
 }
@@ -227,7 +227,7 @@ impl<'a, 'b> SetNewAdminCpi<'a, 'b> {
             ncn: accounts.ncn,
             ncn_admin: accounts.ncn_admin,
             new_admin: accounts.new_admin,
-            restaking_program_id: accounts.restaking_program_id,
+            restaking_program: accounts.restaking_program,
             __args: args,
         }
     }
@@ -282,7 +282,7 @@ impl<'a, 'b> SetNewAdminCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program_id.key,
+            *self.restaking_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -307,7 +307,7 @@ impl<'a, 'b> SetNewAdminCpi<'a, 'b> {
         account_infos.push(self.ncn.clone());
         account_infos.push(self.ncn_admin.clone());
         account_infos.push(self.new_admin.clone());
-        account_infos.push(self.restaking_program_id.clone());
+        account_infos.push(self.restaking_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -328,7 +328,7 @@ impl<'a, 'b> SetNewAdminCpi<'a, 'b> {
 ///   1. `[]` ncn
 ///   2. `[signer]` ncn_admin
 ///   3. `[]` new_admin
-///   4. `[]` restaking_program_id
+///   4. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct SetNewAdminCpiBuilder<'a, 'b> {
     instruction: Box<SetNewAdminCpiBuilderInstruction<'a, 'b>>,
@@ -342,7 +342,7 @@ impl<'a, 'b> SetNewAdminCpiBuilder<'a, 'b> {
             ncn: None,
             ncn_admin: None,
             new_admin: None,
-            restaking_program_id: None,
+            restaking_program: None,
             role: None,
             __remaining_accounts: Vec::new(),
         });
@@ -378,11 +378,11 @@ impl<'a, 'b> SetNewAdminCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn restaking_program(
         &mut self,
-        restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.restaking_program_id = Some(restaking_program_id);
+        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -445,10 +445,10 @@ impl<'a, 'b> SetNewAdminCpiBuilder<'a, 'b> {
 
             new_admin: self.instruction.new_admin.expect("new_admin is not set"),
 
-            restaking_program_id: self
+            restaking_program: self
                 .instruction
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+                .restaking_program
+                .expect("restaking_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -465,7 +465,7 @@ struct SetNewAdminCpiBuilderInstruction<'a, 'b> {
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     new_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program_id: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     role: Option<ConfigAdminRole>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

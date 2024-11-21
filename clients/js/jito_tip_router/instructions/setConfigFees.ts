@@ -50,7 +50,7 @@ export type SetConfigFeesInstruction<
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountNcnAdmin extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgramId extends string | IAccountMeta<string> = string,
+  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -67,9 +67,9 @@ export type SetConfigFeesInstruction<
         ? ReadonlySignerAccount<TAccountNcnAdmin> &
             IAccountSignerMeta<TAccountNcnAdmin>
         : TAccountNcnAdmin,
-      TAccountRestakingProgramId extends string
-        ? ReadonlyAccount<TAccountRestakingProgramId>
-        : TAccountRestakingProgramId,
+      TAccountRestakingProgram extends string
+        ? ReadonlyAccount<TAccountRestakingProgram>
+        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -127,13 +127,13 @@ export type SetConfigFeesInput<
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountNcnAdmin extends string = string,
-  TAccountRestakingProgramId extends string = string,
+  TAccountRestakingProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
-  restakingProgramId: Address<TAccountRestakingProgramId>;
+  restakingProgram: Address<TAccountRestakingProgram>;
   newDaoFeeBps: SetConfigFeesInstructionDataArgs['newDaoFeeBps'];
   newNcnFeeBps: SetConfigFeesInstructionDataArgs['newNcnFeeBps'];
   newBlockEngineFeeBps: SetConfigFeesInstructionDataArgs['newBlockEngineFeeBps'];
@@ -145,7 +145,7 @@ export function getSetConfigFeesInstruction<
   TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountNcnAdmin extends string,
-  TAccountRestakingProgramId extends string,
+  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: SetConfigFeesInput<
@@ -153,7 +153,7 @@ export function getSetConfigFeesInstruction<
     TAccountConfig,
     TAccountNcn,
     TAccountNcnAdmin,
-    TAccountRestakingProgramId
+    TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): SetConfigFeesInstruction<
@@ -162,7 +162,7 @@ export function getSetConfigFeesInstruction<
   TAccountConfig,
   TAccountNcn,
   TAccountNcnAdmin,
-  TAccountRestakingProgramId
+  TAccountRestakingProgram
 > {
   // Program address.
   const programAddress =
@@ -177,8 +177,8 @@ export function getSetConfigFeesInstruction<
     config: { value: input.config ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
-    restakingProgramId: {
-      value: input.restakingProgramId ?? null,
+    restakingProgram: {
+      value: input.restakingProgram ?? null,
       isWritable: false,
     },
   };
@@ -197,7 +197,7 @@ export function getSetConfigFeesInstruction<
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.ncnAdmin),
-      getAccountMeta(accounts.restakingProgramId),
+      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getSetConfigFeesInstructionDataEncoder().encode(
@@ -209,7 +209,7 @@ export function getSetConfigFeesInstruction<
     TAccountConfig,
     TAccountNcn,
     TAccountNcnAdmin,
-    TAccountRestakingProgramId
+    TAccountRestakingProgram
   >;
 
   return instruction;
@@ -225,7 +225,7 @@ export type ParsedSetConfigFeesInstruction<
     config: TAccountMetas[1];
     ncn: TAccountMetas[2];
     ncnAdmin: TAccountMetas[3];
-    restakingProgramId: TAccountMetas[4];
+    restakingProgram: TAccountMetas[4];
   };
   data: SetConfigFeesInstructionData;
 };
@@ -255,7 +255,7 @@ export function parseSetConfigFeesInstruction<
       config: getNextAccount(),
       ncn: getNextAccount(),
       ncnAdmin: getNextAccount(),
-      restakingProgramId: getNextAccount(),
+      restakingProgram: getNextAccount(),
     },
     data: getSetConfigFeesInstructionDataDecoder().decode(instruction.data),
   };
