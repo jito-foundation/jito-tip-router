@@ -89,7 +89,7 @@ pub fn process_initialize_weight_table(
     weight_table_data[0] = WeightTable::DISCRIMINATOR;
     let weight_table_account = WeightTable::try_from_slice_unchecked_mut(&mut weight_table_data)?;
 
-    *weight_table_account = WeightTable::new(*ncn.key, ncn_epoch, current_slot, weight_table_bump);
+    weight_table_account.initialize(*ncn.key, ncn_epoch, current_slot, weight_table_bump);
 
     weight_table_account.initalize_weight_table(&unique_mints)?;
 
