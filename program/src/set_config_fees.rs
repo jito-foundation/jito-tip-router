@@ -1,7 +1,9 @@
 use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::{config::Config, ncn::Ncn};
-use jito_tip_router_core::{error::TipRouterError, ncn_config::NcnConfig};
+use jito_tip_router_core::{
+    error::TipRouterError, ncn_config::NcnConfig, ncn_fee_group::NcnFeeGroup,
+};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
@@ -54,17 +56,17 @@ pub fn process_set_config_fees(
         return Err(TipRouterError::IncorrectFeeAdmin.into());
     }
 
-    let new_ncn_fee_group = let Some(new_ncn_fee_group) = new_ncn_fee_group {
-        new_ncn_fee_group
+    let new_ncn_fee_group = if let Some(new_ncn_fee_group) = new_ncn_fee_group {
+        Some(NcnFeeGroup::from_u8(new_ncn_fee_group)?)
     } else {
-        config.fee_config.ncn_fee_group()
+        None
     };
 
     config.fee_config.update_fee_config(
+        new_fee_wallet,
+        new_block_engine_fee_bps,
         new_dao_fee_bps,
         new_ncn_fee_bps,
-        new_block_engine_fee_bps,
-        new_fee_wallet,
         new_ncn_fee_group,
         epoch,
     )?;

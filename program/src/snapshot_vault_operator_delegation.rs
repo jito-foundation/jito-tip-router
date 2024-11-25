@@ -6,6 +6,8 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     loaders::load_ncn_epoch,
     ncn_config::NcnConfig,
+    stake_weight::StakeWeight,
+    tracked_mints::TrackedMints,
     weight_table::WeightTable,
 };
 use jito_vault_core::{
@@ -22,7 +24,7 @@ pub fn process_snapshot_vault_operator_delegation(
     accounts: &[AccountInfo],
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    let [ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
+    let [ncn_config, restaking_config, tracked_mints, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -68,6 +70,7 @@ pub fn process_snapshot_vault_operator_delegation(
     let (ncn_epoch, ncn_epoch_length) =
         load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
 
+    TrackedMints::load(program_id, ncn.key, tracked_mints, false)?;
     WeightTable::load(program_id, weight_table, ncn, ncn_epoch, false)?;
     EpochSnapshot::load(program_id, ncn.key, ncn_epoch, epoch_snapshot, true)?;
     OperatorSnapshot::load(
@@ -108,7 +111,13 @@ pub fn process_snapshot_vault_operator_delegation(
         vault_ncn_okay && ncn_vault_okay && !delegation_dne
     };
 
-    let total_votes: u128 = if is_active {
+    let ncn_fee_group = {
+        let tracked_mints_data = tracked_mints.data.borrow();
+        let tracked_mints_account = TrackedMints::try_from_slice_unchecked(&tracked_mints_data)?;
+        tracked_mints_account.get_ncn_fee_group(vault_index)?
+    };
+
+    let total_stake_weight: u128 = if is_active {
         let vault_operator_delegation_data = vault_operator_delegation.data.borrow();
         let vault_operator_delegation_account =
             VaultOperatorDelegation::try_from_slice_unchecked(&vault_operator_delegation_data)?;
@@ -130,11 +139,16 @@ pub fn process_snapshot_vault_operator_delegation(
     let operator_snapshot_account =
         OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
 
+    let mut stake_weight = StakeWeight::default();
+
+    stake_weight.increment_stake_weight(total_stake_weight)?;
+    stake_weight.increment_reward_stake_weight(ncn_fee_group, total_stake_weight)?;
+
     operator_snapshot_account.increment_vault_operator_delegation_registration(
         current_slot,
         *vault.key,
         vault_index,
-        total_votes,
+        &stake_weight,
     )?;
 
     // If operator is finalized, increment operator registration

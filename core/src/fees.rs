@@ -40,7 +40,7 @@ impl FeeConfig {
     }
 
     // ------------- Getters -------------
-    fn current_fees(&self, current_epoch: u64) -> &Fees {
+    pub fn current_fees(&self, current_epoch: u64) -> &Fees {
         // If either fee is not yet active, return the other one
         if self.fee_1.activation_epoch() > current_epoch {
             return &self.fee_2;
@@ -271,7 +271,7 @@ pub struct Fees {
     block_engine_fee_bps: PodU64,
     dao_fee_bps: PodU64,
 
-    ncn_fee_groups_bps: [NcnFee; NcnFeeGroup::FEE_GROUP_COUNT],
+    ncn_fee_groups_bps: [NcnFee; 16],
 
     // Reserves
     reserved: [u8; 64],

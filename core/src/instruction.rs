@@ -35,10 +35,11 @@ pub enum TipRouterInstruction {
     #[account(3, signer, name = "ncn_admin")]
     #[account(4, name = "restaking_program")]
     SetConfigFees {
+        new_fee_wallet: Option<Pubkey>,
+        new_block_engine_fee_bps: Option<u64>,
         new_dao_fee_bps: Option<u64>,
         new_ncn_fee_bps: Option<u64>,
-        new_block_engine_fee_bps: Option<u64>,
-        new_fee_wallet: Option<Pubkey>,
+        new_ncn_fee_group: Option<u8>,
     },
 
     /// Sets a new secondary admin for the NCN
@@ -106,17 +107,18 @@ pub enum TipRouterInstruction {
     /// Initializes the Vault Operator Delegation Snapshot
     #[account(0, name = "ncn_config")]
     #[account(1, name = "restaking_config")]
-    #[account(2, name = "ncn")]
-    #[account(3, name = "operator")]
-    #[account(4, name = "vault")]
-    #[account(5, name = "vault_ncn_ticket")]
-    #[account(6, name = "ncn_vault_ticket")]
-    #[account(7, name = "vault_operator_delegation")]
-    #[account(8, name = "weight_table")]
-    #[account(9, writable, name = "epoch_snapshot")]
-    #[account(10, writable, name = "operator_snapshot")]
-    #[account(11, name = "vault_program")]
-    #[account(12, name = "restaking_program")]
+    #[account(2, name = "tracked_mints")]
+    #[account(3, name = "ncn")]
+    #[account(4, name = "operator")]
+    #[account(5, name = "vault")]
+    #[account(6, name = "vault_ncn_ticket")]
+    #[account(7, name = "ncn_vault_ticket")]
+    #[account(8, name = "vault_operator_delegation")]
+    #[account(9, name = "weight_table")]
+    #[account(10, writable, name = "epoch_snapshot")]
+    #[account(11, writable, name = "operator_snapshot")]
+    #[account(12, name = "vault_program")]
+    #[account(13, name = "restaking_program")]
     SnapshotVaultOperatorDelegation{
         first_slot_of_ncn_epoch: Option<u64>,
     },

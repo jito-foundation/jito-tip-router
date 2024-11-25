@@ -76,27 +76,30 @@ export type SetConfigFeesInstruction<
 
 export type SetConfigFeesInstructionData = {
   discriminator: number;
+  newFeeWallet: Option<Address>;
+  newBlockEngineFeeBps: Option<bigint>;
   newDaoFeeBps: Option<bigint>;
   newNcnFeeBps: Option<bigint>;
-  newBlockEngineFeeBps: Option<bigint>;
-  newFeeWallet: Option<Address>;
+  newNcnFeeGroup: Option<number>;
 };
 
 export type SetConfigFeesInstructionDataArgs = {
+  newFeeWallet: OptionOrNullable<Address>;
+  newBlockEngineFeeBps: OptionOrNullable<number | bigint>;
   newDaoFeeBps: OptionOrNullable<number | bigint>;
   newNcnFeeBps: OptionOrNullable<number | bigint>;
-  newBlockEngineFeeBps: OptionOrNullable<number | bigint>;
-  newFeeWallet: OptionOrNullable<Address>;
+  newNcnFeeGroup: OptionOrNullable<number>;
 };
 
 export function getSetConfigFeesInstructionDataEncoder(): Encoder<SetConfigFeesInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
+      ['newFeeWallet', getOptionEncoder(getAddressEncoder())],
+      ['newBlockEngineFeeBps', getOptionEncoder(getU64Encoder())],
       ['newDaoFeeBps', getOptionEncoder(getU64Encoder())],
       ['newNcnFeeBps', getOptionEncoder(getU64Encoder())],
-      ['newBlockEngineFeeBps', getOptionEncoder(getU64Encoder())],
-      ['newFeeWallet', getOptionEncoder(getAddressEncoder())],
+      ['newNcnFeeGroup', getOptionEncoder(getU8Encoder())],
     ]),
     (value) => ({ ...value, discriminator: SET_CONFIG_FEES_DISCRIMINATOR })
   );
@@ -105,10 +108,11 @@ export function getSetConfigFeesInstructionDataEncoder(): Encoder<SetConfigFeesI
 export function getSetConfigFeesInstructionDataDecoder(): Decoder<SetConfigFeesInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
+    ['newFeeWallet', getOptionDecoder(getAddressDecoder())],
+    ['newBlockEngineFeeBps', getOptionDecoder(getU64Decoder())],
     ['newDaoFeeBps', getOptionDecoder(getU64Decoder())],
     ['newNcnFeeBps', getOptionDecoder(getU64Decoder())],
-    ['newBlockEngineFeeBps', getOptionDecoder(getU64Decoder())],
-    ['newFeeWallet', getOptionDecoder(getAddressDecoder())],
+    ['newNcnFeeGroup', getOptionDecoder(getU8Decoder())],
   ]);
 }
 
@@ -134,10 +138,11 @@ export type SetConfigFeesInput<
   ncn: Address<TAccountNcn>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
   restakingProgram: Address<TAccountRestakingProgram>;
+  newFeeWallet: SetConfigFeesInstructionDataArgs['newFeeWallet'];
+  newBlockEngineFeeBps: SetConfigFeesInstructionDataArgs['newBlockEngineFeeBps'];
   newDaoFeeBps: SetConfigFeesInstructionDataArgs['newDaoFeeBps'];
   newNcnFeeBps: SetConfigFeesInstructionDataArgs['newNcnFeeBps'];
-  newBlockEngineFeeBps: SetConfigFeesInstructionDataArgs['newBlockEngineFeeBps'];
-  newFeeWallet: SetConfigFeesInstructionDataArgs['newFeeWallet'];
+  newNcnFeeGroup: SetConfigFeesInstructionDataArgs['newNcnFeeGroup'];
 };
 
 export function getSetConfigFeesInstruction<

@@ -66,54 +66,60 @@ pub enum JitoTipRouterError {
     /// 8717 - Vault index already in use by a different mint
     #[error("Vault index already in use by a different mint")]
     VaultIndexAlreadyInUse = 0x220D,
-    /// 8718 - Fee cap exceeded
+    /// 8718 - Mint Entry not found
+    #[error("Mint Entry not found")]
+    MintEntryNotFound = 0x220E,
+    /// 8719 - Fee cap exceeded
     #[error("Fee cap exceeded")]
-    FeeCapExceeded = 0x220E,
-    /// 8719 - Incorrect NCN Admin
+    FeeCapExceeded = 0x220F,
+    /// 8720 - Incorrect NCN Admin
     #[error("Incorrect NCN Admin")]
-    IncorrectNcnAdmin = 0x220F,
-    /// 8720 - Incorrect NCN
+    IncorrectNcnAdmin = 0x2210,
+    /// 8721 - Incorrect NCN
     #[error("Incorrect NCN")]
-    IncorrectNcn = 0x2210,
-    /// 8721 - Incorrect fee admin
+    IncorrectNcn = 0x2211,
+    /// 8722 - Incorrect fee admin
     #[error("Incorrect fee admin")]
-    IncorrectFeeAdmin = 0x2211,
-    /// 8722 - Weight table not finalized
+    IncorrectFeeAdmin = 0x2212,
+    /// 8723 - Weight table not finalized
     #[error("Weight table not finalized")]
-    WeightTableNotFinalized = 0x2212,
-    /// 8723 - Weight not found
+    WeightTableNotFinalized = 0x2213,
+    /// 8724 - Weight not found
     #[error("Weight not found")]
-    WeightNotFound = 0x2213,
-    /// 8724 - No operators in ncn
+    WeightNotFound = 0x2214,
+    /// 8725 - No operators in ncn
     #[error("No operators in ncn")]
-    NoOperators = 0x2214,
-    /// 8725 - Vault operator delegation is already finalized - should not happen
+    NoOperators = 0x2215,
+    /// 8726 - Vault operator delegation is already finalized - should not happen
     #[error("Vault operator delegation is already finalized - should not happen")]
-    VaultOperatorDelegationFinalized = 0x2215,
-    /// 8726 - Operator is already finalized - should not happen
+    VaultOperatorDelegationFinalized = 0x2216,
+    /// 8727 - Operator is already finalized - should not happen
     #[error("Operator is already finalized - should not happen")]
-    OperatorFinalized = 0x2216,
-    /// 8727 - Too many vault operator delegations
+    OperatorFinalized = 0x2217,
+    /// 8728 - Too many vault operator delegations
     #[error("Too many vault operator delegations")]
-    TooManyVaultOperatorDelegations = 0x2217,
-    /// 8728 - Duplicate vault operator delegation
+    TooManyVaultOperatorDelegations = 0x2218,
+    /// 8729 - Duplicate vault operator delegation
     #[error("Duplicate vault operator delegation")]
-    DuplicateVaultOperatorDelegation = 0x2218,
-    /// 8729 - Duplicate Vote Cast
+    DuplicateVaultOperatorDelegation = 0x2219,
+    /// 8730 - Duplicate Vote Cast
     #[error("Duplicate Vote Cast")]
-    DuplicateVoteCast = 0x2219,
-    /// 8730 - Operator votes full
+    DuplicateVoteCast = 0x221A,
+    /// 8731 - Operator votes full
     #[error("Operator votes full")]
-    OperatorVotesFull = 0x221A,
-    /// 8731 - Merkle root tally full
+    OperatorVotesFull = 0x221B,
+    /// 8732 - Merkle root tally full
     #[error("Merkle root tally full")]
-    BallotTallyFull = 0x221B,
-    /// 8732 - Consensus already reached
+    BallotTallyFull = 0x221C,
+    /// 8733 - Consensus already reached
     #[error("Consensus already reached")]
-    ConsensusAlreadyReached = 0x221C,
-    /// 8733 - Consensus not reached
+    ConsensusAlreadyReached = 0x221D,
+    /// 8734 - Consensus not reached
     #[error("Consensus not reached")]
-    ConsensusNotReached = 0x221D,
+    ConsensusNotReached = 0x221E,
+    /// 8735 - Not a valid NCN fee group
+    #[error("Not a valid NCN fee group")]
+    InvalidNcnFeeGroup = 0x221F,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

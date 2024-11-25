@@ -113,19 +113,21 @@ pub fn process_instruction(
             process_admin_update_weight_table(program_id, accounts, ncn_epoch, weight)
         }
         TipRouterInstruction::SetConfigFees {
+            new_fee_wallet,
+            new_block_engine_fee_bps,
             new_dao_fee_bps,
             new_ncn_fee_bps,
-            new_block_engine_fee_bps,
-            new_fee_wallet,
+            new_ncn_fee_group,
         } => {
             msg!("Instruction: SetConfigFees");
             process_set_config_fees(
                 program_id,
                 accounts,
+                new_fee_wallet,
+                new_block_engine_fee_bps,
                 new_dao_fee_bps,
                 new_ncn_fee_bps,
-                new_block_engine_fee_bps,
-                new_fee_wallet,
+                new_ncn_fee_group,
             )
         }
         TipRouterInstruction::SetNewAdmin { role } => {

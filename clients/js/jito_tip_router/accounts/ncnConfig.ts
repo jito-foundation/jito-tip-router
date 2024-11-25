@@ -35,10 +35,10 @@ import {
   type MaybeEncodedAccount,
 } from '@solana/web3.js';
 import {
-  getFeesDecoder,
-  getFeesEncoder,
-  type Fees,
-  type FeesArgs,
+  getFeeConfigDecoder,
+  getFeeConfigEncoder,
+  type FeeConfig,
+  type FeeConfigArgs,
 } from '../types';
 
 export type NcnConfig = {
@@ -46,7 +46,7 @@ export type NcnConfig = {
   ncn: Address;
   tieBreakerAdmin: Address;
   feeAdmin: Address;
-  fees: Fees;
+  feeConfig: FeeConfig;
   bump: number;
   reserved: Array<number>;
 };
@@ -56,7 +56,7 @@ export type NcnConfigArgs = {
   ncn: Address;
   tieBreakerAdmin: Address;
   feeAdmin: Address;
-  fees: FeesArgs;
+  feeConfig: FeeConfigArgs;
   bump: number;
   reserved: Array<number>;
 };
@@ -67,7 +67,7 @@ export function getNcnConfigEncoder(): Encoder<NcnConfigArgs> {
     ['ncn', getAddressEncoder()],
     ['tieBreakerAdmin', getAddressEncoder()],
     ['feeAdmin', getAddressEncoder()],
-    ['fees', getFeesEncoder()],
+    ['feeConfig', getFeeConfigEncoder()],
     ['bump', getU8Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 127 })],
   ]);
@@ -79,7 +79,7 @@ export function getNcnConfigDecoder(): Decoder<NcnConfig> {
     ['ncn', getAddressDecoder()],
     ['tieBreakerAdmin', getAddressDecoder()],
     ['feeAdmin', getAddressDecoder()],
-    ['fees', getFeesDecoder()],
+    ['feeConfig', getFeeConfigDecoder()],
     ['bump', getU8Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 127 })],
   ]);

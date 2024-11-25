@@ -10,6 +10,7 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     loaders::load_ncn_epoch,
     ncn_config::NcnConfig,
+    stake_weight::StakeWeight,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -153,7 +154,11 @@ pub fn process_initialize_operator_snapshot(
         let epoch_snapshot_account =
             EpochSnapshot::try_from_slice_unchecked_mut(&mut epoch_snapshot_data)?;
 
-        epoch_snapshot_account.increment_operator_registration(current_slot, 0, 0)?;
+        epoch_snapshot_account.increment_operator_registration(
+            current_slot,
+            0,
+            &StakeWeight::default(),
+        )?;
     }
 
     Ok(())

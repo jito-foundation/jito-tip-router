@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use jito_tip_router_core::error::TipRouterError;
+    use jito_tip_router_core::{error::TipRouterError, ncn_fee_group::NcnFeeGroup};
     use solana_sdk::{
         clock::DEFAULT_SLOTS_PER_EPOCH,
         signature::{Keypair, Signer},
@@ -102,13 +102,19 @@ mod tests {
             .get_ncn_config(ncn_root.ncn_pubkey)
             .await?;
         let clock = fixture.clock().await;
-        assert_eq!(config.fee_config.dao_fee(clock.epoch as u64).unwrap(), 100);
-        assert_eq!(config.fee_config.ncn_fee(clock.epoch as u64).unwrap(), 200);
-        assert_eq!(config.fee_config.block_engine_fee(clock.epoch as u64), 0);
+        assert_eq!(config.fee_config.dao_fee_bps(clock.epoch as u64), 100);
         assert_eq!(
-            config.fee_config.fee_wallet(clock.epoch as u64),
-            new_fee_wallet.pubkey()
+            config
+                .fee_config
+                .ncn_fee_bps(NcnFeeGroup::default(), clock.epoch as u64)
+                .unwrap(),
+            200
         );
+        assert_eq!(
+            config.fee_config.block_engine_fee_bps(clock.epoch as u64),
+            0
+        );
+        assert_eq!(config.fee_config.fee_wallet(), new_fee_wallet.pubkey());
 
         Ok(())
     }

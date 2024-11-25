@@ -96,6 +96,18 @@
       ],
       "args": [
         {
+          "name": "newFeeWallet",
+          "type": {
+            "option": "publicKey"
+          }
+        },
+        {
+          "name": "newBlockEngineFeeBps",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
           "name": "newDaoFeeBps",
           "type": {
             "option": "u64"
@@ -108,15 +120,9 @@
           }
         },
         {
-          "name": "newBlockEngineFeeBps",
+          "name": "newNcnFeeGroup",
           "type": {
-            "option": "u64"
-          }
-        },
-        {
-          "name": "newFeeWallet",
-          "type": {
-            "option": "publicKey"
+            "option": "u8"
           }
         }
       ],
@@ -402,6 +408,11 @@
         },
         {
           "name": "restakingConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "trackedMints",
           "isMut": false,
           "isSigner": false
         },
@@ -713,7 +724,7 @@
           {
             "name": "stakeWeight",
             "type": {
-              "defined": "PodU128"
+              "defined": "StakeWeight"
             }
           },
           {
@@ -808,7 +819,7 @@
           {
             "name": "stakeWeight",
             "type": {
-              "defined": "PodU128"
+              "defined": "StakeWeight"
             }
           },
           {
@@ -852,9 +863,9 @@
             "type": "publicKey"
           },
           {
-            "name": "fees",
+            "name": "feeConfig",
             "type": {
-              "defined": "Fees"
+              "defined": "FeeConfig"
             }
           },
           {
@@ -1069,15 +1080,15 @@
             "type": "publicKey"
           },
           {
-            "name": "stakeWeight",
-            "type": {
-              "defined": "PodU128"
-            }
-          },
-          {
             "name": "vaultIndex",
             "type": {
               "defined": "PodU64"
+            }
+          },
+          {
+            "name": "stakeWeight",
+            "type": {
+              "defined": "StakeWeight"
             }
           },
           {
@@ -1093,42 +1104,36 @@
       }
     },
     {
-      "name": "Fees",
+      "name": "FeeConfig",
       "type": {
         "kind": "struct",
         "fields": [
           {
+            "name": "daoFeeWallet",
+            "type": "publicKey"
+          },
+          {
             "name": "fee1",
             "type": {
-              "defined": "Fee"
+              "defined": "Fees"
             }
           },
           {
             "name": "fee2",
             "type": {
-              "defined": "Fee"
+              "defined": "Fees"
             }
           }
         ]
       }
     },
     {
-      "name": "Fee",
+      "name": "Fees",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "wallet",
-            "type": "publicKey"
-          },
-          {
-            "name": "daoShareBps",
-            "type": {
-              "defined": "PodU64"
-            }
-          },
-          {
-            "name": "ncnShareBps",
+            "name": "activationEpoch",
             "type": {
               "defined": "PodU64"
             }
@@ -1140,9 +1145,121 @@
             }
           },
           {
-            "name": "activationEpoch",
+            "name": "daoFeeBps",
             "type": {
               "defined": "PodU64"
+            }
+          },
+          {
+            "name": "ncnFeeGroupsBps",
+            "type": {
+              "array": [
+                {
+                  "defined": "NcnFee"
+                },
+                16
+              ]
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "NcnFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "NcnFeeGroup",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "group",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StakeWeight",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "stakeWeight",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "rewardStakeWeights",
+            "type": {
+              "array": [
+                {
+                  "defined": "RewardStakeWeight"
+                },
+                16
+              ]
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RewardStakeWeight",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "rewardStakeWeight",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
             }
           }
         ]
@@ -1161,6 +1278,12 @@
             "name": "vaultIndex",
             "type": {
               "defined": "PodU64"
+            }
+          },
+          {
+            "name": "ncnFeeGroup",
+            "type": {
+              "defined": "NcnFeeGroup"
             }
           },
           {
@@ -1327,83 +1450,93 @@
     },
     {
       "code": 8718,
+      "name": "MintEntryNotFound",
+      "msg": "Mint Entry not found"
+    },
+    {
+      "code": 8719,
       "name": "FeeCapExceeded",
       "msg": "Fee cap exceeded"
     },
     {
-      "code": 8719,
+      "code": 8720,
       "name": "IncorrectNcnAdmin",
       "msg": "Incorrect NCN Admin"
     },
     {
-      "code": 8720,
+      "code": 8721,
       "name": "IncorrectNcn",
       "msg": "Incorrect NCN"
     },
     {
-      "code": 8721,
+      "code": 8722,
       "name": "IncorrectFeeAdmin",
       "msg": "Incorrect fee admin"
     },
     {
-      "code": 8722,
+      "code": 8723,
       "name": "WeightTableNotFinalized",
       "msg": "Weight table not finalized"
     },
     {
-      "code": 8723,
+      "code": 8724,
       "name": "WeightNotFound",
       "msg": "Weight not found"
     },
     {
-      "code": 8724,
+      "code": 8725,
       "name": "NoOperators",
       "msg": "No operators in ncn"
     },
     {
-      "code": 8725,
+      "code": 8726,
       "name": "VaultOperatorDelegationFinalized",
       "msg": "Vault operator delegation is already finalized - should not happen"
     },
     {
-      "code": 8726,
+      "code": 8727,
       "name": "OperatorFinalized",
       "msg": "Operator is already finalized - should not happen"
     },
     {
-      "code": 8727,
+      "code": 8728,
       "name": "TooManyVaultOperatorDelegations",
       "msg": "Too many vault operator delegations"
     },
     {
-      "code": 8728,
+      "code": 8729,
       "name": "DuplicateVaultOperatorDelegation",
       "msg": "Duplicate vault operator delegation"
     },
     {
-      "code": 8729,
+      "code": 8730,
       "name": "DuplicateVoteCast",
       "msg": "Duplicate Vote Cast"
     },
     {
-      "code": 8730,
+      "code": 8731,
       "name": "OperatorVotesFull",
       "msg": "Operator votes full"
     },
     {
-      "code": 8731,
+      "code": 8732,
       "name": "BallotTallyFull",
       "msg": "Merkle root tally full"
     },
     {
-      "code": 8732,
+      "code": 8733,
       "name": "ConsensusAlreadyReached",
       "msg": "Consensus already reached"
     },
     {
-      "code": 8733,
+      "code": 8734,
       "name": "ConsensusNotReached",
       "msg": "Consensus not reached"
+    },
+    {
+      "code": 8735,
+      "name": "InvalidNcnFeeGroup",
+      "msg": "Not a valid NCN fee group"
     }
   ],
   "metadata": {

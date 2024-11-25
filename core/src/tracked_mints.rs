@@ -5,13 +5,14 @@ use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
-use crate::{discriminators::Discriminators, error::TipRouterError};
+use crate::{discriminators::Discriminators, error::TipRouterError, ncn_fee_group::NcnFeeGroup};
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct MintEntry {
     st_mint: Pubkey,
     vault_index: PodU64,
+    ncn_fee_group: NcnFeeGroup,
     reserved: [u8; 32],
 }
 
@@ -20,12 +21,17 @@ impl MintEntry {
         Self {
             st_mint: mint,
             vault_index: PodU64::from(vault_index),
+            ncn_fee_group: NcnFeeGroup::default(),
             reserved: [0; 32],
         }
     }
 
     pub fn vault_index(&self) -> u64 {
         self.vault_index.into()
+    }
+
+    pub fn ncn_fee_group(&self) -> NcnFeeGroup {
+        self.ncn_fee_group
     }
 }
 
@@ -155,6 +161,31 @@ impl TrackedMints {
             return Err(ProgramError::InvalidAccountData);
         }
 
+        Ok(())
+    }
+
+    pub fn get_ncn_fee_group(&self, vault_index: u64) -> Result<NcnFeeGroup, ProgramError> {
+        let mint_entry = self
+            .st_mint_list
+            .iter()
+            .find(|m| m.vault_index() == vault_index)
+            .ok_or(TipRouterError::MintEntryNotFound)?;
+
+        Ok(mint_entry.ncn_fee_group)
+    }
+
+    pub fn set_ncn_fee_group(
+        &mut self,
+        vault_index: u64,
+        ncn_fee_group: NcnFeeGroup,
+    ) -> Result<(), ProgramError> {
+        let mint_entry = self
+            .st_mint_list
+            .iter_mut()
+            .find(|m| m.vault_index() == vault_index)
+            .ok_or(TipRouterError::MintEntryNotFound)?;
+
+        mint_entry.ncn_fee_group = ncn_fee_group;
         Ok(())
     }
 }

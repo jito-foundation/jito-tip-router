@@ -42,6 +42,8 @@ pub enum TipRouterError {
     TrackedMintsLocked,
     #[error("Vault index already in use by a different mint")]
     VaultIndexAlreadyInUse,
+    #[error("Mint Entry not found")]
+    MintEntryNotFound,
     #[error("Fee cap exceeded")]
     FeeCapExceeded,
     #[error("Incorrect NCN Admin")]

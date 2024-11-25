@@ -7,17 +7,16 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::NcnFeeGroup;
+use crate::generated::types::Fees;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct MintEntry {
+pub struct FeeConfig {
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
-    pub st_mint: Pubkey,
-    pub vault_index: u64,
-    pub ncn_fee_group: NcnFeeGroup,
-    pub reserved: [u8; 32],
+    pub dao_fee_wallet: Pubkey,
+    pub fee1: Fees,
+    pub fee2: Fees,
 }

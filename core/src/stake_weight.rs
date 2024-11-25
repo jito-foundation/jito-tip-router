@@ -1,5 +1,5 @@
 use bytemuck::{Pod, Zeroable};
-use jito_bytemuck::types::{PodU128, PodU64};
+use jito_bytemuck::types::PodU128;
 use shank::ShankType;
 
 use crate::{error::TipRouterError, ncn_fee_group::NcnFeeGroup};
@@ -8,7 +8,7 @@ use crate::{error::TipRouterError, ncn_fee_group::NcnFeeGroup};
 #[repr(C)]
 pub struct StakeWeight {
     stake_weight: PodU128,
-    reward_stake_weights: [RewardStakeWeight; NcnFeeGroup::FEE_GROUP_COUNT],
+    reward_stake_weights: [RewardStakeWeight; 16],
     // Reserves
     reserved: [u8; 64],
 }
@@ -28,7 +28,7 @@ impl StakeWeight {
         self.stake_weight.into()
     }
 
-    pub fn reward_stake_weight(&self, ncn_fee_group: NcnFeeGroup) -> Result<u64, TipRouterError> {
+    pub fn reward_stake_weight(&self, ncn_fee_group: NcnFeeGroup) -> Result<u128, TipRouterError> {
         let group_index = ncn_fee_group.group_index()?;
 
         Ok(self.reward_stake_weights[group_index].reward_stake_weight())
@@ -57,11 +57,11 @@ impl StakeWeight {
     pub fn increment_reward_stake_weight(
         &mut self,
         ncn_fee_group: NcnFeeGroup,
-        stake_weight: u64,
+        stake_weight: u128,
     ) -> Result<(), TipRouterError> {
         let group_index = ncn_fee_group.group_index()?;
 
-        self.reward_stake_weights[group_index].reward_stake_weight = PodU64::from(
+        self.reward_stake_weights[group_index].reward_stake_weight = PodU128::from(
             self.reward_stake_weight(ncn_fee_group)?
                 .checked_add(stake_weight)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
@@ -74,28 +74,28 @@ impl StakeWeight {
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct RewardStakeWeight {
-    reward_stake_weight: PodU64,
+    reward_stake_weight: PodU128,
     reserved: [u8; 64],
 }
 
 impl Default for RewardStakeWeight {
     fn default() -> Self {
         Self {
-            reward_stake_weight: PodU64::from(0),
+            reward_stake_weight: PodU128::from(0),
             reserved: [0; 64],
         }
     }
 }
 
 impl RewardStakeWeight {
-    pub fn new(reward_stake_weight: u64) -> Self {
+    pub fn new(reward_stake_weight: u128) -> Self {
         Self {
-            reward_stake_weight: PodU64::from(reward_stake_weight),
+            reward_stake_weight: PodU128::from(reward_stake_weight),
             reserved: [0; 64],
         }
     }
 
-    pub fn reward_stake_weight(&self) -> u64 {
+    pub fn reward_stake_weight(&self) -> u128 {
         self.reward_stake_weight.into()
     }
 }
