@@ -2,8 +2,13 @@ use clap::Parser;
 use anyhow::Result;
 use log::info;
 use snapshot::SnapshotCreator;
+use solana_metrics::datapoint_info;
+use solana_metrics::datapoint_error;
 
 mod snapshot;
+
+#[cfg(test)]
+mod tests;
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -60,10 +65,12 @@ async fn main() -> Result<()> {
             info!("Starting snapshot creator");
             info!("Output directory: {}", output_dir);
             let snapshot_creator = SnapshotCreator::new(
+                &cli.keypair_path,  // Add keypair path
                 &cli.rpc_url,
-                output_dir,
+                &output_dir,        // Add & to make it a reference
                 max_snapshots,
-                compression
+                compression,
+                true,              // Add is_archive parameter
             )?;
             snapshot_creator.monitor_epoch_boundary().await?;
         }

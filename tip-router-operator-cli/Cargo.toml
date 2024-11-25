@@ -7,12 +7,16 @@ description = "CLI for Jito Tip Router"
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.4", features = ["derive", "env"] }
+ellipsis-client = "0.1"
 env_logger = "0.10"
 log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+solana-ledger = { workspace = true }
 solana-sdk = "1.17"
 solana-client = "1.17"
 solana-cli-config = "1.17"
+solana-metrics = { workspace = true }
 thiserror = "1.0"
 tokio = { version = "1.0", features = ["full"] }
+tokio-test = "0.4"
