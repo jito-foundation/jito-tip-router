@@ -6,7 +6,7 @@ members = [
     "integration_tests",
     "program",
     "shank_cli"
-]
+, "tip-router-operator-cli"]
 
 resolver = "2"
 
