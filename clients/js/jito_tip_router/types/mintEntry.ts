@@ -24,16 +24,24 @@ import {
   type Encoder,
   type ReadonlyUint8Array,
 } from '@solana/web3.js';
+import {
+  getNcnFeeGroupDecoder,
+  getNcnFeeGroupEncoder,
+  type NcnFeeGroup,
+  type NcnFeeGroupArgs,
+} from '.';
 
 export type MintEntry = {
   stMint: Address;
   vaultIndex: bigint;
+  ncnFeeGroup: NcnFeeGroup;
   reserved: ReadonlyUint8Array;
 };
 
 export type MintEntryArgs = {
   stMint: Address;
   vaultIndex: number | bigint;
+  ncnFeeGroup: NcnFeeGroupArgs;
   reserved: ReadonlyUint8Array;
 };
 
@@ -41,6 +49,7 @@ export function getMintEntryEncoder(): Encoder<MintEntryArgs> {
   return getStructEncoder([
     ['stMint', getAddressEncoder()],
     ['vaultIndex', getU64Encoder()],
+    ['ncnFeeGroup', getNcnFeeGroupEncoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 32)],
   ]);
 }
@@ -49,6 +58,7 @@ export function getMintEntryDecoder(): Decoder<MintEntry> {
   return getStructDecoder([
     ['stMint', getAddressDecoder()],
     ['vaultIndex', getU64Decoder()],
+    ['ncnFeeGroup', getNcnFeeGroupDecoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }

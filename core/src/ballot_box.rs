@@ -53,6 +53,7 @@ impl Ballot {
 pub struct BallotTally {
     ballot: Ballot,
     stake_weight: PodU128,
+    reward_stake_weight: PodU128,
     tally: PodU64,
     reserved: [u8; 64],
 }
@@ -62,6 +63,7 @@ impl Default for BallotTally {
         Self {
             ballot: Ballot::default(),
             stake_weight: PodU128::from(0),
+            reward_stake_weight: PodU128::from(0),
             tally: PodU64::from(0),
             reserved: [0; 64],
         }
@@ -69,10 +71,11 @@ impl Default for BallotTally {
 }
 
 impl BallotTally {
-    pub fn new(ballot: Ballot, stake_weight: u128) -> Self {
+    pub fn new(ballot: Ballot, stake_weight: u128, reward_stake_weight: u128) -> Self {
         Self {
             ballot,
             stake_weight: PodU128::from(stake_weight),
+            reward_stake_weight: PodU128::from(reward_stake_weight),
             tally: PodU64::from(1),
             reserved: [0; 64],
         }
@@ -86,6 +89,10 @@ impl BallotTally {
         self.stake_weight.into()
     }
 
+    pub fn reward_stake_weight(&self) -> u128 {
+        self.reward_stake_weight.into()
+    }
+
     pub fn tally(&self) -> u64 {
         self.tally.into()
     }
@@ -94,10 +101,19 @@ impl BallotTally {
         self.stake_weight() == 0
     }
 
-    pub fn increment_tally(&mut self, stake_weight: u128) -> Result<(), TipRouterError> {
+    pub fn increment_tally(
+        &mut self,
+        stake_weight: u128,
+        reward_stake_weight: u128,
+    ) -> Result<(), TipRouterError> {
         self.stake_weight = PodU128::from(
             self.stake_weight()
                 .checked_add(stake_weight)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+        self.reward_stake_weight = PodU128::from(
+            self.stake_weight()
+                .checked_add(reward_stake_weight)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
         self.tally = PodU64::from(
@@ -116,6 +132,7 @@ pub struct OperatorVote {
     operator: Pubkey,
     slot_voted: PodU64,
     stake_weight: PodU128,
+    reward_stake_weight: PodU128,
     ballot_index: PodU16,
     reserved: [u8; 64],
 }
@@ -126,6 +143,7 @@ impl Default for OperatorVote {
             operator: Pubkey::default(),
             slot_voted: PodU64::from(0),
             stake_weight: PodU128::from(0),
+            reward_stake_weight: PodU128::from(0),
             ballot_index: PodU16::from(0),
             reserved: [0; 64],
         }
@@ -138,12 +156,14 @@ impl OperatorVote {
         operator: Pubkey,
         current_slot: u64,
         stake_weight: u128,
+        reward_stake_weight: u128,
     ) -> Self {
         Self {
             operator,
             ballot_index: PodU16::from(ballot_index as u16),
             slot_voted: PodU64::from(current_slot),
             stake_weight: PodU128::from(stake_weight),
+            reward_stake_weight: PodU128::from(reward_stake_weight),
             reserved: [0; 64],
         }
     }
@@ -158,6 +178,10 @@ impl OperatorVote {
 
     pub fn stake_weight(&self) -> u128 {
         self.stake_weight.into()
+    }
+
+    pub fn reward_stake_weight(&self) -> u128 {
+        self.reward_stake_weight.into()
     }
 
     pub fn ballot_index(&self) -> u16 {
@@ -292,6 +316,10 @@ impl BallotBox {
         &self.ballot_tallies
     }
 
+    pub fn operator_votes(&self) -> &[OperatorVote; 32] {
+        &self.operator_votes
+    }
+
     pub fn get_winning_ballot(&self) -> Result<Ballot, TipRouterError> {
         if self.winning_ballot.is_valid() {
             Ok(self.winning_ballot)
@@ -300,20 +328,36 @@ impl BallotBox {
         }
     }
 
+    pub fn get_winning_ballot_tally(&self) -> Result<BallotTally, TipRouterError> {
+        if !self.winning_ballot.is_valid() {
+            return Err(TipRouterError::ConsensusNotReached);
+        }
+
+        let winning_ballot = self.get_winning_ballot()?;
+
+        self.ballot_tallies()
+            .iter()
+            .find(|tally| tally.ballot.eq(&winning_ballot))
+            .map_or(Err(TipRouterError::TrackedMintsVaultIndexDne), |entry| {
+                Ok(*entry)
+            })
+    }
+
     fn increment_or_create_ballot_tally(
         &mut self,
         ballot: &Ballot,
         stake_weight: u128,
+        reward_stake_weight: u128,
     ) -> Result<usize, TipRouterError> {
         let mut tally_index: usize = 0;
         for tally in self.ballot_tallies.iter_mut() {
             if tally.ballot.eq(ballot) {
-                tally.increment_tally(stake_weight)?;
+                tally.increment_tally(stake_weight, reward_stake_weight)?;
                 return Ok(tally_index);
             }
 
             if tally.is_empty() {
-                *tally = BallotTally::new(*ballot, stake_weight);
+                *tally = BallotTally::new(*ballot, stake_weight, reward_stake_weight);
 
                 self.unique_ballots = PodU64::from(
                     self.unique_ballots()
@@ -337,9 +381,11 @@ impl BallotBox {
         operator: Pubkey,
         ballot: Ballot,
         stake_weight: u128,
+        reward_stake_weight: u128,
         current_slot: u64,
     ) -> Result<(), TipRouterError> {
-        let ballot_index = self.increment_or_create_ballot_tally(&ballot, stake_weight)?;
+        let ballot_index =
+            self.increment_or_create_ballot_tally(&ballot, stake_weight, reward_stake_weight)?;
 
         for vote in self.operator_votes.iter_mut() {
             if vote.operator().eq(&operator) {
@@ -347,8 +393,13 @@ impl BallotBox {
             }
 
             if vote.is_empty() {
-                let operator_vote =
-                    OperatorVote::new(ballot_index, operator, current_slot, stake_weight);
+                let operator_vote = OperatorVote::new(
+                    ballot_index,
+                    operator,
+                    current_slot,
+                    stake_weight,
+                    reward_stake_weight,
+                );
                 *vote = operator_vote;
 
                 self.operators_voted = PodU64::from(

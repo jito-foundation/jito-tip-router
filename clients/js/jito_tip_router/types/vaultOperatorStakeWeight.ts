@@ -30,6 +30,7 @@ import {
 export type VaultOperatorStakeWeight = {
   vault: Address;
   stakeWeight: bigint;
+  rewardStakeWeight: bigint;
   vaultIndex: bigint;
   reserved: ReadonlyUint8Array;
 };
@@ -37,6 +38,7 @@ export type VaultOperatorStakeWeight = {
 export type VaultOperatorStakeWeightArgs = {
   vault: Address;
   stakeWeight: number | bigint;
+  rewardStakeWeight: number | bigint;
   vaultIndex: number | bigint;
   reserved: ReadonlyUint8Array;
 };
@@ -45,6 +47,7 @@ export function getVaultOperatorStakeWeightEncoder(): Encoder<VaultOperatorStake
   return getStructEncoder([
     ['vault', getAddressEncoder()],
     ['stakeWeight', getU128Encoder()],
+    ['rewardStakeWeight', getU128Encoder()],
     ['vaultIndex', getU64Encoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 32)],
   ]);
@@ -54,6 +57,7 @@ export function getVaultOperatorStakeWeightDecoder(): Decoder<VaultOperatorStake
   return getStructDecoder([
     ['vault', getAddressDecoder()],
     ['stakeWeight', getU128Decoder()],
+    ['rewardStakeWeight', getU128Decoder()],
     ['vaultIndex', getU64Decoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 32)],
   ]);

@@ -7,12 +7,18 @@ pub enum TipRouterError {
     DenominatorIsZero = 0x2100,
     #[error("Overflow")]
     ArithmeticOverflow,
+    #[error("Arithmetic Underflow Error")]
+    ArithmeticUnderflowError,
+    #[error("Arithmetic Floor Error")]
+    ArithmeticFloorError,
     #[error("Modulo Overflow")]
     ModuloOverflow,
     #[error("New precise number error")]
     NewPreciseNumberError,
     #[error("Cast to imprecise number error")]
     CastToImpreciseNumberError,
+    #[error("Cast from u128 to u64 error")]
+    CastToU64Error,
 
     #[error("Incorrect weight table admin")]
     IncorrectWeightTableAdmin = 0x2200,
@@ -74,6 +80,14 @@ pub enum TipRouterError {
     ConsensusAlreadyReached,
     #[error("Consensus not reached")]
     ConsensusNotReached,
+    #[error("Not a valid NCN share group")]
+    NotValidNcnShareGroup,
+    #[error("Tracked Mints does not contain vault index")]
+    TrackedMintsVaultIndexDne,
+    #[error("OperatorRewardList is full")]
+    OperatorRewardListFull,
+    #[error("Operator not found in OperatorRewardList")]
+    OperatorRewardNotFound,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

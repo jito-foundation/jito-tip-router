@@ -114,6 +114,12 @@ pub enum JitoTipRouterError {
     /// 8733 - Consensus not reached
     #[error("Consensus not reached")]
     ConsensusNotReached = 0x221D,
+    /// 8734 - Not a valid NCN share group
+    #[error("Not a valid NCN share group")]
+    NotValidNcnShareGroup = 0x221E,
+    /// 8735 - Tracked Mints does not contain vault index
+    #[error("Tracked Mints does not contain vault index")]
+    TrackedMintsVaultIndexDne = 0x221F,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

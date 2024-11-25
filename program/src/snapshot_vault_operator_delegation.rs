@@ -6,6 +6,7 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     loaders::load_ncn_epoch,
     ncn_config::NcnConfig,
+    tracked_mints::TrackedMints,
     weight_table::WeightTable,
 };
 use jito_vault_core::{
@@ -22,7 +23,7 @@ pub fn process_snapshot_vault_operator_delegation(
     accounts: &[AccountInfo],
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    let [ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
+    let [ncn_config, restaking_config, tracked_mints, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -108,7 +109,7 @@ pub fn process_snapshot_vault_operator_delegation(
         vault_ncn_okay && ncn_vault_okay && !delegation_dne
     };
 
-    let total_votes: u128 = if is_active {
+    let stake_weight: u128 = if is_active {
         let vault_operator_delegation_data = vault_operator_delegation.data.borrow();
         let vault_operator_delegation_account =
             VaultOperatorDelegation::try_from_slice_unchecked(&vault_operator_delegation_data)?;
@@ -116,13 +117,30 @@ pub fn process_snapshot_vault_operator_delegation(
         let weight_table_data = weight_table.data.borrow();
         let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
 
-        OperatorSnapshot::calculate_total_stake_weight(
+        OperatorSnapshot::calculate_stake_weight(
             vault_operator_delegation_account,
             weight_table_account,
             &st_mint,
         )?
     } else {
         0u128
+    };
+
+    let reward_stake_weight = {
+        let tracked_mints_data = tracked_mints.try_borrow_data()?;
+        let tracked_mints_account = TrackedMints::try_from_slice_unchecked(&tracked_mints_data)?;
+
+        let tracked_mint = tracked_mints_account.get_mint_entry(vault_index)?;
+
+        let epoch_snapshot_data = epoch_snapshot.try_borrow_data()?;
+        let epoch_snapshot_account = EpochSnapshot::try_from_slice_unchecked(&epoch_snapshot_data)?;
+
+        OperatorSnapshot::calculate_reward_stake_weight(
+            stake_weight,
+            tracked_mint.ncn_fee_group(),
+            epoch_snapshot_account.fees(),
+            ncn_epoch,
+        )?
     };
 
     // Increment vault operator delegation
@@ -134,7 +152,8 @@ pub fn process_snapshot_vault_operator_delegation(
         current_slot,
         *vault.key,
         vault_index,
-        total_votes,
+        stake_weight,
+        reward_stake_weight,
     )?;
 
     // If operator is finalized, increment operator registration

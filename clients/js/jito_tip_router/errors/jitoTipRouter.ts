@@ -84,6 +84,10 @@ export const JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL = 0x221b; // 8731
 export const JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED = 0x221c; // 8732
 /** ConsensusNotReached: Consensus not reached */
 export const JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED = 0x221d; // 8733
+/** NotValidNcnShareGroup: Not a valid NCN share group */
+export const JITO_TIP_ROUTER_ERROR__NOT_VALID_NCN_SHARE_GROUP = 0x221e; // 8734
+/** TrackedMintsVaultIndexDne: Tracked Mints does not contain vault index */
+export const JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_VAULT_INDEX_DNE = 0x221f; // 8735
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
@@ -108,12 +112,14 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__NO_OPERATORS
+  | typeof JITO_TIP_ROUTER_ERROR__NOT_VALID_NCN_SHARE_GROUP
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS
   | typeof JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL
   | typeof JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_LOCKED
+  | typeof JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_VAULT_INDEX_DNE
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH
@@ -147,12 +153,14 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR]: `New precise number error`,
     [JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE]: `There are no mints in the table`,
     [JITO_TIP_ROUTER_ERROR__NO_OPERATORS]: `No operators in ncn`,
+    [JITO_TIP_ROUTER_ERROR__NOT_VALID_NCN_SHARE_GROUP]: `Not a valid NCN share group`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED]: `Operator is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL]: `Operator votes full`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE]: `Too many mints for table`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS]: `Too many vault operator delegations`,
     [JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL]: `Tracked mints are at capacity`,
     [JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_LOCKED]: `Tracked mints are locked for the epoch`,
+    [JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_VAULT_INDEX_DNE]: `Tracked Mints does not contain vault index`,
     [JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE]: `Vault index already in use by a different mint`,
     [JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED]: `Vault operator delegation is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH]: `Weight mints do not match - length`,

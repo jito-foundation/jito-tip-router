@@ -5,7 +5,7 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    constants::MAX_FEE_BPS, error::TipRouterError, fees::Fees, ncn_config::NcnConfig,
+    constants::MAX_FEE_BPS, error::TipRouterError, fees::FeeConfig, ncn_config::NcnConfig,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
@@ -88,7 +88,7 @@ pub fn process_initialize_ncn_config(
         *ncn_account.key,
         *tie_breaker_admin.key,
         *ncn_admin.key,
-        Fees::new(
+        FeeConfig::new(
             *fee_wallet.key,
             dao_fee_bps,
             ncn_fee_bps,
@@ -98,7 +98,7 @@ pub fn process_initialize_ncn_config(
     );
     config.bump = config_bump;
 
-    config.fees.check_fees_okay(epoch)?;
+    config.fee_config.check_fees_okay(epoch)?;
 
     Ok(())
 }

@@ -37,10 +37,10 @@ import {
   type MaybeEncodedAccount,
 } from '@solana/web3.js';
 import {
-  getFeesDecoder,
-  getFeesEncoder,
-  type Fees,
-  type FeesArgs,
+  getFeeConfigDecoder,
+  getFeeConfigEncoder,
+  type FeeConfig,
+  type FeeConfigArgs,
 } from '../types';
 
 export type EpochSnapshot = {
@@ -50,12 +50,13 @@ export type EpochSnapshot = {
   bump: number;
   slotCreated: bigint;
   slotFinalized: bigint;
-  ncnFees: Fees;
+  fees: FeeConfig;
   operatorCount: bigint;
   vaultCount: bigint;
   operatorsRegistered: bigint;
   validOperatorVaultDelegations: bigint;
   stakeWeight: bigint;
+  rewardStakeWeight: bigint;
   reserved: Array<number>;
 };
 
@@ -66,12 +67,13 @@ export type EpochSnapshotArgs = {
   bump: number;
   slotCreated: number | bigint;
   slotFinalized: number | bigint;
-  ncnFees: FeesArgs;
+  fees: FeeConfigArgs;
   operatorCount: number | bigint;
   vaultCount: number | bigint;
   operatorsRegistered: number | bigint;
   validOperatorVaultDelegations: number | bigint;
   stakeWeight: number | bigint;
+  rewardStakeWeight: number | bigint;
   reserved: Array<number>;
 };
 
@@ -83,12 +85,13 @@ export function getEpochSnapshotEncoder(): Encoder<EpochSnapshotArgs> {
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
     ['slotFinalized', getU64Encoder()],
-    ['ncnFees', getFeesEncoder()],
+    ['fees', getFeeConfigEncoder()],
     ['operatorCount', getU64Encoder()],
     ['vaultCount', getU64Encoder()],
     ['operatorsRegistered', getU64Encoder()],
     ['validOperatorVaultDelegations', getU64Encoder()],
     ['stakeWeight', getU128Encoder()],
+    ['rewardStakeWeight', getU128Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
   ]);
 }
@@ -101,12 +104,13 @@ export function getEpochSnapshotDecoder(): Decoder<EpochSnapshot> {
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
     ['slotFinalized', getU64Decoder()],
-    ['ncnFees', getFeesDecoder()],
+    ['fees', getFeeConfigDecoder()],
     ['operatorCount', getU64Decoder()],
     ['vaultCount', getU64Decoder()],
     ['operatorsRegistered', getU64Decoder()],
     ['validOperatorVaultDelegations', getU64Decoder()],
     ['stakeWeight', getU128Decoder()],
+    ['rewardStakeWeight', getU128Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
   ]);
 }

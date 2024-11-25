@@ -16,6 +16,7 @@ pub struct VaultOperatorStakeWeight {
     )]
     pub vault: Pubkey,
     pub stake_weight: u128,
+    pub reward_stake_weight: u128,
     pub vault_index: u64,
     pub reserved: [u8; 32],
 }

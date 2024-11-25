@@ -1,7 +1,7 @@
 use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::{config::Config, ncn::Ncn};
-use jito_tip_router_core::{error::TipRouterError, ncn_config::NcnConfig};
+use jito_tip_router_core::{error::TipRouterError, fees::NcnFeeGroup, ncn_config::NcnConfig};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
@@ -10,10 +10,11 @@ use solana_program::{
 pub fn process_set_config_fees(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
+    new_fee_wallet: Option<Pubkey>,
+    new_block_engine_fee_bps: Option<u64>,
     new_dao_fee_bps: Option<u64>,
     new_ncn_fee_bps: Option<u64>,
-    new_block_engine_fee_bps: Option<u64>,
-    new_fee_wallet: Option<Pubkey>,
+    new_ncn_fee_group: Option<u8>,
 ) -> ProgramResult {
     let [restaking_config, config, ncn_account, fee_admin, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -53,11 +54,18 @@ pub fn process_set_config_fees(
         return Err(TipRouterError::IncorrectFeeAdmin.into());
     }
 
-    config.fees.set_new_fees(
+    let new_ncn_fee_group = if let Some(new_ncn_fee_group) = new_ncn_fee_group {
+        Some(NcnFeeGroup::from_u8(new_ncn_fee_group)?)
+    } else {
+        None
+    };
+
+    config.fee_config.update_fee_config(
+        new_fee_wallet,
         new_dao_fee_bps,
         new_ncn_fee_bps,
         new_block_engine_fee_bps,
-        new_fee_wallet,
+        new_ncn_fee_group,
         epoch,
     )?;
 

@@ -5,13 +5,14 @@ use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
-use crate::{discriminators::Discriminators, error::TipRouterError};
+use crate::{discriminators::Discriminators, error::TipRouterError, fees::NcnFeeGroup};
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct MintEntry {
     st_mint: Pubkey,
     vault_index: PodU64,
+    ncn_fee_group: NcnFeeGroup,
     reserved: [u8; 32],
 }
 
@@ -20,12 +21,17 @@ impl MintEntry {
         Self {
             st_mint: mint,
             vault_index: PodU64::from(vault_index),
+            ncn_fee_group: NcnFeeGroup::default(),
             reserved: [0; 32],
         }
     }
 
     pub fn vault_index(&self) -> u64 {
         self.vault_index.into()
+    }
+
+    pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
+        self.ncn_fee_group
     }
 }
 
@@ -119,6 +125,15 @@ impl TrackedMints {
                 unique_mints.insert(m.st_mint);
             });
         unique_mints.into_iter().collect()
+    }
+
+    pub fn get_mint_entry(&self, vault_index: u64) -> Result<MintEntry, TipRouterError> {
+        self.st_mint_list
+            .iter()
+            .find(|entry| entry.vault_index() == vault_index)
+            .map_or(Err(TipRouterError::TrackedMintsVaultIndexDne), |entry| {
+                Ok(*entry)
+            })
     }
 
     pub fn load(

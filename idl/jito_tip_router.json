@@ -96,6 +96,18 @@
       ],
       "args": [
         {
+          "name": "newFeeWallet",
+          "type": {
+            "option": "publicKey"
+          }
+        },
+        {
+          "name": "newBlockEngineFeeBps",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
           "name": "newDaoFeeBps",
           "type": {
             "option": "u64"
@@ -108,15 +120,9 @@
           }
         },
         {
-          "name": "newBlockEngineFeeBps",
+          "name": "newNcnFeeGroup",
           "type": {
-            "option": "u64"
-          }
-        },
-        {
-          "name": "newFeeWallet",
-          "type": {
-            "option": "publicKey"
+            "option": "u8"
           }
         }
       ],
@@ -406,6 +412,11 @@
           "isSigner": false
         },
         {
+          "name": "trackedMints",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "ncn",
           "isMut": false,
           "isSigner": false
@@ -681,9 +692,9 @@
             }
           },
           {
-            "name": "ncnFees",
+            "name": "fees",
             "type": {
-              "defined": "Fees"
+              "defined": "FeeConfig"
             }
           },
           {
@@ -712,6 +723,12 @@
           },
           {
             "name": "stakeWeight",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
+            "name": "rewardStakeWeight",
             "type": {
               "defined": "PodU128"
             }
@@ -812,6 +829,12 @@
             }
           },
           {
+            "name": "rewardStakeWeight",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
@@ -852,9 +875,9 @@
             "type": "publicKey"
           },
           {
-            "name": "fees",
+            "name": "feeConfig",
             "type": {
-              "defined": "Fees"
+              "defined": "FeeConfig"
             }
           },
           {
@@ -867,6 +890,114 @@
               "array": [
                 "u8",
                 127
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EpochRewardRouter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncnEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          },
+          {
+            "name": "rewardPool",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "operatorRewards",
+            "type": {
+              "array": [
+                {
+                  "defined": "OperatorReward"
+                },
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperatorRewardRouter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncnEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          },
+          {
+            "name": "rewardPool",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "vaultRewards",
+            "type": {
+              "array": [
+                {
+                  "defined": "VaultReward"
+                },
+                32
               ]
             }
           }
@@ -1075,6 +1206,12 @@
             }
           },
           {
+            "name": "rewardStakeWeight",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
             "name": "vaultIndex",
             "type": {
               "defined": "PodU64"
@@ -1093,42 +1230,48 @@
       }
     },
     {
-      "name": "Fees",
+      "name": "FeeConfig",
       "type": {
         "kind": "struct",
         "fields": [
           {
+            "name": "daoFeeWallet",
+            "type": "publicKey"
+          },
+          {
             "name": "fee1",
             "type": {
-              "defined": "Fee"
+              "defined": "Fees"
             }
           },
           {
             "name": "fee2",
             "type": {
-              "defined": "Fee"
+              "defined": "Fees"
             }
           }
         ]
       }
     },
     {
-      "name": "Fee",
+      "name": "NcnFeeGroup",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "wallet",
-            "type": "publicKey"
-          },
+            "name": "group",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Fees",
+      "type": {
+        "kind": "struct",
+        "fields": [
           {
-            "name": "daoShareBps",
-            "type": {
-              "defined": "PodU64"
-            }
-          },
-          {
-            "name": "ncnShareBps",
+            "name": "activationEpoch",
             "type": {
               "defined": "PodU64"
             }
@@ -1140,9 +1283,103 @@
             }
           },
           {
-            "name": "activationEpoch",
+            "name": "daoFeeBps",
             "type": {
               "defined": "PodU64"
+            }
+          },
+          {
+            "name": "ncnDefaultFeeBps",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "ncnFeeGroupsBps",
+            "type": {
+              "array": [
+                {
+                  "defined": "NcnFee"
+                },
+                8
+              ]
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "NcnFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee",
+            "type": {
+              "defined": "PodU64"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperatorReward",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operator",
+            "type": "publicKey"
+          },
+          {
+            "name": "reward",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultReward",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "reward",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
             }
           }
         ]
@@ -1161,6 +1398,12 @@
             "name": "vaultIndex",
             "type": {
               "defined": "PodU64"
+            }
+          },
+          {
+            "name": "ncnFeeGroup",
+            "type": {
+              "defined": "NcnFeeGroup"
             }
           },
           {
@@ -1404,6 +1647,16 @@
       "code": 8733,
       "name": "ConsensusNotReached",
       "msg": "Consensus not reached"
+    },
+    {
+      "code": 8734,
+      "name": "NotValidNcnShareGroup",
+      "msg": "Not a valid NCN share group"
+    },
+    {
+      "code": 8735,
+      "name": "TrackedMintsVaultIndexDne",
+      "msg": "Tracked Mints does not contain vault index"
     }
   ],
   "metadata": {

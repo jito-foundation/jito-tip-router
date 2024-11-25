@@ -7,34 +7,27 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::FeeConfig;
+use crate::generated::types::OperatorReward;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct NcnConfig {
+pub struct EpochRewardRouter {
     pub discriminator: u64,
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub ncn: Pubkey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub tie_breaker_admin: Pubkey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub fee_admin: Pubkey,
-    pub fee_config: FeeConfig,
+    pub ncn_epoch: u64,
     pub bump: u8,
+    pub slot_created: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
-    pub reserved: [u8; 127],
+    pub reserved: [u8; 128],
+    pub reward_pool: u64,
+    pub operator_rewards: [OperatorReward; 32],
 }
 
-impl NcnConfig {
+impl EpochRewardRouter {
     #[inline(always)]
     pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
         let mut data = data;
@@ -42,7 +35,7 @@ impl NcnConfig {
     }
 }
 
-impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for NcnConfig {
+impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for EpochRewardRouter {
     type Error = std::io::Error;
 
     fn try_from(
@@ -54,26 +47,26 @@ impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for NcnConfig {
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountDeserialize for NcnConfig {
+impl anchor_lang::AccountDeserialize for EpochRewardRouter {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         Ok(Self::deserialize(buf)?)
     }
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountSerialize for NcnConfig {}
+impl anchor_lang::AccountSerialize for EpochRewardRouter {}
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::Owner for NcnConfig {
+impl anchor_lang::Owner for EpochRewardRouter {
     fn owner() -> Pubkey {
         crate::JITO_TIP_ROUTER_ID
     }
 }
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::IdlBuild for NcnConfig {}
+impl anchor_lang::IdlBuild for EpochRewardRouter {}
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::Discriminator for NcnConfig {
+impl anchor_lang::Discriminator for EpochRewardRouter {
     const DISCRIMINATOR: [u8; 8] = [0; 8];
 }

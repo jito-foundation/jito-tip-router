@@ -9,7 +9,10 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    discriminators::Discriminators, error::TipRouterError, fees::Fees, weight_table::WeightTable,
+    discriminators::Discriminators,
+    error::TipRouterError,
+    fees::{FeeConfig, NcnFeeGroup},
+    weight_table::WeightTable,
 };
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
@@ -30,7 +33,7 @@ pub struct EpochSnapshot {
     slot_created: PodU64,
     slot_finalized: PodU64,
 
-    ncn_fees: Fees,
+    fees: FeeConfig,
 
     operator_count: PodU64,
     vault_count: PodU64,
@@ -40,6 +43,7 @@ pub struct EpochSnapshot {
     /// Counted as each delegate gets added
     ///TODO What happens if `finalized() && total_votes() == 0`?
     stake_weight: PodU128,
+    reward_stake_weight: PodU128,
 
     /// Reserved space
     reserved: [u8; 128],
@@ -55,7 +59,7 @@ impl EpochSnapshot {
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
-        ncn_fees: Fees,
+        ncn_fees: FeeConfig,
         operator_count: u64,
         vault_count: u64,
     ) -> Self {
@@ -65,12 +69,13 @@ impl EpochSnapshot {
             slot_created: PodU64::from(current_slot),
             slot_finalized: PodU64::from(0),
             bump,
-            ncn_fees,
+            fees: ncn_fees,
             operator_count: PodU64::from(operator_count),
             vault_count: PodU64::from(vault_count),
             operators_registered: PodU64::from(0),
             valid_operator_vault_delegations: PodU64::from(0),
             stake_weight: PodU128::from(0),
+            reward_stake_weight: PodU128::from(0),
             reserved: [0; 128],
         }
     }
@@ -151,6 +156,14 @@ impl EpochSnapshot {
         self.stake_weight.into()
     }
 
+    pub fn reward_stake_weight(&self) -> u128 {
+        self.reward_stake_weight.into()
+    }
+
+    pub const fn fees(&self) -> &FeeConfig {
+        &self.fees
+    }
+
     pub fn finalized(&self) -> bool {
         self.operators_registered() == self.operator_count()
     }
@@ -214,6 +227,7 @@ pub struct OperatorSnapshot {
     valid_operator_vault_delegations: PodU64,
 
     stake_weight: PodU128,
+    reward_stake_weight: PodU128,
     reserved: [u8; 256],
 
     //TODO change to 64
@@ -225,6 +239,7 @@ pub struct OperatorSnapshot {
 pub struct VaultOperatorStakeWeight {
     vault: Pubkey,
     stake_weight: PodU128,
+    reward_stake_weight: PodU128,
     vault_index: PodU64,
     reserved: [u8; 32],
 }
@@ -235,17 +250,24 @@ impl Default for VaultOperatorStakeWeight {
             vault: Pubkey::default(),
             vault_index: PodU64::from(u64::MAX),
             stake_weight: PodU128::from(0),
+            reward_stake_weight: PodU128::from(0),
             reserved: [0; 32],
         }
     }
 }
 
 impl VaultOperatorStakeWeight {
-    pub fn new(vault: Pubkey, stake_weight: u128, vault_index: u64) -> Self {
+    pub fn new(
+        vault: Pubkey,
+        stake_weight: u128,
+        reward_stake_weight: u128,
+        vault_index: u64,
+    ) -> Self {
         Self {
             vault,
             vault_index: PodU64::from(vault_index),
             stake_weight: PodU128::from(stake_weight),
+            reward_stake_weight: PodU128::from(reward_stake_weight),
             reserved: [0; 32],
         }
     }
@@ -302,6 +324,7 @@ impl OperatorSnapshot {
             vault_operator_delegations_registered: PodU64::from(0),
             valid_operator_vault_delegations: PodU64::from(0),
             stake_weight: PodU128::from(0),
+            reward_stake_weight: PodU128::from(0),
             reserved: [0; 256],
             vault_operator_stake_weight: [VaultOperatorStakeWeight::default(); 32],
         })
@@ -434,6 +457,10 @@ impl OperatorSnapshot {
         self.stake_weight.into()
     }
 
+    pub fn reward_stake_weight(&self) -> u128 {
+        self.reward_stake_weight.into()
+    }
+
     pub fn finalized(&self) -> bool {
         self.vault_operator_delegations_registered() == self.vault_operator_delegation_count()
     }
@@ -449,6 +476,7 @@ impl OperatorSnapshot {
         vault: Pubkey,
         vault_index: u64,
         stake_weight: u128,
+        reward_stake_weight: u128,
     ) -> Result<(), TipRouterError> {
         if self.vault_operator_delegations_registered()
             > Self::MAX_VAULT_OPERATOR_STAKE_WEIGHT as u64
@@ -461,7 +489,7 @@ impl OperatorSnapshot {
         }
 
         self.vault_operator_stake_weight[self.vault_operator_delegations_registered() as usize] =
-            VaultOperatorStakeWeight::new(vault, stake_weight, vault_index);
+            VaultOperatorStakeWeight::new(vault, stake_weight, reward_stake_weight, vault_index);
 
         Ok(())
     }
@@ -472,12 +500,18 @@ impl OperatorSnapshot {
         vault: Pubkey,
         vault_index: u64,
         stake_weight: u128,
+        reward_stake_weight: u128,
     ) -> Result<(), TipRouterError> {
         if self.finalized() {
             return Err(TipRouterError::VaultOperatorDelegationFinalized);
         }
 
-        self.insert_vault_operator_stake_weight(vault, vault_index, stake_weight)?;
+        self.insert_vault_operator_stake_weight(
+            vault,
+            vault_index,
+            stake_weight,
+            reward_stake_weight,
+        )?;
 
         self.vault_operator_delegations_registered = PodU64::from(
             self.vault_operator_delegations_registered()
@@ -499,6 +533,12 @@ impl OperatorSnapshot {
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
 
+        self.reward_stake_weight = PodU128::from(
+            self.reward_stake_weight()
+                .checked_add(reward_stake_weight)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+
         if self.finalized() {
             self.slot_finalized = PodU64::from(current_slot);
         }
@@ -506,7 +546,7 @@ impl OperatorSnapshot {
         Ok(())
     }
 
-    pub fn calculate_total_stake_weight(
+    pub fn calculate_stake_weight(
         vault_operator_delegation: &VaultOperatorDelegation,
         weight_table: &WeightTable,
         st_mint: &Pubkey,
@@ -518,16 +558,39 @@ impl OperatorSnapshot {
         let precise_total_security = PreciseNumber::new(total_security as u128)
             .ok_or(TipRouterError::NewPreciseNumberError)?;
 
-        let precise_weight = weight_table.get_precise_weight(st_mint)?;
+        let precise_weight: PreciseNumber = weight_table.get_precise_weight(st_mint)?;
 
-        let precise_total_stake_weight = precise_total_security
+        let precise_stake_weight = precise_total_security
             .checked_mul(&precise_weight)
             .ok_or(TipRouterError::ArithmeticOverflow)?;
 
-        let total_stake_weight = precise_total_stake_weight
+        let stake_weight = precise_stake_weight
             .to_imprecise()
             .ok_or(TipRouterError::CastToImpreciseNumberError)?;
 
-        Ok(total_stake_weight)
+        Ok(stake_weight)
+    }
+
+    pub fn calculate_reward_stake_weight(
+        stake_weight: u128,
+        ncn_fee_group: NcnFeeGroup,
+        fee_config: &FeeConfig,
+        current_epoch: u64,
+    ) -> Result<u128, ProgramError> {
+        let precise_stake_weight =
+            PreciseNumber::new(stake_weight).ok_or(TipRouterError::NewPreciseNumberError)?;
+
+        let precise_ncn_fee =
+            fee_config.adjusted_precise_ncn_fee_bps(ncn_fee_group, current_epoch)?;
+
+        let precise_reward_stake_weight = precise_stake_weight
+            .checked_mul(&precise_ncn_fee)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        let reward_stake_weight: u128 = precise_reward_stake_weight
+            .to_imprecise()
+            .ok_or(TipRouterError::CastToImpreciseNumberError)?;
+
+        Ok(reward_stake_weight)
     }
 }

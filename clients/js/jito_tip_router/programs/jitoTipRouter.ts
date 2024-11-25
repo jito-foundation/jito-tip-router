@@ -33,6 +33,8 @@ export enum JitoTipRouterAccount {
   EpochSnapshot,
   OperatorSnapshot,
   NcnConfig,
+  EpochRewardRouter,
+  OperatorRewardRouter,
   TrackedMints,
   WeightTable,
 }
