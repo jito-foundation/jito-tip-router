@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
-    types::{PodBool, PodU128, PodU16, PodU64},
+    types::{PodBool, PodU16, PodU64},
     AccountDeserialize, Discriminator,
 };
 use jito_vault_core::vault_operator_delegation::VaultOperatorDelegation;
@@ -9,7 +9,8 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    discriminators::Discriminators, error::TipRouterError, fees::Fees, weight_table::WeightTable,
+    discriminators::Discriminators, error::TipRouterError, fees::Fees, stake_weight::StakeWeight,
+    weight_table::WeightTable,
 };
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
@@ -37,9 +38,7 @@ pub struct EpochSnapshot {
     operators_registered: PodU64,
     valid_operator_vault_delegations: PodU64,
 
-    /// Counted as each delegate gets added
-    ///TODO What happens if `finalized() && total_votes() == 0`?
-    stake_weight: PodU128,
+    stake_weight: StakeWeight,
 
     /// Reserved space
     reserved: [u8; 128],
@@ -70,7 +69,7 @@ impl EpochSnapshot {
             vault_count: PodU64::from(vault_count),
             operators_registered: PodU64::from(0),
             valid_operator_vault_delegations: PodU64::from(0),
-            stake_weight: PodU128::from(0),
+            stake_weight: StakeWeight::default(),
             reserved: [0; 128],
         }
     }
@@ -147,8 +146,8 @@ impl EpochSnapshot {
         self.valid_operator_vault_delegations.into()
     }
 
-    pub fn stake_weight(&self) -> u128 {
-        self.stake_weight.into()
+    pub const fn stake_weight(&self) -> &StakeWeight {
+        &self.stake_weight
     }
 
     pub fn finalized(&self) -> bool {
@@ -159,7 +158,7 @@ impl EpochSnapshot {
         &mut self,
         current_slot: u64,
         vault_operator_delegations: u64,
-        stake_weight: u128,
+        stake_weight: &StakeWeight,
     ) -> Result<(), TipRouterError> {
         if self.finalized() {
             return Err(TipRouterError::OperatorFinalized);
@@ -177,11 +176,7 @@ impl EpochSnapshot {
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
 
-        self.stake_weight = PodU128::from(
-            self.stake_weight()
-                .checked_add(stake_weight)
-                .ok_or(TipRouterError::ArithmeticOverflow)?,
-        );
+        self.stake_weight.increment(stake_weight)?;
 
         if self.finalized() {
             self.slot_finalized = PodU64::from(current_slot);
@@ -213,7 +208,7 @@ pub struct OperatorSnapshot {
     vault_operator_delegations_registered: PodU64,
     valid_operator_vault_delegations: PodU64,
 
-    stake_weight: PodU128,
+    stake_weight: StakeWeight,
     reserved: [u8; 256],
 
     //TODO change to 64
@@ -224,8 +219,8 @@ pub struct OperatorSnapshot {
 #[repr(C)]
 pub struct VaultOperatorStakeWeight {
     vault: Pubkey,
-    stake_weight: PodU128,
     vault_index: PodU64,
+    stake_weight: StakeWeight,
     reserved: [u8; 32],
 }
 
@@ -234,18 +229,18 @@ impl Default for VaultOperatorStakeWeight {
         Self {
             vault: Pubkey::default(),
             vault_index: PodU64::from(u64::MAX),
-            stake_weight: PodU128::from(0),
+            stake_weight: StakeWeight::default(),
             reserved: [0; 32],
         }
     }
 }
 
 impl VaultOperatorStakeWeight {
-    pub fn new(vault: Pubkey, stake_weight: u128, vault_index: u64) -> Self {
+    pub fn new(vault: Pubkey, vault_index: u64, stake_weight: &StakeWeight) -> Self {
         Self {
             vault,
             vault_index: PodU64::from(vault_index),
-            stake_weight: PodU128::from(stake_weight),
+            stake_weight: *stake_weight,
             reserved: [0; 32],
         }
     }
@@ -258,8 +253,8 @@ impl VaultOperatorStakeWeight {
         self.vault_index.into()
     }
 
-    pub fn stake_weight(&self) -> u128 {
-        self.stake_weight.into()
+    pub fn stake_weight(&self) -> &StakeWeight {
+        &self.stake_weight
     }
 }
 
@@ -301,7 +296,7 @@ impl OperatorSnapshot {
             vault_operator_delegation_count: PodU64::from(vault_operator_delegation_count),
             vault_operator_delegations_registered: PodU64::from(0),
             valid_operator_vault_delegations: PodU64::from(0),
-            stake_weight: PodU128::from(0),
+            stake_weight: StakeWeight::default(),
             reserved: [0; 256],
             vault_operator_stake_weight: [VaultOperatorStakeWeight::default(); 32],
         })
@@ -430,8 +425,8 @@ impl OperatorSnapshot {
         self.valid_operator_vault_delegations.into()
     }
 
-    pub fn stake_weight(&self) -> u128 {
-        self.stake_weight.into()
+    pub fn stake_weight(&self) -> &StakeWeight {
+        &self.stake_weight
     }
 
     pub fn finalized(&self) -> bool {
@@ -448,7 +443,7 @@ impl OperatorSnapshot {
         &mut self,
         vault: Pubkey,
         vault_index: u64,
-        stake_weight: u128,
+        stake_weight: &StakeWeight,
     ) -> Result<(), TipRouterError> {
         if self.vault_operator_delegations_registered()
             > Self::MAX_VAULT_OPERATOR_STAKE_WEIGHT as u64
@@ -461,7 +456,7 @@ impl OperatorSnapshot {
         }
 
         self.vault_operator_stake_weight[self.vault_operator_delegations_registered() as usize] =
-            VaultOperatorStakeWeight::new(vault, stake_weight, vault_index);
+            VaultOperatorStakeWeight::new(vault, vault_index, stake_weight);
 
         Ok(())
     }
@@ -471,7 +466,7 @@ impl OperatorSnapshot {
         current_slot: u64,
         vault: Pubkey,
         vault_index: u64,
-        stake_weight: u128,
+        stake_weight: &StakeWeight,
     ) -> Result<(), TipRouterError> {
         if self.finalized() {
             return Err(TipRouterError::VaultOperatorDelegationFinalized);
@@ -485,7 +480,7 @@ impl OperatorSnapshot {
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
 
-        if stake_weight > 0 {
+        if stake_weight.stake_weight() > 0 {
             self.valid_operator_vault_delegations = PodU64::from(
                 self.valid_operator_vault_delegations()
                     .checked_add(1)
@@ -493,11 +488,7 @@ impl OperatorSnapshot {
             );
         }
 
-        self.stake_weight = PodU128::from(
-            self.stake_weight()
-                .checked_add(stake_weight)
-                .ok_or(TipRouterError::ArithmeticOverflow)?,
-        );
+        self.stake_weight.increment(stake_weight)?;
 
         if self.finalized() {
             self.slot_finalized = PodU64::from(current_slot);

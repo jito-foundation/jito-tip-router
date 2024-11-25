@@ -10,10 +10,11 @@ use solana_program::{
 pub fn process_set_config_fees(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
+    new_fee_wallet: Option<Pubkey>,
+    new_block_engine_fee_bps: Option<u64>,
     new_dao_fee_bps: Option<u64>,
     new_ncn_fee_bps: Option<u64>,
-    new_block_engine_fee_bps: Option<u64>,
-    new_fee_wallet: Option<Pubkey>,
+    new_ncn_fee_group: Option<u8>,
 ) -> ProgramResult {
     let [restaking_config, config, ncn_account, fee_admin, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -53,11 +54,18 @@ pub fn process_set_config_fees(
         return Err(TipRouterError::IncorrectFeeAdmin.into());
     }
 
-    config.fees.set_new_fees(
+    let new_ncn_fee_group = let Some(new_ncn_fee_group) = new_ncn_fee_group {
+        new_ncn_fee_group
+    } else {
+        config.fee_config.ncn_fee_group()
+    };
+
+    config.fee_config.update_fee_config(
         new_dao_fee_bps,
         new_ncn_fee_bps,
         new_block_engine_fee_bps,
         new_fee_wallet,
+        new_ncn_fee_group,
         epoch,
     )?;
 

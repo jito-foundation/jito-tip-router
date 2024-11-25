@@ -74,6 +74,8 @@ pub enum TipRouterError {
     ConsensusAlreadyReached,
     #[error("Consensus not reached")]
     ConsensusNotReached,
+    #[error("Not a valid NCN fee group")]
+    InvalidNcnFeeGroup,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

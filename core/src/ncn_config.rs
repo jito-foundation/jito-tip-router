@@ -3,7 +3,7 @@ use jito_bytemuck::{AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
-use crate::{discriminators::Discriminators, fees::Fees};
+use crate::{discriminators::Discriminators, fees::FeeConfig};
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
@@ -15,7 +15,7 @@ pub struct NcnConfig {
 
     pub fee_admin: Pubkey,
 
-    pub fees: Fees,
+    pub fee_config: FeeConfig,
 
     /// Bump seed for the PDA
     pub bump: u8,
@@ -32,13 +32,13 @@ impl NcnConfig {
         ncn: Pubkey,
         tie_breaker_admin: Pubkey,
         fee_admin: Pubkey,
-        fees: Fees,
+        fee_config: &FeeConfig,
     ) -> Self {
         Self {
             ncn,
             tie_breaker_admin,
             fee_admin,
-            fees,
+            fee_config: *fee_config,
             bump: 0,
             reserved: [0; 127],
         }

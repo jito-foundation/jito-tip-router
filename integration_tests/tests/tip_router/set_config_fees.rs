@@ -102,11 +102,11 @@ mod tests {
             .get_ncn_config(ncn_root.ncn_pubkey)
             .await?;
         let clock = fixture.clock().await;
-        assert_eq!(config.fees.dao_fee(clock.epoch as u64).unwrap(), 100);
-        assert_eq!(config.fees.ncn_fee(clock.epoch as u64).unwrap(), 200);
-        assert_eq!(config.fees.block_engine_fee(clock.epoch as u64), 0);
+        assert_eq!(config.fee_config.dao_fee(clock.epoch as u64).unwrap(), 100);
+        assert_eq!(config.fee_config.ncn_fee(clock.epoch as u64).unwrap(), 200);
+        assert_eq!(config.fee_config.block_engine_fee(clock.epoch as u64), 0);
         assert_eq!(
-            config.fees.fee_wallet(clock.epoch as u64),
+            config.fee_config.fee_wallet(clock.epoch as u64),
             new_fee_wallet.pubkey()
         );
 
