@@ -72,6 +72,7 @@ pub fn process_initialize_operator_snapshot(
         ncn.key,
         ncn_epoch
     );
+
     create_account(
         payer,
         operator_snapshot,

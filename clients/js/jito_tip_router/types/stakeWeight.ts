@@ -8,12 +8,8 @@
 
 import {
   combineCodec,
-  fixDecoderSize,
-  fixEncoderSize,
   getArrayDecoder,
   getArrayEncoder,
-  getBytesDecoder,
-  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU128Decoder,
@@ -21,7 +17,6 @@ import {
   type Codec,
   type Decoder,
   type Encoder,
-  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
   getRewardStakeWeightDecoder,
@@ -33,13 +28,11 @@ import {
 export type StakeWeight = {
   stakeWeight: bigint;
   rewardStakeWeights: Array<RewardStakeWeight>;
-  reserved: ReadonlyUint8Array;
 };
 
 export type StakeWeightArgs = {
   stakeWeight: number | bigint;
   rewardStakeWeights: Array<RewardStakeWeightArgs>;
-  reserved: ReadonlyUint8Array;
 };
 
 export function getStakeWeightEncoder(): Encoder<StakeWeightArgs> {
@@ -47,9 +40,8 @@ export function getStakeWeightEncoder(): Encoder<StakeWeightArgs> {
     ['stakeWeight', getU128Encoder()],
     [
       'rewardStakeWeights',
-      getArrayEncoder(getRewardStakeWeightEncoder(), { size: 16 }),
+      getArrayEncoder(getRewardStakeWeightEncoder(), { size: 8 }),
     ],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 64)],
   ]);
 }
 
@@ -58,9 +50,8 @@ export function getStakeWeightDecoder(): Decoder<StakeWeight> {
     ['stakeWeight', getU128Decoder()],
     [
       'rewardStakeWeights',
-      getArrayDecoder(getRewardStakeWeightDecoder(), { size: 16 }),
+      getArrayDecoder(getRewardStakeWeightDecoder(), { size: 8 }),
     ],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 64)],
   ]);
 }
 

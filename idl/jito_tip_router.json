@@ -713,7 +713,7 @@
                 {
                   "defined": "RewardBucket"
                 },
-                16
+                8
               ]
             }
           },
@@ -1372,7 +1372,7 @@
                 {
                   "defined": "NcnFee"
                 },
-                16
+                8
               ]
             }
           }
@@ -1432,16 +1432,7 @@
                 {
                   "defined": "RewardStakeWeight"
                 },
-                16
-              ]
-            }
-          },
-          {
-            "name": "reserved",
-            "type": {
-              "array": [
-                "u8",
-                64
+                8
               ]
             }
           }
@@ -1457,15 +1448,6 @@
             "name": "rewardStakeWeight",
             "type": {
               "defined": "PodU128"
-            }
-          },
-          {
-            "name": "reserved",
-            "type": {
-              "array": [
-                "u8",
-                64
-              ]
             }
           }
         ]

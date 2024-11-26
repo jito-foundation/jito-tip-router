@@ -49,7 +49,7 @@ export function getFeesEncoder(): Encoder<FeesArgs> {
     ['blockEngineFeeBps', getU64Encoder()],
     ['daoFeeBps', getU64Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
-    ['ncnFeeGroupsBps', getArrayEncoder(getNcnFeeEncoder(), { size: 16 })],
+    ['ncnFeeGroupsBps', getArrayEncoder(getNcnFeeEncoder(), { size: 8 })],
   ]);
 }
 
@@ -59,7 +59,7 @@ export function getFeesDecoder(): Decoder<Fees> {
     ['blockEngineFeeBps', getU64Decoder()],
     ['daoFeeBps', getU64Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
-    ['ncnFeeGroupsBps', getArrayDecoder(getNcnFeeDecoder(), { size: 16 })],
+    ['ncnFeeGroupsBps', getArrayDecoder(getNcnFeeDecoder(), { size: 8 })],
   ]);
 }
 

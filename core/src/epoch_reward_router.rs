@@ -99,7 +99,7 @@ pub struct EpochRewardRouter {
 
     reserved: [u8; 128],
 
-    ncn_reward_buckets: [RewardBucket; 16],
+    ncn_reward_buckets: [RewardBucket; 8],
 
     //TODO change to 256
     reward_routes: [RewardRoutes; 32],
@@ -437,7 +437,7 @@ impl EpochRewardRouter {
         Ok(())
     }
 
-    pub const fn ncn_reward_buckets(&self) -> &[RewardBucket; 16] {
+    pub const fn ncn_reward_buckets(&self) -> &[RewardBucket; 8] {
         &self.ncn_reward_buckets
     }
 

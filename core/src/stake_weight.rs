@@ -8,9 +8,9 @@ use crate::{error::TipRouterError, ncn_fee_group::NcnFeeGroup};
 #[repr(C)]
 pub struct StakeWeight {
     stake_weight: PodU128,
-    reward_stake_weights: [RewardStakeWeight; 16],
+    reward_stake_weights: [RewardStakeWeight; 8],
     // Reserves
-    reserved: [u8; 64],
+    // reserved: [u8; 64],
 }
 
 impl Default for StakeWeight {
@@ -18,7 +18,7 @@ impl Default for StakeWeight {
         Self {
             stake_weight: PodU128::from(0),
             reward_stake_weights: [RewardStakeWeight::default(); NcnFeeGroup::FEE_GROUP_COUNT],
-            reserved: [0; 64],
+            // reserved: [0; 64],
         }
     }
 }
@@ -75,14 +75,14 @@ impl StakeWeight {
 #[repr(C)]
 pub struct RewardStakeWeight {
     reward_stake_weight: PodU128,
-    reserved: [u8; 64],
+    // reserved: [u8; 64],
 }
 
 impl Default for RewardStakeWeight {
     fn default() -> Self {
         Self {
             reward_stake_weight: PodU128::from(0),
-            reserved: [0; 64],
+            // reserved: [0; 64],
         }
     }
 }
@@ -91,7 +91,7 @@ impl RewardStakeWeight {
     pub fn new(reward_stake_weight: u128) -> Self {
         Self {
             reward_stake_weight: PodU128::from(reward_stake_weight),
-            reserved: [0; 64],
+            // reserved: [0; 64],
         }
     }
 

@@ -272,7 +272,7 @@ pub struct Fees {
     block_engine_fee_bps: PodU64,
     dao_fee_bps: PodU64,
     reserved: [u8; 128],
-    ncn_fee_groups_bps: [NcnFee; 16],
+    ncn_fee_groups_bps: [NcnFee; 8],
 }
 
 impl Fees {
@@ -474,7 +474,7 @@ mod tests {
                 .fee_1
                 .ncn_fee_bps(NcnFeeGroup::default())
                 .unwrap(),
-            0
+            DEFAULT_NCN_FEE
         );
 
         assert_eq!(fee_config.fee_2.activation_epoch(), STARTING_EPOCH);
@@ -485,7 +485,7 @@ mod tests {
                 .fee_2
                 .ncn_fee_bps(NcnFeeGroup::default())
                 .unwrap(),
-            0
+            DEFAULT_NCN_FEE
         );
 
         let new_fees = Fees::new(500, 600, 700, 10).unwrap();

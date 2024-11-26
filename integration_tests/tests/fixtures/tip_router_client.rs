@@ -650,6 +650,9 @@ impl TipRouterClient {
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
 
+        let tracked_mints =
+            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
         let ix = SnapshotVaultOperatorDelegationBuilder::new()
             .ncn_config(config_pda)
             .restaking_config(restaking_config)
@@ -660,6 +663,7 @@ impl TipRouterClient {
             .ncn_vault_ticket(ncn_vault_ticket)
             .vault_operator_delegation(vault_operator_delegation)
             .weight_table(weight_table)
+            .tracked_mints(tracked_mints)
             .epoch_snapshot(epoch_snapshot)
             .operator_snapshot(operator_snapshot)
             .vault_program(jito_vault_program::id())

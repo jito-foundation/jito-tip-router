@@ -83,7 +83,7 @@ export function getEpochRewardRouterEncoder(): Encoder<EpochRewardRouterArgs> {
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
     [
       'ncnRewardBuckets',
-      getArrayEncoder(getRewardBucketEncoder(), { size: 16 }),
+      getArrayEncoder(getRewardBucketEncoder(), { size: 8 }),
     ],
     ['rewardRoutes', getArrayEncoder(getRewardRoutesEncoder(), { size: 32 })],
   ]);
@@ -101,7 +101,7 @@ export function getEpochRewardRouterDecoder(): Decoder<EpochRewardRouter> {
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
     [
       'ncnRewardBuckets',
-      getArrayDecoder(getRewardBucketDecoder(), { size: 16 }),
+      getArrayDecoder(getRewardBucketDecoder(), { size: 8 }),
     ],
     ['rewardRoutes', getArrayDecoder(getRewardRoutesDecoder(), { size: 32 })],
   ]);

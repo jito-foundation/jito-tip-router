@@ -12,7 +12,5 @@ use crate::generated::types::RewardStakeWeight;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct StakeWeight {
     pub stake_weight: u128,
-    pub reward_stake_weights: [RewardStakeWeight; 16],
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
-    pub reserved: [u8; 64],
+    pub reward_stake_weights: [RewardStakeWeight; 8],
 }

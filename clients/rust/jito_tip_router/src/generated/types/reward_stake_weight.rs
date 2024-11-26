@@ -10,6 +10,4 @@ use borsh::{BorshDeserialize, BorshSerialize};
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RewardStakeWeight {
     pub reward_stake_weight: u128,
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
-    pub reserved: [u8; 64],
 }
