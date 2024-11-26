@@ -52,7 +52,7 @@ import {
 export type BallotBox = {
   discriminator: bigint;
   ncn: Address;
-  ncnEpoch: bigint;
+  epoch: bigint;
   bump: number;
   slotCreated: bigint;
   slotConsensusReached: bigint;
@@ -67,7 +67,7 @@ export type BallotBox = {
 export type BallotBoxArgs = {
   discriminator: number | bigint;
   ncn: Address;
-  ncnEpoch: number | bigint;
+  epoch: number | bigint;
   bump: number;
   slotCreated: number | bigint;
   slotConsensusReached: number | bigint;
@@ -83,7 +83,7 @@ export function getBallotBoxEncoder(): Encoder<BallotBoxArgs> {
   return getStructEncoder([
     ['discriminator', getU64Encoder()],
     ['ncn', getAddressEncoder()],
-    ['ncnEpoch', getU64Encoder()],
+    ['epoch', getU64Encoder()],
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
     ['slotConsensusReached', getU64Encoder()],
@@ -100,7 +100,7 @@ export function getBallotBoxDecoder(): Decoder<BallotBox> {
   return getStructDecoder([
     ['discriminator', getU64Decoder()],
     ['ncn', getAddressDecoder()],
-    ['ncnEpoch', getU64Decoder()],
+    ['epoch', getU64Decoder()],
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
     ['slotConsensusReached', getU64Decoder()],

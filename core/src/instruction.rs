@@ -139,4 +139,50 @@ pub enum TipRouterInstruction {
     #[account(3, writable, signer, name = "payer")]
     #[account(4, name = "system_program")]
     InitializeTrackedMints,
+
+    /// Initializes the ballot box for an NCN
+    #[account(0, name = "restaking_config")]
+    #[account(1, writable, name = "ballot_box")]
+    #[account(2, name = "ncn")]
+    #[account(3, writable, signer, name = "payer")]
+    #[account(4, name = "system_program")]
+    InitializeBallotBox,
+
+    /// Cast a vote for a merkle root
+    #[account(0, name = "ncn_config")]
+    #[account(1, writable, name = "ballot_box")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "epoch_snapshot")]
+    #[account(4, name = "operator_snapshot")]
+    #[account(5, signer, name = "operator")]
+    CastVote {
+        meta_merkle_root: [u8; 32],
+        epoch: u64,
+    },
+
+    /// Set the merkle root after consensus is reached
+    #[account(0, name = "ncn_config")]
+    #[account(1, name = "ncn")]
+    #[account(2, name = "ballot_box")]
+    #[account(3, name = "vote_account")]
+    #[account(4, writable, name = "tip_distribution_account")]
+    #[account(5, name = "tip_distribution_config")]
+    #[account(6, name = "tip_distribution_program")]
+    SetMerkleRoot {
+        proof: Vec<[u8; 32]>,
+        merkle_root: [u8; 32],
+        max_total_claim: u64,
+        max_num_nodes: u64,
+        epoch: u64,
+    },
+
+    /// Set tie breaker in case of stalled voting
+    #[account(0, name = "ncn_config")]
+    #[account(1, writable, name = "ballot_box")]
+    #[account(2, name = "ncn")]
+    #[account(3, signer, name = "tie_breaker_admin")]
+    SetTieBreaker {
+        meta_merkle_root: [u8; 32],
+        epoch: u64,
+    }
 }

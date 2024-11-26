@@ -7,6 +7,8 @@
  */
 
 export * from './adminUpdateWeightTable';
+export * from './castVote';
+export * from './initializeBallotBox';
 export * from './initializeEpochSnapshot';
 export * from './initializeNCNConfig';
 export * from './initializeOperatorSnapshot';
@@ -14,5 +16,7 @@ export * from './initializeTrackedMints';
 export * from './initializeWeightTable';
 export * from './registerMint';
 export * from './setConfigFees';
+export * from './setMerkleRoot';
 export * from './setNewAdmin';
+export * from './setTieBreaker';
 export * from './snapshotVaultOperatorDelegation';

@@ -5,6 +5,8 @@
 //! <https://github.com/kinobi-so/kinobi>
 
 pub(crate) mod r#admin_update_weight_table;
+pub(crate) mod r#cast_vote;
+pub(crate) mod r#initialize_ballot_box;
 pub(crate) mod r#initialize_epoch_snapshot;
 pub(crate) mod r#initialize_n_c_n_config;
 pub(crate) mod r#initialize_operator_snapshot;
@@ -12,12 +14,15 @@ pub(crate) mod r#initialize_tracked_mints;
 pub(crate) mod r#initialize_weight_table;
 pub(crate) mod r#register_mint;
 pub(crate) mod r#set_config_fees;
+pub(crate) mod r#set_merkle_root;
 pub(crate) mod r#set_new_admin;
+pub(crate) mod r#set_tie_breaker;
 pub(crate) mod r#snapshot_vault_operator_delegation;
 
 pub use self::{
-    r#admin_update_weight_table::*, r#initialize_epoch_snapshot::*, r#initialize_n_c_n_config::*,
+    r#admin_update_weight_table::*, r#cast_vote::*, r#initialize_ballot_box::*,
+    r#initialize_epoch_snapshot::*, r#initialize_n_c_n_config::*,
     r#initialize_operator_snapshot::*, r#initialize_tracked_mints::*, r#initialize_weight_table::*,
-    r#register_mint::*, r#set_config_fees::*, r#set_new_admin::*,
-    r#snapshot_vault_operator_delegation::*,
+    r#register_mint::*, r#set_config_fees::*, r#set_merkle_root::*, r#set_new_admin::*,
+    r#set_tie_breaker::*, r#snapshot_vault_operator_delegation::*,
 };

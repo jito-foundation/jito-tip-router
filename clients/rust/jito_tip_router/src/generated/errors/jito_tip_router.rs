@@ -114,6 +114,24 @@ pub enum JitoTipRouterError {
     /// 8733 - Consensus not reached
     #[error("Consensus not reached")]
     ConsensusNotReached = 0x221D,
+    /// 8734 - Epoch snapshot not finalized
+    #[error("Epoch snapshot not finalized")]
+    EpochSnapshotNotFinalized = 0x221E,
+    /// 8735 - Voting not valid
+    #[error("Voting not valid")]
+    VotingNotValid = 0x221F,
+    /// 8736 - Tie breaker admin invalid
+    #[error("Tie breaker admin invalid")]
+    TieBreakerAdminInvalid = 0x2220,
+    /// 8737 - Voting not finalized
+    #[error("Voting not finalized")]
+    VotingNotFinalized = 0x2221,
+    /// 8738 - Tie breaking ballot must be one of the prior votes
+    #[error("Tie breaking ballot must be one of the prior votes")]
+    TieBreakerNotInPriorVotes = 0x2222,
+    /// 8739 - Invalid merkle proof
+    #[error("Invalid merkle proof")]
+    InvalidMerkleProof = 0x2223,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

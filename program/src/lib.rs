@@ -1,4 +1,6 @@
 mod admin_update_weight_table;
+mod cast_vote;
+mod initialize_ballot_box;
 mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
 mod initialize_operator_snapshot;
@@ -6,7 +8,9 @@ mod initialize_tracked_mints;
 mod initialize_weight_table;
 mod register_mint;
 mod set_config_fees;
+mod set_merkle_root;
 mod set_new_admin;
+mod set_tie_breaker;
 mod snapshot_vault_operator_delegation;
 
 use borsh::BorshDeserialize;
@@ -21,13 +25,15 @@ use solana_program::{
 use solana_security_txt::security_txt;
 
 use crate::{
-    admin_update_weight_table::process_admin_update_weight_table,
+    admin_update_weight_table::process_admin_update_weight_table, cast_vote::process_cast_vote,
+    initialize_ballot_box::process_initialize_ballot_box,
     initialize_epoch_snapshot::process_initialize_epoch_snapshot,
     initialize_ncn_config::process_initialize_ncn_config,
     initialize_operator_snapshot::process_initialize_operator_snapshot,
     initialize_tracked_mints::process_initialize_tracked_mints,
     initialize_weight_table::process_initialize_weight_table, register_mint::process_register_mint,
-    set_config_fees::process_set_config_fees,
+    set_config_fees::process_set_config_fees, set_merkle_root::process_set_merkle_root,
+    set_tie_breaker::process_set_tie_breaker,
     snapshot_vault_operator_delegation::process_snapshot_vault_operator_delegation,
 };
 
@@ -139,6 +145,42 @@ pub fn process_instruction(
         TipRouterInstruction::InitializeTrackedMints => {
             msg!("Instruction: InitializeTrackedMints");
             process_initialize_tracked_mints(program_id, accounts)
+        }
+        TipRouterInstruction::InitializeBallotBox => {
+            msg!("Instruction: InitializeBallotBox");
+            process_initialize_ballot_box(program_id, accounts)
+        }
+        TipRouterInstruction::CastVote {
+            meta_merkle_root,
+            epoch,
+        } => {
+            msg!("Instruction: CastVote");
+            process_cast_vote(program_id, accounts, meta_merkle_root, epoch)
+        }
+        TipRouterInstruction::SetMerkleRoot {
+            proof,
+            merkle_root,
+            max_total_claim,
+            max_num_nodes,
+            epoch,
+        } => {
+            msg!("Instruction: SetMerkleRoot");
+            process_set_merkle_root(
+                program_id,
+                accounts,
+                proof,
+                merkle_root,
+                max_total_claim,
+                max_num_nodes,
+                epoch,
+            )
+        }
+        TipRouterInstruction::SetTieBreaker {
+            meta_merkle_root,
+            epoch,
+        } => {
+            msg!("Instruction: SetTieBreaker");
+            process_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
         }
     }
 }

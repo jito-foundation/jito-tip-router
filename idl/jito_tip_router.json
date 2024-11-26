@@ -563,6 +563,217 @@
         "type": "u8",
         "value": 9
       }
+    },
+    {
+      "name": "InitializeBallotBox",
+      "accounts": [
+        {
+          "name": "restakingConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ballotBox",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 10
+      }
+    },
+    {
+      "name": "CastVote",
+      "accounts": [
+        {
+          "name": "ncnConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ballotBox",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "epochSnapshot",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "operatorSnapshot",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "operator",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "metaMerkleRoot",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "epoch",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 11
+      }
+    },
+    {
+      "name": "SetMerkleRoot",
+      "accounts": [
+        {
+          "name": "ncnConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ballotBox",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "voteAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "merkleRoot",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "maxTotalClaim",
+          "type": "u64"
+        },
+        {
+          "name": "maxNumNodes",
+          "type": "u64"
+        },
+        {
+          "name": "epoch",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 12
+      }
+    },
+    {
+      "name": "SetTieBreaker",
+      "accounts": [
+        {
+          "name": "ncnConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ballotBox",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tieBreakerAdmin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "metaMerkleRoot",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "epoch",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 13
+      }
     }
   ],
   "accounts": [
@@ -576,7 +787,7 @@
             "type": "publicKey"
           },
           {
-            "name": "ncnEpoch",
+            "name": "epoch",
             "type": {
               "defined": "PodU64"
             }
@@ -850,6 +1061,18 @@
           {
             "name": "feeAdmin",
             "type": "publicKey"
+          },
+          {
+            "name": "validSlotsAfterConsensus",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "epochsBeforeStall",
+            "type": {
+              "defined": "PodU64"
+            }
           },
           {
             "name": "fees",
@@ -1404,6 +1627,36 @@
       "code": 8733,
       "name": "ConsensusNotReached",
       "msg": "Consensus not reached"
+    },
+    {
+      "code": 8734,
+      "name": "EpochSnapshotNotFinalized",
+      "msg": "Epoch snapshot not finalized"
+    },
+    {
+      "code": 8735,
+      "name": "VotingNotValid",
+      "msg": "Voting not valid"
+    },
+    {
+      "code": 8736,
+      "name": "TieBreakerAdminInvalid",
+      "msg": "Tie breaker admin invalid"
+    },
+    {
+      "code": 8737,
+      "name": "VotingNotFinalized",
+      "msg": "Voting not finalized"
+    },
+    {
+      "code": 8738,
+      "name": "TieBreakerNotInPriorVotes",
+      "msg": "Tie breaking ballot must be one of the prior votes"
+    },
+    {
+      "code": 8739,
+      "name": "InvalidMerkleProof",
+      "msg": "Invalid merkle proof"
     }
   ],
   "metadata": {

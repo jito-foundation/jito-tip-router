@@ -28,6 +28,8 @@ pub struct NcnConfig {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub fee_admin: Pubkey,
+    pub valid_slots_after_consensus: u64,
+    pub epochs_before_stall: u64,
     pub fees: Fees,
     pub bump: u8,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]

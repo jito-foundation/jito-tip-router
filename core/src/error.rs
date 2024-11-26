@@ -74,6 +74,19 @@ pub enum TipRouterError {
     ConsensusAlreadyReached,
     #[error("Consensus not reached")]
     ConsensusNotReached,
+
+    #[error("Epoch snapshot not finalized")]
+    EpochSnapshotNotFinalized,
+    #[error("Voting not valid")]
+    VotingNotValid,
+    #[error("Tie breaker admin invalid")]
+    TieBreakerAdminInvalid,
+    #[error("Voting not finalized")]
+    VotingNotFinalized,
+    #[error("Tie breaking ballot must be one of the prior votes")]
+    TieBreakerNotInPriorVotes,
+    #[error("Invalid merkle proof")]
+    InvalidMerkleProof,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

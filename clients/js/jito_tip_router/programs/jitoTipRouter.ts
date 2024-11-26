@@ -14,6 +14,8 @@ import {
 } from '@solana/web3.js';
 import {
   type ParsedAdminUpdateWeightTableInstruction,
+  type ParsedCastVoteInstruction,
+  type ParsedInitializeBallotBoxInstruction,
   type ParsedInitializeEpochSnapshotInstruction,
   type ParsedInitializeNCNConfigInstruction,
   type ParsedInitializeOperatorSnapshotInstruction,
@@ -21,7 +23,9 @@ import {
   type ParsedInitializeWeightTableInstruction,
   type ParsedRegisterMintInstruction,
   type ParsedSetConfigFeesInstruction,
+  type ParsedSetMerkleRootInstruction,
   type ParsedSetNewAdminInstruction,
+  type ParsedSetTieBreakerInstruction,
   type ParsedSnapshotVaultOperatorDelegationInstruction,
 } from '../instructions';
 
@@ -48,6 +52,10 @@ export enum JitoTipRouterInstruction {
   SnapshotVaultOperatorDelegation,
   RegisterMint,
   InitializeTrackedMints,
+  InitializeBallotBox,
+  CastVote,
+  SetMerkleRoot,
+  SetTieBreaker,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -83,6 +91,18 @@ export function identifyJitoTipRouterInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(9), 0)) {
     return JitoTipRouterInstruction.InitializeTrackedMints;
+  }
+  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
+    return JitoTipRouterInstruction.InitializeBallotBox;
+  }
+  if (containsBytes(data, getU8Encoder().encode(11), 0)) {
+    return JitoTipRouterInstruction.CastVote;
+  }
+  if (containsBytes(data, getU8Encoder().encode(12), 0)) {
+    return JitoTipRouterInstruction.SetMerkleRoot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(13), 0)) {
+    return JitoTipRouterInstruction.SetTieBreaker;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -121,4 +141,16 @@ export type ParsedJitoTipRouterInstruction<
     } & ParsedRegisterMintInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.InitializeTrackedMints;
-    } & ParsedInitializeTrackedMintsInstruction<TProgram>);
+    } & ParsedInitializeTrackedMintsInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeBallotBox;
+    } & ParsedInitializeBallotBoxInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.CastVote;
+    } & ParsedCastVoteInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.SetMerkleRoot;
+    } & ParsedSetMerkleRootInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.SetTieBreaker;
+    } & ParsedSetTieBreakerInstruction<TProgram>);

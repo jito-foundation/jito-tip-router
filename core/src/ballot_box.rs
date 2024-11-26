@@ -3,6 +3,7 @@ use jito_bytemuck::{
     types::{PodU128, PodU16, PodU64},
     AccountDeserialize, Discriminator,
 };
+use meta_merkle_tree::tree_node::TreeNode;
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 use spl_math::precise_number::PreciseNumber;
@@ -22,6 +23,12 @@ impl Default for Ballot {
             merkle_root: [0; 32],
             reserved: [0; 64],
         }
+    }
+}
+
+impl std::fmt::Display for Ballot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.merkle_root)
     }
 }
 
@@ -169,7 +176,7 @@ impl OperatorVote {
 pub struct BallotBox {
     ncn: Pubkey,
 
-    ncn_epoch: PodU64,
+    epoch: PodU64,
 
     bump: u8,
 
@@ -193,10 +200,10 @@ impl Discriminator for BallotBox {
 }
 
 impl BallotBox {
-    pub fn new(ncn: Pubkey, ncn_epoch: u64, bump: u8, current_slot: u64) -> Self {
+    pub fn new(ncn: Pubkey, epoch: u64, bump: u8, current_slot: u64) -> Self {
         Self {
             ncn,
-            ncn_epoch: PodU64::from(ncn_epoch),
+            epoch: PodU64::from(epoch),
             bump,
             slot_created: PodU64::from(current_slot),
             slot_consensus_reached: PodU64::from(0),
@@ -210,12 +217,12 @@ impl BallotBox {
         }
     }
 
-    pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
+    pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
                 b"ballot_box".to_vec(),
                 ncn.to_bytes().to_vec(),
-                ncn_epoch.to_le_bytes().to_vec(),
+                epoch.to_le_bytes().to_vec(),
             ]
             .iter()
             .cloned(),
@@ -225,9 +232,9 @@ impl BallotBox {
     pub fn find_program_address(
         program_id: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(ncn, ncn_epoch);
+        let seeds = Self::seeds(ncn, epoch);
         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
         (pda, bump, seeds)
@@ -236,34 +243,38 @@ impl BallotBox {
     pub fn load(
         program_id: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
-        epoch_snapshot: &AccountInfo,
+        epoch: u64,
+        ballot_box_account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if epoch_snapshot.owner.ne(program_id) {
+        if ballot_box_account.owner.ne(program_id) {
             msg!("Ballot box account has an invalid owner");
             return Err(ProgramError::InvalidAccountOwner);
         }
-        if epoch_snapshot.data_is_empty() {
+        if ballot_box_account.data_is_empty() {
             msg!("Ballot box account data is empty");
             return Err(ProgramError::InvalidAccountData);
         }
-        if expect_writable && !epoch_snapshot.is_writable {
+        if expect_writable && !ballot_box_account.is_writable {
             msg!("Ballot box account is not writable");
             return Err(ProgramError::InvalidAccountData);
         }
-        if epoch_snapshot.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
+        if ballot_box_account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
             msg!("Ballot box account discriminator is invalid");
             return Err(ProgramError::InvalidAccountData);
         }
-        if epoch_snapshot
+        if ballot_box_account
             .key
-            .ne(&Self::find_program_address(program_id, ncn, ncn_epoch).0)
+            .ne(&Self::find_program_address(program_id, ncn, epoch).0)
         {
             msg!("Ballot box account is not at the correct PDA");
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.epoch.into()
     }
 
     pub fn slot_consensus_reached(&self) -> u64 {
@@ -279,7 +290,7 @@ impl BallotBox {
     }
 
     pub fn is_consensus_reached(&self) -> bool {
-        self.slot_consensus_reached() > 0
+        self.slot_consensus_reached() > 0 || self.winning_ballot.is_valid()
     }
 
     pub fn get_winning_ballot(&self) -> Result<Ballot, TipRouterError> {
@@ -288,6 +299,10 @@ impl BallotBox {
         } else {
             Err(TipRouterError::ConsensusNotReached)
         }
+    }
+
+    pub fn set_winning_ballot(&mut self, ballot: Ballot) {
+        self.winning_ballot = ballot;
     }
 
     fn increment_or_create_ballot_tally(
@@ -389,9 +404,64 @@ impl BallotBox {
         if consensus_reached {
             self.slot_consensus_reached = PodU64::from(current_slot);
 
-            self.winning_ballot = max_tally.ballot();
+            self.set_winning_ballot(max_tally.ballot());
         }
 
         Ok(())
+    }
+
+    pub fn has_ballot(&self, ballot: &Ballot) -> bool {
+        self.ballot_tallies.iter().any(|t| t.ballot.eq(ballot))
+    }
+
+    pub fn is_voting_valid(&self, current_slot: u64, valid_slots_after_consensus: u64) -> bool {
+        !(self.is_consensus_reached()
+            && current_slot > self.slot_consensus_reached() + valid_slots_after_consensus)
+    }
+
+    pub fn verify_merkle_root(
+        &self,
+        tip_distribution_account: Pubkey,
+        proof: Vec<[u8; 32]>,
+        merkle_root: [u8; 32],
+        max_total_claim: u64,
+        max_num_nodes: u64,
+    ) -> Result<(), TipRouterError> {
+        let tree_node = TreeNode::new(
+            tip_distribution_account,
+            merkle_root,
+            max_total_claim,
+            max_num_nodes,
+        );
+
+        if !meta_merkle_tree::verify::verify(
+            proof,
+            self.winning_ballot.root(),
+            tree_node.hash().to_bytes(),
+        ) {
+            return Err(TipRouterError::InvalidMerkleProof);
+        }
+
+        Ok(())
+    }
+}
+
+// merkle tree of merkle trees struct
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_verify_merkle_root() {
+        // Create merkle tree of merkle trees
+
+        // Intialize ballot box
+        let ballot_box = BallotBox::new(Pubkey::default(), 0, 0, 0);
+
+        // Set winning merkle root, don't care about anything else
+        ballot_box
+            .verify_merkle_root(Pubkey::default(), vec![], [0u8; 32], 0, 0)
+            .unwrap();
     }
 }

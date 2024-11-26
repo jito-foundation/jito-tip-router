@@ -767,7 +767,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115e54d64eb62cdebad391c19efc9dce4981c690c85a33a12199d99bb9546fee"
 dependencies = [
  "borsh-derive 0.10.4",
- "hashbrown 0.13.2",
+ "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -1732,6 +1732,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 
 [[package]]
+name = "fast-math"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2465292146cdfc2011350fe3b1c616ac83cf0faeedb33463ba1c332ed8948d66"
+dependencies = [
+ "ieee754",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2217,6 +2226,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ieee754"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9007da9cacbd3e6343da136e98b0d2df013f553d35bdec8b518f07bea768e19c"
+
+[[package]]
 name = "im"
 version = "15.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2377,6 +2392,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "jito-programs-vote-state"
+version = "0.1.5"
+source = "git+https://github.com/jito-foundation/jito-programs?rev=2849874101336e7ef6ee93bb64b1354d5e682bb9#2849874101336e7ef6ee93bb64b1354d5e682bb9"
+dependencies = [
+ "anchor-lang",
+ "bincode",
+ "serde",
+ "serde_derive",
+ "solana-program 1.18.26",
+]
+
+[[package]]
 name = "jito-restaking-client"
 version = "0.0.3"
 source = "git+https://github.com/jito-foundation/restaking.git?rev=eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d#eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d"
@@ -2444,6 +2471,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "jito-tip-distribution"
+version = "0.1.5"
+source = "git+https://github.com/jito-foundation/jito-programs?rev=2849874101336e7ef6ee93bb64b1354d5e682bb9#2849874101336e7ef6ee93bb64b1354d5e682bb9"
+dependencies = [
+ "anchor-lang",
+ "jito-programs-vote-state",
+ "solana-program 1.18.26",
+ "solana-security-txt",
+]
+
+[[package]]
+name = "jito-tip-distribution-sdk"
+version = "0.1.0"
+source = "git+https://github.com/jito-foundation/jito-programs?rev=2849874101336e7ef6ee93bb64b1354d5e682bb9#2849874101336e7ef6ee93bb64b1354d5e682bb9"
+dependencies = [
+ "anchor-lang",
+ "jito-tip-distribution",
+]
+
+[[package]]
 name = "jito-tip-router-cli"
 version = "0.0.1"
 dependencies = [
@@ -2501,6 +2548,7 @@ dependencies = [
  "jito-restaking-sdk",
  "jito-vault-core",
  "jito-vault-sdk",
+ "meta-merkle-tree",
  "shank",
  "solana-program 1.18.26",
  "spl-associated-token-account",
@@ -2514,11 +2562,14 @@ name = "jito-tip-router-integration-tests"
 version = "0.0.1"
 dependencies = [
  "borsh 0.10.4",
+ "bytemuck",
  "jito-bytemuck",
  "jito-jsm-core",
  "jito-restaking-core",
  "jito-restaking-program",
  "jito-restaking-sdk",
+ "jito-tip-distribution",
+ "jito-tip-distribution-sdk",
  "jito-tip-router-client",
  "jito-tip-router-core",
  "jito-tip-router-program",
@@ -2526,6 +2577,7 @@ dependencies = [
  "jito-vault-program",
  "jito-vault-sdk",
  "log",
+ "meta-merkle-tree",
  "shank",
  "solana-program 1.18.26",
  "solana-program-test",
@@ -2551,6 +2603,7 @@ dependencies = [
  "jito-restaking-core",
  "jito-restaking-program",
  "jito-restaking-sdk",
+ "jito-tip-distribution-sdk",
  "jito-tip-router-core",
  "jito-vault-core",
  "jito-vault-program",
@@ -2866,6 +2919,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "meta-merkle-tree"
+version = "0.0.1"
+dependencies = [
+ "borsh 0.10.4",
+ "bytemuck",
+ "fast-math",
+ "hex",
+ "indexmap 2.6.0",
+ "jito-bytemuck",
+ "jito-jsm-core",
+ "jito-restaking-core",
+ "jito-restaking-sdk",
+ "jito-tip-distribution",
+ "jito-vault-core",
+ "jito-vault-sdk",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "shank",
+ "solana-program 1.18.26",
+ "solana-sdk",
+ "spl-associated-token-account",
+ "spl-math",
+ "spl-token",
+ "thiserror",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3135,7 +3216,7 @@ version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af1844ef2428cc3e1cb900be36181049ef3d3193c63e43026cfe202983b27a56"
 dependencies = [
- "proc-macro-crate 3.2.0",
+ "proc-macro-crate 1.3.1",
  "proc-macro2",
  "quote",
  "syn 2.0.85",
