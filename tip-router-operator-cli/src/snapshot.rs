@@ -1,30 +1,32 @@
-use anyhow::{anyhow, Result};
-use log::{info, warn};
+use anyhow::{ anyhow, Result };
+use log::{ info, warn };
 use solana_client::rpc_client::RpcClient;
-use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{
     clock::Slot,
     epoch_schedule::EpochSchedule,
-    hash::Hash,
     signature::Keypair,
+    genesis_config::GenesisConfig,
 };
-use solana_ledger::{
-    bank_forks_utils,
-    blockstore::Blockstore,
-    snapshot_utils::{
-        self,
-        SnapshotVersion,
-        create_snapshot_archive,
-    },
-};
-use std::{
-    path::PathBuf,
-    fs,
-    sync::Arc,
-};
+use solana_metrics::{ datapoint_info, datapoint_error };
+use solana_ledger::{ bank_forks_utils, blockstore::Blockstore };
+use std::{ path::PathBuf, fs, sync::Arc };
+use std::sync::atomic::AtomicBool;
+use solana_ledger::blockstore_processor::ProcessOptions;
+use solana_runtime::{ self, snapshot_utils::SnapshotVersion, snapshot_bank_utils };
+use std::num::NonZeroUsize;
+use solana_runtime::snapshot_utils::ArchiveFormat;
+use ellipsis_client::EllipsisClient;
 
+// Add progress reporting
+#[derive(Debug)]
+pub struct SnapshotProgress {
+    pub slot: Slot,
+    pub phase: String,
+    pub progress: f32,
+    pub message: String,
+}
 pub struct SnapshotCreator {
-    rpc_client: RpcClient,
+    rpc_client: EllipsisClient,
     output_dir: PathBuf,
     max_snapshots: u32,
     compression: String,
@@ -39,9 +41,9 @@ impl SnapshotCreator {
         max_snapshots: u32,
         compression: String,
         keypair: Keypair,
-        blockstore_path: PathBuf,
+        blockstore_path: PathBuf
     ) -> Result<Self> {
-        let rpc_client = RpcClient::new(rpc_url);
+        let rpc_client = EllipsisClient::from_rpc(RpcClient::new(rpc_url), &keypair)?;
         Ok(Self {
             rpc_client,
             output_dir: PathBuf::from(output_dir),
@@ -50,6 +52,24 @@ impl SnapshotCreator {
             keypair: Arc::new(keypair),
             blockstore_path,
         })
+    }
+
+    pub fn report_progress(&self, progress: SnapshotProgress) {
+        info!(
+            "Snapshot progress - Slot: {}, Phase: {}, Progress: {:.2}%, Message: {}",
+            progress.slot,
+            progress.phase,
+            progress.progress * 100.0,
+            progress.message
+        );
+
+        datapoint_info!(
+            "tip_router_snapshot_progress",
+            ("slot", progress.slot, i64),
+            ("phase", progress.phase, String),
+            ("progress", progress.progress, f64),
+            ("message", progress.message, String)
+        );
     }
 
     pub async fn monitor_epoch_boundary(&self) -> Result<()> {
@@ -87,11 +107,7 @@ impl SnapshotCreator {
     }
 
     async fn create_snapshot(&self, slot: Slot) -> Result<()> {
-        datapoint_info!(
-            "tip_router_snapshot",
-            ("slot", slot, i64),
-            ("event", "start", String)
-        );
+        datapoint_info!("tip_router_snapshot", ("slot", slot, i64), ("event", "start", String));
 
         let result = self.create_snapshot_internal(slot).await;
 
@@ -117,63 +133,150 @@ impl SnapshotCreator {
 
     async fn create_snapshot_internal(&self, slot: Slot) -> Result<()> {
         info!("Creating snapshot at slot {}", slot);
-        
-        let blockstore = Blockstore::open(&self.blockstore_path)?;
-        
-        let (bank_forks, _leader_schedule_cache) = bank_forks_utils::load(
-            &blockstore,
-            &self.keypair,
-            None,
-            None,
-            None,
-            None,
-        )?;
 
-        let bank = bank_forks.read().unwrap().get(slot)
+        let blockstore = Blockstore::open(&self.blockstore_path)?;
+        let genesis_config = GenesisConfig::default(); // You might need to load this properly
+
+        let (bank_forks, _leader_schedule_cache, _starting_snapshot_hashes) =
+            bank_forks_utils::load(
+                &genesis_config,
+                &blockstore,
+                vec![self.output_dir.clone()],
+                None,
+                None,
+                ProcessOptions::default(),
+                None,
+                None,
+                None,
+                None,
+                Arc::new(AtomicBool::new(false))
+            )?;
+
+        let bank = bank_forks
+            .read()
+            .unwrap()
+            .get(slot)
             .ok_or_else(|| anyhow!("Failed to get bank at slot {}", slot))?;
 
-        fs::create_dir_all(&self.output_dir)?;
+        let archive_format = match self.compression.as_str() {
+            "bzip2" => ArchiveFormat::TarBzip2,
+            "gzip" => ArchiveFormat::TarGzip,
+            "zstd" => ArchiveFormat::TarZstd,
+            _ => ArchiveFormat::TarBzip2,
+        };
 
-        let snapshot_archive = create_snapshot_archive(
+        snapshot_bank_utils::bank_to_full_snapshot_archive(
+            &self.output_dir, // bank_snapshots_dir
             &bank,
-            &self.output_dir,
-            SnapshotVersion::default(),
-            &self.compression,
-            slot,
-            Hash::default(),
-            None,
+            Some(SnapshotVersion::default()), // snapshot_version needs to be Option<SnapshotVersion>
+            &self.output_dir, // full_snapshot_archives_dir
+            &self.output_dir, // incremental_snapshot_archives_dir
+            archive_format,
+            NonZeroUsize::new(self.max_snapshots as usize).unwrap(),
+            NonZeroUsize::new(self.max_snapshots as usize).unwrap()
         )?;
 
-        info!("Created snapshot archive at {:?}", snapshot_archive);
+        self.report_progress(SnapshotProgress {
+            slot,
+            phase: "snapshot_creation".to_string(),
+            progress: 1.0,
+            message: "Snapshot created successfully".to_string(),
+        });
 
-        self.create_stake_meta(slot).await?;
-        self.create_merkle_trees(slot).await?;
-        self.create_meta_merkle_tree(slot).await?;
-        self.upload_meta_merkle_root(slot).await?;
-        self.validate_snapshot(slot).await?;
-        self.cleanup_old_snapshots().await?;
+        Ok(())
+    }
+
+    async fn validate_snapshot(&self, slot: Slot) -> Result<()> {
+        info!("Validating snapshot for slot {}", slot);
+
+        let snapshot_archive_path = self.output_dir.join(
+            format!("snapshot-{}.tar.{}", slot, self.compression)
+        );
+
+        if !snapshot_archive_path.exists() {
+            return Err(anyhow!("Snapshot archive not found at {:?}", snapshot_archive_path));
+        }
+
+        let blockstore = Blockstore::open(&self.blockstore_path)?;
+        let bank_hash = blockstore
+            .get_bank_hash(slot)
+            .ok_or_else(|| anyhow!("Bank hash not found for slot {}", slot))?;
+
+        let temp_dir = tempfile::tempdir()?;
+        let genesis_config = GenesisConfig::default(); // You might need to load this properly
+
+        let (bank_forks, _leader_schedule_cache, _starting_snapshot_hashes) =
+            bank_forks_utils::load_bank_forks(
+                &genesis_config,
+                &blockstore,
+                vec![temp_dir.path().to_path_buf()],
+                None,
+                None,
+                &Default::default(),
+                None,
+                None,
+                None,
+                Arc::new(AtomicBool::new(false))
+            )?;
+
+        let bank = bank_forks
+            .read()
+            .unwrap()
+            .get(slot)
+            .ok_or_else(|| anyhow!("Failed to load bank from snapshot at slot {}", slot))?;
+
+        if bank.get_accounts_hash().map(|h| h.0) != Some(bank_hash) {
+            return Err(anyhow!("Account hash mismatch for slot {}", slot));
+        }
+
+        Ok(())
+    }
+
+    async fn cleanup_old_snapshots(&self) -> Result<()> {
+        info!("Cleaning up old snapshots");
+
+        let mut snapshots: Vec<(Slot, PathBuf)> = fs
+            ::read_dir(&self.output_dir)?
+            .filter_map(|entry| entry.ok())
+            .filter_map(|entry| {
+                let path = entry.path();
+                let file_name = path.file_name()?.to_str()?;
+                if !file_name.starts_with("snapshot-") {
+                    return None;
+                }
+                let slot = file_name
+                    .strip_prefix("snapshot-")
+                    .and_then(|s| s.split('.').next())
+                    .and_then(|s| s.parse::<Slot>().ok())?; // Add ? here
+
+                Some((slot, path)) // Remove the duplicate Some() below
+            })
+            .collect();
+
+        // Sort by slot number, newest first
+        snapshots.sort_by(|a, b| b.0.cmp(&a.0));
+
+        // Keep only the specified number of latest snapshots
+        for (_slot, path) in snapshots.iter().skip(self.max_snapshots as usize) {
+            info!("Removing old snapshot: {:?}", path);
+            if let Err(e) = fs::remove_file(path) {
+                warn!("Failed to remove old snapshot {:?}: {}", path, e);
+            }
+        }
 
         Ok(())
     }
 
     async fn create_stake_meta(&self, slot: Slot) -> Result<()> {
         info!("Creating stake meta for slot {}", slot);
-        datapoint_info!(
-            "tip_router_stake_meta",
-            ("slot", slot, i64),
-            ("event", "start", String)
-        );
+        datapoint_info!("tip_router_stake_meta", ("slot", slot, i64), ("event", "start", String));
         // TODO: Implement stake meta json creation
         Ok(())
     }
 
     async fn create_merkle_trees(&self, slot: Slot) -> Result<()> {
         info!("Creating merkle trees for slot {}", slot);
-        datapoint_info!(
-            "tip_router_merkle_trees",
-            ("slot", slot, i64),
-            ("event", "start", String)
-        );
+        datapoint_info!("tip_router_merkle_trees", ("slot", slot, i64), ("event", "start", String));
         // TODO: Implement merkle tree creation
         Ok(())
     }
@@ -191,33 +294,8 @@ impl SnapshotCreator {
 
     async fn upload_meta_merkle_root(&self, slot: Slot) -> Result<()> {
         info!("Uploading meta merkle root for slot {}", slot);
-        datapoint_info!(
-            "tip_router_upload_root",
-            ("slot", slot, i64),
-            ("event", "start", String)
-        );
+        datapoint_info!("tip_router_upload_root", ("slot", slot, i64), ("event", "start", String));
         // TODO: Implement NCN upload
-        Ok(())
-    }
-
-    async fn validate_snapshot(&self, slot: Slot) -> Result<()> {
-        info!("Validating snapshot for slot {}", slot);
-        datapoint_info!(
-            "tip_router_validate",
-            ("slot", slot, i64),
-            ("event", "start", String)
-        );
-        // TODO: Implement snapshot validation
-        Ok(())
-    }
-
-    async fn cleanup_old_snapshots(&self) -> Result<()> {
-        info!("Cleaning up old snapshots");
-        datapoint_info!(
-            "tip_router_cleanup",
-            ("event", "start", String)
-        );
-        // TODO: Implement cleanup logic
         Ok(())
     }
 

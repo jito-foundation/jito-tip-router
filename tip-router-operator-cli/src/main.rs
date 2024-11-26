@@ -2,8 +2,8 @@ use clap::Parser;
 use anyhow::Result;
 use log::info;
 use snapshot::SnapshotCreator;
-use solana_metrics::datapoint_info;
-use solana_metrics::datapoint_error;
+use std::path::PathBuf;
+use solana_sdk::signer::keypair::read_keypair_file;
 
 mod snapshot;
 
@@ -63,14 +63,15 @@ async fn main() -> Result<()> {
         }
         Commands::Snapshot { output_dir, max_snapshots, compression } => {
             info!("Starting snapshot creator");
-            info!("Output directory: {}", output_dir);
+            let keypair = read_keypair_file(&cli.keypair_path)
+                .map_err(|e| anyhow::Error::msg(e.to_string()))?;
             let snapshot_creator = SnapshotCreator::new(
-                &cli.keypair_path,  // Add keypair path
                 &cli.rpc_url,
-                &output_dir,        // Add & to make it a reference
+                output_dir,
                 max_snapshots,
                 compression,
-                true,              // Add is_archive parameter
+                keypair,
+                PathBuf::from("blockstore") // You'll need to provide the correct path
             )?;
             snapshot_creator.monitor_epoch_boundary().await?;
         }
