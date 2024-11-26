@@ -261,15 +261,15 @@ impl VaultOperatorStakeWeight {
         self.vault_index.into()
     }
 
-    pub fn stake_weight(&self) -> &StakeWeight {
+    pub const fn stake_weight(&self) -> &StakeWeight {
         &self.stake_weight
     }
 
-    pub fn vault(&self) -> Pubkey {
+    pub const fn vault(&self) -> Pubkey {
         self.vault
     }
 
-    pub fn ncn_fee_group(&self) -> NcnFeeGroup {
+    pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
         self.ncn_fee_group
     }
 }
@@ -445,7 +445,7 @@ impl OperatorSnapshot {
         self.valid_operator_vault_delegations.into()
     }
 
-    pub fn stake_weight(&self) -> &StakeWeight {
+    pub const fn stake_weight(&self) -> &StakeWeight {
         &self.stake_weight
     }
 
@@ -459,7 +459,7 @@ impl OperatorSnapshot {
             .any(|v| v.vault_index() == vault_index)
     }
 
-    pub fn vault_operator_stake_weight(&self) -> &[VaultOperatorStakeWeight] {
+    pub const fn vault_operator_stake_weight(&self) -> &[VaultOperatorStakeWeight] {
         &self.vault_operator_stake_weight
     }
 

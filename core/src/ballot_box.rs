@@ -78,7 +78,7 @@ impl BallotTally {
         self.ballot
     }
 
-    pub fn stake_weight(&self) -> &StakeWeight {
+    pub const fn stake_weight(&self) -> &StakeWeight {
         &self.stake_weight
     }
 
@@ -152,7 +152,7 @@ impl OperatorVote {
         self.slot_voted.into()
     }
 
-    pub fn stake_weight(&self) -> &StakeWeight {
+    pub const fn stake_weight(&self) -> &StakeWeight {
         &self.stake_weight
     }
 
@@ -292,7 +292,7 @@ impl BallotBox {
         }
     }
 
-    pub fn operator_votes(&self) -> &[OperatorVote; 32] {
+    pub const fn operator_votes(&self) -> &[OperatorVote; 32] {
         &self.operator_votes
     }
 

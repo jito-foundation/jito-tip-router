@@ -15,6 +15,8 @@ export * from './mintEntry';
 export * from './ncnFee';
 export * from './ncnFeeGroup';
 export * from './operatorVote';
+export * from './rewardBucket';
+export * from './rewardRoutes';
 export * from './rewardStakeWeight';
 export * from './stakeWeight';
 export * from './vaultOperatorStakeWeight';

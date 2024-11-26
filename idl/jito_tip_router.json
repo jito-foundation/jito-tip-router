@@ -1415,56 +1415,6 @@
       }
     },
     {
-      "name": "RewardRoutes",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "destination",
-            "type": "publicKey"
-          },
-          {
-            "name": "rewards",
-            "type": {
-              "defined": "PodU64"
-            }
-          },
-          {
-            "name": "reserved",
-            "type": {
-              "array": [
-                "u8",
-                128
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "RewardBucket",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "rewards",
-            "type": {
-              "defined": "PodU64"
-            }
-          },
-          {
-            "name": "reserved",
-            "type": {
-              "array": [
-                "u8",
-                64
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "StakeWeight",
       "type": {
         "kind": "struct",

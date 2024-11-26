@@ -34,7 +34,7 @@ impl StakeWeight {
         Ok(self.reward_stake_weights[group_index].reward_stake_weight())
     }
 
-    pub fn increment(&mut self, stake_weight: &StakeWeight) -> Result<(), TipRouterError> {
+    pub fn increment(&mut self, stake_weight: &Self) -> Result<(), TipRouterError> {
         self.increment_stake_weight(stake_weight.stake_weight())?;
 
         for group in NcnFeeGroup::all_groups().iter() {

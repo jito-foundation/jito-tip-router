@@ -13,6 +13,8 @@ pub(crate) mod r#mint_entry;
 pub(crate) mod r#ncn_fee;
 pub(crate) mod r#ncn_fee_group;
 pub(crate) mod r#operator_vote;
+pub(crate) mod r#reward_bucket;
+pub(crate) mod r#reward_routes;
 pub(crate) mod r#reward_stake_weight;
 pub(crate) mod r#stake_weight;
 pub(crate) mod r#vault_operator_stake_weight;
@@ -20,7 +22,7 @@ pub(crate) mod r#weight_entry;
 
 pub use self::{
     r#ballot::*, r#ballot_tally::*, r#config_admin_role::*, r#fee_config::*, r#fees::*,
-    r#mint_entry::*, r#ncn_fee::*, r#ncn_fee_group::*, r#operator_vote::*,
-    r#reward_stake_weight::*, r#stake_weight::*, r#vault_operator_stake_weight::*,
-    r#weight_entry::*,
+    r#mint_entry::*, r#ncn_fee::*, r#ncn_fee_group::*, r#operator_vote::*, r#reward_bucket::*,
+    r#reward_routes::*, r#reward_stake_weight::*, r#stake_weight::*,
+    r#vault_operator_stake_weight::*, r#weight_entry::*,
 };

@@ -30,7 +30,7 @@ impl MintEntry {
         self.vault_index.into()
     }
 
-    pub fn ncn_fee_group(&self) -> NcnFeeGroup {
+    pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
         self.ncn_fee_group
     }
 }

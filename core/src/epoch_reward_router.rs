@@ -32,6 +32,10 @@ impl RewardRoutes {
         self.destination
     }
 
+    pub fn set_destination(&mut self, destination: Pubkey) {
+        self.destination = destination;
+    }
+
     pub fn rewards(&self) -> u64 {
         self.rewards.into()
     }
@@ -351,7 +355,7 @@ impl EpochRewardRouter {
             }
         }
 
-        Err(TipRouterError::OperatorRewardListFull.into())
+        Err(TipRouterError::OperatorRewardListFull)
     }
 
     pub fn decrement_operator_rewards(
@@ -370,7 +374,7 @@ impl EpochRewardRouter {
             }
         }
 
-        Err(TipRouterError::OperatorRewardNotFound.into())
+        Err(TipRouterError::OperatorRewardNotFound)
     }
 
     pub fn reward_pool(&self) -> u64 {
@@ -433,7 +437,7 @@ impl EpochRewardRouter {
         Ok(())
     }
 
-    pub fn ncn_reward_buckets(&self) -> &[RewardBucket; 16] {
+    pub const fn ncn_reward_buckets(&self) -> &[RewardBucket; 16] {
         &self.ncn_reward_buckets
     }
 

@@ -6,76 +6,9 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    discriminators::Discriminators, epoch_snapshot::OperatorSnapshot, error::TipRouterError,
+    discriminators::Discriminators, epoch_reward_router::RewardRoutes,
+    epoch_snapshot::OperatorSnapshot, error::TipRouterError,
 };
-
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
-#[repr(C)]
-pub struct RewardRoutes {
-    destination: Pubkey,
-    rewards: PodU64,
-    reserved: [u8; 128],
-}
-
-impl Default for RewardRoutes {
-    fn default() -> Self {
-        Self {
-            destination: Pubkey::default(),
-            rewards: PodU64::from(0),
-            reserved: [0; 128],
-        }
-    }
-}
-
-impl RewardRoutes {
-    pub const fn destination(&self) -> Pubkey {
-        self.destination
-    }
-
-    pub fn rewards(&self) -> u64 {
-        self.rewards.into()
-    }
-
-    pub fn increment_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
-        self.rewards = PodU64::from(
-            self.rewards()
-                .checked_add(rewards)
-                .ok_or(TipRouterError::ArithmeticOverflow)?,
-        );
-        Ok(())
-    }
-
-    pub fn decrement_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
-        self.rewards = PodU64::from(
-            self.rewards()
-                .checked_sub(rewards)
-                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
-        );
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
-#[repr(C)]
-pub struct RewardBucket {
-    rewards: PodU64,
-    reserved: [u8; 64],
-}
-
-impl Default for RewardBucket {
-    fn default() -> Self {
-        Self {
-            rewards: PodU64::from(0),
-            reserved: [0; 64],
-        }
-    }
-}
-
-impl RewardBucket {
-    pub fn rewards(&self) -> u64 {
-        self.rewards.into()
-    }
-}
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
@@ -318,21 +251,21 @@ impl OperatorEpochRewardRouter {
         }
 
         for vault_reward in self.vault_rewards.iter_mut() {
-            if vault_reward.destination == vault {
+            if vault_reward.destination() == vault {
                 vault_reward.increment_rewards(rewards)?;
                 return Ok(());
             }
         }
 
         for vault_reward in self.vault_rewards.iter_mut() {
-            if vault_reward.destination == Pubkey::default() {
-                vault_reward.destination = vault;
-                vault_reward.rewards = PodU64::from(rewards);
+            if vault_reward.destination() == Pubkey::default() {
+                vault_reward.set_destination(vault);
+                vault_reward.increment_rewards(rewards)?;
                 return Ok(());
             }
         }
 
-        Err(TipRouterError::OperatorRewardListFull.into())
+        Err(TipRouterError::OperatorRewardListFull)
     }
 
     pub fn decrement_vault_rewards(
@@ -345,13 +278,13 @@ impl OperatorEpochRewardRouter {
         }
 
         for operator_reward in self.vault_rewards.iter_mut() {
-            if operator_reward.destination == vault {
+            if operator_reward.destination() == vault {
                 operator_reward.decrement_rewards(rewards)?;
                 return Ok(());
             }
         }
 
-        Err(TipRouterError::OperatorRewardNotFound.into())
+        Err(TipRouterError::OperatorRewardNotFound)
     }
 
     pub fn reward_pool(&self) -> u64 {
