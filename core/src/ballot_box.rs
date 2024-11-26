@@ -292,6 +292,10 @@ impl BallotBox {
         }
     }
 
+    pub fn operator_votes(&self) -> &[OperatorVote; 32] {
+        &self.operator_votes
+    }
+
     fn increment_or_create_ballot_tally(
         &mut self,
         ballot: &Ballot,

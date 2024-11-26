@@ -9,12 +9,16 @@ pub enum TipRouterError {
     ArithmeticOverflow,
     #[error("Underflow")]
     ArithmeticUnderflowError,
+    #[error("Floor Overflow")]
+    ArithmeticFloorError,
     #[error("Modulo Overflow")]
     ModuloOverflow,
     #[error("New precise number error")]
     NewPreciseNumberError,
     #[error("Cast to imprecise number error")]
     CastToImpreciseNumberError,
+    #[error("Cast to u64 error")]
+    CastToU64Error,
 
     #[error("Incorrect weight table admin")]
     IncorrectWeightTableAdmin = 0x2200,
@@ -80,6 +84,10 @@ pub enum TipRouterError {
     ConsensusNotReached,
     #[error("Not a valid NCN fee group")]
     InvalidNcnFeeGroup,
+    #[error("Operator reward list full")]
+    OperatorRewardListFull,
+    #[error("Operator Reward not found")]
+    OperatorRewardNotFound,
 }
 
 impl<T> DecodeError<T> for TipRouterError {
