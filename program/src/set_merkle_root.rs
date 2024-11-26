@@ -8,7 +8,7 @@ use jito_tip_distribution_sdk::{
 use jito_tip_router_core::{ballot_box::BallotBox, error::TipRouterError, ncn_config::NcnConfig};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
-    program_error::ProgramError, pubkey::Pubkey, vote::state::VoteStateVersions,
+    program_error::ProgramError, pubkey::Pubkey,
 };
 
 pub fn process_set_merkle_root(
@@ -29,11 +29,6 @@ pub fn process_set_merkle_root(
     NcnConfig::load(program_id, ncn.key, ncn_config, true)?;
     Ncn::load(restaking_program_id.key, ncn, false)?;
     BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
-
-    // TODO check vote account
-    // let vote_state = VoteStateVersions::load(program_id, vote_account.key, false)?;
-
-    // TODO check tip distribution account exists?
 
     let (tip_distribution_address, _) = derive_tip_distribution_account_address(
         &tip_distribution_program_id.key,
@@ -65,14 +60,6 @@ pub fn process_set_merkle_root(
     let (_, bump, mut ncn_config_seeds) = NcnConfig::find_program_address(program_id, ncn.key);
     ncn_config_seeds.push(vec![bump]);
 
-    msg!("Made it almost there");
-
-    let mut ncn_config_signer_ai = ncn_config.clone();
-    // ncn_config_signer_ai.is_signer = true;
-    // ncn_config_signer_ai.is_writable = true;
-
-    msg!("NCN config key: {:?}", ncn_config.key);
-
     invoke_signed(
         &upload_merkle_root_ix(
             *tip_distribution_program_id.key,
@@ -90,7 +77,7 @@ pub fn process_set_merkle_root(
         &[
             tip_distribution_config.clone(),
             tip_distribution_account.clone(),
-            ncn_config_signer_ai,
+            ncn_config.clone(),
         ],
         &[ncn_config_seeds
             .iter()

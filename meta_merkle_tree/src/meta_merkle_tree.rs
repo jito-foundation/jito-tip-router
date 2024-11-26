@@ -200,6 +200,8 @@ impl MetaMerkleTree {
     }
 }
 
+// TODO rewrite tests for MetaMerkleTree
+
 // #[cfg(test)]
 // mod tests {
 //     use std::path::PathBuf;

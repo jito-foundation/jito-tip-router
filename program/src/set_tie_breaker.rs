@@ -17,8 +17,6 @@ pub fn process_set_tie_breaker(
     meta_merkle_root: [u8; 32],
     ncn_epoch: u64,
 ) -> ProgramResult {
-    // accounts: [ncn_config, ballot_box, ncn, tie_breaker_admin(signer)]
-
     let [ncn_config, ballot_box, ncn, tie_breaker_admin] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };

@@ -1,11 +1,4 @@
-// TODO write this
-
-// Import tip distribution program
-
-// Basic methods for initializing the joint
-// Remember the merkle_root_upload_authority system may be changing a bit
-
-use std::borrow::{Borrow, BorrowMut};
+use std::borrow::BorrowMut;
 
 use anchor_lang::AccountDeserialize;
 use borsh::BorshDeserialize;
@@ -24,7 +17,7 @@ use solana_sdk::{
     },
 };
 
-use crate::fixtures::{TestError, TestResult};
+use crate::fixtures::TestResult;
 
 pub struct TipDistributionClient {
     banks_client: BanksClient,

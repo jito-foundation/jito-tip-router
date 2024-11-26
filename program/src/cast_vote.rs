@@ -18,12 +18,6 @@ pub fn process_cast_vote(
     meta_merkle_root: [u8; 32],
     ncn_epoch: u64,
 ) -> ProgramResult {
-    /*
-        accounts:
-            [ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator]
-
-        ncn_config gonna be used to get the number of slots you can still cast votes for
-    */
     let [ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator] = accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -66,7 +60,6 @@ pub fn process_cast_vote(
         let epoch_snapshot_data = epoch_snapshot.data.borrow();
         let epoch_snapshot = EpochSnapshot::try_from_slice_unchecked(&epoch_snapshot_data)?;
 
-        // TODO do this when creating the ballotbox??
         if !epoch_snapshot.finalized() {
             return Err(TipRouterError::EpochSnapshotNotFinalized.into());
         }

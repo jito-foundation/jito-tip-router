@@ -61,6 +61,7 @@ impl From<GeneratedMerkleTree> for TreeNode {
     }
 }
 
+// TODO rewrite tests for MetaMerkleTree TreeNode
 #[cfg(test)]
 mod tests {
     use super::*;

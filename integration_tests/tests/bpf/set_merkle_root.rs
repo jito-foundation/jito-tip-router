@@ -1,34 +1,3 @@
-/*
-
-Goal:
-- Get a successful invoke of the set_merkle_root instruction
-- Have a clean way to set this up
-- Set myself up / have a good understanding of what I need to do to set up the other instructions
-- Maybe add some stuff to the TestBuilder so its easier for others?
-
-
-Working backwards what do I need to invoke this?
-
-- NCN config
-- NCN
-- Full ballot box
-- Vote account
-- Tip distribution account
-- tip distribution config
-- tip distribution program id
-
-
-1 Create GeneratedMerkleTree (with this vote account)
-2 Create MetaMerkleTree (with this vote account)
-
-- Set root of MetaMerkleTree in BallotBox
-
-- get_proof(vote_account) from MetaMerkleTree
-
--
-
-*/
-
 mod set_merkle_root {
     use jito_tip_distribution::state::ClaimStatus;
     use jito_tip_distribution_sdk::derive_tip_distribution_account_address;
@@ -42,7 +11,6 @@ mod set_merkle_root {
             StakeMetaCollection, TipDistributionMeta,
         },
         meta_merkle_tree::MetaMerkleTree,
-        tree_node,
     };
     use solana_sdk::{
         clock::{Clock, DEFAULT_SLOTS_PER_EPOCH},
@@ -54,8 +22,7 @@ mod set_merkle_root {
 
     use crate::{
         fixtures::{
-            test_builder::TestBuilder, tip_distribution_client::TipDistributionClient,
-            tip_router_client::TipRouterClient, TestError, TestResult,
+            test_builder::TestBuilder, tip_router_client::TipRouterClient, TestError, TestResult,
         },
         helpers::ballot_box::serialized_ballot_box_account,
     };
@@ -275,12 +242,6 @@ mod set_merkle_root {
                 node.max_num_nodes,
             )
             .unwrap();
-
-        println!("All relevant addresses: {:?}", ncn_address);
-        println!("Tip distribution address: {:?}", tip_distribution_address);
-        println!("NCN Config address: {:?}", ncn_config_address);
-        println!("Vote account: {:?}", vote_account);
-        println!("Tip router program id: {:?}", jito_tip_router_program::id());
 
         // Invoke set_merkle_root
         tip_router_client

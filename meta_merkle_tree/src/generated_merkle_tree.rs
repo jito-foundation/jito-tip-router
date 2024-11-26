@@ -1,3 +1,5 @@
+// Mostly copied from modules in jito-solana/tip-distributor/src
+// To be replaced by tip distributor code in this repo
 use std::{fs::File, io::BufReader, path::PathBuf};
 
 use jito_tip_distribution::state::ClaimStatus;
