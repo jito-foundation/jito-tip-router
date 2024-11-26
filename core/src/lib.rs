@@ -1,6 +1,7 @@
 pub mod ballot_box;
 pub mod constants;
 pub mod discriminators;
+pub mod epoch_reward_router;
 pub mod epoch_snapshot;
 pub mod error;
 pub mod fees;
