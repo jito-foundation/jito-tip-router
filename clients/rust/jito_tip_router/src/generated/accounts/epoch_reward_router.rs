@@ -7,11 +7,11 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::{BallotTally, OperatorVote};
+use crate::generated::types::{RewardBucket, RewardRoutes};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct BallotBox {
+pub struct EpochRewardRouter {
     pub discriminator: u64,
     #[cfg_attr(
         feature = "serde",
@@ -21,17 +21,15 @@ pub struct BallotBox {
     pub ncn_epoch: u64,
     pub bump: u8,
     pub slot_created: u64,
-    pub slot_consensus_reached: u64,
+    pub reward_pool: u64,
+    pub doa_rewards: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 128],
-    pub operators_voted: u64,
-    pub unique_ballots: u64,
-    pub winning_ballot: BallotTally,
-    pub operator_votes: [OperatorVote; 32],
-    pub ballot_tallies: [BallotTally; 32],
+    pub ncn_reward_buckets: [RewardBucket; 16],
+    pub reward_routes: [RewardRoutes; 32],
 }
 
-impl BallotBox {
+impl EpochRewardRouter {
     #[inline(always)]
     pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
         let mut data = data;
@@ -39,7 +37,7 @@ impl BallotBox {
     }
 }
 
-impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for BallotBox {
+impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for EpochRewardRouter {
     type Error = std::io::Error;
 
     fn try_from(
@@ -51,26 +49,26 @@ impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for BallotBox {
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountDeserialize for BallotBox {
+impl anchor_lang::AccountDeserialize for EpochRewardRouter {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         Ok(Self::deserialize(buf)?)
     }
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountSerialize for BallotBox {}
+impl anchor_lang::AccountSerialize for EpochRewardRouter {}
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::Owner for BallotBox {
+impl anchor_lang::Owner for EpochRewardRouter {
     fn owner() -> Pubkey {
         crate::JITO_TIP_ROUTER_ID
     }
 }
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::IdlBuild for BallotBox {}
+impl anchor_lang::IdlBuild for EpochRewardRouter {}
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::Discriminator for BallotBox {
+impl anchor_lang::Discriminator for EpochRewardRouter {
     const DISCRIMINATOR: [u8; 8] = [0; 8];
 }

@@ -14,7 +14,7 @@ pub struct Fees {
     pub activation_epoch: u64,
     pub block_engine_fee_bps: u64,
     pub dao_fee_bps: u64,
-    pub ncn_fee_groups_bps: [NcnFee; 16],
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
-    pub reserved: [u8; 64],
+    pub reserved: [u8; 128],
+    pub ncn_fee_groups_bps: [NcnFee; 16],
 }

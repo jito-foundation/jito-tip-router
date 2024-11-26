@@ -18,12 +18,18 @@ import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 export const JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO = 0x2100; // 8448
 /** ArithmeticOverflow: Overflow */
 export const JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW = 0x2101; // 8449
+/** ArithmeticUnderflowError: Underflow */
+export const JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR = 0x2102; // 8450
+/** ArithmeticFloorError: Floor Overflow */
+export const JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR = 0x2103; // 8451
 /** ModuloOverflow: Modulo Overflow */
-export const JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW = 0x2102; // 8450
+export const JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW = 0x2104; // 8452
 /** NewPreciseNumberError: New precise number error */
-export const JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR = 0x2103; // 8451
+export const JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR = 0x2105; // 8453
 /** CastToImpreciseNumberError: Cast to imprecise number error */
-export const JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR = 0x2104; // 8452
+export const JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR = 0x2106; // 8454
+/** CastToU64Error: Cast to u64 error */
+export const JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR = 0x2107; // 8455
 /** IncorrectWeightTableAdmin: Incorrect weight table admin */
 export const JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN = 0x2200; // 8704
 /** DuplicateMintsInTable: Duplicate mints in table */
@@ -88,12 +94,19 @@ export const JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED = 0x221d; // 8733
 export const JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED = 0x221e; // 8734
 /** InvalidNcnFeeGroup: Not a valid NCN fee group */
 export const JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP = 0x221f; // 8735
+/** OperatorRewardListFull: Operator reward list full */
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL = 0x2220; // 8736
+/** OperatorRewardNotFound: Operator Reward not found */
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND = 0x2221; // 8737
 
 export type JitoTipRouterError =
+  | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
+  | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
+  | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL
   | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED
   | typeof JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED
@@ -115,6 +128,8 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__NO_OPERATORS
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED
+  | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL
+  | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS
@@ -131,10 +146,13 @@ export type JitoTipRouterError =
 let jitoTipRouterErrorMessages: Record<JitoTipRouterError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   jitoTipRouterErrorMessages = {
+    [JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR]: `Floor Overflow`,
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW]: `Overflow`,
+    [JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR]: `Underflow`,
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL]: `Merkle root tally full`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
+    [JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR]: `Cast to u64 error`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL]: `NCN config vaults are at capacity`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED]: `Config supported mints do not match NCN Vault Count`,
     [JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED]: `Consensus already reached`,
@@ -156,6 +174,8 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE]: `There are no mints in the table`,
     [JITO_TIP_ROUTER_ERROR__NO_OPERATORS]: `No operators in ncn`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED]: `Operator is already finalized - should not happen`,
+    [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL]: `Operator reward list full`,
+    [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND]: `Operator Reward not found`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL]: `Operator votes full`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE]: `Too many mints for table`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS]: `Too many vault operator delegations`,

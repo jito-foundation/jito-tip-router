@@ -15,15 +15,24 @@ pub enum JitoTipRouterError {
     /// 8449 - Overflow
     #[error("Overflow")]
     ArithmeticOverflow = 0x2101,
-    /// 8450 - Modulo Overflow
+    /// 8450 - Underflow
+    #[error("Underflow")]
+    ArithmeticUnderflowError = 0x2102,
+    /// 8451 - Floor Overflow
+    #[error("Floor Overflow")]
+    ArithmeticFloorError = 0x2103,
+    /// 8452 - Modulo Overflow
     #[error("Modulo Overflow")]
-    ModuloOverflow = 0x2102,
-    /// 8451 - New precise number error
+    ModuloOverflow = 0x2104,
+    /// 8453 - New precise number error
     #[error("New precise number error")]
-    NewPreciseNumberError = 0x2103,
-    /// 8452 - Cast to imprecise number error
+    NewPreciseNumberError = 0x2105,
+    /// 8454 - Cast to imprecise number error
     #[error("Cast to imprecise number error")]
-    CastToImpreciseNumberError = 0x2104,
+    CastToImpreciseNumberError = 0x2106,
+    /// 8455 - Cast to u64 error
+    #[error("Cast to u64 error")]
+    CastToU64Error = 0x2107,
     /// 8704 - Incorrect weight table admin
     #[error("Incorrect weight table admin")]
     IncorrectWeightTableAdmin = 0x2200,
@@ -120,6 +129,12 @@ pub enum JitoTipRouterError {
     /// 8735 - Not a valid NCN fee group
     #[error("Not a valid NCN fee group")]
     InvalidNcnFeeGroup = 0x221F,
+    /// 8736 - Operator reward list full
+    #[error("Operator reward list full")]
+    OperatorRewardListFull = 0x2220,
+    /// 8737 - Operator Reward not found
+    #[error("Operator Reward not found")]
+    OperatorRewardNotFound = 0x2221,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

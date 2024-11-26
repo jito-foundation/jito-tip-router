@@ -632,7 +632,7 @@
           {
             "name": "winningBallot",
             "type": {
-              "defined": "Ballot"
+              "defined": "BallotTally"
             }
           },
           {
@@ -652,6 +652,77 @@
               "array": [
                 {
                   "defined": "BallotTally"
+                },
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EpochRewardRouter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncnEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "rewardPool",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "doaRewards",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          },
+          {
+            "name": "ncnRewardBuckets",
+            "type": {
+              "array": [
+                {
+                  "defined": "RewardBucket"
+                },
+                16
+              ]
+            }
+          },
+          {
+            "name": "rewardRoutes",
+            "type": {
+              "array": [
+                {
+                  "defined": "RewardRoutes"
                 },
                 32
               ]
@@ -885,6 +956,70 @@
       }
     },
     {
+      "name": "OperatorEpochRewardRouter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operator",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncnEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "rewardPool",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "operatorRewards",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          },
+          {
+            "name": "vaultRewards",
+            "type": {
+              "array": [
+                {
+                  "defined": "RewardRoutes"
+                },
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "TrackedMints",
       "type": {
         "kind": "struct",
@@ -1002,6 +1137,12 @@
         "kind": "struct",
         "fields": [
           {
+            "name": "index",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
             "name": "ballot",
             "type": {
               "defined": "Ballot"
@@ -1010,7 +1151,7 @@
           {
             "name": "stakeWeight",
             "type": {
-              "defined": "PodU128"
+              "defined": "StakeWeight"
             }
           },
           {
@@ -1049,13 +1190,63 @@
           {
             "name": "stakeWeight",
             "type": {
-              "defined": "PodU128"
+              "defined": "StakeWeight"
             }
           },
           {
             "name": "ballotIndex",
             "type": {
               "defined": "PodU16"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RewardRoutes",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "destination",
+            "type": "publicKey"
+          },
+          {
+            "name": "rewards",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RewardBucket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "rewards",
+            "type": {
+              "defined": "PodU64"
             }
           },
           {
@@ -1086,6 +1277,12 @@
             }
           },
           {
+            "name": "ncnFeeGroup",
+            "type": {
+              "defined": "NcnFeeGroup"
+            }
+          },
+          {
             "name": "stakeWeight",
             "type": {
               "defined": "StakeWeight"
@@ -1111,6 +1308,15 @@
           {
             "name": "daoFeeWallet",
             "type": "publicKey"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
           },
           {
             "name": "fee1",
@@ -1151,6 +1357,15 @@
             }
           },
           {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          },
+          {
             "name": "ncnFeeGroupsBps",
             "type": {
               "array": [
@@ -1158,15 +1373,6 @@
                   "defined": "NcnFee"
                 },
                 16
-              ]
-            }
-          },
-          {
-            "name": "reserved",
-            "type": {
-              "array": [
-                "u8",
-                64
               ]
             }
           }
@@ -1204,6 +1410,56 @@
           {
             "name": "group",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RewardRoutes",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "destination",
+            "type": "publicKey"
+          },
+          {
+            "name": "rewards",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RewardBucket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "rewards",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }
@@ -1365,18 +1621,33 @@
     },
     {
       "code": 8450,
+      "name": "ArithmeticUnderflowError",
+      "msg": "Underflow"
+    },
+    {
+      "code": 8451,
+      "name": "ArithmeticFloorError",
+      "msg": "Floor Overflow"
+    },
+    {
+      "code": 8452,
       "name": "ModuloOverflow",
       "msg": "Modulo Overflow"
     },
     {
-      "code": 8451,
+      "code": 8453,
       "name": "NewPreciseNumberError",
       "msg": "New precise number error"
     },
     {
-      "code": 8452,
+      "code": 8454,
       "name": "CastToImpreciseNumberError",
       "msg": "Cast to imprecise number error"
+    },
+    {
+      "code": 8455,
+      "name": "CastToU64Error",
+      "msg": "Cast to u64 error"
     },
     {
       "code": 8704,
@@ -1537,6 +1808,16 @@
       "code": 8735,
       "name": "InvalidNcnFeeGroup",
       "msg": "Not a valid NCN fee group"
+    },
+    {
+      "code": 8736,
+      "name": "OperatorRewardListFull",
+      "msg": "Operator reward list full"
+    },
+    {
+      "code": 8737,
+      "name": "OperatorRewardNotFound",
+      "msg": "Operator Reward not found"
     }
   ],
   "metadata": {

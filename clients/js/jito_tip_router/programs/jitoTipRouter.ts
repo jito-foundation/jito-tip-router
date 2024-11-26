@@ -30,9 +30,11 @@ export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
 
 export enum JitoTipRouterAccount {
   BallotBox,
+  EpochRewardRouter,
   EpochSnapshot,
   OperatorSnapshot,
   NcnConfig,
+  OperatorEpochRewardRouter,
   TrackedMints,
   WeightTable,
 }

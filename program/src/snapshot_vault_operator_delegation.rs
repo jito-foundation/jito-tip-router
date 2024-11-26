@@ -148,6 +148,7 @@ pub fn process_snapshot_vault_operator_delegation(
         current_slot,
         *vault.key,
         vault_index,
+        ncn_fee_group,
         &stake_weight,
     )?;
 

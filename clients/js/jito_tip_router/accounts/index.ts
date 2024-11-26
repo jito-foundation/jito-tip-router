@@ -7,8 +7,10 @@
  */
 
 export * from './ballotBox';
+export * from './epochRewardRouter';
 export * from './epochSnapshot';
 export * from './ncnConfig';
+export * from './operatorEpochRewardRouter';
 export * from './operatorSnapshot';
 export * from './trackedMints';
 export * from './weightTable';

@@ -10,8 +10,12 @@ import {
   combineCodec,
   getAddressDecoder,
   getAddressEncoder,
+  getArrayDecoder,
+  getArrayEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU8Decoder,
+  getU8Encoder,
   type Address,
   type Codec,
   type Decoder,
@@ -19,10 +23,16 @@ import {
 } from '@solana/web3.js';
 import { getFeesDecoder, getFeesEncoder, type Fees, type FeesArgs } from '.';
 
-export type FeeConfig = { daoFeeWallet: Address; fee1: Fees; fee2: Fees };
+export type FeeConfig = {
+  daoFeeWallet: Address;
+  reserved: Array<number>;
+  fee1: Fees;
+  fee2: Fees;
+};
 
 export type FeeConfigArgs = {
   daoFeeWallet: Address;
+  reserved: Array<number>;
   fee1: FeesArgs;
   fee2: FeesArgs;
 };
@@ -30,6 +40,7 @@ export type FeeConfigArgs = {
 export function getFeeConfigEncoder(): Encoder<FeeConfigArgs> {
   return getStructEncoder([
     ['daoFeeWallet', getAddressEncoder()],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
     ['fee1', getFeesEncoder()],
     ['fee2', getFeesEncoder()],
   ]);
@@ -38,6 +49,7 @@ export function getFeeConfigEncoder(): Encoder<FeeConfigArgs> {
 export function getFeeConfigDecoder(): Decoder<FeeConfig> {
   return getStructDecoder([
     ['daoFeeWallet', getAddressDecoder()],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
     ['fee1', getFeesDecoder()],
     ['fee2', getFeesDecoder()],
   ]);

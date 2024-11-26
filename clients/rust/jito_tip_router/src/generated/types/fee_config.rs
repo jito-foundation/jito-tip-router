@@ -17,6 +17,8 @@ pub struct FeeConfig {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub dao_fee_wallet: Pubkey,
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
+    pub reserved: [u8; 128],
     pub fee1: Fees,
     pub fee2: Fees,
 }

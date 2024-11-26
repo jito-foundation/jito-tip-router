@@ -7,7 +7,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::StakeWeight;
+use crate::generated::types::{NcnFeeGroup, StakeWeight};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -18,6 +18,7 @@ pub struct VaultOperatorStakeWeight {
     )]
     pub vault: Pubkey,
     pub vault_index: u64,
+    pub ncn_fee_group: NcnFeeGroup,
     pub stake_weight: StakeWeight,
     pub reserved: [u8; 32],
 }

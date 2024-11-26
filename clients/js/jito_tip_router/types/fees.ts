@@ -8,20 +8,17 @@
 
 import {
   combineCodec,
-  fixDecoderSize,
-  fixEncoderSize,
   getArrayDecoder,
   getArrayEncoder,
-  getBytesDecoder,
-  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
   getU64Encoder,
+  getU8Decoder,
+  getU8Encoder,
   type Codec,
   type Decoder,
   type Encoder,
-  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
   getNcnFeeDecoder,
@@ -34,16 +31,16 @@ export type Fees = {
   activationEpoch: bigint;
   blockEngineFeeBps: bigint;
   daoFeeBps: bigint;
+  reserved: Array<number>;
   ncnFeeGroupsBps: Array<NcnFee>;
-  reserved: ReadonlyUint8Array;
 };
 
 export type FeesArgs = {
   activationEpoch: number | bigint;
   blockEngineFeeBps: number | bigint;
   daoFeeBps: number | bigint;
+  reserved: Array<number>;
   ncnFeeGroupsBps: Array<NcnFeeArgs>;
-  reserved: ReadonlyUint8Array;
 };
 
 export function getFeesEncoder(): Encoder<FeesArgs> {
@@ -51,8 +48,8 @@ export function getFeesEncoder(): Encoder<FeesArgs> {
     ['activationEpoch', getU64Encoder()],
     ['blockEngineFeeBps', getU64Encoder()],
     ['daoFeeBps', getU64Encoder()],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
     ['ncnFeeGroupsBps', getArrayEncoder(getNcnFeeEncoder(), { size: 16 })],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 64)],
   ]);
 }
 
@@ -61,8 +58,8 @@ export function getFeesDecoder(): Decoder<Fees> {
     ['activationEpoch', getU64Decoder()],
     ['blockEngineFeeBps', getU64Decoder()],
     ['daoFeeBps', getU64Decoder()],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
     ['ncnFeeGroupsBps', getArrayDecoder(getNcnFeeDecoder(), { size: 16 })],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 64)],
   ]);
 }
 

@@ -25,8 +25,12 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
+  getNcnFeeGroupDecoder,
+  getNcnFeeGroupEncoder,
   getStakeWeightDecoder,
   getStakeWeightEncoder,
+  type NcnFeeGroup,
+  type NcnFeeGroupArgs,
   type StakeWeight,
   type StakeWeightArgs,
 } from '.';
@@ -34,6 +38,7 @@ import {
 export type VaultOperatorStakeWeight = {
   vault: Address;
   vaultIndex: bigint;
+  ncnFeeGroup: NcnFeeGroup;
   stakeWeight: StakeWeight;
   reserved: ReadonlyUint8Array;
 };
@@ -41,6 +46,7 @@ export type VaultOperatorStakeWeight = {
 export type VaultOperatorStakeWeightArgs = {
   vault: Address;
   vaultIndex: number | bigint;
+  ncnFeeGroup: NcnFeeGroupArgs;
   stakeWeight: StakeWeightArgs;
   reserved: ReadonlyUint8Array;
 };
@@ -49,6 +55,7 @@ export function getVaultOperatorStakeWeightEncoder(): Encoder<VaultOperatorStake
   return getStructEncoder([
     ['vault', getAddressEncoder()],
     ['vaultIndex', getU64Encoder()],
+    ['ncnFeeGroup', getNcnFeeGroupEncoder()],
     ['stakeWeight', getStakeWeightEncoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 32)],
   ]);
@@ -58,6 +65,7 @@ export function getVaultOperatorStakeWeightDecoder(): Decoder<VaultOperatorStake
   return getStructDecoder([
     ['vault', getAddressDecoder()],
     ['vaultIndex', getU64Decoder()],
+    ['ncnFeeGroup', getNcnFeeGroupDecoder()],
     ['stakeWeight', getStakeWeightDecoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 32)],
   ]);
