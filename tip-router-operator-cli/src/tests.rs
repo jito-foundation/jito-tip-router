@@ -3,14 +3,18 @@ use solana_sdk::{signature::Keypair, clock::Slot, hash::Hash};
 use std::path::PathBuf;
 use tempfile::TempDir;
 use anyhow::Result;
-use solana_client::rpc_client::RpcClient;  // Add this import
-use crate::snapshot::SnapshotCreator;  // Add this import
+use solana_client::rpc_client::RpcClient;
+use crate::snapshot::SnapshotCreator;
+use std::fs;
+
+// Take the part that does the processing not the ticks/polling, oh a new epoch has happen and have some state and expected output and based on on-chain state get the expected output.
 
 pub struct TestContext {
     pub client: EllipsisClient,
     pub keypair: Keypair,
     pub output_dir: PathBuf,
-    pub temp_dir: TempDir, // Add this to clean up test files
+    pub temp_dir: TempDir,
+    pub blockstore_dir: PathBuf,
 }
 
 impl TestContext {
@@ -19,51 +23,42 @@ impl TestContext {
         let client = EllipsisClient::from_rpc(RpcClient::new("http://localhost:8899"), &keypair).unwrap();
         let temp_dir = TempDir::new().unwrap();
         let output_dir = temp_dir.path().join("snapshots");
+        let blockstore_dir = temp_dir.path().join("blockstore");
+        
+        // Create directories
+        fs::create_dir_all(&output_dir).unwrap();
+        fs::create_dir_all(&blockstore_dir).unwrap();
         
         Self {
             client,
             keypair,
             output_dir,
             temp_dir,
+            blockstore_dir,
         }
+    }
+
+    pub fn create_dummy_snapshot(&self, slot: Slot) -> Result<()> {
+        let snapshot_path = self.output_dir.join(format!("snapshot-{}.tar.zstd", slot));
+        fs::write(snapshot_path, b"dummy snapshot data")?;
+        Ok(())
     }
 }
 
 #[tokio::test]
-async fn test_snapshot_creation() -> Result<()> {
+async fn test_snapshot_creator_initialization() -> Result<()> {
     let ctx = TestContext::new().await;
     
-    // Setup test data
-    let slot: Slot = 100;
-    let epoch = 5;
-    let bank_hash = Hash::new_unique();
-    
-    let blockstore_path = ctx.temp_dir.path().join("blockstore");  // Remove to_str() and to_string()
-    // Create a snapshot creator with test configuration
     let snapshot_creator = SnapshotCreator::new(
         &ctx.client.url(),           
-        ctx.output_dir.to_str().unwrap().to_string(),  // Convert PathBuf to String
+        ctx.output_dir.to_str().unwrap().to_string(),
         5,                          
-        "bzip2".to_string(),     
-        ctx.keypair.insecure_clone(),  // Use insecure_clone() instead of clone()
-        blockstore_path,     
+        "zstd".to_string(),     
+        ctx.keypair.insecure_clone(),
+        ctx.blockstore_dir,     
     )?;
 
-    // Simulate epoch boundary processing
-    // let result = snapshot_creator.process_epoch_boundary(epoch, slot).await?;
-    
-    // // Verify snapshot was created
-    // assert!(result.snapshot_path.exists());
-    // assert!(result.slot == slot);
-    
-    // // Verify snapshot contents
-    // let snapshot_path = ctx.output_dir.join(format!("snapshot-{}.tar.bz2", slot));
-    // assert!(snapshot_path.exists());
-    
-    // // Validate the snapshot
-    // let validation_result = snapshot_creator.validate_snapshot(slot).await;
-    // assert!(validation_result.is_ok());
-
+    assert!(snapshot_creator.get_output_dir().exists());
     Ok(())
 }
 
@@ -71,31 +66,34 @@ async fn test_snapshot_creation() -> Result<()> {
 async fn test_snapshot_cleanup() -> Result<()> {
     let ctx = TestContext::new().await;
     
-    // Create snapshot creator with small max_snapshots
+    // Create snapshot creator with max 2 snapshots
     let snapshot_creator = SnapshotCreator::new(
-        &ctx.keypair,
-        &ctx.client.url(),
-        &ctx.output_dir,
-        2, // Only keep 2 snapshots
-        CompressionType::Bzip2,
-        true,
+        &ctx.client.url(),           
+        ctx.output_dir.to_str().unwrap().to_string(),
+        2,                          
+        "zstd".to_string(),     
+        ctx.keypair.insecure_clone(),
+        ctx.blockstore_dir.clone(),     // Add .clone() here
     )?;
 
-    // Create multiple snapshots
-    for slot in [100, 200, 300].iter() {
-        snapshot_creator.process_epoch_boundary(5, *slot).await?;
-    }
+    // Create dummy snapshots
+    ctx.create_dummy_snapshot(100)?;
+    ctx.create_dummy_snapshot(200)?;
+    ctx.create_dummy_snapshot(300)?;
 
-    // Verify cleanup
-    let snapshots: Vec<_> = std::fs::read_dir(&ctx.output_dir)?
+    // Trigger cleanup
+    snapshot_creator.cleanup_old_snapshots().await?;
+
+    // Verify only 2 most recent snapshots remain
+    let snapshots: Vec<_> = fs::read_dir(&ctx.output_dir)?
         .filter_map(|entry| entry.ok())
         .collect();
     
     assert_eq!(snapshots.len(), 2, "Should only keep 2 most recent snapshots");
     
     // Verify we kept the most recent ones
-    let snapshot_300 = ctx.output_dir.join("snapshot-300.tar.bz2");
-    let snapshot_200 = ctx.output_dir.join("snapshot-200.tar.bz2");
+    let snapshot_300 = ctx.output_dir.join("snapshot-300.tar.zstd");
+    let snapshot_200 = ctx.output_dir.join("snapshot-200.tar.zstd");
     assert!(snapshot_300.exists());
     assert!(snapshot_200.exists());
     
@@ -106,50 +104,53 @@ async fn test_snapshot_cleanup() -> Result<()> {
 async fn test_snapshot_validation_failure() -> Result<()> {
     let ctx = TestContext::new().await;
     
-    let blockstore_path = ctx.temp_dir.path().join("blockstore");  // Add this line
     let snapshot_creator = SnapshotCreator::new(
         &ctx.client.url(),           
         ctx.output_dir.to_str().unwrap().to_string(),
         5,                          
-        "bzip2".to_string(),     
+        "zstd".to_string(),     
         ctx.keypair.insecure_clone(),
-        blockstore_path,     
+        ctx.blockstore_dir,     
     )?;
 
     // Try to validate non-existent snapshot
     let invalid_slot = 999;
-    // let result = snapshot_creator.validate_snapshot(invalid_slot).await;
-    // assert!(result.is_err());
+    let result = snapshot_creator.validate_snapshot(invalid_slot).await;
+    assert!(result.is_err());
     
-    // // Create corrupt snapshot
-    // let corrupt_snapshot_path = ctx.output_dir.join(format!("snapshot-{}.tar.bz2", invalid_slot));
-    // std::fs::write(&corrupt_snapshot_path, b"corrupt data")?;
+    // Create corrupt snapshot
+    let corrupt_snapshot_path = ctx.output_dir.join(format!("snapshot-{}.tar.zstd", invalid_slot));
+    fs::write(&corrupt_snapshot_path, b"corrupt data")?;
     
-    // // Validation should fail
-    // let result = snapshot_creator.validate_snapshot(invalid_slot).await;
-    // assert!(result.is_err());
+    // Validation should fail for corrupt snapshot
+    let result = snapshot_creator.validate_snapshot(invalid_slot).await;
+    assert!(result.is_err());
 
     Ok(())
 }
 
-// Helper function to simulate epoch boundary state
-#[derive(Debug)]
-struct EpochBoundaryState {
-    slot: Slot,
-    epoch: u64,
-    bank_hash: Hash,
-    accounts_hash: Hash,
-}
+#[tokio::test]
+async fn test_stake_meta_generation() {
+    let ctx = TestContext::new().await;
+    
+    let snapshot_creator = SnapshotCreator::new(
+        &ctx.client.url(),           
+        ctx.output_dir.to_str().unwrap().to_string(),
+        5,                          
+        "zstd".to_string(),     
+        ctx.keypair.insecure_clone(),
+        ctx.blockstore_dir.clone(),     
+    ).unwrap();
 
-impl EpochBoundaryState {
-    fn new(slot: Slot, epoch: u64) -> Self {
-        Self {
-            slot,
-            epoch,
-            bank_hash: Hash::new_unique(),
-            accounts_hash: Hash::new_unique(),
-        }
-    }
-}
+    let slot = 100;
+    // Use std::panic::catch_unwind with a synchronous block
+    let result = tokio::task::spawn_blocking(move || {
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(snapshot_creator.create_stake_meta(slot))
+        }))
+    }).await.unwrap();
 
-// Take the part that does the processing not the ticks/polling, oh a new epoch has happen and have some state and expected output and based on on-chain state get the expected output.
+    assert!(result.is_err(), "Expected panic due to no staked nodes");
+}

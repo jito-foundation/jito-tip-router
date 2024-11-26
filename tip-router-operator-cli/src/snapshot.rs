@@ -19,6 +19,10 @@ use ellipsis_client::EllipsisClient;
 use std::collections::HashMap;
 use serde::{ Serialize, Deserialize };
 use solana_stake_program;
+use solana_sdk::account::ReadableAccount;
+use solana_accounts_db::accounts_index::ScanConfig;
+use solana_stake_program::stake_state::StakeStateV2;
+use bincode;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct StakeMetaAccount {
@@ -205,7 +209,7 @@ impl SnapshotCreator {
         Ok(())
     }
 
-    async fn validate_snapshot(&self, slot: Slot) -> Result<()> {
+    pub async fn validate_snapshot(&self, slot: Slot) -> Result<()> {
         info!("Validating snapshot for slot {}", slot);
 
         let snapshot_archive_path = self.output_dir.join(
@@ -251,7 +255,7 @@ impl SnapshotCreator {
         Ok(())
     }
 
-    async fn cleanup_old_snapshots(&self) -> Result<()> {
+    pub async fn cleanup_old_snapshots(&self) -> Result<()> {
         info!("Cleaning up old snapshots");
 
         let mut snapshots: Vec<(Slot, PathBuf)> = fs
@@ -286,7 +290,7 @@ impl SnapshotCreator {
         Ok(())
     }
 
-    async fn create_stake_meta(&self, slot: Slot) -> Result<()> {
+    pub async fn create_stake_meta(&self, slot: Slot) -> Result<()> {
         info!("Creating stake meta for slot {}", slot);
         datapoint_info!("tip_router_stake_meta", ("slot", slot, i64), ("event", "start", String));
 
@@ -318,46 +322,41 @@ impl SnapshotCreator {
         let vote_accounts = bank.vote_accounts();
         let mut validator_stake_meta = HashMap::new();
 
-        // First, get all stake accounts once
-        if let Ok(accounts) = bank.get_program_accounts(&solana_stake_program::id(), None) {
-            // Process all stake accounts first
+        // Process all stake accounts
+        if
+            let Ok(accounts) = bank.get_program_accounts(
+                &solana_stake_program::id(),
+                &ScanConfig::default()
+            )
+        {
             for (stake_pubkey, account) in accounts {
-                if
-                    let Ok(stake_state) =
-                        solana_stake_program::stake_state::StakeState::deserialize(
-                            &account.data(),
-                            account.owner()
-                        )
-                {
-                    if
-                        let solana_stake_program::stake_state::StakeState::Stake(_, stake) =
-                            stake_state
-                    {
+                if let Ok(stake_state) = bincode::deserialize(account.data()) {
+                    if let StakeStateV2::Stake(meta, stake, _stake_flags) = stake_state {
                         let voter_pubkey = stake.delegation.voter_pubkey.to_string();
                         let lamports = account.lamports();
 
-                        // Get or create the validator entry
                         validator_stake_meta
                             .entry(voter_pubkey)
-                            .and_modify(|meta: &mut ValidatorStakeMeta| {
-                                meta.total_stake += lamports;
-                                meta.stake_accounts.insert(
-                                    stake_pubkey.to_string(),
-                                    StakeMetaAccount {
-                                        lamports,
-                                        owner: account.owner().to_string(),
-                                        stake_authority: None,
-                                        withdraw_authority: None,
-                                    }
-                                );
+                            .and_modify(|v: &mut ValidatorStakeMeta| {
+                                v.total_stake += lamports;
+                                v.stake_accounts.insert(stake_pubkey.to_string(), StakeMetaAccount {
+                                    lamports,
+                                    owner: account.owner().to_string(),
+                                    stake_authority: meta.authorized.staker.to_string().into(),
+                                    withdraw_authority: meta.authorized.withdrawer
+                                        .to_string()
+                                        .into(),
+                                });
                             })
                             .or_insert_with(|| {
                                 let mut stake_accounts = HashMap::new();
                                 stake_accounts.insert(stake_pubkey.to_string(), StakeMetaAccount {
                                     lamports,
                                     owner: account.owner().to_string(),
-                                    stake_authority: None,
-                                    withdraw_authority: None,
+                                    stake_authority: meta.authorized.staker.to_string().into(),
+                                    withdraw_authority: meta.authorized.withdrawer
+                                        .to_string()
+                                        .into(),
                                 });
                                 ValidatorStakeMeta {
                                     vote_account: stake.delegation.voter_pubkey.to_string(),
@@ -372,11 +371,13 @@ impl SnapshotCreator {
             }
         }
 
-        // Now fill in the validator identity and commission information
+        // Fill in validator identity and commission information
         for (vote_pubkey, (validator_identity, vote_account)) in vote_accounts.as_ref() {
             if let Some(meta) = validator_stake_meta.get_mut(&vote_pubkey.to_string()) {
                 meta.identity = validator_identity.to_string();
-                meta.commission = vote_account.commission;
+                if let Ok(vote_state) = vote_account.vote_state() {
+                    meta.commission = vote_state.commission;
+                }
             }
         }
 
@@ -394,32 +395,11 @@ impl SnapshotCreator {
         Ok(())
     }
 
-    async fn create_merkle_trees(&self, slot: Slot) -> Result<()> {
-        info!("Creating merkle trees for slot {}", slot);
-        datapoint_info!("tip_router_merkle_trees", ("slot", slot, i64), ("event", "start", String));
-        // TODO: Implement merkle tree creation
-        Ok(())
-    }
-
-    async fn create_meta_merkle_tree(&self, slot: Slot) -> Result<()> {
-        info!("Creating meta merkle tree for slot {}", slot);
-        datapoint_info!(
-            "tip_router_meta_merkle_tree",
-            ("slot", slot, i64),
-            ("event", "start", String)
-        );
-        // TODO: Implement meta merkle tree creation
-        Ok(())
-    }
-
-    async fn upload_meta_merkle_root(&self, slot: Slot) -> Result<()> {
-        info!("Uploading meta merkle root for slot {}", slot);
-        datapoint_info!("tip_router_upload_root", ("slot", slot, i64), ("event", "start", String));
-        // TODO: Implement NCN upload
-        Ok(())
-    }
-
     fn get_epoch_at_slot(&self, slot: Slot, epoch_schedule: &EpochSchedule) -> u64 {
         epoch_schedule.get_epoch(slot)
+    }
+    
+    pub fn get_output_dir(&self) -> &PathBuf {
+        &self.output_dir
     }
 }

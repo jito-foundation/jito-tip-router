@@ -7078,6 +7078,7 @@ name = "tip-router-operator-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "clap 4.5.20",
  "crossbeam-channel",
  "ellipsis-client",
@@ -7085,12 +7086,15 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
+ "solana-accounts-db",
  "solana-cli-config",
  "solana-client",
  "solana-ledger",
  "solana-metrics",
  "solana-runtime",
  "solana-sdk",
+ "solana-stake-program",
+ "solana-vote-program",
  "tempfile",
  "thiserror",
  "tokio",
