@@ -27,7 +27,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 shank = { workspace = true }
 solana-program = { workspace = true }
-solana-sdk = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-math = { workspace = true }
 spl-token = { workspace = true }

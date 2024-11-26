@@ -837,6 +837,7 @@ impl TipRouterClient {
         let tip_distribution_config =
             jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program_id)
                 .0;
+        let restaking_program_id = jito_restaking_program::id();
 
         self.set_merkle_root(
             ncn_config,
@@ -846,6 +847,7 @@ impl TipRouterClient {
             tip_distribution_account,
             tip_distribution_config,
             tip_distribution_program_id,
+            restaking_program_id,
             proof,
             merkle_root,
             max_total_claim,
@@ -864,6 +866,7 @@ impl TipRouterClient {
         tip_distribution_account: Pubkey,
         tip_distribution_config: Pubkey,
         tip_distribution_program_id: Pubkey,
+        restaking_program_id: Pubkey,
         proof: Vec<[u8; 32]>,
         merkle_root: [u8; 32],
         max_total_claim: u64,
@@ -878,6 +881,7 @@ impl TipRouterClient {
             .tip_distribution_account(tip_distribution_account)
             .tip_distribution_config(tip_distribution_config)
             .tip_distribution_program(tip_distribution_program_id)
+            .restaking_program(restaking_program_id)
             .proof(proof)
             .merkle_root(merkle_root)
             .max_total_claim(max_total_claim)

@@ -22,7 +22,7 @@ use crate::{
 // We need to discern between leaf and intermediate nodes to prevent trivial second
 // pre-image attacks.
 // https://flawed.net.nz/2018/02/21/attacking-merkle-trees-with-a-second-preimage-attack
-const LEAF_PREFIX: &[u8] = &[0];
+pub const LEAF_PREFIX: &[u8] = &[0];
 
 /// Merkle Tree which will be used to set the merkle root for each tip distribution account.
 /// Contains all the information necessary to verify claims against the Merkle Tree.
@@ -39,7 +39,8 @@ pub type Result<T> = result::Result<T, MerkleTreeError>;
 
 impl MetaMerkleTree {
     pub fn new(mut tree_nodes: Vec<TreeNode>) -> Result<Self> {
-        // TODO Consider a sorting step here
+        // TODO Consider correctness of a sorting step here
+        tree_nodes.sort_by_key(|node| node.hash());
 
         let hashed_nodes = tree_nodes
             .iter()
@@ -106,9 +107,9 @@ impl MetaMerkleTree {
         file.write_all(serialized.as_bytes()).unwrap();
     }
 
-    pub fn get_node(&self, vote_account: &Pubkey) -> TreeNode {
+    pub fn get_node(&self, tip_distribution_account: &Pubkey) -> TreeNode {
         for i in self.tree_nodes.iter() {
-            if i.tip_distribution_account == *vote_account {
+            if i.tip_distribution_account == *tip_distribution_account {
                 return i.clone();
             }
         }
@@ -184,6 +185,8 @@ impl MetaMerkleTree {
                 return Err(MerkleValidationError("invalid merkle proof".to_string()));
             }
         }
+
+        println!("Verified proof");
 
         Ok(())
     }

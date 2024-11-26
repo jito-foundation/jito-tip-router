@@ -658,7 +658,7 @@
       "accounts": [
         {
           "name": "ncnConfig",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -688,6 +688,11 @@
         },
         {
           "name": "tipDistributionProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         }

@@ -42,8 +42,15 @@ mod set_merkle_root {
             StakeMetaCollection, TipDistributionMeta,
         },
         meta_merkle_tree::MetaMerkleTree,
+        tree_node,
     };
-    use solana_sdk::pubkey::Pubkey;
+    use solana_sdk::{
+        clock::{Clock, DEFAULT_SLOTS_PER_EPOCH},
+        epoch_schedule::EpochSchedule,
+        pubkey::Pubkey,
+        signer::Signer,
+        sysvar::epoch_schedule,
+    };
 
     use crate::{
         fixtures::{
@@ -207,14 +214,14 @@ mod set_merkle_root {
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_address).0;
 
         let epoch = 0;
-
         tip_distribution_client
             .do_initialize(ncn_config_address)
             .await?;
-        let vote_account = tip_distribution_client.setup_vote_account().await?;
+        let vote_keypair = tip_distribution_client.setup_vote_account().await?;
+        let vote_account = vote_keypair.pubkey();
 
         tip_distribution_client
-            .do_initialize_tip_distribution_account(ncn_config_address, vote_account, epoch, 100)
+            .do_initialize_tip_distribution_account(ncn_config_address, vote_keypair, epoch, 100)
             .await?;
 
         let meta_merkle_tree_fixture =
@@ -232,12 +239,72 @@ mod set_merkle_root {
             ballot_box
         };
 
+        let epoch_schedule: EpochSchedule = fixture.epoch_schedule().await;
+
+        // Must warp before .set_account
+        fixture
+            .warp_slot_incremental(epoch_schedule.get_slots_in_epoch(epoch))
+            .await?;
+
         fixture
             .set_account(
                 ballot_box_address,
                 serialized_ballot_box_account(&ballot_box_fixture),
             )
             .await;
+
+        let tip_distribution_address = derive_tip_distribution_account_address(
+            &jito_tip_distribution::id(),
+            &vote_account,
+            epoch,
+        )
+        .0;
+
+        // Get proof for vote_account
+        let node = meta_merkle_tree_fixture
+            .meta_merkle_tree
+            .get_node(&tip_distribution_address);
+        let proof = node.proof.clone().unwrap();
+
+        ballot_box_fixture
+            .verify_merkle_root(
+                tip_distribution_address,
+                node.proof.unwrap(),
+                node.validator_merkle_root,
+                node.max_total_claim,
+                node.max_num_nodes,
+            )
+            .unwrap();
+
+        println!("All relevant addresses: {:?}", ncn_address);
+        println!("Tip distribution address: {:?}", tip_distribution_address);
+        println!("NCN Config address: {:?}", ncn_config_address);
+        println!("Vote account: {:?}", vote_account);
+        println!("Tip router program id: {:?}", jito_tip_router_program::id());
+
+        // Invoke set_merkle_root
+        tip_router_client
+            .do_set_merkle_root(
+                ncn_address,
+                vote_account,
+                proof,
+                node.validator_merkle_root,
+                node.max_total_claim,
+                node.max_num_nodes,
+                epoch,
+            )
+            .await?;
+
+        // Fetch the tip distribution account and check root
+        let tip_distribution_account = tip_distribution_client
+            .get_tip_distribution_account(vote_account, epoch)
+            .await?;
+
+        let merkle_root = tip_distribution_account.merkle_root.unwrap();
+
+        assert_eq!(merkle_root.root, node.validator_merkle_root);
+        assert_eq!(merkle_root.max_num_nodes, node.max_num_nodes);
+        assert_eq!(merkle_root.max_total_claim, node.max_total_claim);
 
         Ok(())
     }

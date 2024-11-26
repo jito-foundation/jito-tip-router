@@ -43,7 +43,7 @@ const_str_to_pubkey = "0.1.1"
 envfile = "0.2.1"
 env_logger = "0.10.2"
 fast-math = "0.1"
-getrandom = { version = "0.1.15", features = ["custom"] }
+getrandom = { version = "0.1.16", features = ["custom"] }
 
 hex = "0.4.3"
 indexmap = "2.1.0"

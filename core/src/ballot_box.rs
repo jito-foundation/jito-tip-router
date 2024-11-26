@@ -3,9 +3,11 @@ use jito_bytemuck::{
     types::{PodU128, PodU16, PodU64},
     AccountDeserialize, Discriminator,
 };
-use meta_merkle_tree::tree_node::TreeNode;
+use meta_merkle_tree::{meta_merkle_tree::LEAF_PREFIX, tree_node::TreeNode};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{
+    account_info::AccountInfo, hash::hashv, msg, program_error::ProgramError, pubkey::Pubkey,
+};
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{constants::PRECISE_CONSENSUS, discriminators::Discriminators, error::TipRouterError};
@@ -434,10 +436,12 @@ impl BallotBox {
             max_num_nodes,
         );
 
+        let node_hash = hashv(&[LEAF_PREFIX, &tree_node.hash().to_bytes()]);
+
         if !meta_merkle_tree::verify::verify(
             proof,
             self.winning_ballot.root(),
-            tree_node.hash().to_bytes(),
+            node_hash.to_bytes(),
         ) {
             return Err(TipRouterError::InvalidMerkleProof);
         }

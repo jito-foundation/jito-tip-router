@@ -10,6 +10,7 @@ edition = { workspace = true }
 readme = { workspace = true }
 
 [dev-dependencies]
+anchor-lang = { workspace = true }
 borsh = { workspace = true }
 bytemuck = { workspace = true }
 jito-bytemuck = { workspace = true }

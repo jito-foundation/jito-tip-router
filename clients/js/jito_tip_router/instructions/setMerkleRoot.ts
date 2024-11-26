@@ -51,13 +51,14 @@ export type SetMerkleRootInstruction<
   TAccountTipDistributionAccount extends string | IAccountMeta<string> = string,
   TAccountTipDistributionConfig extends string | IAccountMeta<string> = string,
   TAccountTipDistributionProgram extends string | IAccountMeta<string> = string,
+  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
       TAccountNcnConfig extends string
-        ? ReadonlyAccount<TAccountNcnConfig>
+        ? WritableAccount<TAccountNcnConfig>
         : TAccountNcnConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountBallotBox extends string
@@ -75,6 +76,9 @@ export type SetMerkleRootInstruction<
       TAccountTipDistributionProgram extends string
         ? ReadonlyAccount<TAccountTipDistributionProgram>
         : TAccountTipDistributionProgram,
+      TAccountRestakingProgram extends string
+        ? ReadonlyAccount<TAccountRestakingProgram>
+        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -139,6 +143,7 @@ export type SetMerkleRootInput<
   TAccountTipDistributionAccount extends string = string,
   TAccountTipDistributionConfig extends string = string,
   TAccountTipDistributionProgram extends string = string,
+  TAccountRestakingProgram extends string = string,
 > = {
   ncnConfig: Address<TAccountNcnConfig>;
   ncn: Address<TAccountNcn>;
@@ -147,6 +152,7 @@ export type SetMerkleRootInput<
   tipDistributionAccount: Address<TAccountTipDistributionAccount>;
   tipDistributionConfig: Address<TAccountTipDistributionConfig>;
   tipDistributionProgram: Address<TAccountTipDistributionProgram>;
+  restakingProgram: Address<TAccountRestakingProgram>;
   proof: SetMerkleRootInstructionDataArgs['proof'];
   merkleRoot: SetMerkleRootInstructionDataArgs['merkleRoot'];
   maxTotalClaim: SetMerkleRootInstructionDataArgs['maxTotalClaim'];
@@ -162,6 +168,7 @@ export function getSetMerkleRootInstruction<
   TAccountTipDistributionAccount extends string,
   TAccountTipDistributionConfig extends string,
   TAccountTipDistributionProgram extends string,
+  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: SetMerkleRootInput<
@@ -171,7 +178,8 @@ export function getSetMerkleRootInstruction<
     TAccountVoteAccount,
     TAccountTipDistributionAccount,
     TAccountTipDistributionConfig,
-    TAccountTipDistributionProgram
+    TAccountTipDistributionProgram,
+    TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): SetMerkleRootInstruction<
@@ -182,7 +190,8 @@ export function getSetMerkleRootInstruction<
   TAccountVoteAccount,
   TAccountTipDistributionAccount,
   TAccountTipDistributionConfig,
-  TAccountTipDistributionProgram
+  TAccountTipDistributionProgram,
+  TAccountRestakingProgram
 > {
   // Program address.
   const programAddress =
@@ -190,7 +199,7 @@ export function getSetMerkleRootInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
+    ncnConfig: { value: input.ncnConfig ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: false },
     voteAccount: { value: input.voteAccount ?? null, isWritable: false },
@@ -204,6 +213,10 @@ export function getSetMerkleRootInstruction<
     },
     tipDistributionProgram: {
       value: input.tipDistributionProgram ?? null,
+      isWritable: false,
+    },
+    restakingProgram: {
+      value: input.restakingProgram ?? null,
       isWritable: false,
     },
   };
@@ -225,6 +238,7 @@ export function getSetMerkleRootInstruction<
       getAccountMeta(accounts.tipDistributionAccount),
       getAccountMeta(accounts.tipDistributionConfig),
       getAccountMeta(accounts.tipDistributionProgram),
+      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getSetMerkleRootInstructionDataEncoder().encode(
@@ -238,7 +252,8 @@ export function getSetMerkleRootInstruction<
     TAccountVoteAccount,
     TAccountTipDistributionAccount,
     TAccountTipDistributionConfig,
-    TAccountTipDistributionProgram
+    TAccountTipDistributionProgram,
+    TAccountRestakingProgram
   >;
 
   return instruction;
@@ -257,6 +272,7 @@ export type ParsedSetMerkleRootInstruction<
     tipDistributionAccount: TAccountMetas[4];
     tipDistributionConfig: TAccountMetas[5];
     tipDistributionProgram: TAccountMetas[6];
+    restakingProgram: TAccountMetas[7];
   };
   data: SetMerkleRootInstructionData;
 };
@@ -269,7 +285,7 @@ export function parseSetMerkleRootInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedSetMerkleRootInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -289,6 +305,7 @@ export function parseSetMerkleRootInstruction<
       tipDistributionAccount: getNextAccount(),
       tipDistributionConfig: getNextAccount(),
       tipDistributionProgram: getNextAccount(),
+      restakingProgram: getNextAccount(),
     },
     data: getSetMerkleRootInstructionDataDecoder().decode(instruction.data),
   };

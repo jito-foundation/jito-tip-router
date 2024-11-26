@@ -20,14 +20,14 @@ pub fn process_set_merkle_root(
     max_num_nodes: u64,
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ncn, ballot_box, vote_account, tip_distribution_account, tip_distribution_config, tip_distribution_program_id] =
+    let [ncn_config, ncn, ballot_box, vote_account, tip_distribution_account, tip_distribution_config, tip_distribution_program_id, restaking_program_id] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    Ncn::load(program_id, ncn, false)?;
+    NcnConfig::load(program_id, ncn.key, ncn_config, true)?;
+    Ncn::load(restaking_program_id.key, ncn, false)?;
     BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
 
     // TODO check vote account
@@ -62,7 +62,16 @@ pub fn process_set_merkle_root(
         max_num_nodes,
     )?;
 
-    let (_, _, ncn_config_seeds) = NcnConfig::find_program_address(program_id, ncn.key);
+    let (_, bump, mut ncn_config_seeds) = NcnConfig::find_program_address(program_id, ncn.key);
+    ncn_config_seeds.push(vec![bump]);
+
+    msg!("Made it almost there");
+
+    let mut ncn_config_signer_ai = ncn_config.clone();
+    // ncn_config_signer_ai.is_signer = true;
+    // ncn_config_signer_ai.is_writable = true;
+
+    msg!("NCN config key: {:?}", ncn_config.key);
 
     invoke_signed(
         &upload_merkle_root_ix(
@@ -74,19 +83,20 @@ pub fn process_set_merkle_root(
             },
             UploadMerkleRootAccounts {
                 config: *tip_distribution_config.key,
-                merkle_root_upload_authority: *ncn_config.key,
                 tip_distribution_account: *tip_distribution_account.key,
+                merkle_root_upload_authority: *ncn_config.key,
             },
         ),
         &[
             tip_distribution_config.clone(),
-            ncn_config.clone(),
             tip_distribution_account.clone(),
+            ncn_config_signer_ai,
         ],
-        &[&ncn_config_seeds
+        &[ncn_config_seeds
             .iter()
-            .map(|v| v.as_slice())
-            .collect::<Vec<&[u8]>>()[..]],
+            .map(|s| s.as_slice())
+            .collect::<Vec<&[u8]>>()
+            .as_slice()],
     )?;
 
     Ok(())

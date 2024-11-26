@@ -2,7 +2,7 @@ use std::{fs::File, io::BufReader, path::PathBuf};
 
 use jito_tip_distribution::state::ClaimStatus;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use solana_sdk::{
+use solana_program::{
     clock::{Epoch, Slot},
     hash::{Hash, Hasher},
     pubkey::Pubkey,
@@ -312,7 +312,7 @@ mod pubkey_string_conversion {
     use std::str::FromStr;
 
     use serde::{self, Deserialize, Deserializer, Serializer};
-    use solana_sdk::pubkey::Pubkey;
+    use solana_program::pubkey::Pubkey;
 
     pub(crate) fn serialize<S>(pubkey: &Pubkey, serializer: S) -> Result<S::Ok, S::Error>
     where

@@ -21,6 +21,8 @@ pub struct SetMerkleRoot {
     pub tip_distribution_config: solana_program::pubkey::Pubkey,
 
     pub tip_distribution_program: solana_program::pubkey::Pubkey,
+
+    pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
 impl SetMerkleRoot {
@@ -36,8 +38,8 @@ impl SetMerkleRoot {
         args: SetMerkleRootInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new(
             self.ncn_config,
             false,
         ));
@@ -62,6 +64,10 @@ impl SetMerkleRoot {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.tip_distribution_program,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.restaking_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -108,13 +114,14 @@ pub struct SetMerkleRootInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
+///   0. `[writable]` ncn_config
 ///   1. `[]` ncn
 ///   2. `[]` ballot_box
 ///   3. `[]` vote_account
 ///   4. `[writable]` tip_distribution_account
 ///   5. `[]` tip_distribution_config
 ///   6. `[]` tip_distribution_program
+///   7. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct SetMerkleRootBuilder {
     ncn_config: Option<solana_program::pubkey::Pubkey>,
@@ -124,6 +131,7 @@ pub struct SetMerkleRootBuilder {
     tip_distribution_account: Option<solana_program::pubkey::Pubkey>,
     tip_distribution_config: Option<solana_program::pubkey::Pubkey>,
     tip_distribution_program: Option<solana_program::pubkey::Pubkey>,
+    restaking_program: Option<solana_program::pubkey::Pubkey>,
     proof: Option<Vec<[u8; 32]>>,
     merkle_root: Option<[u8; 32]>,
     max_total_claim: Option<u64>,
@@ -178,6 +186,14 @@ impl SetMerkleRootBuilder {
         tip_distribution_program: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
         self.tip_distribution_program = Some(tip_distribution_program);
+        self
+    }
+    #[inline(always)]
+    pub fn restaking_program(
+        &mut self,
+        restaking_program: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -239,6 +255,9 @@ impl SetMerkleRootBuilder {
             tip_distribution_program: self
                 .tip_distribution_program
                 .expect("tip_distribution_program is not set"),
+            restaking_program: self
+                .restaking_program
+                .expect("restaking_program is not set"),
         };
         let args = SetMerkleRootInstructionArgs {
             proof: self.proof.clone().expect("proof is not set"),
@@ -273,6 +292,8 @@ pub struct SetMerkleRootCpiAccounts<'a, 'b> {
     pub tip_distribution_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub tip_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `set_merkle_root` CPI instruction.
@@ -293,6 +314,8 @@ pub struct SetMerkleRootCpi<'a, 'b> {
     pub tip_distribution_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub tip_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: SetMerkleRootInstructionArgs,
 }
@@ -312,6 +335,7 @@ impl<'a, 'b> SetMerkleRootCpi<'a, 'b> {
             tip_distribution_account: accounts.tip_distribution_account,
             tip_distribution_config: accounts.tip_distribution_config,
             tip_distribution_program: accounts.tip_distribution_program,
+            restaking_program: accounts.restaking_program,
             __args: args,
         }
     }
@@ -348,8 +372,8 @@ impl<'a, 'b> SetMerkleRootCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new(
             *self.ncn_config.key,
             false,
         ));
@@ -377,6 +401,10 @@ impl<'a, 'b> SetMerkleRootCpi<'a, 'b> {
             *self.tip_distribution_program.key,
             false,
         ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.restaking_program.key,
+            false,
+        ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_program::instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -393,7 +421,7 @@ impl<'a, 'b> SetMerkleRootCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.ncn_config.clone());
         account_infos.push(self.ncn.clone());
@@ -402,6 +430,7 @@ impl<'a, 'b> SetMerkleRootCpi<'a, 'b> {
         account_infos.push(self.tip_distribution_account.clone());
         account_infos.push(self.tip_distribution_config.clone());
         account_infos.push(self.tip_distribution_program.clone());
+        account_infos.push(self.restaking_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -418,13 +447,14 @@ impl<'a, 'b> SetMerkleRootCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
+///   0. `[writable]` ncn_config
 ///   1. `[]` ncn
 ///   2. `[]` ballot_box
 ///   3. `[]` vote_account
 ///   4. `[writable]` tip_distribution_account
 ///   5. `[]` tip_distribution_config
 ///   6. `[]` tip_distribution_program
+///   7. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct SetMerkleRootCpiBuilder<'a, 'b> {
     instruction: Box<SetMerkleRootCpiBuilderInstruction<'a, 'b>>,
@@ -441,6 +471,7 @@ impl<'a, 'b> SetMerkleRootCpiBuilder<'a, 'b> {
             tip_distribution_account: None,
             tip_distribution_config: None,
             tip_distribution_program: None,
+            restaking_program: None,
             proof: None,
             merkle_root: None,
             max_total_claim: None,
@@ -501,6 +532,14 @@ impl<'a, 'b> SetMerkleRootCpiBuilder<'a, 'b> {
         tip_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.tip_distribution_program = Some(tip_distribution_program);
+        self
+    }
+    #[inline(always)]
+    pub fn restaking_program(
+        &mut self,
+        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -616,6 +655,11 @@ impl<'a, 'b> SetMerkleRootCpiBuilder<'a, 'b> {
                 .instruction
                 .tip_distribution_program
                 .expect("tip_distribution_program is not set"),
+
+            restaking_program: self
+                .instruction
+                .restaking_program
+                .expect("restaking_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -635,6 +679,7 @@ struct SetMerkleRootCpiBuilderInstruction<'a, 'b> {
     tip_distribution_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     tip_distribution_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     tip_distribution_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     proof: Option<Vec<[u8; 32]>>,
     merkle_root: Option<[u8; 32]>,
     max_total_claim: Option<u64>,

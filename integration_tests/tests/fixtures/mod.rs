@@ -22,6 +22,10 @@ pub enum TestError {
     MerkleTreeError(#[from] MerkleTreeError),
     #[error(transparent)]
     MerkleRootGeneratorError(#[from] MerkleRootGeneratorError),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    AnchorError(#[from] anchor_lang::error::Error),
 }
 
 impl TestError {

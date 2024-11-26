@@ -10,8 +10,8 @@ use solana_program::{
 };
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
-    account::Account, commitment_config::CommitmentLevel, native_token::lamports_to_sol,
-    signature::Signer, transaction::Transaction,
+    account::Account, commitment_config::CommitmentLevel, epoch_schedule::EpochSchedule,
+    native_token::lamports_to_sol, signature::Signer, transaction::Transaction,
 };
 
 use super::{
@@ -120,6 +120,10 @@ impl TestBuilder {
     }
 
     pub async fn clock(&mut self) -> Clock {
+        self.context.banks_client.get_sysvar().await.unwrap()
+    }
+
+    pub async fn epoch_schedule(&mut self) -> EpochSchedule {
         self.context.banks_client.get_sysvar().await.unwrap()
     }
 
