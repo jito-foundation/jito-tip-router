@@ -22,6 +22,7 @@ use solana_stake_program;
 use solana_sdk::account::ReadableAccount;
 use solana_accounts_db::accounts_index::ScanConfig;
 use solana_stake_program::stake_state::StakeStateV2;
+use std::time::Instant;
 use bincode;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -155,13 +156,25 @@ impl SnapshotCreator {
     }
 
     async fn create_snapshot_internal(&self, slot: Slot) -> Result<()> {
+        let start_time = Instant::now();
         info!("Creating snapshot at slot {}", slot);
 
-        let blockstore = Blockstore::open(&self.blockstore_path)?;
-        let genesis_config = GenesisConfig::default(); // You might need to load this properly
+        // Track snapshot creation phases
+        let mut current_phase = "initialization";
+        self.report_snapshot_progress(slot, current_phase, 0.0)?;
 
-        let (bank_forks, _leader_schedule_cache, _starting_snapshot_hashes) =
-            bank_forks_utils::load(
+        // Open blockstore with error context
+        let blockstore = Blockstore::open(&self.blockstore_path).map_err(|e|
+            anyhow!("Failed to open blockstore: {}", e)
+        )?;
+        let genesis_config = GenesisConfig::default();
+
+        // Load bank forks
+        current_phase = "loading_bank";
+        self.report_snapshot_progress(slot, current_phase, 0.2)?;
+
+        let (bank_forks, _leader_schedule_cache, _starting_snapshot_hashes) = bank_forks_utils
+            ::load(
                 &genesis_config,
                 &blockstore,
                 vec![self.output_dir.clone()],
@@ -173,13 +186,22 @@ impl SnapshotCreator {
                 None,
                 None,
                 Arc::new(AtomicBool::new(false))
-            )?;
+            )
+            .map_err(|e| anyhow!("Failed to load bank forks: {}", e))?;
+
+        // Get bank for slot
+        current_phase = "accessing_bank";
+        self.report_snapshot_progress(slot, current_phase, 0.4)?;
 
         let bank = bank_forks
             .read()
             .unwrap()
             .get(slot)
             .ok_or_else(|| anyhow!("Failed to get bank at slot {}", slot))?;
+
+        // Create snapshot archive
+        current_phase = "creating_archive";
+        self.report_snapshot_progress(slot, current_phase, 0.6)?;
 
         let archive_format = match self.compression.as_str() {
             "bzip2" => ArchiveFormat::TarBzip2,
@@ -188,23 +210,49 @@ impl SnapshotCreator {
             _ => ArchiveFormat::TarBzip2,
         };
 
-        snapshot_bank_utils::bank_to_full_snapshot_archive(
-            &self.output_dir, // bank_snapshots_dir
-            &bank,
-            Some(SnapshotVersion::default()), // snapshot_version needs to be Option<SnapshotVersion>
-            &self.output_dir, // full_snapshot_archives_dir
-            &self.output_dir, // incremental_snapshot_archives_dir
-            archive_format,
-            NonZeroUsize::new(self.max_snapshots as usize).unwrap(),
-            NonZeroUsize::new(self.max_snapshots as usize).unwrap()
-        )?;
+        snapshot_bank_utils
+            ::bank_to_full_snapshot_archive(
+                &self.output_dir,
+                &bank,
+                Some(SnapshotVersion::default()),
+                &self.output_dir,
+                &self.output_dir,
+                archive_format,
+                NonZeroUsize::new(self.max_snapshots as usize).unwrap(),
+                NonZeroUsize::new(self.max_snapshots as usize).unwrap()
+            )
+            .map_err(|e| anyhow!("Failed to create snapshot archive: {}", e))?;
 
-        self.report_progress(SnapshotProgress {
-            slot,
-            phase: "snapshot_creation".to_string(),
-            progress: 1.0,
-            message: "Snapshot created successfully".to_string(),
-        });
+        // Get snapshot file size
+        current_phase = "finalizing";
+        self.report_snapshot_progress(slot, current_phase, 0.9)?;
+
+        let snapshot_path = self.output_dir.join(
+            format!("snapshot-{}.tar.{}", slot, self.compression)
+        );
+        let snapshot_size = fs
+            ::metadata(&snapshot_path)
+            .map(|m| m.len())
+            .unwrap_or(0);
+
+        let duration = start_time.elapsed();
+
+        // Report final metrics
+        datapoint_info!(
+            "tip_router_snapshot_metrics",
+            ("slot", slot, i64),
+            ("duration_ms", duration.as_millis() as i64, i64),
+            ("size_bytes", snapshot_size as i64, i64),
+            ("compression", self.compression, String)
+        );
+
+        self.report_snapshot_progress(slot, "complete", 1.0)?;
+
+        info!(
+            "Snapshot created successfully - Size: {}MB, Duration: {:.2}s",
+            snapshot_size / (1024 * 1024),
+            duration.as_secs_f64()
+        );
 
         Ok(())
     }
@@ -395,10 +443,30 @@ impl SnapshotCreator {
         Ok(())
     }
 
+    fn report_snapshot_progress(&self, slot: Slot, phase: &str, progress: f32) -> Result<()> {
+        let progress_info = SnapshotProgress {
+            slot,
+            phase: phase.to_string(),
+            progress,
+            message: format!("Creating snapshot - phase: {}", phase),
+        };
+
+        self.report_progress(progress_info);
+
+        datapoint_info!(
+            "tip_router_snapshot_progress",
+            ("slot", slot, i64),
+            ("phase", phase, String),
+            ("progress", progress as f64, f64)
+        );
+
+        Ok(())
+    }
+
     fn get_epoch_at_slot(&self, slot: Slot, epoch_schedule: &EpochSchedule) -> u64 {
         epoch_schedule.get_epoch(slot)
     }
-    
+
     pub fn get_output_dir(&self) -> &PathBuf {
         &self.output_dir
     }
