@@ -16,8 +16,27 @@ use solana_runtime::{ self, snapshot_utils::SnapshotVersion, snapshot_bank_utils
 use std::num::NonZeroUsize;
 use solana_runtime::snapshot_utils::ArchiveFormat;
 use ellipsis_client::EllipsisClient;
+use std::collections::HashMap;
+use serde::{ Serialize, Deserialize };
+use solana_stake_program;
 
-// Add progress reporting
+#[derive(Serialize, Deserialize, Debug)]
+struct StakeMetaAccount {
+    lamports: u64,
+    owner: String,
+    stake_authority: Option<String>,
+    withdraw_authority: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ValidatorStakeMeta {
+    vote_account: String,
+    identity: String,
+    commission: u8,
+    stake_accounts: HashMap<String, StakeMetaAccount>,
+    total_stake: u64,
+}
+
 #[derive(Debug)]
 pub struct SnapshotProgress {
     pub slot: Slot,
@@ -270,7 +289,108 @@ impl SnapshotCreator {
     async fn create_stake_meta(&self, slot: Slot) -> Result<()> {
         info!("Creating stake meta for slot {}", slot);
         datapoint_info!("tip_router_stake_meta", ("slot", slot, i64), ("event", "start", String));
-        // TODO: Implement stake meta json creation
+
+        // Load bank from snapshot
+        let blockstore = Blockstore::open(&self.blockstore_path)?;
+        let genesis_config = GenesisConfig::default();
+
+        let (bank_forks, _, _) = bank_forks_utils::load(
+            &genesis_config,
+            &blockstore,
+            vec![self.output_dir.clone()],
+            None,
+            None,
+            ProcessOptions::default(),
+            None,
+            None,
+            None,
+            None,
+            Arc::new(AtomicBool::new(false))
+        )?;
+
+        let bank = bank_forks
+            .read()
+            .unwrap()
+            .get(slot)
+            .ok_or_else(|| anyhow!("Failed to get bank at slot {}", slot))?;
+
+        // Get all vote accounts
+        let vote_accounts = bank.vote_accounts();
+        let mut validator_stake_meta = HashMap::new();
+
+        // First, get all stake accounts once
+        if let Ok(accounts) = bank.get_program_accounts(&solana_stake_program::id(), None) {
+            // Process all stake accounts first
+            for (stake_pubkey, account) in accounts {
+                if
+                    let Ok(stake_state) =
+                        solana_stake_program::stake_state::StakeState::deserialize(
+                            &account.data(),
+                            account.owner()
+                        )
+                {
+                    if
+                        let solana_stake_program::stake_state::StakeState::Stake(_, stake) =
+                            stake_state
+                    {
+                        let voter_pubkey = stake.delegation.voter_pubkey.to_string();
+                        let lamports = account.lamports();
+
+                        // Get or create the validator entry
+                        validator_stake_meta
+                            .entry(voter_pubkey)
+                            .and_modify(|meta: &mut ValidatorStakeMeta| {
+                                meta.total_stake += lamports;
+                                meta.stake_accounts.insert(
+                                    stake_pubkey.to_string(),
+                                    StakeMetaAccount {
+                                        lamports,
+                                        owner: account.owner().to_string(),
+                                        stake_authority: None,
+                                        withdraw_authority: None,
+                                    }
+                                );
+                            })
+                            .or_insert_with(|| {
+                                let mut stake_accounts = HashMap::new();
+                                stake_accounts.insert(stake_pubkey.to_string(), StakeMetaAccount {
+                                    lamports,
+                                    owner: account.owner().to_string(),
+                                    stake_authority: None,
+                                    withdraw_authority: None,
+                                });
+                                ValidatorStakeMeta {
+                                    vote_account: stake.delegation.voter_pubkey.to_string(),
+                                    identity: String::new(), // Will be filled in next loop
+                                    commission: 0, // Will be filled in next loop
+                                    stake_accounts,
+                                    total_stake: lamports,
+                                }
+                            });
+                    }
+                }
+            }
+        }
+
+        // Now fill in the validator identity and commission information
+        for (vote_pubkey, (validator_identity, vote_account)) in vote_accounts.as_ref() {
+            if let Some(meta) = validator_stake_meta.get_mut(&vote_pubkey.to_string()) {
+                meta.identity = validator_identity.to_string();
+                meta.commission = vote_account.commission;
+            }
+        }
+
+        // Write to file
+        let meta_path = self.output_dir.join(format!("stake-meta-{}.json", slot));
+        fs::write(&meta_path, serde_json::to_string_pretty(&validator_stake_meta)?)?;
+
+        info!("Stake meta created at {:?}", meta_path);
+        datapoint_info!(
+            "tip_router_stake_meta",
+            ("slot", slot, i64),
+            ("event", "complete", String)
+        );
+
         Ok(())
     }
 
