@@ -12,7 +12,7 @@ use crate::{constants::MAX_FEE_BPS, error::TipRouterError, ncn_fee_group::NcnFee
 #[repr(C)]
 pub struct FeeConfig {
     dao_fee_wallet: Pubkey,
-
+    reserved: [u8; 128],
     fee_1: Fees,
     fee_2: Fees,
 }
@@ -34,6 +34,7 @@ impl FeeConfig {
 
         Ok(Self {
             dao_fee_wallet,
+            reserved: [0; 128],
             fee_1: fee,
             fee_2: fee,
         })
@@ -270,10 +271,8 @@ pub struct Fees {
 
     block_engine_fee_bps: PodU64,
     dao_fee_bps: PodU64,
-    reserved_0: [u8; 128],
+    reserved: [u8; 128],
     ncn_fee_groups_bps: [NcnFee; 16],
-    // Reserves
-    reserved_1: [u8; 64],
 }
 
 impl Fees {
@@ -287,9 +286,8 @@ impl Fees {
             activation_epoch: PodU64::from(epoch),
             block_engine_fee_bps: PodU64::from(block_engine_fee_bps),
             dao_fee_bps: PodU64::from(dao_fee_bps),
-            reserved_0: [0; 128],
+            reserved: [0; 128],
             ncn_fee_groups_bps: [NcnFee::default(); NcnFeeGroup::FEE_GROUP_COUNT],
-            reserved_1: [0; 64],
         };
 
         fees.set_ncn_fee_bps(NcnFeeGroup::default(), default_ncn_fee_bps)?;

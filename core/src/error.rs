@@ -7,6 +7,8 @@ pub enum TipRouterError {
     DenominatorIsZero = 0x2100,
     #[error("Overflow")]
     ArithmeticOverflow,
+    #[error("Underflow")]
+    ArithmeticUnderflowError,
     #[error("Modulo Overflow")]
     ModuloOverflow,
     #[error("New precise number error")]

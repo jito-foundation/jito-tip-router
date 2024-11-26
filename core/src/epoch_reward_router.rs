@@ -1,65 +1,120 @@
 use bytemuck::{Pod, Zeroable};
-use jito_bytemuck::{
-    types::{PodBool, PodU16, PodU64},
-    AccountDeserialize, Discriminator,
-};
-use jito_vault_core::vault_operator_delegation::VaultOperatorDelegation;
+use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
+use jito_vault_core::MAX_BPS;
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    discriminators::Discriminators, error::TipRouterError, fees::Fees, stake_weight::StakeWeight,
-    weight_table::WeightTable,
+    ballot_box::{self, BallotBox, OperatorVote},
+    discriminators::Discriminators,
+    epoch_snapshot::{OperatorSnapshot, VaultOperatorStakeWeight},
+    error::TipRouterError,
+    fees::FeeConfig,
+    ncn_fee_group::NcnFeeGroup,
 };
 
-// PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
 #[repr(C)]
-pub struct EpochSnapshot {
-    /// The NCN on-chain program is the signer to create and update this account,
-    /// this pushes the responsibility of managing the account to the NCN program.
-    ncn: Pubkey,
-
-    /// The NCN epoch for which the Epoch snapshot is valid
-    ncn_epoch: PodU64,
-
-    /// Bump seed for the PDA
-    bump: u8,
-
-    /// Slot Epoch snapshot was created
-    slot_created: PodU64,
-
-    /// Reserved space
+pub struct RewardRoutes {
+    destination: Pubkey,
+    rewards: PodU64,
     reserved: [u8; 128],
 }
 
-impl Discriminator for EpochSnapshot {
-    const DISCRIMINATOR: u8 = Discriminators::EpochSnapshot as u8;
+impl Default for RewardRoutes {
+    fn default() -> Self {
+        Self {
+            destination: Pubkey::default(),
+            rewards: PodU64::from(0),
+            reserved: [0; 128],
+        }
+    }
 }
 
-impl EpochSnapshot {
-    pub fn new(
-        ncn: Pubkey,
-        ncn_epoch: u64,
-        bump: u8,
-        current_slot: u64,
-        ncn_fees: Fees,
-        operator_count: u64,
-        vault_count: u64,
-    ) -> Self {
+impl RewardRoutes {
+    pub const fn destination(&self) -> Pubkey {
+        self.destination
+    }
+
+    pub fn rewards(&self) -> u64 {
+        self.rewards.into()
+    }
+
+    pub fn increment_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+        self.rewards = PodU64::from(
+            self.rewards()
+                .checked_add(rewards)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+        Ok(())
+    }
+
+    pub fn decrement_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+        self.rewards = PodU64::from(
+            self.rewards()
+                .checked_sub(rewards)
+                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
+        );
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
+#[repr(C)]
+pub struct RewardBucket {
+    rewards: PodU64,
+    reserved: [u8; 64],
+}
+
+impl Default for RewardBucket {
+    fn default() -> Self {
+        Self {
+            rewards: PodU64::from(0),
+            reserved: [0; 64],
+        }
+    }
+}
+
+// PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
+#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[repr(C)]
+pub struct EpochRewardRouter {
+    ncn: Pubkey,
+
+    ncn_epoch: PodU64,
+
+    bump: u8,
+
+    slot_created: PodU64,
+
+    reward_pool: PodU64,
+
+    doa_rewards: PodU64,
+
+    reserved: [u8; 128],
+
+    ncn_reward_buckets: [RewardBucket; 16],
+
+    //TODO change to 256
+    reward_routes: [RewardRoutes; 32],
+}
+
+impl Discriminator for EpochRewardRouter {
+    const DISCRIMINATOR: u8 = Discriminators::EpochRewardRouter as u8;
+}
+
+impl EpochRewardRouter {
+    pub fn new(ncn: Pubkey, ncn_epoch: u64, bump: u8, slot_created: u64) -> Self {
         Self {
             ncn,
             ncn_epoch: PodU64::from(ncn_epoch),
-            slot_created: PodU64::from(current_slot),
-            slot_finalized: PodU64::from(0),
             bump,
-            ncn_fees,
-            operator_count: PodU64::from(operator_count),
-            vault_count: PodU64::from(vault_count),
-            operators_registered: PodU64::from(0),
-            valid_operator_vault_delegations: PodU64::from(0),
-            stake_weight: StakeWeight::default(),
+            slot_created: PodU64::from(slot_created),
+            ncn_reward_buckets: [RewardBucket::default(); NcnFeeGroup::FEE_GROUP_COUNT],
+            reward_routes: [RewardRoutes::default(); 32],
+            reward_pool: PodU64::from(0),
+            doa_rewards: PodU64::from(0),
             reserved: [0; 128],
         }
     }
@@ -67,7 +122,7 @@ impl EpochSnapshot {
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
-                b"epoch_snapshot".to_vec(),
+                b"epoch_reward_router".to_vec(),
                 ncn.to_bytes().to_vec(),
                 ncn_epoch.to_le_bytes().to_vec(),
             ]
@@ -91,424 +146,567 @@ impl EpochSnapshot {
         program_id: &Pubkey,
         ncn: &Pubkey,
         ncn_epoch: u64,
-        epoch_snapshot: &AccountInfo,
+        account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if epoch_snapshot.owner.ne(program_id) {
-            msg!("Epoch Snapshot account has an invalid owner");
+        if account.owner.ne(program_id) {
+            msg!("Epoch Reward Router account has an invalid owner");
             return Err(ProgramError::InvalidAccountOwner);
         }
-        if epoch_snapshot.data_is_empty() {
-            msg!("Epoch Snapshot account data is empty");
+        if account.data_is_empty() {
+            msg!("Epoch Reward Router account data is empty");
             return Err(ProgramError::InvalidAccountData);
         }
-        if expect_writable && !epoch_snapshot.is_writable {
-            msg!("Epoch Snapshot account is not writable");
+        if expect_writable && !account.is_writable {
+            msg!("Epoch Reward Router account is not writable");
             return Err(ProgramError::InvalidAccountData);
         }
-        if epoch_snapshot.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Epoch Snapshot account discriminator is invalid");
+        if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
+            msg!("Epoch Reward Router account discriminator is invalid");
             return Err(ProgramError::InvalidAccountData);
         }
-        if epoch_snapshot
+        if account
             .key
             .ne(&Self::find_program_address(program_id, ncn, ncn_epoch).0)
         {
-            msg!("Epoch Snapshot account is not at the correct PDA");
+            msg!("Epoch Reward Router account is not at the correct PDA");
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
     }
 
-    pub fn operator_count(&self) -> u64 {
-        self.operator_count.into()
-    }
-
-    pub fn vault_count(&self) -> u64 {
-        self.vault_count.into()
-    }
-
-    pub fn operators_registered(&self) -> u64 {
-        self.operators_registered.into()
-    }
-
-    pub fn valid_operator_vault_delegations(&self) -> u64 {
-        self.valid_operator_vault_delegations.into()
-    }
-
-    pub const fn stake_weight(&self) -> &StakeWeight {
-        &self.stake_weight
-    }
-
-    pub fn finalized(&self) -> bool {
-        self.operators_registered() == self.operator_count()
-    }
-
-    pub fn increment_operator_registration(
+    pub fn process_reward_pool(
         &mut self,
-        current_slot: u64,
-        vault_operator_delegations: u64,
-        stake_weight: &StakeWeight,
+        fee_config: &FeeConfig,
+        ballot_box: &BallotBox,
+        current_epoch: u64,
     ) -> Result<(), TipRouterError> {
-        if self.finalized() {
-            return Err(TipRouterError::OperatorFinalized);
-        }
+        let base_fee = fee_config.adjusted_dao_fee_bps(current_epoch)?;
 
-        self.operators_registered = PodU64::from(
-            self.operators_registered()
-                .checked_add(1)
-                .ok_or(TipRouterError::ArithmeticOverflow)?,
-        );
+        let winning_ballot = ballot_box.get_winning_ballot()?;
 
-        self.valid_operator_vault_delegations = PodU64::from(
-            self.valid_operator_vault_delegations()
-                .checked_add(vault_operator_delegations)
-                .ok_or(TipRouterError::ArithmeticOverflow)?,
-        );
+        let winning_stake_weight = winning_ballot.stake_weight();
 
-        self.stake_weight.increment(stake_weight)?;
-
-        if self.finalized() {
-            self.slot_finalized = PodU64::from(current_slot);
-        }
-
-        Ok(())
-    }
-}
-
-// PDA'd ["operator_snapshot", OPERATOR, NCN, NCN_EPOCH_SLOT]
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
-#[repr(C)]
-pub struct OperatorSnapshot {
-    operator: Pubkey,
-    ncn: Pubkey,
-    ncn_epoch: PodU64,
-    bump: u8,
-
-    slot_created: PodU64,
-    slot_finalized: PodU64,
-
-    is_active: PodBool,
-
-    ncn_operator_index: PodU64,
-    operator_index: PodU64,
-    operator_fee_bps: PodU16,
-
-    vault_operator_delegation_count: PodU64,
-    vault_operator_delegations_registered: PodU64,
-    valid_operator_vault_delegations: PodU64,
-
-    stake_weight: StakeWeight,
-    reserved: [u8; 256],
-
-    //TODO change to 64
-    vault_operator_stake_weight: [VaultOperatorStakeWeight; 32],
-}
-
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
-#[repr(C)]
-pub struct VaultOperatorStakeWeight {
-    vault: Pubkey,
-    vault_index: PodU64,
-    stake_weight: StakeWeight,
-    reserved: [u8; 32],
-}
-
-impl Default for VaultOperatorStakeWeight {
-    fn default() -> Self {
-        Self {
-            vault: Pubkey::default(),
-            vault_index: PodU64::from(u64::MAX),
-            stake_weight: StakeWeight::default(),
-            reserved: [0; 32],
-        }
-    }
-}
-
-impl VaultOperatorStakeWeight {
-    pub fn new(vault: Pubkey, vault_index: u64, stake_weight: &StakeWeight) -> Self {
-        Self {
-            vault,
-            vault_index: PodU64::from(vault_index),
-            stake_weight: *stake_weight,
-            reserved: [0; 32],
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.vault_index() == u64::MAX
-    }
-
-    pub fn vault_index(&self) -> u64 {
-        self.vault_index.into()
-    }
-
-    pub fn stake_weight(&self) -> &StakeWeight {
-        &self.stake_weight
-    }
-}
-
-impl Discriminator for OperatorSnapshot {
-    const DISCRIMINATOR: u8 = Discriminators::OperatorSnapshot as u8;
-}
-
-impl OperatorSnapshot {
-    pub const MAX_VAULT_OPERATOR_STAKE_WEIGHT: usize = 64;
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        operator: Pubkey,
-        ncn: Pubkey,
-        ncn_epoch: u64,
-        bump: u8,
-        current_slot: u64,
-        is_active: bool,
-        ncn_operator_index: u64,
-        operator_index: u64,
-        operator_fee_bps: u16,
-        vault_operator_delegation_count: u64,
-    ) -> Result<Self, TipRouterError> {
-        if vault_operator_delegation_count > Self::MAX_VAULT_OPERATOR_STAKE_WEIGHT as u64 {
-            return Err(TipRouterError::TooManyVaultOperatorDelegations);
-        }
-
-        Ok(Self {
-            operator,
-            ncn,
-            ncn_epoch: PodU64::from(ncn_epoch),
-            bump,
-            slot_created: PodU64::from(current_slot),
-            slot_finalized: PodU64::from(0),
-            is_active: PodBool::from(is_active),
-            ncn_operator_index: PodU64::from(ncn_operator_index),
-            operator_index: PodU64::from(operator_index),
-            operator_fee_bps: PodU16::from(operator_fee_bps),
-            vault_operator_delegation_count: PodU64::from(vault_operator_delegation_count),
-            vault_operator_delegations_registered: PodU64::from(0),
-            valid_operator_vault_delegations: PodU64::from(0),
-            stake_weight: StakeWeight::default(),
-            reserved: [0; 256],
-            vault_operator_stake_weight: [VaultOperatorStakeWeight::default(); 32],
-        })
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn new_active(
-        operator: Pubkey,
-        ncn: Pubkey,
-        ncn_epoch: u64,
-        bump: u8,
-        current_slot: u64,
-        ncn_operator_index: u64,
-        operator_index: u64,
-        operator_fee_bps: u16,
-        vault_count: u64,
-    ) -> Result<Self, TipRouterError> {
-        Self::new(
-            operator,
-            ncn,
-            ncn_epoch,
-            bump,
-            current_slot,
-            true,
-            ncn_operator_index,
-            operator_index,
-            operator_fee_bps,
-            vault_count,
-        )
-    }
-
-    pub fn new_inactive(
-        operator: Pubkey,
-        ncn: Pubkey,
-        ncn_epoch: u64,
-        bump: u8,
-        current_slot: u64,
-        ncn_operator_index: u64,
-        operator_index: u64,
-    ) -> Result<Self, TipRouterError> {
-        let mut snapshot = Self::new(
-            operator,
-            ncn,
-            ncn_epoch,
-            bump,
-            current_slot,
-            false,
-            ncn_operator_index,
-            operator_index,
-            0,
-            0,
-        )?;
-
-        snapshot.slot_finalized = PodU64::from(current_slot);
-        Ok(snapshot)
-    }
-
-    pub fn seeds(operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
-        Vec::from_iter(
-            [
-                b"operator_snapshot".to_vec(),
-                operator.to_bytes().to_vec(),
-                ncn.to_bytes().to_vec(),
-                ncn_epoch.to_le_bytes().to_vec(),
-            ]
-            .iter()
-            .cloned(),
-        )
-    }
-
-    pub fn find_program_address(
-        program_id: &Pubkey,
-        operator: &Pubkey,
-        ncn: &Pubkey,
-        ncn_epoch: u64,
-    ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(operator, ncn, ncn_epoch);
-        let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
-        let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
-        (pda, bump, seeds)
-    }
-
-    pub fn load(
-        program_id: &Pubkey,
-        operator: &Pubkey,
-        ncn: &Pubkey,
-        ncn_epoch: u64,
-        operator_snapshot: &AccountInfo,
-        expect_writable: bool,
-    ) -> Result<(), ProgramError> {
-        if operator_snapshot.owner.ne(program_id) {
-            msg!("Operator Snapshot account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-        if operator_snapshot.data_is_empty() {
-            msg!("Operator Snapshot account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if expect_writable && !operator_snapshot.is_writable {
-            msg!("Operator Snapshot account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if operator_snapshot.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Operator Snapshot account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if operator_snapshot
-            .key
-            .ne(&Self::find_program_address(program_id, operator, ncn, ncn_epoch).0)
+        // DAO Fee
         {
-            msg!("Operator Snapshot account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
+            let rewards_to_process: u64 = self.reward_pool();
+
+            let dao_rewards = Self::calculate_dao_rewards(base_fee, rewards_to_process)?;
+
+            self.increment_dao_rewards(dao_rewards)?;
+            self.decrement_reward_pool(dao_rewards)?;
         }
-        Ok(())
-    }
-
-    pub fn vault_operator_delegation_count(&self) -> u64 {
-        self.vault_operator_delegation_count.into()
-    }
-
-    pub fn vault_operator_delegations_registered(&self) -> u64 {
-        self.vault_operator_delegations_registered.into()
-    }
-
-    pub fn valid_operator_vault_delegations(&self) -> u64 {
-        self.valid_operator_vault_delegations.into()
-    }
-
-    pub fn stake_weight(&self) -> &StakeWeight {
-        &self.stake_weight
-    }
-
-    pub fn finalized(&self) -> bool {
-        self.vault_operator_delegations_registered() == self.vault_operator_delegation_count()
-    }
-
-    pub fn contains_vault_index(&self, vault_index: u64) -> bool {
-        self.vault_operator_stake_weight
-            .iter()
-            .any(|v| v.vault_index() == vault_index)
-    }
-
-    pub fn insert_vault_operator_stake_weight(
-        &mut self,
-        vault: Pubkey,
-        vault_index: u64,
-        stake_weight: &StakeWeight,
-    ) -> Result<(), TipRouterError> {
-        if self.vault_operator_delegations_registered()
-            > Self::MAX_VAULT_OPERATOR_STAKE_WEIGHT as u64
-        {
-            return Err(TipRouterError::TooManyVaultOperatorDelegations);
-        }
-
-        if self.contains_vault_index(vault_index) {
-            return Err(TipRouterError::DuplicateVaultOperatorDelegation);
-        }
-
-        self.vault_operator_stake_weight[self.vault_operator_delegations_registered() as usize] =
-            VaultOperatorStakeWeight::new(vault, vault_index, stake_weight);
-
-        Ok(())
-    }
-
-    pub fn increment_vault_operator_delegation_registration(
-        &mut self,
-        current_slot: u64,
-        vault: Pubkey,
-        vault_index: u64,
-        stake_weight: &StakeWeight,
-    ) -> Result<(), TipRouterError> {
-        if self.finalized() {
-            return Err(TipRouterError::VaultOperatorDelegationFinalized);
-        }
-
-        self.insert_vault_operator_stake_weight(vault, vault_index, stake_weight)?;
-
-        self.vault_operator_delegations_registered = PodU64::from(
-            self.vault_operator_delegations_registered()
-                .checked_add(1)
-                .ok_or(TipRouterError::ArithmeticOverflow)?,
-        );
-
-        if stake_weight.stake_weight() > 0 {
-            self.valid_operator_vault_delegations = PodU64::from(
-                self.valid_operator_vault_delegations()
-                    .checked_add(1)
-                    .ok_or(TipRouterError::ArithmeticOverflow)?,
-            );
-        }
-
-        self.stake_weight.increment(stake_weight)?;
-
-        if self.finalized() {
-            self.slot_finalized = PodU64::from(current_slot);
-        }
-
-        Ok(())
-    }
-
-    pub fn calculate_total_stake_weight(
-        vault_operator_delegation: &VaultOperatorDelegation,
-        weight_table: &WeightTable,
-        st_mint: &Pubkey,
-    ) -> Result<u128, ProgramError> {
-        let total_security = vault_operator_delegation
-            .delegation_state
-            .total_security()?;
-
-        let precise_total_security = PreciseNumber::new(total_security as u128)
-            .ok_or(TipRouterError::NewPreciseNumberError)?;
-
-        let precise_weight = weight_table.get_precise_weight(st_mint)?;
-
-        let precise_total_stake_weight = precise_total_security
-            .checked_mul(&precise_weight)
-            .ok_or(TipRouterError::ArithmeticOverflow)?;
-
-        let total_stake_weight = precise_total_stake_weight
-            .to_imprecise()
-            .ok_or(TipRouterError::CastToImpreciseNumberError)?;
-
-        Ok(total_stake_weight)
     }
 }
+
+// // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
+// #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+// #[repr(C)]
+// pub struct EpochRewardRouter {
+//     ncn: Pubkey,
+
+//     ncn_epoch: PodU64,
+
+//     bump: u8,
+
+//     slot_created: PodU64,
+//     /// base_rewards == dao_rewards
+//     router: RewardRouter,
+// }
+
+// impl Discriminator for EpochRewardRouter {
+//     const DISCRIMINATOR: u8 = Discriminators::EpochRewardRouter as u8;
+// }
+
+// impl EpochRewardRouter {
+//     pub fn new(ncn: Pubkey, ncn_epoch: u64, bump: u8, slot_created: u64) -> Self {
+//         Self {
+//             ncn,
+//             ncn_epoch: PodU64::from(ncn_epoch),
+//             bump,
+//             slot_created: PodU64::from(slot_created),
+//             router: RewardRouter::new(),
+//         }
+//     }
+
+//     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
+//         Vec::from_iter(
+//             [
+//                 b"epoch_reward_router".to_vec(),
+//                 ncn.to_bytes().to_vec(),
+//                 ncn_epoch.to_le_bytes().to_vec(),
+//             ]
+//             .iter()
+//             .cloned(),
+//         )
+//     }
+
+//     pub fn find_program_address(
+//         program_id: &Pubkey,
+//         ncn: &Pubkey,
+//         ncn_epoch: u64,
+//     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
+//         let seeds = Self::seeds(ncn, ncn_epoch);
+//         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
+//         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
+//         (pda, bump, seeds)
+//     }
+
+//     pub fn load(
+//         program_id: &Pubkey,
+//         ncn: &Pubkey,
+//         ncn_epoch: u64,
+//         account: &AccountInfo,
+//         expect_writable: bool,
+//     ) -> Result<(), ProgramError> {
+//         if account.owner.ne(program_id) {
+//             msg!("Epoch Reward Router account has an invalid owner");
+//             return Err(ProgramError::InvalidAccountOwner);
+//         }
+//         if account.data_is_empty() {
+//             msg!("Epoch Reward Router account data is empty");
+//             return Err(ProgramError::InvalidAccountData);
+//         }
+//         if expect_writable && !account.is_writable {
+//             msg!("Epoch Reward Router account is not writable");
+//             return Err(ProgramError::InvalidAccountData);
+//         }
+//         if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
+//             msg!("Epoch Reward Router account discriminator is invalid");
+//             return Err(ProgramError::InvalidAccountData);
+//         }
+//         if account
+//             .key
+//             .ne(&Self::find_program_address(program_id, ncn, ncn_epoch).0)
+//         {
+//             msg!("Epoch Reward Router account is not at the correct PDA");
+//             return Err(ProgramError::InvalidAccountData);
+//         }
+//         Ok(())
+//     }
+
+//     pub fn process_reward_pool(
+//         &mut self,
+//         fee_config: &FeeConfig,
+//         ballot_box: &BallotBox,
+//         current_epoch: u64,
+//     ) -> Result<(), TipRouterError> {
+//         let base_fee = fee_config.adjusted_dao_fee_bps(current_epoch)?;
+
+//         let winning_ballot = ballot_box.get_winning_ballot_tally()?;
+
+//         let total_reward_stake_weight = winning_ballot.reward_stake_weight();
+
+//         let reward_stake_weights: Vec<RewardStakeWeight> = ballot_box
+//             .operator_votes()
+//             .iter()
+//             .filter_map(|vote| {
+//                 if vote.ballot_index() == winning_ballot.index() {
+//                     Some(RewardStakeWeight::from(vote))
+//                 } else {
+//                     None
+//                 }
+//             })
+//             .collect();
+
+//         self.router
+//             .process_reward_pool(base_fee, total_reward_stake_weight, &reward_stake_weights)
+//     }
+// }
+
+// // PDA'd ["operator_reward_router", OPERATOR, NCN, NCN_EPOCH_SLOT]
+// #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+// #[repr(C)]
+// pub struct OperatorRewardRouter {
+//     operator: Pubkey,
+
+//     ncn: Pubkey,
+
+//     ncn_epoch: PodU64,
+
+//     bump: u8,
+
+//     slot_created: PodU64,
+//     /// base_rewards == operator_rewards
+//     router: RewardRouter,
+// }
+
+// impl Discriminator for OperatorRewardRouter {
+//     const DISCRIMINATOR: u8 = Discriminators::OperatorRewardRouter as u8;
+// }
+
+// impl OperatorRewardRouter {
+//     pub fn new(operator: Pubkey, ncn: Pubkey, ncn_epoch: u64, bump: u8, slot_created: u64) -> Self {
+//         Self {
+//             operator,
+//             ncn,
+//             ncn_epoch: PodU64::from(ncn_epoch),
+//             bump,
+//             slot_created: PodU64::from(slot_created),
+//             router: RewardRouter::new(),
+//         }
+//     }
+
+//     pub fn seeds(operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
+//         Vec::from_iter(
+//             [
+//                 b"operator_reward_router".to_vec(),
+//                 operator.to_bytes().to_vec(),
+//                 ncn.to_bytes().to_vec(),
+//                 ncn_epoch.to_le_bytes().to_vec(),
+//             ]
+//             .iter()
+//             .cloned(),
+//         )
+//     }
+
+//     pub fn find_program_address(
+//         program_id: &Pubkey,
+//         operator: &Pubkey,
+//         ncn: &Pubkey,
+//         ncn_epoch: u64,
+//     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
+//         let seeds = Self::seeds(operator, ncn, ncn_epoch);
+//         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
+//         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
+//         (pda, bump, seeds)
+//     }
+
+//     pub fn load(
+//         program_id: &Pubkey,
+//         operator: &Pubkey,
+//         ncn: &Pubkey,
+//         ncn_epoch: u64,
+//         account: &AccountInfo,
+//         expect_writable: bool,
+//     ) -> Result<(), ProgramError> {
+//         if account.owner.ne(program_id) {
+//             msg!("Operator Reward Router account has an invalid owner");
+//             return Err(ProgramError::InvalidAccountOwner);
+//         }
+//         if account.data_is_empty() {
+//             msg!("Operator Reward Router account data is empty");
+//             return Err(ProgramError::InvalidAccountData);
+//         }
+//         if expect_writable && !account.is_writable {
+//             msg!("Operator Reward Router account is not writable");
+//             return Err(ProgramError::InvalidAccountData);
+//         }
+//         if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
+//             msg!("Operator Reward Router account discriminator is invalid");
+//             return Err(ProgramError::InvalidAccountData);
+//         }
+//         if account
+//             .key
+//             .ne(&Self::find_program_address(program_id, operator, ncn, ncn_epoch).0)
+//         {
+//             msg!("Operator Reward Router account is not at the correct PDA");
+//             return Err(ProgramError::InvalidAccountData);
+//         }
+//         Ok(())
+//     }
+
+//     pub fn process_reward_pool(
+//         &mut self,
+//         operator_snapshot: &OperatorSnapshot,
+//     ) -> Result<(), TipRouterError> {
+//         let base_fee = operator_snapshot.operator_fee_bps();
+
+//         let total_reward_stake_weight = operator_snapshot.reward_stake_weight();
+
+//         let reward_stake_weights: Vec<RewardStakeWeight> = operator_snapshot
+//             .vault_operator_stake_weight()
+//             .iter()
+//             .map(|stake_weight| RewardStakeWeight::from(stake_weight))
+//             .collect();
+
+//         self.router.process_reward_pool(
+//             base_fee as u64,
+//             total_reward_stake_weight,
+//             &reward_stake_weights,
+//         )
+//     }
+// }
+
+// #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
+// #[repr(C)]
+// pub struct RewardRouter {
+//     reward_pool: PodU64,
+
+//     base_rewards: PodU64,
+
+//     reward_routes: [RewardRoutes; 32],
+
+//     reserved: [u8; 128],
+// }
+
+// impl RewardRouter {
+//     pub fn new() -> Self {
+//         Self {
+//             reserved: [0; 128],
+//             reward_pool: PodU64::from(0),
+//             base_rewards: PodU64::from(0),
+//             reward_routes: [RewardRoutes::default(); 32],
+//         }
+//     }
+
+//     fn calculate_base_rewards(
+//         base_fee: u64,
+//         rewards_to_process: u64,
+//     ) -> Result<u64, TipRouterError> {
+//         let precise_base_fee =
+//             PreciseNumber::new(base_fee as u128).ok_or(TipRouterError::NewPreciseNumberError)?;
+
+//         let precise_rewards_to_process = PreciseNumber::new(rewards_to_process as u128)
+//             .ok_or(TipRouterError::NewPreciseNumberError)?;
+
+//         let precise_max_bps =
+//             PreciseNumber::new(MAX_BPS as u128).ok_or(TipRouterError::NewPreciseNumberError)?;
+
+//         let precise_base_rewards = precise_rewards_to_process
+//             .checked_mul(&precise_base_fee)
+//             .and_then(|x| x.checked_div(&precise_max_bps))
+//             .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+//         let floored_precise_base_rewards = precise_base_rewards
+//             .floor()
+//             .ok_or(TipRouterError::ArithmeticFloorError)?;
+
+//         let base_rewards_u128: u128 = floored_precise_base_rewards
+//             .to_imprecise()
+//             .ok_or(TipRouterError::CastToImpreciseNumberError)?;
+
+//         base_rewards_u128
+//             .try_into()
+//             .map_err(|_| TipRouterError::CastToU64Error)
+//     }
+
+//     fn calculate_route_rewards(
+//         reward_stake_weight: u128,
+//         total_reward_stake_weight: u128,
+//         rewards_to_process: u64,
+//     ) -> Result<u64, TipRouterError> {
+//         let precise_reward_stake_weight =
+//             PreciseNumber::new(reward_stake_weight).ok_or(TipRouterError::NewPreciseNumberError)?;
+
+//         let precise_total_reward_stake_weight = PreciseNumber::new(total_reward_stake_weight)
+//             .ok_or(TipRouterError::NewPreciseNumberError)?;
+
+//         let precise_rewards_to_process = PreciseNumber::new(rewards_to_process as u128)
+//             .ok_or(TipRouterError::NewPreciseNumberError)?;
+
+//         let precise_reward_split = precise_reward_stake_weight
+//             .checked_div(&precise_total_reward_stake_weight)
+//             .ok_or(TipRouterError::DenominatorIsZero)?;
+
+//         let precise_rewards = precise_rewards_to_process
+//             .checked_div(&precise_reward_split)
+//             .ok_or(TipRouterError::DenominatorIsZero)?;
+
+//         let floored_precise_rewards = precise_rewards
+//             .floor()
+//             .ok_or(TipRouterError::ArithmeticFloorError)?;
+
+//         let rewards_u128: u128 = floored_precise_rewards
+//             .to_imprecise()
+//             .ok_or(TipRouterError::CastToImpreciseNumberError)?;
+
+//         rewards_u128
+//             .try_into()
+//             .map_err(|_| TipRouterError::CastToU64Error)
+//     }
+
+//     pub fn process_reward_pool(
+//         &mut self,
+//         base_fee: u64,
+//         total_reward_stake_weight: u128,
+//         reward_stake_weights: &[RewardStakeWeight],
+//     ) -> Result<(), TipRouterError> {
+//         // Base Rewards
+//         {
+//             let rewards_to_process: u64 = self.reward_pool();
+
+//             let base_rewards = Self::calculate_base_rewards(base_fee, rewards_to_process)?;
+
+//             self.increment_base_rewards(base_rewards)?;
+//             self.decrement_reward_pool(base_rewards)?;
+//         }
+
+//         // Router Rewards
+//         {
+//             let rewards_to_process: u64 = self.reward_pool();
+
+//             for entry in reward_stake_weights.iter() {
+//                 let router_rewards = Self::calculate_route_rewards(
+//                     entry.reward_stake_weight,
+//                     total_reward_stake_weight,
+//                     rewards_to_process,
+//                 )?;
+
+//                 self.insert_or_increment_router_rewards(entry.destination, router_rewards)?;
+//                 self.decrement_reward_pool(router_rewards)?;
+//             }
+//         }
+
+//         // Any Leftovers go to base
+//         {
+//             let leftover_rewards = self.reward_pool();
+
+//             self.increment_base_rewards(leftover_rewards)?;
+//             self.decrement_reward_pool(leftover_rewards)?;
+//         }
+
+//         Ok(())
+//     }
+
+//     pub fn insert_or_increment_router_rewards(
+//         &mut self,
+//         operator: Pubkey,
+//         rewards: u64,
+//     ) -> Result<(), TipRouterError> {
+//         for operator_reward in self.reward_routes.iter_mut() {
+//             if operator_reward.destination == operator {
+//                 operator_reward.increment_rewards(rewards)?;
+//                 return Ok(());
+//             }
+//         }
+
+//         for operator_reward in self.reward_routes.iter_mut() {
+//             if operator_reward.destination == Pubkey::default() {
+//                 operator_reward.destination = operator;
+//                 operator_reward.rewards = PodU64::from(rewards);
+//                 return Ok(());
+//             }
+//         }
+
+//         Err(TipRouterError::OperatorRewardListFull.into())
+//     }
+
+//     pub fn decrement_router_rewards(
+//         &mut self,
+//         operator: Pubkey,
+//         rewards: u64,
+//     ) -> Result<(), TipRouterError> {
+//         for operator_reward in self.reward_routes.iter_mut() {
+//             if operator_reward.destination == operator {
+//                 operator_reward.decrement_rewards(rewards)?;
+//                 return Ok(());
+//             }
+//         }
+
+//         Err(TipRouterError::OperatorRewardNotFound.into())
+//     }
+
+//     pub fn reward_pool(&self) -> u64 {
+//         self.reward_pool.into()
+//     }
+
+//     pub fn increment_reward_pool(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+//         self.reward_pool = PodU64::from(
+//             self.reward_pool()
+//                 .checked_add(rewards)
+//                 .ok_or(TipRouterError::ArithmeticOverflow)?,
+//         );
+//         Ok(())
+//     }
+
+//     pub fn decrement_reward_pool(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+//         self.reward_pool = PodU64::from(
+//             self.reward_pool()
+//                 .checked_sub(rewards)
+//                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
+//         );
+//         Ok(())
+//     }
+
+//     pub fn base_rewards(&self) -> u64 {
+//         self.base_rewards.into()
+//     }
+
+//     pub fn increment_base_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+//         self.base_rewards = PodU64::from(
+//             self.base_rewards()
+//                 .checked_add(rewards)
+//                 .ok_or(TipRouterError::ArithmeticOverflow)?,
+//         );
+//         Ok(())
+//     }
+
+//     pub fn decrement_base_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+//         self.base_rewards = PodU64::from(
+//             self.base_rewards()
+//                 .checked_sub(rewards)
+//                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
+//         );
+//         Ok(())
+//     }
+// }
+
+// #[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
+// #[repr(C)]
+// pub struct RewardRoutes {
+//     destination: Pubkey,
+//     rewards: PodU64,
+//     reserved: [u8; 128],
+// }
+
+// impl Default for RewardRoutes {
+//     fn default() -> Self {
+//         Self {
+//             destination: Pubkey::default(),
+//             rewards: PodU64::from(0),
+//             reserved: [0; 128],
+//         }
+//     }
+// }
+
+// impl RewardRoutes {
+//     pub const fn destination(&self) -> Pubkey {
+//         self.destination
+//     }
+
+//     pub fn rewards(&self) -> u64 {
+//         self.rewards.into()
+//     }
+
+//     pub fn increment_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+//         self.rewards = PodU64::from(
+//             self.rewards()
+//                 .checked_add(rewards)
+//                 .ok_or(TipRouterError::ArithmeticOverflow)?,
+//         );
+//         Ok(())
+//     }
+
+//     pub fn decrement_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+//         self.rewards = PodU64::from(
+//             self.rewards()
+//                 .checked_sub(rewards)
+//                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
+//         );
+//         Ok(())
+//     }
+// }
+
+// pub struct RewardStakeWeight {
+//     pub destination: Pubkey,
+//     pub reward_stake_weight: u128,
+// }
+
+// impl From<&VaultOperatorStakeWeight> for RewardStakeWeight {
+//     fn from(stake_weight: &VaultOperatorStakeWeight) -> Self {
+//         Self {
+//             destination: stake_weight.vault(),
+//             reward_stake_weight: stake_weight.reward_stake_weight(),
+//         }
+//     }
+// }
+
+// impl From<&OperatorVote> for RewardStakeWeight {
+//     fn from(vote: &OperatorVote) -> Self {
+//         Self {
+//             destination: vote.operator(),
+//             reward_stake_weight: vote.reward_stake_weight(),
+//         }
+//     }
+// }
