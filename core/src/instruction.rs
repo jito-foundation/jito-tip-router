@@ -141,4 +141,27 @@ pub enum TipRouterInstruction {
     #[account(3, writable, signer, name = "payer")]
     #[account(4, name = "system_program")]
     InitializeTrackedMints,
+
+    /// Initializes the epoch reward router account for an NCN
+    #[account(0, name = "ncn_config")]
+    #[account(1, name = "ncn")]
+    #[account(2, name = "ballot_box")]
+    #[account(3, name = "epoch_reward_router")]
+    #[account(4, writable, signer, name = "payer")]
+    #[account(5, name = "system_program")]
+    InitializeEpochRewardRouter{
+        first_slot_of_ncn_epoch: Option<u64>,
+    },
+
+    /// Initializes the epoch reward router account for an NCN
+    #[account(0, name = "ncn_config")]
+    #[account(1, name = "ncn")]
+    #[account(2, name = "operator")]
+    #[account(3, name = "ballot_box")]
+    #[account(4, name = "operator_epoch_reward_router")]
+    #[account(5, writable, signer, name = "payer")]
+    #[account(6, name = "system_program")]
+    InitializeOperatorEpochRewardRouter{
+        first_slot_of_ncn_epoch: Option<u64>,
+    },
 }

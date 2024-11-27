@@ -56,7 +56,7 @@ impl OperatorEpochRewardRouter {
     pub fn seeds(operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
-                b"operator_reward_router".to_vec(),
+                b"operator_epoch_reward_router".to_vec(),
                 operator.to_bytes().to_vec(),
                 ncn.to_bytes().to_vec(),
                 ncn_epoch.to_le_bytes().to_vec(),

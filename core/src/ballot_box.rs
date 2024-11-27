@@ -292,6 +292,10 @@ impl BallotBox {
         }
     }
 
+    pub fn has_winning_ballot(&self) -> bool {
+        !self.winning_ballot.is_empty()
+    }
+
     pub const fn operator_votes(&self) -> &[OperatorVote; 32] {
         &self.operator_votes
     }

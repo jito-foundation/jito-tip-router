@@ -1,6 +1,8 @@
 mod admin_update_weight_table;
+mod initialize_epoch_reward_router;
 mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
+mod initialize_operator_epoch_reward_router;
 mod initialize_operator_snapshot;
 mod initialize_tracked_mints;
 mod initialize_weight_table;
@@ -22,8 +24,10 @@ use solana_security_txt::security_txt;
 
 use crate::{
     admin_update_weight_table::process_admin_update_weight_table,
+    initialize_epoch_reward_router::process_initialize_epoch_reward_router,
     initialize_epoch_snapshot::process_initialize_epoch_snapshot,
     initialize_ncn_config::process_initialize_ncn_config,
+    initialize_operator_epoch_reward_router::process_initialize_operator_epoch_reward_router,
     initialize_operator_snapshot::process_initialize_operator_snapshot,
     initialize_tracked_mints::process_initialize_tracked_mints,
     initialize_weight_table::process_initialize_weight_table, register_mint::process_register_mint,
@@ -100,6 +104,22 @@ pub fn process_instruction(
         } => {
             msg!("Instruction: InitializeVaultOperatorDelegationSnapshot");
             process_snapshot_vault_operator_delegation(
+                program_id,
+                accounts,
+                first_slot_of_ncn_epoch,
+            )
+        }
+        TipRouterInstruction::InitializeEpochRewardRouter {
+            first_slot_of_ncn_epoch,
+        } => {
+            msg!("Instruction: InitializeEpochRewardRouter");
+            process_initialize_epoch_reward_router(program_id, accounts, first_slot_of_ncn_epoch)
+        }
+        TipRouterInstruction::InitializeOperatorEpochRewardRouter {
+            first_slot_of_ncn_epoch,
+        } => {
+            msg!("Instruction: InitializeOperatorEpochRewardRouter");
+            process_initialize_operator_epoch_reward_router(
                 program_id,
                 accounts,
                 first_slot_of_ncn_epoch,
