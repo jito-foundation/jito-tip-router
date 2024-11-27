@@ -239,26 +239,26 @@ impl BallotBox {
         program_id: &Pubkey,
         ncn: &Pubkey,
         ncn_epoch: u64,
-        epoch_snapshot: &AccountInfo,
+        account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if epoch_snapshot.owner.ne(program_id) {
+        if account.owner.ne(program_id) {
             msg!("Ballot box account has an invalid owner");
             return Err(ProgramError::InvalidAccountOwner);
         }
-        if epoch_snapshot.data_is_empty() {
+        if account.data_is_empty() {
             msg!("Ballot box account data is empty");
             return Err(ProgramError::InvalidAccountData);
         }
-        if expect_writable && !epoch_snapshot.is_writable {
+        if expect_writable && !account.is_writable {
             msg!("Ballot box account is not writable");
             return Err(ProgramError::InvalidAccountData);
         }
-        if epoch_snapshot.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
+        if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
             msg!("Ballot box account discriminator is invalid");
             return Err(ProgramError::InvalidAccountData);
         }
-        if epoch_snapshot
+        if account
             .key
             .ne(&Self::find_program_address(program_id, ncn, ncn_epoch).0)
         {

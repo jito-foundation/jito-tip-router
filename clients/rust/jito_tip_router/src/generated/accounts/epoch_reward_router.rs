@@ -22,6 +22,7 @@ pub struct EpochRewardRouter {
     pub bump: u8,
     pub slot_created: u64,
     pub reward_pool: u64,
+    pub rewards_processed: u64,
     pub doa_rewards: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 128],

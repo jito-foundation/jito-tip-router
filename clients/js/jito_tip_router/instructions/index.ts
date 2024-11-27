@@ -7,11 +7,16 @@
  */
 
 export * from './adminUpdateWeightTable';
+export * from './initializeEpochRewardRouter';
 export * from './initializeEpochSnapshot';
 export * from './initializeNCNConfig';
+export * from './initializeOperatorEpochRewardRouter';
 export * from './initializeOperatorSnapshot';
 export * from './initializeTrackedMints';
 export * from './initializeWeightTable';
+export * from './processEpochRewardBuckets';
+export * from './processEpochRewardPool';
+export * from './processOperatorEpochRewardPool';
 export * from './registerMint';
 export * from './setConfigFees';
 export * from './setNewAdmin';

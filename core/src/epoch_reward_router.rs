@@ -5,8 +5,8 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    ballot_box::BallotBox, discriminators::Discriminators, error::TipRouterError, fees::FeeConfig,
-    ncn_fee_group::NcnFeeGroup,
+    ballot_box::BallotBox, discriminators::Discriminators, error::TipRouterError, fees::Fees,
+    ncn_fee_group::NcnFeeGroup, operator_epoch_reward_router::OperatorEpochRewardRouter,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
@@ -95,6 +95,8 @@ pub struct EpochRewardRouter {
 
     reward_pool: PodU64,
 
+    rewards_processed: PodU64,
+
     doa_rewards: PodU64,
 
     reserved: [u8; 128],
@@ -119,6 +121,7 @@ impl EpochRewardRouter {
             ncn_reward_buckets: [RewardBucket::default(); NcnFeeGroup::FEE_GROUP_COUNT],
             reward_routes: [RewardRoutes::default(); 32],
             reward_pool: PodU64::from(0),
+            rewards_processed: PodU64::from(0),
             doa_rewards: PodU64::from(0),
             reserved: [0; 128],
         }
@@ -180,18 +183,26 @@ impl EpochRewardRouter {
         Ok(())
     }
 
-    pub fn process_reward_pool(
-        &mut self,
-        fee_config: &FeeConfig,
-        current_epoch: u64,
-    ) -> Result<(), TipRouterError> {
+    pub fn process_incoming_rewards(&mut self, account_balance: u64) -> Result<(), TipRouterError> {
+        let total_rewards = self.total_rewards()?;
+
+        let incoming_rewards = account_balance
+            .checked_sub(total_rewards)
+            .ok_or(TipRouterError::ArithmeticUnderflowError)?;
+
+        self.increment_reward_pool(incoming_rewards)?;
+
+        Ok(())
+    }
+
+    pub fn process_reward_pool(&mut self, fee: &Fees) -> Result<(), TipRouterError> {
         let rewards_to_process: u64 = self.reward_pool();
 
-        let total_fee_bps = fee_config.total_fees_bps(current_epoch)?;
+        let total_fee_bps = fee.total_fees_bps()?;
 
         // DAO Rewards
         {
-            let dao_fee = fee_config.dao_fee_bps(current_epoch);
+            let dao_fee = fee.dao_fee_bps();
             let dao_rewards =
                 Self::calculate_bucket_reward(dao_fee, total_fee_bps, rewards_to_process)?;
 
@@ -202,7 +213,7 @@ impl EpochRewardRouter {
         // Fee Buckets
         {
             for group in NcnFeeGroup::all_groups().iter() {
-                let ncn_group_fee = fee_config.ncn_fee_bps(*group, current_epoch)?;
+                let ncn_group_fee = fee.ncn_fee_bps(*group)?;
 
                 let group_reward = Self::calculate_bucket_reward(
                     ncn_group_fee,
@@ -226,7 +237,11 @@ impl EpochRewardRouter {
         Ok(())
     }
 
-    pub fn process_buckets(&mut self, ballot_box: &BallotBox) -> Result<(), TipRouterError> {
+    pub fn process_buckets(
+        &mut self,
+        ballot_box: &BallotBox,
+        program_id: &Pubkey,
+    ) -> Result<(), TipRouterError> {
         let winning_ballot = ballot_box.get_winning_ballot()?;
         let winning_stake_weight = winning_ballot.stake_weight();
 
@@ -247,7 +262,19 @@ impl EpochRewardRouter {
                         rewards_to_process,
                     )?;
 
-                    self.insert_or_increment_operator_rewards(operator, operator_rewards)?;
+                    let operator_epoch_reward_router =
+                        OperatorEpochRewardRouter::find_program_address(
+                            program_id,
+                            &operator,
+                            &self.ncn,
+                            self.ncn_epoch.into(),
+                        )
+                        .0;
+
+                    self.insert_or_increment_operator_rewards(
+                        operator_epoch_reward_router,
+                        operator_rewards,
+                    )?;
                     self.decrement_ncn_rewards(*group, operator_rewards)?;
                 }
             }
@@ -377,6 +404,19 @@ impl EpochRewardRouter {
         Err(TipRouterError::OperatorRewardNotFound)
     }
 
+    pub fn total_rewards(&self) -> Result<u64, TipRouterError> {
+        let total_rewards = self
+            .reward_pool()
+            .checked_add(self.rewards_processed())
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        Ok(total_rewards)
+    }
+
+    pub fn rewards_processed(&self) -> u64 {
+        self.rewards_processed.into()
+    }
+
     pub fn reward_pool(&self) -> u64 {
         self.reward_pool.into()
     }
@@ -403,6 +443,12 @@ impl EpochRewardRouter {
             self.reward_pool()
                 .checked_sub(rewards)
                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
+        );
+
+        self.rewards_processed = PodU64::from(
+            self.rewards_processed()
+                .checked_add(rewards)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
         Ok(())
     }
@@ -431,6 +477,12 @@ impl EpochRewardRouter {
 
         self.doa_rewards = PodU64::from(
             self.doa_rewards()
+                .checked_sub(rewards)
+                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
+        );
+
+        self.rewards_processed = PodU64::from(
+            self.rewards_processed()
                 .checked_sub(rewards)
                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
         );
@@ -476,6 +528,12 @@ impl EpochRewardRouter {
         let group_index = group.group_index()?;
         self.ncn_reward_buckets[group_index].rewards = PodU64::from(
             self.ncn_rewards(group)?
+                .checked_sub(rewards)
+                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
+        );
+
+        self.rewards_processed = PodU64::from(
+            self.rewards_processed()
                 .checked_sub(rewards)
                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
         );

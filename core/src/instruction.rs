@@ -143,25 +143,58 @@ pub enum TipRouterInstruction {
     InitializeTrackedMints,
 
     /// Initializes the epoch reward router account for an NCN
-    #[account(0, name = "ncn_config")]
+    #[account(0, name = "restaking_config")]
     #[account(1, name = "ncn")]
     #[account(2, name = "ballot_box")]
     #[account(3, name = "epoch_reward_router")]
     #[account(4, writable, signer, name = "payer")]
-    #[account(5, name = "system_program")]
+    #[account(5, name = "restaking_program_id")]
+    #[account(6, name = "system_program")]
     InitializeEpochRewardRouter{
         first_slot_of_ncn_epoch: Option<u64>,
     },
 
     /// Initializes the epoch reward router account for an NCN
-    #[account(0, name = "ncn_config")]
+    #[account(0, name = "restaking_config")]
     #[account(1, name = "ncn")]
     #[account(2, name = "operator")]
     #[account(3, name = "ballot_box")]
     #[account(4, name = "operator_epoch_reward_router")]
     #[account(5, writable, signer, name = "payer")]
-    #[account(6, name = "system_program")]
+    #[account(6, name = "restaking_program_id")]
+    #[account(7, name = "system_program")]
     InitializeOperatorEpochRewardRouter{
         first_slot_of_ncn_epoch: Option<u64>,
     },
+
+    // restaking_config, ncn, epoch_snapshot, epoch_reward_router, restaking_program
+    #[account(0, name = "restaking_config")]
+    #[account(1, name = "ncn")]
+    #[account(2, name = "epoch_snapshot")]
+    #[account(3, name = "epoch_reward_router")]
+    #[account(4, name = "restaking_program_id")]
+    ProcessEpochRewardPool{
+        first_slot_of_ncn_epoch: Option<u64>,
+    },
+
+    // restaking_config, ncn, ballot_box, epoch_reward_router, restaking_program
+    #[account(0, name = "restaking_config")]
+    #[account(1, name = "ncn")]
+    #[account(2, name = "ballot_box")]
+    #[account(3, name = "epoch_reward_router")]
+    #[account(4, name = "restaking_program_id")]
+    ProcessEpochRewardBuckets{
+        first_slot_of_ncn_epoch: Option<u64>,
+    },
+
+    #[account(0, name = "restaking_config")]
+    #[account(1, name = "ncn")]
+    #[account(2, name = "operator")]
+    #[account(3, name = "operator_snapshot")]
+    #[account(4, name = "operator_reward_router")]
+    #[account(5, name = "restaking_program_id")]
+    ProcessOperatorEpochRewardPool{
+        first_slot_of_ncn_epoch: Option<u64>,
+    },
+
 }

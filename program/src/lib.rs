@@ -6,6 +6,9 @@ mod initialize_operator_epoch_reward_router;
 mod initialize_operator_snapshot;
 mod initialize_tracked_mints;
 mod initialize_weight_table;
+mod process_epoch_reward_buckets;
+mod process_epoch_reward_pool;
+mod process_operator_epoch_reward_pool;
 mod register_mint;
 mod set_config_fees;
 mod set_new_admin;
@@ -30,8 +33,11 @@ use crate::{
     initialize_operator_epoch_reward_router::process_initialize_operator_epoch_reward_router,
     initialize_operator_snapshot::process_initialize_operator_snapshot,
     initialize_tracked_mints::process_initialize_tracked_mints,
-    initialize_weight_table::process_initialize_weight_table, register_mint::process_register_mint,
-    set_config_fees::process_set_config_fees,
+    initialize_weight_table::process_initialize_weight_table,
+    process_epoch_reward_buckets::process_process_epoch_reward_buckets,
+    process_epoch_reward_pool::process_process_epoch_reward_pool,
+    process_operator_epoch_reward_pool::process_process_operator_epoch_reward_pool,
+    register_mint::process_register_mint, set_config_fees::process_set_config_fees,
     snapshot_vault_operator_delegation::process_snapshot_vault_operator_delegation,
 };
 
@@ -161,6 +167,28 @@ pub fn process_instruction(
         TipRouterInstruction::InitializeTrackedMints => {
             msg!("Instruction: InitializeTrackedMints");
             process_initialize_tracked_mints(program_id, accounts)
+        }
+        TipRouterInstruction::ProcessEpochRewardPool {
+            first_slot_of_ncn_epoch,
+        } => {
+            msg!("Instruction: ProcessEpochRewardPool");
+            process_process_epoch_reward_pool(program_id, accounts, first_slot_of_ncn_epoch)
+        }
+        TipRouterInstruction::ProcessEpochRewardBuckets {
+            first_slot_of_ncn_epoch,
+        } => {
+            msg!("Instruction: ProcessEpochRewardBuckets");
+            process_process_epoch_reward_buckets(program_id, accounts, first_slot_of_ncn_epoch)
+        }
+        TipRouterInstruction::ProcessOperatorEpochRewardPool {
+            first_slot_of_ncn_epoch,
+        } => {
+            msg!("Instruction: ProcessOperatorEpochRewardPool");
+            process_process_operator_epoch_reward_pool(
+                program_id,
+                accounts,
+                first_slot_of_ncn_epoch,
+            )
         }
     }
 }

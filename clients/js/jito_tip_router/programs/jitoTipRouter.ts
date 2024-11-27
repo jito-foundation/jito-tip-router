@@ -14,11 +14,16 @@ import {
 } from '@solana/web3.js';
 import {
   type ParsedAdminUpdateWeightTableInstruction,
+  type ParsedInitializeEpochRewardRouterInstruction,
   type ParsedInitializeEpochSnapshotInstruction,
   type ParsedInitializeNCNConfigInstruction,
+  type ParsedInitializeOperatorEpochRewardRouterInstruction,
   type ParsedInitializeOperatorSnapshotInstruction,
   type ParsedInitializeTrackedMintsInstruction,
   type ParsedInitializeWeightTableInstruction,
+  type ParsedProcessEpochRewardBucketsInstruction,
+  type ParsedProcessEpochRewardPoolInstruction,
+  type ParsedProcessOperatorEpochRewardPoolInstruction,
   type ParsedRegisterMintInstruction,
   type ParsedSetConfigFeesInstruction,
   type ParsedSetNewAdminInstruction,
@@ -50,6 +55,11 @@ export enum JitoTipRouterInstruction {
   SnapshotVaultOperatorDelegation,
   RegisterMint,
   InitializeTrackedMints,
+  InitializeEpochRewardRouter,
+  InitializeOperatorEpochRewardRouter,
+  ProcessEpochRewardPool,
+  ProcessEpochRewardBuckets,
+  ProcessOperatorEpochRewardPool,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -85,6 +95,21 @@ export function identifyJitoTipRouterInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(9), 0)) {
     return JitoTipRouterInstruction.InitializeTrackedMints;
+  }
+  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
+    return JitoTipRouterInstruction.InitializeEpochRewardRouter;
+  }
+  if (containsBytes(data, getU8Encoder().encode(11), 0)) {
+    return JitoTipRouterInstruction.InitializeOperatorEpochRewardRouter;
+  }
+  if (containsBytes(data, getU8Encoder().encode(12), 0)) {
+    return JitoTipRouterInstruction.ProcessEpochRewardPool;
+  }
+  if (containsBytes(data, getU8Encoder().encode(13), 0)) {
+    return JitoTipRouterInstruction.ProcessEpochRewardBuckets;
+  }
+  if (containsBytes(data, getU8Encoder().encode(14), 0)) {
+    return JitoTipRouterInstruction.ProcessOperatorEpochRewardPool;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -123,4 +148,19 @@ export type ParsedJitoTipRouterInstruction<
     } & ParsedRegisterMintInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.InitializeTrackedMints;
-    } & ParsedInitializeTrackedMintsInstruction<TProgram>);
+    } & ParsedInitializeTrackedMintsInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeEpochRewardRouter;
+    } & ParsedInitializeEpochRewardRouterInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeOperatorEpochRewardRouter;
+    } & ParsedInitializeOperatorEpochRewardRouterInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ProcessEpochRewardPool;
+    } & ParsedProcessEpochRewardPoolInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ProcessEpochRewardBuckets;
+    } & ParsedProcessEpochRewardBucketsInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ProcessOperatorEpochRewardPool;
+    } & ParsedProcessOperatorEpochRewardPoolInstruction<TProgram>);

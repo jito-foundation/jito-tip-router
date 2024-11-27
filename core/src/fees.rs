@@ -59,34 +59,16 @@ impl FeeConfig {
     }
 
     pub fn total_fees_bps(&self, current_epoch: u64) -> Result<u64, TipRouterError> {
-        let mut total_fees_bps = self.dao_fee_bps(current_epoch);
-
-        for group in NcnFeeGroup::all_groups().iter() {
-            let ncn_fee_bps = self.ncn_fee_bps(*group, current_epoch)?;
-
-            total_fees_bps = total_fees_bps
-                .checked_add(ncn_fee_bps)
-                .ok_or(TipRouterError::ArithmeticOverflow)?;
-        }
-
-        Ok(total_fees_bps)
+        let current_fees = self.current_fees(current_epoch);
+        current_fees.total_fees_bps()
     }
 
     pub fn precise_total_fee_bps(
         &self,
         current_epoch: u64,
     ) -> Result<PreciseNumber, TipRouterError> {
-        let mut precise_total_fees_bps = self.precise_dao_fee_bps(current_epoch)?;
-
-        for group in NcnFeeGroup::all_groups().iter() {
-            let precise_ncn_fee_bps = self.precise_ncn_fee_bps(*group, current_epoch)?;
-
-            precise_total_fees_bps = precise_total_fees_bps
-                .checked_add(&precise_ncn_fee_bps)
-                .ok_or(TipRouterError::ArithmeticOverflow)?;
-        }
-
-        Ok(precise_total_fees_bps)
+        let current_fees = self.current_fees(current_epoch);
+        current_fees.precise_total_fee_bps()
     }
 
     pub fn block_engine_fee_bps(&self, current_epoch: u64) -> u64 {
@@ -353,6 +335,34 @@ impl Fees {
         let fee = self.ncn_fee_bps(ncn_fee_group)?;
 
         self.adjusted_precise_fee_bps(fee)
+    }
+
+    pub fn total_fees_bps(&self) -> Result<u64, TipRouterError> {
+        let mut total_fees_bps = self.dao_fee_bps();
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            let ncn_fee_bps = self.ncn_fee_bps(*group)?;
+
+            total_fees_bps = total_fees_bps
+                .checked_add(ncn_fee_bps)
+                .ok_or(TipRouterError::ArithmeticOverflow)?;
+        }
+
+        Ok(total_fees_bps)
+    }
+
+    pub fn precise_total_fee_bps(&self) -> Result<PreciseNumber, TipRouterError> {
+        let mut precise_total_fees_bps = self.precise_dao_fee_bps()?;
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            let precise_ncn_fee_bps = self.precise_ncn_fee_bps(*group)?;
+
+            precise_total_fees_bps = precise_total_fees_bps
+                .checked_add(&precise_ncn_fee_bps)
+                .ok_or(TipRouterError::ArithmeticOverflow)?;
+        }
+
+        Ok(precise_total_fees_bps)
     }
 
     // ------ Setters -----------------

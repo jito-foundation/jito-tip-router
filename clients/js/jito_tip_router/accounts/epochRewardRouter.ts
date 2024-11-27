@@ -52,6 +52,7 @@ export type EpochRewardRouter = {
   bump: number;
   slotCreated: bigint;
   rewardPool: bigint;
+  rewardsProcessed: bigint;
   doaRewards: bigint;
   reserved: Array<number>;
   ncnRewardBuckets: Array<RewardBucket>;
@@ -65,6 +66,7 @@ export type EpochRewardRouterArgs = {
   bump: number;
   slotCreated: number | bigint;
   rewardPool: number | bigint;
+  rewardsProcessed: number | bigint;
   doaRewards: number | bigint;
   reserved: Array<number>;
   ncnRewardBuckets: Array<RewardBucketArgs>;
@@ -79,6 +81,7 @@ export function getEpochRewardRouterEncoder(): Encoder<EpochRewardRouterArgs> {
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
     ['rewardPool', getU64Encoder()],
+    ['rewardsProcessed', getU64Encoder()],
     ['doaRewards', getU64Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
     [
@@ -97,6 +100,7 @@ export function getEpochRewardRouterDecoder(): Decoder<EpochRewardRouter> {
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
     ['rewardPool', getU64Decoder()],
+    ['rewardsProcessed', getU64Decoder()],
     ['doaRewards', getU64Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
     [

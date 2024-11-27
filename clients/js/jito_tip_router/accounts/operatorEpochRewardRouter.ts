@@ -49,6 +49,7 @@ export type OperatorEpochRewardRouter = {
   bump: number;
   slotCreated: bigint;
   rewardPool: bigint;
+  rewardsProcessed: bigint;
   operatorRewards: bigint;
   reserved: Array<number>;
   vaultRewards: Array<RewardRoutes>;
@@ -62,6 +63,7 @@ export type OperatorEpochRewardRouterArgs = {
   bump: number;
   slotCreated: number | bigint;
   rewardPool: number | bigint;
+  rewardsProcessed: number | bigint;
   operatorRewards: number | bigint;
   reserved: Array<number>;
   vaultRewards: Array<RewardRoutesArgs>;
@@ -76,6 +78,7 @@ export function getOperatorEpochRewardRouterEncoder(): Encoder<OperatorEpochRewa
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
     ['rewardPool', getU64Encoder()],
+    ['rewardsProcessed', getU64Encoder()],
     ['operatorRewards', getU64Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
     ['vaultRewards', getArrayEncoder(getRewardRoutesEncoder(), { size: 32 })],
@@ -91,6 +94,7 @@ export function getOperatorEpochRewardRouterDecoder(): Decoder<OperatorEpochRewa
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
     ['rewardPool', getU64Decoder()],
+    ['rewardsProcessed', getU64Decoder()],
     ['operatorRewards', getU64Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
     ['vaultRewards', getArrayDecoder(getRewardRoutesDecoder(), { size: 32 })],

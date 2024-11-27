@@ -31,7 +31,7 @@ pub struct EpochSnapshot {
     slot_created: PodU64,
     slot_finalized: PodU64,
 
-    ncn_fees: Fees,
+    fees: Fees,
 
     operator_count: PodU64,
     vault_count: PodU64,
@@ -54,7 +54,7 @@ impl EpochSnapshot {
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
-        ncn_fees: Fees,
+        fees: Fees,
         operator_count: u64,
         vault_count: u64,
     ) -> Self {
@@ -64,7 +64,7 @@ impl EpochSnapshot {
             slot_created: PodU64::from(current_slot),
             slot_finalized: PodU64::from(0),
             bump,
-            ncn_fees,
+            fees,
             operator_count: PodU64::from(operator_count),
             vault_count: PodU64::from(vault_count),
             operators_registered: PodU64::from(0),
@@ -148,6 +148,10 @@ impl EpochSnapshot {
 
     pub const fn stake_weight(&self) -> &StakeWeight {
         &self.stake_weight
+    }
+
+    pub const fn fees(&self) -> &Fees {
+        &self.fees
     }
 
     pub fn finalized(&self) -> bool {

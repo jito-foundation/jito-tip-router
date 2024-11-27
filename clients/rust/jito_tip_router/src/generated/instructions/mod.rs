@@ -5,19 +5,26 @@
 //! <https://github.com/kinobi-so/kinobi>
 
 pub(crate) mod r#admin_update_weight_table;
+pub(crate) mod r#initialize_epoch_reward_router;
 pub(crate) mod r#initialize_epoch_snapshot;
 pub(crate) mod r#initialize_n_c_n_config;
+pub(crate) mod r#initialize_operator_epoch_reward_router;
 pub(crate) mod r#initialize_operator_snapshot;
 pub(crate) mod r#initialize_tracked_mints;
 pub(crate) mod r#initialize_weight_table;
+pub(crate) mod r#process_epoch_reward_buckets;
+pub(crate) mod r#process_epoch_reward_pool;
+pub(crate) mod r#process_operator_epoch_reward_pool;
 pub(crate) mod r#register_mint;
 pub(crate) mod r#set_config_fees;
 pub(crate) mod r#set_new_admin;
 pub(crate) mod r#snapshot_vault_operator_delegation;
 
 pub use self::{
-    r#admin_update_weight_table::*, r#initialize_epoch_snapshot::*, r#initialize_n_c_n_config::*,
-    r#initialize_operator_snapshot::*, r#initialize_tracked_mints::*, r#initialize_weight_table::*,
-    r#register_mint::*, r#set_config_fees::*, r#set_new_admin::*,
-    r#snapshot_vault_operator_delegation::*,
+    r#admin_update_weight_table::*, r#initialize_epoch_reward_router::*,
+    r#initialize_epoch_snapshot::*, r#initialize_n_c_n_config::*,
+    r#initialize_operator_epoch_reward_router::*, r#initialize_operator_snapshot::*,
+    r#initialize_tracked_mints::*, r#initialize_weight_table::*, r#process_epoch_reward_buckets::*,
+    r#process_epoch_reward_pool::*, r#process_operator_epoch_reward_pool::*, r#register_mint::*,
+    r#set_config_fees::*, r#set_new_admin::*, r#snapshot_vault_operator_delegation::*,
 };

@@ -22,7 +22,7 @@ pub struct EpochSnapshot {
     pub bump: u8,
     pub slot_created: u64,
     pub slot_finalized: u64,
-    pub ncn_fees: Fees,
+    pub fees: Fees,
     pub operator_count: u64,
     pub vault_count: u64,
     pub operators_registered: u64,

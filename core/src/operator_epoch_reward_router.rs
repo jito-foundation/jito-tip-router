@@ -26,6 +26,8 @@ pub struct OperatorEpochRewardRouter {
 
     reward_pool: PodU64,
 
+    rewards_processed: PodU64,
+
     operator_rewards: PodU64,
 
     reserved: [u8; 128],
@@ -48,6 +50,7 @@ impl OperatorEpochRewardRouter {
             slot_created: PodU64::from(slot_created),
             vault_rewards: [RewardRoutes::default(); 32],
             reward_pool: PodU64::from(0),
+            rewards_processed: PodU64::from(0),
             operator_rewards: PodU64::from(0),
             reserved: [0; 128],
         }
@@ -109,6 +112,18 @@ impl OperatorEpochRewardRouter {
             msg!("Epoch Reward Router account is not at the correct PDA");
             return Err(ProgramError::InvalidAccountData);
         }
+        Ok(())
+    }
+
+    pub fn process_incoming_rewards(&mut self, account_balance: u64) -> Result<(), TipRouterError> {
+        let total_rewards = self.total_rewards()?;
+
+        let incoming_rewards = account_balance
+            .checked_sub(total_rewards)
+            .ok_or(TipRouterError::ArithmeticUnderflowError)?;
+
+        self.increment_reward_pool(incoming_rewards)?;
+
         Ok(())
     }
 
@@ -284,7 +299,26 @@ impl OperatorEpochRewardRouter {
             }
         }
 
+        self.rewards_processed = PodU64::from(
+            self.rewards_processed()
+                .checked_sub(rewards)
+                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
+        );
+
         Err(TipRouterError::OperatorRewardNotFound)
+    }
+
+    pub fn total_rewards(&self) -> Result<u64, TipRouterError> {
+        let total_rewards = self
+            .reward_pool()
+            .checked_add(self.rewards_processed())
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        Ok(total_rewards)
+    }
+
+    pub fn rewards_processed(&self) -> u64 {
+        self.rewards_processed.into()
     }
 
     pub fn reward_pool(&self) -> u64 {
@@ -314,6 +348,13 @@ impl OperatorEpochRewardRouter {
                 .checked_sub(rewards)
                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
         );
+
+        self.rewards_processed = PodU64::from(
+            self.rewards_processed()
+                .checked_add(rewards)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+
         Ok(())
     }
 
@@ -341,6 +382,12 @@ impl OperatorEpochRewardRouter {
 
         self.operator_rewards = PodU64::from(
             self.operator_rewards()
+                .checked_sub(rewards)
+                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
+        );
+
+        self.rewards_processed = PodU64::from(
+            self.rewards_processed()
                 .checked_sub(rewards)
                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
         );
