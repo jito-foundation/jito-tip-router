@@ -128,29 +128,3 @@ async fn test_snapshot_validation_failure() -> Result<()> {
 
     Ok(())
 }
-
-#[tokio::test]
-async fn test_stake_meta_generation() {
-    let ctx = TestContext::new().await;
-    
-    let snapshot_creator = SnapshotCreator::new(
-        &ctx.client.url(),           
-        ctx.output_dir.to_str().unwrap().to_string(),
-        5,                          
-        "zstd".to_string(),     
-        ctx.keypair.insecure_clone(),
-        ctx.blockstore_dir.clone(),     
-    ).unwrap();
-
-    let slot = 100;
-    // Use std::panic::catch_unwind with a synchronous block
-    let result = tokio::task::spawn_blocking(move || {
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            tokio::runtime::Runtime::new()
-                .unwrap()
-                .block_on(snapshot_creator.create_stake_meta(slot))
-        }))
-    }).await.unwrap();
-
-    assert!(result.is_err(), "Expected panic due to no staked nodes");
-}

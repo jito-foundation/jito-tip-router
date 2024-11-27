@@ -22,9 +22,8 @@ use solana_stake_program;
 use solana_sdk::account::ReadableAccount;
 use solana_accounts_db::accounts_index::ScanConfig;
 use solana_stake_program::stake_state::StakeStateV2;
-use std::time::Instant;
 use bincode;
-
+use std::time::Instant;
 #[derive(Serialize, Deserialize, Debug)]
 struct StakeMetaAccount {
     lamports: u64,
@@ -334,111 +333,6 @@ impl SnapshotCreator {
                 warn!("Failed to remove old snapshot {:?}: {}", path, e);
             }
         }
-
-        Ok(())
-    }
-
-    pub async fn create_stake_meta(&self, slot: Slot) -> Result<()> {
-        info!("Creating stake meta for slot {}", slot);
-        datapoint_info!("tip_router_stake_meta", ("slot", slot, i64), ("event", "start", String));
-
-        // Load bank from snapshot
-        let blockstore = Blockstore::open(&self.blockstore_path)?;
-        let genesis_config = GenesisConfig::default();
-
-        let (bank_forks, _, _) = bank_forks_utils::load(
-            &genesis_config,
-            &blockstore,
-            vec![self.output_dir.clone()],
-            None,
-            None,
-            ProcessOptions::default(),
-            None,
-            None,
-            None,
-            None,
-            Arc::new(AtomicBool::new(false))
-        )?;
-
-        let bank = bank_forks
-            .read()
-            .unwrap()
-            .get(slot)
-            .ok_or_else(|| anyhow!("Failed to get bank at slot {}", slot))?;
-
-        // Get all vote accounts
-        let vote_accounts = bank.vote_accounts();
-        let mut validator_stake_meta = HashMap::new();
-
-        // Process all stake accounts
-        if
-            let Ok(accounts) = bank.get_program_accounts(
-                &solana_stake_program::id(),
-                &ScanConfig::default()
-            )
-        {
-            for (stake_pubkey, account) in accounts {
-                if let Ok(stake_state) = bincode::deserialize(account.data()) {
-                    if let StakeStateV2::Stake(meta, stake, _stake_flags) = stake_state {
-                        let voter_pubkey = stake.delegation.voter_pubkey.to_string();
-                        let lamports = account.lamports();
-
-                        validator_stake_meta
-                            .entry(voter_pubkey)
-                            .and_modify(|v: &mut ValidatorStakeMeta| {
-                                v.total_stake += lamports;
-                                v.stake_accounts.insert(stake_pubkey.to_string(), StakeMetaAccount {
-                                    lamports,
-                                    owner: account.owner().to_string(),
-                                    stake_authority: meta.authorized.staker.to_string().into(),
-                                    withdraw_authority: meta.authorized.withdrawer
-                                        .to_string()
-                                        .into(),
-                                });
-                            })
-                            .or_insert_with(|| {
-                                let mut stake_accounts = HashMap::new();
-                                stake_accounts.insert(stake_pubkey.to_string(), StakeMetaAccount {
-                                    lamports,
-                                    owner: account.owner().to_string(),
-                                    stake_authority: meta.authorized.staker.to_string().into(),
-                                    withdraw_authority: meta.authorized.withdrawer
-                                        .to_string()
-                                        .into(),
-                                });
-                                ValidatorStakeMeta {
-                                    vote_account: stake.delegation.voter_pubkey.to_string(),
-                                    identity: String::new(), // Will be filled in next loop
-                                    commission: 0, // Will be filled in next loop
-                                    stake_accounts,
-                                    total_stake: lamports,
-                                }
-                            });
-                    }
-                }
-            }
-        }
-
-        // Fill in validator identity and commission information
-        for (vote_pubkey, (validator_identity, vote_account)) in vote_accounts.as_ref() {
-            if let Some(meta) = validator_stake_meta.get_mut(&vote_pubkey.to_string()) {
-                meta.identity = validator_identity.to_string();
-                if let Ok(vote_state) = vote_account.vote_state() {
-                    meta.commission = vote_state.commission;
-                }
-            }
-        }
-
-        // Write to file
-        let meta_path = self.output_dir.join(format!("stake-meta-{}.json", slot));
-        fs::write(&meta_path, serde_json::to_string_pretty(&validator_stake_meta)?)?;
-
-        info!("Stake meta created at {:?}", meta_path);
-        datapoint_info!(
-            "tip_router_stake_meta",
-            ("slot", slot, i64),
-            ("event", "complete", String)
-        );
 
         Ok(())
     }
