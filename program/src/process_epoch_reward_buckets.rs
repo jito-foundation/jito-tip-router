@@ -38,7 +38,7 @@ pub fn process_process_epoch_reward_buckets(
         let ballot_box_data = ballot_box.try_borrow_data()?;
         let ballot_box_account = BallotBox::try_from_slice_unchecked(&ballot_box_data)?;
 
-        ballot_box_account.clone()
+        *ballot_box_account
     };
 
     let mut epoch_reward_router_data = epoch_reward_router.try_borrow_mut_data()?;

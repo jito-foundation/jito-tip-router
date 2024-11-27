@@ -55,10 +55,10 @@ pub fn process_process_operator_epoch_reward_pool(
         let operator_snapshot_account =
             OperatorSnapshot::try_from_slice_unchecked(&operator_snapshot_data)?;
 
-        operator_snapshot_account.clone()
+        *operator_snapshot_account
     };
 
-    let account_balance = operator_epoch_reward_router.try_borrow_lamports()?.clone();
+    let account_balance = **operator_epoch_reward_router.try_borrow_lamports()?;
 
     let mut operator_epoch_reward_router_data =
         operator_epoch_reward_router.try_borrow_mut_data()?;

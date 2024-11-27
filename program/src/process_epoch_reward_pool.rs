@@ -38,10 +38,10 @@ pub fn process_process_epoch_reward_pool(
         let epoch_snapshot_data = epoch_snapshot.try_borrow_data()?;
         let epoch_snapshot_account = EpochSnapshot::try_from_slice_unchecked(&epoch_snapshot_data)?;
 
-        epoch_snapshot_account.fees().clone()
+        *epoch_snapshot_account.fees()
     };
 
-    let account_balance = epoch_reward_router.try_borrow_lamports()?.clone();
+    let account_balance = **epoch_reward_router.try_borrow_lamports()?;
 
     let mut epoch_reward_router_data = epoch_reward_router.try_borrow_mut_data()?;
     let epoch_reward_router_account =
