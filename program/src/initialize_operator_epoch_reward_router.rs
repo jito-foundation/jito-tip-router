@@ -7,7 +7,7 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
-    ballot_box::BallotBox, loaders::load_ncn_epoch,
+    ballot_box::BallotBox, loaders::load_ncn_epoch, ncn_fee_group::NcnFeeGroup,
     operator_epoch_reward_router::OperatorEpochRewardRouter,
 };
 use solana_program::{
@@ -20,6 +20,7 @@ use solana_program::{
 pub fn process_initialize_operator_epoch_reward_router(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
+    ncn_fee_group: u8,
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
     let [restaking_config, ncn, operator, ballot_box, operator_reward_router, payer, restaking_program, system_program] =
@@ -41,6 +42,8 @@ pub fn process_initialize_operator_epoch_reward_router(
     load_system_program(system_program)?;
     load_signer(payer, true)?;
 
+    let ncn_fee_group = NcnFeeGroup::try_from(ncn_fee_group)?;
+
     let current_slot = Clock::get()?.slot;
     let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
 
@@ -61,6 +64,7 @@ pub fn process_initialize_operator_epoch_reward_router(
         mut operator_reward_router_seeds,
     ) = OperatorEpochRewardRouter::find_program_address(
         program_id,
+        ncn_fee_group,
         operator.key,
         ncn.key,
         ncn_epoch,
@@ -96,6 +100,7 @@ pub fn process_initialize_operator_epoch_reward_router(
         OperatorEpochRewardRouter::try_from_slice_unchecked_mut(&mut operator_reward_router_data)?;
 
     *operator_reward_router_account = OperatorEpochRewardRouter::new(
+        ncn_fee_group,
         *operator.key,
         *ncn.key,
         ncn_epoch,

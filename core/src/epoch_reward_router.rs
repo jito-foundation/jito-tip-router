@@ -5,57 +5,93 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    ballot_box::BallotBox, discriminators::Discriminators, error::TipRouterError, fees::Fees,
-    ncn_fee_group::NcnFeeGroup, operator_epoch_reward_router::OperatorEpochRewardRouter,
+    ballot_box::BallotBox,
+    discriminators::Discriminators,
+    error::TipRouterError,
+    fees::{FeeConfig, Fees},
+    ncn_fee_group::NcnFeeGroup,
+    operator_epoch_reward_router::OperatorEpochRewardRouter,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
+#[repr(C)]
+pub struct OperatorRewards {
+    rewards: PodU64,
+}
+
+impl OperatorRewards {
+    pub fn rewards(self) -> u64 {
+        self.rewards.into()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct RewardRoutes {
-    destination: Pubkey,
-    rewards: PodU64,
-    reserved: [u8; 128],
+    operator: Pubkey,
+    rewards: [OperatorRewards; 8],
 }
 
 impl Default for RewardRoutes {
     fn default() -> Self {
         Self {
-            destination: Pubkey::default(),
-            rewards: PodU64::from(0),
-            reserved: [0; 128],
+            operator: Pubkey::default(),
+            rewards: [OperatorRewards::default(); NcnFeeGroup::FEE_GROUP_COUNT],
         }
     }
 }
 
 impl RewardRoutes {
     pub const fn destination(&self) -> Pubkey {
-        self.destination
+        self.operator
     }
 
     pub fn set_destination(&mut self, destination: Pubkey) {
-        self.destination = destination;
+        self.operator = destination;
     }
 
-    pub fn rewards(&self) -> u64 {
-        self.rewards.into()
+    pub fn rewards(&self, ncn_fee_group: NcnFeeGroup) -> Result<u64, TipRouterError> {
+        let group_index = ncn_fee_group.group_index()?;
+        Ok(self.rewards[group_index].rewards())
     }
 
-    pub fn increment_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
-        self.rewards = PodU64::from(
-            self.rewards()
-                .checked_add(rewards)
-                .ok_or(TipRouterError::ArithmeticOverflow)?,
-        );
+    pub fn set_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        rewards: u64,
+    ) -> Result<(), TipRouterError> {
+        let group_index = ncn_fee_group.group_index()?;
+        self.rewards[group_index].rewards = PodU64::from(rewards);
+
         Ok(())
     }
 
-    pub fn decrement_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
-        self.rewards = PodU64::from(
-            self.rewards()
-                .checked_sub(rewards)
-                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
-        );
-        Ok(())
+    pub fn increment_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        rewards: u64,
+    ) -> Result<(), TipRouterError> {
+        let current_rewards = self.rewards(ncn_fee_group)?;
+
+        let new_rewards = current_rewards
+            .checked_add(rewards)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        self.set_rewards(ncn_fee_group, new_rewards)
+    }
+
+    pub fn decrement_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        rewards: u64,
+    ) -> Result<(), TipRouterError> {
+        let current_rewards = self.rewards(ncn_fee_group)?;
+
+        let new_rewards = current_rewards
+            .checked_sub(rewards)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        self.set_rewards(ncn_fee_group, new_rewards)
     }
 }
 
@@ -183,6 +219,36 @@ impl EpochRewardRouter {
         Ok(())
     }
 
+    pub fn distribute_dao_rewards(
+        &mut self,
+        fee_config: &FeeConfig,
+        destination: &Pubkey,
+    ) -> Result<u64, TipRouterError> {
+        if destination.ne(&fee_config.fee_wallet()) {
+            return Err(TipRouterError::DestinationMismatch);
+        }
+
+        let dao_rewards = self.doa_rewards();
+
+        self.decrement_dao_rewards(dao_rewards)?;
+
+        Ok(self.doa_rewards())
+    }
+
+    // pub fn distribute_ncn_rewards(
+    //     &mut self,
+    //     destination: &Pubkey,
+    // ) -> Result<u64, TipRouterError> {
+
+    //     for route in
+
+    //     let group_rewards = self.ncn_rewards(group)?;
+
+    //     self.decrement_ncn_rewards(group, group_rewards)?;
+
+    //     Ok(self.ncn_rewards(group)?)
+    // }
+
     pub fn process_incoming_rewards(&mut self, account_balance: u64) -> Result<(), TipRouterError> {
         let total_rewards = self.total_rewards()?;
 
@@ -265,6 +331,7 @@ impl EpochRewardRouter {
                     let operator_epoch_reward_router =
                         OperatorEpochRewardRouter::find_program_address(
                             program_id,
+                            *group,
                             &operator,
                             &self.ncn,
                             self.ncn_epoch.into(),
@@ -272,6 +339,7 @@ impl EpochRewardRouter {
                         .0;
 
                     self.insert_or_increment_operator_rewards(
+                        *group,
                         operator_epoch_reward_router,
                         operator_rewards,
                     )?;
@@ -360,6 +428,7 @@ impl EpochRewardRouter {
 
     pub fn insert_or_increment_operator_rewards(
         &mut self,
+        ncn_fee_group: NcnFeeGroup,
         operator: Pubkey,
         rewards: u64,
     ) -> Result<(), TipRouterError> {
@@ -368,16 +437,16 @@ impl EpochRewardRouter {
         }
 
         for operator_reward in self.reward_routes.iter_mut() {
-            if operator_reward.destination == operator {
-                operator_reward.increment_rewards(rewards)?;
+            if operator_reward.operator == operator {
+                operator_reward.increment_rewards(ncn_fee_group, rewards)?;
                 return Ok(());
             }
         }
 
         for operator_reward in self.reward_routes.iter_mut() {
-            if operator_reward.destination == Pubkey::default() {
-                operator_reward.destination = operator;
-                operator_reward.rewards = PodU64::from(rewards);
+            if operator_reward.operator == Pubkey::default() {
+                operator_reward.operator = operator;
+                operator_reward.increment_rewards(ncn_fee_group, rewards)?;
                 return Ok(());
             }
         }
@@ -387,6 +456,7 @@ impl EpochRewardRouter {
 
     pub fn decrement_operator_rewards(
         &mut self,
+        ncn_fee_group: NcnFeeGroup,
         operator: Pubkey,
         rewards: u64,
     ) -> Result<(), TipRouterError> {
@@ -395,8 +465,8 @@ impl EpochRewardRouter {
         }
 
         for operator_reward in self.reward_routes.iter_mut() {
-            if operator_reward.destination == operator {
-                operator_reward.decrement_rewards(rewards)?;
+            if operator_reward.operator == operator {
+                operator_reward.decrement_rewards(ncn_fee_group, rewards)?;
                 return Ok(());
             }
         }

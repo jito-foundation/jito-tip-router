@@ -88,6 +88,8 @@ pub enum TipRouterError {
     OperatorRewardListFull,
     #[error("Operator Reward not found")]
     OperatorRewardNotFound,
+    #[error("Destination mismatch")]
+    DestinationMismatch,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

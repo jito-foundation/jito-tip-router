@@ -6,14 +6,66 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    discriminators::Discriminators, epoch_reward_router::RewardRoutes,
-    epoch_snapshot::OperatorSnapshot, error::TipRouterError,
+    discriminators::Discriminators, epoch_snapshot::OperatorSnapshot, error::TipRouterError,
+    ncn_fee_group::NcnFeeGroup,
 };
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[repr(C)]
+pub struct RewardRoutes {
+    destination: Pubkey,
+    rewards: PodU64,
+    reserved: [u8; 128],
+}
+
+impl Default for RewardRoutes {
+    fn default() -> Self {
+        Self {
+            destination: Pubkey::default(),
+            rewards: PodU64::from(0),
+            reserved: [0; 128],
+        }
+    }
+}
+
+impl RewardRoutes {
+    pub const fn destination(&self) -> Pubkey {
+        self.destination
+    }
+
+    pub fn set_destination(&mut self, destination: Pubkey) {
+        self.destination = destination;
+    }
+
+    pub fn rewards(&self) -> u64 {
+        self.rewards.into()
+    }
+
+    pub fn increment_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+        self.rewards = PodU64::from(
+            self.rewards()
+                .checked_add(rewards)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+        Ok(())
+    }
+
+    pub fn decrement_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+        self.rewards = PodU64::from(
+            self.rewards()
+                .checked_sub(rewards)
+                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
+        );
+        Ok(())
+    }
+}
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct OperatorEpochRewardRouter {
+    ncn_fee_group: NcnFeeGroup,
+
     operator: Pubkey,
 
     ncn: Pubkey,
@@ -41,8 +93,16 @@ impl Discriminator for OperatorEpochRewardRouter {
 }
 
 impl OperatorEpochRewardRouter {
-    pub fn new(operator: Pubkey, ncn: Pubkey, ncn_epoch: u64, bump: u8, slot_created: u64) -> Self {
+    pub fn new(
+        ncn_fee_group: NcnFeeGroup,
+        operator: Pubkey,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+        bump: u8,
+        slot_created: u64,
+    ) -> Self {
         Self {
+            ncn_fee_group,
             operator,
             ncn,
             ncn_epoch: PodU64::from(ncn_epoch),
@@ -56,10 +116,16 @@ impl OperatorEpochRewardRouter {
         }
     }
 
-    pub fn seeds(operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
+    pub fn seeds(
+        ncn_fee_group: NcnFeeGroup,
+        operator: &Pubkey,
+        ncn: &Pubkey,
+        ncn_epoch: u64,
+    ) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
                 b"operator_epoch_reward_router".to_vec(),
+                vec![ncn_fee_group.group],
                 operator.to_bytes().to_vec(),
                 ncn.to_bytes().to_vec(),
                 ncn_epoch.to_le_bytes().to_vec(),
@@ -71,11 +137,12 @@ impl OperatorEpochRewardRouter {
 
     pub fn find_program_address(
         program_id: &Pubkey,
+        ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
         ncn_epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(operator, ncn, ncn_epoch);
+        let seeds = Self::seeds(ncn_fee_group, operator, ncn, ncn_epoch);
         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
         (pda, bump, seeds)
@@ -83,6 +150,7 @@ impl OperatorEpochRewardRouter {
 
     pub fn load(
         program_id: &Pubkey,
+        ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
         ncn_epoch: u64,
@@ -105,9 +173,14 @@ impl OperatorEpochRewardRouter {
             msg!("Epoch Reward Router account discriminator is invalid");
             return Err(ProgramError::InvalidAccountData);
         }
-        if account
-            .key
-            .ne(&Self::find_program_address(program_id, operator, ncn, ncn_epoch).0)
+        if account.key.ne(&Self::find_program_address(
+            program_id,
+            ncn_fee_group,
+            operator,
+            ncn,
+            ncn_epoch,
+        )
+        .0)
         {
             msg!("Epoch Reward Router account is not at the correct PDA");
             return Err(ProgramError::InvalidAccountData);

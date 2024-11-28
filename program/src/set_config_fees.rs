@@ -57,7 +57,7 @@ pub fn process_set_config_fees(
     }
 
     let new_ncn_fee_group = if let Some(new_ncn_fee_group) = new_ncn_fee_group {
-        Some(NcnFeeGroup::from_u8(new_ncn_fee_group)?)
+        Some(NcnFeeGroup::try_from(new_ncn_fee_group)?)
     } else {
         None
     };

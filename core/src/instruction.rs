@@ -164,6 +164,7 @@ pub enum TipRouterInstruction {
     #[account(6, name = "restaking_program_id")]
     #[account(7, name = "system_program")]
     InitializeOperatorEpochRewardRouter{
+        ncn_fee_group: u8, 
         first_slot_of_ncn_epoch: Option<u64>,
     },
 

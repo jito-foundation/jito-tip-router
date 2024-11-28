@@ -1,4 +1,5 @@
 mod admin_update_weight_table;
+mod distribute_rewards;
 mod initialize_epoch_reward_router;
 mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
@@ -122,12 +123,14 @@ pub fn process_instruction(
             process_initialize_epoch_reward_router(program_id, accounts, first_slot_of_ncn_epoch)
         }
         TipRouterInstruction::InitializeOperatorEpochRewardRouter {
+            ncn_fee_group,
             first_slot_of_ncn_epoch,
         } => {
             msg!("Instruction: InitializeOperatorEpochRewardRouter");
             process_initialize_operator_epoch_reward_router(
                 program_id,
                 accounts,
+                ncn_fee_group,
                 first_slot_of_ncn_epoch,
             )
         }

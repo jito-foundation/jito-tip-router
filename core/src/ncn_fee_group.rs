@@ -38,6 +38,32 @@ impl Default for NcnFeeGroup {
     }
 }
 
+impl TryFrom<u8> for NcnFeeGroup {
+    type Error = TipRouterError;
+
+    fn try_from(group: u8) -> Result<Self, Self::Error> {
+        match group {
+            0x0 => Ok(Self::new(NcnFeeGroupType::Default)),
+            0x1 => Ok(Self::new(NcnFeeGroupType::JTO)),
+            0x2 => Ok(Self::new(NcnFeeGroupType::Reserved2)),
+            0x3 => Ok(Self::new(NcnFeeGroupType::Reserved3)),
+            0x4 => Ok(Self::new(NcnFeeGroupType::Reserved4)),
+            0x5 => Ok(Self::new(NcnFeeGroupType::Reserved5)),
+            0x6 => Ok(Self::new(NcnFeeGroupType::Reserved6)),
+            0x7 => Ok(Self::new(NcnFeeGroupType::Reserved7)),
+            // 0x8 => Ok(Self::new(NcnFeeGroupType::Reserved8)),
+            // 0x9 => Ok(Self::new(NcnFeeGroupType::Reserved9)),
+            // 0xA => Ok(Self::new(NcnFeeGroupType::ReservedA)),
+            // 0xB => Ok(Self::new(NcnFeeGroupType::ReservedB)),
+            // 0xC => Ok(Self::new(NcnFeeGroupType::ReservedC)),
+            // 0xD => Ok(Self::new(NcnFeeGroupType::ReservedD)),
+            // 0xE => Ok(Self::new(NcnFeeGroupType::ReservedE)),
+            // 0xF => Ok(Self::new(NcnFeeGroupType::ReservedF)),
+            _ => Err(TipRouterError::InvalidNcnFeeGroup),
+        }
+    }
+}
+
 impl NcnFeeGroup {
     pub const FEE_GROUP_COUNT: usize = 8;
 
@@ -60,28 +86,6 @@ impl NcnFeeGroup {
             // NcnFeeGroupType::ReservedD => Self { group: group as u8 },
             // NcnFeeGroupType::ReservedE => Self { group: group as u8 },
             // NcnFeeGroupType::ReservedF => Self { group: group as u8 },
-        }
-    }
-
-    pub const fn from_u8(group: u8) -> Result<Self, TipRouterError> {
-        match group {
-            0x0 => Ok(Self::new(NcnFeeGroupType::Default)),
-            0x1 => Ok(Self::new(NcnFeeGroupType::JTO)),
-            0x2 => Ok(Self::new(NcnFeeGroupType::Reserved2)),
-            0x3 => Ok(Self::new(NcnFeeGroupType::Reserved3)),
-            0x4 => Ok(Self::new(NcnFeeGroupType::Reserved4)),
-            0x5 => Ok(Self::new(NcnFeeGroupType::Reserved5)),
-            0x6 => Ok(Self::new(NcnFeeGroupType::Reserved6)),
-            0x7 => Ok(Self::new(NcnFeeGroupType::Reserved7)),
-            // 0x8 => Ok(Self::new(NcnFeeGroupType::Reserved8)),
-            // 0x9 => Ok(Self::new(NcnFeeGroupType::Reserved9)),
-            // 0xA => Ok(Self::new(NcnFeeGroupType::ReservedA)),
-            // 0xB => Ok(Self::new(NcnFeeGroupType::ReservedB)),
-            // 0xC => Ok(Self::new(NcnFeeGroupType::ReservedC)),
-            // 0xD => Ok(Self::new(NcnFeeGroupType::ReservedD)),
-            // 0xE => Ok(Self::new(NcnFeeGroupType::ReservedE)),
-            // 0xF => Ok(Self::new(NcnFeeGroupType::ReservedF)),
-            _ => Err(TipRouterError::InvalidNcnFeeGroup),
         }
     }
 
