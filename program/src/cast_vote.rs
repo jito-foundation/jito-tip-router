@@ -77,11 +77,6 @@ pub fn process_cast_vote(
 
     let slot = Clock::get()?.slot;
 
-    // Check if voting is still valid given current slot
-    if !ballot_box.is_voting_valid(slot, valid_slots_after_consensus) {
-        return Err(TipRouterError::VotingNotValid.into());
-    }
-
     let ballot = Ballot::new(meta_merkle_root);
 
     ballot_box.cast_vote(

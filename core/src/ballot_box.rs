@@ -425,6 +425,34 @@ impl BallotBox {
         Ok(())
     }
 
+    pub fn set_tie_breaker_ballot(
+        &mut self,
+        meta_merkle_root: [u8; 32],
+        current_epoch: u64,
+        epochs_before_stall: u64,
+    ) -> Result<(), TipRouterError> {
+        // Check that consensus has not been reached
+        if self.is_consensus_reached() {
+            msg!("Consensus already reached");
+            return Err(TipRouterError::ConsensusAlreadyReached);
+        }
+
+        // Check if voting is stalled and setting the tie breaker is eligible
+        if current_epoch < self.epoch() + epochs_before_stall {
+            return Err(TipRouterError::VotingNotFinalized);
+        }
+
+        let finalized_ballot = Ballot::new(meta_merkle_root);
+
+        // Check that the merkle root is one of the existing options
+        if !self.has_ballot(&finalized_ballot) {
+            return Err(TipRouterError::TieBreakerNotInPriorVotes);
+        }
+
+        self.set_winning_ballot(finalized_ballot);
+        Ok(())
+    }
+
     pub fn has_ballot(&self, ballot: &Ballot) -> bool {
         self.ballot_tallies.iter().any(|t| t.ballot.eq(ballot))
     }
@@ -692,5 +720,65 @@ mod tests {
             .unwrap();
         assert!(ballot_box.is_consensus_reached());
         assert_eq!(ballot_box.get_winning_ballot().unwrap(), ballot3);
+    }
+
+    #[test]
+    fn test_set_tie_breaker_ballot() {
+        let ncn = Pubkey::new_unique();
+        let epoch = 0;
+        let current_slot = 1000;
+        let mut ballot_box = BallotBox::new(ncn, epoch, 0, current_slot);
+
+        // Create some initial ballots
+        let ballot1 = Ballot::new([1; 32]);
+        let ballot2 = Ballot::new([2; 32]);
+        let stake_weight = 100;
+
+        ballot_box
+            .increment_or_create_ballot_tally(&ballot1, stake_weight)
+            .unwrap();
+        ballot_box
+            .increment_or_create_ballot_tally(&ballot2, stake_weight)
+            .unwrap();
+
+        // Test setting tie breaker before voting is stalled
+        let current_epoch = epoch + 1;
+        let epochs_before_stall = 3;
+        assert_eq!(
+            ballot_box.set_tie_breaker_ballot(ballot1.root(), current_epoch, epochs_before_stall),
+            Err(TipRouterError::VotingNotFinalized)
+        );
+
+        // Test setting tie breaker after voting is stalled (current_epoch >= epoch + epochs_before_stall)
+        let current_epoch = epoch + epochs_before_stall;
+        ballot_box
+            .set_tie_breaker_ballot(ballot1.root(), current_epoch, epochs_before_stall)
+            .unwrap();
+        assert!(ballot_box.is_consensus_reached());
+        assert_eq!(ballot_box.get_winning_ballot().unwrap(), ballot1);
+
+        // Test setting tie breaker with invalid merkle root
+        let mut ballot_box = BallotBox::new(ncn, epoch, 0, current_slot);
+        ballot_box
+            .increment_or_create_ballot_tally(&ballot1, stake_weight)
+            .unwrap();
+        assert_eq!(
+            ballot_box.set_tie_breaker_ballot([99; 32], current_epoch, epochs_before_stall),
+            Err(TipRouterError::TieBreakerNotInPriorVotes)
+        );
+
+        // Test setting tie breaker when consensus already reached
+        let mut ballot_box = BallotBox::new(ncn, epoch, 0, current_slot);
+        ballot_box
+            .increment_or_create_ballot_tally(&ballot1, stake_weight * 2)
+            .unwrap();
+        ballot_box
+            .tally_votes(stake_weight * 2, current_slot)
+            .unwrap();
+        assert!(ballot_box.is_consensus_reached());
+        assert_eq!(
+            ballot_box.set_tie_breaker_ballot(ballot1.root(), current_epoch, epochs_before_stall),
+            Err(TipRouterError::ConsensusAlreadyReached)
+        );
     }
 }

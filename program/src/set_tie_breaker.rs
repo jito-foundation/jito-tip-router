@@ -24,7 +24,6 @@ pub fn process_set_tie_breaker(
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     BallotBox::load(program_id, ncn.key, ncn_epoch, ballot_box, false)?;
     Ncn::load(program_id, ncn, false)?;
-
     load_signer(tie_breaker_admin, false)?;
 
     let ncn_config_data = ncn_config.data.borrow();
@@ -38,27 +37,13 @@ pub fn process_set_tie_breaker(
     let mut ballot_box_data = ballot_box.data.borrow_mut();
     let ballot_box_account = BallotBox::try_from_slice_unchecked_mut(&mut ballot_box_data)?;
 
-    // Check that consensus has not been reached and we are past epoch
-    if ballot_box_account.is_consensus_reached() {
-        msg!("Consensus already reached");
-        return Err(TipRouterError::ConsensusAlreadyReached.into());
-    }
-
     let current_epoch = Clock::get()?.epoch;
 
-    // Check if voting is stalled and setting the tie breaker is eligible
-    if ballot_box_account.epoch() + ncn_config.epochs_before_stall() < current_epoch {
-        return Err(TipRouterError::VotingNotFinalized.into());
-    }
-
-    let finalized_ballot = Ballot::new(meta_merkle_root);
-
-    // Check that the merkle root is one of the existing options
-    if !ballot_box_account.has_ballot(&finalized_ballot) {
-        return Err(TipRouterError::TieBreakerNotInPriorVotes.into());
-    }
-
-    ballot_box_account.set_winning_ballot(finalized_ballot);
+    ballot_box_account.set_tie_breaker_ballot(
+        meta_merkle_root,
+        current_epoch,
+        ncn_config.epochs_before_stall(),
+    )?;
 
     Ok(())
 }
