@@ -108,8 +108,8 @@ pub enum JitoTipRouterError {
     /// 8731 - Merkle root tally full
     #[error("Merkle root tally full")]
     BallotTallyFull = 0x221B,
-    /// 8732 - Consensus already reached
-    #[error("Consensus already reached")]
+    /// 8732 - Consensus already reached, cannot change vote
+    #[error("Consensus already reached, cannot change vote")]
     ConsensusAlreadyReached = 0x221C,
     /// 8733 - Consensus not reached
     #[error("Consensus not reached")]
@@ -117,8 +117,8 @@ pub enum JitoTipRouterError {
     /// 8734 - Epoch snapshot not finalized
     #[error("Epoch snapshot not finalized")]
     EpochSnapshotNotFinalized = 0x221E,
-    /// 8735 - Voting not valid
-    #[error("Voting not valid")]
+    /// 8735 - Voting not valid, too many slots after consensus reached
+    #[error("Voting not valid, too many slots after consensus reached")]
     VotingNotValid = 0x221F,
     /// 8736 - Tie breaker admin invalid
     #[error("Tie breaker admin invalid")]

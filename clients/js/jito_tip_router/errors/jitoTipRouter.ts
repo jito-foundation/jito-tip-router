@@ -80,13 +80,13 @@ export const JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST = 0x2219; // 8729
 export const JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL = 0x221a; // 8730
 /** BallotTallyFull: Merkle root tally full */
 export const JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL = 0x221b; // 8731
-/** ConsensusAlreadyReached: Consensus already reached */
+/** ConsensusAlreadyReached: Consensus already reached, cannot change vote */
 export const JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED = 0x221c; // 8732
 /** ConsensusNotReached: Consensus not reached */
 export const JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED = 0x221d; // 8733
 /** EpochSnapshotNotFinalized: Epoch snapshot not finalized */
 export const JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED = 0x221e; // 8734
-/** VotingNotValid: Voting not valid */
+/** VotingNotValid: Voting not valid, too many slots after consensus reached */
 export const JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID = 0x221f; // 8735
 /** TieBreakerAdminInvalid: Tie breaker admin invalid */
 export const JITO_TIP_ROUTER_ERROR__TIE_BREAKER_ADMIN_INVALID = 0x2220; // 8736
@@ -149,7 +149,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL]: `NCN config vaults are at capacity`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED]: `Config supported mints do not match NCN Vault Count`,
-    [JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED]: `Consensus already reached`,
+    [JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED]: `Consensus already reached, cannot change vote`,
     [JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED]: `Consensus not reached`,
     [JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO]: `Zero in the denominator`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE]: `Duplicate mints in table`,
@@ -178,7 +178,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE]: `Vault index already in use by a different mint`,
     [JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED]: `Vault operator delegation is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED]: `Voting not finalized`,
-    [JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID]: `Voting not valid`,
+    [JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID]: `Voting not valid, too many slots after consensus reached`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH]: `Weight mints do not match - length`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH]: `Weight mints do not match - mint hash`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND]: `Weight not found`,
