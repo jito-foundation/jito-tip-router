@@ -55,8 +55,9 @@ impl Debug for TestBuilder {
 
 impl TestBuilder {
     pub async fn new() -> Self {
-        // TODO explain difference
-        let program_test = if std::env::vars().any(|(key, value)| key.eq("SBF_OUT_DIR")) {
+        let run_as_bpf = std::env::vars().any(|(key, value)| key.eq("SBF_OUT_DIR"));
+
+        let program_test = if run_as_bpf {
             let mut program_test = ProgramTest::new(
                 "jito_tip_router_program",
                 jito_tip_router_program::id(),
@@ -69,7 +70,6 @@ impl TestBuilder {
             // Anchor programs do not expose a compatible entrypoint for solana_program_test::processor!
             program_test.add_program("jito_tip_distribution", jito_tip_distribution::id(), None);
 
-            // program_test.prefer_bpf(true);
             program_test
         } else {
             let mut program_test = ProgramTest::new(
@@ -87,12 +87,6 @@ impl TestBuilder {
                 jito_restaking_program::id(),
                 processor!(jito_restaking_program::process_instruction),
             );
-
-            // program_test.add_program(
-            //     "jito_tip_distribution",
-            //     jito_tip_distribution::id(),
-            //     processor!(jito_tip_router_program::process_instruction),
-            // );
 
             program_test
         };

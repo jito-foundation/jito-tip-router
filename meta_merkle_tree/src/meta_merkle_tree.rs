@@ -39,7 +39,7 @@ pub type Result<T> = result::Result<T, MerkleTreeError>;
 
 impl MetaMerkleTree {
     pub fn new(mut tree_nodes: Vec<TreeNode>) -> Result<Self> {
-        // TODO Consider correctness of a sorting step here
+        // Sort by hash to ensure consistent trees
         tree_nodes.sort_by_key(|node| node.hash());
 
         let hashed_nodes = tree_nodes
@@ -82,7 +82,7 @@ impl MetaMerkleTree {
         Self::new(tree_nodes)
     }
 
-    // TODO uncomment if we need to load this from a file (for operator?)
+    // TODO if we need to load this from a file (for operator?)
     /// Load a merkle tree from a csv path
     // pub fn new_from_csv(path: &PathBuf) -> Result<Self> {
     //     let csv_entries = CsvEntry::new_from_file(path)?;
@@ -200,169 +200,119 @@ impl MetaMerkleTree {
     }
 }
 
-// TODO rewrite tests for MetaMerkleTree
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
 
-// #[cfg(test)]
-// mod tests {
-//     use std::path::PathBuf;
+    use solana_program::pubkey::Pubkey;
+    use solana_sdk::{
+        signature::{EncodableKey, Keypair},
+        signer::Signer,
+    };
 
-//     use solana_program::{pubkey, pubkey::Pubkey};
-//     use solana_sdk::{
-//         signature::{EncodableKey, Keypair},
-//         signer::Signer,
-//     };
+    use super::*;
 
-//     use super::*;
+    pub fn new_test_key() -> Pubkey {
+        let kp = Keypair::new();
+        let out_path = format!("./test_keys/{}.json", kp.pubkey());
 
-//     pub fn new_test_key() -> Pubkey {
-//         let kp = Keypair::new();
-//         let out_path = format!("./test_keys/{}.json", kp.pubkey());
+        kp.write_to_file(out_path)
+            .expect("Failed to write to signer");
 
-//         kp.write_to_file(out_path)
-//             .expect("Failed to write to signer");
+        kp.pubkey()
+    }
 
-//         kp.pubkey()
-//     }
+    fn new_test_merkle_tree(num_nodes: u64, path: &PathBuf) {
+        let mut tree_nodes = vec![];
 
-//     fn new_test_merkle_tree(num_nodes: u64, path: &PathBuf) {
-//         let mut tree_nodes = vec![];
+        fn rand_balance() -> u64 {
+            rand::random::<u64>() % 100 * u64::pow(10, 9)
+        }
 
-//         fn rand_balance() -> u64 {
-//             rand::random::<u64>() % 100 * u64::pow(10, 9)
-//         }
+        for _ in 0..num_nodes {
+            tree_nodes.push(TreeNode::new(
+                new_test_key(),
+                [0; 32],
+                rand_balance(),
+                rand_balance(),
+            ));
+        }
 
-//         for _ in 0..num_nodes {
-//             // choose amount unlocked and amount locked as a random u64 between 0 and 100
-//             tree_nodes.push(TreeNode {
-//                 vote_account: new_test_key(),
-//                 proof: None,
-//                 total_unlocked_staker: rand_balance(),
-//                 total_locked_staker: rand_balance(),
-//                 total_unlocked_searcher: rand_balance(),
-//                 total_locked_searcher: rand_balance(),
-//                 total_unlocked_validator: rand_balance(),
-//                 total_locked_validator: rand_balance(),
-//             });
-//         }
+        let merkle_tree = MetaMerkleTree::new(tree_nodes).unwrap();
 
-//         let merkle_tree = MetaMerkleTree::new(tree_nodes).unwrap();
+        merkle_tree.write_to_file(path);
+    }
 
-//         merkle_tree.write_to_file(path);
-//     }
+    #[test]
+    fn test_verify_new_merkle_tree() {
+        let tree_nodes = vec![TreeNode::new(Pubkey::default(), [0; 32], 100, 10)];
+        let merkle_tree = MetaMerkleTree::new(tree_nodes).unwrap();
+        assert!(merkle_tree.verify_proof().is_ok(), "verify failed");
+    }
 
-//     #[test]
-//     fn test_verify_new_merkle_tree() {
-//         let tree_nodes = vec![TreeNode {
-//             vote_account: Pubkey::default(),
-//             proof: None,
-//             total_unlocked_staker: 2,
-//             total_locked_staker: 3,
-//             total_unlocked_searcher: 4,
-//             total_locked_searcher: 5,
-//             total_unlocked_validator: 6,
-//             total_locked_validator: 7,
-//         }];
-//         let merkle_tree = MetaMerkleTree::new(tree_nodes).unwrap();
-//         assert!(merkle_tree.verify_proof().is_ok(), "verify failed");
-//     }
+    #[test]
+    fn test_write_merkle_distributor_to_file() {
+        // create a merkle root from 3 tree nodes and write it to file, then read it
+        let tree_nodes = vec![
+            TreeNode::new(
+                new_test_key(),
+                [0; 32],
+                100 * u64::pow(10, 9),
+                100 * u64::pow(10, 9),
+            ),
+            TreeNode::new(
+                new_test_key(),
+                [0; 32],
+                100 * u64::pow(10, 9),
+                100 * u64::pow(10, 9),
+            ),
+            TreeNode::new(
+                new_test_key(),
+                [0; 32],
+                100 * u64::pow(10, 9),
+                100 * u64::pow(10, 9),
+            ),
+        ];
 
-//     #[test]
-//     fn test_write_merkle_distributor_to_file() {
-//         // create a merkle root from 3 tree nodes and write it to file, then read it
-//         let tree_nodes = vec![
-//             TreeNode {
-//                 vote_account: pubkey!("FLYqJsmJ5AGMxMxK3Qy1rSen4ES2dqqo6h51W3C1tYS"),
-//                 proof: None,
-//                 total_unlocked_staker: (100 * u64::pow(10, 9)),
-//                 total_locked_staker: (100 * u64::pow(10, 9)),
-//                 total_unlocked_searcher: 0,
-//                 total_locked_searcher: 0,
-//                 total_unlocked_validator: 0,
-//                 total_locked_validator: 0,
-//             },
-//             TreeNode {
-//                 vote_account: pubkey!("EDGARWktv3nDxRYjufjdbZmryqGXceaFPoPpbUzdpqED"),
-//                 proof: None,
-//                 total_unlocked_staker: 100 * u64::pow(10, 9),
-//                 total_locked_staker: (100 * u64::pow(10, 9)),
-//                 total_unlocked_searcher: 0,
-//                 total_locked_searcher: 0,
-//                 total_unlocked_validator: 0,
-//                 total_locked_validator: 0,
-//             },
-//             TreeNode {
-//                 vote_account: pubkey!("EDGARWktv3nDxRYjufjdbZmryqGXceaFPoPpbUzdpqEH"),
-//                 proof: None,
-//                 total_locked_staker: (100 * u64::pow(10, 9)),
-//                 total_unlocked_staker: (100 * u64::pow(10, 9)),
-//                 total_unlocked_searcher: 0,
-//                 total_locked_searcher: 0,
-//                 total_unlocked_validator: 0,
-//                 total_locked_validator: 0,
-//             },
-//         ];
+        let merkle_distributor_info = MetaMerkleTree::new(tree_nodes).unwrap();
+        let path = PathBuf::from("merkle_tree.json");
 
-//         let merkle_distributor_info = MetaMerkleTree::new(tree_nodes).unwrap();
-//         let path = PathBuf::from("merkle_tree.json");
+        // serialize merkle distributor to file
+        merkle_distributor_info.write_to_file(&path);
+        // now test we can successfully read from file
+        let merkle_distributor_read: MetaMerkleTree = MetaMerkleTree::new_from_file(&path).unwrap();
 
-//         // serialize merkle distributor to file
-//         merkle_distributor_info.write_to_file(&path);
-//         // now test we can successfully read from file
-//         let merkle_distributor_read: MetaMerkleTree = MetaMerkleTree::new_from_file(&path).unwrap();
+        assert_eq!(merkle_distributor_read.tree_nodes.len(), 3);
+    }
 
-//         assert_eq!(merkle_distributor_read.tree_nodes.len(), 3);
-//     }
+    #[test]
+    fn test_new_test_merkle_tree() {
+        new_test_merkle_tree(100, &PathBuf::from("merkle_tree_test_csv.json"));
+    }
 
-//     #[test]
-//     fn test_new_test_merkle_tree() {
-//         new_test_merkle_tree(100, &PathBuf::from("merkle_tree_test_csv.json"));
-//     }
+    // Test creating a merkle tree from Tree Nodes
+    #[test]
+    fn test_new_merkle_tree() {
+        let pubkey1 = Pubkey::new_unique();
+        let pubkey2 = Pubkey::new_unique();
+        let pubkey3 = Pubkey::new_unique();
 
-//     // Test creating a merkle tree from Tree Nodes, where claimants are not unique
-//     #[test]
-//     fn test_new_merkle_tree_duplicate_claimants() {
-//         let duplicate_pubkey = Pubkey::new_unique();
-//         let tree_nodes = vec![
-//             TreeNode {
-//                 vote_account: duplicate_pubkey,
-//                 proof: None,
-//                 total_unlocked_staker: 10,
-//                 total_locked_staker: 20,
-//                 total_unlocked_searcher: 30,
-//                 total_locked_searcher: 40,
-//                 total_unlocked_validator: 50,
-//                 total_locked_validator: 60,
-//             },
-//             TreeNode {
-//                 vote_account: duplicate_pubkey,
-//                 proof: None,
-//                 total_unlocked_staker: 1,
-//                 total_locked_staker: 2,
-//                 total_unlocked_searcher: 3,
-//                 total_locked_searcher: 4,
-//                 total_unlocked_validator: 5,
-//                 total_locked_validator: 6,
-//             },
-//             TreeNode {
-//                 vote_account: Pubkey::new_unique(),
-//                 proof: None,
-//                 total_unlocked_staker: 0,
-//                 total_locked_staker: 0,
-//                 total_unlocked_searcher: 0,
-//                 total_locked_searcher: 0,
-//                 total_unlocked_validator: 0,
-//                 total_locked_validator: 0,
-//             },
-//         ];
+        let mut tree_nodes = vec![
+            TreeNode::new(pubkey1, [0; 32], 10, 20),
+            TreeNode::new(pubkey2, [0; 32], 1, 2),
+            TreeNode::new(pubkey3, [0; 32], 3, 4),
+        ];
 
-//         let tree = MetaMerkleTree::new(tree_nodes).unwrap();
-//         // Assert that the merkle distributor correctly combines the two tree nodes
-//         assert_eq!(tree.tree_nodes.len(), 2);
-//         assert_eq!(tree.tree_nodes[0].total_unlocked_staker, 11);
-//         assert_eq!(tree.tree_nodes[0].total_locked_staker, 22);
-//         assert_eq!(tree.tree_nodes[0].total_unlocked_searcher, 33);
-//         assert_eq!(tree.tree_nodes[0].total_locked_searcher, 44);
-//         assert_eq!(tree.tree_nodes[0].total_unlocked_validator, 55);
-//         assert_eq!(tree.tree_nodes[0].total_locked_validator, 66);
-//     }
-// }
+        // Sort by hash
+        tree_nodes.sort_by_key(|node| node.hash());
+
+        let tree = MetaMerkleTree::new(tree_nodes).unwrap();
+
+        assert_eq!(tree.tree_nodes.len(), 3);
+        assert_eq!(tree.tree_nodes[0].max_total_claim, 10);
+        assert_eq!(tree.tree_nodes[0].max_num_nodes, 20);
+        assert_eq!(tree.tree_nodes[0].validator_merkle_root, [0; 32]);
+        assert_eq!(tree.tree_nodes[0].tip_distribution_account, pubkey1);
+        assert!(tree.tree_nodes[0].proof.is_some());
+    }
+}

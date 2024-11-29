@@ -1,6 +1,4 @@
-use solana_program::pubkey::Pubkey;
-
-use crate::{merkle_tree::MerkleTree, tree_node::TreeNode};
+use crate::merkle_tree::MerkleTree;
 
 pub fn get_proof(merkle_tree: &MerkleTree, index: usize) -> Vec<[u8; 32]> {
     let mut proof = Vec::new();

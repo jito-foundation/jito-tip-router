@@ -25,6 +25,8 @@ jobs:
         with:
           crate: cargo-audit
       - run: cargo audit --ignore RUSTSEC-2022-0093 --ignore RUSTSEC-2023-0065 --ignore RUSTSEC-2024-0344
+        env:
+          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
 
   code_gen:
     name: code generation
@@ -39,6 +41,8 @@ jobs:
           toolchain: nightly-2024-07-25
       - name: Regenerate Shank IDL files
         run: cargo b --release -p jito-tip-router-shank-cli && ./target/release/jito-tip-router-shank-cli
+        env:
+          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
       - name: Verify no changed files
         uses: tj-actions/verify-changed-files@v20
         with:
@@ -84,8 +88,14 @@ jobs:
         with:
           crate: cargo-sort
       - run: cargo sort --workspace --check
+        env:
+          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
       - run: cargo fmt --all --check
+        env:
+          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
       - run: cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D clippy::integer_division -D clippy::arithmetic_side_effects -D clippy::style -D clippy::perf
+        env:
+          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
 
   build:
     name: build
@@ -105,11 +115,13 @@ jobs:
         run: cargo-build-sbf
         env:
           TIP_ROUTER_PROGRAM_ID: ${{ env.TIP_ROUTER_PROGRAM_ID }}
+          SBF_OUT_DIR: ${{ github.workspace }}/target/sbf-solana-solana/release
+          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
       - name: Upload MEV Tip Distribution NCN program
         uses: actions/upload-artifact@v4
         with:
           name: jito_tip_router_program.so
-          path: target/sbf-solana-solana/release/jito_tip_router_program.so
+          path: target/sbf-solana-solana/release/
           if-no-files-found: error
 
   # coverage:
@@ -150,11 +162,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: jito_tip_router_program.so
-          path: target/sbf-solana-solana/release/
+          path: integration_tests/tests/fixtures/
       - uses: taiki-e/install-action@nextest
-      - run: cargo nextest run --all-features
+      # Test the non-BPF tests and the BPF tests separately
+      - run: cargo nextest run --all-features -E 'not test(bpf)'
         env:
-          SBF_OUT_DIR: ${{ github.workspace }}/target/sbf-solana-solana/release
+          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
+      - run: cargo nextest run --all-features -E 'test(bpf)'
+        env:
+          SBF_OUT_DIR: ${{ github.workspace }}/integration_tests/tests/fixtures
+          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
 
   # create_release:
   #   name: Create Release

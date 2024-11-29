@@ -6,7 +6,7 @@ members = [
     "integration_tests",
     "meta_merkle_tree",
     "program",
-    "shank_cli"
+    "shank_cli",
 ]
 
 resolver = "2"

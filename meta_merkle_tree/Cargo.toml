@@ -32,3 +32,5 @@ spl-math = { workspace = true }
 spl-token = { workspace = true }
 thiserror = { workspace = true }
 
+[dev-dependencies]
+solana-sdk = { workspace = true }

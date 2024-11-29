@@ -2940,6 +2940,7 @@ dependencies = [
  "serde_json",
  "shank",
  "solana-program 1.18.26",
+ "solana-sdk",
  "spl-associated-token-account",
  "spl-math",
  "spl-token",

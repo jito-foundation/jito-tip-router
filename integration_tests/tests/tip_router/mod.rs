@@ -1,4 +1,5 @@
 mod admin_update_weight_table;
+mod bpf;
 mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
 mod initialize_operator_snapshot;

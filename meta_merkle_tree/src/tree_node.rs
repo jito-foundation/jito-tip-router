@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use serde::{Deserialize, Serialize};
 use solana_program::{
     hash::{hashv, Hash},
@@ -41,6 +39,7 @@ impl TreeNode {
 
     pub fn hash(&self) -> Hash {
         hashv(&[
+            &self.tip_distribution_account.to_bytes(),
             &self.validator_merkle_root,
             &self.max_total_claim.to_le_bytes(),
             &self.max_num_nodes.to_le_bytes(),
@@ -61,25 +60,21 @@ impl From<GeneratedMerkleTree> for TreeNode {
     }
 }
 
-// TODO rewrite tests for MetaMerkleTree TreeNode
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_serialize_tree_node() {
-        // let tree_node = TreeNode {
-        //     claimant: Pubkey::default(),
-        //     proof: None,
-        //     total_unlocked_staker: 0,
-        //     total_locked_staker: 0,
-        //     total_unlocked_searcher: 0,
-        //     total_locked_searcher: 0,
-        //     total_unlocked_validator: 0,
-        //     total_locked_validator: 0,
-        // };
-        // let serialized = serde_json::to_string(&tree_node).unwrap();
-        // let deserialized: TreeNode = serde_json::from_str(&serialized).unwrap();
-        // assert_eq!(tree_node, deserialized);
+        let tree_node = TreeNode {
+            tip_distribution_account: Pubkey::default(),
+            proof: None,
+            validator_merkle_root: [0; 32],
+            max_total_claim: 0,
+            max_num_nodes: 0,
+        };
+        let serialized = serde_json::to_string(&tree_node).unwrap();
+        let deserialized: TreeNode = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(tree_node, deserialized);
     }
 }

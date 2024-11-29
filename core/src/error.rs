@@ -70,14 +70,14 @@ pub enum TipRouterError {
     OperatorVotesFull,
     #[error("Merkle root tally full")]
     BallotTallyFull,
-    #[error("Consensus already reached")]
+    #[error("Consensus already reached, cannot change vote")]
     ConsensusAlreadyReached,
     #[error("Consensus not reached")]
     ConsensusNotReached,
 
     #[error("Epoch snapshot not finalized")]
     EpochSnapshotNotFinalized,
-    #[error("Voting not valid")]
+    #[error("Voting not valid, too many slots after consensus reached")]
     VotingNotValid,
     #[error("Tie breaker admin invalid")]
     TieBreakerAdminInvalid,
