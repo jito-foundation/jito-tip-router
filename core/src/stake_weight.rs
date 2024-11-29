@@ -8,17 +8,15 @@ use crate::{error::TipRouterError, ncn_fee_group::NcnFeeGroup};
 #[repr(C)]
 pub struct StakeWeight {
     stake_weight: PodU128,
-    reward_stake_weights: [RewardStakeWeight; 8],
-    // Reserves
-    // reserved: [u8; 64],
+    ncn_fee_group_stake_weights: [NcnFeeGroupWeight; 8],
 }
 
 impl Default for StakeWeight {
     fn default() -> Self {
         Self {
             stake_weight: PodU128::from(0),
-            reward_stake_weights: [RewardStakeWeight::default(); NcnFeeGroup::FEE_GROUP_COUNT],
-            // reserved: [0; 64],
+            ncn_fee_group_stake_weights: [NcnFeeGroupWeight::default();
+                NcnFeeGroup::FEE_GROUP_COUNT],
         }
     }
 }
@@ -28,23 +26,29 @@ impl StakeWeight {
         self.stake_weight.into()
     }
 
-    pub fn reward_stake_weight(&self, ncn_fee_group: NcnFeeGroup) -> Result<u128, TipRouterError> {
+    pub fn ncn_fee_group_stake_weight(
+        &self,
+        ncn_fee_group: NcnFeeGroup,
+    ) -> Result<u128, TipRouterError> {
         let group_index = ncn_fee_group.group_index()?;
 
-        Ok(self.reward_stake_weights[group_index].reward_stake_weight())
+        Ok(self.ncn_fee_group_stake_weights[group_index].weight())
     }
 
     pub fn increment(&mut self, stake_weight: &Self) -> Result<(), TipRouterError> {
         self.increment_stake_weight(stake_weight.stake_weight())?;
 
         for group in NcnFeeGroup::all_groups().iter() {
-            self.increment_reward_stake_weight(*group, stake_weight.reward_stake_weight(*group)?)?;
+            self.increment_ncn_fee_group_stake_weight(
+                *group,
+                stake_weight.ncn_fee_group_stake_weight(*group)?,
+            )?;
         }
 
         Ok(())
     }
 
-    pub fn increment_stake_weight(&mut self, stake_weight: u128) -> Result<(), TipRouterError> {
+    fn increment_stake_weight(&mut self, stake_weight: u128) -> Result<(), TipRouterError> {
         self.stake_weight = PodU128::from(
             self.stake_weight()
                 .checked_add(stake_weight)
@@ -54,15 +58,15 @@ impl StakeWeight {
         Ok(())
     }
 
-    pub fn increment_reward_stake_weight(
+    fn increment_ncn_fee_group_stake_weight(
         &mut self,
         ncn_fee_group: NcnFeeGroup,
         stake_weight: u128,
     ) -> Result<(), TipRouterError> {
         let group_index = ncn_fee_group.group_index()?;
 
-        self.reward_stake_weights[group_index].reward_stake_weight = PodU128::from(
-            self.reward_stake_weight(ncn_fee_group)?
+        self.ncn_fee_group_stake_weights[group_index].weight = PodU128::from(
+            self.ncn_fee_group_stake_weight(ncn_fee_group)?
                 .checked_add(stake_weight)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
@@ -73,29 +77,26 @@ impl StakeWeight {
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
-pub struct RewardStakeWeight {
-    reward_stake_weight: PodU128,
-    // reserved: [u8; 64],
+pub struct NcnFeeGroupWeight {
+    weight: PodU128,
 }
 
-impl Default for RewardStakeWeight {
+impl Default for NcnFeeGroupWeight {
     fn default() -> Self {
         Self {
-            reward_stake_weight: PodU128::from(0),
-            // reserved: [0; 64],
+            weight: PodU128::from(0),
         }
     }
 }
 
-impl RewardStakeWeight {
-    pub fn new(reward_stake_weight: u128) -> Self {
+impl NcnFeeGroupWeight {
+    pub fn new(weight: u128) -> Self {
         Self {
-            reward_stake_weight: PodU128::from(reward_stake_weight),
-            // reserved: [0; 64],
+            weight: PodU128::from(weight),
         }
     }
 
-    pub fn reward_stake_weight(&self) -> u128 {
-        self.reward_stake_weight.into()
+    pub fn weight(&self) -> u128 {
+        self.weight.into()
     }
 }

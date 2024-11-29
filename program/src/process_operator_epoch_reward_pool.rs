@@ -1,8 +1,8 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
-    epoch_reward_router::EpochRewardRouter, epoch_snapshot::OperatorSnapshot,
-    loaders::load_ncn_epoch, operator_epoch_reward_router::OperatorEpochRewardRouter,
+    base_reward_router::BaseRewardRouter, epoch_snapshot::OperatorSnapshot,
+    loaders::load_ncn_epoch, ncn_reward_router::NcnRewardRouter,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -42,7 +42,7 @@ pub fn process_process_operator_epoch_reward_pool(
         operator_snapshot,
         false,
     )?;
-    EpochRewardRouter::load(
+    BaseRewardRouter::load(
         program_id,
         ncn.key,
         ncn_epoch,
@@ -63,9 +63,7 @@ pub fn process_process_operator_epoch_reward_pool(
     let mut operator_epoch_reward_router_data =
         operator_epoch_reward_router.try_borrow_mut_data()?;
     let operator_epoch_reward_router_account =
-        OperatorEpochRewardRouter::try_from_slice_unchecked_mut(
-            &mut operator_epoch_reward_router_data,
-        )?;
+        NcnRewardRouter::try_from_slice_unchecked_mut(&mut operator_epoch_reward_router_data)?;
 
     operator_epoch_reward_router_account.process_incoming_rewards(account_balance)?;
 

@@ -142,7 +142,7 @@ pub fn process_snapshot_vault_operator_delegation(
     let mut stake_weight = StakeWeight::default();
 
     stake_weight.increment_stake_weight(total_stake_weight)?;
-    stake_weight.increment_reward_stake_weight(ncn_fee_group, total_stake_weight)?;
+    stake_weight.increment_ncn_fee_group_stake_weight(ncn_fee_group, total_stake_weight)?;
 
     operator_snapshot_account.increment_vault_operator_delegation_registration(
         current_slot,

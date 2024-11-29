@@ -84,6 +84,8 @@ pub enum TipRouterError {
     ConsensusNotReached,
     #[error("Not a valid NCN fee group")]
     InvalidNcnFeeGroup,
+    #[error("Not a valid base fee group")]
+    InvalidBaseFeeGroup,
     #[error("Operator reward list full")]
     OperatorRewardListFull,
     #[error("Operator Reward not found")]

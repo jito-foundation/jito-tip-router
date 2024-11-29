@@ -1,7 +1,7 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    epoch_reward_router::EpochRewardRouter, error::TipRouterError, loaders::load_ncn_epoch,
+    base_reward_router::BaseRewardRouter, error::TipRouterError, loaders::load_ncn_epoch,
     ncn_config::NcnConfig,
 };
 use solana_program::{
@@ -34,7 +34,7 @@ pub fn process_distribute_dao_rewards(
     let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
 
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    EpochRewardRouter::load(program_id, ncn.key, ncn_epoch, epoch_reward_router, true)?;
+    BaseRewardRouter::load(program_id, ncn.key, ncn_epoch, epoch_reward_router, true)?;
 
     // Get rewards and update state
     let rewards = {
@@ -44,7 +44,7 @@ pub fn process_distribute_dao_rewards(
 
         let mut epoch_reward_router_data = epoch_reward_router.try_borrow_mut_data()?;
         let epoch_reward_router_account =
-            EpochRewardRouter::try_from_slice_unchecked_mut(&mut epoch_reward_router_data)?;
+            BaseRewardRouter::try_from_slice_unchecked_mut(&mut epoch_reward_router_data)?;
 
         epoch_reward_router_account.distribute_dao_rewards(&fee_config, destination.key)?
     };

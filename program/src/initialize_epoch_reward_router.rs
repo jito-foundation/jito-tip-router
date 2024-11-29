@@ -7,7 +7,7 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    ballot_box::BallotBox, epoch_reward_router::EpochRewardRouter, loaders::load_ncn_epoch,
+    ballot_box::BallotBox, base_reward_router::BaseRewardRouter, loaders::load_ncn_epoch,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -54,7 +54,7 @@ pub fn process_initialize_epoch_reward_router(
     }
 
     let (epoch_reward_router_pubkey, epoch_reward_router_bump, mut epoch_reward_router_seeds) =
-        EpochRewardRouter::find_program_address(program_id, ncn.key, ncn_epoch);
+        BaseRewardRouter::find_program_address(program_id, ncn.key, ncn_epoch);
     epoch_reward_router_seeds.push(vec![epoch_reward_router_bump]);
 
     if epoch_reward_router_pubkey.ne(epoch_reward_router.key) {
@@ -75,18 +75,18 @@ pub fn process_initialize_epoch_reward_router(
         program_id,
         &Rent::get()?,
         8_u64
-            .checked_add(size_of::<EpochRewardRouter>() as u64)
+            .checked_add(size_of::<BaseRewardRouter>() as u64)
             .unwrap(),
         &epoch_reward_router_seeds,
     )?;
 
     let mut epoch_reward_router_data = epoch_reward_router.try_borrow_mut_data()?;
-    epoch_reward_router_data[0] = EpochRewardRouter::DISCRIMINATOR;
+    epoch_reward_router_data[0] = BaseRewardRouter::DISCRIMINATOR;
     let epoch_reward_router_account =
-        EpochRewardRouter::try_from_slice_unchecked_mut(&mut epoch_reward_router_data)?;
+        BaseRewardRouter::try_from_slice_unchecked_mut(&mut epoch_reward_router_data)?;
 
     *epoch_reward_router_account =
-        EpochRewardRouter::new(*ncn.key, ncn_epoch, epoch_reward_router_bump, current_slot);
+        BaseRewardRouter::new(*ncn.key, ncn_epoch, epoch_reward_router_bump, current_slot);
 
     Ok(())
 }

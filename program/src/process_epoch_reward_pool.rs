@@ -1,7 +1,7 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    epoch_reward_router::EpochRewardRouter, epoch_snapshot::EpochSnapshot, loaders::load_ncn_epoch,
+    base_reward_router::BaseRewardRouter, epoch_snapshot::EpochSnapshot, loaders::load_ncn_epoch,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -32,7 +32,7 @@ pub fn process_process_epoch_reward_pool(
     let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
 
     EpochSnapshot::load(program_id, ncn.key, ncn_epoch, epoch_snapshot, false)?;
-    EpochRewardRouter::load(program_id, ncn.key, ncn_epoch, epoch_reward_router, true)?;
+    BaseRewardRouter::load(program_id, ncn.key, ncn_epoch, epoch_reward_router, true)?;
 
     let snapshot_fees = {
         let epoch_snapshot_data = epoch_snapshot.try_borrow_data()?;
@@ -45,11 +45,11 @@ pub fn process_process_epoch_reward_pool(
 
     let mut epoch_reward_router_data = epoch_reward_router.try_borrow_mut_data()?;
     let epoch_reward_router_account =
-        EpochRewardRouter::try_from_slice_unchecked_mut(&mut epoch_reward_router_data)?;
+        BaseRewardRouter::try_from_slice_unchecked_mut(&mut epoch_reward_router_data)?;
 
-    epoch_reward_router_account.process_incoming_rewards(account_balance)?;
+    epoch_reward_router_account.route_incoming_rewards(account_balance)?;
 
-    epoch_reward_router_account.process_reward_pool(&snapshot_fees)?;
+    epoch_reward_router_account.route_reward_pool(&snapshot_fees)?;
 
     Ok(())
 }

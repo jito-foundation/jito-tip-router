@@ -8,7 +8,7 @@ use jito_jsm_core::{
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     ballot_box::BallotBox, loaders::load_ncn_epoch, ncn_fee_group::NcnFeeGroup,
-    operator_epoch_reward_router::OperatorEpochRewardRouter,
+    ncn_reward_router::NcnRewardRouter,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -62,7 +62,7 @@ pub fn process_initialize_operator_epoch_reward_router(
         operator_reward_router_pubkey,
         operator_reward_router_bump,
         mut operator_reward_router_seeds,
-    ) = OperatorEpochRewardRouter::find_program_address(
+    ) = NcnRewardRouter::find_program_address(
         program_id,
         ncn_fee_group,
         operator.key,
@@ -89,17 +89,17 @@ pub fn process_initialize_operator_epoch_reward_router(
         program_id,
         &Rent::get()?,
         8_u64
-            .checked_add(size_of::<OperatorEpochRewardRouter>() as u64)
+            .checked_add(size_of::<NcnRewardRouter>() as u64)
             .unwrap(),
         &operator_reward_router_seeds,
     )?;
 
     let mut operator_reward_router_data = operator_reward_router.try_borrow_mut_data()?;
-    operator_reward_router_data[0] = OperatorEpochRewardRouter::DISCRIMINATOR;
+    operator_reward_router_data[0] = NcnRewardRouter::DISCRIMINATOR;
     let operator_reward_router_account =
-        OperatorEpochRewardRouter::try_from_slice_unchecked_mut(&mut operator_reward_router_data)?;
+        NcnRewardRouter::try_from_slice_unchecked_mut(&mut operator_reward_router_data)?;
 
-    *operator_reward_router_account = OperatorEpochRewardRouter::new(
+    *operator_reward_router_account = NcnRewardRouter::new(
         ncn_fee_group,
         *operator.key,
         *ncn.key,

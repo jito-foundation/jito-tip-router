@@ -63,7 +63,7 @@ impl RewardRoutes {
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
-pub struct OperatorEpochRewardRouter {
+pub struct NcnRewardRouter {
     ncn_fee_group: NcnFeeGroup,
 
     operator: Pubkey,
@@ -88,11 +88,11 @@ pub struct OperatorEpochRewardRouter {
     vault_rewards: [RewardRoutes; 32],
 }
 
-impl Discriminator for OperatorEpochRewardRouter {
+impl Discriminator for NcnRewardRouter {
     const DISCRIMINATOR: u8 = Discriminators::EpochRewardRouter as u8;
 }
 
-impl OperatorEpochRewardRouter {
+impl NcnRewardRouter {
     pub fn new(
         ncn_fee_group: NcnFeeGroup,
         operator: Pubkey,
@@ -228,10 +228,10 @@ impl OperatorEpochRewardRouter {
 
                 let vault_reward_stake_weight = vault_operator_delegation
                     .stake_weight()
-                    .reward_stake_weight(vault_ncn_fee_group)?;
+                    .ncn_fee_group_stake_weight(vault_ncn_fee_group)?;
 
                 let operator_reward_stake_weight =
-                    operator_stake_weight.reward_stake_weight(vault_ncn_fee_group)?;
+                    operator_stake_weight.ncn_fee_group_stake_weight(vault_ncn_fee_group)?;
 
                 let vault_reward = Self::calculate_vault_reward(
                     vault_reward_stake_weight,
