@@ -3,7 +3,6 @@ use jito_jsm_core::{
     create_account,
     loader::{load_system_account, load_system_program},
 };
-use jito_restaking_core::config::Config;
 use jito_tip_router_core::{ballot_box::BallotBox, ncn_config::NcnConfig};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,

@@ -1,6 +1,6 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::load_signer;
-use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
+use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     ballot_box::{Ballot, BallotBox},
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},

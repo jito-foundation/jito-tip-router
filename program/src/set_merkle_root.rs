@@ -1,5 +1,4 @@
 use jito_bytemuck::AccountDeserialize;
-use jito_jsm_core::loader::{load_system_program, load_token_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{
     derive_tip_distribution_account_address,
