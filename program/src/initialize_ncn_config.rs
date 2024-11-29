@@ -15,11 +15,11 @@ use solana_program::{
 pub fn process_initialize_ncn_config(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    dao_fee_bps: u64,
-    ncn_fee_bps: u64,
-    block_engine_fee_bps: u64,
+    block_engine_fee_bps: u16,
+    dao_fee_bps: u16,
+    default_ncn_fee_bps: u16,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn_account, fee_wallet, ncn_admin, tie_breaker_admin, restaking_program, system_program] =
+    let [restaking_config, ncn_config, ncn_account, dao_fee_wallet, ncn_admin, tie_breaker_admin, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -59,13 +59,13 @@ pub fn process_initialize_ncn_config(
         return Err(ProgramError::InvalidSeeds);
     }
 
-    if block_engine_fee_bps >= MAX_FEE_BPS {
+    if block_engine_fee_bps as u64 >= MAX_FEE_BPS {
         return Err(TipRouterError::FeeCapExceeded.into());
     }
-    if dao_fee_bps > MAX_FEE_BPS {
+    if dao_fee_bps as u64 > MAX_FEE_BPS {
         return Err(TipRouterError::FeeCapExceeded.into());
     }
-    if ncn_fee_bps > MAX_FEE_BPS {
+    if default_ncn_fee_bps as u64 > MAX_FEE_BPS {
         return Err(TipRouterError::FeeCapExceeded.into());
     }
 
@@ -86,10 +86,10 @@ pub fn process_initialize_ncn_config(
     let config = NcnConfig::try_from_slice_unchecked_mut(&mut config_data)?;
 
     let fee_config = FeeConfig::new(
-        *fee_wallet.key,
+        *dao_fee_wallet.key,
         block_engine_fee_bps,
         dao_fee_bps,
-        ncn_fee_bps,
+        default_ncn_fee_bps,
         epoch,
     )?;
 

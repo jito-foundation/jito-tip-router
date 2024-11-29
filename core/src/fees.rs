@@ -299,7 +299,7 @@ impl FeeConfig {
 
     // ------ Helpers -----------------
 
-    fn check_fees_okay(&self, current_epoch: u64) -> Result<(), TipRouterError> {
+    pub fn check_fees_okay(&self, current_epoch: u64) -> Result<(), TipRouterError> {
         for group in BaseFeeGroup::all_groups().iter() {
             let _ = self.adjusted_precise_base_fee_bps(*group, current_epoch)?;
         }

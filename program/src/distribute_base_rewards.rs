@@ -1,8 +1,8 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    base_reward_router::BaseRewardRouter, error::TipRouterError, loaders::load_ncn_epoch,
-    ncn_config::NcnConfig,
+    base_fee_group, base_reward_router::BaseRewardRouter, error::TipRouterError,
+    loaders::load_ncn_epoch, ncn_config::NcnConfig,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -11,12 +11,13 @@ use solana_program::{
 
 /// Initializes a Epoch Reward Router
 /// Can be backfilled for previous epochs
-pub fn process_distribute_dao_rewards(
+pub fn process_distribute_base_rewards(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
+    base_fee_group: u8,
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn, epoch_reward_router, destination, restaking_program] =
+    let [restaking_config, ncn_config, ncn, epoch_reward_router, base_fee_wallet, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -36,22 +37,37 @@ pub fn process_distribute_dao_rewards(
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     BaseRewardRouter::load(program_id, ncn.key, ncn_epoch, epoch_reward_router, true)?;
 
-    // Get rewards and update state
-    let rewards = {
+    let group = base_fee_group::BaseFeeGroup::try_from(base_fee_group)?;
+
+    // Check if base fee wallet is correct
+    {
         let ncn_config_data = ncn_config.try_borrow_data()?;
         let ncn_config_account = NcnConfig::try_from_slice_unchecked(&ncn_config_data)?;
-        let fee_config = ncn_config_account.fee_config;
+        let fee_wallet = ncn_config_account.fee_config.base_fee_wallet(group)?;
+
+        if fee_wallet.ne(base_fee_wallet.key) {
+            msg!("Incorrect base fee wallet");
+            return Err(ProgramError::InvalidAccountData);
+        }
+    }
+
+    // Get rewards and update state
+    let rewards = {
+        let group = base_fee_group::BaseFeeGroup::try_from(base_fee_group)?;
 
         let mut epoch_reward_router_data = epoch_reward_router.try_borrow_mut_data()?;
         let epoch_reward_router_account =
             BaseRewardRouter::try_from_slice_unchecked_mut(&mut epoch_reward_router_data)?;
 
-        epoch_reward_router_account.distribute_dao_rewards(&fee_config, destination.key)?
+        let rewards = epoch_reward_router_account.base_fee_group_rewards(group)?;
+        epoch_reward_router_account.distribute_base_fee_group_rewards(group, rewards)?;
+
+        rewards
     };
 
     // Send rewards
     {
-        **destination.lamports.borrow_mut() = destination
+        **base_fee_wallet.lamports.borrow_mut() = base_fee_wallet
             .lamports()
             .checked_add(rewards)
             .ok_or(TipRouterError::ArithmeticOverflow)?;

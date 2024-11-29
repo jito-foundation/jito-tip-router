@@ -139,10 +139,7 @@ pub fn process_snapshot_vault_operator_delegation(
     let operator_snapshot_account =
         OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
 
-    let mut stake_weight = StakeWeight::default();
-
-    stake_weight.increment_stake_weight(total_stake_weight)?;
-    stake_weight.increment_ncn_fee_group_stake_weight(ncn_fee_group, total_stake_weight)?;
+    let stake_weight = StakeWeight::new(ncn_fee_group, stake_weight)?;
 
     operator_snapshot_account.increment_vault_operator_delegation_registration(
         current_slot,
