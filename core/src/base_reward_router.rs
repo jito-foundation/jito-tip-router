@@ -5,107 +5,10 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    ballot_box::BallotBox,
-    base_fee_group::BaseFeeGroup,
-    discriminators::Discriminators,
-    error::TipRouterError,
-    fees::{FeeConfig, Fees},
-    ncn_fee_group::NcnFeeGroup,
+    ballot_box::BallotBox, base_fee_group::BaseFeeGroup, discriminators::Discriminators,
+    error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::NcnRewardRouter,
 };
-
-#[derive(Default, Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
-#[repr(C)]
-pub struct Rewards {
-    rewards: PodU64,
-}
-
-impl Rewards {
-    pub fn rewards(self) -> u64 {
-        self.rewards.into()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
-#[repr(C)]
-pub struct NcnRewardRoute {
-    operator: Pubkey,
-    ncn_fee_group_rewards: [Rewards; 8],
-}
-
-impl Default for NcnRewardRoute {
-    fn default() -> Self {
-        Self {
-            operator: Pubkey::default(),
-            ncn_fee_group_rewards: [Rewards::default(); NcnFeeGroup::FEE_GROUP_COUNT],
-        }
-    }
-}
-
-impl NcnRewardRoute {
-    pub fn new(
-        operator: Pubkey,
-        ncn_fee_group: NcnFeeGroup,
-        rewards: u64,
-    ) -> Result<Self, TipRouterError> {
-        let mut route = Self {
-            operator,
-            ncn_fee_group_rewards: [Rewards::default(); NcnFeeGroup::FEE_GROUP_COUNT],
-        };
-
-        route.set_rewards(ncn_fee_group, rewards)?;
-
-        Ok(route)
-    }
-
-    pub const fn operator(&self) -> Pubkey {
-        self.operator
-    }
-
-    pub fn rewards(&self, ncn_fee_group: NcnFeeGroup) -> Result<u64, TipRouterError> {
-        let group_index = ncn_fee_group.group_index()?;
-        Ok(self.ncn_fee_group_rewards[group_index].rewards())
-    }
-
-    fn set_rewards(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        rewards: u64,
-    ) -> Result<(), TipRouterError> {
-        let group_index = ncn_fee_group.group_index()?;
-        self.ncn_fee_group_rewards[group_index].rewards = PodU64::from(rewards);
-
-        Ok(())
-    }
-
-    pub fn increment_rewards(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        rewards: u64,
-    ) -> Result<(), TipRouterError> {
-        let current_rewards = self.rewards(ncn_fee_group)?;
-
-        let new_rewards = current_rewards
-            .checked_add(rewards)
-            .ok_or(TipRouterError::ArithmeticOverflow)?;
-
-        self.set_rewards(ncn_fee_group, new_rewards)
-    }
-
-    pub fn decrement_rewards(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        rewards: u64,
-    ) -> Result<(), TipRouterError> {
-        let current_rewards = self.rewards(ncn_fee_group)?;
-
-        let new_rewards = current_rewards
-            .checked_sub(rewards)
-            .ok_or(TipRouterError::ArithmeticOverflow)?;
-
-        self.set_rewards(ncn_fee_group, new_rewards)
-    }
-}
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
@@ -125,15 +28,15 @@ pub struct BaseRewardRouter {
 
     reserved: [u8; 128],
 
-    base_fee_group_rewards: [Rewards; 8],
-    ncn_fee_group_rewards: [Rewards; 8],
+    base_fee_group_rewards: [BaseRewardRouterRewards; 8],
+    ncn_fee_group_rewards: [BaseRewardRouterRewards; 8],
 
     //TODO change to 256
     ncn_fee_group_reward_routes: [NcnRewardRoute; 32],
 }
 
 impl Discriminator for BaseRewardRouter {
-    const DISCRIMINATOR: u8 = Discriminators::EpochRewardRouter as u8;
+    const DISCRIMINATOR: u8 = Discriminators::BaseRewardRouter as u8;
 }
 
 impl BaseRewardRouter {
@@ -146,8 +49,10 @@ impl BaseRewardRouter {
             reward_pool: PodU64::from(0),
             rewards_processed: PodU64::from(0),
             reserved: [0; 128],
-            base_fee_group_rewards: [Rewards::default(); NcnFeeGroup::FEE_GROUP_COUNT],
-            ncn_fee_group_rewards: [Rewards::default(); NcnFeeGroup::FEE_GROUP_COUNT],
+            base_fee_group_rewards: [BaseRewardRouterRewards::default();
+                NcnFeeGroup::FEE_GROUP_COUNT],
+            ncn_fee_group_rewards: [BaseRewardRouterRewards::default();
+                NcnFeeGroup::FEE_GROUP_COUNT],
             ncn_fee_group_reward_routes: [NcnRewardRoute::default(); 32],
         }
     }
@@ -275,11 +180,11 @@ impl BaseRewardRouter {
                     let rewards_to_process = self.ncn_fee_group_rewards(*group)?;
                     let winning_reward_stake_weight =
                         winning_stake_weight.ncn_fee_group_stake_weight(*group)?;
-                    let operator_reward_stake_weight =
+                    let ncn_route_reward_stake_weight =
                         votes.stake_weight().ncn_fee_group_stake_weight(*group)?;
 
                     let ncn_fee_group_route_reward = Self::calculate_ncn_fee_group_route_reward(
-                        operator_reward_stake_weight,
+                        ncn_route_reward_stake_weight,
                         winning_reward_stake_weight,
                         rewards_to_process,
                     )?;
@@ -345,41 +250,42 @@ impl BaseRewardRouter {
     }
 
     fn calculate_ncn_fee_group_route_reward(
-        operator_reward_stake_weight: u128,
+        ncn_route_reward_stake_weight: u128,
         winning_reward_stake_weight: u128,
         rewards_to_process: u64,
     ) -> Result<u64, TipRouterError> {
-        if operator_reward_stake_weight == 0 || rewards_to_process == 0 {
+        if ncn_route_reward_stake_weight == 0 || rewards_to_process == 0 {
             return Ok(0);
         }
 
         let precise_rewards_to_process = PreciseNumber::new(rewards_to_process as u128)
             .ok_or(TipRouterError::NewPreciseNumberError)?;
 
-        let precise_operator_reward_stake_weight = PreciseNumber::new(operator_reward_stake_weight)
-            .ok_or(TipRouterError::NewPreciseNumberError)?;
+        let precise_ncn_route_reward_stake_weight =
+            PreciseNumber::new(ncn_route_reward_stake_weight)
+                .ok_or(TipRouterError::NewPreciseNumberError)?;
 
         let precise_winning_reward_stake_weight = PreciseNumber::new(winning_reward_stake_weight)
             .ok_or(TipRouterError::NewPreciseNumberError)?;
 
-        let precise_operator_reward = precise_rewards_to_process
-            .checked_mul(&precise_operator_reward_stake_weight)
+        let precise_ncn_route_reward = precise_rewards_to_process
+            .checked_mul(&precise_ncn_route_reward_stake_weight)
             .and_then(|x| x.checked_div(&precise_winning_reward_stake_weight))
             .ok_or(TipRouterError::ArithmeticOverflow)?;
 
-        let floored_precise_operator_reward = precise_operator_reward
+        let floored_precise_ncn_route_reward = precise_ncn_route_reward
             .floor()
             .ok_or(TipRouterError::ArithmeticFloorError)?;
 
-        let operator_reward_u128: u128 = floored_precise_operator_reward
+        let ncn_route_reward_u128: u128 = floored_precise_ncn_route_reward
             .to_imprecise()
             .ok_or(TipRouterError::CastToImpreciseNumberError)?;
 
-        let operator_reward: u64 = operator_reward_u128
+        let ncn_route_reward: u64 = ncn_route_reward_u128
             .try_into()
             .map_err(|_| TipRouterError::CastToU64Error)?;
 
-        Ok(operator_reward)
+        Ok(ncn_route_reward)
     }
 
     // ------------------ REWARD TALLIES ---------------------
@@ -561,16 +467,16 @@ impl BaseRewardRouter {
             return Ok(());
         }
 
-        for operator_reward in self.ncn_fee_group_reward_routes.iter_mut() {
-            if operator_reward.operator == operator {
-                operator_reward.increment_rewards(ncn_fee_group, rewards)?;
+        for ncn_route_reward in self.ncn_fee_group_reward_routes.iter_mut() {
+            if ncn_route_reward.operator == operator {
+                ncn_route_reward.increment_rewards(ncn_fee_group, rewards)?;
                 return Ok(());
             }
         }
 
-        for operator_reward in self.ncn_fee_group_reward_routes.iter_mut() {
-            if operator_reward.operator == Pubkey::default() {
-                *operator_reward = NcnRewardRoute::new(operator, ncn_fee_group, rewards)?;
+        for ncn_route_reward in self.ncn_fee_group_reward_routes.iter_mut() {
+            if ncn_route_reward.operator == Pubkey::default() {
+                *ncn_route_reward = NcnRewardRoute::new(operator, ncn_fee_group, rewards)?;
                 return Ok(());
             }
         }
@@ -598,5 +504,100 @@ impl BaseRewardRouter {
         }
 
         Err(TipRouterError::OperatorRewardNotFound)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
+#[repr(C)]
+pub struct NcnRewardRoute {
+    operator: Pubkey,
+    ncn_fee_group_rewards: [BaseRewardRouterRewards; 8],
+}
+
+impl Default for NcnRewardRoute {
+    fn default() -> Self {
+        Self {
+            operator: Pubkey::default(),
+            ncn_fee_group_rewards: [BaseRewardRouterRewards::default();
+                NcnFeeGroup::FEE_GROUP_COUNT],
+        }
+    }
+}
+
+impl NcnRewardRoute {
+    pub fn new(
+        operator: Pubkey,
+        ncn_fee_group: NcnFeeGroup,
+        rewards: u64,
+    ) -> Result<Self, TipRouterError> {
+        let mut route = Self {
+            operator,
+            ncn_fee_group_rewards: [BaseRewardRouterRewards::default();
+                NcnFeeGroup::FEE_GROUP_COUNT],
+        };
+
+        route.set_rewards(ncn_fee_group, rewards)?;
+
+        Ok(route)
+    }
+
+    pub const fn operator(&self) -> Pubkey {
+        self.operator
+    }
+
+    pub fn rewards(&self, ncn_fee_group: NcnFeeGroup) -> Result<u64, TipRouterError> {
+        let group_index = ncn_fee_group.group_index()?;
+        Ok(self.ncn_fee_group_rewards[group_index].rewards())
+    }
+
+    fn set_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        rewards: u64,
+    ) -> Result<(), TipRouterError> {
+        let group_index = ncn_fee_group.group_index()?;
+        self.ncn_fee_group_rewards[group_index].rewards = PodU64::from(rewards);
+
+        Ok(())
+    }
+
+    pub fn increment_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        rewards: u64,
+    ) -> Result<(), TipRouterError> {
+        let current_rewards = self.rewards(ncn_fee_group)?;
+
+        let new_rewards = current_rewards
+            .checked_add(rewards)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        self.set_rewards(ncn_fee_group, new_rewards)
+    }
+
+    pub fn decrement_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        rewards: u64,
+    ) -> Result<(), TipRouterError> {
+        let current_rewards = self.rewards(ncn_fee_group)?;
+
+        let new_rewards = current_rewards
+            .checked_sub(rewards)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        self.set_rewards(ncn_fee_group, new_rewards)
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
+#[repr(C)]
+pub struct BaseRewardRouterRewards {
+    rewards: PodU64,
+}
+
+impl BaseRewardRouterRewards {
+    pub fn rewards(self) -> u64 {
+        self.rewards.into()
     }
 }

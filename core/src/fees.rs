@@ -5,10 +5,8 @@ use solana_program::pubkey::Pubkey;
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    base_fee_group::{self, BaseFeeGroup},
-    constants::MAX_FEE_BPS,
-    error::TipRouterError,
-    ncn_fee_group::{self, NcnFeeGroup},
+    base_fee_group::BaseFeeGroup, constants::MAX_FEE_BPS, error::TipRouterError,
+    ncn_fee_group::NcnFeeGroup,
 };
 
 /// Fee Config. Allows for fee updates to take place in a future epoch without requiring an update.
@@ -249,10 +247,6 @@ impl FeeConfig {
 
     // ------------- Setters -------------
     /// Updates the Fee Config
-    /// Any option set to None will be ignored
-    /// `new_wallet`` and `new_block_engine_fee_bps` will take effect immediately
-    /// `new_ncn_fee_bps` will set the fee group specified in `new_ncn_fee_group`
-    /// if no `new_ncn_fee_group` is specified, the default ncn group will be set
     pub fn update_fee_config(
         &mut self,
         new_block_engine_fee_bps: Option<u16>,
@@ -276,11 +270,11 @@ impl FeeConfig {
         };
 
         if let Some(new_base_fee_wallet) = new_base_fee_wallet {
-            self.set_base_fee_wallet(base_fee_group, new_base_fee_wallet);
+            self.set_base_fee_wallet(base_fee_group, new_base_fee_wallet)?;
         }
 
         if let Some(new_base_fee_bps) = new_base_fee_bps {
-            self.set_base_fee_bps(base_fee_group, new_base_fee_bps, current_epoch);
+            self.set_base_fee_bps(base_fee_group, new_base_fee_bps, current_epoch)?;
         }
 
         // NCN FEE
@@ -291,7 +285,7 @@ impl FeeConfig {
         };
 
         if let Some(new_ncn_fee_bps) = new_ncn_fee_bps {
-            self.set_ncn_fee_bps(ncn_fee_group, new_ncn_fee_bps, current_epoch);
+            self.set_ncn_fee_bps(ncn_fee_group, new_ncn_fee_bps, current_epoch)?;
         }
 
         // ACTIVATION EPOCH
@@ -511,9 +505,9 @@ impl Fee {
 
 #[cfg(test)]
 mod tests {
-    use solana_program::pubkey::Pubkey;
+    // use solana_program::pubkey::Pubkey;
 
-    use super::*;
+    // use super::*;
 
     // #[test]
     // fn test_update_fees() {

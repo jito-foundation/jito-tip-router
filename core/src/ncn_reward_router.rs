@@ -10,56 +10,6 @@ use crate::{
     ncn_fee_group::NcnFeeGroup,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
-#[repr(C)]
-pub struct RewardRoutes {
-    destination: Pubkey,
-    rewards: PodU64,
-    reserved: [u8; 128],
-}
-
-impl Default for RewardRoutes {
-    fn default() -> Self {
-        Self {
-            destination: Pubkey::default(),
-            rewards: PodU64::from(0),
-            reserved: [0; 128],
-        }
-    }
-}
-
-impl RewardRoutes {
-    pub const fn destination(&self) -> Pubkey {
-        self.destination
-    }
-
-    pub fn set_destination(&mut self, destination: Pubkey) {
-        self.destination = destination;
-    }
-
-    pub fn rewards(&self) -> u64 {
-        self.rewards.into()
-    }
-
-    pub fn increment_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
-        self.rewards = PodU64::from(
-            self.rewards()
-                .checked_add(rewards)
-                .ok_or(TipRouterError::ArithmeticOverflow)?,
-        );
-        Ok(())
-    }
-
-    pub fn decrement_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
-        self.rewards = PodU64::from(
-            self.rewards()
-                .checked_sub(rewards)
-                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
-        );
-        Ok(())
-    }
-}
-
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
@@ -85,11 +35,11 @@ pub struct NcnRewardRouter {
     reserved: [u8; 128],
 
     //TODO change to 64
-    vault_rewards: [RewardRoutes; 32],
+    vault_reward_routes: [VaultRewardRoute; 32],
 }
 
 impl Discriminator for NcnRewardRouter {
-    const DISCRIMINATOR: u8 = Discriminators::EpochRewardRouter as u8;
+    const DISCRIMINATOR: u8 = Discriminators::BaseRewardRouter as u8;
 }
 
 impl NcnRewardRouter {
@@ -108,11 +58,11 @@ impl NcnRewardRouter {
             ncn_epoch: PodU64::from(ncn_epoch),
             bump,
             slot_created: PodU64::from(slot_created),
-            vault_rewards: [RewardRoutes::default(); 32],
             reward_pool: PodU64::from(0),
             rewards_processed: PodU64::from(0),
             operator_rewards: PodU64::from(0),
             reserved: [0; 128],
+            vault_reward_routes: [VaultRewardRoute::default(); 32],
         }
     }
 
@@ -124,7 +74,7 @@ impl NcnRewardRouter {
     ) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
-                b"operator_epoch_reward_router".to_vec(),
+                b"ncn_reward_router".to_vec(),
                 vec![ncn_fee_group.group],
                 operator.to_bytes().to_vec(),
                 ncn.to_bytes().to_vec(),
@@ -158,19 +108,19 @@ impl NcnRewardRouter {
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         if account.owner.ne(program_id) {
-            msg!("Epoch Reward Router account has an invalid owner");
+            msg!("NCN Reward Router account has an invalid owner");
             return Err(ProgramError::InvalidAccountOwner);
         }
         if account.data_is_empty() {
-            msg!("Epoch Reward Router account data is empty");
+            msg!("NCN Reward Router account data is empty");
             return Err(ProgramError::InvalidAccountData);
         }
         if expect_writable && !account.is_writable {
-            msg!("Epoch Reward Router account is not writable");
+            msg!("NCN Reward Router account is not writable");
             return Err(ProgramError::InvalidAccountData);
         }
         if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Epoch Reward Router account discriminator is invalid");
+            msg!("NCN Reward Router account discriminator is invalid");
             return Err(ProgramError::InvalidAccountData);
         }
         if account.key.ne(&Self::find_program_address(
@@ -182,25 +132,26 @@ impl NcnRewardRouter {
         )
         .0)
         {
-            msg!("Epoch Reward Router account is not at the correct PDA");
+            msg!("NCN Reward Router account is not at the correct PDA");
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
     }
 
-    pub fn process_incoming_rewards(&mut self, account_balance: u64) -> Result<(), TipRouterError> {
+    // ------------------------ ROUTING ------------------------
+    pub fn route_incoming_rewards(&mut self, account_balance: u64) -> Result<(), TipRouterError> {
         let total_rewards = self.total_rewards()?;
 
         let incoming_rewards = account_balance
             .checked_sub(total_rewards)
             .ok_or(TipRouterError::ArithmeticUnderflowError)?;
 
-        self.increment_reward_pool(incoming_rewards)?;
+        self.route_to_reward_pool(incoming_rewards)?;
 
         Ok(())
     }
 
-    pub fn process_reward_pool(
+    pub fn route_reward_pool(
         &mut self,
         operator_snapshot: &OperatorSnapshot,
     ) -> Result<(), TipRouterError> {
@@ -212,8 +163,8 @@ impl NcnRewardRouter {
             let operator_rewards =
                 Self::calculate_operator_reward(operator_fee_bps as u64, rewards_to_process)?;
 
-            self.increment_operator_rewards(operator_rewards)?;
-            self.decrement_reward_pool(operator_rewards)?;
+            self.route_from_reward_pool(operator_rewards)?;
+            self.route_to_operator_rewards(operator_rewards)?;
         }
 
         // Vault Rewards
@@ -239,8 +190,8 @@ impl NcnRewardRouter {
                     rewards_to_process,
                 )?;
 
-                self.insert_or_increment_vault_rewards(vault, vault_reward)?;
-                self.decrement_reward_pool(vault_reward)?;
+                self.route_from_reward_pool(vault_reward)?;
+                self.route_to_vault_reward_route(vault, vault_reward)?;
             }
         }
 
@@ -248,13 +199,14 @@ impl NcnRewardRouter {
         {
             let leftover_rewards = self.reward_pool();
 
-            self.increment_operator_rewards(leftover_rewards)?;
-            self.decrement_reward_pool(leftover_rewards)?;
+            self.route_from_reward_pool(leftover_rewards)?;
+            self.route_to_operator_rewards(leftover_rewards)?;
         }
 
         Ok(())
     }
 
+    // ------------------------ CALCULATIONS ------------------------
     fn calculate_operator_reward(
         fee_bps: u64,
         rewards_to_process: u64,
@@ -329,58 +281,7 @@ impl NcnRewardRouter {
         Ok(operator_reward)
     }
 
-    pub fn insert_or_increment_vault_rewards(
-        &mut self,
-        vault: Pubkey,
-        rewards: u64,
-    ) -> Result<(), TipRouterError> {
-        if rewards == 0 {
-            return Ok(());
-        }
-
-        for vault_reward in self.vault_rewards.iter_mut() {
-            if vault_reward.destination() == vault {
-                vault_reward.increment_rewards(rewards)?;
-                return Ok(());
-            }
-        }
-
-        for vault_reward in self.vault_rewards.iter_mut() {
-            if vault_reward.destination() == Pubkey::default() {
-                vault_reward.set_destination(vault);
-                vault_reward.increment_rewards(rewards)?;
-                return Ok(());
-            }
-        }
-
-        Err(TipRouterError::OperatorRewardListFull)
-    }
-
-    pub fn decrement_vault_rewards(
-        &mut self,
-        vault: Pubkey,
-        rewards: u64,
-    ) -> Result<(), TipRouterError> {
-        if rewards == 0 {
-            return Ok(());
-        }
-
-        for operator_reward in self.vault_rewards.iter_mut() {
-            if operator_reward.destination() == vault {
-                operator_reward.decrement_rewards(rewards)?;
-                return Ok(());
-            }
-        }
-
-        self.rewards_processed = PodU64::from(
-            self.rewards_processed()
-                .checked_sub(rewards)
-                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
-        );
-
-        Err(TipRouterError::OperatorRewardNotFound)
-    }
-
+    // ------------------------ REWARD POOL ------------------------
     pub fn total_rewards(&self) -> Result<u64, TipRouterError> {
         let total_rewards = self
             .reward_pool()
@@ -390,15 +291,11 @@ impl NcnRewardRouter {
         Ok(total_rewards)
     }
 
-    pub fn rewards_processed(&self) -> u64 {
-        self.rewards_processed.into()
-    }
-
     pub fn reward_pool(&self) -> u64 {
         self.reward_pool.into()
     }
 
-    pub fn increment_reward_pool(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+    pub fn route_to_reward_pool(&mut self, rewards: u64) -> Result<(), TipRouterError> {
         if rewards == 0 {
             return Ok(());
         }
@@ -411,7 +308,7 @@ impl NcnRewardRouter {
         Ok(())
     }
 
-    pub fn decrement_reward_pool(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+    pub fn route_from_reward_pool(&mut self, rewards: u64) -> Result<(), TipRouterError> {
         if rewards == 0 {
             return Ok(());
         }
@@ -422,20 +319,47 @@ impl NcnRewardRouter {
                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
         );
 
+        Ok(())
+    }
+
+    // ------------------------ REWARDS PROCESSED ------------------------
+    pub fn rewards_processed(&self) -> u64 {
+        self.rewards_processed.into()
+    }
+
+    pub fn increment_rewards_processed(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+        if rewards == 0 {
+            return Ok(());
+        }
+
         self.rewards_processed = PodU64::from(
             self.rewards_processed()
                 .checked_add(rewards)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
-
         Ok(())
     }
+
+    pub fn decrement_rewards_processed(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+        if rewards == 0 {
+            return Ok(());
+        }
+
+        self.rewards_processed = PodU64::from(
+            self.rewards_processed()
+                .checked_sub(rewards)
+                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
+        );
+        Ok(())
+    }
+
+    // ------------------------ OPERATOR REWARDS ------------------------
 
     pub fn operator_rewards(&self) -> u64 {
         self.operator_rewards.into()
     }
 
-    pub fn increment_operator_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+    pub fn route_to_operator_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
         if rewards == 0 {
             return Ok(());
         }
@@ -448,7 +372,7 @@ impl NcnRewardRouter {
         Ok(())
     }
 
-    pub fn decrement_operator_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+    pub fn distribute_operator_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
         if rewards == 0 {
             return Ok(());
         }
@@ -459,11 +383,102 @@ impl NcnRewardRouter {
                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
         );
 
-        self.rewards_processed = PodU64::from(
-            self.rewards_processed()
-                .checked_sub(rewards)
-                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
-        );
+        self.decrement_rewards_processed(rewards)?;
         Ok(())
+    }
+
+    // ------------------------ VAULT REWARD ROUTES ------------------------
+    pub fn route_to_vault_reward_route(
+        &mut self,
+        vault: Pubkey,
+        rewards: u64,
+    ) -> Result<(), TipRouterError> {
+        if rewards == 0 {
+            return Ok(());
+        }
+
+        for vault_reward in self.vault_reward_routes.iter_mut() {
+            if vault_reward.vault().eq(&vault) {
+                vault_reward.increment_rewards(rewards)?;
+                return Ok(());
+            }
+        }
+
+        for vault_reward in self.vault_reward_routes.iter_mut() {
+            if vault_reward.vault().eq(&Pubkey::default()) {
+                *vault_reward = VaultRewardRoute::new(vault, rewards)?;
+                return Ok(());
+            }
+        }
+
+        Err(TipRouterError::OperatorRewardListFull)
+    }
+
+    pub fn distribute_vault_reward_route(
+        &mut self,
+        vault: Pubkey,
+        rewards: u64,
+    ) -> Result<(), TipRouterError> {
+        if rewards == 0 {
+            return Ok(());
+        }
+
+        for route in self.vault_reward_routes.iter_mut() {
+            if route.vault().eq(&vault) {
+                route.decrement_rewards(rewards)?;
+                self.decrement_rewards_processed(rewards)?;
+                return Ok(());
+            }
+        }
+        Err(TipRouterError::OperatorRewardNotFound)
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
+#[repr(C)]
+pub struct VaultRewardRoute {
+    vault: Pubkey,
+    rewards: PodU64,
+}
+
+impl VaultRewardRoute {
+    pub fn new(vault: Pubkey, rewards: u64) -> Result<Self, TipRouterError> {
+        Ok(Self {
+            vault,
+            rewards: PodU64::from(rewards),
+        })
+    }
+
+    pub const fn vault(&self) -> Pubkey {
+        self.vault
+    }
+
+    pub fn rewards(&self) -> u64 {
+        self.rewards.into()
+    }
+
+    fn set_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+        self.rewards = PodU64::from(rewards);
+        Ok(())
+    }
+
+    pub fn increment_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+        let current_rewards = self.rewards();
+
+        let new_rewards = current_rewards
+            .checked_add(rewards)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        self.set_rewards(new_rewards)
+    }
+
+    pub fn decrement_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+        let current_rewards = self.rewards();
+
+        let new_rewards = current_rewards
+            .checked_sub(rewards)
+            .ok_or(TipRouterError::ArithmeticUnderflowError)?;
+
+        self.set_rewards(new_rewards)
     }
 }

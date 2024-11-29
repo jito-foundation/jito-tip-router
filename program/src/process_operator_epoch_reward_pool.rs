@@ -65,9 +65,9 @@ pub fn process_process_operator_epoch_reward_pool(
     let operator_epoch_reward_router_account =
         NcnRewardRouter::try_from_slice_unchecked_mut(&mut operator_epoch_reward_router_data)?;
 
-    operator_epoch_reward_router_account.process_incoming_rewards(account_balance)?;
+    operator_epoch_reward_router_account.route_incoming_rewards(account_balance)?;
 
-    operator_epoch_reward_router_account.process_reward_pool(&operator_snapshot)?;
+    operator_epoch_reward_router_account.route_reward_pool(&operator_snapshot)?;
 
     Ok(())
 }
