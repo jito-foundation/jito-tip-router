@@ -87,9 +87,11 @@ jobs:
           crate: cargo-sort
       - run: cargo sort --workspace --check
       - run: cargo fmt --all --check
-      - run: cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D clippy::integer_division -D clippy::arithmetic_side_effects -D clippy::style -D clippy::perf
+      - run: |
+          export ANCHOR_IDL_BUILD_SKIP_LINT=true
+          cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D clippy::integer_division -D clippy::arithmetic_side_effects -D clippy::style -D clippy::perf
         env:
-          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
+          ANCHOR_IDL_BUILD_SKIP_LINT: true
 
   build:
     name: build
@@ -145,6 +147,8 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+    env:
+      ANCHOR_IDL_BUILD_SKIP_LINT: true
     steps:
       - uses: actions/checkout@v4
       - uses: aarcangeli/load-dotenv@v1.0.0
@@ -159,13 +163,10 @@ jobs:
           path: integration_tests/tests/fixtures/
       - uses: taiki-e/install-action@nextest
       # Test the non-BPF tests and the BPF tests separately
-      - run: ANCHOR_IDL_BUILD_SKIP_LINT=true cargo nextest run --all-features -E 'not test(bpf)'
-        env:
-          ANCHOR_IDL_BUILD_SKIP_LINT: true
-      - run: ANCHOR_IDL_BUILD_SKIP_LINT=true cargo nextest run --all-features -E 'test(bpf)'
+      - run: cargo nextest run --all-features -E 'not test(bpf)'
+      - run: cargo nextest run --all-features -E 'test(bpf)'
         env:
           SBF_OUT_DIR: ${{ github.workspace }}/integration_tests/tests/fixtures
-          ANCHOR_IDL_BUILD_SKIP_LINT: true
 
   # create_release:
   #   name: Create Release
