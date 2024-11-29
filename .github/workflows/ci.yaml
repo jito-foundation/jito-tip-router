@@ -41,8 +41,6 @@ jobs:
           toolchain: nightly-2024-07-25
       - name: Regenerate Shank IDL files
         run: cargo b --release -p jito-tip-router-shank-cli && ./target/release/jito-tip-router-shank-cli
-        env:
-          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
       - name: Verify no changed files
         uses: tj-actions/verify-changed-files@v20
         with:
@@ -88,11 +86,7 @@ jobs:
         with:
           crate: cargo-sort
       - run: cargo sort --workspace --check
-        env:
-          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
       - run: cargo fmt --all --check
-        env:
-          ANCHOR_IDL_BUILD_SKIP_LINT: TRUE
       - run: cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D clippy::integer_division -D clippy::arithmetic_side_effects -D clippy::style -D clippy::perf
         env:
           ANCHOR_IDL_BUILD_SKIP_LINT: TRUE

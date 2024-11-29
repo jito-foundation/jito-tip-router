@@ -84,7 +84,13 @@ pub fn process_cast_vote(
 
     let ballot = Ballot::new(meta_merkle_root);
 
-    ballot_box.cast_vote(*operator.key, ballot, operator_stake_weight, slot, valid_slots_after_consensus)?;
+    ballot_box.cast_vote(
+        *operator.key,
+        ballot,
+        operator_stake_weight,
+        slot,
+        valid_slots_after_consensus,
+    )?;
 
     ballot_box.tally_votes(total_stake_weight, slot)?;
 

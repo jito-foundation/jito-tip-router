@@ -6,7 +6,6 @@ use std::{
     result,
 };
 
-use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use solana_program::{hash::hashv, pubkey::Pubkey};
 
@@ -31,7 +30,7 @@ pub const LEAF_PREFIX: &[u8] = &[0];
 pub struct MetaMerkleTree {
     /// The merkle root, which is uploaded on-chain
     pub merkle_root: [u8; 32],
-    pub num_nodes: u64, // Is this needed?
+    pub num_nodes: u64,
     pub tree_nodes: Vec<TreeNode>,
 }
 

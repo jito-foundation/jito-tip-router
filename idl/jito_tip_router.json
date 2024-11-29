@@ -1626,7 +1626,7 @@
     {
       "code": 8732,
       "name": "ConsensusAlreadyReached",
-      "msg": "Consensus already reached"
+      "msg": "Consensus already reached, cannot change vote"
     },
     {
       "code": 8733,
@@ -1641,7 +1641,7 @@
     {
       "code": 8735,
       "name": "VotingNotValid",
-      "msg": "Voting not valid"
+      "msg": "Voting not valid, too many slots after consensus reached"
     },
     {
       "code": 8736,

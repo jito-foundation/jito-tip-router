@@ -2927,7 +2927,6 @@ dependencies = [
  "bytemuck",
  "fast-math",
  "hex",
- "indexmap 2.6.0",
  "jito-bytemuck",
  "jito-jsm-core",
  "jito-restaking-core",

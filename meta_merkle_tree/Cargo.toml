@@ -14,7 +14,6 @@ borsh = { workspace = true }
 bytemuck = { workspace = true }
 fast-math = { workspace = true }
 hex = { workspace = true }
-indexmap = { workspace = true }
 jito-bytemuck = { workspace = true }
 jito-jsm-core = { workspace = true }
 jito-restaking-core = { workspace = true }

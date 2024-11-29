@@ -46,7 +46,6 @@ fast-math = "0.1"
 getrandom = { version = "0.1.16", features = ["custom"] }
 
 hex = "0.4.3"
-indexmap = "2.1.0"
 log = "0.4.22"
 matches = "0.1.10"
 num-derive = "0.4.2"
