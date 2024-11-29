@@ -1,5 +1,5 @@
 mod admin_update_weight_table;
-mod distribute_rewards;
+mod distribute_dao_rewards;
 mod initialize_epoch_reward_router;
 mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
@@ -28,6 +28,7 @@ use solana_security_txt::security_txt;
 
 use crate::{
     admin_update_weight_table::process_admin_update_weight_table,
+    distribute_dao_rewards::process_distribute_dao_rewards,
     initialize_epoch_reward_router::process_initialize_epoch_reward_router,
     initialize_epoch_snapshot::process_initialize_epoch_snapshot,
     initialize_ncn_config::process_initialize_ncn_config,
@@ -192,6 +193,12 @@ pub fn process_instruction(
                 accounts,
                 first_slot_of_ncn_epoch,
             )
+        }
+        TipRouterInstruction::DistributeDaoRewards {
+            first_slot_of_ncn_epoch,
+        } => {
+            msg!("Instruction: DistributeDAORewards");
+            process_distribute_dao_rewards(program_id, accounts, first_slot_of_ncn_epoch)
         }
     }
 }

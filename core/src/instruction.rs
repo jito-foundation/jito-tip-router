@@ -198,4 +198,14 @@ pub enum TipRouterInstruction {
         first_slot_of_ncn_epoch: Option<u64>,
     },
 
+    #[account(0, name = "restaking_config")]
+    #[account(1, name = "ncn_config")]
+    #[account(2, name = "ncn")]
+    #[account(3, writable, name = "epoch_reward_router")]
+    #[account(4, writable, name = "destination")]
+    #[account(5, name = "restaking_program_id")]
+    DistributeDaoRewards{
+        first_slot_of_ncn_epoch: Option<u64>,
+    },
+
 }
