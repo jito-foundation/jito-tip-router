@@ -18,7 +18,7 @@ jito-bytemuck = { workspace = true }
 jito-jsm-core = { workspace = true }
 jito-restaking-core = { workspace = true }
 jito-restaking-sdk = { workspace = true }
-jito-tip-distribution = { workspace = true }
+jito-tip-distribution-sdk = { workspace = true }
 jito-vault-core = { workspace = true }
 jito-vault-sdk = { workspace = true }
 rand = { workspace = true }

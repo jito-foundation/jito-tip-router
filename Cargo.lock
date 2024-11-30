@@ -2392,18 +2392,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "jito-programs-vote-state"
-version = "0.1.5"
-source = "git+https://github.com/jito-foundation/jito-programs?rev=2849874101336e7ef6ee93bb64b1354d5e682bb9#2849874101336e7ef6ee93bb64b1354d5e682bb9"
-dependencies = [
- "anchor-lang",
- "bincode",
- "serde",
- "serde_derive",
- "solana-program 1.18.26",
-]
-
-[[package]]
 name = "jito-restaking-client"
 version = "0.0.3"
 source = "git+https://github.com/jito-foundation/restaking.git?rev=eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d#eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d"
@@ -2471,23 +2459,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "jito-tip-distribution"
-version = "0.1.5"
-source = "git+https://github.com/jito-foundation/jito-programs?rev=2849874101336e7ef6ee93bb64b1354d5e682bb9#2849874101336e7ef6ee93bb64b1354d5e682bb9"
-dependencies = [
- "anchor-lang",
- "jito-programs-vote-state",
- "solana-program 1.18.26",
- "solana-security-txt",
-]
-
-[[package]]
 name = "jito-tip-distribution-sdk"
-version = "0.1.0"
-source = "git+https://github.com/jito-foundation/jito-programs?rev=2849874101336e7ef6ee93bb64b1354d5e682bb9#2849874101336e7ef6ee93bb64b1354d5e682bb9"
+version = "0.0.1"
 dependencies = [
  "anchor-lang",
- "jito-tip-distribution",
 ]
 
 [[package]]
@@ -2569,7 +2544,6 @@ dependencies = [
  "jito-restaking-core",
  "jito-restaking-program",
  "jito-restaking-sdk",
- "jito-tip-distribution",
  "jito-tip-distribution-sdk",
  "jito-tip-router-client",
  "jito-tip-router-core",
@@ -2931,7 +2905,7 @@ dependencies = [
  "jito-jsm-core",
  "jito-restaking-core",
  "jito-restaking-sdk",
- "jito-tip-distribution",
+ "jito-tip-distribution-sdk",
  "jito-vault-core",
  "jito-vault-sdk",
  "rand 0.8.5",

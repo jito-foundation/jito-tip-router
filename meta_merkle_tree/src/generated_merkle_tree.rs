@@ -2,7 +2,7 @@
 // To be replaced by tip distributor code in this repo
 use std::{fs::File, io::BufReader, path::PathBuf};
 
-use jito_tip_distribution::state::ClaimStatus;
+use jito_tip_distribution_sdk::{jito_tip_distribution, CLAIM_STATUS_SEED};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use solana_program::{
     clock::{Epoch, Slot},
@@ -136,11 +136,11 @@ impl TreeNode {
                 .unwrap() as u64;
             let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
                 &[
-                    ClaimStatus::SEED,
+                    CLAIM_STATUS_SEED,
                     &stake_meta.validator_vote_account.to_bytes(),
                     &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
                 ],
-                &jito_tip_distribution::id(),
+                &jito_tip_distribution::ID,
             );
             let mut tree_nodes = vec![TreeNode {
                 claimant: stake_meta.validator_vote_account,
@@ -170,11 +170,11 @@ impl TreeNode {
                             .unwrap();
                         let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
                             &[
-                                ClaimStatus::SEED,
+                                CLAIM_STATUS_SEED,
                                 &delegation.stake_account_pubkey.to_bytes(),
                                 &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
                             ],
-                            &jito_tip_distribution::id(),
+                            &jito_tip_distribution::ID,
                         );
                         Ok(TreeNode {
                             claimant: delegation.stake_account_pubkey,

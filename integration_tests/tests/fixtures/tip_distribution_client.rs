@@ -2,7 +2,7 @@ use std::borrow::BorrowMut;
 
 use anchor_lang::AccountDeserialize;
 use borsh::BorshDeserialize;
-use jito_tip_distribution::state::TipDistributionAccount;
+use jito_tip_distribution_sdk::TipDistributionAccount;
 // Getters for the Tip Distribution account to verify that we've set the merkle root correctly
 use solana_program::{pubkey::Pubkey, system_instruction::transfer};
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
@@ -153,19 +153,14 @@ impl TipDistributionClient {
         bump: u8,
     ) -> TestResult<()> {
         let ix = jito_tip_distribution_sdk::instruction::initialize_ix(
-            jito_tip_distribution::id(),
-            jito_tip_distribution_sdk::instruction::InitializeArgs {
-                authority,
-                expired_funds_account,
-                num_epochs_valid,
-                max_validator_commission_bps,
-                bump,
-            },
-            jito_tip_distribution_sdk::instruction::InitializeAccounts {
-                config,
-                system_program,
-                initializer,
-            },
+            config,
+            system_program,
+            initializer,
+            authority,
+            expired_funds_account,
+            num_epochs_valid,
+            max_validator_commission_bps,
+            bump,
         );
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;
@@ -224,19 +219,14 @@ impl TipDistributionClient {
         bump: u8,
     ) -> TestResult<()> {
         let ix = jito_tip_distribution_sdk::instruction::initialize_tip_distribution_account_ix(
-            jito_tip_distribution::id(),
-            jito_tip_distribution_sdk::instruction::InitializeTipDistributionAccountArgs {
-                merkle_root_upload_authority,
-                validator_commission_bps,
-                bump,
-            },
-            jito_tip_distribution_sdk::instruction::InitializeTipDistributionAccountAccounts {
-                config,
-                tip_distribution_account,
-                system_program,
-                validator_vote_account,
-                signer: self.payer.pubkey(),
-            },
+            config,
+            tip_distribution_account,
+            system_program,
+            validator_vote_account,
+            self.payer.pubkey(),
+            merkle_root_upload_authority,
+            validator_commission_bps,
+            bump,
         );
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;
@@ -301,20 +291,15 @@ impl TipDistributionClient {
         bump: u8,
     ) -> TestResult<()> {
         let ix = jito_tip_distribution_sdk::instruction::claim_ix(
-            jito_tip_distribution::id(),
-            jito_tip_distribution_sdk::instruction::ClaimArgs {
-                proof,
-                amount,
-                bump,
-            },
-            jito_tip_distribution_sdk::instruction::ClaimAccounts {
-                config,
-                tip_distribution_account,
-                claim_status,
-                claimant,
-                payer,
-                system_program,
-            },
+            config,
+            tip_distribution_account,
+            claim_status,
+            claimant,
+            payer,
+            system_program,
+            proof,
+            amount,
+            bump,
         );
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;

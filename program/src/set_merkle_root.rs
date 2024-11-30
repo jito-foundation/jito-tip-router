@@ -1,8 +1,7 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{
-    derive_tip_distribution_account_address,
-    instruction::{upload_merkle_root_ix, UploadMerkleRootAccounts, UploadMerkleRootArgs},
+    derive_tip_distribution_account_address, instruction::upload_merkle_root_ix,
 };
 use jito_tip_router_core::{ballot_box::BallotBox, error::TipRouterError, ncn_config::NcnConfig};
 use solana_program::{
@@ -61,17 +60,12 @@ pub fn process_set_merkle_root(
 
     invoke_signed(
         &upload_merkle_root_ix(
-            *tip_distribution_program_id.key,
-            UploadMerkleRootArgs {
-                root: merkle_root,
-                max_total_claim,
-                max_num_nodes,
-            },
-            UploadMerkleRootAccounts {
-                config: *tip_distribution_config.key,
-                tip_distribution_account: *tip_distribution_account.key,
-                merkle_root_upload_authority: *ncn_config.key,
-            },
+            *tip_distribution_config.key,
+            *ncn_config.key,
+            *tip_distribution_account.key,
+            merkle_root,
+            max_total_claim,
+            max_num_nodes,
         ),
         &[
             tip_distribution_config.clone(),

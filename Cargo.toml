@@ -7,6 +7,7 @@ members = [
     "meta_merkle_tree",
     "program",
     "shank_cli",
+    "tip_distribution_sdk",
 ]
 
 resolver = "2"
@@ -31,7 +32,7 @@ edition = "2021"
 readme = "README.md"
 
 [workspace.dependencies]
-anchor-lang = { version = "0.30.0" }
+anchor-lang = { version = "0.30.1" }
 anyhow = "1.0.86"
 assert_matches = "1.5.0"
 borsh = { version = "0.10.3" }
@@ -73,8 +74,8 @@ syn = "2.0.72"
 thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
 meta-merkle-tree = { path = "./meta_merkle_tree", version = "=0.0.1" }
-jito-tip-distribution-sdk = { git = "https://github.com/jito-foundation/jito-programs", rev = "2849874101336e7ef6ee93bb64b1354d5e682bb9" }
-jito-tip-distribution = { git = "https://github.com/jito-foundation/jito-programs", rev = "2849874101336e7ef6ee93bb64b1354d5e682bb9" }
+jito-tip-distribution-sdk = { path = "./tip_distribution_sdk", version = "=0.0.1" }
+# jito-tip-distribution = { default-features = false, features = ["no-entrypoint", "no-idl"], git = "https://github.com/jito-foundation/jito-programs", rev = "2849874101336e7ef6ee93bb64b1354d5e682bb9" }
 jito-tip-router-client = { path = "./clients/rust/jito_tip_router", version = "0.0.1" }
 jito-tip-router-core = { path = "./core", version = "=0.0.1" }
 jito-tip-router-program = { path = "./program", version = "=0.0.1" }
