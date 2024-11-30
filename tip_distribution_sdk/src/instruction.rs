@@ -1,17 +1,10 @@
-/*
-* Initialize ix
-* initialize_tip_distribution_account
-* claim_ix
-* set_merkle_root
-*/
 use anchor_lang::{
-    declare_program, prelude::Pubkey, solana_program::instruction::Instruction, InstructionData,
-    ToAccountMetas,
+    prelude::Pubkey, solana_program::instruction::Instruction, InstructionData, ToAccountMetas,
 };
 
-declare_program!(jito_tip_distribution);
-use jito_tip_distribution::program::JitoTipDistribution;
+use crate::jito_tip_distribution;
 
+#[allow(clippy::too_many_arguments)]
 pub fn initialize_ix(
     config: Pubkey,
     system_program: Pubkey,
@@ -41,6 +34,7 @@ pub fn initialize_ix(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn initialize_tip_distribution_account_ix(
     config: Pubkey,
     tip_distribution_account: Pubkey,
@@ -70,6 +64,7 @@ pub fn initialize_tip_distribution_account_ix(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn claim_ix(
     config: Pubkey,
     tip_distribution_account: Pubkey,
@@ -101,6 +96,7 @@ pub fn claim_ix(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn upload_merkle_root_ix(
     config: Pubkey,
     merkle_root_upload_authority: Pubkey,

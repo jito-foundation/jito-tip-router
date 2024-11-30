@@ -1,11 +1,7 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::ncn::Ncn;
-use jito_tip_router_core::{
-    ballot_box::{Ballot, BallotBox},
-    error::TipRouterError,
-    ncn_config::NcnConfig,
-};
+use jito_tip_router_core::{ballot_box::BallotBox, error::TipRouterError, ncn_config::NcnConfig};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,

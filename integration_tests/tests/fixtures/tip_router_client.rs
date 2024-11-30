@@ -2,8 +2,7 @@ use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{
     config::Config, ncn_operator_state::NcnOperatorState, ncn_vault_ticket::NcnVaultTicket,
 };
-use jito_tip_distribution::state::TipDistributionAccount;
-use jito_tip_distribution_sdk::derive_tip_distribution_account_address;
+use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, jito_tip_distribution};
 use jito_tip_router_client::{
     instructions::{
         AdminUpdateWeightTableBuilder, CastVoteBuilder, InitializeBallotBoxBuilder,
@@ -826,7 +825,7 @@ impl TipRouterClient {
         let ballot_box =
             BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let tip_distribution_program_id = jito_tip_distribution::id();
+        let tip_distribution_program_id = jito_tip_distribution::ID;
         let tip_distribution_account = derive_tip_distribution_account_address(
             &tip_distribution_program_id,
             &vote_account,

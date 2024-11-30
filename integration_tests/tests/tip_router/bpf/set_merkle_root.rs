@@ -1,6 +1,8 @@
 mod set_merkle_root {
-    use jito_tip_distribution::state::ClaimStatus;
-    use jito_tip_distribution_sdk::derive_tip_distribution_account_address;
+    use jito_tip_distribution_sdk::{
+        derive_claim_status_account_address, derive_tip_distribution_account_address,
+        jito_tip_distribution,
+    };
     use jito_tip_router_core::{
         ballot_box::{Ballot, BallotBox},
         ncn_config::NcnConfig,
@@ -12,38 +14,32 @@ mod set_merkle_root {
         },
         meta_merkle_tree::MetaMerkleTree,
     };
-    use solana_sdk::{
-        clock::{Clock, DEFAULT_SLOTS_PER_EPOCH},
-        epoch_schedule::EpochSchedule,
-        pubkey::Pubkey,
-        signer::Signer,
-        sysvar::epoch_schedule,
-    };
+    use solana_sdk::{epoch_schedule::EpochSchedule, pubkey::Pubkey, signer::Signer};
 
     use crate::{
-        fixtures::{
-            test_builder::TestBuilder, tip_router_client::TipRouterClient, TestError, TestResult,
-        },
+        fixtures::{test_builder::TestBuilder, TestError, TestResult},
         helpers::ballot_box::serialized_ballot_box_account,
     };
 
     struct GeneratedMerkleTreeCollectionFixture {
-        test_generated_merkle_tree: GeneratedMerkleTree,
+        _test_generated_merkle_tree: GeneratedMerkleTree,
         collection: GeneratedMerkleTreeCollection,
     }
 
-    fn create_tree_node(
+    fn _create_tree_node(
         claimant_staker_withdrawer: Pubkey,
         amount: u64,
         epoch: u64,
     ) -> generated_merkle_tree::TreeNode {
-        let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
-            &[
-                ClaimStatus::SEED,
-                claimant_staker_withdrawer.to_bytes().as_ref(),
-                epoch.to_le_bytes().as_ref(),
-            ],
-            &jito_tip_distribution::id(),
+        let (claim_status_pubkey, claim_status_bump) = derive_claim_status_account_address(
+            &jito_tip_distribution::ID,
+            &claimant_staker_withdrawer,
+            &derive_tip_distribution_account_address(
+                &jito_tip_distribution::ID,
+                &claimant_staker_withdrawer,
+                epoch,
+            )
+            .0,
         );
 
         generated_merkle_tree::TreeNode {
@@ -77,7 +73,7 @@ mod set_merkle_root {
             maybe_tip_distribution_meta: Some(TipDistributionMeta {
                 merkle_root_upload_authority,
                 tip_distribution_pubkey: derive_tip_distribution_account_address(
-                    &jito_tip_distribution::id(),
+                    &jito_tip_distribution::ID,
                     &vote_account,
                     epoch,
                 )
@@ -97,7 +93,7 @@ mod set_merkle_root {
             maybe_tip_distribution_meta: Some(TipDistributionMeta {
                 merkle_root_upload_authority: other_validator,
                 tip_distribution_pubkey: derive_tip_distribution_account_address(
-                    &jito_tip_distribution::id(),
+                    &jito_tip_distribution::ID,
                     &other_validator,
                     epoch,
                 )
@@ -123,7 +119,7 @@ mod set_merkle_root {
                 .map_err(TestError::from)?;
 
         let test_tip_distribution_account = derive_tip_distribution_account_address(
-            &jito_tip_distribution::id(),
+            &jito_tip_distribution::ID,
             &vote_account,
             epoch,
         )
@@ -135,14 +131,14 @@ mod set_merkle_root {
             .unwrap();
 
         Ok(GeneratedMerkleTreeCollectionFixture {
-            test_generated_merkle_tree: test_generated_merkle_tree.clone(),
+            _test_generated_merkle_tree: test_generated_merkle_tree.clone(),
             collection,
         })
     }
 
     struct MetaMerkleTreeFixture {
         // Contains the individual validator's merkle trees, with the TreeNode idata needed to invoke the set_merkle_root instruction (root, max_num_nodes, max_total_claim)
-        pub generated_merkle_tree_fixture: GeneratedMerkleTreeCollectionFixture,
+        _generated_merkle_tree_fixture: GeneratedMerkleTreeCollectionFixture,
         // Contains meta merkle tree with the root that all validators vote on, and proofs needed to verify the input data
         pub meta_merkle_tree: MetaMerkleTree,
     }
@@ -164,7 +160,7 @@ mod set_merkle_root {
         )?;
 
         Ok(MetaMerkleTreeFixture {
-            generated_merkle_tree_fixture,
+            _generated_merkle_tree_fixture: generated_merkle_tree_fixture,
             meta_merkle_tree,
         })
     }
@@ -221,7 +217,7 @@ mod set_merkle_root {
             .await;
 
         let tip_distribution_address = derive_tip_distribution_account_address(
-            &jito_tip_distribution::id(),
+            &jito_tip_distribution::ID,
             &vote_account,
             epoch,
         )

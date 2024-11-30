@@ -4,6 +4,7 @@ use std::{
 };
 
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
+use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
     clock::Clock, native_token::sol_to_lamports, pubkey::Pubkey, system_instruction::transfer,
@@ -11,7 +12,7 @@ use solana_program::{
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
     account::Account, commitment_config::CommitmentLevel, epoch_schedule::EpochSchedule,
-    native_token::lamports_to_sol, signature::Signer, transaction::Transaction,
+    signature::Signer, transaction::Transaction,
 };
 
 use super::{
@@ -55,7 +56,7 @@ impl Debug for TestBuilder {
 
 impl TestBuilder {
     pub async fn new() -> Self {
-        let run_as_bpf = std::env::vars().any(|(key, value)| key.eq("SBF_OUT_DIR"));
+        let run_as_bpf = std::env::vars().any(|(key, _)| key.eq("SBF_OUT_DIR"));
 
         let program_test = if run_as_bpf {
             let mut program_test = ProgramTest::new(
@@ -68,7 +69,7 @@ impl TestBuilder {
 
             // Tests that invoke this program should be in the "bpf" module so we can run them separately with the bpf vm.
             // Anchor programs do not expose a compatible entrypoint for solana_program_test::processor!
-            program_test.add_program("jito_tip_distribution", jito_tip_distribution::id(), None);
+            program_test.add_program("jito_tip_distribution", jito_tip_distribution::ID, None);
 
             program_test
         } else {

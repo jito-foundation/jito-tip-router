@@ -1,8 +1,5 @@
-use std::borrow::BorrowMut;
-
 use anchor_lang::AccountDeserialize;
-use borsh::BorshDeserialize;
-use jito_tip_distribution_sdk::TipDistributionAccount;
+use jito_tip_distribution_sdk::{jito_tip_distribution, TipDistributionAccount};
 // Getters for the Tip Distribution account to verify that we've set the merkle root correctly
 use solana_program::{pubkey::Pubkey, system_instruction::transfer};
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
@@ -70,7 +67,7 @@ impl TipDistributionClient {
     ) -> TestResult<TipDistributionAccount> {
         let (tip_distribution_address, _) =
             jito_tip_distribution_sdk::derive_tip_distribution_account_address(
-                &jito_tip_distribution::id(),
+                &jito_tip_distribution::ID,
                 &vote_account,
                 epoch,
             );
@@ -121,7 +118,7 @@ impl TipDistributionClient {
 
     pub async fn do_initialize(&mut self, authority: Pubkey) -> TestResult<()> {
         let (config, bump) =
-            jito_tip_distribution_sdk::derive_config_account_address(&jito_tip_distribution::id());
+            jito_tip_distribution_sdk::derive_config_account_address(&jito_tip_distribution::ID);
         let system_program = solana_program::system_program::id();
         let initializer = self.payer.pubkey();
         let expired_funds_account = authority;
@@ -181,7 +178,7 @@ impl TipDistributionClient {
         validator_commission_bps: u16,
     ) -> TestResult<()> {
         let (config, _) =
-            jito_tip_distribution_sdk::derive_config_account_address(&jito_tip_distribution::id());
+            jito_tip_distribution_sdk::derive_config_account_address(&jito_tip_distribution::ID);
         let system_program = solana_program::system_program::id();
         let validator_vote_account = vote_keypair.pubkey();
         println!("Checkpoint E.1");
@@ -189,7 +186,7 @@ impl TipDistributionClient {
         println!("Checkpoint E.2");
         let (tip_distribution_account, account_bump) =
             jito_tip_distribution_sdk::derive_tip_distribution_account_address(
-                &jito_tip_distribution::id(),
+                &jito_tip_distribution::ID,
                 &validator_vote_account,
                 epoch,
             );
@@ -201,7 +198,6 @@ impl TipDistributionClient {
             tip_distribution_account,
             system_program,
             validator_vote_account,
-            vote_keypair,
             account_bump,
         )
         .await
@@ -215,7 +211,6 @@ impl TipDistributionClient {
         tip_distribution_account: Pubkey,
         system_program: Pubkey,
         validator_vote_account: Pubkey,
-        vote_keypair: Keypair,
         bump: u8,
     ) -> TestResult<()> {
         let ix = jito_tip_distribution_sdk::instruction::initialize_tip_distribution_account_ix(
@@ -244,24 +239,23 @@ impl TipDistributionClient {
         proof: Vec<[u8; 32]>,
         amount: u64,
         claimant: Pubkey,
+        epoch: u64,
     ) -> TestResult<()> {
         let (config, _) =
-            jito_tip_distribution_sdk::derive_config_account_address(&jito_tip_distribution::id());
+            jito_tip_distribution_sdk::derive_config_account_address(&jito_tip_distribution::ID);
         let system_program = solana_program::system_program::id();
         let (tip_distribution_account, _) =
             jito_tip_distribution_sdk::derive_tip_distribution_account_address(
-                &jito_tip_distribution::id(),
+                &jito_tip_distribution::ID,
                 &claimant,
-                0, // Assuming epoch is 0 for simplicity
+                epoch,
             );
-        let (claim_status, claim_status_bump) = Pubkey::find_program_address(
-            &[
-                jito_tip_distribution::state::ClaimStatus::SEED,
-                claimant.as_ref(),
-                tip_distribution_account.as_ref(),
-            ],
-            &jito_tip_distribution::id(),
-        );
+        let (claim_status, claim_status_bump) =
+            jito_tip_distribution_sdk::derive_claim_status_account_address(
+                &jito_tip_distribution::ID,
+                &claimant,
+                &tip_distribution_account,
+            );
         let payer = self.payer.pubkey();
 
         self.claim(
