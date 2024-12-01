@@ -6,7 +6,7 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     loaders::load_ncn_epoch,
     ncn_config::NcnConfig,
-    stake_weight::StakeWeight,
+    stake_weight::StakeWeights,
     tracked_mints::TrackedMints,
     weight_table::WeightTable,
 };
@@ -139,14 +139,14 @@ pub fn process_snapshot_vault_operator_delegation(
     let operator_snapshot_account =
         OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
 
-    let stake_weight = StakeWeight::new(ncn_fee_group, stake_weight)?;
+    let stake_weights = StakeWeights::new(ncn_fee_group, total_stake_weight)?;
 
     operator_snapshot_account.increment_vault_operator_delegation_registration(
         current_slot,
         *vault.key,
         vault_index,
         ncn_fee_group,
-        &stake_weight,
+        &stake_weights,
     )?;
 
     // If operator is finalized, increment operator registration
@@ -158,7 +158,7 @@ pub fn process_snapshot_vault_operator_delegation(
         epoch_snapshot_account.increment_operator_registration(
             current_slot,
             operator_snapshot_account.valid_operator_vault_delegations(),
-            operator_snapshot_account.stake_weight(),
+            operator_snapshot_account.stake_weights(),
         )?;
     }
 

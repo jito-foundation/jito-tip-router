@@ -29,6 +29,7 @@ use solana_security_txt::security_txt;
 use crate::{
     admin_update_weight_table::process_admin_update_weight_table,
     distribute_base_rewards::process_distribute_base_rewards,
+    distribute_ncn_routes::process_distribute_ncn_routes,
     initialize_epoch_reward_router::process_initialize_epoch_reward_router,
     initialize_epoch_snapshot::process_initialize_epoch_snapshot,
     initialize_ncn_config::process_initialize_ncn_config,
@@ -76,17 +77,17 @@ pub fn process_instruction(
         // Initialization
         // ------------------------------------------
         TipRouterInstruction::InitializeNCNConfig {
-            dao_fee_bps,
-            ncn_fee_bps,
             block_engine_fee_bps,
+            dao_fee_bps,
+            default_ncn_fee_bps,
         } => {
             msg!("Instruction: InitializeConfig");
             process_initialize_ncn_config(
                 program_id,
                 accounts,
-                dao_fee_bps,
-                ncn_fee_bps,
                 block_engine_fee_bps,
+                dao_fee_bps,
+                default_ncn_fee_bps,
             )
         }
         TipRouterInstruction::InitializeWeightTable {
@@ -143,21 +144,23 @@ pub fn process_instruction(
             process_admin_update_weight_table(program_id, accounts, ncn_epoch, weight)
         }
         TipRouterInstruction::SetConfigFees {
-            new_fee_wallet,
             new_block_engine_fee_bps,
-            new_dao_fee_bps,
+            base_fee_group,
+            new_base_fee_wallet,
+            new_base_fee_bps,
+            ncn_fee_group,
             new_ncn_fee_bps,
-            new_ncn_fee_group,
         } => {
             msg!("Instruction: SetConfigFees");
             process_set_config_fees(
                 program_id,
                 accounts,
-                new_fee_wallet,
                 new_block_engine_fee_bps,
-                new_dao_fee_bps,
+                base_fee_group,
+                new_base_fee_wallet,
+                new_base_fee_bps,
+                ncn_fee_group,
                 new_ncn_fee_bps,
-                new_ncn_fee_group,
             )
         }
         TipRouterInstruction::SetNewAdmin { role } => {
@@ -195,10 +198,16 @@ pub fn process_instruction(
             )
         }
         TipRouterInstruction::DistributeDaoRewards {
+            base_fee_group,
             first_slot_of_ncn_epoch,
         } => {
             msg!("Instruction: DistributeDAORewards");
-            process_distribute_base_rewards(program_id, accounts, first_slot_of_ncn_epoch)
+            process_distribute_base_rewards(
+                program_id,
+                accounts,
+                base_fee_group,
+                first_slot_of_ncn_epoch,
+            )
         }
     }
 }

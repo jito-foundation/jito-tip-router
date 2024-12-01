@@ -9,7 +9,7 @@ use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     constants::PRECISE_CONSENSUS, discriminators::Discriminators, error::TipRouterError,
-    stake_weight::StakeWeight,
+    stake_weight::StakeWeights,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
@@ -46,7 +46,7 @@ impl Ballot {
 pub struct BallotTally {
     index: PodU16,
     ballot: Ballot,
-    stake_weight: StakeWeight,
+    stake_weight: StakeWeights,
     tally: PodU64,
     reserved: [u8; 64],
 }
@@ -56,7 +56,7 @@ impl Default for BallotTally {
         Self {
             index: PodU16::from(u16::MAX),
             ballot: Ballot::default(),
-            stake_weight: StakeWeight::default(),
+            stake_weight: StakeWeights::default(),
             tally: PodU64::from(0),
             reserved: [0; 64],
         }
@@ -64,7 +64,7 @@ impl Default for BallotTally {
 }
 
 impl BallotTally {
-    pub fn new(index: u16, ballot: Ballot, stake_weight: &StakeWeight) -> Self {
+    pub fn new(index: u16, ballot: Ballot, stake_weight: &StakeWeights) -> Self {
         Self {
             index: PodU16::from(index),
             ballot,
@@ -78,7 +78,7 @@ impl BallotTally {
         self.ballot
     }
 
-    pub const fn stake_weight(&self) -> &StakeWeight {
+    pub const fn stake_weight(&self) -> &StakeWeights {
         &self.stake_weight
     }
 
@@ -94,7 +94,7 @@ impl BallotTally {
         self.index() == u16::MAX
     }
 
-    pub fn increment_tally(&mut self, stake_weight: &StakeWeight) -> Result<(), TipRouterError> {
+    pub fn increment_tally(&mut self, stake_weight: &StakeWeights) -> Result<(), TipRouterError> {
         self.stake_weight.increment(stake_weight)?;
         self.tally = PodU64::from(
             self.tally()
@@ -111,7 +111,7 @@ impl BallotTally {
 pub struct OperatorVote {
     operator: Pubkey,
     slot_voted: PodU64,
-    stake_weight: StakeWeight,
+    stake_weight: StakeWeights,
     ballot_index: PodU16,
     reserved: [u8; 64],
 }
@@ -121,7 +121,7 @@ impl Default for OperatorVote {
         Self {
             operator: Pubkey::default(),
             slot_voted: PodU64::from(0),
-            stake_weight: StakeWeight::default(),
+            stake_weight: StakeWeights::default(),
             ballot_index: PodU16::from(u16::MAX),
             reserved: [0; 64],
         }
@@ -133,7 +133,7 @@ impl OperatorVote {
         ballot_index: usize,
         operator: Pubkey,
         current_slot: u64,
-        stake_weight: &StakeWeight,
+        stake_weight: &StakeWeights,
     ) -> Self {
         Self {
             operator,
@@ -152,7 +152,7 @@ impl OperatorVote {
         self.slot_voted.into()
     }
 
-    pub const fn stake_weight(&self) -> &StakeWeight {
+    pub const fn stake_weight(&self) -> &StakeWeights {
         &self.stake_weight
     }
 
@@ -303,7 +303,7 @@ impl BallotBox {
     fn increment_or_create_ballot_tally(
         &mut self,
         ballot: &Ballot,
-        stake_weight: &StakeWeight,
+        stake_weight: &StakeWeights,
     ) -> Result<usize, TipRouterError> {
         let mut tally_index: usize = 0;
         for tally in self.ballot_tallies.iter_mut() {
@@ -336,7 +336,7 @@ impl BallotBox {
         &mut self,
         operator: Pubkey,
         ballot: Ballot,
-        stake_weight: &StakeWeight,
+        stake_weight: &StakeWeights,
         current_slot: u64,
     ) -> Result<(), TipRouterError> {
         let ballot_index = self.increment_or_create_ballot_tally(&ballot, stake_weight)?;

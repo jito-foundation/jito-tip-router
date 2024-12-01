@@ -10,7 +10,7 @@ use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     discriminators::Discriminators, error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup,
-    stake_weight::StakeWeight, weight_table::WeightTable,
+    stake_weight::StakeWeights, weight_table::WeightTable,
 };
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
@@ -38,7 +38,7 @@ pub struct EpochSnapshot {
     operators_registered: PodU64,
     valid_operator_vault_delegations: PodU64,
 
-    stake_weight: StakeWeight,
+    stake_weights: StakeWeights,
 
     /// Reserved space
     reserved: [u8; 128],
@@ -69,7 +69,7 @@ impl EpochSnapshot {
             vault_count: PodU64::from(vault_count),
             operators_registered: PodU64::from(0),
             valid_operator_vault_delegations: PodU64::from(0),
-            stake_weight: StakeWeight::default(),
+            stake_weights: StakeWeights::default(),
             reserved: [0; 128],
         }
     }
@@ -146,8 +146,8 @@ impl EpochSnapshot {
         self.valid_operator_vault_delegations.into()
     }
 
-    pub const fn stake_weight(&self) -> &StakeWeight {
-        &self.stake_weight
+    pub const fn stake_weights(&self) -> &StakeWeights {
+        &self.stake_weights
     }
 
     pub const fn fees(&self) -> &Fees {
@@ -162,7 +162,7 @@ impl EpochSnapshot {
         &mut self,
         current_slot: u64,
         vault_operator_delegations: u64,
-        stake_weight: &StakeWeight,
+        stake_weight: &StakeWeights,
     ) -> Result<(), TipRouterError> {
         if self.finalized() {
             return Err(TipRouterError::OperatorFinalized);
@@ -180,7 +180,7 @@ impl EpochSnapshot {
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
 
-        self.stake_weight.increment(stake_weight)?;
+        self.stake_weights.increment(stake_weight)?;
 
         if self.finalized() {
             self.slot_finalized = PodU64::from(current_slot);
@@ -212,70 +212,11 @@ pub struct OperatorSnapshot {
     vault_operator_delegations_registered: PodU64,
     valid_operator_vault_delegations: PodU64,
 
-    stake_weight: StakeWeight,
+    stake_weights: StakeWeights,
     reserved: [u8; 256],
 
     //TODO change to 64
     vault_operator_stake_weight: [VaultOperatorStakeWeight; 32],
-}
-
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
-#[repr(C)]
-pub struct VaultOperatorStakeWeight {
-    vault: Pubkey,
-    vault_index: PodU64,
-    ncn_fee_group: NcnFeeGroup,
-    stake_weight: StakeWeight,
-    reserved: [u8; 32],
-}
-
-impl Default for VaultOperatorStakeWeight {
-    fn default() -> Self {
-        Self {
-            vault: Pubkey::default(),
-            ncn_fee_group: NcnFeeGroup::default(),
-            vault_index: PodU64::from(u64::MAX),
-            stake_weight: StakeWeight::default(),
-            reserved: [0; 32],
-        }
-    }
-}
-
-impl VaultOperatorStakeWeight {
-    pub fn new(
-        vault: Pubkey,
-        vault_index: u64,
-        ncn_fee_group: NcnFeeGroup,
-        stake_weight: &StakeWeight,
-    ) -> Self {
-        Self {
-            vault,
-            vault_index: PodU64::from(vault_index),
-            ncn_fee_group,
-            stake_weight: *stake_weight,
-            reserved: [0; 32],
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.vault_index() == u64::MAX
-    }
-
-    pub fn vault_index(&self) -> u64 {
-        self.vault_index.into()
-    }
-
-    pub const fn stake_weight(&self) -> &StakeWeight {
-        &self.stake_weight
-    }
-
-    pub const fn vault(&self) -> Pubkey {
-        self.vault
-    }
-
-    pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
-        self.ncn_fee_group
-    }
 }
 
 impl Discriminator for OperatorSnapshot {
@@ -316,7 +257,7 @@ impl OperatorSnapshot {
             vault_operator_delegation_count: PodU64::from(vault_operator_delegation_count),
             vault_operator_delegations_registered: PodU64::from(0),
             valid_operator_vault_delegations: PodU64::from(0),
-            stake_weight: StakeWeight::default(),
+            stake_weights: StakeWeights::default(),
             reserved: [0; 256],
             vault_operator_stake_weight: [VaultOperatorStakeWeight::default(); 32],
         })
@@ -449,8 +390,8 @@ impl OperatorSnapshot {
         self.valid_operator_vault_delegations.into()
     }
 
-    pub const fn stake_weight(&self) -> &StakeWeight {
-        &self.stake_weight
+    pub const fn stake_weights(&self) -> &StakeWeights {
+        &self.stake_weights
     }
 
     pub fn finalized(&self) -> bool {
@@ -472,7 +413,7 @@ impl OperatorSnapshot {
         vault: Pubkey,
         vault_index: u64,
         ncn_fee_group: NcnFeeGroup,
-        stake_weight: &StakeWeight,
+        stake_weights: &StakeWeights,
     ) -> Result<(), TipRouterError> {
         if self.vault_operator_delegations_registered()
             > Self::MAX_VAULT_OPERATOR_STAKE_WEIGHT as u64
@@ -485,7 +426,7 @@ impl OperatorSnapshot {
         }
 
         self.vault_operator_stake_weight[self.vault_operator_delegations_registered() as usize] =
-            VaultOperatorStakeWeight::new(vault, vault_index, ncn_fee_group, stake_weight);
+            VaultOperatorStakeWeight::new(vault, vault_index, ncn_fee_group, stake_weights);
 
         Ok(())
     }
@@ -496,13 +437,13 @@ impl OperatorSnapshot {
         vault: Pubkey,
         vault_index: u64,
         ncn_fee_group: NcnFeeGroup,
-        stake_weight: &StakeWeight,
+        stake_weights: &StakeWeights,
     ) -> Result<(), TipRouterError> {
         if self.finalized() {
             return Err(TipRouterError::VaultOperatorDelegationFinalized);
         }
 
-        self.insert_vault_operator_stake_weight(vault, vault_index, ncn_fee_group, stake_weight)?;
+        self.insert_vault_operator_stake_weight(vault, vault_index, ncn_fee_group, stake_weights)?;
 
         self.vault_operator_delegations_registered = PodU64::from(
             self.vault_operator_delegations_registered()
@@ -510,7 +451,7 @@ impl OperatorSnapshot {
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
 
-        if stake_weight.stake_weight() > 0 {
+        if stake_weights.stake_weight() > 0 {
             self.valid_operator_vault_delegations = PodU64::from(
                 self.valid_operator_vault_delegations()
                     .checked_add(1)
@@ -518,7 +459,7 @@ impl OperatorSnapshot {
             );
         }
 
-        self.stake_weight.increment(stake_weight)?;
+        self.stake_weights.increment(stake_weights)?;
 
         if self.finalized() {
             self.slot_finalized = PodU64::from(current_slot);
@@ -550,5 +491,64 @@ impl OperatorSnapshot {
             .ok_or(TipRouterError::CastToImpreciseNumberError)?;
 
         Ok(total_stake_weight)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[repr(C)]
+pub struct VaultOperatorStakeWeight {
+    vault: Pubkey,
+    vault_index: PodU64,
+    ncn_fee_group: NcnFeeGroup,
+    stake_weight: StakeWeights,
+    reserved: [u8; 32],
+}
+
+impl Default for VaultOperatorStakeWeight {
+    fn default() -> Self {
+        Self {
+            vault: Pubkey::default(),
+            ncn_fee_group: NcnFeeGroup::default(),
+            vault_index: PodU64::from(u64::MAX),
+            stake_weight: StakeWeights::default(),
+            reserved: [0; 32],
+        }
+    }
+}
+
+impl VaultOperatorStakeWeight {
+    pub fn new(
+        vault: Pubkey,
+        vault_index: u64,
+        ncn_fee_group: NcnFeeGroup,
+        stake_weight: &StakeWeights,
+    ) -> Self {
+        Self {
+            vault,
+            vault_index: PodU64::from(vault_index),
+            ncn_fee_group,
+            stake_weight: *stake_weight,
+            reserved: [0; 32],
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.vault_index() == u64::MAX
+    }
+
+    pub fn vault_index(&self) -> u64 {
+        self.vault_index.into()
+    }
+
+    pub const fn stake_weights(&self) -> &StakeWeights {
+        &self.stake_weight
+    }
+
+    pub const fn vault(&self) -> Pubkey {
+        self.vault
+    }
+
+    pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
+        self.ncn_fee_group
     }
 }

@@ -246,6 +246,21 @@ impl FeeConfig {
     }
 
     // ------------- Setters -------------
+
+    fn set_fees_to_current(&mut self, current_epoch: u64) -> Result<(), TipRouterError> {
+        if self.fee_1.activation_epoch() > current_epoch
+            || self.fee_2.activation_epoch() > current_epoch
+        {
+            return Err(TipRouterError::FeeNotActive);
+        }
+
+        let cloned_current_fees = *self.current_fees(current_epoch);
+        let updatable_fees = self.updatable_fees(current_epoch);
+        *updatable_fees = cloned_current_fees;
+
+        Ok(())
+    }
+
     /// Updates the Fee Config
     pub fn update_fee_config(
         &mut self,
@@ -257,6 +272,14 @@ impl FeeConfig {
         new_ncn_fee_bps: Option<u16>,
         current_epoch: u64,
     ) -> Result<(), TipRouterError> {
+        // IF NEW CHANGES, COPY OVER CURRENT FEES
+        {
+            let updatable_fees = self.updatable_fees(current_epoch);
+            if updatable_fees.activation_epoch() <= current_epoch {
+                self.set_fees_to_current(current_epoch)?;
+            }
+        }
+
         // BLOCK ENGINE
         if let Some(new_block_engine_fee_bps) = new_block_engine_fee_bps {
             self.block_engine_fee_bps = PodU16::from(new_block_engine_fee_bps);

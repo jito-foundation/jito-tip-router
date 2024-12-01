@@ -6,12 +6,12 @@ use crate::{error::TipRouterError, ncn_fee_group::NcnFeeGroup};
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
-pub struct StakeWeight {
+pub struct StakeWeights {
     stake_weight: PodU128,
     ncn_fee_group_stake_weights: [NcnFeeGroupWeight; 8],
 }
 
-impl Default for StakeWeight {
+impl Default for StakeWeights {
     fn default() -> Self {
         Self {
             stake_weight: PodU128::from(0),
@@ -21,18 +21,14 @@ impl Default for StakeWeight {
     }
 }
 
-impl StakeWeight {
+impl StakeWeights {
     pub fn new(ncn_fee_group: NcnFeeGroup, stake_weight: u128) -> Result<Self, TipRouterError> {
-        let mut stake_weight = Self {
-            stake_weight: PodU128::from(stake_weight),
-            ncn_fee_group_stake_weights: [NcnFeeGroupWeight::default();
-                NcnFeeGroup::FEE_GROUP_COUNT],
-        };
+        let mut stake_weights = StakeWeights::default();
 
-        stake_weight.increment_stake_weight(stake_weight.stake_weight())?;
-        stake_weight.increment_ncn_fee_group_stake_weight(ncn_fee_group, stake_weight)?;
+        stake_weights.increment_stake_weight(stake_weight)?;
+        stake_weights.increment_ncn_fee_group_stake_weight(ncn_fee_group, stake_weight)?;
 
-        Ok(stake_weight)
+        Ok(stake_weights)
     }
 
     pub fn stake_weight(&self) -> u128 {

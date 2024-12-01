@@ -23,9 +23,9 @@ pub enum TipRouterInstruction {
     #[account(6, name = "restaking_program")]
     #[account(7, name = "system_program")]
     InitializeNCNConfig {
-        dao_fee_bps: u64,
-        ncn_fee_bps: u64,
-        block_engine_fee_bps: u64,
+        block_engine_fee_bps: u16,
+        dao_fee_bps: u16,
+        default_ncn_fee_bps: u16,
     },
 
     /// Updates the fee configuration
@@ -35,11 +35,12 @@ pub enum TipRouterInstruction {
     #[account(3, signer, name = "ncn_admin")]
     #[account(4, name = "restaking_program")]
     SetConfigFees {
-        new_fee_wallet: Option<Pubkey>,
-        new_block_engine_fee_bps: Option<u64>,
-        new_dao_fee_bps: Option<u64>,
-        new_ncn_fee_bps: Option<u64>,
-        new_ncn_fee_group: Option<u8>,
+    new_block_engine_fee_bps: Option<u16>,
+    base_fee_group: Option<u8>,
+    new_base_fee_wallet: Option<Pubkey>,
+    new_base_fee_bps: Option<u16>,
+    ncn_fee_group: Option<u8>,
+    new_ncn_fee_bps: Option<u16>,
     },
 
     /// Sets a new secondary admin for the NCN
@@ -205,6 +206,7 @@ pub enum TipRouterInstruction {
     #[account(4, writable, name = "destination")]
     #[account(5, name = "restaking_program_id")]
     DistributeDaoRewards{
+        base_fee_group: u8, 
         first_slot_of_ncn_epoch: Option<u64>,
     },
 

@@ -39,7 +39,7 @@ pub struct NcnRewardRouter {
 }
 
 impl Discriminator for NcnRewardRouter {
-    const DISCRIMINATOR: u8 = Discriminators::BaseRewardRouter as u8;
+    const DISCRIMINATOR: u8 = Discriminators::NcnRewardRouter as u8;
 }
 
 impl NcnRewardRouter {
@@ -169,7 +169,7 @@ impl NcnRewardRouter {
 
         // Vault Rewards
         {
-            let operator_stake_weight = operator_snapshot.stake_weight();
+            let operator_stake_weight = operator_snapshot.stake_weights();
             let rewards_to_process: u64 = self.reward_pool();
 
             for vault_operator_delegation in operator_snapshot.vault_operator_stake_weight().iter()
@@ -178,7 +178,7 @@ impl NcnRewardRouter {
                 let vault_ncn_fee_group = vault_operator_delegation.ncn_fee_group();
 
                 let vault_reward_stake_weight = vault_operator_delegation
-                    .stake_weight()
+                    .stake_weights()
                     .ncn_fee_group_stake_weight(vault_ncn_fee_group)?;
 
                 let operator_reward_stake_weight =

@@ -10,7 +10,7 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     loaders::load_ncn_epoch,
     ncn_config::NcnConfig,
-    stake_weight::StakeWeight,
+    stake_weight::StakeWeights,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -158,7 +158,7 @@ pub fn process_initialize_operator_snapshot(
         epoch_snapshot_account.increment_operator_registration(
             current_slot,
             0,
-            &StakeWeight::default(),
+            &StakeWeights::default(),
         )?;
     }
 
