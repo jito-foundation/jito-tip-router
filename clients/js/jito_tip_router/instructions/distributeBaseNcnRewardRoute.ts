@@ -28,26 +28,26 @@ import {
   type Option,
   type OptionOrNullable,
   type ReadonlyAccount,
+  type WritableAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const PROCESS_OPERATOR_EPOCH_REWARD_POOL_DISCRIMINATOR = 14;
+export const DISTRIBUTE_BASE_NCN_REWARD_ROUTE_DISCRIMINATOR = 15;
 
-export function getProcessOperatorEpochRewardPoolDiscriminatorBytes() {
-  return getU8Encoder().encode(
-    PROCESS_OPERATOR_EPOCH_REWARD_POOL_DISCRIMINATOR
-  );
+export function getDistributeBaseNcnRewardRouteDiscriminatorBytes() {
+  return getU8Encoder().encode(DISTRIBUTE_BASE_NCN_REWARD_ROUTE_DISCRIMINATOR);
 }
 
-export type ProcessOperatorEpochRewardPoolInstruction<
+export type DistributeBaseNcnRewardRouteInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
+  TAccountNcnConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
-  TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
-  TAccountOperatorRewardRouter extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgramId extends string | IAccountMeta<string> = string,
+  TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
+  TAccountNcnRewardRouter extends string | IAccountMeta<string> = string,
+  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -56,105 +56,118 @@ export type ProcessOperatorEpochRewardPoolInstruction<
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
+      TAccountNcnConfig extends string
+        ? ReadonlyAccount<TAccountNcnConfig>
+        : TAccountNcnConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountOperator extends string
         ? ReadonlyAccount<TAccountOperator>
         : TAccountOperator,
-      TAccountOperatorSnapshot extends string
-        ? ReadonlyAccount<TAccountOperatorSnapshot>
-        : TAccountOperatorSnapshot,
-      TAccountOperatorRewardRouter extends string
-        ? ReadonlyAccount<TAccountOperatorRewardRouter>
-        : TAccountOperatorRewardRouter,
-      TAccountRestakingProgramId extends string
-        ? ReadonlyAccount<TAccountRestakingProgramId>
-        : TAccountRestakingProgramId,
+      TAccountBaseRewardRouter extends string
+        ? WritableAccount<TAccountBaseRewardRouter>
+        : TAccountBaseRewardRouter,
+      TAccountNcnRewardRouter extends string
+        ? WritableAccount<TAccountNcnRewardRouter>
+        : TAccountNcnRewardRouter,
+      TAccountRestakingProgram extends string
+        ? ReadonlyAccount<TAccountRestakingProgram>
+        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
 
-export type ProcessOperatorEpochRewardPoolInstructionData = {
+export type DistributeBaseNcnRewardRouteInstructionData = {
   discriminator: number;
+  ncnFeeGroup: number;
   firstSlotOfNcnEpoch: Option<bigint>;
 };
 
-export type ProcessOperatorEpochRewardPoolInstructionDataArgs = {
+export type DistributeBaseNcnRewardRouteInstructionDataArgs = {
+  ncnFeeGroup: number;
   firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
 };
 
-export function getProcessOperatorEpochRewardPoolInstructionDataEncoder(): Encoder<ProcessOperatorEpochRewardPoolInstructionDataArgs> {
+export function getDistributeBaseNcnRewardRouteInstructionDataEncoder(): Encoder<DistributeBaseNcnRewardRouteInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
+      ['ncnFeeGroup', getU8Encoder()],
       ['firstSlotOfNcnEpoch', getOptionEncoder(getU64Encoder())],
     ]),
     (value) => ({
       ...value,
-      discriminator: PROCESS_OPERATOR_EPOCH_REWARD_POOL_DISCRIMINATOR,
+      discriminator: DISTRIBUTE_BASE_NCN_REWARD_ROUTE_DISCRIMINATOR,
     })
   );
 }
 
-export function getProcessOperatorEpochRewardPoolInstructionDataDecoder(): Decoder<ProcessOperatorEpochRewardPoolInstructionData> {
+export function getDistributeBaseNcnRewardRouteInstructionDataDecoder(): Decoder<DistributeBaseNcnRewardRouteInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
+    ['ncnFeeGroup', getU8Decoder()],
     ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
   ]);
 }
 
-export function getProcessOperatorEpochRewardPoolInstructionDataCodec(): Codec<
-  ProcessOperatorEpochRewardPoolInstructionDataArgs,
-  ProcessOperatorEpochRewardPoolInstructionData
+export function getDistributeBaseNcnRewardRouteInstructionDataCodec(): Codec<
+  DistributeBaseNcnRewardRouteInstructionDataArgs,
+  DistributeBaseNcnRewardRouteInstructionData
 > {
   return combineCodec(
-    getProcessOperatorEpochRewardPoolInstructionDataEncoder(),
-    getProcessOperatorEpochRewardPoolInstructionDataDecoder()
+    getDistributeBaseNcnRewardRouteInstructionDataEncoder(),
+    getDistributeBaseNcnRewardRouteInstructionDataDecoder()
   );
 }
 
-export type ProcessOperatorEpochRewardPoolInput<
+export type DistributeBaseNcnRewardRouteInput<
   TAccountRestakingConfig extends string = string,
+  TAccountNcnConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
-  TAccountOperatorSnapshot extends string = string,
-  TAccountOperatorRewardRouter extends string = string,
-  TAccountRestakingProgramId extends string = string,
+  TAccountBaseRewardRouter extends string = string,
+  TAccountNcnRewardRouter extends string = string,
+  TAccountRestakingProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
+  ncnConfig: Address<TAccountNcnConfig>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
-  operatorSnapshot: Address<TAccountOperatorSnapshot>;
-  operatorRewardRouter: Address<TAccountOperatorRewardRouter>;
-  restakingProgramId: Address<TAccountRestakingProgramId>;
-  firstSlotOfNcnEpoch: ProcessOperatorEpochRewardPoolInstructionDataArgs['firstSlotOfNcnEpoch'];
+  baseRewardRouter: Address<TAccountBaseRewardRouter>;
+  ncnRewardRouter: Address<TAccountNcnRewardRouter>;
+  restakingProgram: Address<TAccountRestakingProgram>;
+  ncnFeeGroup: DistributeBaseNcnRewardRouteInstructionDataArgs['ncnFeeGroup'];
+  firstSlotOfNcnEpoch: DistributeBaseNcnRewardRouteInstructionDataArgs['firstSlotOfNcnEpoch'];
 };
 
-export function getProcessOperatorEpochRewardPoolInstruction<
+export function getDistributeBaseNcnRewardRouteInstruction<
   TAccountRestakingConfig extends string,
+  TAccountNcnConfig extends string,
   TAccountNcn extends string,
   TAccountOperator extends string,
-  TAccountOperatorSnapshot extends string,
-  TAccountOperatorRewardRouter extends string,
-  TAccountRestakingProgramId extends string,
+  TAccountBaseRewardRouter extends string,
+  TAccountNcnRewardRouter extends string,
+  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: ProcessOperatorEpochRewardPoolInput<
+  input: DistributeBaseNcnRewardRouteInput<
     TAccountRestakingConfig,
+    TAccountNcnConfig,
     TAccountNcn,
     TAccountOperator,
-    TAccountOperatorSnapshot,
-    TAccountOperatorRewardRouter,
-    TAccountRestakingProgramId
+    TAccountBaseRewardRouter,
+    TAccountNcnRewardRouter,
+    TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): ProcessOperatorEpochRewardPoolInstruction<
+): DistributeBaseNcnRewardRouteInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
+  TAccountNcnConfig,
   TAccountNcn,
   TAccountOperator,
-  TAccountOperatorSnapshot,
-  TAccountOperatorRewardRouter,
-  TAccountRestakingProgramId
+  TAccountBaseRewardRouter,
+  TAccountNcnRewardRouter,
+  TAccountRestakingProgram
 > {
   // Program address.
   const programAddress =
@@ -166,18 +179,16 @@ export function getProcessOperatorEpochRewardPoolInstruction<
       value: input.restakingConfig ?? null,
       isWritable: false,
     },
+    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     operator: { value: input.operator ?? null, isWritable: false },
-    operatorSnapshot: {
-      value: input.operatorSnapshot ?? null,
-      isWritable: false,
+    baseRewardRouter: {
+      value: input.baseRewardRouter ?? null,
+      isWritable: true,
     },
-    operatorRewardRouter: {
-      value: input.operatorRewardRouter ?? null,
-      isWritable: false,
-    },
-    restakingProgramId: {
-      value: input.restakingProgramId ?? null,
+    ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
+    restakingProgram: {
+      value: input.restakingProgram ?? null,
       isWritable: false,
     },
   };
@@ -193,54 +204,57 @@ export function getProcessOperatorEpochRewardPoolInstruction<
   const instruction = {
     accounts: [
       getAccountMeta(accounts.restakingConfig),
+      getAccountMeta(accounts.ncnConfig),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
-      getAccountMeta(accounts.operatorSnapshot),
-      getAccountMeta(accounts.operatorRewardRouter),
-      getAccountMeta(accounts.restakingProgramId),
+      getAccountMeta(accounts.baseRewardRouter),
+      getAccountMeta(accounts.ncnRewardRouter),
+      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
-    data: getProcessOperatorEpochRewardPoolInstructionDataEncoder().encode(
-      args as ProcessOperatorEpochRewardPoolInstructionDataArgs
+    data: getDistributeBaseNcnRewardRouteInstructionDataEncoder().encode(
+      args as DistributeBaseNcnRewardRouteInstructionDataArgs
     ),
-  } as ProcessOperatorEpochRewardPoolInstruction<
+  } as DistributeBaseNcnRewardRouteInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
+    TAccountNcnConfig,
     TAccountNcn,
     TAccountOperator,
-    TAccountOperatorSnapshot,
-    TAccountOperatorRewardRouter,
-    TAccountRestakingProgramId
+    TAccountBaseRewardRouter,
+    TAccountNcnRewardRouter,
+    TAccountRestakingProgram
   >;
 
   return instruction;
 }
 
-export type ParsedProcessOperatorEpochRewardPoolInstruction<
+export type ParsedDistributeBaseNcnRewardRouteInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
     restakingConfig: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    operator: TAccountMetas[2];
-    operatorSnapshot: TAccountMetas[3];
-    operatorRewardRouter: TAccountMetas[4];
-    restakingProgramId: TAccountMetas[5];
+    ncnConfig: TAccountMetas[1];
+    ncn: TAccountMetas[2];
+    operator: TAccountMetas[3];
+    baseRewardRouter: TAccountMetas[4];
+    ncnRewardRouter: TAccountMetas[5];
+    restakingProgram: TAccountMetas[6];
   };
-  data: ProcessOperatorEpochRewardPoolInstructionData;
+  data: DistributeBaseNcnRewardRouteInstructionData;
 };
 
-export function parseProcessOperatorEpochRewardPoolInstruction<
+export function parseDistributeBaseNcnRewardRouteInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedProcessOperatorEpochRewardPoolInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+): ParsedDistributeBaseNcnRewardRouteInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -254,13 +268,14 @@ export function parseProcessOperatorEpochRewardPoolInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       restakingConfig: getNextAccount(),
+      ncnConfig: getNextAccount(),
       ncn: getNextAccount(),
       operator: getNextAccount(),
-      operatorSnapshot: getNextAccount(),
-      operatorRewardRouter: getNextAccount(),
-      restakingProgramId: getNextAccount(),
+      baseRewardRouter: getNextAccount(),
+      ncnRewardRouter: getNextAccount(),
+      restakingProgram: getNextAccount(),
     },
-    data: getProcessOperatorEpochRewardPoolInstructionDataDecoder().decode(
+    data: getDistributeBaseNcnRewardRouteInstructionDataDecoder().decode(
       instruction.data
     ),
   };

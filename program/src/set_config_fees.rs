@@ -10,6 +10,7 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_set_config_fees(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

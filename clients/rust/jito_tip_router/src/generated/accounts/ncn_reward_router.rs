@@ -7,12 +7,13 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::RewardRoutes;
+use crate::generated::types::{NcnFeeGroup, VaultRewardRoute};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct OperatorEpochRewardRouter {
+pub struct NcnRewardRouter {
     pub discriminator: u64,
+    pub ncn_fee_group: NcnFeeGroup,
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
@@ -31,10 +32,10 @@ pub struct OperatorEpochRewardRouter {
     pub operator_rewards: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 128],
-    pub vault_rewards: [RewardRoutes; 32],
+    pub vault_reward_routes: [VaultRewardRoute; 32],
 }
 
-impl OperatorEpochRewardRouter {
+impl NcnRewardRouter {
     #[inline(always)]
     pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
         let mut data = data;
@@ -42,7 +43,7 @@ impl OperatorEpochRewardRouter {
     }
 }
 
-impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for OperatorEpochRewardRouter {
+impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for NcnRewardRouter {
     type Error = std::io::Error;
 
     fn try_from(
@@ -54,26 +55,26 @@ impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for OperatorEpo
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountDeserialize for OperatorEpochRewardRouter {
+impl anchor_lang::AccountDeserialize for NcnRewardRouter {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         Ok(Self::deserialize(buf)?)
     }
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountSerialize for OperatorEpochRewardRouter {}
+impl anchor_lang::AccountSerialize for NcnRewardRouter {}
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::Owner for OperatorEpochRewardRouter {
+impl anchor_lang::Owner for NcnRewardRouter {
     fn owner() -> Pubkey {
         crate::JITO_TIP_ROUTER_ID
     }
 }
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::IdlBuild for OperatorEpochRewardRouter {}
+impl anchor_lang::IdlBuild for NcnRewardRouter {}
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::Discriminator for OperatorEpochRewardRouter {
+impl anchor_lang::Discriminator for NcnRewardRouter {
     const DISCRIMINATOR: [u8; 8] = [0; 8];
 }

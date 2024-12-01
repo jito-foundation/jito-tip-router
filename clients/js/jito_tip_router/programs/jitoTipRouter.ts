@@ -14,19 +14,23 @@ import {
 } from '@solana/web3.js';
 import {
   type ParsedAdminUpdateWeightTableInstruction,
-  type ParsedInitializeEpochRewardRouterInstruction,
+  type ParsedDistributeBaseNcnRewardRouteInstruction,
+  type ParsedDistributeBaseRewardsInstruction,
+  type ParsedDistributeNcnOperatorRewardsInstruction,
+  type ParsedDistributeNcnVaultRewardsInstruction,
+  type ParsedInitializeBaseRewardRouterInstruction,
   type ParsedInitializeEpochSnapshotInstruction,
   type ParsedInitializeNCNConfigInstruction,
-  type ParsedInitializeOperatorEpochRewardRouterInstruction,
+  type ParsedInitializeNcnRewardRouterInstruction,
   type ParsedInitializeOperatorSnapshotInstruction,
   type ParsedInitializeTrackedMintsInstruction,
   type ParsedInitializeWeightTableInstruction,
-  type ParsedProcessEpochRewardBucketsInstruction,
-  type ParsedProcessEpochRewardPoolInstruction,
-  type ParsedProcessOperatorEpochRewardPoolInstruction,
   type ParsedRegisterMintInstruction,
+  type ParsedRouteBaseRewardsInstruction,
+  type ParsedRouteNcnRewardsInstruction,
   type ParsedSetConfigFeesInstruction,
   type ParsedSetNewAdminInstruction,
+  type ParsedSetTrackedMintNcnFeeGroupInstruction,
   type ParsedSnapshotVaultOperatorDelegationInstruction,
 } from '../instructions';
 
@@ -35,17 +39,18 @@ export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
 
 export enum JitoTipRouterAccount {
   BallotBox,
-  EpochRewardRouter,
+  BaseRewardRouter,
   EpochSnapshot,
   OperatorSnapshot,
   NcnConfig,
-  OperatorEpochRewardRouter,
+  NcnRewardRouter,
   TrackedMints,
   WeightTable,
 }
 
 export enum JitoTipRouterInstruction {
   InitializeNCNConfig,
+  InitializeTrackedMints,
   SetConfigFees,
   SetNewAdmin,
   InitializeWeightTable,
@@ -54,12 +59,15 @@ export enum JitoTipRouterInstruction {
   InitializeOperatorSnapshot,
   SnapshotVaultOperatorDelegation,
   RegisterMint,
-  InitializeTrackedMints,
-  InitializeEpochRewardRouter,
-  InitializeOperatorEpochRewardRouter,
-  ProcessEpochRewardPool,
-  ProcessEpochRewardBuckets,
-  ProcessOperatorEpochRewardPool,
+  InitializeBaseRewardRouter,
+  InitializeNcnRewardRouter,
+  RouteBaseRewards,
+  RouteNcnRewards,
+  DistributeBaseRewards,
+  DistributeBaseNcnRewardRoute,
+  DistributeNcnOperatorRewards,
+  DistributeNcnVaultRewards,
+  SetTrackedMintNcnFeeGroup,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -70,46 +78,58 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.InitializeNCNConfig;
   }
   if (containsBytes(data, getU8Encoder().encode(1), 0)) {
-    return JitoTipRouterInstruction.SetConfigFees;
-  }
-  if (containsBytes(data, getU8Encoder().encode(2), 0)) {
-    return JitoTipRouterInstruction.SetNewAdmin;
-  }
-  if (containsBytes(data, getU8Encoder().encode(3), 0)) {
-    return JitoTipRouterInstruction.InitializeWeightTable;
-  }
-  if (containsBytes(data, getU8Encoder().encode(4), 0)) {
-    return JitoTipRouterInstruction.AdminUpdateWeightTable;
-  }
-  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
-    return JitoTipRouterInstruction.InitializeEpochSnapshot;
-  }
-  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
-    return JitoTipRouterInstruction.InitializeOperatorSnapshot;
-  }
-  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
-    return JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
-  }
-  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
-    return JitoTipRouterInstruction.RegisterMint;
-  }
-  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
     return JitoTipRouterInstruction.InitializeTrackedMints;
   }
+  if (containsBytes(data, getU8Encoder().encode(2), 0)) {
+    return JitoTipRouterInstruction.SetConfigFees;
+  }
+  if (containsBytes(data, getU8Encoder().encode(3), 0)) {
+    return JitoTipRouterInstruction.SetNewAdmin;
+  }
+  if (containsBytes(data, getU8Encoder().encode(4), 0)) {
+    return JitoTipRouterInstruction.InitializeWeightTable;
+  }
+  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
+    return JitoTipRouterInstruction.AdminUpdateWeightTable;
+  }
+  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
+    return JitoTipRouterInstruction.InitializeEpochSnapshot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
+    return JitoTipRouterInstruction.InitializeOperatorSnapshot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
+    return JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
+  }
+  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
+    return JitoTipRouterInstruction.RegisterMint;
+  }
   if (containsBytes(data, getU8Encoder().encode(10), 0)) {
-    return JitoTipRouterInstruction.InitializeEpochRewardRouter;
+    return JitoTipRouterInstruction.InitializeBaseRewardRouter;
   }
   if (containsBytes(data, getU8Encoder().encode(11), 0)) {
-    return JitoTipRouterInstruction.InitializeOperatorEpochRewardRouter;
+    return JitoTipRouterInstruction.InitializeNcnRewardRouter;
   }
   if (containsBytes(data, getU8Encoder().encode(12), 0)) {
-    return JitoTipRouterInstruction.ProcessEpochRewardPool;
+    return JitoTipRouterInstruction.RouteBaseRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(13), 0)) {
-    return JitoTipRouterInstruction.ProcessEpochRewardBuckets;
+    return JitoTipRouterInstruction.RouteNcnRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(14), 0)) {
-    return JitoTipRouterInstruction.ProcessOperatorEpochRewardPool;
+    return JitoTipRouterInstruction.DistributeBaseRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(15), 0)) {
+    return JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
+  }
+  if (containsBytes(data, getU8Encoder().encode(16), 0)) {
+    return JitoTipRouterInstruction.DistributeNcnOperatorRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(17), 0)) {
+    return JitoTipRouterInstruction.DistributeNcnVaultRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(18), 0)) {
+    return JitoTipRouterInstruction.SetTrackedMintNcnFeeGroup;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -122,6 +142,9 @@ export type ParsedJitoTipRouterInstruction<
   | ({
       instructionType: JitoTipRouterInstruction.InitializeNCNConfig;
     } & ParsedInitializeNCNConfigInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeTrackedMints;
+    } & ParsedInitializeTrackedMintsInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.SetConfigFees;
     } & ParsedSetConfigFeesInstruction<TProgram>)
@@ -147,20 +170,29 @@ export type ParsedJitoTipRouterInstruction<
       instructionType: JitoTipRouterInstruction.RegisterMint;
     } & ParsedRegisterMintInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.InitializeTrackedMints;
-    } & ParsedInitializeTrackedMintsInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.InitializeBaseRewardRouter;
+    } & ParsedInitializeBaseRewardRouterInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.InitializeEpochRewardRouter;
-    } & ParsedInitializeEpochRewardRouterInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.InitializeNcnRewardRouter;
+    } & ParsedInitializeNcnRewardRouterInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.InitializeOperatorEpochRewardRouter;
-    } & ParsedInitializeOperatorEpochRewardRouterInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.RouteBaseRewards;
+    } & ParsedRouteBaseRewardsInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.ProcessEpochRewardPool;
-    } & ParsedProcessEpochRewardPoolInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.RouteNcnRewards;
+    } & ParsedRouteNcnRewardsInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.ProcessEpochRewardBuckets;
-    } & ParsedProcessEpochRewardBucketsInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.DistributeBaseRewards;
+    } & ParsedDistributeBaseRewardsInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.ProcessOperatorEpochRewardPool;
-    } & ParsedProcessOperatorEpochRewardPoolInstruction<TProgram>);
+      instructionType: JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
+    } & ParsedDistributeBaseNcnRewardRouteInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.DistributeNcnOperatorRewards;
+    } & ParsedDistributeNcnOperatorRewardsInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.DistributeNcnVaultRewards;
+    } & ParsedDistributeNcnVaultRewardsInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.SetTrackedMintNcnFeeGroup;
+    } & ParsedSetTrackedMintNcnFeeGroupInstruction<TProgram>);

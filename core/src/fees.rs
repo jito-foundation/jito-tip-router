@@ -262,6 +262,7 @@ impl FeeConfig {
     }
 
     /// Updates the Fee Config
+    #[allow(clippy::too_many_arguments)]
     pub fn update_fee_config(
         &mut self,
         new_block_engine_fee_bps: Option<u16>,
@@ -286,11 +287,7 @@ impl FeeConfig {
         }
 
         // BASE FEE
-        let base_fee_group = if let Some(base_fee_group) = base_fee_group {
-            base_fee_group
-        } else {
-            BaseFeeGroup::default()
-        };
+        let base_fee_group = base_fee_group.unwrap_or_default();
 
         if let Some(new_base_fee_wallet) = new_base_fee_wallet {
             self.set_base_fee_wallet(base_fee_group, new_base_fee_wallet)?;
@@ -301,11 +298,7 @@ impl FeeConfig {
         }
 
         // NCN FEE
-        let ncn_fee_group = if let Some(ncn_fee_group) = ncn_fee_group {
-            ncn_fee_group
-        } else {
-            NcnFeeGroup::default()
-        };
+        let ncn_fee_group = ncn_fee_group.unwrap_or_default();
 
         if let Some(new_ncn_fee_bps) = new_ncn_fee_bps {
             self.set_ncn_fee_bps(ncn_fee_group, new_ncn_fee_bps, current_epoch)?;

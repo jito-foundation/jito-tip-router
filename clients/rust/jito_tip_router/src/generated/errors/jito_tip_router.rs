@@ -129,12 +129,30 @@ pub enum JitoTipRouterError {
     /// 8735 - Not a valid NCN fee group
     #[error("Not a valid NCN fee group")]
     InvalidNcnFeeGroup = 0x221F,
-    /// 8736 - Operator reward list full
+    /// 8736 - Not a valid base fee group
+    #[error("Not a valid base fee group")]
+    InvalidBaseFeeGroup = 0x2220,
+    /// 8737 - Operator reward list full
     #[error("Operator reward list full")]
-    OperatorRewardListFull = 0x2220,
-    /// 8737 - Operator Reward not found
+    OperatorRewardListFull = 0x2221,
+    /// 8738 - Operator Reward not found
     #[error("Operator Reward not found")]
-    OperatorRewardNotFound = 0x2221,
+    OperatorRewardNotFound = 0x2222,
+    /// 8739 - Vault Reward not found
+    #[error("Vault Reward not found")]
+    VaultRewardNotFound = 0x2223,
+    /// 8740 - Destination mismatch
+    #[error("Destination mismatch")]
+    DestinationMismatch = 0x2224,
+    /// 8741 - Ncn reward route not found
+    #[error("Ncn reward route not found")]
+    NcnRewardRouteNotFound = 0x2225,
+    /// 8742 - Fee not active
+    #[error("Fee not active")]
+    FeeNotActive = 0x2226,
+    /// 8743 - No rewards to distribute
+    #[error("No rewards to distribute")]
+    NoRewards = 0x2227,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

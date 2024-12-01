@@ -39,12 +39,12 @@ import {
   type MaybeEncodedAccount,
 } from '@solana/web3.js';
 import {
-  getStakeWeightDecoder,
-  getStakeWeightEncoder,
+  getStakeWeightsDecoder,
+  getStakeWeightsEncoder,
   getVaultOperatorStakeWeightDecoder,
   getVaultOperatorStakeWeightEncoder,
-  type StakeWeight,
-  type StakeWeightArgs,
+  type StakeWeights,
+  type StakeWeightsArgs,
   type VaultOperatorStakeWeight,
   type VaultOperatorStakeWeightArgs,
 } from '../types';
@@ -64,7 +64,7 @@ export type OperatorSnapshot = {
   vaultOperatorDelegationCount: bigint;
   vaultOperatorDelegationsRegistered: bigint;
   validOperatorVaultDelegations: bigint;
-  stakeWeight: StakeWeight;
+  stakeWeights: StakeWeights;
   reserved: Array<number>;
   vaultOperatorStakeWeight: Array<VaultOperatorStakeWeight>;
 };
@@ -84,7 +84,7 @@ export type OperatorSnapshotArgs = {
   vaultOperatorDelegationCount: number | bigint;
   vaultOperatorDelegationsRegistered: number | bigint;
   validOperatorVaultDelegations: number | bigint;
-  stakeWeight: StakeWeightArgs;
+  stakeWeights: StakeWeightsArgs;
   reserved: Array<number>;
   vaultOperatorStakeWeight: Array<VaultOperatorStakeWeightArgs>;
 };
@@ -105,7 +105,7 @@ export function getOperatorSnapshotEncoder(): Encoder<OperatorSnapshotArgs> {
     ['vaultOperatorDelegationCount', getU64Encoder()],
     ['vaultOperatorDelegationsRegistered', getU64Encoder()],
     ['validOperatorVaultDelegations', getU64Encoder()],
-    ['stakeWeight', getStakeWeightEncoder()],
+    ['stakeWeights', getStakeWeightsEncoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 256 })],
     [
       'vaultOperatorStakeWeight',
@@ -130,7 +130,7 @@ export function getOperatorSnapshotDecoder(): Decoder<OperatorSnapshot> {
     ['vaultOperatorDelegationCount', getU64Decoder()],
     ['vaultOperatorDelegationsRegistered', getU64Decoder()],
     ['validOperatorVaultDelegations', getU64Decoder()],
-    ['stakeWeight', getStakeWeightDecoder()],
+    ['stakeWeights', getStakeWeightsDecoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 256 })],
     [
       'vaultOperatorStakeWeight',

@@ -7,7 +7,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::StakeWeight;
+use crate::generated::types::StakeWeights;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -18,7 +18,7 @@ pub struct OperatorVote {
     )]
     pub operator: Pubkey,
     pub slot_voted: u64,
-    pub stake_weight: StakeWeight,
+    pub stake_weight: StakeWeights,
     pub ballot_index: u16,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 64],

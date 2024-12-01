@@ -12,11 +12,8 @@ use crate::generated::types::Fees;
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FeeConfig {
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub dao_fee_wallet: Pubkey,
+    pub block_engine_fee_bps: u16,
+    pub base_fee_wallets: [Pubkey; 8],
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 128],
     pub fee1: Fees,

@@ -7,35 +7,35 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
-pub struct InitializeNCNConfig {
+pub struct InitializeNcnRewardRouter {
     pub restaking_config: solana_program::pubkey::Pubkey,
-
-    pub ncn_config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub ncn_admin: solana_program::pubkey::Pubkey,
+    pub operator: solana_program::pubkey::Pubkey,
 
-    pub fee_wallet: solana_program::pubkey::Pubkey,
+    pub ballot_box: solana_program::pubkey::Pubkey,
 
-    pub tie_breaker_admin: solana_program::pubkey::Pubkey,
+    pub ncn_reward_router: solana_program::pubkey::Pubkey,
+
+    pub payer: solana_program::pubkey::Pubkey,
 
     pub restaking_program: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
 
-impl InitializeNCNConfig {
+impl InitializeNcnRewardRouter {
     pub fn instruction(
         &self,
-        args: InitializeNCNConfigInstructionArgs,
+        args: InitializeNcnRewardRouterInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: InitializeNCNConfigInstructionArgs,
+        args: InitializeNcnRewardRouterInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
         let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
@@ -43,24 +43,23 @@ impl InitializeNCNConfig {
             self.restaking_config,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.ncn_config,
-            false,
-        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_admin,
-            true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.fee_wallet,
+            self.operator,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.tie_breaker_admin,
+            self.ballot_box,
             false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.ncn_reward_router,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.payer, true,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_program,
@@ -71,7 +70,7 @@ impl InitializeNCNConfig {
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = InitializeNCNConfigInstructionData::new()
+        let mut data = InitializeNcnRewardRouterInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -86,17 +85,17 @@ impl InitializeNCNConfig {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct InitializeNCNConfigInstructionData {
+pub struct InitializeNcnRewardRouterInstructionData {
     discriminator: u8,
 }
 
-impl InitializeNCNConfigInstructionData {
+impl InitializeNcnRewardRouterInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 0 }
+        Self { discriminator: 11 }
     }
 }
 
-impl Default for InitializeNCNConfigInstructionData {
+impl Default for InitializeNcnRewardRouterInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -104,41 +103,39 @@ impl Default for InitializeNCNConfigInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct InitializeNCNConfigInstructionArgs {
-    pub block_engine_fee_bps: u16,
-    pub dao_fee_bps: u16,
-    pub default_ncn_fee_bps: u16,
+pub struct InitializeNcnRewardRouterInstructionArgs {
+    pub ncn_fee_group: u8,
+    pub first_slot_of_ncn_epoch: Option<u64>,
 }
 
-/// Instruction builder for `InitializeNCNConfig`.
+/// Instruction builder for `InitializeNcnRewardRouter`.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[writable]` ncn_config
-///   2. `[]` ncn
-///   3. `[signer]` ncn_admin
-///   4. `[]` fee_wallet
-///   5. `[]` tie_breaker_admin
+///   1. `[]` ncn
+///   2. `[]` operator
+///   3. `[]` ballot_box
+///   4. `[writable]` ncn_reward_router
+///   5. `[writable, signer]` payer
 ///   6. `[]` restaking_program
 ///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
-pub struct InitializeNCNConfigBuilder {
+pub struct InitializeNcnRewardRouterBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
-    ncn_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    ncn_admin: Option<solana_program::pubkey::Pubkey>,
-    fee_wallet: Option<solana_program::pubkey::Pubkey>,
-    tie_breaker_admin: Option<solana_program::pubkey::Pubkey>,
+    operator: Option<solana_program::pubkey::Pubkey>,
+    ballot_box: Option<solana_program::pubkey::Pubkey>,
+    ncn_reward_router: Option<solana_program::pubkey::Pubkey>,
+    payer: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
-    block_engine_fee_bps: Option<u16>,
-    dao_fee_bps: Option<u16>,
-    default_ncn_fee_bps: Option<u16>,
+    ncn_fee_group: Option<u8>,
+    first_slot_of_ncn_epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl InitializeNCNConfigBuilder {
+impl InitializeNcnRewardRouterBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -151,31 +148,31 @@ impl InitializeNCNConfigBuilder {
         self
     }
     #[inline(always)]
-    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_config = Some(ncn_config);
-        self
-    }
-    #[inline(always)]
     pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
         self.ncn = Some(ncn);
         self
     }
     #[inline(always)]
-    pub fn ncn_admin(&mut self, ncn_admin: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_admin = Some(ncn_admin);
+    pub fn operator(&mut self, operator: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.operator = Some(operator);
         self
     }
     #[inline(always)]
-    pub fn fee_wallet(&mut self, fee_wallet: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.fee_wallet = Some(fee_wallet);
+    pub fn ballot_box(&mut self, ballot_box: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.ballot_box = Some(ballot_box);
         self
     }
     #[inline(always)]
-    pub fn tie_breaker_admin(
+    pub fn ncn_reward_router(
         &mut self,
-        tie_breaker_admin: solana_program::pubkey::Pubkey,
+        ncn_reward_router: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.tie_breaker_admin = Some(tie_breaker_admin);
+        self.ncn_reward_router = Some(ncn_reward_router);
+        self
+    }
+    #[inline(always)]
+    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.payer = Some(payer);
         self
     }
     #[inline(always)]
@@ -193,18 +190,14 @@ impl InitializeNCNConfigBuilder {
         self
     }
     #[inline(always)]
-    pub fn block_engine_fee_bps(&mut self, block_engine_fee_bps: u16) -> &mut Self {
-        self.block_engine_fee_bps = Some(block_engine_fee_bps);
+    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
+        self.ncn_fee_group = Some(ncn_fee_group);
         self
     }
+    /// `[optional argument]`
     #[inline(always)]
-    pub fn dao_fee_bps(&mut self, dao_fee_bps: u16) -> &mut Self {
-        self.dao_fee_bps = Some(dao_fee_bps);
-        self
-    }
-    #[inline(always)]
-    pub fn default_ncn_fee_bps(&mut self, default_ncn_fee_bps: u16) -> &mut Self {
-        self.default_ncn_fee_bps = Some(default_ncn_fee_bps);
+    pub fn first_slot_of_ncn_epoch(&mut self, first_slot_of_ncn_epoch: u64) -> &mut Self {
+        self.first_slot_of_ncn_epoch = Some(first_slot_of_ncn_epoch);
         self
     }
     /// Add an additional account to the instruction.
@@ -227,15 +220,15 @@ impl InitializeNCNConfigBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = InitializeNCNConfig {
+        let accounts = InitializeNcnRewardRouter {
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
-            ncn_config: self.ncn_config.expect("ncn_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            ncn_admin: self.ncn_admin.expect("ncn_admin is not set"),
-            fee_wallet: self.fee_wallet.expect("fee_wallet is not set"),
-            tie_breaker_admin: self
-                .tie_breaker_admin
-                .expect("tie_breaker_admin is not set"),
+            operator: self.operator.expect("operator is not set"),
+            ballot_box: self.ballot_box.expect("ballot_box is not set"),
+            ncn_reward_router: self
+                .ncn_reward_router
+                .expect("ncn_reward_router is not set"),
+            payer: self.payer.expect("payer is not set"),
             restaking_program: self
                 .restaking_program
                 .expect("restaking_program is not set"),
@@ -243,79 +236,75 @@ impl InitializeNCNConfigBuilder {
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
         };
-        let args = InitializeNCNConfigInstructionArgs {
-            block_engine_fee_bps: self
-                .block_engine_fee_bps
+        let args = InitializeNcnRewardRouterInstructionArgs {
+            ncn_fee_group: self
+                .ncn_fee_group
                 .clone()
-                .expect("block_engine_fee_bps is not set"),
-            dao_fee_bps: self.dao_fee_bps.clone().expect("dao_fee_bps is not set"),
-            default_ncn_fee_bps: self
-                .default_ncn_fee_bps
-                .clone()
-                .expect("default_ncn_fee_bps is not set"),
+                .expect("ncn_fee_group is not set"),
+            first_slot_of_ncn_epoch: self.first_slot_of_ncn_epoch.clone(),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
     }
 }
 
-/// `initialize_n_c_n_config` CPI accounts.
-pub struct InitializeNCNConfigCpiAccounts<'a, 'b> {
+/// `initialize_ncn_reward_router` CPI accounts.
+pub struct InitializeNcnRewardRouterCpiAccounts<'a, 'b> {
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub fee_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `initialize_n_c_n_config` CPI instruction.
-pub struct InitializeNCNConfigCpi<'a, 'b> {
+/// `initialize_ncn_reward_router` CPI instruction.
+pub struct InitializeNcnRewardRouterCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub fee_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: InitializeNCNConfigInstructionArgs,
+    pub __args: InitializeNcnRewardRouterInstructionArgs,
 }
 
-impl<'a, 'b> InitializeNCNConfigCpi<'a, 'b> {
+impl<'a, 'b> InitializeNcnRewardRouterCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: InitializeNCNConfigCpiAccounts<'a, 'b>,
-        args: InitializeNCNConfigInstructionArgs,
+        accounts: InitializeNcnRewardRouterCpiAccounts<'a, 'b>,
+        args: InitializeNcnRewardRouterInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
             restaking_config: accounts.restaking_config,
-            ncn_config: accounts.ncn_config,
             ncn: accounts.ncn,
-            ncn_admin: accounts.ncn_admin,
-            fee_wallet: accounts.fee_wallet,
-            tie_breaker_admin: accounts.tie_breaker_admin,
+            operator: accounts.operator,
+            ballot_box: accounts.ballot_box,
+            ncn_reward_router: accounts.ncn_reward_router,
+            payer: accounts.payer,
             restaking_program: accounts.restaking_program,
             system_program: accounts.system_program,
             __args: args,
@@ -359,25 +348,25 @@ impl<'a, 'b> InitializeNCNConfigCpi<'a, 'b> {
             *self.restaking_config.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.ncn_config.key,
-            false,
-        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_admin.key,
+            *self.operator.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.ballot_box.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.ncn_reward_router.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.payer.key,
             true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.fee_wallet.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.tie_breaker_admin.key,
-            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_program.key,
@@ -394,7 +383,7 @@ impl<'a, 'b> InitializeNCNConfigCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = InitializeNCNConfigInstructionData::new()
+        let mut data = InitializeNcnRewardRouterInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
@@ -408,11 +397,11 @@ impl<'a, 'b> InitializeNCNConfigCpi<'a, 'b> {
         let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
-        account_infos.push(self.ncn_config.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.ncn_admin.clone());
-        account_infos.push(self.fee_wallet.clone());
-        account_infos.push(self.tie_breaker_admin.clone());
+        account_infos.push(self.operator.clone());
+        account_infos.push(self.ballot_box.clone());
+        account_infos.push(self.ncn_reward_router.clone());
+        account_infos.push(self.payer.clone());
         account_infos.push(self.restaking_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
@@ -427,38 +416,37 @@ impl<'a, 'b> InitializeNCNConfigCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `InitializeNCNConfig` via CPI.
+/// Instruction builder for `InitializeNcnRewardRouter` via CPI.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[writable]` ncn_config
-///   2. `[]` ncn
-///   3. `[signer]` ncn_admin
-///   4. `[]` fee_wallet
-///   5. `[]` tie_breaker_admin
+///   1. `[]` ncn
+///   2. `[]` operator
+///   3. `[]` ballot_box
+///   4. `[writable]` ncn_reward_router
+///   5. `[writable, signer]` payer
 ///   6. `[]` restaking_program
 ///   7. `[]` system_program
 #[derive(Clone, Debug)]
-pub struct InitializeNCNConfigCpiBuilder<'a, 'b> {
-    instruction: Box<InitializeNCNConfigCpiBuilderInstruction<'a, 'b>>,
+pub struct InitializeNcnRewardRouterCpiBuilder<'a, 'b> {
+    instruction: Box<InitializeNcnRewardRouterCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
+impl<'a, 'b> InitializeNcnRewardRouterCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(InitializeNCNConfigCpiBuilderInstruction {
+        let instruction = Box::new(InitializeNcnRewardRouterCpiBuilderInstruction {
             __program: program,
             restaking_config: None,
-            ncn_config: None,
             ncn: None,
-            ncn_admin: None,
-            fee_wallet: None,
-            tie_breaker_admin: None,
+            operator: None,
+            ballot_box: None,
+            ncn_reward_router: None,
+            payer: None,
             restaking_program: None,
             system_program: None,
-            block_engine_fee_bps: None,
-            dao_fee_bps: None,
-            default_ncn_fee_bps: None,
+            ncn_fee_group: None,
+            first_slot_of_ncn_epoch: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -472,40 +460,37 @@ impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn ncn_config(
-        &mut self,
-        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.ncn_config = Some(ncn_config);
-        self
-    }
-    #[inline(always)]
     pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.ncn = Some(ncn);
         self
     }
     #[inline(always)]
-    pub fn ncn_admin(
+    pub fn operator(
         &mut self,
-        ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
+        operator: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_admin = Some(ncn_admin);
+        self.instruction.operator = Some(operator);
         self
     }
     #[inline(always)]
-    pub fn fee_wallet(
+    pub fn ballot_box(
         &mut self,
-        fee_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+        ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.fee_wallet = Some(fee_wallet);
+        self.instruction.ballot_box = Some(ballot_box);
         self
     }
     #[inline(always)]
-    pub fn tie_breaker_admin(
+    pub fn ncn_reward_router(
         &mut self,
-        tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
+        ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.tie_breaker_admin = Some(tie_breaker_admin);
+        self.instruction.ncn_reward_router = Some(ncn_reward_router);
+        self
+    }
+    #[inline(always)]
+    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.payer = Some(payer);
         self
     }
     #[inline(always)]
@@ -525,18 +510,14 @@ impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn block_engine_fee_bps(&mut self, block_engine_fee_bps: u16) -> &mut Self {
-        self.instruction.block_engine_fee_bps = Some(block_engine_fee_bps);
+    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
+        self.instruction.ncn_fee_group = Some(ncn_fee_group);
         self
     }
+    /// `[optional argument]`
     #[inline(always)]
-    pub fn dao_fee_bps(&mut self, dao_fee_bps: u16) -> &mut Self {
-        self.instruction.dao_fee_bps = Some(dao_fee_bps);
-        self
-    }
-    #[inline(always)]
-    pub fn default_ncn_fee_bps(&mut self, default_ncn_fee_bps: u16) -> &mut Self {
-        self.instruction.default_ncn_fee_bps = Some(default_ncn_fee_bps);
+    pub fn first_slot_of_ncn_epoch(&mut self, first_slot_of_ncn_epoch: u64) -> &mut Self {
+        self.instruction.first_slot_of_ncn_epoch = Some(first_slot_of_ncn_epoch);
         self
     }
     /// Add an additional account to the instruction.
@@ -580,24 +561,15 @@ impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = InitializeNCNConfigInstructionArgs {
-            block_engine_fee_bps: self
+        let args = InitializeNcnRewardRouterInstructionArgs {
+            ncn_fee_group: self
                 .instruction
-                .block_engine_fee_bps
+                .ncn_fee_group
                 .clone()
-                .expect("block_engine_fee_bps is not set"),
-            dao_fee_bps: self
-                .instruction
-                .dao_fee_bps
-                .clone()
-                .expect("dao_fee_bps is not set"),
-            default_ncn_fee_bps: self
-                .instruction
-                .default_ncn_fee_bps
-                .clone()
-                .expect("default_ncn_fee_bps is not set"),
+                .expect("ncn_fee_group is not set"),
+            first_slot_of_ncn_epoch: self.instruction.first_slot_of_ncn_epoch.clone(),
         };
-        let instruction = InitializeNCNConfigCpi {
+        let instruction = InitializeNcnRewardRouterCpi {
             __program: self.instruction.__program,
 
             restaking_config: self
@@ -605,18 +577,18 @@ impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
                 .restaking_config
                 .expect("restaking_config is not set"),
 
-            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
-
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            ncn_admin: self.instruction.ncn_admin.expect("ncn_admin is not set"),
+            operator: self.instruction.operator.expect("operator is not set"),
 
-            fee_wallet: self.instruction.fee_wallet.expect("fee_wallet is not set"),
+            ballot_box: self.instruction.ballot_box.expect("ballot_box is not set"),
 
-            tie_breaker_admin: self
+            ncn_reward_router: self
                 .instruction
-                .tie_breaker_admin
-                .expect("tie_breaker_admin is not set"),
+                .ncn_reward_router
+                .expect("ncn_reward_router is not set"),
+
+            payer: self.instruction.payer.expect("payer is not set"),
 
             restaking_program: self
                 .instruction
@@ -637,19 +609,18 @@ impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct InitializeNCNConfigCpiBuilderInstruction<'a, 'b> {
+struct InitializeNcnRewardRouterCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    fee_wallet: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    tie_breaker_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    block_engine_fee_bps: Option<u16>,
-    dao_fee_bps: Option<u16>,
-    default_ncn_fee_bps: Option<u16>,
+    ncn_fee_group: Option<u8>,
+    first_slot_of_ncn_epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,

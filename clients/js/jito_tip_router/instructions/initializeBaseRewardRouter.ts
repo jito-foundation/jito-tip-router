@@ -22,29 +22,37 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
+  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type Option,
   type OptionOrNullable,
   type ReadonlyAccount,
+  type TransactionSigner,
+  type WritableAccount,
+  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const PROCESS_EPOCH_REWARD_BUCKETS_DISCRIMINATOR = 13;
+export const INITIALIZE_BASE_REWARD_ROUTER_DISCRIMINATOR = 10;
 
-export function getProcessEpochRewardBucketsDiscriminatorBytes() {
-  return getU8Encoder().encode(PROCESS_EPOCH_REWARD_BUCKETS_DISCRIMINATOR);
+export function getInitializeBaseRewardRouterDiscriminatorBytes() {
+  return getU8Encoder().encode(INITIALIZE_BASE_REWARD_ROUTER_DISCRIMINATOR);
 }
 
-export type ProcessEpochRewardBucketsInstruction<
+export type InitializeBaseRewardRouterInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountBallotBox extends string | IAccountMeta<string> = string,
-  TAccountEpochRewardRouter extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgramId extends string | IAccountMeta<string> = string,
+  TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
+  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
+  TAccountSystemProgram extends
+    | string
+    | IAccountMeta<string> = '11111111111111111111111111111111',
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -57,26 +65,33 @@ export type ProcessEpochRewardBucketsInstruction<
       TAccountBallotBox extends string
         ? ReadonlyAccount<TAccountBallotBox>
         : TAccountBallotBox,
-      TAccountEpochRewardRouter extends string
-        ? ReadonlyAccount<TAccountEpochRewardRouter>
-        : TAccountEpochRewardRouter,
-      TAccountRestakingProgramId extends string
-        ? ReadonlyAccount<TAccountRestakingProgramId>
-        : TAccountRestakingProgramId,
+      TAccountBaseRewardRouter extends string
+        ? WritableAccount<TAccountBaseRewardRouter>
+        : TAccountBaseRewardRouter,
+      TAccountPayer extends string
+        ? WritableSignerAccount<TAccountPayer> &
+            IAccountSignerMeta<TAccountPayer>
+        : TAccountPayer,
+      TAccountRestakingProgram extends string
+        ? ReadonlyAccount<TAccountRestakingProgram>
+        : TAccountRestakingProgram,
+      TAccountSystemProgram extends string
+        ? ReadonlyAccount<TAccountSystemProgram>
+        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >;
 
-export type ProcessEpochRewardBucketsInstructionData = {
+export type InitializeBaseRewardRouterInstructionData = {
   discriminator: number;
   firstSlotOfNcnEpoch: Option<bigint>;
 };
 
-export type ProcessEpochRewardBucketsInstructionDataArgs = {
+export type InitializeBaseRewardRouterInstructionDataArgs = {
   firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
 };
 
-export function getProcessEpochRewardBucketsInstructionDataEncoder(): Encoder<ProcessEpochRewardBucketsInstructionDataArgs> {
+export function getInitializeBaseRewardRouterInstructionDataEncoder(): Encoder<InitializeBaseRewardRouterInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
@@ -84,66 +99,76 @@ export function getProcessEpochRewardBucketsInstructionDataEncoder(): Encoder<Pr
     ]),
     (value) => ({
       ...value,
-      discriminator: PROCESS_EPOCH_REWARD_BUCKETS_DISCRIMINATOR,
+      discriminator: INITIALIZE_BASE_REWARD_ROUTER_DISCRIMINATOR,
     })
   );
 }
 
-export function getProcessEpochRewardBucketsInstructionDataDecoder(): Decoder<ProcessEpochRewardBucketsInstructionData> {
+export function getInitializeBaseRewardRouterInstructionDataDecoder(): Decoder<InitializeBaseRewardRouterInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
   ]);
 }
 
-export function getProcessEpochRewardBucketsInstructionDataCodec(): Codec<
-  ProcessEpochRewardBucketsInstructionDataArgs,
-  ProcessEpochRewardBucketsInstructionData
+export function getInitializeBaseRewardRouterInstructionDataCodec(): Codec<
+  InitializeBaseRewardRouterInstructionDataArgs,
+  InitializeBaseRewardRouterInstructionData
 > {
   return combineCodec(
-    getProcessEpochRewardBucketsInstructionDataEncoder(),
-    getProcessEpochRewardBucketsInstructionDataDecoder()
+    getInitializeBaseRewardRouterInstructionDataEncoder(),
+    getInitializeBaseRewardRouterInstructionDataDecoder()
   );
 }
 
-export type ProcessEpochRewardBucketsInput<
+export type InitializeBaseRewardRouterInput<
   TAccountRestakingConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountBallotBox extends string = string,
-  TAccountEpochRewardRouter extends string = string,
-  TAccountRestakingProgramId extends string = string,
+  TAccountBaseRewardRouter extends string = string,
+  TAccountPayer extends string = string,
+  TAccountRestakingProgram extends string = string,
+  TAccountSystemProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
   ncn: Address<TAccountNcn>;
   ballotBox: Address<TAccountBallotBox>;
-  epochRewardRouter: Address<TAccountEpochRewardRouter>;
-  restakingProgramId: Address<TAccountRestakingProgramId>;
-  firstSlotOfNcnEpoch: ProcessEpochRewardBucketsInstructionDataArgs['firstSlotOfNcnEpoch'];
+  baseRewardRouter: Address<TAccountBaseRewardRouter>;
+  payer: TransactionSigner<TAccountPayer>;
+  restakingProgram: Address<TAccountRestakingProgram>;
+  systemProgram?: Address<TAccountSystemProgram>;
+  firstSlotOfNcnEpoch: InitializeBaseRewardRouterInstructionDataArgs['firstSlotOfNcnEpoch'];
 };
 
-export function getProcessEpochRewardBucketsInstruction<
+export function getInitializeBaseRewardRouterInstruction<
   TAccountRestakingConfig extends string,
   TAccountNcn extends string,
   TAccountBallotBox extends string,
-  TAccountEpochRewardRouter extends string,
-  TAccountRestakingProgramId extends string,
+  TAccountBaseRewardRouter extends string,
+  TAccountPayer extends string,
+  TAccountRestakingProgram extends string,
+  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: ProcessEpochRewardBucketsInput<
+  input: InitializeBaseRewardRouterInput<
     TAccountRestakingConfig,
     TAccountNcn,
     TAccountBallotBox,
-    TAccountEpochRewardRouter,
-    TAccountRestakingProgramId
+    TAccountBaseRewardRouter,
+    TAccountPayer,
+    TAccountRestakingProgram,
+    TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): ProcessEpochRewardBucketsInstruction<
+): InitializeBaseRewardRouterInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
   TAccountNcn,
   TAccountBallotBox,
-  TAccountEpochRewardRouter,
-  TAccountRestakingProgramId
+  TAccountBaseRewardRouter,
+  TAccountPayer,
+  TAccountRestakingProgram,
+  TAccountSystemProgram
 > {
   // Program address.
   const programAddress =
@@ -157,14 +182,16 @@ export function getProcessEpochRewardBucketsInstruction<
     },
     ncn: { value: input.ncn ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: false },
-    epochRewardRouter: {
-      value: input.epochRewardRouter ?? null,
+    baseRewardRouter: {
+      value: input.baseRewardRouter ?? null,
+      isWritable: true,
+    },
+    payer: { value: input.payer ?? null, isWritable: true },
+    restakingProgram: {
+      value: input.restakingProgram ?? null,
       isWritable: false,
     },
-    restakingProgramId: {
-      value: input.restakingProgramId ?? null,
-      isWritable: false,
-    },
+    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -174,32 +201,42 @@ export function getProcessEpochRewardBucketsInstruction<
   // Original args.
   const args = { ...input };
 
+  // Resolve default values.
+  if (!accounts.systemProgram.value) {
+    accounts.systemProgram.value =
+      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
+  }
+
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
       getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.ballotBox),
-      getAccountMeta(accounts.epochRewardRouter),
-      getAccountMeta(accounts.restakingProgramId),
+      getAccountMeta(accounts.baseRewardRouter),
+      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.restakingProgram),
+      getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
-    data: getProcessEpochRewardBucketsInstructionDataEncoder().encode(
-      args as ProcessEpochRewardBucketsInstructionDataArgs
+    data: getInitializeBaseRewardRouterInstructionDataEncoder().encode(
+      args as InitializeBaseRewardRouterInstructionDataArgs
     ),
-  } as ProcessEpochRewardBucketsInstruction<
+  } as InitializeBaseRewardRouterInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
     TAccountNcn,
     TAccountBallotBox,
-    TAccountEpochRewardRouter,
-    TAccountRestakingProgramId
+    TAccountBaseRewardRouter,
+    TAccountPayer,
+    TAccountRestakingProgram,
+    TAccountSystemProgram
   >;
 
   return instruction;
 }
 
-export type ParsedProcessEpochRewardBucketsInstruction<
+export type ParsedInitializeBaseRewardRouterInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -208,21 +245,23 @@ export type ParsedProcessEpochRewardBucketsInstruction<
     restakingConfig: TAccountMetas[0];
     ncn: TAccountMetas[1];
     ballotBox: TAccountMetas[2];
-    epochRewardRouter: TAccountMetas[3];
-    restakingProgramId: TAccountMetas[4];
+    baseRewardRouter: TAccountMetas[3];
+    payer: TAccountMetas[4];
+    restakingProgram: TAccountMetas[5];
+    systemProgram: TAccountMetas[6];
   };
-  data: ProcessEpochRewardBucketsInstructionData;
+  data: InitializeBaseRewardRouterInstructionData;
 };
 
-export function parseProcessEpochRewardBucketsInstruction<
+export function parseInitializeBaseRewardRouterInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedProcessEpochRewardBucketsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+): ParsedInitializeBaseRewardRouterInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -238,10 +277,12 @@ export function parseProcessEpochRewardBucketsInstruction<
       restakingConfig: getNextAccount(),
       ncn: getNextAccount(),
       ballotBox: getNextAccount(),
-      epochRewardRouter: getNextAccount(),
-      restakingProgramId: getNextAccount(),
+      baseRewardRouter: getNextAccount(),
+      payer: getNextAccount(),
+      restakingProgram: getNextAccount(),
+      systemProgram: getNextAccount(),
     },
-    data: getProcessEpochRewardBucketsInstructionDataDecoder().decode(
+    data: getInitializeBaseRewardRouterInstructionDataDecoder().decode(
       instruction.data
     ),
   };

@@ -7,17 +7,21 @@
  */
 
 export * from './adminUpdateWeightTable';
-export * from './initializeEpochRewardRouter';
+export * from './distributeBaseNcnRewardRoute';
+export * from './distributeBaseRewards';
+export * from './distributeNcnOperatorRewards';
+export * from './distributeNcnVaultRewards';
+export * from './initializeBaseRewardRouter';
 export * from './initializeEpochSnapshot';
 export * from './initializeNCNConfig';
-export * from './initializeOperatorEpochRewardRouter';
+export * from './initializeNcnRewardRouter';
 export * from './initializeOperatorSnapshot';
 export * from './initializeTrackedMints';
 export * from './initializeWeightTable';
-export * from './processEpochRewardBuckets';
-export * from './processEpochRewardPool';
-export * from './processOperatorEpochRewardPool';
 export * from './registerMint';
+export * from './routeBaseRewards';
+export * from './routeNcnRewards';
 export * from './setConfigFees';
 export * from './setNewAdmin';
+export * from './setTrackedMintNcnFeeGroup';
 export * from './snapshotVaultOperatorDelegation';

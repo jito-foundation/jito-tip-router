@@ -6,15 +6,14 @@
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-use crate::generated::types::NcnFee;
+use crate::generated::types::Fee;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fees {
     pub activation_epoch: u64,
-    pub block_engine_fee_bps: u64,
-    pub dao_fee_bps: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 128],
-    pub ncn_fee_groups_bps: [NcnFee; 8],
+    pub base_fee_groups_bps: [Fee; 8],
+    pub ncn_fee_groups_bps: [Fee; 8],
 }

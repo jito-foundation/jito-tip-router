@@ -7,38 +7,34 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
-pub struct InitializeOperatorEpochRewardRouter {
+pub struct RouteBaseRewards {
     pub restaking_config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub operator: solana_program::pubkey::Pubkey,
+    pub epoch_snapshot: solana_program::pubkey::Pubkey,
 
     pub ballot_box: solana_program::pubkey::Pubkey,
 
-    pub operator_epoch_reward_router: solana_program::pubkey::Pubkey,
+    pub base_reward_router: solana_program::pubkey::Pubkey,
 
-    pub payer: solana_program::pubkey::Pubkey,
-
-    pub restaking_program_id: solana_program::pubkey::Pubkey,
-
-    pub system_program: solana_program::pubkey::Pubkey,
+    pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
-impl InitializeOperatorEpochRewardRouter {
+impl RouteBaseRewards {
     pub fn instruction(
         &self,
-        args: InitializeOperatorEpochRewardRouterInstructionArgs,
+        args: RouteBaseRewardsInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: InitializeOperatorEpochRewardRouterInstructionArgs,
+        args: RouteBaseRewardsInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_config,
             false,
@@ -47,32 +43,23 @@ impl InitializeOperatorEpochRewardRouter {
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.operator,
+            self.epoch_snapshot,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ballot_box,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.operator_epoch_reward_router,
-            false,
-        ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.payer, true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program_id,
+            self.base_reward_router,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.system_program,
+            self.restaking_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = InitializeOperatorEpochRewardRouterInstructionData::new()
-            .try_to_vec()
-            .unwrap();
+        let mut data = RouteBaseRewardsInstructionData::new().try_to_vec().unwrap();
         let mut args = args.try_to_vec().unwrap();
         data.append(&mut args);
 
@@ -85,17 +72,17 @@ impl InitializeOperatorEpochRewardRouter {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct InitializeOperatorEpochRewardRouterInstructionData {
+pub struct RouteBaseRewardsInstructionData {
     discriminator: u8,
 }
 
-impl InitializeOperatorEpochRewardRouterInstructionData {
+impl RouteBaseRewardsInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 11 }
+        Self { discriminator: 12 }
     }
 }
 
-impl Default for InitializeOperatorEpochRewardRouterInstructionData {
+impl Default for RouteBaseRewardsInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -103,37 +90,33 @@ impl Default for InitializeOperatorEpochRewardRouterInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct InitializeOperatorEpochRewardRouterInstructionArgs {
+pub struct RouteBaseRewardsInstructionArgs {
     pub first_slot_of_ncn_epoch: Option<u64>,
 }
 
-/// Instruction builder for `InitializeOperatorEpochRewardRouter`.
+/// Instruction builder for `RouteBaseRewards`.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
 ///   1. `[]` ncn
-///   2. `[]` operator
+///   2. `[]` epoch_snapshot
 ///   3. `[]` ballot_box
-///   4. `[]` operator_epoch_reward_router
-///   5. `[writable, signer]` payer
-///   6. `[]` restaking_program_id
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   4. `[writable]` base_reward_router
+///   5. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
-pub struct InitializeOperatorEpochRewardRouterBuilder {
+pub struct RouteBaseRewardsBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    operator: Option<solana_program::pubkey::Pubkey>,
+    epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
     ballot_box: Option<solana_program::pubkey::Pubkey>,
-    operator_epoch_reward_router: Option<solana_program::pubkey::Pubkey>,
-    payer: Option<solana_program::pubkey::Pubkey>,
-    restaking_program_id: Option<solana_program::pubkey::Pubkey>,
-    system_program: Option<solana_program::pubkey::Pubkey>,
+    base_reward_router: Option<solana_program::pubkey::Pubkey>,
+    restaking_program: Option<solana_program::pubkey::Pubkey>,
     first_slot_of_ncn_epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl InitializeOperatorEpochRewardRouterBuilder {
+impl RouteBaseRewardsBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -151,8 +134,8 @@ impl InitializeOperatorEpochRewardRouterBuilder {
         self
     }
     #[inline(always)]
-    pub fn operator(&mut self, operator: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.operator = Some(operator);
+    pub fn epoch_snapshot(&mut self, epoch_snapshot: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.epoch_snapshot = Some(epoch_snapshot);
         self
     }
     #[inline(always)]
@@ -161,30 +144,19 @@ impl InitializeOperatorEpochRewardRouterBuilder {
         self
     }
     #[inline(always)]
-    pub fn operator_epoch_reward_router(
+    pub fn base_reward_router(
         &mut self,
-        operator_epoch_reward_router: solana_program::pubkey::Pubkey,
+        base_reward_router: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.operator_epoch_reward_router = Some(operator_epoch_reward_router);
+        self.base_reward_router = Some(base_reward_router);
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn restaking_program(
         &mut self,
-        restaking_program_id: solana_program::pubkey::Pubkey,
+        restaking_program: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.restaking_program_id = Some(restaking_program_id);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.system_program = Some(system_program);
+        self.restaking_program = Some(restaking_program);
         self
     }
     /// `[optional argument]`
@@ -213,23 +185,19 @@ impl InitializeOperatorEpochRewardRouterBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = InitializeOperatorEpochRewardRouter {
+        let accounts = RouteBaseRewards {
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            operator: self.operator.expect("operator is not set"),
+            epoch_snapshot: self.epoch_snapshot.expect("epoch_snapshot is not set"),
             ballot_box: self.ballot_box.expect("ballot_box is not set"),
-            operator_epoch_reward_router: self
-                .operator_epoch_reward_router
-                .expect("operator_epoch_reward_router is not set"),
-            payer: self.payer.expect("payer is not set"),
-            restaking_program_id: self
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
-            system_program: self
-                .system_program
-                .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
+            base_reward_router: self
+                .base_reward_router
+                .expect("base_reward_router is not set"),
+            restaking_program: self
+                .restaking_program
+                .expect("restaking_program is not set"),
         };
-        let args = InitializeOperatorEpochRewardRouterInstructionArgs {
+        let args = RouteBaseRewardsInstructionArgs {
             first_slot_of_ncn_epoch: self.first_slot_of_ncn_epoch.clone(),
         };
 
@@ -237,27 +205,23 @@ impl InitializeOperatorEpochRewardRouterBuilder {
     }
 }
 
-/// `initialize_operator_epoch_reward_router` CPI accounts.
-pub struct InitializeOperatorEpochRewardRouterCpiAccounts<'a, 'b> {
+/// `route_base_rewards` CPI accounts.
+pub struct RouteBaseRewardsCpiAccounts<'a, 'b> {
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
+    pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator_epoch_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+    pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `initialize_operator_epoch_reward_router` CPI instruction.
-pub struct InitializeOperatorEpochRewardRouterCpi<'a, 'b> {
+/// `route_base_rewards` CPI instruction.
+pub struct RouteBaseRewardsCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -265,37 +229,31 @@ pub struct InitializeOperatorEpochRewardRouterCpi<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
+    pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator_epoch_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+    pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: InitializeOperatorEpochRewardRouterInstructionArgs,
+    pub __args: RouteBaseRewardsInstructionArgs,
 }
 
-impl<'a, 'b> InitializeOperatorEpochRewardRouterCpi<'a, 'b> {
+impl<'a, 'b> RouteBaseRewardsCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: InitializeOperatorEpochRewardRouterCpiAccounts<'a, 'b>,
-        args: InitializeOperatorEpochRewardRouterInstructionArgs,
+        accounts: RouteBaseRewardsCpiAccounts<'a, 'b>,
+        args: RouteBaseRewardsInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
             restaking_config: accounts.restaking_config,
             ncn: accounts.ncn,
-            operator: accounts.operator,
+            epoch_snapshot: accounts.epoch_snapshot,
             ballot_box: accounts.ballot_box,
-            operator_epoch_reward_router: accounts.operator_epoch_reward_router,
-            payer: accounts.payer,
-            restaking_program_id: accounts.restaking_program_id,
-            system_program: accounts.system_program,
+            base_reward_router: accounts.base_reward_router,
+            restaking_program: accounts.restaking_program,
             __args: args,
         }
     }
@@ -332,7 +290,7 @@ impl<'a, 'b> InitializeOperatorEpochRewardRouterCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_config.key,
             false,
@@ -342,27 +300,19 @@ impl<'a, 'b> InitializeOperatorEpochRewardRouterCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.operator.key,
+            *self.epoch_snapshot.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ballot_box.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.operator_epoch_reward_router.key,
-            false,
-        ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.payer.key,
-            true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program_id.key,
+            *self.base_reward_router.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.system_program.key,
+            *self.restaking_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -372,9 +322,7 @@ impl<'a, 'b> InitializeOperatorEpochRewardRouterCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = InitializeOperatorEpochRewardRouterInstructionData::new()
-            .try_to_vec()
-            .unwrap();
+        let mut data = RouteBaseRewardsInstructionData::new().try_to_vec().unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
         data.append(&mut args);
 
@@ -383,16 +331,14 @@ impl<'a, 'b> InitializeOperatorEpochRewardRouterCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.operator.clone());
+        account_infos.push(self.epoch_snapshot.clone());
         account_infos.push(self.ballot_box.clone());
-        account_infos.push(self.operator_epoch_reward_router.clone());
-        account_infos.push(self.payer.clone());
-        account_infos.push(self.restaking_program_id.clone());
-        account_infos.push(self.system_program.clone());
+        account_infos.push(self.base_reward_router.clone());
+        account_infos.push(self.restaking_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -405,35 +351,31 @@ impl<'a, 'b> InitializeOperatorEpochRewardRouterCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `InitializeOperatorEpochRewardRouter` via CPI.
+/// Instruction builder for `RouteBaseRewards` via CPI.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
 ///   1. `[]` ncn
-///   2. `[]` operator
+///   2. `[]` epoch_snapshot
 ///   3. `[]` ballot_box
-///   4. `[]` operator_epoch_reward_router
-///   5. `[writable, signer]` payer
-///   6. `[]` restaking_program_id
-///   7. `[]` system_program
+///   4. `[writable]` base_reward_router
+///   5. `[]` restaking_program
 #[derive(Clone, Debug)]
-pub struct InitializeOperatorEpochRewardRouterCpiBuilder<'a, 'b> {
-    instruction: Box<InitializeOperatorEpochRewardRouterCpiBuilderInstruction<'a, 'b>>,
+pub struct RouteBaseRewardsCpiBuilder<'a, 'b> {
+    instruction: Box<RouteBaseRewardsCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> InitializeOperatorEpochRewardRouterCpiBuilder<'a, 'b> {
+impl<'a, 'b> RouteBaseRewardsCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(InitializeOperatorEpochRewardRouterCpiBuilderInstruction {
+        let instruction = Box::new(RouteBaseRewardsCpiBuilderInstruction {
             __program: program,
             restaking_config: None,
             ncn: None,
-            operator: None,
+            epoch_snapshot: None,
             ballot_box: None,
-            operator_epoch_reward_router: None,
-            payer: None,
-            restaking_program_id: None,
-            system_program: None,
+            base_reward_router: None,
+            restaking_program: None,
             first_slot_of_ncn_epoch: None,
             __remaining_accounts: Vec::new(),
         });
@@ -453,11 +395,11 @@ impl<'a, 'b> InitializeOperatorEpochRewardRouterCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn operator(
+    pub fn epoch_snapshot(
         &mut self,
-        operator: &'b solana_program::account_info::AccountInfo<'a>,
+        epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.operator = Some(operator);
+        self.instruction.epoch_snapshot = Some(epoch_snapshot);
         self
     }
     #[inline(always)]
@@ -469,32 +411,19 @@ impl<'a, 'b> InitializeOperatorEpochRewardRouterCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn operator_epoch_reward_router(
+    pub fn base_reward_router(
         &mut self,
-        operator_epoch_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+        base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.operator_epoch_reward_router = Some(operator_epoch_reward_router);
+        self.instruction.base_reward_router = Some(base_reward_router);
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn restaking_program(
         &mut self,
-        restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.restaking_program_id = Some(restaking_program_id);
-        self
-    }
-    #[inline(always)]
-    pub fn system_program(
-        &mut self,
-        system_program: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.system_program = Some(system_program);
+        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     /// `[optional argument]`
@@ -544,10 +473,10 @@ impl<'a, 'b> InitializeOperatorEpochRewardRouterCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = InitializeOperatorEpochRewardRouterInstructionArgs {
+        let args = RouteBaseRewardsInstructionArgs {
             first_slot_of_ncn_epoch: self.instruction.first_slot_of_ncn_epoch.clone(),
         };
-        let instruction = InitializeOperatorEpochRewardRouterCpi {
+        let instruction = RouteBaseRewardsCpi {
             __program: self.instruction.__program,
 
             restaking_config: self
@@ -557,26 +486,22 @@ impl<'a, 'b> InitializeOperatorEpochRewardRouterCpiBuilder<'a, 'b> {
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            operator: self.instruction.operator.expect("operator is not set"),
+            epoch_snapshot: self
+                .instruction
+                .epoch_snapshot
+                .expect("epoch_snapshot is not set"),
 
             ballot_box: self.instruction.ballot_box.expect("ballot_box is not set"),
 
-            operator_epoch_reward_router: self
+            base_reward_router: self
                 .instruction
-                .operator_epoch_reward_router
-                .expect("operator_epoch_reward_router is not set"),
+                .base_reward_router
+                .expect("base_reward_router is not set"),
 
-            payer: self.instruction.payer.expect("payer is not set"),
-
-            restaking_program_id: self
+            restaking_program: self
                 .instruction
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
-
-            system_program: self
-                .instruction
-                .system_program
-                .expect("system_program is not set"),
+                .restaking_program
+                .expect("restaking_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -587,16 +512,14 @@ impl<'a, 'b> InitializeOperatorEpochRewardRouterCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct InitializeOperatorEpochRewardRouterCpiBuilderInstruction<'a, 'b> {
+struct RouteBaseRewardsCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    operator_epoch_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program_id: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    base_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     first_slot_of_ncn_epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

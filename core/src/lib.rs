@@ -11,7 +11,6 @@ pub mod loaders;
 pub mod ncn_config;
 pub mod ncn_fee_group;
 pub mod ncn_reward_router;
-pub mod rewards;
 pub mod stake_weight;
 pub mod tracked_mints;
 pub mod weight_entry;

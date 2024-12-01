@@ -94,10 +94,22 @@ export const JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED = 0x221d; // 8733
 export const JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED = 0x221e; // 8734
 /** InvalidNcnFeeGroup: Not a valid NCN fee group */
 export const JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP = 0x221f; // 8735
+/** InvalidBaseFeeGroup: Not a valid base fee group */
+export const JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP = 0x2220; // 8736
 /** OperatorRewardListFull: Operator reward list full */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL = 0x2220; // 8736
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL = 0x2221; // 8737
 /** OperatorRewardNotFound: Operator Reward not found */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND = 0x2221; // 8737
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND = 0x2222; // 8738
+/** VaultRewardNotFound: Vault Reward not found */
+export const JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND = 0x2223; // 8739
+/** DestinationMismatch: Destination mismatch */
+export const JITO_TIP_ROUTER_ERROR__DESTINATION_MISMATCH = 0x2224; // 8740
+/** NcnRewardRouteNotFound: Ncn reward route not found */
+export const JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND = 0x2225; // 8741
+/** FeeNotActive: Fee not active */
+export const JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE = 0x2226; // 8742
+/** NoRewards: No rewards to distribute */
+export const JITO_TIP_ROUTER_ERROR__NO_REWARDS = 0x2227; // 8743
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR
@@ -112,21 +124,26 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED
   | typeof JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED
   | typeof JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO
+  | typeof JITO_TIP_ROUTER_ERROR__DESTINATION_MISMATCH
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST
   | typeof JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED
+  | typeof JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP
   | typeof JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW
+  | typeof JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__NO_OPERATORS
+  | typeof JITO_TIP_ROUTER_ERROR__NO_REWARDS
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND
@@ -137,6 +154,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_LOCKED
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED
+  | typeof JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND
@@ -158,21 +176,26 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED]: `Consensus already reached`,
     [JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED]: `Consensus not reached`,
     [JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO]: `Zero in the denominator`,
+    [JITO_TIP_ROUTER_ERROR__DESTINATION_MISMATCH]: `Destination mismatch`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE]: `Duplicate mints in table`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION]: `Duplicate vault operator delegation`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST]: `Duplicate Vote Cast`,
     [JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED]: `Fee cap exceeded`,
+    [JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE]: `Fee not active`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN]: `Incorrect fee admin`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN]: `Incorrect NCN`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN]: `Incorrect NCN Admin`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN]: `Incorrect weight table admin`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP]: `Not a valid base fee group`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE]: `Invalid mint for weight table`,
     [JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP]: `Not a valid NCN fee group`,
     [JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND]: `Mint Entry not found`,
     [JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW]: `Modulo Overflow`,
+    [JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND]: `Ncn reward route not found`,
     [JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR]: `New precise number error`,
     [JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE]: `There are no mints in the table`,
     [JITO_TIP_ROUTER_ERROR__NO_OPERATORS]: `No operators in ncn`,
+    [JITO_TIP_ROUTER_ERROR__NO_REWARDS]: `No rewards to distribute`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED]: `Operator is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL]: `Operator reward list full`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND]: `Operator Reward not found`,
@@ -183,6 +206,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_LOCKED]: `Tracked mints are locked for the epoch`,
     [JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE]: `Vault index already in use by a different mint`,
     [JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED]: `Vault operator delegation is already finalized - should not happen`,
+    [JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND]: `Vault Reward not found`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH]: `Weight mints do not match - length`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH]: `Weight mints do not match - mint hash`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND]: `Weight not found`,

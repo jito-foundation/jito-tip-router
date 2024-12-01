@@ -37,12 +37,12 @@ import {
 import {
   getFeesDecoder,
   getFeesEncoder,
-  getStakeWeightDecoder,
-  getStakeWeightEncoder,
+  getStakeWeightsDecoder,
+  getStakeWeightsEncoder,
   type Fees,
   type FeesArgs,
-  type StakeWeight,
-  type StakeWeightArgs,
+  type StakeWeights,
+  type StakeWeightsArgs,
 } from '../types';
 
 export type EpochSnapshot = {
@@ -57,7 +57,7 @@ export type EpochSnapshot = {
   vaultCount: bigint;
   operatorsRegistered: bigint;
   validOperatorVaultDelegations: bigint;
-  stakeWeight: StakeWeight;
+  stakeWeights: StakeWeights;
   reserved: Array<number>;
 };
 
@@ -73,7 +73,7 @@ export type EpochSnapshotArgs = {
   vaultCount: number | bigint;
   operatorsRegistered: number | bigint;
   validOperatorVaultDelegations: number | bigint;
-  stakeWeight: StakeWeightArgs;
+  stakeWeights: StakeWeightsArgs;
   reserved: Array<number>;
 };
 
@@ -90,7 +90,7 @@ export function getEpochSnapshotEncoder(): Encoder<EpochSnapshotArgs> {
     ['vaultCount', getU64Encoder()],
     ['operatorsRegistered', getU64Encoder()],
     ['validOperatorVaultDelegations', getU64Encoder()],
-    ['stakeWeight', getStakeWeightEncoder()],
+    ['stakeWeights', getStakeWeightsEncoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
   ]);
 }
@@ -108,7 +108,7 @@ export function getEpochSnapshotDecoder(): Decoder<EpochSnapshot> {
     ['vaultCount', getU64Decoder()],
     ['operatorsRegistered', getU64Decoder()],
     ['validOperatorVaultDelegations', getU64Decoder()],
-    ['stakeWeight', getStakeWeightDecoder()],
+    ['stakeWeights', getStakeWeightsDecoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
   ]);
 }

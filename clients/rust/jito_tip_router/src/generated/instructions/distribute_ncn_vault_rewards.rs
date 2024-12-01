@@ -7,53 +7,70 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
-pub struct ProcessEpochRewardBuckets {
+pub struct DistributeNcnVaultRewards {
     pub restaking_config: solana_program::pubkey::Pubkey,
+
+    pub ncn_config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub ballot_box: solana_program::pubkey::Pubkey,
+    pub operator: solana_program::pubkey::Pubkey,
 
-    pub epoch_reward_router: solana_program::pubkey::Pubkey,
+    pub vault: solana_program::pubkey::Pubkey,
 
-    pub restaking_program_id: solana_program::pubkey::Pubkey,
+    pub ncn_reward_router: solana_program::pubkey::Pubkey,
+
+    pub restaking_program: solana_program::pubkey::Pubkey,
+
+    pub vault_program: solana_program::pubkey::Pubkey,
 }
 
-impl ProcessEpochRewardBuckets {
+impl DistributeNcnVaultRewards {
     pub fn instruction(
         &self,
-        args: ProcessEpochRewardBucketsInstructionArgs,
+        args: DistributeNcnVaultRewardsInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: ProcessEpochRewardBucketsInstructionArgs,
+        args: DistributeNcnVaultRewardsInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_config,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.ncn_config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ballot_box,
+            self.operator,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.epoch_reward_router,
+            self.vault, false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.ncn_reward_router,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program_id,
+            self.restaking_program,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.vault_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = ProcessEpochRewardBucketsInstructionData::new()
+        let mut data = DistributeNcnVaultRewardsInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -68,17 +85,17 @@ impl ProcessEpochRewardBuckets {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct ProcessEpochRewardBucketsInstructionData {
+pub struct DistributeNcnVaultRewardsInstructionData {
     discriminator: u8,
 }
 
-impl ProcessEpochRewardBucketsInstructionData {
+impl DistributeNcnVaultRewardsInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 13 }
+        Self { discriminator: 17 }
     }
 }
 
-impl Default for ProcessEpochRewardBucketsInstructionData {
+impl Default for DistributeNcnVaultRewardsInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -86,31 +103,39 @@ impl Default for ProcessEpochRewardBucketsInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ProcessEpochRewardBucketsInstructionArgs {
+pub struct DistributeNcnVaultRewardsInstructionArgs {
+    pub ncn_fee_group: u8,
     pub first_slot_of_ncn_epoch: Option<u64>,
 }
 
-/// Instruction builder for `ProcessEpochRewardBuckets`.
+/// Instruction builder for `DistributeNcnVaultRewards`.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[]` ncn
-///   2. `[]` ballot_box
-///   3. `[]` epoch_reward_router
-///   4. `[]` restaking_program_id
+///   1. `[]` ncn_config
+///   2. `[]` ncn
+///   3. `[]` operator
+///   4. `[]` vault
+///   5. `[writable]` ncn_reward_router
+///   6. `[]` restaking_program
+///   7. `[]` vault_program
 #[derive(Clone, Debug, Default)]
-pub struct ProcessEpochRewardBucketsBuilder {
+pub struct DistributeNcnVaultRewardsBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
+    ncn_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    ballot_box: Option<solana_program::pubkey::Pubkey>,
-    epoch_reward_router: Option<solana_program::pubkey::Pubkey>,
-    restaking_program_id: Option<solana_program::pubkey::Pubkey>,
+    operator: Option<solana_program::pubkey::Pubkey>,
+    vault: Option<solana_program::pubkey::Pubkey>,
+    ncn_reward_router: Option<solana_program::pubkey::Pubkey>,
+    restaking_program: Option<solana_program::pubkey::Pubkey>,
+    vault_program: Option<solana_program::pubkey::Pubkey>,
+    ncn_fee_group: Option<u8>,
     first_slot_of_ncn_epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl ProcessEpochRewardBucketsBuilder {
+impl DistributeNcnVaultRewardsBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -123,29 +148,49 @@ impl ProcessEpochRewardBucketsBuilder {
         self
     }
     #[inline(always)]
+    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.ncn_config = Some(ncn_config);
+        self
+    }
+    #[inline(always)]
     pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
         self.ncn = Some(ncn);
         self
     }
     #[inline(always)]
-    pub fn ballot_box(&mut self, ballot_box: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ballot_box = Some(ballot_box);
+    pub fn operator(&mut self, operator: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.operator = Some(operator);
         self
     }
     #[inline(always)]
-    pub fn epoch_reward_router(
-        &mut self,
-        epoch_reward_router: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.epoch_reward_router = Some(epoch_reward_router);
+    pub fn vault(&mut self, vault: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.vault = Some(vault);
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn ncn_reward_router(
         &mut self,
-        restaking_program_id: solana_program::pubkey::Pubkey,
+        ncn_reward_router: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.restaking_program_id = Some(restaking_program_id);
+        self.ncn_reward_router = Some(ncn_reward_router);
+        self
+    }
+    #[inline(always)]
+    pub fn restaking_program(
+        &mut self,
+        restaking_program: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.restaking_program = Some(restaking_program);
+        self
+    }
+    #[inline(always)]
+    pub fn vault_program(&mut self, vault_program: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.vault_program = Some(vault_program);
+        self
+    }
+    #[inline(always)]
+    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
+        self.ncn_fee_group = Some(ncn_fee_group);
         self
     }
     /// `[optional argument]`
@@ -174,18 +219,25 @@ impl ProcessEpochRewardBucketsBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = ProcessEpochRewardBuckets {
+        let accounts = DistributeNcnVaultRewards {
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
+            ncn_config: self.ncn_config.expect("ncn_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            ballot_box: self.ballot_box.expect("ballot_box is not set"),
-            epoch_reward_router: self
-                .epoch_reward_router
-                .expect("epoch_reward_router is not set"),
-            restaking_program_id: self
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+            operator: self.operator.expect("operator is not set"),
+            vault: self.vault.expect("vault is not set"),
+            ncn_reward_router: self
+                .ncn_reward_router
+                .expect("ncn_reward_router is not set"),
+            restaking_program: self
+                .restaking_program
+                .expect("restaking_program is not set"),
+            vault_program: self.vault_program.expect("vault_program is not set"),
         };
-        let args = ProcessEpochRewardBucketsInstructionArgs {
+        let args = DistributeNcnVaultRewardsInstructionArgs {
+            ncn_fee_group: self
+                .ncn_fee_group
+                .clone()
+                .expect("ncn_fee_group is not set"),
             first_slot_of_ncn_epoch: self.first_slot_of_ncn_epoch.clone(),
         };
 
@@ -193,50 +245,65 @@ impl ProcessEpochRewardBucketsBuilder {
     }
 }
 
-/// `process_epoch_reward_buckets` CPI accounts.
-pub struct ProcessEpochRewardBucketsCpiAccounts<'a, 'b> {
+/// `distribute_ncn_vault_rewards` CPI accounts.
+pub struct DistributeNcnVaultRewardsCpiAccounts<'a, 'b> {
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
+    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub epoch_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub vault_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `process_epoch_reward_buckets` CPI instruction.
-pub struct ProcessEpochRewardBucketsCpi<'a, 'b> {
+/// `distribute_ncn_vault_rewards` CPI instruction.
+pub struct DistributeNcnVaultRewardsCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
+    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub epoch_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub vault_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: ProcessEpochRewardBucketsInstructionArgs,
+    pub __args: DistributeNcnVaultRewardsInstructionArgs,
 }
 
-impl<'a, 'b> ProcessEpochRewardBucketsCpi<'a, 'b> {
+impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: ProcessEpochRewardBucketsCpiAccounts<'a, 'b>,
-        args: ProcessEpochRewardBucketsInstructionArgs,
+        accounts: DistributeNcnVaultRewardsCpiAccounts<'a, 'b>,
+        args: DistributeNcnVaultRewardsInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
             restaking_config: accounts.restaking_config,
+            ncn_config: accounts.ncn_config,
             ncn: accounts.ncn,
-            ballot_box: accounts.ballot_box,
-            epoch_reward_router: accounts.epoch_reward_router,
-            restaking_program_id: accounts.restaking_program_id,
+            operator: accounts.operator,
+            vault: accounts.vault,
+            ncn_reward_router: accounts.ncn_reward_router,
+            restaking_program: accounts.restaking_program,
+            vault_program: accounts.vault_program,
             __args: args,
         }
     }
@@ -273,9 +340,13 @@ impl<'a, 'b> ProcessEpochRewardBucketsCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_config.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.ncn_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -283,15 +354,23 @@ impl<'a, 'b> ProcessEpochRewardBucketsCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ballot_box.key,
+            *self.operator.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.epoch_reward_router.key,
+            *self.vault.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.ncn_reward_router.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program_id.key,
+            *self.restaking_program.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.vault_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -301,7 +380,7 @@ impl<'a, 'b> ProcessEpochRewardBucketsCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = ProcessEpochRewardBucketsInstructionData::new()
+        let mut data = DistributeNcnVaultRewardsInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
@@ -312,13 +391,16 @@ impl<'a, 'b> ProcessEpochRewardBucketsCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
+        account_infos.push(self.ncn_config.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.ballot_box.clone());
-        account_infos.push(self.epoch_reward_router.clone());
-        account_infos.push(self.restaking_program_id.clone());
+        account_infos.push(self.operator.clone());
+        account_infos.push(self.vault.clone());
+        account_infos.push(self.ncn_reward_router.clone());
+        account_infos.push(self.restaking_program.clone());
+        account_infos.push(self.vault_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -331,29 +413,36 @@ impl<'a, 'b> ProcessEpochRewardBucketsCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `ProcessEpochRewardBuckets` via CPI.
+/// Instruction builder for `DistributeNcnVaultRewards` via CPI.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[]` ncn
-///   2. `[]` ballot_box
-///   3. `[]` epoch_reward_router
-///   4. `[]` restaking_program_id
+///   1. `[]` ncn_config
+///   2. `[]` ncn
+///   3. `[]` operator
+///   4. `[]` vault
+///   5. `[writable]` ncn_reward_router
+///   6. `[]` restaking_program
+///   7. `[]` vault_program
 #[derive(Clone, Debug)]
-pub struct ProcessEpochRewardBucketsCpiBuilder<'a, 'b> {
-    instruction: Box<ProcessEpochRewardBucketsCpiBuilderInstruction<'a, 'b>>,
+pub struct DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
+    instruction: Box<DistributeNcnVaultRewardsCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> ProcessEpochRewardBucketsCpiBuilder<'a, 'b> {
+impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(ProcessEpochRewardBucketsCpiBuilderInstruction {
+        let instruction = Box::new(DistributeNcnVaultRewardsCpiBuilderInstruction {
             __program: program,
             restaking_config: None,
+            ncn_config: None,
             ncn: None,
-            ballot_box: None,
-            epoch_reward_router: None,
-            restaking_program_id: None,
+            operator: None,
+            vault: None,
+            ncn_reward_router: None,
+            restaking_program: None,
+            vault_program: None,
+            ncn_fee_group: None,
             first_slot_of_ncn_epoch: None,
             __remaining_accounts: Vec::new(),
         });
@@ -368,32 +457,58 @@ impl<'a, 'b> ProcessEpochRewardBucketsCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
+    pub fn ncn_config(
+        &mut self,
+        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.ncn_config = Some(ncn_config);
+        self
+    }
+    #[inline(always)]
     pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.ncn = Some(ncn);
         self
     }
     #[inline(always)]
-    pub fn ballot_box(
+    pub fn operator(
         &mut self,
-        ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
+        operator: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ballot_box = Some(ballot_box);
+        self.instruction.operator = Some(operator);
         self
     }
     #[inline(always)]
-    pub fn epoch_reward_router(
-        &mut self,
-        epoch_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.epoch_reward_router = Some(epoch_reward_router);
+    pub fn vault(&mut self, vault: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.vault = Some(vault);
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
+    pub fn ncn_reward_router(
         &mut self,
-        restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+        ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.restaking_program_id = Some(restaking_program_id);
+        self.instruction.ncn_reward_router = Some(ncn_reward_router);
+        self
+    }
+    #[inline(always)]
+    pub fn restaking_program(
+        &mut self,
+        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.restaking_program = Some(restaking_program);
+        self
+    }
+    #[inline(always)]
+    pub fn vault_program(
+        &mut self,
+        vault_program: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.vault_program = Some(vault_program);
+        self
+    }
+    #[inline(always)]
+    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
+        self.instruction.ncn_fee_group = Some(ncn_fee_group);
         self
     }
     /// `[optional argument]`
@@ -443,10 +558,15 @@ impl<'a, 'b> ProcessEpochRewardBucketsCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = ProcessEpochRewardBucketsInstructionArgs {
+        let args = DistributeNcnVaultRewardsInstructionArgs {
+            ncn_fee_group: self
+                .instruction
+                .ncn_fee_group
+                .clone()
+                .expect("ncn_fee_group is not set"),
             first_slot_of_ncn_epoch: self.instruction.first_slot_of_ncn_epoch.clone(),
         };
-        let instruction = ProcessEpochRewardBucketsCpi {
+        let instruction = DistributeNcnVaultRewardsCpi {
             __program: self.instruction.__program,
 
             restaking_config: self
@@ -454,19 +574,28 @@ impl<'a, 'b> ProcessEpochRewardBucketsCpiBuilder<'a, 'b> {
                 .restaking_config
                 .expect("restaking_config is not set"),
 
+            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
+
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            ballot_box: self.instruction.ballot_box.expect("ballot_box is not set"),
+            operator: self.instruction.operator.expect("operator is not set"),
 
-            epoch_reward_router: self
-                .instruction
-                .epoch_reward_router
-                .expect("epoch_reward_router is not set"),
+            vault: self.instruction.vault.expect("vault is not set"),
 
-            restaking_program_id: self
+            ncn_reward_router: self
                 .instruction
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+                .ncn_reward_router
+                .expect("ncn_reward_router is not set"),
+
+            restaking_program: self
+                .instruction
+                .restaking_program
+                .expect("restaking_program is not set"),
+
+            vault_program: self
+                .instruction
+                .vault_program
+                .expect("vault_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -477,13 +606,17 @@ impl<'a, 'b> ProcessEpochRewardBucketsCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct ProcessEpochRewardBucketsCpiBuilderInstruction<'a, 'b> {
+struct DistributeNcnVaultRewardsCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    epoch_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program_id: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    vault_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn_fee_group: Option<u8>,
     first_slot_of_ncn_epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

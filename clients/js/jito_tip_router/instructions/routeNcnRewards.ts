@@ -22,37 +22,31 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type Option,
   type OptionOrNullable,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR = 4;
+export const ROUTE_NCN_REWARDS_DISCRIMINATOR = 13;
 
-export function getInitializeWeightTableDiscriminatorBytes() {
-  return getU8Encoder().encode(INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR);
+export function getRouteNcnRewardsDiscriminatorBytes() {
+  return getU8Encoder().encode(ROUTE_NCN_REWARDS_DISCRIMINATOR);
 }
 
-export type InitializeWeightTableInstruction<
+export type RouteNcnRewardsInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
-  TAccountTrackedMints extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountWeightTable extends string | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountOperator extends string | IAccountMeta<string> = string,
+  TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
+  TAccountNcnRewardRouter extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
-  TAccountSystemProgram extends
-    | string
-    | IAccountMeta<string> = '11111111111111111111111111111111',
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -61,114 +55,107 @@ export type InitializeWeightTableInstruction<
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
-      TAccountTrackedMints extends string
-        ? ReadonlyAccount<TAccountTrackedMints>
-        : TAccountTrackedMints,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountWeightTable extends string
-        ? WritableAccount<TAccountWeightTable>
-        : TAccountWeightTable,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
+      TAccountOperator extends string
+        ? ReadonlyAccount<TAccountOperator>
+        : TAccountOperator,
+      TAccountOperatorSnapshot extends string
+        ? ReadonlyAccount<TAccountOperatorSnapshot>
+        : TAccountOperatorSnapshot,
+      TAccountNcnRewardRouter extends string
+        ? WritableAccount<TAccountNcnRewardRouter>
+        : TAccountNcnRewardRouter,
       TAccountRestakingProgram extends string
         ? ReadonlyAccount<TAccountRestakingProgram>
         : TAccountRestakingProgram,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >;
 
-export type InitializeWeightTableInstructionData = {
+export type RouteNcnRewardsInstructionData = {
   discriminator: number;
+  ncnFeeGroup: number;
   firstSlotOfNcnEpoch: Option<bigint>;
 };
 
-export type InitializeWeightTableInstructionDataArgs = {
+export type RouteNcnRewardsInstructionDataArgs = {
+  ncnFeeGroup: number;
   firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
 };
 
-export function getInitializeWeightTableInstructionDataEncoder(): Encoder<InitializeWeightTableInstructionDataArgs> {
+export function getRouteNcnRewardsInstructionDataEncoder(): Encoder<RouteNcnRewardsInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
+      ['ncnFeeGroup', getU8Encoder()],
       ['firstSlotOfNcnEpoch', getOptionEncoder(getU64Encoder())],
     ]),
-    (value) => ({
-      ...value,
-      discriminator: INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR,
-    })
+    (value) => ({ ...value, discriminator: ROUTE_NCN_REWARDS_DISCRIMINATOR })
   );
 }
 
-export function getInitializeWeightTableInstructionDataDecoder(): Decoder<InitializeWeightTableInstructionData> {
+export function getRouteNcnRewardsInstructionDataDecoder(): Decoder<RouteNcnRewardsInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
+    ['ncnFeeGroup', getU8Decoder()],
     ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
   ]);
 }
 
-export function getInitializeWeightTableInstructionDataCodec(): Codec<
-  InitializeWeightTableInstructionDataArgs,
-  InitializeWeightTableInstructionData
+export function getRouteNcnRewardsInstructionDataCodec(): Codec<
+  RouteNcnRewardsInstructionDataArgs,
+  RouteNcnRewardsInstructionData
 > {
   return combineCodec(
-    getInitializeWeightTableInstructionDataEncoder(),
-    getInitializeWeightTableInstructionDataDecoder()
+    getRouteNcnRewardsInstructionDataEncoder(),
+    getRouteNcnRewardsInstructionDataDecoder()
   );
 }
 
-export type InitializeWeightTableInput<
+export type RouteNcnRewardsInput<
   TAccountRestakingConfig extends string = string,
-  TAccountTrackedMints extends string = string,
   TAccountNcn extends string = string,
-  TAccountWeightTable extends string = string,
-  TAccountPayer extends string = string,
+  TAccountOperator extends string = string,
+  TAccountOperatorSnapshot extends string = string,
+  TAccountNcnRewardRouter extends string = string,
   TAccountRestakingProgram extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
-  trackedMints: Address<TAccountTrackedMints>;
   ncn: Address<TAccountNcn>;
-  weightTable: Address<TAccountWeightTable>;
-  payer: TransactionSigner<TAccountPayer>;
+  operator: Address<TAccountOperator>;
+  operatorSnapshot: Address<TAccountOperatorSnapshot>;
+  ncnRewardRouter: Address<TAccountNcnRewardRouter>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  systemProgram?: Address<TAccountSystemProgram>;
-  firstSlotOfNcnEpoch: InitializeWeightTableInstructionDataArgs['firstSlotOfNcnEpoch'];
+  ncnFeeGroup: RouteNcnRewardsInstructionDataArgs['ncnFeeGroup'];
+  firstSlotOfNcnEpoch: RouteNcnRewardsInstructionDataArgs['firstSlotOfNcnEpoch'];
 };
 
-export function getInitializeWeightTableInstruction<
+export function getRouteNcnRewardsInstruction<
   TAccountRestakingConfig extends string,
-  TAccountTrackedMints extends string,
   TAccountNcn extends string,
-  TAccountWeightTable extends string,
-  TAccountPayer extends string,
+  TAccountOperator extends string,
+  TAccountOperatorSnapshot extends string,
+  TAccountNcnRewardRouter extends string,
   TAccountRestakingProgram extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: InitializeWeightTableInput<
+  input: RouteNcnRewardsInput<
     TAccountRestakingConfig,
-    TAccountTrackedMints,
     TAccountNcn,
-    TAccountWeightTable,
-    TAccountPayer,
-    TAccountRestakingProgram,
-    TAccountSystemProgram
+    TAccountOperator,
+    TAccountOperatorSnapshot,
+    TAccountNcnRewardRouter,
+    TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): InitializeWeightTableInstruction<
+): RouteNcnRewardsInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
-  TAccountTrackedMints,
   TAccountNcn,
-  TAccountWeightTable,
-  TAccountPayer,
-  TAccountRestakingProgram,
-  TAccountSystemProgram
+  TAccountOperator,
+  TAccountOperatorSnapshot,
+  TAccountNcnRewardRouter,
+  TAccountRestakingProgram
 > {
   // Program address.
   const programAddress =
@@ -180,15 +167,17 @@ export function getInitializeWeightTableInstruction<
       value: input.restakingConfig ?? null,
       isWritable: false,
     },
-    trackedMints: { value: input.trackedMints ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    weightTable: { value: input.weightTable ?? null, isWritable: true },
-    payer: { value: input.payer ?? null, isWritable: true },
+    operator: { value: input.operator ?? null, isWritable: false },
+    operatorSnapshot: {
+      value: input.operatorSnapshot ?? null,
+      isWritable: false,
+    },
+    ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
     restakingProgram: {
       value: input.restakingProgram ?? null,
       isWritable: false,
     },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -198,67 +187,58 @@ export function getInitializeWeightTableInstruction<
   // Original args.
   const args = { ...input };
 
-  // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
-  }
-
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
       getAccountMeta(accounts.restakingConfig),
-      getAccountMeta(accounts.trackedMints),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.weightTable),
-      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.operator),
+      getAccountMeta(accounts.operatorSnapshot),
+      getAccountMeta(accounts.ncnRewardRouter),
       getAccountMeta(accounts.restakingProgram),
-      getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
-    data: getInitializeWeightTableInstructionDataEncoder().encode(
-      args as InitializeWeightTableInstructionDataArgs
+    data: getRouteNcnRewardsInstructionDataEncoder().encode(
+      args as RouteNcnRewardsInstructionDataArgs
     ),
-  } as InitializeWeightTableInstruction<
+  } as RouteNcnRewardsInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
-    TAccountTrackedMints,
     TAccountNcn,
-    TAccountWeightTable,
-    TAccountPayer,
-    TAccountRestakingProgram,
-    TAccountSystemProgram
+    TAccountOperator,
+    TAccountOperatorSnapshot,
+    TAccountNcnRewardRouter,
+    TAccountRestakingProgram
   >;
 
   return instruction;
 }
 
-export type ParsedInitializeWeightTableInstruction<
+export type ParsedRouteNcnRewardsInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
     restakingConfig: TAccountMetas[0];
-    trackedMints: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    weightTable: TAccountMetas[3];
-    payer: TAccountMetas[4];
+    ncn: TAccountMetas[1];
+    operator: TAccountMetas[2];
+    operatorSnapshot: TAccountMetas[3];
+    ncnRewardRouter: TAccountMetas[4];
     restakingProgram: TAccountMetas[5];
-    systemProgram: TAccountMetas[6];
   };
-  data: InitializeWeightTableInstructionData;
+  data: RouteNcnRewardsInstructionData;
 };
 
-export function parseInitializeWeightTableInstruction<
+export function parseRouteNcnRewardsInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedInitializeWeightTableInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+): ParsedRouteNcnRewardsInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -272,15 +252,12 @@ export function parseInitializeWeightTableInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       restakingConfig: getNextAccount(),
-      trackedMints: getNextAccount(),
       ncn: getNextAccount(),
-      weightTable: getNextAccount(),
-      payer: getNextAccount(),
+      operator: getNextAccount(),
+      operatorSnapshot: getNextAccount(),
+      ncnRewardRouter: getNextAccount(),
       restakingProgram: getNextAccount(),
-      systemProgram: getNextAccount(),
     },
-    data: getInitializeWeightTableInstructionDataDecoder().decode(
-      instruction.data
-    ),
+    data: getRouteNcnRewardsInstructionDataDecoder().decode(instruction.data),
   };
 }

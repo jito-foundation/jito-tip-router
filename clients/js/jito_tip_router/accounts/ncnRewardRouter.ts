@@ -35,14 +35,19 @@ import {
   type MaybeEncodedAccount,
 } from '@solana/web3.js';
 import {
-  getRewardRoutesDecoder,
-  getRewardRoutesEncoder,
-  type RewardRoutes,
-  type RewardRoutesArgs,
+  getNcnFeeGroupDecoder,
+  getNcnFeeGroupEncoder,
+  getVaultRewardRouteDecoder,
+  getVaultRewardRouteEncoder,
+  type NcnFeeGroup,
+  type NcnFeeGroupArgs,
+  type VaultRewardRoute,
+  type VaultRewardRouteArgs,
 } from '../types';
 
-export type OperatorEpochRewardRouter = {
+export type NcnRewardRouter = {
   discriminator: bigint;
+  ncnFeeGroup: NcnFeeGroup;
   operator: Address;
   ncn: Address;
   ncnEpoch: bigint;
@@ -52,11 +57,12 @@ export type OperatorEpochRewardRouter = {
   rewardsProcessed: bigint;
   operatorRewards: bigint;
   reserved: Array<number>;
-  vaultRewards: Array<RewardRoutes>;
+  vaultRewardRoutes: Array<VaultRewardRoute>;
 };
 
-export type OperatorEpochRewardRouterArgs = {
+export type NcnRewardRouterArgs = {
   discriminator: number | bigint;
+  ncnFeeGroup: NcnFeeGroupArgs;
   operator: Address;
   ncn: Address;
   ncnEpoch: number | bigint;
@@ -66,12 +72,13 @@ export type OperatorEpochRewardRouterArgs = {
   rewardsProcessed: number | bigint;
   operatorRewards: number | bigint;
   reserved: Array<number>;
-  vaultRewards: Array<RewardRoutesArgs>;
+  vaultRewardRoutes: Array<VaultRewardRouteArgs>;
 };
 
-export function getOperatorEpochRewardRouterEncoder(): Encoder<OperatorEpochRewardRouterArgs> {
+export function getNcnRewardRouterEncoder(): Encoder<NcnRewardRouterArgs> {
   return getStructEncoder([
     ['discriminator', getU64Encoder()],
+    ['ncnFeeGroup', getNcnFeeGroupEncoder()],
     ['operator', getAddressEncoder()],
     ['ncn', getAddressEncoder()],
     ['ncnEpoch', getU64Encoder()],
@@ -81,13 +88,17 @@ export function getOperatorEpochRewardRouterEncoder(): Encoder<OperatorEpochRewa
     ['rewardsProcessed', getU64Encoder()],
     ['operatorRewards', getU64Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
-    ['vaultRewards', getArrayEncoder(getRewardRoutesEncoder(), { size: 32 })],
+    [
+      'vaultRewardRoutes',
+      getArrayEncoder(getVaultRewardRouteEncoder(), { size: 32 }),
+    ],
   ]);
 }
 
-export function getOperatorEpochRewardRouterDecoder(): Decoder<OperatorEpochRewardRouter> {
+export function getNcnRewardRouterDecoder(): Decoder<NcnRewardRouter> {
   return getStructDecoder([
     ['discriminator', getU64Decoder()],
+    ['ncnFeeGroup', getNcnFeeGroupDecoder()],
     ['operator', getAddressDecoder()],
     ['ncn', getAddressDecoder()],
     ['ncnEpoch', getU64Decoder()],
@@ -97,76 +108,64 @@ export function getOperatorEpochRewardRouterDecoder(): Decoder<OperatorEpochRewa
     ['rewardsProcessed', getU64Decoder()],
     ['operatorRewards', getU64Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
-    ['vaultRewards', getArrayDecoder(getRewardRoutesDecoder(), { size: 32 })],
+    [
+      'vaultRewardRoutes',
+      getArrayDecoder(getVaultRewardRouteDecoder(), { size: 32 }),
+    ],
   ]);
 }
 
-export function getOperatorEpochRewardRouterCodec(): Codec<
-  OperatorEpochRewardRouterArgs,
-  OperatorEpochRewardRouter
+export function getNcnRewardRouterCodec(): Codec<
+  NcnRewardRouterArgs,
+  NcnRewardRouter
 > {
-  return combineCodec(
-    getOperatorEpochRewardRouterEncoder(),
-    getOperatorEpochRewardRouterDecoder()
-  );
+  return combineCodec(getNcnRewardRouterEncoder(), getNcnRewardRouterDecoder());
 }
 
-export function decodeOperatorEpochRewardRouter<
-  TAddress extends string = string,
->(
+export function decodeNcnRewardRouter<TAddress extends string = string>(
   encodedAccount: EncodedAccount<TAddress>
-): Account<OperatorEpochRewardRouter, TAddress>;
-export function decodeOperatorEpochRewardRouter<
-  TAddress extends string = string,
->(
+): Account<NcnRewardRouter, TAddress>;
+export function decodeNcnRewardRouter<TAddress extends string = string>(
   encodedAccount: MaybeEncodedAccount<TAddress>
-): MaybeAccount<OperatorEpochRewardRouter, TAddress>;
-export function decodeOperatorEpochRewardRouter<
-  TAddress extends string = string,
->(
+): MaybeAccount<NcnRewardRouter, TAddress>;
+export function decodeNcnRewardRouter<TAddress extends string = string>(
   encodedAccount: EncodedAccount<TAddress> | MaybeEncodedAccount<TAddress>
 ):
-  | Account<OperatorEpochRewardRouter, TAddress>
-  | MaybeAccount<OperatorEpochRewardRouter, TAddress> {
+  | Account<NcnRewardRouter, TAddress>
+  | MaybeAccount<NcnRewardRouter, TAddress> {
   return decodeAccount(
     encodedAccount as MaybeEncodedAccount<TAddress>,
-    getOperatorEpochRewardRouterDecoder()
+    getNcnRewardRouterDecoder()
   );
 }
 
-export async function fetchOperatorEpochRewardRouter<
-  TAddress extends string = string,
->(
+export async function fetchNcnRewardRouter<TAddress extends string = string>(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<Account<OperatorEpochRewardRouter, TAddress>> {
-  const maybeAccount = await fetchMaybeOperatorEpochRewardRouter(
-    rpc,
-    address,
-    config
-  );
+): Promise<Account<NcnRewardRouter, TAddress>> {
+  const maybeAccount = await fetchMaybeNcnRewardRouter(rpc, address, config);
   assertAccountExists(maybeAccount);
   return maybeAccount;
 }
 
-export async function fetchMaybeOperatorEpochRewardRouter<
+export async function fetchMaybeNcnRewardRouter<
   TAddress extends string = string,
 >(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<MaybeAccount<OperatorEpochRewardRouter, TAddress>> {
+): Promise<MaybeAccount<NcnRewardRouter, TAddress>> {
   const maybeAccount = await fetchEncodedAccount(rpc, address, config);
-  return decodeOperatorEpochRewardRouter(maybeAccount);
+  return decodeNcnRewardRouter(maybeAccount);
 }
 
-export async function fetchAllOperatorEpochRewardRouter(
+export async function fetchAllNcnRewardRouter(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<Account<OperatorEpochRewardRouter>[]> {
-  const maybeAccounts = await fetchAllMaybeOperatorEpochRewardRouter(
+): Promise<Account<NcnRewardRouter>[]> {
+  const maybeAccounts = await fetchAllMaybeNcnRewardRouter(
     rpc,
     addresses,
     config
@@ -175,13 +174,13 @@ export async function fetchAllOperatorEpochRewardRouter(
   return maybeAccounts;
 }
 
-export async function fetchAllMaybeOperatorEpochRewardRouter(
+export async function fetchAllMaybeNcnRewardRouter(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<MaybeAccount<OperatorEpochRewardRouter>[]> {
+): Promise<MaybeAccount<NcnRewardRouter>[]> {
   const maybeAccounts = await fetchEncodedAccounts(rpc, addresses, config);
   return maybeAccounts.map((maybeAccount) =>
-    decodeOperatorEpochRewardRouter(maybeAccount)
+    decodeNcnRewardRouter(maybeAccount)
   );
 }

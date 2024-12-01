@@ -22,37 +22,33 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type Option,
   type OptionOrNullable,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR = 4;
+export const DISTRIBUTE_NCN_VAULT_REWARDS_DISCRIMINATOR = 17;
 
-export function getInitializeWeightTableDiscriminatorBytes() {
-  return getU8Encoder().encode(INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR);
+export function getDistributeNcnVaultRewardsDiscriminatorBytes() {
+  return getU8Encoder().encode(DISTRIBUTE_NCN_VAULT_REWARDS_DISCRIMINATOR);
 }
 
-export type InitializeWeightTableInstruction<
+export type DistributeNcnVaultRewardsInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
-  TAccountTrackedMints extends string | IAccountMeta<string> = string,
+  TAccountNcnConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountWeightTable extends string | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountOperator extends string | IAccountMeta<string> = string,
+  TAccountVault extends string | IAccountMeta<string> = string,
+  TAccountNcnRewardRouter extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
-  TAccountSystemProgram extends
-    | string
-    | IAccountMeta<string> = '11111111111111111111111111111111',
+  TAccountVaultProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -61,114 +57,126 @@ export type InitializeWeightTableInstruction<
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
-      TAccountTrackedMints extends string
-        ? ReadonlyAccount<TAccountTrackedMints>
-        : TAccountTrackedMints,
+      TAccountNcnConfig extends string
+        ? ReadonlyAccount<TAccountNcnConfig>
+        : TAccountNcnConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountWeightTable extends string
-        ? WritableAccount<TAccountWeightTable>
-        : TAccountWeightTable,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
+      TAccountOperator extends string
+        ? ReadonlyAccount<TAccountOperator>
+        : TAccountOperator,
+      TAccountVault extends string
+        ? ReadonlyAccount<TAccountVault>
+        : TAccountVault,
+      TAccountNcnRewardRouter extends string
+        ? WritableAccount<TAccountNcnRewardRouter>
+        : TAccountNcnRewardRouter,
       TAccountRestakingProgram extends string
         ? ReadonlyAccount<TAccountRestakingProgram>
         : TAccountRestakingProgram,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
+      TAccountVaultProgram extends string
+        ? ReadonlyAccount<TAccountVaultProgram>
+        : TAccountVaultProgram,
       ...TRemainingAccounts,
     ]
   >;
 
-export type InitializeWeightTableInstructionData = {
+export type DistributeNcnVaultRewardsInstructionData = {
   discriminator: number;
+  ncnFeeGroup: number;
   firstSlotOfNcnEpoch: Option<bigint>;
 };
 
-export type InitializeWeightTableInstructionDataArgs = {
+export type DistributeNcnVaultRewardsInstructionDataArgs = {
+  ncnFeeGroup: number;
   firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
 };
 
-export function getInitializeWeightTableInstructionDataEncoder(): Encoder<InitializeWeightTableInstructionDataArgs> {
+export function getDistributeNcnVaultRewardsInstructionDataEncoder(): Encoder<DistributeNcnVaultRewardsInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
+      ['ncnFeeGroup', getU8Encoder()],
       ['firstSlotOfNcnEpoch', getOptionEncoder(getU64Encoder())],
     ]),
     (value) => ({
       ...value,
-      discriminator: INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR,
+      discriminator: DISTRIBUTE_NCN_VAULT_REWARDS_DISCRIMINATOR,
     })
   );
 }
 
-export function getInitializeWeightTableInstructionDataDecoder(): Decoder<InitializeWeightTableInstructionData> {
+export function getDistributeNcnVaultRewardsInstructionDataDecoder(): Decoder<DistributeNcnVaultRewardsInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
+    ['ncnFeeGroup', getU8Decoder()],
     ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
   ]);
 }
 
-export function getInitializeWeightTableInstructionDataCodec(): Codec<
-  InitializeWeightTableInstructionDataArgs,
-  InitializeWeightTableInstructionData
+export function getDistributeNcnVaultRewardsInstructionDataCodec(): Codec<
+  DistributeNcnVaultRewardsInstructionDataArgs,
+  DistributeNcnVaultRewardsInstructionData
 > {
   return combineCodec(
-    getInitializeWeightTableInstructionDataEncoder(),
-    getInitializeWeightTableInstructionDataDecoder()
+    getDistributeNcnVaultRewardsInstructionDataEncoder(),
+    getDistributeNcnVaultRewardsInstructionDataDecoder()
   );
 }
 
-export type InitializeWeightTableInput<
+export type DistributeNcnVaultRewardsInput<
   TAccountRestakingConfig extends string = string,
-  TAccountTrackedMints extends string = string,
+  TAccountNcnConfig extends string = string,
   TAccountNcn extends string = string,
-  TAccountWeightTable extends string = string,
-  TAccountPayer extends string = string,
+  TAccountOperator extends string = string,
+  TAccountVault extends string = string,
+  TAccountNcnRewardRouter extends string = string,
   TAccountRestakingProgram extends string = string,
-  TAccountSystemProgram extends string = string,
+  TAccountVaultProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
-  trackedMints: Address<TAccountTrackedMints>;
+  ncnConfig: Address<TAccountNcnConfig>;
   ncn: Address<TAccountNcn>;
-  weightTable: Address<TAccountWeightTable>;
-  payer: TransactionSigner<TAccountPayer>;
+  operator: Address<TAccountOperator>;
+  vault: Address<TAccountVault>;
+  ncnRewardRouter: Address<TAccountNcnRewardRouter>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  systemProgram?: Address<TAccountSystemProgram>;
-  firstSlotOfNcnEpoch: InitializeWeightTableInstructionDataArgs['firstSlotOfNcnEpoch'];
+  vaultProgram: Address<TAccountVaultProgram>;
+  ncnFeeGroup: DistributeNcnVaultRewardsInstructionDataArgs['ncnFeeGroup'];
+  firstSlotOfNcnEpoch: DistributeNcnVaultRewardsInstructionDataArgs['firstSlotOfNcnEpoch'];
 };
 
-export function getInitializeWeightTableInstruction<
+export function getDistributeNcnVaultRewardsInstruction<
   TAccountRestakingConfig extends string,
-  TAccountTrackedMints extends string,
+  TAccountNcnConfig extends string,
   TAccountNcn extends string,
-  TAccountWeightTable extends string,
-  TAccountPayer extends string,
+  TAccountOperator extends string,
+  TAccountVault extends string,
+  TAccountNcnRewardRouter extends string,
   TAccountRestakingProgram extends string,
-  TAccountSystemProgram extends string,
+  TAccountVaultProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: InitializeWeightTableInput<
+  input: DistributeNcnVaultRewardsInput<
     TAccountRestakingConfig,
-    TAccountTrackedMints,
+    TAccountNcnConfig,
     TAccountNcn,
-    TAccountWeightTable,
-    TAccountPayer,
+    TAccountOperator,
+    TAccountVault,
+    TAccountNcnRewardRouter,
     TAccountRestakingProgram,
-    TAccountSystemProgram
+    TAccountVaultProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): InitializeWeightTableInstruction<
+): DistributeNcnVaultRewardsInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
-  TAccountTrackedMints,
+  TAccountNcnConfig,
   TAccountNcn,
-  TAccountWeightTable,
-  TAccountPayer,
+  TAccountOperator,
+  TAccountVault,
+  TAccountNcnRewardRouter,
   TAccountRestakingProgram,
-  TAccountSystemProgram
+  TAccountVaultProgram
 > {
   // Program address.
   const programAddress =
@@ -180,15 +188,16 @@ export function getInitializeWeightTableInstruction<
       value: input.restakingConfig ?? null,
       isWritable: false,
     },
-    trackedMints: { value: input.trackedMints ?? null, isWritable: false },
+    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    weightTable: { value: input.weightTable ?? null, isWritable: true },
-    payer: { value: input.payer ?? null, isWritable: true },
+    operator: { value: input.operator ?? null, isWritable: false },
+    vault: { value: input.vault ?? null, isWritable: false },
+    ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
     restakingProgram: {
       value: input.restakingProgram ?? null,
       isWritable: false,
     },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    vaultProgram: { value: input.vaultProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -198,67 +207,64 @@ export function getInitializeWeightTableInstruction<
   // Original args.
   const args = { ...input };
 
-  // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
-  }
-
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
       getAccountMeta(accounts.restakingConfig),
-      getAccountMeta(accounts.trackedMints),
+      getAccountMeta(accounts.ncnConfig),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.weightTable),
-      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.operator),
+      getAccountMeta(accounts.vault),
+      getAccountMeta(accounts.ncnRewardRouter),
       getAccountMeta(accounts.restakingProgram),
-      getAccountMeta(accounts.systemProgram),
+      getAccountMeta(accounts.vaultProgram),
     ],
     programAddress,
-    data: getInitializeWeightTableInstructionDataEncoder().encode(
-      args as InitializeWeightTableInstructionDataArgs
+    data: getDistributeNcnVaultRewardsInstructionDataEncoder().encode(
+      args as DistributeNcnVaultRewardsInstructionDataArgs
     ),
-  } as InitializeWeightTableInstruction<
+  } as DistributeNcnVaultRewardsInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
-    TAccountTrackedMints,
+    TAccountNcnConfig,
     TAccountNcn,
-    TAccountWeightTable,
-    TAccountPayer,
+    TAccountOperator,
+    TAccountVault,
+    TAccountNcnRewardRouter,
     TAccountRestakingProgram,
-    TAccountSystemProgram
+    TAccountVaultProgram
   >;
 
   return instruction;
 }
 
-export type ParsedInitializeWeightTableInstruction<
+export type ParsedDistributeNcnVaultRewardsInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
     restakingConfig: TAccountMetas[0];
-    trackedMints: TAccountMetas[1];
+    ncnConfig: TAccountMetas[1];
     ncn: TAccountMetas[2];
-    weightTable: TAccountMetas[3];
-    payer: TAccountMetas[4];
-    restakingProgram: TAccountMetas[5];
-    systemProgram: TAccountMetas[6];
+    operator: TAccountMetas[3];
+    vault: TAccountMetas[4];
+    ncnRewardRouter: TAccountMetas[5];
+    restakingProgram: TAccountMetas[6];
+    vaultProgram: TAccountMetas[7];
   };
-  data: InitializeWeightTableInstructionData;
+  data: DistributeNcnVaultRewardsInstructionData;
 };
 
-export function parseInitializeWeightTableInstruction<
+export function parseDistributeNcnVaultRewardsInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedInitializeWeightTableInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+): ParsedDistributeNcnVaultRewardsInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -272,14 +278,15 @@ export function parseInitializeWeightTableInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       restakingConfig: getNextAccount(),
-      trackedMints: getNextAccount(),
+      ncnConfig: getNextAccount(),
       ncn: getNextAccount(),
-      weightTable: getNextAccount(),
-      payer: getNextAccount(),
+      operator: getNextAccount(),
+      vault: getNextAccount(),
+      ncnRewardRouter: getNextAccount(),
       restakingProgram: getNextAccount(),
-      systemProgram: getNextAccount(),
+      vaultProgram: getNextAccount(),
     },
-    data: getInitializeWeightTableInstructionDataDecoder().decode(
+    data: getDistributeNcnVaultRewardsInstructionDataDecoder().decode(
       instruction.data
     ),
   };

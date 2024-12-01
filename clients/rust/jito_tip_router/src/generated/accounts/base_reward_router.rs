@@ -7,11 +7,11 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::{RewardBucket, RewardRoutes};
+use crate::generated::types::{BaseRewardRouterRewards, NcnRewardRoute};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct EpochRewardRouter {
+pub struct BaseRewardRouter {
     pub discriminator: u64,
     #[cfg_attr(
         feature = "serde",
@@ -23,14 +23,14 @@ pub struct EpochRewardRouter {
     pub slot_created: u64,
     pub reward_pool: u64,
     pub rewards_processed: u64,
-    pub doa_rewards: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 128],
-    pub ncn_reward_buckets: [RewardBucket; 8],
-    pub reward_routes: [RewardRoutes; 32],
+    pub base_fee_group_rewards: [BaseRewardRouterRewards; 8],
+    pub ncn_fee_group_rewards: [BaseRewardRouterRewards; 8],
+    pub ncn_fee_group_reward_routes: [NcnRewardRoute; 32],
 }
 
-impl EpochRewardRouter {
+impl BaseRewardRouter {
     #[inline(always)]
     pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
         let mut data = data;
@@ -38,7 +38,7 @@ impl EpochRewardRouter {
     }
 }
 
-impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for EpochRewardRouter {
+impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for BaseRewardRouter {
     type Error = std::io::Error;
 
     fn try_from(
@@ -50,26 +50,26 @@ impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for EpochReward
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountDeserialize for EpochRewardRouter {
+impl anchor_lang::AccountDeserialize for BaseRewardRouter {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         Ok(Self::deserialize(buf)?)
     }
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountSerialize for EpochRewardRouter {}
+impl anchor_lang::AccountSerialize for BaseRewardRouter {}
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::Owner for EpochRewardRouter {
+impl anchor_lang::Owner for BaseRewardRouter {
     fn owner() -> Pubkey {
         crate::JITO_TIP_ROUTER_ID
     }
 }
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::IdlBuild for EpochRewardRouter {}
+impl anchor_lang::IdlBuild for BaseRewardRouter {}
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::Discriminator for EpochRewardRouter {
+impl anchor_lang::Discriminator for BaseRewardRouter {
     const DISCRIMINATOR: [u8; 8] = [0; 8];
 }

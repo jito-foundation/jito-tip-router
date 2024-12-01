@@ -27,19 +27,19 @@ import {
 import {
   getNcnFeeGroupDecoder,
   getNcnFeeGroupEncoder,
-  getStakeWeightDecoder,
-  getStakeWeightEncoder,
+  getStakeWeightsDecoder,
+  getStakeWeightsEncoder,
   type NcnFeeGroup,
   type NcnFeeGroupArgs,
-  type StakeWeight,
-  type StakeWeightArgs,
+  type StakeWeights,
+  type StakeWeightsArgs,
 } from '.';
 
 export type VaultOperatorStakeWeight = {
   vault: Address;
   vaultIndex: bigint;
   ncnFeeGroup: NcnFeeGroup;
-  stakeWeight: StakeWeight;
+  stakeWeight: StakeWeights;
   reserved: ReadonlyUint8Array;
 };
 
@@ -47,7 +47,7 @@ export type VaultOperatorStakeWeightArgs = {
   vault: Address;
   vaultIndex: number | bigint;
   ncnFeeGroup: NcnFeeGroupArgs;
-  stakeWeight: StakeWeightArgs;
+  stakeWeight: StakeWeightsArgs;
   reserved: ReadonlyUint8Array;
 };
 
@@ -56,7 +56,7 @@ export function getVaultOperatorStakeWeightEncoder(): Encoder<VaultOperatorStake
     ['vault', getAddressEncoder()],
     ['vaultIndex', getU64Encoder()],
     ['ncnFeeGroup', getNcnFeeGroupEncoder()],
-    ['stakeWeight', getStakeWeightEncoder()],
+    ['stakeWeight', getStakeWeightsEncoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 32)],
   ]);
 }
@@ -66,7 +66,7 @@ export function getVaultOperatorStakeWeightDecoder(): Decoder<VaultOperatorStake
     ['vault', getAddressDecoder()],
     ['vaultIndex', getU64Decoder()],
     ['ncnFeeGroup', getNcnFeeGroupDecoder()],
-    ['stakeWeight', getStakeWeightDecoder()],
+    ['stakeWeight', getStakeWeightsDecoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }

@@ -424,7 +424,7 @@ impl NcnRewardRouter {
 
     pub fn distribute_vault_reward_route(&mut self, vault: &Pubkey) -> Result<u64, TipRouterError> {
         for route in self.vault_reward_routes.iter_mut() {
-            if route.vault().eq(&vault) {
+            if route.vault().eq(vault) {
                 let rewards = route.rewards();
                 route.decrement_rewards(rewards)?;
                 self.decrement_rewards_processed(rewards)?;

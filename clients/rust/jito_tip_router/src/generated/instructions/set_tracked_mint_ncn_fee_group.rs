@@ -7,53 +7,64 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
-pub struct ProcessEpochRewardPool {
+pub struct SetTrackedMintNcnFeeGroup {
     pub restaking_config: solana_program::pubkey::Pubkey,
+
+    pub ncn_config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub epoch_snapshot: solana_program::pubkey::Pubkey,
+    pub weight_table: solana_program::pubkey::Pubkey,
 
-    pub epoch_reward_router: solana_program::pubkey::Pubkey,
+    pub tracked_mints: solana_program::pubkey::Pubkey,
 
-    pub restaking_program_id: solana_program::pubkey::Pubkey,
+    pub admin: solana_program::pubkey::Pubkey,
+
+    pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
-impl ProcessEpochRewardPool {
+impl SetTrackedMintNcnFeeGroup {
     pub fn instruction(
         &self,
-        args: ProcessEpochRewardPoolInstructionArgs,
+        args: SetTrackedMintNcnFeeGroupInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: ProcessEpochRewardPoolInstructionArgs,
+        args: SetTrackedMintNcnFeeGroupInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_config,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.ncn_config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.epoch_snapshot,
+            self.weight_table,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.epoch_reward_router,
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.tracked_mints,
             false,
         ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.admin, true,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program_id,
+            self.restaking_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = ProcessEpochRewardPoolInstructionData::new()
+        let mut data = SetTrackedMintNcnFeeGroupInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -68,17 +79,17 @@ impl ProcessEpochRewardPool {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct ProcessEpochRewardPoolInstructionData {
+pub struct SetTrackedMintNcnFeeGroupInstructionData {
     discriminator: u8,
 }
 
-impl ProcessEpochRewardPoolInstructionData {
+impl SetTrackedMintNcnFeeGroupInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 12 }
+        Self { discriminator: 18 }
     }
 }
 
-impl Default for ProcessEpochRewardPoolInstructionData {
+impl Default for SetTrackedMintNcnFeeGroupInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -86,31 +97,37 @@ impl Default for ProcessEpochRewardPoolInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ProcessEpochRewardPoolInstructionArgs {
-    pub first_slot_of_ncn_epoch: Option<u64>,
+pub struct SetTrackedMintNcnFeeGroupInstructionArgs {
+    pub vault_index: u64,
+    pub ncn_fee_group: u8,
 }
 
-/// Instruction builder for `ProcessEpochRewardPool`.
+/// Instruction builder for `SetTrackedMintNcnFeeGroup`.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[]` ncn
-///   2. `[]` epoch_snapshot
-///   3. `[]` epoch_reward_router
-///   4. `[]` restaking_program_id
+///   1. `[]` ncn_config
+///   2. `[]` ncn
+///   3. `[]` weight_table
+///   4. `[writable]` tracked_mints
+///   5. `[writable, signer]` admin
+///   6. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
-pub struct ProcessEpochRewardPoolBuilder {
+pub struct SetTrackedMintNcnFeeGroupBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
+    ncn_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
-    epoch_reward_router: Option<solana_program::pubkey::Pubkey>,
-    restaking_program_id: Option<solana_program::pubkey::Pubkey>,
-    first_slot_of_ncn_epoch: Option<u64>,
+    weight_table: Option<solana_program::pubkey::Pubkey>,
+    tracked_mints: Option<solana_program::pubkey::Pubkey>,
+    admin: Option<solana_program::pubkey::Pubkey>,
+    restaking_program: Option<solana_program::pubkey::Pubkey>,
+    vault_index: Option<u64>,
+    ncn_fee_group: Option<u8>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl ProcessEpochRewardPoolBuilder {
+impl SetTrackedMintNcnFeeGroupBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -123,35 +140,46 @@ impl ProcessEpochRewardPoolBuilder {
         self
     }
     #[inline(always)]
+    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.ncn_config = Some(ncn_config);
+        self
+    }
+    #[inline(always)]
     pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
         self.ncn = Some(ncn);
         self
     }
     #[inline(always)]
-    pub fn epoch_snapshot(&mut self, epoch_snapshot: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.epoch_snapshot = Some(epoch_snapshot);
+    pub fn weight_table(&mut self, weight_table: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.weight_table = Some(weight_table);
         self
     }
     #[inline(always)]
-    pub fn epoch_reward_router(
+    pub fn tracked_mints(&mut self, tracked_mints: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.tracked_mints = Some(tracked_mints);
+        self
+    }
+    #[inline(always)]
+    pub fn admin(&mut self, admin: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.admin = Some(admin);
+        self
+    }
+    #[inline(always)]
+    pub fn restaking_program(
         &mut self,
-        epoch_reward_router: solana_program::pubkey::Pubkey,
+        restaking_program: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.epoch_reward_router = Some(epoch_reward_router);
+        self.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
-        &mut self,
-        restaking_program_id: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_program_id = Some(restaking_program_id);
+    pub fn vault_index(&mut self, vault_index: u64) -> &mut Self {
+        self.vault_index = Some(vault_index);
         self
     }
-    /// `[optional argument]`
     #[inline(always)]
-    pub fn first_slot_of_ncn_epoch(&mut self, first_slot_of_ncn_epoch: u64) -> &mut Self {
-        self.first_slot_of_ncn_epoch = Some(first_slot_of_ncn_epoch);
+    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
+        self.ncn_fee_group = Some(ncn_fee_group);
         self
     }
     /// Add an additional account to the instruction.
@@ -174,69 +202,83 @@ impl ProcessEpochRewardPoolBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = ProcessEpochRewardPool {
+        let accounts = SetTrackedMintNcnFeeGroup {
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
+            ncn_config: self.ncn_config.expect("ncn_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            epoch_snapshot: self.epoch_snapshot.expect("epoch_snapshot is not set"),
-            epoch_reward_router: self
-                .epoch_reward_router
-                .expect("epoch_reward_router is not set"),
-            restaking_program_id: self
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+            weight_table: self.weight_table.expect("weight_table is not set"),
+            tracked_mints: self.tracked_mints.expect("tracked_mints is not set"),
+            admin: self.admin.expect("admin is not set"),
+            restaking_program: self
+                .restaking_program
+                .expect("restaking_program is not set"),
         };
-        let args = ProcessEpochRewardPoolInstructionArgs {
-            first_slot_of_ncn_epoch: self.first_slot_of_ncn_epoch.clone(),
+        let args = SetTrackedMintNcnFeeGroupInstructionArgs {
+            vault_index: self.vault_index.clone().expect("vault_index is not set"),
+            ncn_fee_group: self
+                .ncn_fee_group
+                .clone()
+                .expect("ncn_fee_group is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
     }
 }
 
-/// `process_epoch_reward_pool` CPI accounts.
-pub struct ProcessEpochRewardPoolCpiAccounts<'a, 'b> {
+/// `set_tracked_mint_ncn_fee_group` CPI accounts.
+pub struct SetTrackedMintNcnFeeGroupCpiAccounts<'a, 'b> {
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+    pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub epoch_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub admin: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `process_epoch_reward_pool` CPI instruction.
-pub struct ProcessEpochRewardPoolCpi<'a, 'b> {
+/// `set_tracked_mint_ncn_fee_group` CPI instruction.
+pub struct SetTrackedMintNcnFeeGroupCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+    pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub epoch_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
+    pub admin: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: ProcessEpochRewardPoolInstructionArgs,
+    pub __args: SetTrackedMintNcnFeeGroupInstructionArgs,
 }
 
-impl<'a, 'b> ProcessEpochRewardPoolCpi<'a, 'b> {
+impl<'a, 'b> SetTrackedMintNcnFeeGroupCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: ProcessEpochRewardPoolCpiAccounts<'a, 'b>,
-        args: ProcessEpochRewardPoolInstructionArgs,
+        accounts: SetTrackedMintNcnFeeGroupCpiAccounts<'a, 'b>,
+        args: SetTrackedMintNcnFeeGroupInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
             restaking_config: accounts.restaking_config,
+            ncn_config: accounts.ncn_config,
             ncn: accounts.ncn,
-            epoch_snapshot: accounts.epoch_snapshot,
-            epoch_reward_router: accounts.epoch_reward_router,
-            restaking_program_id: accounts.restaking_program_id,
+            weight_table: accounts.weight_table,
+            tracked_mints: accounts.tracked_mints,
+            admin: accounts.admin,
+            restaking_program: accounts.restaking_program,
             __args: args,
         }
     }
@@ -273,9 +315,13 @@ impl<'a, 'b> ProcessEpochRewardPoolCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_config.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.ncn_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -283,15 +329,19 @@ impl<'a, 'b> ProcessEpochRewardPoolCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.epoch_snapshot.key,
+            *self.weight_table.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.epoch_reward_router.key,
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.tracked_mints.key,
             false,
         ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.admin.key,
+            true,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program_id.key,
+            *self.restaking_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -301,7 +351,7 @@ impl<'a, 'b> ProcessEpochRewardPoolCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = ProcessEpochRewardPoolInstructionData::new()
+        let mut data = SetTrackedMintNcnFeeGroupInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
@@ -312,13 +362,15 @@ impl<'a, 'b> ProcessEpochRewardPoolCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
+        account_infos.push(self.ncn_config.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.epoch_snapshot.clone());
-        account_infos.push(self.epoch_reward_router.clone());
-        account_infos.push(self.restaking_program_id.clone());
+        account_infos.push(self.weight_table.clone());
+        account_infos.push(self.tracked_mints.clone());
+        account_infos.push(self.admin.clone());
+        account_infos.push(self.restaking_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -331,30 +383,35 @@ impl<'a, 'b> ProcessEpochRewardPoolCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `ProcessEpochRewardPool` via CPI.
+/// Instruction builder for `SetTrackedMintNcnFeeGroup` via CPI.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[]` ncn
-///   2. `[]` epoch_snapshot
-///   3. `[]` epoch_reward_router
-///   4. `[]` restaking_program_id
+///   1. `[]` ncn_config
+///   2. `[]` ncn
+///   3. `[]` weight_table
+///   4. `[writable]` tracked_mints
+///   5. `[writable, signer]` admin
+///   6. `[]` restaking_program
 #[derive(Clone, Debug)]
-pub struct ProcessEpochRewardPoolCpiBuilder<'a, 'b> {
-    instruction: Box<ProcessEpochRewardPoolCpiBuilderInstruction<'a, 'b>>,
+pub struct SetTrackedMintNcnFeeGroupCpiBuilder<'a, 'b> {
+    instruction: Box<SetTrackedMintNcnFeeGroupCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> ProcessEpochRewardPoolCpiBuilder<'a, 'b> {
+impl<'a, 'b> SetTrackedMintNcnFeeGroupCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(ProcessEpochRewardPoolCpiBuilderInstruction {
+        let instruction = Box::new(SetTrackedMintNcnFeeGroupCpiBuilderInstruction {
             __program: program,
             restaking_config: None,
+            ncn_config: None,
             ncn: None,
-            epoch_snapshot: None,
-            epoch_reward_router: None,
-            restaking_program_id: None,
-            first_slot_of_ncn_epoch: None,
+            weight_table: None,
+            tracked_mints: None,
+            admin: None,
+            restaking_program: None,
+            vault_index: None,
+            ncn_fee_group: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -368,38 +425,55 @@ impl<'a, 'b> ProcessEpochRewardPoolCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
+    pub fn ncn_config(
+        &mut self,
+        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.ncn_config = Some(ncn_config);
+        self
+    }
+    #[inline(always)]
     pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.ncn = Some(ncn);
         self
     }
     #[inline(always)]
-    pub fn epoch_snapshot(
+    pub fn weight_table(
         &mut self,
-        epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+        weight_table: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.epoch_snapshot = Some(epoch_snapshot);
+        self.instruction.weight_table = Some(weight_table);
         self
     }
     #[inline(always)]
-    pub fn epoch_reward_router(
+    pub fn tracked_mints(
         &mut self,
-        epoch_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+        tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.epoch_reward_router = Some(epoch_reward_router);
+        self.instruction.tracked_mints = Some(tracked_mints);
         self
     }
     #[inline(always)]
-    pub fn restaking_program_id(
-        &mut self,
-        restaking_program_id: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_program_id = Some(restaking_program_id);
+    pub fn admin(&mut self, admin: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.admin = Some(admin);
         self
     }
-    /// `[optional argument]`
     #[inline(always)]
-    pub fn first_slot_of_ncn_epoch(&mut self, first_slot_of_ncn_epoch: u64) -> &mut Self {
-        self.instruction.first_slot_of_ncn_epoch = Some(first_slot_of_ncn_epoch);
+    pub fn restaking_program(
+        &mut self,
+        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.restaking_program = Some(restaking_program);
+        self
+    }
+    #[inline(always)]
+    pub fn vault_index(&mut self, vault_index: u64) -> &mut Self {
+        self.instruction.vault_index = Some(vault_index);
+        self
+    }
+    #[inline(always)]
+    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
+        self.instruction.ncn_fee_group = Some(ncn_fee_group);
         self
     }
     /// Add an additional account to the instruction.
@@ -443,10 +517,19 @@ impl<'a, 'b> ProcessEpochRewardPoolCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = ProcessEpochRewardPoolInstructionArgs {
-            first_slot_of_ncn_epoch: self.instruction.first_slot_of_ncn_epoch.clone(),
+        let args = SetTrackedMintNcnFeeGroupInstructionArgs {
+            vault_index: self
+                .instruction
+                .vault_index
+                .clone()
+                .expect("vault_index is not set"),
+            ncn_fee_group: self
+                .instruction
+                .ncn_fee_group
+                .clone()
+                .expect("ncn_fee_group is not set"),
         };
-        let instruction = ProcessEpochRewardPoolCpi {
+        let instruction = SetTrackedMintNcnFeeGroupCpi {
             __program: self.instruction.__program,
 
             restaking_config: self
@@ -454,22 +537,26 @@ impl<'a, 'b> ProcessEpochRewardPoolCpiBuilder<'a, 'b> {
                 .restaking_config
                 .expect("restaking_config is not set"),
 
+            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
+
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            epoch_snapshot: self
+            weight_table: self
                 .instruction
-                .epoch_snapshot
-                .expect("epoch_snapshot is not set"),
+                .weight_table
+                .expect("weight_table is not set"),
 
-            epoch_reward_router: self
+            tracked_mints: self
                 .instruction
-                .epoch_reward_router
-                .expect("epoch_reward_router is not set"),
+                .tracked_mints
+                .expect("tracked_mints is not set"),
 
-            restaking_program_id: self
+            admin: self.instruction.admin.expect("admin is not set"),
+
+            restaking_program: self
                 .instruction
-                .restaking_program_id
-                .expect("restaking_program_id is not set"),
+                .restaking_program
+                .expect("restaking_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -480,14 +567,17 @@ impl<'a, 'b> ProcessEpochRewardPoolCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct ProcessEpochRewardPoolCpiBuilderInstruction<'a, 'b> {
+struct SetTrackedMintNcnFeeGroupCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    epoch_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program_id: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    first_slot_of_ncn_epoch: Option<u64>,
+    weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    tracked_mints: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    vault_index: Option<u64>,
+    ncn_fee_group: Option<u8>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,

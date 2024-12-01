@@ -20,46 +20,37 @@ import {
   type Decoder,
   type Encoder,
 } from '@solana/web3.js';
-import {
-  getNcnFeeDecoder,
-  getNcnFeeEncoder,
-  type NcnFee,
-  type NcnFeeArgs,
-} from '.';
+import { getFeeDecoder, getFeeEncoder, type Fee, type FeeArgs } from '.';
 
 export type Fees = {
   activationEpoch: bigint;
-  blockEngineFeeBps: bigint;
-  daoFeeBps: bigint;
   reserved: Array<number>;
-  ncnFeeGroupsBps: Array<NcnFee>;
+  baseFeeGroupsBps: Array<Fee>;
+  ncnFeeGroupsBps: Array<Fee>;
 };
 
 export type FeesArgs = {
   activationEpoch: number | bigint;
-  blockEngineFeeBps: number | bigint;
-  daoFeeBps: number | bigint;
   reserved: Array<number>;
-  ncnFeeGroupsBps: Array<NcnFeeArgs>;
+  baseFeeGroupsBps: Array<FeeArgs>;
+  ncnFeeGroupsBps: Array<FeeArgs>;
 };
 
 export function getFeesEncoder(): Encoder<FeesArgs> {
   return getStructEncoder([
     ['activationEpoch', getU64Encoder()],
-    ['blockEngineFeeBps', getU64Encoder()],
-    ['daoFeeBps', getU64Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
-    ['ncnFeeGroupsBps', getArrayEncoder(getNcnFeeEncoder(), { size: 8 })],
+    ['baseFeeGroupsBps', getArrayEncoder(getFeeEncoder(), { size: 8 })],
+    ['ncnFeeGroupsBps', getArrayEncoder(getFeeEncoder(), { size: 8 })],
   ]);
 }
 
 export function getFeesDecoder(): Decoder<Fees> {
   return getStructDecoder([
     ['activationEpoch', getU64Decoder()],
-    ['blockEngineFeeBps', getU64Decoder()],
-    ['daoFeeBps', getU64Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
-    ['ncnFeeGroupsBps', getArrayDecoder(getNcnFeeDecoder(), { size: 8 })],
+    ['baseFeeGroupsBps', getArrayDecoder(getFeeDecoder(), { size: 8 })],
+    ['ncnFeeGroupsBps', getArrayDecoder(getFeeDecoder(), { size: 8 })],
   ]);
 }
 

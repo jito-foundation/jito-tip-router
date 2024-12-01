@@ -5,9 +5,17 @@
 //! <https://github.com/kinobi-so/kinobi>
 
 use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::pubkey::Pubkey;
+
+use crate::generated::types::BaseRewardRouterRewards;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct RewardStakeWeight {
-    pub reward_stake_weight: u128,
+pub struct NcnRewardRoute {
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub operator: Pubkey,
+    pub ncn_fee_group_rewards: [BaseRewardRouterRewards; 8],
 }

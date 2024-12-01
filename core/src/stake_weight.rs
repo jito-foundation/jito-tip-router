@@ -23,7 +23,7 @@ impl Default for StakeWeights {
 
 impl StakeWeights {
     pub fn new(ncn_fee_group: NcnFeeGroup, stake_weight: u128) -> Result<Self, TipRouterError> {
-        let mut stake_weights = StakeWeights::default();
+        let mut stake_weights = Self::default();
 
         stake_weights.increment_stake_weight(stake_weight)?;
         stake_weights.increment_ncn_fee_group_stake_weight(ncn_fee_group, stake_weight)?;
