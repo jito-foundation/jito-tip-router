@@ -28,6 +28,14 @@ pub enum TipRouterInstruction {
         default_ncn_fee_bps: u16,
     },
 
+    /// Initializes the tracked mints account for an NCN
+    #[account(0, name = "ncn_config")]
+    #[account(1, writable, name = "tracked_mints")]
+    #[account(2, name = "ncn")]
+    #[account(3, writable, signer, name = "payer")]
+    #[account(4, name = "system_program")]
+    InitializeTrackedMints,
+
     /// Updates the fee configuration
     #[account(0, name = "restaking_config")]
     #[account(1, writable, name = "config")]
@@ -135,79 +143,118 @@ pub enum TipRouterInstruction {
     #[account(8, name = "vault_program_id")]
     RegisterMint,
 
-    /// Initializes the tracked mints account for an NCN
-    #[account(0, name = "ncn_config")]
-    #[account(1, writable, name = "tracked_mints")]
-    #[account(2, name = "ncn")]
-    #[account(3, writable, signer, name = "payer")]
-    #[account(4, name = "system_program")]
-    InitializeTrackedMints,
 
-    /// Initializes the epoch reward router account for an NCN
+    /// Initializes the base reward router
     #[account(0, name = "restaking_config")]
     #[account(1, name = "ncn")]
     #[account(2, name = "ballot_box")]
-    #[account(3, name = "epoch_reward_router")]
+    #[account(3, writable, name = "base_reward_router")]
     #[account(4, writable, signer, name = "payer")]
-    #[account(5, name = "restaking_program_id")]
+    #[account(5, name = "restaking_program")]
     #[account(6, name = "system_program")]
-    InitializeEpochRewardRouter{
+    InitializeBaseRewardRouter{
         first_slot_of_ncn_epoch: Option<u64>,
     },
 
-    /// Initializes the epoch reward router account for an NCN
+    /// Initializes the ncn reward router
     #[account(0, name = "restaking_config")]
     #[account(1, name = "ncn")]
     #[account(2, name = "operator")]
     #[account(3, name = "ballot_box")]
-    #[account(4, name = "operator_epoch_reward_router")]
+    #[account(4, writable, name = "ncn_reward_router")]
     #[account(5, writable, signer, name = "payer")]
-    #[account(6, name = "restaking_program_id")]
+    #[account(6, name = "restaking_program")]
     #[account(7, name = "system_program")]
-    InitializeOperatorEpochRewardRouter{
-        ncn_fee_group: u8, 
+    InitializeNcnRewardRouter{
+        ncn_fee_group: u8,
         first_slot_of_ncn_epoch: Option<u64>,
     },
 
-    // restaking_config, ncn, epoch_snapshot, epoch_reward_router, restaking_program
+
+    /// Routes base reward router
     #[account(0, name = "restaking_config")]
     #[account(1, name = "ncn")]
     #[account(2, name = "epoch_snapshot")]
-    #[account(3, name = "epoch_reward_router")]
-    #[account(4, name = "restaking_program_id")]
-    ProcessEpochRewardPool{
+    #[account(3, name = "ballot_box")]
+    #[account(4, writable, name = "base_reward_router")]
+    #[account(5, name = "restaking_program")]
+    RouteBaseRewards{
         first_slot_of_ncn_epoch: Option<u64>,
     },
 
-    // restaking_config, ncn, ballot_box, epoch_reward_router, restaking_program
-    #[account(0, name = "restaking_config")]
-    #[account(1, name = "ncn")]
-    #[account(2, name = "ballot_box")]
-    #[account(3, name = "epoch_reward_router")]
-    #[account(4, name = "restaking_program_id")]
-    ProcessEpochRewardBuckets{
-        first_slot_of_ncn_epoch: Option<u64>,
-    },
-
+    /// Routes ncn reward router
     #[account(0, name = "restaking_config")]
     #[account(1, name = "ncn")]
     #[account(2, name = "operator")]
     #[account(3, name = "operator_snapshot")]
-    #[account(4, name = "operator_reward_router")]
-    #[account(5, name = "restaking_program_id")]
-    ProcessOperatorEpochRewardPool{
+    #[account(4, writable, name = "ncn_reward_router")]
+    #[account(5, name = "restaking_program")]
+    RouteNcnRewards{
+        ncn_fee_group: u8,
         first_slot_of_ncn_epoch: Option<u64>,
     },
 
+    /// Distributes base rewards
     #[account(0, name = "restaking_config")]
     #[account(1, name = "ncn_config")]
     #[account(2, name = "ncn")]
-    #[account(3, writable, name = "epoch_reward_router")]
-    #[account(4, writable, name = "destination")]
-    #[account(5, name = "restaking_program_id")]
-    DistributeDaoRewards{
-        base_fee_group: u8, 
+    #[account(3, writable, name = "base_reward_router")]
+    #[account(4, writable, name = "base_fee_wallet")]
+    #[account(5, name = "restaking_program")]
+    DistributeBaseRewards{
+        base_fee_group: u8,
         first_slot_of_ncn_epoch: Option<u64>,
     },
 
+    /// Distributes base ncn reward routes
+    #[account(0, name = "restaking_config")]
+    #[account(1, name = "ncn_config")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "operator")]
+    #[account(4, writable, name = "base_reward_router")]
+    #[account(5, writable, name = "ncn_reward_router")]
+    #[account(6, name = "restaking_program")]
+    DistributeBaseNcnRewardRoute{
+        ncn_fee_group: u8,
+        first_slot_of_ncn_epoch: Option<u64>,
+    },
+
+    /// Distributes ncn operator rewards
+    #[account(0, name = "restaking_config")]
+    #[account(1, name = "ncn_config")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "operator")]
+    #[account(4, writable, name = "ncn_reward_router")]
+    #[account(5, name = "restaking_program")]
+    DistributeNcnOperatorRewards{
+        ncn_fee_group: u8,
+        first_slot_of_ncn_epoch: Option<u64>,
+    },
+
+    /// Distributes ncn vault rewards
+    #[account(0, name = "restaking_config")]
+    #[account(1, name = "ncn_config")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "operator")]
+    #[account(4, name = "vault")]
+    #[account(5, writable, name = "ncn_reward_router")]
+    #[account(6, name = "restaking_program")]
+    #[account(7, name = "vault_program")]
+    DistributeNcnVaultRewards{
+        ncn_fee_group: u8,
+        first_slot_of_ncn_epoch: Option<u64>,
+    },
+
+    /// Sets the NCN fee group for a mint
+    #[account(0, name = "restaking_config")]
+    #[account(1, name = "ncn_config")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "weight_table")]
+    #[account(4, writable, name = "tracked_mints")]
+    #[account(5, signer, writable, name = "admin")]
+    #[account(6, name = "restaking_program")]
+    SetTrackedMintNcnFeeGroup{
+        vault_index: u64,
+        ncn_fee_group: u8,
+    },
 }

@@ -14,14 +14,13 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
-/// Initializes a Epoch Reward Router
 /// Can be backfilled for previous epochs
-pub fn process_initialize_epoch_reward_router(
+pub fn process_initialize_base_reward_router(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    let [restaking_config, ncn, ballot_box, epoch_reward_router, payer, restaking_program, system_program] =
+    let [restaking_config, ncn, ballot_box, base_reward_router, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -35,7 +34,7 @@ pub fn process_initialize_epoch_reward_router(
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
-    load_system_account(epoch_reward_router, true)?;
+    load_system_account(base_reward_router, true)?;
     load_system_program(system_program)?;
     load_signer(payer, true)?;
 
@@ -53,40 +52,40 @@ pub fn process_initialize_epoch_reward_router(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    let (epoch_reward_router_pubkey, epoch_reward_router_bump, mut epoch_reward_router_seeds) =
+    let (base_reward_router_pubkey, base_reward_router_bump, mut base_reward_router_seeds) =
         BaseRewardRouter::find_program_address(program_id, ncn.key, ncn_epoch);
-    epoch_reward_router_seeds.push(vec![epoch_reward_router_bump]);
+    base_reward_router_seeds.push(vec![base_reward_router_bump]);
 
-    if epoch_reward_router_pubkey.ne(epoch_reward_router.key) {
+    if base_reward_router_pubkey.ne(base_reward_router.key) {
         msg!("Incorrect epoch reward router PDA");
         return Err(ProgramError::InvalidAccountData);
     }
 
     msg!(
-        "Initializing Epoch Reward Router {} for NCN: {} at epoch: {}",
-        epoch_reward_router.key,
+        "Initializing Base Reward Router {} for NCN: {} at epoch: {}",
+        base_reward_router.key,
         ncn.key,
         ncn_epoch
     );
     create_account(
         payer,
-        epoch_reward_router,
+        base_reward_router,
         system_program,
         program_id,
         &Rent::get()?,
         8_u64
             .checked_add(size_of::<BaseRewardRouter>() as u64)
             .unwrap(),
-        &epoch_reward_router_seeds,
+        &base_reward_router_seeds,
     )?;
 
-    let mut epoch_reward_router_data = epoch_reward_router.try_borrow_mut_data()?;
-    epoch_reward_router_data[0] = BaseRewardRouter::DISCRIMINATOR;
-    let epoch_reward_router_account =
-        BaseRewardRouter::try_from_slice_unchecked_mut(&mut epoch_reward_router_data)?;
+    let mut base_reward_router_data = base_reward_router.try_borrow_mut_data()?;
+    base_reward_router_data[0] = BaseRewardRouter::DISCRIMINATOR;
+    let base_reward_router_account =
+        BaseRewardRouter::try_from_slice_unchecked_mut(&mut base_reward_router_data)?;
 
-    *epoch_reward_router_account =
-        BaseRewardRouter::new(*ncn.key, ncn_epoch, epoch_reward_router_bump, current_slot);
+    *base_reward_router_account =
+        BaseRewardRouter::new(*ncn.key, ncn_epoch, base_reward_router_bump, current_slot);
 
     Ok(())
 }

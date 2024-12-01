@@ -1,6 +1,3 @@
-use bytemuck::{Pod, Zeroable};
-use shank::ShankType;
-
 use crate::error::TipRouterError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

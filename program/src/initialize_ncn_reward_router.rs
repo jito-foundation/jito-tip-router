@@ -15,15 +15,14 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
-/// Initializes a Epoch Reward Router
 /// Can be backfilled for previous epochs
-pub fn process_initialize_operator_epoch_reward_router(
+pub fn process_initialize_ncn_reward_router(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     ncn_fee_group: u8,
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    let [restaking_config, ncn, operator, ballot_box, operator_reward_router, payer, restaking_program, system_program] =
+    let [restaking_config, ncn, operator, ballot_box, ncn_reward_router, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -38,7 +37,7 @@ pub fn process_initialize_operator_epoch_reward_router(
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
 
-    load_system_account(operator_reward_router, true)?;
+    load_system_account(ncn_reward_router, true)?;
     load_system_program(system_program)?;
     load_signer(payer, true)?;
 
@@ -54,57 +53,54 @@ pub fn process_initialize_operator_epoch_reward_router(
     };
 
     if !has_winning_ballot {
-        msg!("Ballot has to be finalized before initializing operator reward router");
+        msg!("Ballot has to be finalized before initializing ncn reward router");
         return Err(ProgramError::InvalidAccountData);
     }
 
-    let (
-        operator_reward_router_pubkey,
-        operator_reward_router_bump,
-        mut operator_reward_router_seeds,
-    ) = NcnRewardRouter::find_program_address(
-        program_id,
-        ncn_fee_group,
-        operator.key,
-        ncn.key,
-        ncn_epoch,
-    );
-    operator_reward_router_seeds.push(vec![operator_reward_router_bump]);
+    let (ncn_reward_router_pubkey, ncn_reward_router_bump, mut ncn_reward_router_seeds) =
+        NcnRewardRouter::find_program_address(
+            program_id,
+            ncn_fee_group,
+            operator.key,
+            ncn.key,
+            ncn_epoch,
+        );
+    ncn_reward_router_seeds.push(vec![ncn_reward_router_bump]);
 
-    if operator_reward_router_pubkey.ne(operator_reward_router.key) {
-        msg!("Incorrect operator epoch reward router PDA");
+    if ncn_reward_router_pubkey.ne(ncn_reward_router.key) {
+        msg!("Incorrect ncn reward router PDA");
         return Err(ProgramError::InvalidAccountData);
     }
 
     msg!(
         "Initializing Epoch Reward Router {} for NCN: {} at epoch: {}",
-        operator_reward_router.key,
+        ncn_reward_router.key,
         ncn.key,
         ncn_epoch
     );
     create_account(
         payer,
-        operator_reward_router,
+        ncn_reward_router,
         system_program,
         program_id,
         &Rent::get()?,
         8_u64
             .checked_add(size_of::<NcnRewardRouter>() as u64)
             .unwrap(),
-        &operator_reward_router_seeds,
+        &ncn_reward_router_seeds,
     )?;
 
-    let mut operator_reward_router_data = operator_reward_router.try_borrow_mut_data()?;
-    operator_reward_router_data[0] = NcnRewardRouter::DISCRIMINATOR;
-    let operator_reward_router_account =
-        NcnRewardRouter::try_from_slice_unchecked_mut(&mut operator_reward_router_data)?;
+    let mut ncn_reward_router_data = ncn_reward_router.try_borrow_mut_data()?;
+    ncn_reward_router_data[0] = NcnRewardRouter::DISCRIMINATOR;
+    let ncn_reward_router_account =
+        NcnRewardRouter::try_from_slice_unchecked_mut(&mut ncn_reward_router_data)?;
 
-    *operator_reward_router_account = NcnRewardRouter::new(
+    *ncn_reward_router_account = NcnRewardRouter::new(
         ncn_fee_group,
         *operator.key,
         *ncn.key,
         ncn_epoch,
-        operator_reward_router_bump,
+        ncn_reward_router_bump,
         current_slot,
     );
 

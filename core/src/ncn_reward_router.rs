@@ -372,10 +372,8 @@ impl NcnRewardRouter {
         Ok(())
     }
 
-    pub fn distribute_operator_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
-        if rewards == 0 {
-            return Ok(());
-        }
+    pub fn distribute_operator_rewards(&mut self) -> Result<u64, TipRouterError> {
+        let rewards = self.operator_rewards();
 
         self.operator_rewards = PodU64::from(
             self.operator_rewards()
@@ -384,10 +382,20 @@ impl NcnRewardRouter {
         );
 
         self.decrement_rewards_processed(rewards)?;
-        Ok(())
+        Ok(rewards)
     }
 
     // ------------------------ VAULT REWARD ROUTES ------------------------
+
+    pub fn vault_reward_route(&self, vault: &Pubkey) -> Result<&VaultRewardRoute, TipRouterError> {
+        for vault_reward in self.vault_reward_routes.iter() {
+            if vault_reward.vault().eq(vault) {
+                return Ok(vault_reward);
+            }
+        }
+        Err(TipRouterError::VaultRewardNotFound)
+    }
+
     pub fn route_to_vault_reward_route(
         &mut self,
         vault: Pubkey,
@@ -414,20 +422,13 @@ impl NcnRewardRouter {
         Err(TipRouterError::OperatorRewardListFull)
     }
 
-    pub fn distribute_vault_reward_route(
-        &mut self,
-        vault: Pubkey,
-        rewards: u64,
-    ) -> Result<(), TipRouterError> {
-        if rewards == 0 {
-            return Ok(());
-        }
-
+    pub fn distribute_vault_reward_route(&mut self, vault: &Pubkey) -> Result<u64, TipRouterError> {
         for route in self.vault_reward_routes.iter_mut() {
             if route.vault().eq(&vault) {
+                let rewards = route.rewards();
                 route.decrement_rewards(rewards)?;
                 self.decrement_rewards_processed(rewards)?;
-                return Ok(());
+                return Ok(rewards);
             }
         }
         Err(TipRouterError::OperatorRewardNotFound)

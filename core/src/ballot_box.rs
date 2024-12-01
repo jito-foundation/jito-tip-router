@@ -144,8 +144,8 @@ impl OperatorVote {
         }
     }
 
-    pub const fn operator(&self) -> Pubkey {
-        self.operator
+    pub const fn operator(&self) -> &Pubkey {
+        &self.operator
     }
 
     pub fn slot_voted(&self) -> u64 {

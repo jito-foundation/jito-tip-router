@@ -1,22 +1,22 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
-    base_reward_router::BaseRewardRouter, epoch_snapshot::OperatorSnapshot,
-    loaders::load_ncn_epoch, ncn_reward_router::NcnRewardRouter,
+    epoch_snapshot::OperatorSnapshot, loaders::load_ncn_epoch, ncn_fee_group::NcnFeeGroup,
+    ncn_reward_router::NcnRewardRouter,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
-/// Initializes a Epoch Reward Router
 /// Can be backfilled for previous epochs
-pub fn process_process_operator_epoch_reward_pool(
+pub fn process_route_ncn_rewards(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
+    ncn_fee_group: u8,
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    let [restaking_config, ncn, operator, operator_snapshot, operator_epoch_reward_router, restaking_program] =
+    let [restaking_config, ncn, operator, operator_snapshot, ncn_reward_router, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -33,6 +33,7 @@ pub fn process_process_operator_epoch_reward_pool(
 
     let current_slot = Clock::get()?.slot;
     let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
+    let ncn_fee_group = NcnFeeGroup::try_from(ncn_fee_group)?;
 
     OperatorSnapshot::load(
         program_id,
@@ -42,32 +43,29 @@ pub fn process_process_operator_epoch_reward_pool(
         operator_snapshot,
         false,
     )?;
-    BaseRewardRouter::load(
+    NcnRewardRouter::load(
         program_id,
+        ncn_fee_group,
+        operator.key,
         ncn.key,
         ncn_epoch,
-        operator_epoch_reward_router,
+        ncn_reward_router,
         true,
     )?;
 
-    let operator_snapshot = {
-        let operator_snapshot_data = operator_snapshot.try_borrow_data()?;
-        let operator_snapshot_account =
-            OperatorSnapshot::try_from_slice_unchecked(&operator_snapshot_data)?;
+    let operator_snapshot_data = operator_snapshot.try_borrow_data()?;
+    let operator_snapshot_account =
+        OperatorSnapshot::try_from_slice_unchecked(&operator_snapshot_data)?;
 
-        *operator_snapshot_account
-    };
+    let account_balance = **ncn_reward_router.try_borrow_lamports()?;
 
-    let account_balance = **operator_epoch_reward_router.try_borrow_lamports()?;
+    let mut ncn_reward_router_data = ncn_reward_router.try_borrow_mut_data()?;
+    let ncn_reward_router_account =
+        NcnRewardRouter::try_from_slice_unchecked_mut(&mut ncn_reward_router_data)?;
 
-    let mut operator_epoch_reward_router_data =
-        operator_epoch_reward_router.try_borrow_mut_data()?;
-    let operator_epoch_reward_router_account =
-        NcnRewardRouter::try_from_slice_unchecked_mut(&mut operator_epoch_reward_router_data)?;
+    ncn_reward_router_account.route_incoming_rewards(account_balance)?;
 
-    operator_epoch_reward_router_account.route_incoming_rewards(account_balance)?;
-
-    operator_epoch_reward_router_account.route_reward_pool(&operator_snapshot)?;
+    ncn_reward_router_account.route_reward_pool(operator_snapshot_account)?;
 
     Ok(())
 }
