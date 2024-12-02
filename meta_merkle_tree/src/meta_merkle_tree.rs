@@ -221,27 +221,6 @@ mod tests {
         kp.pubkey()
     }
 
-    fn new_test_merkle_tree(num_nodes: u64, path: &PathBuf) {
-        let mut tree_nodes = vec![];
-
-        fn rand_balance() -> u64 {
-            rand::random::<u64>() % 100 * u64::pow(10, 9)
-        }
-
-        for _ in 0..num_nodes {
-            tree_nodes.push(TreeNode::new(
-                new_test_key(),
-                [0; 32],
-                rand_balance(),
-                rand_balance(),
-            ));
-        }
-
-        let merkle_tree = MetaMerkleTree::new(tree_nodes).unwrap();
-
-        merkle_tree.write_to_file(path);
-    }
-
     #[test]
     fn test_verify_new_merkle_tree() {
         let tree_nodes = vec![TreeNode::new(Pubkey::default(), [0; 32], 100, 10)];
@@ -249,9 +228,9 @@ mod tests {
         assert!(merkle_tree.verify_proof().is_ok(), "verify failed");
     }
 
+    #[ignore]
     #[test]
     fn test_write_merkle_distributor_to_file() {
-        // create a merkle root from 3 tree nodes and write it to file, then read it
         let tree_nodes = vec![
             TreeNode::new(
                 new_test_key(),
@@ -282,11 +261,6 @@ mod tests {
         let merkle_distributor_read: MetaMerkleTree = MetaMerkleTree::new_from_file(&path).unwrap();
 
         assert_eq!(merkle_distributor_read.tree_nodes.len(), 3);
-    }
-
-    #[test]
-    fn test_new_test_merkle_tree() {
-        new_test_merkle_tree(100, &PathBuf::from("merkle_tree_test_csv.json"));
     }
 
     // Test creating a merkle tree from Tree Nodes

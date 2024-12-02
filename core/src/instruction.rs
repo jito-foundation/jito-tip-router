@@ -186,6 +186,7 @@ pub enum TipRouterInstruction {
     #[account(1, writable, name = "ballot_box")]
     #[account(2, name = "ncn")]
     #[account(3, signer, name = "tie_breaker_admin")]
+    #[account(4, name = "restaking_program")]
     SetTieBreaker {
         meta_merkle_root: [u8; 32],
         epoch: u64,

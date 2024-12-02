@@ -49,6 +49,7 @@ export type SetTieBreakerInstruction<
   TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountTieBreakerAdmin extends string | IAccountMeta<string> = string,
+  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -65,6 +66,9 @@ export type SetTieBreakerInstruction<
         ? ReadonlySignerAccount<TAccountTieBreakerAdmin> &
             IAccountSignerMeta<TAccountTieBreakerAdmin>
         : TAccountTieBreakerAdmin,
+      TAccountRestakingProgram extends string
+        ? ReadonlyAccount<TAccountRestakingProgram>
+        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -114,11 +118,13 @@ export type SetTieBreakerInput<
   TAccountBallotBox extends string = string,
   TAccountNcn extends string = string,
   TAccountTieBreakerAdmin extends string = string,
+  TAccountRestakingProgram extends string = string,
 > = {
   ncnConfig: Address<TAccountNcnConfig>;
   ballotBox: Address<TAccountBallotBox>;
   ncn: Address<TAccountNcn>;
   tieBreakerAdmin: TransactionSigner<TAccountTieBreakerAdmin>;
+  restakingProgram: Address<TAccountRestakingProgram>;
   metaMerkleRoot: SetTieBreakerInstructionDataArgs['metaMerkleRoot'];
   epoch: SetTieBreakerInstructionDataArgs['epoch'];
 };
@@ -128,13 +134,15 @@ export function getSetTieBreakerInstruction<
   TAccountBallotBox extends string,
   TAccountNcn extends string,
   TAccountTieBreakerAdmin extends string,
+  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: SetTieBreakerInput<
     TAccountNcnConfig,
     TAccountBallotBox,
     TAccountNcn,
-    TAccountTieBreakerAdmin
+    TAccountTieBreakerAdmin,
+    TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): SetTieBreakerInstruction<
@@ -142,7 +150,8 @@ export function getSetTieBreakerInstruction<
   TAccountNcnConfig,
   TAccountBallotBox,
   TAccountNcn,
-  TAccountTieBreakerAdmin
+  TAccountTieBreakerAdmin,
+  TAccountRestakingProgram
 > {
   // Program address.
   const programAddress =
@@ -155,6 +164,10 @@ export function getSetTieBreakerInstruction<
     ncn: { value: input.ncn ?? null, isWritable: false },
     tieBreakerAdmin: {
       value: input.tieBreakerAdmin ?? null,
+      isWritable: false,
+    },
+    restakingProgram: {
+      value: input.restakingProgram ?? null,
       isWritable: false,
     },
   };
@@ -173,6 +186,7 @@ export function getSetTieBreakerInstruction<
       getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.tieBreakerAdmin),
+      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getSetTieBreakerInstructionDataEncoder().encode(
@@ -183,7 +197,8 @@ export function getSetTieBreakerInstruction<
     TAccountNcnConfig,
     TAccountBallotBox,
     TAccountNcn,
-    TAccountTieBreakerAdmin
+    TAccountTieBreakerAdmin,
+    TAccountRestakingProgram
   >;
 
   return instruction;
@@ -199,6 +214,7 @@ export type ParsedSetTieBreakerInstruction<
     ballotBox: TAccountMetas[1];
     ncn: TAccountMetas[2];
     tieBreakerAdmin: TAccountMetas[3];
+    restakingProgram: TAccountMetas[4];
   };
   data: SetTieBreakerInstructionData;
 };
@@ -211,7 +227,7 @@ export function parseSetTieBreakerInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedSetTieBreakerInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -228,6 +244,7 @@ export function parseSetTieBreakerInstruction<
       ballotBox: getNextAccount(),
       ncn: getNextAccount(),
       tieBreakerAdmin: getNextAccount(),
+      restakingProgram: getNextAccount(),
     },
     data: getSetTieBreakerInstructionDataDecoder().decode(instruction.data),
   };

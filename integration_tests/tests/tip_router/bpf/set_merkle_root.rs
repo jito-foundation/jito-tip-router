@@ -5,6 +5,7 @@ mod set_merkle_root {
     };
     use jito_tip_router_core::{
         ballot_box::{Ballot, BallotBox},
+        error::TipRouterError,
         ncn_config::NcnConfig,
     };
     use meta_merkle_tree::{
@@ -17,7 +18,10 @@ mod set_merkle_root {
     use solana_sdk::{epoch_schedule::EpochSchedule, pubkey::Pubkey, signer::Signer};
 
     use crate::{
-        fixtures::{test_builder::TestBuilder, TestError, TestResult},
+        fixtures::{
+            test_builder::TestBuilder, tip_router_client::assert_tip_router_error, TestError,
+            TestResult,
+        },
         helpers::ballot_box::serialized_ballot_box_account,
     };
 
@@ -198,7 +202,6 @@ mod set_merkle_root {
             let mut ballot_box = BallotBox::new(ncn_address, epoch, bump, 0);
             let winning_ballot = Ballot::new(winning_root);
             ballot_box.set_winning_ballot(winning_ballot);
-            // TODO set other fields to make this ballot box realistic
             ballot_box
         };
 
@@ -239,6 +242,20 @@ mod set_merkle_root {
             )
             .unwrap();
 
+        // Test wrong proof
+        let res = tip_router_client
+            .do_set_merkle_root(
+                ncn_address,
+                vote_account,
+                vec![[1; 32]],
+                node.validator_merkle_root,
+                node.max_total_claim,
+                node.max_num_nodes,
+                epoch,
+            )
+            .await;
+        assert_tip_router_error(res, TipRouterError::InvalidMerkleProof);
+
         // Invoke set_merkle_root
         tip_router_client
             .do_set_merkle_root(
@@ -266,9 +283,172 @@ mod set_merkle_root {
         Ok(())
     }
 
-    // Failure cases:
-    // - wrong TDA
-    // - ballot box not finalized
-    // - proof is incorrect
-    // - Merkle root already uploaded?
+    // TODO update to use this test once snapshot instructions work with BPF
+    #[ignore]
+    #[tokio::test]
+    async fn _test_set_merkle_root_no_fixture() -> TestResult<()> {
+        let mut fixture = TestBuilder::new().await;
+        let mut tip_router_client = fixture.tip_router_client();
+        let mut tip_distribution_client = fixture.tip_distribution_client();
+
+        let test_ncn = fixture.create_initial_test_ncn(1, 1).await?;
+
+        ///// TipRouter Setup /////
+        fixture.warp_slot_incremental(1000).await?;
+        fixture.snapshot_test_ncn(&test_ncn).await?;
+
+        let clock = fixture.clock().await;
+        let slot = clock.slot;
+        let restaking_config_account = tip_router_client.get_restaking_config().await?;
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
+
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+        let ncn_config_address =
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
+        let epoch: u64 = 0;
+        tip_distribution_client
+            .do_initialize(ncn_config_address)
+            .await?;
+        let vote_keypair = tip_distribution_client.setup_vote_account().await?;
+        let vote_account = vote_keypair.pubkey();
+
+        tip_distribution_client
+            .do_initialize_tip_distribution_account(
+                ncn_config_address,
+                vote_keypair,
+                ncn_epoch,
+                100,
+            )
+            .await?;
+
+        let meta_merkle_tree_fixture =
+            create_meta_merkle_tree(vote_account, ncn_config_address, epoch)?;
+        let winning_root = meta_merkle_tree_fixture.meta_merkle_tree.merkle_root;
+
+        let operator = test_ncn.operators[0].operator_pubkey;
+        let operator_admin = &test_ncn.operators[0].operator_admin;
+
+        tip_router_client
+            .do_cast_vote(ncn, operator, operator_admin, winning_root, ncn_epoch)
+            .await?;
+        let tip_distribution_address = derive_tip_distribution_account_address(
+            &jito_tip_distribution::ID,
+            &vote_account,
+            epoch,
+        )
+        .0;
+
+        // Get proof for vote_account
+        let node = meta_merkle_tree_fixture
+            .meta_merkle_tree
+            .get_node(&tip_distribution_address);
+        let proof = node.proof.clone().unwrap();
+
+        let ballot_box = tip_router_client.get_ballot_box(ncn, epoch).await?;
+
+        ballot_box
+            .verify_merkle_root(
+                tip_distribution_address,
+                node.proof.unwrap(),
+                node.validator_merkle_root,
+                node.max_total_claim,
+                node.max_num_nodes,
+            )
+            .unwrap();
+
+        // Invoke set_merkle_root
+        tip_router_client
+            .do_set_merkle_root(
+                ncn,
+                vote_account,
+                proof,
+                node.validator_merkle_root,
+                node.max_total_claim,
+                node.max_num_nodes,
+                epoch,
+            )
+            .await?;
+
+        // Fetch the tip distribution account and check root
+        let tip_distribution_account = tip_distribution_client
+            .get_tip_distribution_account(vote_account, epoch)
+            .await?;
+
+        let merkle_root = tip_distribution_account.merkle_root.unwrap();
+
+        assert_eq!(merkle_root.root, node.validator_merkle_root);
+        assert_eq!(merkle_root.max_num_nodes, node.max_num_nodes);
+        assert_eq!(merkle_root.max_total_claim, node.max_total_claim);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_merkle_root_before_consensus() -> TestResult<()> {
+        let mut fixture = TestBuilder::new().await;
+        let mut tip_router_client = fixture.tip_router_client();
+        let mut tip_distribution_client = fixture.tip_distribution_client();
+
+        let test_ncn = fixture.create_test_ncn().await?;
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+        let ncn_config_address =
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
+        let clock = fixture.clock().await;
+        let slot = clock.slot;
+        let restaking_config_account = tip_router_client.get_restaking_config().await?;
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
+
+        tip_distribution_client
+            .do_initialize(ncn_config_address)
+            .await?;
+        let vote_keypair = tip_distribution_client.setup_vote_account().await?;
+        let vote_account = vote_keypair.pubkey();
+
+        tip_distribution_client
+            .do_initialize_tip_distribution_account(
+                ncn_config_address,
+                vote_keypair,
+                ncn_epoch,
+                100,
+            )
+            .await?;
+
+        let meta_merkle_tree_fixture =
+            create_meta_merkle_tree(vote_account, ncn_config_address, ncn_epoch)?;
+
+        let tip_distribution_address = derive_tip_distribution_account_address(
+            &jito_tip_distribution::ID,
+            &vote_account,
+            ncn_epoch,
+        )
+        .0;
+        let node = meta_merkle_tree_fixture
+            .meta_merkle_tree
+            .get_node(&tip_distribution_address);
+        let proof = node.proof.clone().unwrap();
+
+        // Initialize ballot box
+        tip_router_client
+            .do_initialize_ballot_box(ncn, ncn_epoch)
+            .await?;
+
+        // Try setting merkle root before consensus
+        let res = tip_router_client
+            .do_set_merkle_root(
+                ncn,
+                vote_account,
+                proof,
+                node.validator_merkle_root,
+                node.max_total_claim,
+                node.max_num_nodes,
+                ncn_epoch,
+            )
+            .await;
+
+        assert_tip_router_error(res, TipRouterError::ConsensusNotReached);
+
+        Ok(())
+    }
 }

@@ -932,6 +932,7 @@ impl TipRouterClient {
             BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let tie_breaker_admin = self.payer.pubkey();
+        let restaking_program_id = jito_restaking_program::id();
 
         self.set_tie_breaker(
             ncn_config,
@@ -940,6 +941,7 @@ impl TipRouterClient {
             tie_breaker_admin,
             meta_merkle_root,
             epoch,
+            restaking_program_id,
         )
         .await
     }
@@ -952,6 +954,7 @@ impl TipRouterClient {
         tie_breaker_admin: Pubkey,
         meta_merkle_root: [u8; 32],
         epoch: u64,
+        restaking_program_id: Pubkey,
     ) -> Result<(), TestError> {
         let ix = SetTieBreakerBuilder::new()
             .ncn_config(ncn_config)
@@ -960,6 +963,7 @@ impl TipRouterClient {
             .tie_breaker_admin(tie_breaker_admin)
             .meta_merkle_root(meta_merkle_root)
             .epoch(epoch)
+            .restaking_program(restaking_program_id)
             .instruction();
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;

@@ -773,6 +773,11 @@
           "name": "tieBreakerAdmin",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": [

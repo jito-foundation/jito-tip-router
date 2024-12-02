@@ -219,6 +219,10 @@ impl BallotBox {
         }
     }
 
+    pub fn initialize(&mut self, ncn: Pubkey, epoch: u64, bump: u8, current_slot: u64) {
+        *self = Self::new(ncn, epoch, bump, current_slot);
+    }
+
     pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [

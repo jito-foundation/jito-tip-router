@@ -13,13 +13,13 @@ pub fn process_set_tie_breaker(
     meta_merkle_root: [u8; 32],
     ncn_epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ballot_box, ncn, tie_breaker_admin] = accounts else {
+    let [ncn_config, ballot_box, ncn, tie_breaker_admin, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     BallotBox::load(program_id, ncn.key, ncn_epoch, ballot_box, false)?;
-    Ncn::load(program_id, ncn, false)?;
+    Ncn::load(restaking_program.key, ncn, false)?;
     load_signer(tie_breaker_admin, false)?;
 
     let ncn_config_data = ncn_config.data.borrow();
