@@ -1,3 +1,4 @@
+#![allow(clippy::arithmetic_side_effects)]
 // https://github.com/jito-foundation/jito-solana/blob/v1.16.19-jito/merkle-tree/src/merkle_tree.rs
 use solana_program::hash::{hashv, Hash};
 
@@ -38,11 +39,11 @@ impl<'a> ProofEntry<'a> {
         Self(target, left_sibling, right_sibling)
     }
 
-    pub fn get_left_sibling(&self) -> Option<&'a Hash> {
+    pub const fn get_left_sibling(&self) -> Option<&'a Hash> {
         self.1
     }
 
-    pub fn get_right_sibling(&self) -> Option<&'a Hash> {
+    pub const fn get_right_sibling(&self) -> Option<&'a Hash> {
         self.2
     }
 }
@@ -76,8 +77,8 @@ impl<'a> Proof<'a> {
 }
 
 impl MerkleTree {
-    #[inline]
-    fn next_level_len(level_len: usize) -> usize {
+    #[allow(clippy::integer_division)]
+    const fn next_level_len(level_len: usize) -> usize {
         if level_len == 1 {
             0
         } else {
@@ -109,8 +110,8 @@ impl MerkleTree {
     }
 
     pub fn new<T: AsRef<[u8]>>(items: &[T], sorted_hashes: bool) -> Self {
-        let cap = MerkleTree::calculate_vec_capacity(items.len());
-        let mut mt = MerkleTree {
+        let cap = Self::calculate_vec_capacity(items.len());
+        let mut mt = Self {
             leaf_count: items.len(),
             nodes: Vec::with_capacity(cap),
         };
@@ -121,7 +122,7 @@ impl MerkleTree {
             mt.nodes.push(hash);
         }
 
-        let mut level_len = MerkleTree::next_level_len(items.len());
+        let mut level_len = Self::next_level_len(items.len());
         let mut level_start = items.len();
         let mut prev_level_len = items.len();
         let mut prev_level_start = 0;
@@ -154,7 +155,7 @@ impl MerkleTree {
             prev_level_start = level_start;
             prev_level_len = level_len;
             level_start += level_len;
-            level_len = MerkleTree::next_level_len(level_len);
+            level_len = Self::next_level_len(level_len);
         }
 
         mt
@@ -196,7 +197,7 @@ impl MerkleTree {
             node_index /= 2;
 
             level_start += level_len;
-            level_len = MerkleTree::next_level_len(level_len);
+            level_len = Self::next_level_len(level_len);
         }
         Some(path)
     }

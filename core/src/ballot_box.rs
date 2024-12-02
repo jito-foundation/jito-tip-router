@@ -299,6 +299,10 @@ impl BallotBox {
         self.slot_consensus_reached() > 0 || self.winning_ballot.is_valid()
     }
 
+    pub fn tie_breaker_set(&self) -> bool {
+        self.slot_consensus_reached() == 0 && self.winning_ballot.is_valid()
+    }
+
     pub fn get_winning_ballot(&self) -> Result<Ballot, TipRouterError> {
         if self.winning_ballot.is_valid() {
             Ok(self.winning_ballot)
@@ -351,7 +355,7 @@ impl BallotBox {
         current_slot: u64,
         valid_slots_after_consensus: u64,
     ) -> Result<(), TipRouterError> {
-        if !self.is_voting_valid(current_slot, valid_slots_after_consensus) {
+        if !self.is_voting_valid(current_slot, valid_slots_after_consensus)? {
             return Err(TipRouterError::VotingNotValid);
         }
 
@@ -442,7 +446,12 @@ impl BallotBox {
         }
 
         // Check if voting is stalled and setting the tie breaker is eligible
-        if current_epoch < self.epoch() + epochs_before_stall {
+        if current_epoch
+            < self
+                .epoch()
+                .checked_add(epochs_before_stall)
+                .ok_or(TipRouterError::ArithmeticOverflow)?
+        {
             return Err(TipRouterError::VotingNotFinalized);
         }
 
@@ -461,9 +470,21 @@ impl BallotBox {
         self.ballot_tallies.iter().any(|t| t.ballot.eq(ballot))
     }
 
-    pub fn is_voting_valid(&self, current_slot: u64, valid_slots_after_consensus: u64) -> bool {
-        !(self.is_consensus_reached()
-            && current_slot > self.slot_consensus_reached() + valid_slots_after_consensus)
+    /// Determines if an operator can still cast their vote.
+    /// Returns true when:
+    /// Consensus is not reached OR the voting window is still valid, assuming set_tie_breaker was not invoked
+    pub fn is_voting_valid(
+        &self,
+        current_slot: u64,
+        valid_slots_after_consensus: u64,
+    ) -> Result<bool, TipRouterError> {
+        let vote_window_valid = current_slot
+            <= self
+                .slot_consensus_reached()
+                .checked_add(valid_slots_after_consensus)
+                .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        Ok((!self.is_consensus_reached() || vote_window_valid) && !self.tie_breaker_set())
     }
 
     pub fn verify_merkle_root(

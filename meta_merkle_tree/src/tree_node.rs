@@ -22,7 +22,7 @@ pub struct TreeNode {
 }
 
 impl TreeNode {
-    pub fn new(
+    pub const fn new(
         tip_distribution_account: Pubkey,
         validator_merkle_root: [u8; 32],
         max_total_claim: u64,
@@ -50,7 +50,7 @@ impl TreeNode {
 // TODO replace this with the GeneratedMerkleTree from the Operator module once that's created
 impl From<GeneratedMerkleTree> for TreeNode {
     fn from(generated_merkle_tree: GeneratedMerkleTree) -> Self {
-        TreeNode {
+        Self {
             tip_distribution_account: generated_merkle_tree.tip_distribution_account,
             validator_merkle_root: generated_merkle_tree.merkle_root.to_bytes(),
             max_total_claim: generated_merkle_tree.max_total_claim,

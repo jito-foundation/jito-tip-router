@@ -29,7 +29,7 @@ pub fn process_set_merkle_root(
     BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
 
     let (tip_distribution_address, _) = derive_tip_distribution_account_address(
-        &tip_distribution_program_id.key,
+        tip_distribution_program_id.key,
         vote_account.key,
         epoch,
     );

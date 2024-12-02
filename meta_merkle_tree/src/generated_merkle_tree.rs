@@ -45,7 +45,7 @@ pub struct GeneratedMerkleTree {
 impl GeneratedMerkleTreeCollection {
     pub fn new_from_stake_meta_collection(
         stake_meta_coll: StakeMetaCollection,
-    ) -> Result<GeneratedMerkleTreeCollection, MerkleRootGeneratorError> {
+    ) -> Result<Self, MerkleRootGeneratorError> {
         let generated_merkle_trees = stake_meta_coll
             .stake_metas
             .into_iter()
@@ -90,7 +90,7 @@ impl GeneratedMerkleTreeCollection {
             })
             .collect::<Result<Vec<GeneratedMerkleTree>, MerkleRootGeneratorError>>()?;
 
-        Ok(GeneratedMerkleTreeCollection {
+        Ok(Self {
             generated_merkle_trees,
             bank_hash: stake_meta_coll.bank_hash,
             epoch: stake_meta_coll.epoch,
@@ -127,7 +127,7 @@ pub struct TreeNode {
 impl TreeNode {
     fn vec_from_stake_meta(
         stake_meta: &StakeMeta,
-    ) -> Result<Option<Vec<TreeNode>>, MerkleRootGeneratorError> {
+    ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
         if let Some(tip_distribution_meta) = stake_meta.maybe_tip_distribution_meta.as_ref() {
             let validator_amount = (tip_distribution_meta.total_tips as u128)
                 .checked_mul(tip_distribution_meta.validator_fee_bps as u128)
@@ -142,7 +142,7 @@ impl TreeNode {
                 ],
                 &jito_tip_distribution::ID,
             );
-            let mut tree_nodes = vec![TreeNode {
+            let mut tree_nodes = vec![Self {
                 claimant: stake_meta.validator_vote_account,
                 claim_status_pubkey,
                 claim_status_bump,
@@ -176,7 +176,7 @@ impl TreeNode {
                             ],
                             &jito_tip_distribution::ID,
                         );
-                        Ok(TreeNode {
+                        Ok(Self {
                             claimant: delegation.stake_account_pubkey,
                             claim_status_pubkey,
                             claim_status_bump,
@@ -186,7 +186,7 @@ impl TreeNode {
                             proof: None,
                         })
                     })
-                    .collect::<Result<Vec<TreeNode>, MerkleRootGeneratorError>>()?,
+                    .collect::<Result<Vec<Self>, MerkleRootGeneratorError>>()?,
             );
 
             Ok(Some(tree_nodes))
@@ -316,14 +316,14 @@ mod pubkey_string_conversion {
     use serde::{self, Deserialize, Deserializer, Serializer};
     use solana_program::pubkey::Pubkey;
 
-    pub(crate) fn serialize<S>(pubkey: &Pubkey, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(pubkey: &Pubkey, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         serializer.serialize_str(&pubkey.to_string())
     }
 
-    pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<Pubkey, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Pubkey, D::Error>
     where
         D: Deserializer<'de>,
     {

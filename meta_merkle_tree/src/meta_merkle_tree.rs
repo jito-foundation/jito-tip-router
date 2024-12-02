@@ -52,7 +52,7 @@ impl MetaMerkleTree {
             tree_node.proof = Some(get_proof(&tree, i));
         }
 
-        let tree = MetaMerkleTree {
+        let tree = Self {
             merkle_root: tree
                 .get_root()
                 .ok_or(MerkleTreeError::MerkleRootError)?
@@ -94,7 +94,7 @@ impl MetaMerkleTree {
     pub fn new_from_file(path: &PathBuf) -> Result<Self> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
-        let tree: MetaMerkleTree = serde_json::from_reader(reader)?;
+        let tree: Self = serde_json::from_reader(reader)?;
 
         Ok(tree)
     }
@@ -118,7 +118,11 @@ impl MetaMerkleTree {
 
     fn validate(&self) -> Result<()> {
         // The Merkle tree can be at most height 32, implying a max node count of 2^32 - 1
-        if self.num_nodes > 2u64.pow(32) - 1 {
+        let max_nodes = 2u64
+            .checked_pow(32)
+            .and_then(|x| x.checked_sub(1))
+            .ok_or(MerkleTreeError::ArithmeticOverflow)?;
+        if self.num_nodes > max_nodes {
             return Err(MerkleValidationError(format!(
                 "Max num nodes {} is greater than 2^32 - 1",
                 self.num_nodes
