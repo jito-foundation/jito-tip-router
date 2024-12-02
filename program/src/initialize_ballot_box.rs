@@ -12,6 +12,7 @@ use solana_program::{
 pub fn process_initialize_ballot_box(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
+    epoch: u64,
 ) -> ProgramResult {
     let [ncn_config, ballot_box, ncn_account, payer, system_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -22,8 +23,6 @@ pub fn process_initialize_ballot_box(
     load_system_program(system_program)?;
 
     NcnConfig::load(program_id, ncn_account.key, ncn_config, false)?;
-
-    let epoch = Clock::get()?.epoch;
 
     let (ballot_box_pda, ballot_box_bump, mut ballot_box_seeds) =
         BallotBox::find_program_address(program_id, ncn_account.key, epoch);

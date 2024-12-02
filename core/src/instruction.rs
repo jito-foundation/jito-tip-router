@@ -141,12 +141,14 @@ pub enum TipRouterInstruction {
     InitializeTrackedMints,
 
     /// Initializes the ballot box for an NCN
-    #[account(0, name = "restaking_config")]
+    #[account(0, name = "ncn_config")]
     #[account(1, writable, name = "ballot_box")]
     #[account(2, name = "ncn")]
     #[account(3, writable, signer, name = "payer")]
     #[account(4, name = "system_program")]
-    InitializeBallotBox,
+    InitializeBallotBox {
+        epoch: u64,
+    },
 
     /// Cast a vote for a merkle root
     #[account(0, name = "ncn_config")]
@@ -154,7 +156,9 @@ pub enum TipRouterInstruction {
     #[account(2, name = "ncn")]
     #[account(3, name = "epoch_snapshot")]
     #[account(4, name = "operator_snapshot")]
-    #[account(5, signer, name = "operator")]
+    #[account(5, name = "operator")]
+    #[account(6, signer, name = "operator_admin")]
+    #[account(7, name = "restaking_program")]
     CastVote {
         meta_merkle_root: [u8; 32],
         epoch: u64,

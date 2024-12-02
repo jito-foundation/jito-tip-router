@@ -175,6 +175,13 @@ impl TipRouterClient {
         Ok(*account)
     }
 
+    pub async fn get_ballot_box(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<BallotBox> {
+        let address =
+            BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+        let raw_account = self.banks_client.get_account(address).await?.unwrap();
+        Ok(*BallotBox::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap())
+    }
+
     pub async fn do_initialize_config(
         &mut self,
         ncn: Pubkey,
@@ -508,6 +515,8 @@ impl TipRouterClient {
 
         let restaking_config_account = self.get_restaking_config().await?;
         let ncn_epoch = slot / restaking_config_account.epoch_length();
+        println!("Epoch length: {}", restaking_config_account.epoch_length());
+        println!("ncn_epoch: {}", ncn_epoch);
 
         let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let tracked_mints =
@@ -517,6 +526,7 @@ impl TipRouterClient {
 
         let epoch_snapshot =
             EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
+        println!("epoch_snapshot: {:?}", epoch_snapshot);
 
         let ix = InitializeEpochSnapshotBuilder::new()
             .ncn_config(config_pda)
@@ -686,8 +696,9 @@ impl TipRouterClient {
         ncn: Pubkey,
         ncn_epoch: u64,
     ) -> Result<(), TestError> {
-        let restaking_config = jito_restaking_core::config::Config::find_program_address(
-            &jito_restaking_program::id(),
+        let ncn_config = jito_tip_router_core::ncn_config::NcnConfig::find_program_address(
+            &jito_tip_router_program::id(),
+            &ncn,
         )
         .0;
 
@@ -698,20 +709,22 @@ impl TipRouterClient {
         )
         .0;
 
-        self.initialize_ballot_box(restaking_config, ballot_box, ncn)
+        self.initialize_ballot_box(ncn_config, ballot_box, ncn, ncn_epoch)
             .await
     }
 
     pub async fn initialize_ballot_box(
         &mut self,
-        restaking_config: Pubkey,
+        ncn_config: Pubkey,
         ballot_box: Pubkey,
         ncn: Pubkey,
+        epoch: u64,
     ) -> Result<(), TestError> {
         let ix = InitializeBallotBoxBuilder::new()
-            .restaking_config(restaking_config)
+            .ncn_config(ncn_config)
             .ballot_box(ballot_box)
             .ncn(ncn)
+            .epoch(epoch)
             .payer(self.payer.pubkey())
             .instruction();
 
@@ -728,7 +741,8 @@ impl TipRouterClient {
     pub async fn do_cast_vote(
         &mut self,
         ncn: Pubkey,
-        operator: &Keypair,
+        operator: Pubkey,
+        operator_admin: &Keypair,
         meta_merkle_root: [u8; 32],
         ncn_epoch: u64,
     ) -> Result<(), TestError> {
@@ -752,11 +766,12 @@ impl TipRouterClient {
                 ncn_epoch,
             )
             .0;
+        println!("epoch_snapshot: {:?}", epoch_snapshot);
 
         let operator_snapshot =
             jito_tip_router_core::epoch_snapshot::OperatorSnapshot::find_program_address(
                 &jito_tip_router_program::id(),
-                &operator.pubkey(),
+                &operator,
                 &ncn,
                 ncn_epoch,
             )
@@ -769,6 +784,7 @@ impl TipRouterClient {
             epoch_snapshot,
             operator_snapshot,
             operator,
+            operator_admin,
             meta_merkle_root,
             ncn_epoch,
         )
@@ -782,7 +798,8 @@ impl TipRouterClient {
         ncn: Pubkey,
         epoch_snapshot: Pubkey,
         operator_snapshot: Pubkey,
-        operator: &Keypair,
+        operator: Pubkey,
+        operator_admin: &Keypair,
         meta_merkle_root: [u8; 32],
         epoch: u64,
     ) -> Result<(), TestError> {
@@ -792,7 +809,9 @@ impl TipRouterClient {
             .ncn(ncn)
             .epoch_snapshot(epoch_snapshot)
             .operator_snapshot(operator_snapshot)
-            .operator(operator.pubkey())
+            .operator(operator)
+            .operator_admin(operator_admin.pubkey())
+            .restaking_program(jito_restaking_program::id())
             .meta_merkle_root(meta_merkle_root)
             .epoch(epoch)
             .instruction();
@@ -801,7 +820,7 @@ impl TipRouterClient {
         self.process_transaction(&Transaction::new_signed_with_payer(
             &[ix],
             Some(&self.payer.pubkey()),
-            &[&self.payer, operator],
+            &[&self.payer, operator_admin],
             blockhash,
         ))
         .await

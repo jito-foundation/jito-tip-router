@@ -16,33 +16,29 @@ pub fn process_cast_vote(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     meta_merkle_root: [u8; 32],
-    ncn_epoch: u64,
+    epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator] = accounts
+    let [ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator, operator_admin, restaking_program] =
+        accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     // Operator is casting the vote, needs to be signer
-    load_signer(operator, false)?;
+    load_signer(operator_admin, false)?;
 
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    Ncn::load(program_id, ncn, false)?;
-    Operator::load(program_id, operator, false)?;
+    Ncn::load(restaking_program.key, ncn, false)?;
+    Operator::load(restaking_program.key, operator, false)?;
+    // Check admin is operator admin
 
-    BallotBox::load(program_id, ncn.key, ncn_epoch, ballot_box, true)?;
-    EpochSnapshot::load(
-        program_id,
-        epoch_snapshot.key,
-        ncn_epoch,
-        epoch_snapshot,
-        false,
-    )?;
+    BallotBox::load(program_id, ncn.key, epoch, ballot_box, true)?;
+    EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;
     OperatorSnapshot::load(
         program_id,
         operator.key,
         ncn.key,
-        ncn_epoch,
+        epoch,
         operator_snapshot,
         false,
     )?;
@@ -92,7 +88,7 @@ pub fn process_cast_vote(
     if ballot_box.is_consensus_reached() {
         msg!(
             "Consensus reached for epoch {} with ballot {}",
-            ncn_epoch,
+            epoch,
             ballot_box.get_winning_ballot()?
         );
     }

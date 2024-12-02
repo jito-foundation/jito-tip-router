@@ -568,7 +568,7 @@
       "name": "InitializeBallotBox",
       "accounts": [
         {
-          "name": "restakingConfig",
+          "name": "ncnConfig",
           "isMut": false,
           "isSigner": false
         },
@@ -593,7 +593,12 @@
           "isSigner": false
         }
       ],
-      "args": [],
+      "args": [
+        {
+          "name": "epoch",
+          "type": "u64"
+        }
+      ],
       "discriminant": {
         "type": "u8",
         "value": 10
@@ -630,7 +635,17 @@
         {
           "name": "operator",
           "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "operatorAdmin",
+          "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": [

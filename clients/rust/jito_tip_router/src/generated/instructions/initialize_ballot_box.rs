@@ -8,7 +8,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
 pub struct InitializeBallotBox {
-    pub restaking_config: solana_program::pubkey::Pubkey,
+    pub ncn_config: solana_program::pubkey::Pubkey,
 
     pub ballot_box: solana_program::pubkey::Pubkey,
 
@@ -20,17 +20,21 @@ pub struct InitializeBallotBox {
 }
 
 impl InitializeBallotBox {
-    pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        self.instruction_with_remaining_accounts(&[])
+    pub fn instruction(
+        &self,
+        args: InitializeBallotBoxInstructionArgs,
+    ) -> solana_program::instruction::Instruction {
+        self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
+        args: InitializeBallotBoxInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
         let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_config,
+            self.ncn_config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -48,9 +52,11 @@ impl InitializeBallotBox {
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let data = InitializeBallotBoxInstructionData::new()
+        let mut data = InitializeBallotBoxInstructionData::new()
             .try_to_vec()
             .unwrap();
+        let mut args = args.try_to_vec().unwrap();
+        data.append(&mut args);
 
         solana_program::instruction::Instruction {
             program_id: crate::JITO_TIP_ROUTER_ID,
@@ -77,22 +83,29 @@ impl Default for InitializeBallotBoxInstructionData {
     }
 }
 
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct InitializeBallotBoxInstructionArgs {
+    pub epoch: u64,
+}
+
 /// Instruction builder for `InitializeBallotBox`.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
+///   0. `[]` ncn_config
 ///   1. `[writable]` ballot_box
 ///   2. `[]` ncn
 ///   3. `[writable, signer]` payer
 ///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeBallotBoxBuilder {
-    restaking_config: Option<solana_program::pubkey::Pubkey>,
+    ncn_config: Option<solana_program::pubkey::Pubkey>,
     ballot_box: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
+    epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
@@ -101,11 +114,8 @@ impl InitializeBallotBoxBuilder {
         Self::default()
     }
     #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_config = Some(restaking_config);
+    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.ncn_config = Some(ncn_config);
         self
     }
     #[inline(always)]
@@ -129,6 +139,11 @@ impl InitializeBallotBoxBuilder {
         self.system_program = Some(system_program);
         self
     }
+    #[inline(always)]
+    pub fn epoch(&mut self, epoch: u64) -> &mut Self {
+        self.epoch = Some(epoch);
+        self
+    }
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -150,7 +165,7 @@ impl InitializeBallotBoxBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = InitializeBallotBox {
-            restaking_config: self.restaking_config.expect("restaking_config is not set"),
+            ncn_config: self.ncn_config.expect("ncn_config is not set"),
             ballot_box: self.ballot_box.expect("ballot_box is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             payer: self.payer.expect("payer is not set"),
@@ -158,14 +173,17 @@ impl InitializeBallotBoxBuilder {
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
         };
+        let args = InitializeBallotBoxInstructionArgs {
+            epoch: self.epoch.clone().expect("epoch is not set"),
+        };
 
-        accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
+        accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
     }
 }
 
 /// `initialize_ballot_box` CPI accounts.
 pub struct InitializeBallotBoxCpiAccounts<'a, 'b> {
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -181,7 +199,7 @@ pub struct InitializeBallotBoxCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -190,20 +208,24 @@ pub struct InitializeBallotBoxCpi<'a, 'b> {
     pub payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
+    /// The arguments for the instruction.
+    pub __args: InitializeBallotBoxInstructionArgs,
 }
 
 impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
         accounts: InitializeBallotBoxCpiAccounts<'a, 'b>,
+        args: InitializeBallotBoxInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
-            restaking_config: accounts.restaking_config,
+            ncn_config: accounts.ncn_config,
             ballot_box: accounts.ballot_box,
             ncn: accounts.ncn,
             payer: accounts.payer,
             system_program: accounts.system_program,
+            __args: args,
         }
     }
     #[inline(always)]
@@ -241,7 +263,7 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
     ) -> solana_program::entrypoint::ProgramResult {
         let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_config.key,
+            *self.ncn_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -267,9 +289,11 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let data = InitializeBallotBoxInstructionData::new()
+        let mut data = InitializeBallotBoxInstructionData::new()
             .try_to_vec()
             .unwrap();
+        let mut args = self.__args.try_to_vec().unwrap();
+        data.append(&mut args);
 
         let instruction = solana_program::instruction::Instruction {
             program_id: crate::JITO_TIP_ROUTER_ID,
@@ -278,7 +302,7 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
         };
         let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.restaking_config.clone());
+        account_infos.push(self.ncn_config.clone());
         account_infos.push(self.ballot_box.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.payer.clone());
@@ -299,7 +323,7 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
+///   0. `[]` ncn_config
 ///   1. `[writable]` ballot_box
 ///   2. `[]` ncn
 ///   3. `[writable, signer]` payer
@@ -313,21 +337,22 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(InitializeBallotBoxCpiBuilderInstruction {
             __program: program,
-            restaking_config: None,
+            ncn_config: None,
             ballot_box: None,
             ncn: None,
             payer: None,
             system_program: None,
+            epoch: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
     }
     #[inline(always)]
-    pub fn restaking_config(
+    pub fn ncn_config(
         &mut self,
-        restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
+        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.restaking_config = Some(restaking_config);
+        self.instruction.ncn_config = Some(ncn_config);
         self
     }
     #[inline(always)]
@@ -354,6 +379,11 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
         system_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.system_program = Some(system_program);
+        self
+    }
+    #[inline(always)]
+    pub fn epoch(&mut self, epoch: u64) -> &mut Self {
+        self.instruction.epoch = Some(epoch);
         self
     }
     /// Add an additional account to the instruction.
@@ -397,13 +427,13 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
+        let args = InitializeBallotBoxInstructionArgs {
+            epoch: self.instruction.epoch.clone().expect("epoch is not set"),
+        };
         let instruction = InitializeBallotBoxCpi {
             __program: self.instruction.__program,
 
-            restaking_config: self
-                .instruction
-                .restaking_config
-                .expect("restaking_config is not set"),
+            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
 
             ballot_box: self.instruction.ballot_box.expect("ballot_box is not set"),
 
@@ -415,6 +445,7 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
                 .instruction
                 .system_program
                 .expect("system_program is not set"),
+            __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -426,11 +457,12 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct InitializeBallotBoxCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,

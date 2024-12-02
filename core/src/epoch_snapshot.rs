@@ -106,7 +106,6 @@ impl EpochSnapshot {
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         if epoch_snapshot.owner.ne(program_id) {
-            msg!("Epoch Snapshot account has an invalid owner");
             return Err(ProgramError::InvalidAccountOwner);
         }
         if epoch_snapshot.data_is_empty() {
@@ -125,7 +124,6 @@ impl EpochSnapshot {
             .key
             .ne(&Self::find_program_address(program_id, ncn, ncn_epoch).0)
         {
-            msg!("Epoch Snapshot account is not at the correct PDA");
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())

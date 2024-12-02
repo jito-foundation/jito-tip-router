@@ -146,9 +146,9 @@ pub fn process_instruction(
             msg!("Instruction: InitializeTrackedMints");
             process_initialize_tracked_mints(program_id, accounts)
         }
-        TipRouterInstruction::InitializeBallotBox => {
+        TipRouterInstruction::InitializeBallotBox { epoch } => {
             msg!("Instruction: InitializeBallotBox");
-            process_initialize_ballot_box(program_id, accounts)
+            process_initialize_ballot_box(program_id, accounts, epoch)
         }
         TipRouterInstruction::CastVote {
             meta_merkle_root,
