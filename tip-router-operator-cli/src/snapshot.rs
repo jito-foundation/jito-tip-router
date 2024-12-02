@@ -19,11 +19,8 @@ use ellipsis_client::EllipsisClient;
 use std::collections::HashMap;
 use serde::{ Serialize, Deserialize };
 use solana_stake_program;
-use solana_sdk::account::ReadableAccount;
-use solana_accounts_db::accounts_index::ScanConfig;
-use solana_stake_program::stake_state::StakeStateV2;
-use bincode;
 use std::time::Instant;
+
 #[derive(Serialize, Deserialize, Debug)]
 struct StakeMetaAccount {
     lamports: u64,

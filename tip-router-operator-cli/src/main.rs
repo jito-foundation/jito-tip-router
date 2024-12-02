@@ -4,8 +4,14 @@ use log::info;
 use snapshot::SnapshotCreator;
 use std::path::PathBuf;
 use solana_sdk::signer::keypair::read_keypair_file;
+use solana_metrics::datapoint_info;
+use std::time::Instant;
 
 mod snapshot;
+mod merkle_tree;
+mod claim_mev_workflow;
+mod merkle_root_generator_workflow;
+mod merkle_root_upload_workflow;
 
 #[cfg(test)]
 mod tests;
@@ -59,12 +65,47 @@ async fn main() -> Result<()> {
             info!("Starting monitor for NCN address: {}", ncn_address);
             info!("Using keypair at: {}", cli.keypair_path);
             info!("Connected to RPC: {}", cli.rpc_url);
-            // TODO: Implement monitoring logic
+
+            let keypair = read_keypair_file(&cli.keypair_path).map_err(|e|
+                anyhow::Error::msg(e.to_string())
+            )?;
+
+            let merkle_tree_generator = merkle_tree::MerkleTreeGenerator::new(
+                &cli.rpc_url,
+                keypair,
+                ncn_address.parse()?,
+                PathBuf::from("output") // Configure this
+            )?;
+
+            loop {
+                let current_epoch = merkle_tree_generator.wait_for_epoch_boundary().await?;
+                info!("Starting workflow for epoch {}", current_epoch);
+                let start = Instant::now();
+
+                // Generate and upload regular merkle trees
+                let stake_meta = merkle_tree_generator.generate_stake_meta(current_epoch).await?;
+                let merkle_trees =
+                    merkle_tree_generator.generate_and_upload_merkle_trees(stake_meta).await?;
+
+                // Generate and upload meta merkle tree
+                let meta_tree = merkle_tree_generator.generate_meta_merkle_tree(
+                    &merkle_trees
+                ).await?;
+                merkle_tree_generator.upload_to_ncn(&meta_tree).await?;
+
+                let elapsed = start.elapsed();
+                datapoint_info!(
+                    "tip_router_workflow",
+                    ("epoch", current_epoch, i64),
+                    ("elapsed_ms", elapsed.as_millis(), i64)
+                );
+            }
         }
         Commands::Snapshot { output_dir, max_snapshots, compression } => {
             info!("Starting snapshot creator");
-            let keypair = read_keypair_file(&cli.keypair_path)
-                .map_err(|e| anyhow::Error::msg(e.to_string()))?;
+            let keypair = read_keypair_file(&cli.keypair_path).map_err(|e|
+                anyhow::Error::msg(e.to_string())
+            )?;
             let snapshot_creator = SnapshotCreator::new(
                 &cli.rpc_url,
                 output_dir,
