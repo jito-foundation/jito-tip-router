@@ -234,6 +234,7 @@ impl TipDistributionClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn do_claim(
         &mut self,
         proof: Vec<[u8; 32]>,
@@ -272,6 +273,7 @@ impl TipDistributionClient {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn claim(
         &mut self,
         proof: Vec<[u8; 32]>,
