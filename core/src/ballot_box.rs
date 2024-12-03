@@ -9,7 +9,7 @@ use spl_math::precise_number::PreciseNumber;
 
 use crate::{constants::PRECISE_CONSENSUS, discriminators::Discriminators, error::TipRouterError};
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, Pod, ShankType)]
 #[repr(C)]
 pub struct Ballot {
     merkle_root: [u8; 32],
@@ -42,7 +42,7 @@ impl Ballot {
     }
 }
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, ShankType)]
 #[repr(C)]
 pub struct BallotTally {
     ballot: Ballot,
@@ -104,7 +104,7 @@ impl BallotTally {
     }
 }
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, ShankType)]
 #[repr(C)]
 pub struct OperatorVote {
     operator: Pubkey,
@@ -164,7 +164,7 @@ impl OperatorVote {
 }
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct BallotBox {
     ncn: Pubkey,

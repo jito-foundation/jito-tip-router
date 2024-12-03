@@ -13,7 +13,7 @@ use crate::{
 };
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct EpochSnapshot {
     /// The NCN on-chain program is the signer to create and update this account,
@@ -192,7 +192,7 @@ impl EpochSnapshot {
 }
 
 // PDA'd ["operator_snapshot", OPERATOR, NCN, NCN_EPOCH_SLOT]
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct OperatorSnapshot {
     operator: Pubkey,
@@ -220,7 +220,7 @@ pub struct OperatorSnapshot {
     vault_operator_stake_weight: [VaultOperatorStakeWeight; 32],
 }
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, ShankType)]
 #[repr(C)]
 pub struct VaultOperatorStakeWeight {
     vault: Pubkey,

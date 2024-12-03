@@ -1,11 +1,11 @@
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{AccountDeserialize, Discriminator};
-use shank::{ShankAccount, ShankType};
+use shank::ShankAccount;
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
 use crate::{discriminators::Discriminators, fees::Fees};
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct NcnConfig {
     /// The Restaking program's NCN admin is the signer to create and update this account
