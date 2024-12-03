@@ -119,40 +119,13 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-access-control"
-version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "anchor-syn 0.24.2",
- "anyhow",
- "proc-macro2 1.0.89",
- "quote 1.0.37",
- "regex",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-access-control"
 version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47fe28365b33e8334dd70ae2f34a43892363012fe239cf37d2ee91693575b1f8"
 dependencies = [
- "anchor-syn 0.30.1",
+ "anchor-syn",
  "proc-macro2 1.0.89",
  "quote 1.0.37",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-account"
-version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "anchor-syn 0.24.2",
- "anyhow",
- "bs58 0.4.0",
- "proc-macro2 1.0.89",
- "quote 1.0.37",
- "rustversion",
  "syn 1.0.109",
 ]
 
@@ -162,20 +135,10 @@ version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c288d496168268d198d9b53ee9f4f9d260a55ba4df9877ea1d4486ad6109e0f"
 dependencies = [
- "anchor-syn 0.30.1",
+ "anchor-syn",
  "bs58 0.5.1",
  "proc-macro2 1.0.89",
  "quote 1.0.37",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-constant"
-version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "anchor-syn 0.24.2",
- "proc-macro2 1.0.89",
  "syn 1.0.109",
 ]
 
@@ -185,18 +148,7 @@ version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49b77b6948d0eeaaa129ce79eea5bbbb9937375a9241d909ca8fb9e006bb6e90"
 dependencies = [
- "anchor-syn 0.30.1",
- "quote 1.0.37",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-error"
-version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "anchor-syn 0.24.2",
- "proc-macro2 1.0.89",
+ "anchor-syn",
  "quote 1.0.37",
  "syn 1.0.109",
 ]
@@ -207,19 +159,7 @@ version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d20bb569c5a557c86101b944721d865e1fd0a4c67c381d31a44a84f07f84828"
 dependencies = [
- "anchor-syn 0.30.1",
- "quote 1.0.37",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-event"
-version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "anchor-syn 0.24.2",
- "anyhow",
- "proc-macro2 1.0.89",
+ "anchor-syn",
  "quote 1.0.37",
  "syn 1.0.109",
 ]
@@ -230,32 +170,7 @@ version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4cebd8d0671a3a9dc3160c48598d652c34c77de6be4d44345b8b514323284d57"
 dependencies = [
- "anchor-syn 0.30.1",
- "proc-macro2 1.0.89",
- "quote 1.0.37",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-interface"
-version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "anchor-syn 0.24.2",
- "anyhow",
- "heck 0.3.3",
- "proc-macro2 1.0.89",
- "quote 1.0.37",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-program"
-version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "anchor-syn 0.24.2",
- "anyhow",
+ "anchor-syn",
  "proc-macro2 1.0.89",
  "quote 1.0.37",
  "syn 1.0.109",
@@ -268,7 +183,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "efb2a5eb0860e661ab31aff7bb5e0288357b176380e985bade4ccb395981b42d"
 dependencies = [
  "anchor-lang-idl",
- "anchor-syn 0.30.1",
+ "anchor-syn",
  "anyhow",
  "bs58 0.5.1",
  "heck 0.3.3",
@@ -279,36 +194,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "anchor-attribute-state"
-version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "anchor-syn 0.24.2",
- "anyhow",
- "proc-macro2 1.0.89",
- "quote 1.0.37",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-derive-accounts"
-version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "anchor-syn 0.24.2",
- "anyhow",
- "proc-macro2 1.0.89",
- "quote 1.0.37",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "anchor-derive-accounts"
 version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04368b5abef4266250ca8d1d12f4dff860242681e4ec22b885dcfe354fd35aa1"
 dependencies = [
- "anchor-syn 0.30.1",
+ "anchor-syn",
  "quote 1.0.37",
  "syn 1.0.109",
 ]
@@ -319,7 +210,7 @@ version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e0bb0e0911ad4a70cab880cdd6287fe1e880a1a9d8e4e6defa8e9044b9796a6c"
 dependencies = [
- "anchor-syn 0.30.1",
+ "anchor-syn",
  "borsh-derive-internal 0.10.4",
  "proc-macro2 1.0.89",
  "quote 1.0.37",
@@ -339,40 +230,17 @@ dependencies = [
 
 [[package]]
 name = "anchor-lang"
-version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "anchor-attribute-access-control 0.24.2",
- "anchor-attribute-account 0.24.2",
- "anchor-attribute-constant 0.24.2",
- "anchor-attribute-error 0.24.2",
- "anchor-attribute-event 0.24.2",
- "anchor-attribute-interface",
- "anchor-attribute-program 0.24.2",
- "anchor-attribute-state",
- "anchor-derive-accounts 0.24.2",
- "arrayref",
- "base64 0.13.1",
- "bincode",
- "borsh 0.10.4",
- "bytemuck",
- "solana-program 2.1.0",
- "thiserror",
-]
-
-[[package]]
-name = "anchor-lang"
 version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6620c9486d9d36a4389cab5e37dc34a42ed0bfaa62e6a75a2999ce98f8f2e373"
 dependencies = [
- "anchor-attribute-access-control 0.30.1",
- "anchor-attribute-account 0.30.1",
- "anchor-attribute-constant 0.30.1",
- "anchor-attribute-error 0.30.1",
- "anchor-attribute-event 0.30.1",
- "anchor-attribute-program 0.30.1",
- "anchor-derive-accounts 0.30.1",
+ "anchor-attribute-access-control",
+ "anchor-attribute-account",
+ "anchor-attribute-constant",
+ "anchor-attribute-error",
+ "anchor-attribute-event",
+ "anchor-attribute-program",
+ "anchor-derive-accounts",
  "anchor-derive-serde",
  "anchor-derive-space",
  "anchor-lang-idl",
@@ -409,24 +277,6 @@ checksum = "2bdf143115440fe621bdac3a29a1f7472e09f6cd82b2aa569429a0c13f103838"
 dependencies = [
  "anyhow",
  "serde",
-]
-
-[[package]]
-name = "anchor-syn"
-version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "anyhow",
- "bs58 0.3.1",
- "heck 0.3.3",
- "proc-macro2 1.0.89",
- "proc-macro2-diagnostics",
- "quote 1.0.37",
- "serde",
- "serde_json",
- "sha2 0.9.9",
- "syn 1.0.109",
- "thiserror",
 ]
 
 [[package]]
@@ -1151,12 +1001,6 @@ dependencies = [
  "alloc-no-stdlib",
  "alloc-stdlib",
 ]
-
-[[package]]
-name = "bs58"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "476e9cd489f9e121e02ffa6014a8ef220ecb15c05ed23fc34cca13925dc283fb"
 
 [[package]]
 name = "bs58"
@@ -2866,13 +2710,13 @@ dependencies = [
 [[package]]
 name = "jito-programs-vote-state"
 version = "0.1.5"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
+source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=837d0c604cb2402b603eb878b60b49ba3c78b42a#837d0c604cb2402b603eb878b60b49ba3c78b42a"
 dependencies = [
- "anchor-lang 0.24.2",
+ "anchor-lang",
  "bincode",
  "serde",
  "serde_derive",
- "solana-program 2.1.0",
+ "solana-program 1.18.26",
 ]
 
 [[package]]
@@ -2880,7 +2724,7 @@ name = "jito-restaking-client"
 version = "0.0.3"
 source = "git+https://github.com/jito-foundation/restaking.git?rev=eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d#eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d"
 dependencies = [
- "anchor-lang 0.30.1",
+ "anchor-lang",
  "borsh 0.10.4",
  "bytemuck",
  "num-derive 0.4.2",
@@ -2945,21 +2789,21 @@ dependencies = [
 [[package]]
 name = "jito-tip-distribution"
 version = "0.1.5"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
+source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=837d0c604cb2402b603eb878b60b49ba3c78b42a#837d0c604cb2402b603eb878b60b49ba3c78b42a"
 dependencies = [
- "anchor-lang 0.24.2",
+ "anchor-lang",
  "default-env",
  "jito-programs-vote-state",
- "solana-program 2.1.0",
+ "solana-program 1.18.26",
  "solana-security-txt",
 ]
 
 [[package]]
 name = "jito-tip-payment"
 version = "0.1.5"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
+source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=837d0c604cb2402b603eb878b60b49ba3c78b42a#837d0c604cb2402b603eb878b60b49ba3c78b42a"
 dependencies = [
- "anchor-lang 0.24.2",
+ "anchor-lang",
  "default-env",
  "solana-security-txt",
 ]
@@ -2997,7 +2841,7 @@ dependencies = [
 name = "jito-tip-router-client"
 version = "0.0.1"
 dependencies = [
- "anchor-lang 0.30.1",
+ "anchor-lang",
  "borsh 0.10.4",
  "bytemuck",
  "num-derive 0.4.2",
@@ -3102,7 +2946,7 @@ name = "jito-vault-client"
 version = "0.0.3"
 source = "git+https://github.com/jito-foundation/restaking.git?rev=eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d#eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d"
 dependencies = [
- "anchor-lang 0.30.1",
+ "anchor-lang",
  "borsh 0.10.4",
  "bytemuck",
  "num-derive 0.4.2",
@@ -4195,19 +4039,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f139b0662de085916d1fb67d2b4169d1addddda1919e696f3252b740b629986e"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "proc-macro2-diagnostics"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bf29726d67464d49fa6224a1d07936a8c08bb3fba727c7493f6cf1616fdaada"
-dependencies = [
- "proc-macro2 1.0.89",
- "quote 1.0.37",
- "syn 1.0.109",
- "version_check",
- "yansi",
 ]
 
 [[package]]
@@ -5311,14 +5142,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-atomic-u64"
-version = "2.1.0"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "parking_lot 0.12.3",
-]
-
-[[package]]
 name = "solana-banks-client"
 version = "1.18.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5538,19 +5361,6 @@ dependencies = [
  "solana-system-program",
  "solana-vote-program",
 ]
-
-[[package]]
-name = "solana-decode-error"
-version = "2.1.0"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
-name = "solana-define-syscall"
-version = "2.1.0"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
 
 [[package]]
 name = "solana-download-utils"
@@ -5924,51 +5734,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-program"
-version = "2.1.0"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "base64 0.22.1",
- "bincode",
- "bitflags 2.6.0",
- "blake3",
- "borsh 0.10.4",
- "borsh 1.5.1",
- "bs58 0.5.1",
- "bv",
- "bytemuck",
- "bytemuck_derive",
- "console_error_panic_hook",
- "console_log",
- "curve25519-dalek",
- "getrandom 0.2.15",
- "js-sys",
- "lazy_static",
- "log",
- "memoffset 0.9.1",
- "num-bigint 0.4.6",
- "num-derive 0.4.2",
- "num-traits",
- "parking_lot 0.12.3",
- "rand 0.8.5",
- "rustc_version",
- "serde",
- "serde_bytes",
- "serde_derive",
- "sha2 0.10.8",
- "sha3 0.10.8",
- "solana-atomic-u64",
- "solana-decode-error",
- "solana-define-syscall",
- "solana-sanitize",
- "solana-sdk-macro 2.1.0",
- "solana-secp256k1-recover",
- "solana-short-vec",
- "thiserror",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "solana-program-runtime"
 version = "1.18.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6246,14 +6011,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-sanitize"
-version = "2.1.0"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "thiserror",
-]
-
-[[package]]
 name = "solana-sdk"
 version = "1.18.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6335,28 +6092,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-sdk-macro"
-version = "2.1.0"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "bs58 0.5.1",
- "proc-macro2 1.0.89",
- "quote 1.0.37",
- "syn 2.0.85",
-]
-
-[[package]]
-name = "solana-secp256k1-recover"
-version = "2.1.0"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "libsecp256k1",
- "rustc_version",
- "solana-define-syscall",
- "thiserror",
-]
-
-[[package]]
 name = "solana-security-txt"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6376,15 +6111,6 @@ dependencies = [
  "solana-runtime",
  "solana-sdk",
  "solana-tpu-client",
-]
-
-[[package]]
-name = "solana-short-vec"
-version = "2.1.0"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=837300f#837300fa58cb450e041443bafc6e21a7ee8f15b7"
-dependencies = [
- "rustc_version",
- "serde",
 ]
 
 [[package]]
@@ -7471,7 +7197,7 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 name = "tip-router-operator-cli"
 version = "0.1.0"
 dependencies = [
- "anchor-lang 0.30.1",
+ "anchor-lang",
  "anyhow",
  "bincode",
  "clap 4.5.20",
@@ -8420,12 +8146,6 @@ dependencies = [
  "linux-raw-sys",
  "rustix",
 ]
-
-[[package]]
-name = "yansi"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09041cd90cf85f7f8b2df60c646f853b7f535ce68f85244eb6731cf89fa498ec"
 
 [[package]]
 name = "yasna"

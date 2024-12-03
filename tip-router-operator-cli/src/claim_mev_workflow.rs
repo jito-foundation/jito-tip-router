@@ -327,13 +327,13 @@ fn build_mev_claim_transactions(
 
             instructions.push(Instruction {
                 program_id: tip_distribution_program_id,
-                data: jito_tip_distribution::instruction::Claim {
+                data: jito_tip_distribution::Instruction::Claim {
                     proof: node.proof.clone().unwrap(),
                     amount: node.amount,
                     bump: node.claim_status_bump,
                 }
                 .data(),
-                accounts: jito_tip_distribution::accounts::Claim {
+                accounts: jito_tip_distribution::Accounts::Claim {
                     config: tip_distribution_config,
                     tip_distribution_account: tree.tip_distribution_account,
                     claimant: node.claimant,
