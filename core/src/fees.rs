@@ -34,6 +34,14 @@ impl FeeConfig {
         default_ncn_fee_bps: u16,
         current_epoch: u64,
     ) -> Result<Self, TipRouterError> {
+        if dao_fee_wallet.eq(&Pubkey::default()) {
+            return Err(TipRouterError::DefaultDaoWallet);
+        }
+
+        if block_engine_fee_bps as u64 > MAX_FEE_BPS {
+            return Err(TipRouterError::FeeCapExceeded);
+        }
+
         let fee = Fees::new(dao_fee_bps, default_ncn_fee_bps, current_epoch)?;
 
         let mut fee_config = Self {
@@ -45,6 +53,8 @@ impl FeeConfig {
         };
 
         fee_config.set_base_fee_wallet(BaseFeeGroup::default(), dao_fee_wallet)?;
+
+        fee_config.check_fees_okay(current_epoch)?;
 
         Ok(fee_config)
     }
@@ -521,9 +531,204 @@ impl Fee {
 
 #[cfg(test)]
 mod tests {
-    // use solana_program::pubkey::Pubkey;
+    use jito_restaking_core::MAX_FEE_BPS;
+    use solana_program::pubkey::Pubkey;
 
-    // use super::*;
+    use super::*;
+
+    #[test]
+    fn test_get_all_fees() {
+        const BLOCK_ENGINE_FEE: u16 = 100;
+        const DAO_FEE: u16 = 200;
+        const DEFAULT_NCN_FEE: u16 = 300;
+        const STARTING_EPOCH: u64 = 10;
+
+        let dao_fee_wallet = Pubkey::new_unique();
+
+        let fee_config = FeeConfig::new(
+            dao_fee_wallet,
+            BLOCK_ENGINE_FEE,
+            DAO_FEE,
+            DEFAULT_NCN_FEE,
+            STARTING_EPOCH,
+        )
+        .unwrap();
+
+        fee_config.check_fees_okay(STARTING_EPOCH).unwrap();
+
+        assert_eq!(fee_config.block_engine_fee_bps(), BLOCK_ENGINE_FEE);
+
+        let dao_fee_group = BaseFeeGroup::default();
+
+        assert_eq!(
+            fee_config.base_fee_wallet(dao_fee_group).unwrap(),
+            dao_fee_wallet
+        );
+
+        assert_eq!(
+            fee_config.fee_1.base_fee_bps(dao_fee_group).unwrap(),
+            DAO_FEE
+        );
+        assert_eq!(
+            fee_config.fee_2.base_fee_bps(dao_fee_group).unwrap(),
+            DAO_FEE
+        );
+
+        let default_ncn_fee_group = NcnFeeGroup::default();
+
+        assert_eq!(
+            fee_config.fee_1.ncn_fee_bps(default_ncn_fee_group).unwrap(),
+            DEFAULT_NCN_FEE
+        );
+
+        assert_eq!(
+            fee_config.fee_2.ncn_fee_bps(default_ncn_fee_group).unwrap(),
+            DEFAULT_NCN_FEE
+        );
+    }
+
+    #[test]
+    fn test_init_fee_config_errors() {
+        const OK_FEE: u16 = 0;
+        const OK_EPOCH: u64 = 0;
+
+        let ok_wallet = Pubkey::new_unique();
+
+        // DEFAULT WALLET
+        let error = FeeConfig::new(Pubkey::default(), OK_FEE, OK_FEE, OK_FEE, OK_EPOCH);
+        assert_eq!(error.err().unwrap(), TipRouterError::DefaultDaoWallet);
+
+        // BLOCK ENGINE FEE
+        let error = FeeConfig::new(ok_wallet, MAX_FEE_BPS + 1, OK_FEE, OK_FEE, OK_EPOCH);
+        assert_eq!(error.err().unwrap(), TipRouterError::FeeCapExceeded);
+
+        // DAO FEE
+        let error = FeeConfig::new(ok_wallet, OK_FEE, MAX_FEE_BPS + 1, OK_FEE, OK_EPOCH);
+        assert_eq!(error.err().unwrap(), TipRouterError::FeeCapExceeded);
+
+        // NCN FEE
+        let error = FeeConfig::new(ok_wallet, OK_FEE, OK_FEE, MAX_FEE_BPS + 1, OK_EPOCH);
+        assert_eq!(error.err().unwrap(), TipRouterError::FeeCapExceeded);
+
+        // ADJUSTED FEE ERROR
+        let error = FeeConfig::new(ok_wallet, MAX_FEE_BPS, OK_FEE, OK_FEE, OK_EPOCH);
+        assert_eq!(error.err().unwrap(), TipRouterError::DenominatorIsZero);
+
+        //TODO should it be an error if adjusted fee is 0?
+        // let error = FeeConfig::new(ok_wallet, MAX_FEE_BPS - 1, 1000, OK_FEE, OK_EPOCH);
+        // assert_eq!(error.err().unwrap(), TipRouterError::DenominatorIsZero);
+    }
+
+    #[test]
+    fn test_update_fees() {
+        const BLOCK_ENGINE_FEE: u16 = 100;
+        const NEW_BLOCK_ENGINE_FEE: u16 = 500;
+        const DAO_FEE: u16 = 200;
+        const NEW_DAO_FEE: u16 = 600;
+        const NEW_NEW_DAO_FEE: u16 = 800;
+        const DEFAULT_NCN_FEE: u16 = 300;
+        const NEW_DEFAULT_NCN_FEE: u16 = 700;
+        const NEW_NEW_DEFAULT_NCN_FEE: u16 = 900;
+        const STARTING_EPOCH: u64 = 10;
+
+        let dao_fee_wallet = Pubkey::new_unique();
+        let new_dao_fee_wallet = Pubkey::new_unique();
+
+        let mut fee_config = FeeConfig::new(
+            dao_fee_wallet,
+            BLOCK_ENGINE_FEE,
+            DAO_FEE,
+            DEFAULT_NCN_FEE,
+            STARTING_EPOCH,
+        )
+        .unwrap();
+
+        fee_config
+            .update_fee_config(
+                Some(NEW_BLOCK_ENGINE_FEE),
+                None,
+                Some(new_dao_fee_wallet),
+                Some(NEW_DAO_FEE),
+                None,
+                Some(NEW_DEFAULT_NCN_FEE),
+                STARTING_EPOCH,
+            )
+            .unwrap();
+
+        assert_eq!(fee_config.block_engine_fee_bps(), NEW_BLOCK_ENGINE_FEE);
+
+        let dao_fee_group = BaseFeeGroup::default();
+
+        assert_eq!(
+            fee_config.base_fee_wallet(dao_fee_group).unwrap(),
+            new_dao_fee_wallet
+        );
+
+        let current_fees = fee_config.current_fees(STARTING_EPOCH);
+        let next_epoch_fees = fee_config.current_fees(STARTING_EPOCH + 1);
+
+        assert_eq!(current_fees.base_fee_bps(dao_fee_group).unwrap(), DAO_FEE);
+        assert_eq!(
+            next_epoch_fees.base_fee_bps(dao_fee_group).unwrap(),
+            NEW_DAO_FEE
+        );
+
+        let default_ncn_fee_group = NcnFeeGroup::default();
+
+        assert_eq!(
+            current_fees.ncn_fee_bps(default_ncn_fee_group).unwrap(),
+            DEFAULT_NCN_FEE
+        );
+        assert_eq!(
+            next_epoch_fees.ncn_fee_bps(default_ncn_fee_group).unwrap(),
+            NEW_DEFAULT_NCN_FEE
+        );
+
+        // test update again
+        fee_config
+            .update_fee_config(
+                None,
+                None,
+                None,
+                Some(NEW_NEW_DAO_FEE),
+                None,
+                Some(NEW_NEW_DEFAULT_NCN_FEE),
+                STARTING_EPOCH + 1,
+            )
+            .unwrap();
+
+        assert_eq!(fee_config.block_engine_fee_bps(), NEW_BLOCK_ENGINE_FEE);
+
+        let dao_fee_group = BaseFeeGroup::default();
+
+        assert_eq!(
+            fee_config.base_fee_wallet(dao_fee_group).unwrap(),
+            new_dao_fee_wallet
+        );
+
+        let current_fees = fee_config.current_fees(STARTING_EPOCH + 1);
+        let next_epoch_fees = fee_config.current_fees(STARTING_EPOCH + 2);
+
+        assert_eq!(
+            current_fees.base_fee_bps(dao_fee_group).unwrap(),
+            NEW_DAO_FEE
+        );
+        assert_eq!(
+            next_epoch_fees.base_fee_bps(dao_fee_group).unwrap(),
+            NEW_NEW_DAO_FEE
+        );
+
+        let default_ncn_fee_group = NcnFeeGroup::default();
+
+        assert_eq!(
+            current_fees.ncn_fee_bps(default_ncn_fee_group).unwrap(),
+            NEW_DEFAULT_NCN_FEE
+        );
+        assert_eq!(
+            next_epoch_fees.ncn_fee_bps(default_ncn_fee_group).unwrap(),
+            NEW_NEW_DEFAULT_NCN_FEE
+        );
+    }
 
     // #[test]
     // fn test_update_fees() {

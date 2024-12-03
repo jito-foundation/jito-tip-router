@@ -2194,121 +2194,126 @@
     },
     {
       "code": 8720,
+      "name": "DefaultDaoWallet",
+      "msg": "DAO wallet cannot be default"
+    },
+    {
+      "code": 8721,
       "name": "IncorrectNcnAdmin",
       "msg": "Incorrect NCN Admin"
     },
     {
-      "code": 8721,
+      "code": 8722,
       "name": "IncorrectNcn",
       "msg": "Incorrect NCN"
     },
     {
-      "code": 8722,
+      "code": 8723,
       "name": "IncorrectFeeAdmin",
       "msg": "Incorrect fee admin"
     },
     {
-      "code": 8723,
+      "code": 8724,
       "name": "WeightTableNotFinalized",
       "msg": "Weight table not finalized"
     },
     {
-      "code": 8724,
+      "code": 8725,
       "name": "WeightNotFound",
       "msg": "Weight not found"
     },
     {
-      "code": 8725,
+      "code": 8726,
       "name": "NoOperators",
       "msg": "No operators in ncn"
     },
     {
-      "code": 8726,
+      "code": 8727,
       "name": "VaultOperatorDelegationFinalized",
       "msg": "Vault operator delegation is already finalized - should not happen"
     },
     {
-      "code": 8727,
+      "code": 8728,
       "name": "OperatorFinalized",
       "msg": "Operator is already finalized - should not happen"
     },
     {
-      "code": 8728,
+      "code": 8729,
       "name": "TooManyVaultOperatorDelegations",
       "msg": "Too many vault operator delegations"
     },
     {
-      "code": 8729,
+      "code": 8730,
       "name": "DuplicateVaultOperatorDelegation",
       "msg": "Duplicate vault operator delegation"
     },
     {
-      "code": 8730,
+      "code": 8731,
       "name": "DuplicateVoteCast",
       "msg": "Duplicate Vote Cast"
     },
     {
-      "code": 8731,
+      "code": 8732,
       "name": "OperatorVotesFull",
       "msg": "Operator votes full"
     },
     {
-      "code": 8732,
+      "code": 8733,
       "name": "BallotTallyFull",
       "msg": "Merkle root tally full"
     },
     {
-      "code": 8733,
+      "code": 8734,
       "name": "ConsensusAlreadyReached",
       "msg": "Consensus already reached"
     },
     {
-      "code": 8734,
+      "code": 8735,
       "name": "ConsensusNotReached",
       "msg": "Consensus not reached"
     },
     {
-      "code": 8735,
+      "code": 8736,
       "name": "InvalidNcnFeeGroup",
       "msg": "Not a valid NCN fee group"
     },
     {
-      "code": 8736,
+      "code": 8737,
       "name": "InvalidBaseFeeGroup",
       "msg": "Not a valid base fee group"
     },
     {
-      "code": 8737,
+      "code": 8738,
       "name": "OperatorRewardListFull",
       "msg": "Operator reward list full"
     },
     {
-      "code": 8738,
+      "code": 8739,
       "name": "OperatorRewardNotFound",
       "msg": "Operator Reward not found"
     },
     {
-      "code": 8739,
+      "code": 8740,
       "name": "VaultRewardNotFound",
       "msg": "Vault Reward not found"
     },
     {
-      "code": 8740,
+      "code": 8741,
       "name": "DestinationMismatch",
       "msg": "Destination mismatch"
     },
     {
-      "code": 8741,
+      "code": 8742,
       "name": "NcnRewardRouteNotFound",
       "msg": "Ncn reward route not found"
     },
     {
-      "code": 8742,
+      "code": 8743,
       "name": "FeeNotActive",
       "msg": "Fee not active"
     },
     {
-      "code": 8743,
+      "code": 8744,
       "name": "NoRewards",
       "msg": "No rewards to distribute"
     }

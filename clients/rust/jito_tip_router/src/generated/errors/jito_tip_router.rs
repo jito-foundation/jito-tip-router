@@ -81,78 +81,81 @@ pub enum JitoTipRouterError {
     /// 8719 - Fee cap exceeded
     #[error("Fee cap exceeded")]
     FeeCapExceeded = 0x220F,
-    /// 8720 - Incorrect NCN Admin
+    /// 8720 - DAO wallet cannot be default
+    #[error("DAO wallet cannot be default")]
+    DefaultDaoWallet = 0x2210,
+    /// 8721 - Incorrect NCN Admin
     #[error("Incorrect NCN Admin")]
-    IncorrectNcnAdmin = 0x2210,
-    /// 8721 - Incorrect NCN
+    IncorrectNcnAdmin = 0x2211,
+    /// 8722 - Incorrect NCN
     #[error("Incorrect NCN")]
-    IncorrectNcn = 0x2211,
-    /// 8722 - Incorrect fee admin
+    IncorrectNcn = 0x2212,
+    /// 8723 - Incorrect fee admin
     #[error("Incorrect fee admin")]
-    IncorrectFeeAdmin = 0x2212,
-    /// 8723 - Weight table not finalized
+    IncorrectFeeAdmin = 0x2213,
+    /// 8724 - Weight table not finalized
     #[error("Weight table not finalized")]
-    WeightTableNotFinalized = 0x2213,
-    /// 8724 - Weight not found
+    WeightTableNotFinalized = 0x2214,
+    /// 8725 - Weight not found
     #[error("Weight not found")]
-    WeightNotFound = 0x2214,
-    /// 8725 - No operators in ncn
+    WeightNotFound = 0x2215,
+    /// 8726 - No operators in ncn
     #[error("No operators in ncn")]
-    NoOperators = 0x2215,
-    /// 8726 - Vault operator delegation is already finalized - should not happen
+    NoOperators = 0x2216,
+    /// 8727 - Vault operator delegation is already finalized - should not happen
     #[error("Vault operator delegation is already finalized - should not happen")]
-    VaultOperatorDelegationFinalized = 0x2216,
-    /// 8727 - Operator is already finalized - should not happen
+    VaultOperatorDelegationFinalized = 0x2217,
+    /// 8728 - Operator is already finalized - should not happen
     #[error("Operator is already finalized - should not happen")]
-    OperatorFinalized = 0x2217,
-    /// 8728 - Too many vault operator delegations
+    OperatorFinalized = 0x2218,
+    /// 8729 - Too many vault operator delegations
     #[error("Too many vault operator delegations")]
-    TooManyVaultOperatorDelegations = 0x2218,
-    /// 8729 - Duplicate vault operator delegation
+    TooManyVaultOperatorDelegations = 0x2219,
+    /// 8730 - Duplicate vault operator delegation
     #[error("Duplicate vault operator delegation")]
-    DuplicateVaultOperatorDelegation = 0x2219,
-    /// 8730 - Duplicate Vote Cast
+    DuplicateVaultOperatorDelegation = 0x221A,
+    /// 8731 - Duplicate Vote Cast
     #[error("Duplicate Vote Cast")]
-    DuplicateVoteCast = 0x221A,
-    /// 8731 - Operator votes full
+    DuplicateVoteCast = 0x221B,
+    /// 8732 - Operator votes full
     #[error("Operator votes full")]
-    OperatorVotesFull = 0x221B,
-    /// 8732 - Merkle root tally full
+    OperatorVotesFull = 0x221C,
+    /// 8733 - Merkle root tally full
     #[error("Merkle root tally full")]
-    BallotTallyFull = 0x221C,
-    /// 8733 - Consensus already reached
+    BallotTallyFull = 0x221D,
+    /// 8734 - Consensus already reached
     #[error("Consensus already reached")]
-    ConsensusAlreadyReached = 0x221D,
-    /// 8734 - Consensus not reached
+    ConsensusAlreadyReached = 0x221E,
+    /// 8735 - Consensus not reached
     #[error("Consensus not reached")]
-    ConsensusNotReached = 0x221E,
-    /// 8735 - Not a valid NCN fee group
+    ConsensusNotReached = 0x221F,
+    /// 8736 - Not a valid NCN fee group
     #[error("Not a valid NCN fee group")]
-    InvalidNcnFeeGroup = 0x221F,
-    /// 8736 - Not a valid base fee group
+    InvalidNcnFeeGroup = 0x2220,
+    /// 8737 - Not a valid base fee group
     #[error("Not a valid base fee group")]
-    InvalidBaseFeeGroup = 0x2220,
-    /// 8737 - Operator reward list full
+    InvalidBaseFeeGroup = 0x2221,
+    /// 8738 - Operator reward list full
     #[error("Operator reward list full")]
-    OperatorRewardListFull = 0x2221,
-    /// 8738 - Operator Reward not found
+    OperatorRewardListFull = 0x2222,
+    /// 8739 - Operator Reward not found
     #[error("Operator Reward not found")]
-    OperatorRewardNotFound = 0x2222,
-    /// 8739 - Vault Reward not found
+    OperatorRewardNotFound = 0x2223,
+    /// 8740 - Vault Reward not found
     #[error("Vault Reward not found")]
-    VaultRewardNotFound = 0x2223,
-    /// 8740 - Destination mismatch
+    VaultRewardNotFound = 0x2224,
+    /// 8741 - Destination mismatch
     #[error("Destination mismatch")]
-    DestinationMismatch = 0x2224,
-    /// 8741 - Ncn reward route not found
+    DestinationMismatch = 0x2225,
+    /// 8742 - Ncn reward route not found
     #[error("Ncn reward route not found")]
-    NcnRewardRouteNotFound = 0x2225,
-    /// 8742 - Fee not active
+    NcnRewardRouteNotFound = 0x2226,
+    /// 8743 - Fee not active
     #[error("Fee not active")]
-    FeeNotActive = 0x2226,
-    /// 8743 - No rewards to distribute
+    FeeNotActive = 0x2227,
+    /// 8744 - No rewards to distribute
     #[error("No rewards to distribute")]
-    NoRewards = 0x2227,
+    NoRewards = 0x2228,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {
