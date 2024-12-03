@@ -2710,7 +2710,7 @@ dependencies = [
 [[package]]
 name = "jito-programs-vote-state"
 version = "0.1.5"
-source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=837d0c604cb2402b603eb878b60b49ba3c78b42a#837d0c604cb2402b603eb878b60b49ba3c78b42a"
+source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=10e68aeb804c03877f4b04bad594e9921aed050a#10e68aeb804c03877f4b04bad594e9921aed050a"
 dependencies = [
  "anchor-lang",
  "bincode",
@@ -2789,7 +2789,7 @@ dependencies = [
 [[package]]
 name = "jito-tip-distribution"
 version = "0.1.5"
-source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=837d0c604cb2402b603eb878b60b49ba3c78b42a#837d0c604cb2402b603eb878b60b49ba3c78b42a"
+source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=10e68aeb804c03877f4b04bad594e9921aed050a#10e68aeb804c03877f4b04bad594e9921aed050a"
 dependencies = [
  "anchor-lang",
  "default-env",
@@ -2801,7 +2801,7 @@ dependencies = [
 [[package]]
 name = "jito-tip-payment"
 version = "0.1.5"
-source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=837d0c604cb2402b603eb878b60b49ba3c78b42a#837d0c604cb2402b603eb878b60b49ba3c78b42a"
+source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=10e68aeb804c03877f4b04bad594e9921aed050a#10e68aeb804c03877f4b04bad594e9921aed050a"
 dependencies = [
  "anchor-lang",
  "default-env",

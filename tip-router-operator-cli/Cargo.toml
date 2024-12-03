@@ -16,8 +16,8 @@ futures = "0.3"
 gethostname = "0.4"
 im = "15.1"
 itertools = "0.11"
-jito-tip-distribution = { git = "https://github.com/exo-tech-xyz/jito-programs.git", rev = "837d0c604cb2402b603eb878b60b49ba3c78b42a", features = ["no-entrypoint"] }
-jito-tip-payment = { git = "https://github.com/exo-tech-xyz/jito-programs.git", rev = "837d0c604cb2402b603eb878b60b49ba3c78b42a", features = ["no-entrypoint"] }
+jito-tip-distribution = { git = "https://github.com/exo-tech-xyz/jito-programs.git", rev = "10e68aeb804c03877f4b04bad594e9921aed050a",     features = ["cpi"] }
+jito-tip-payment = { git = "https://github.com/exo-tech-xyz/jito-programs.git", rev = "10e68aeb804c03877f4b04bad594e9921aed050a",     features = ["cpi"] }
 log.workspace = true
 num-traits.workspace = true
 rand = "0.8"

@@ -2,7 +2,7 @@ use {
     crate::{send_until_blockhash_expires, GeneratedMerkleTreeCollection},
     anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas},
     itertools::Itertools,
-    jito_tip_distribution::state::{ClaimStatus, Config, TipDistributionAccount},
+    jito_tip_distribution::types::*,
     log::{error, info, warn},
     rand::{prelude::SliceRandom, thread_rng},
     solana_client::nonblocking::rpc_client::RpcClient,
@@ -327,13 +327,13 @@ fn build_mev_claim_transactions(
 
             instructions.push(Instruction {
                 program_id: tip_distribution_program_id,
-                data: jito_tip_distribution::Instruction::Claim {
+                data: jito_tip_distribution::instruction::Claim {
                     proof: node.proof.clone().unwrap(),
                     amount: node.amount,
                     bump: node.claim_status_bump,
                 }
                 .data(),
-                accounts: jito_tip_distribution::Accounts::Claim {
+                accounts: jito_tip_distribution::accounts::Claim {
                     config: tip_distribution_config,
                     tip_distribution_account: tree.tip_distribution_account,
                     claimant: node.claimant,
