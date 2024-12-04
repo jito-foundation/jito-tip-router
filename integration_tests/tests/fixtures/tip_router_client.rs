@@ -12,7 +12,7 @@ use jito_tip_router_client::{
         InitializeOperatorSnapshotBuilder, InitializeTrackedMintsBuilder,
         InitializeWeightTableBuilder, RegisterMintBuilder, RouteBaseRewardsBuilder,
         RouteNcnRewardsBuilder, SetConfigFeesBuilder, SetNewAdminBuilder,
-        SnapshotVaultOperatorDelegationBuilder,
+        SetTrackedMintNcnFeeGroupBuilder, SnapshotVaultOperatorDelegationBuilder,
     },
     types::ConfigAdminRole,
 };
@@ -566,6 +566,66 @@ impl TipRouterClient {
             .ncn_vault_ticket(ncn_vault_ticket)
             .restaking_program_id(jito_restaking_program::id())
             .vault_program_id(jito_vault_program::id())
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_set_tracked_mint_ncn_fee_group(
+        &mut self,
+        ncn: Pubkey,
+        vault_index: u64,
+        ncn_fee_group: NcnFeeGroup,
+        slot: u64,
+    ) -> TestResult<()> {
+        self.set_tracked_mint_ncn_fee_group(ncn, vault_index, ncn_fee_group, slot)
+            .await
+    }
+
+    pub async fn set_tracked_mint_ncn_fee_group(
+        &mut self,
+        ncn: Pubkey,
+        vault_index: u64,
+        ncn_fee_group: NcnFeeGroup,
+        slot: u64,
+    ) -> TestResult<()> {
+        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
+
+        let restaking_config_account = self.get_restaking_config().await?;
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
+
+        let tracked_mints =
+            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
+        let weight_table =
+            WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
+
+        let (ncn_config, _, _) =
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
+
+        let (base_reward_router, _, _) =
+            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
+
+        //TODO: Check admin is correct
+        let admin = self.payer.pubkey();
+
+        let ix = SetTrackedMintNcnFeeGroupBuilder::new()
+            .restaking_config(restaking_config)
+            .ncn_config(ncn_config)
+            .ncn(ncn)
+            .weight_table(weight_table)
+            .tracked_mints(tracked_mints)
+            .admin(admin)
+            .restaking_program(jito_restaking_program::id())
+            .vault_index(vault_index)
+            .ncn_fee_group(ncn_fee_group.group)
             .instruction();
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;
