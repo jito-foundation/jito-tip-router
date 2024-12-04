@@ -4,22 +4,27 @@ use jito_restaking_core::{
 };
 use jito_tip_router_client::{
     instructions::{
-        AdminUpdateWeightTableBuilder, InitializeBaseRewardRouterBuilder,
-        InitializeEpochSnapshotBuilder, InitializeNCNConfigBuilder,
-        InitializeNcnRewardRouterBuilder, InitializeOperatorSnapshotBuilder,
-        InitializeTrackedMintsBuilder, InitializeWeightTableBuilder, RegisterMintBuilder,
-        SetConfigFeesBuilder, SetNewAdminBuilder, SnapshotVaultOperatorDelegationBuilder,
+        AdminUpdateWeightTableBuilder, DistributeBaseNcnRewardRouteBuilder,
+        DistributeBaseRewardsBuilder, DistributeNcnOperatorRewards,
+        DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
+        InitializeBaseRewardRouterBuilder, InitializeEpochSnapshotBuilder,
+        InitializeNCNConfigBuilder, InitializeNcnRewardRouterBuilder,
+        InitializeOperatorSnapshotBuilder, InitializeTrackedMintsBuilder,
+        InitializeWeightTableBuilder, RegisterMintBuilder, RouteBaseRewardsBuilder,
+        RouteNcnRewardsBuilder, SetConfigFeesBuilder, SetNewAdminBuilder,
+        SnapshotVaultOperatorDelegationBuilder,
     },
-    types::{BaseFeeGroup, ConfigAdminRole},
+    types::ConfigAdminRole,
 };
 use jito_tip_router_core::{
     ballot_box::BallotBox,
+    base_fee_group::BaseFeeGroup,
     base_reward_router::BaseRewardRouter,
-    epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_snapshot::{self, EpochSnapshot, OperatorSnapshot},
     error::TipRouterError,
-    ncn_config::NcnConfig,
-    ncn_fee_group::NcnFeeGroup,
-    ncn_reward_router::NcnRewardRouter,
+    ncn_config::{self, NcnConfig},
+    ncn_fee_group::{self, NcnFeeGroup},
+    ncn_reward_router::{self, NcnRewardRouter},
     tracked_mints::TrackedMints,
     weight_table::WeightTable,
 };
@@ -172,6 +177,47 @@ impl TipRouterClient {
 
         let account =
             OperatorSnapshot::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap();
+
+        Ok(*account)
+    }
+
+    pub async fn get_base_reward_router(
+        &mut self,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+    ) -> TestResult<BaseRewardRouter> {
+        let address =
+            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch)
+                .0;
+
+        let raw_account = self.banks_client.get_account(address).await?.unwrap();
+
+        let account =
+            BaseRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap();
+
+        Ok(*account)
+    }
+
+    pub async fn get_ncn_reward_router(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        operator: Pubkey,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+    ) -> TestResult<NcnRewardRouter> {
+        let address = NcnRewardRouter::find_program_address(
+            &jito_tip_router_program::id(),
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            ncn_epoch,
+        )
+        .0;
+
+        let raw_account = self.banks_client.get_account(address).await?.unwrap();
+
+        let account =
+            NcnRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap();
 
         Ok(*account)
     }
@@ -809,6 +855,325 @@ impl TipRouterClient {
             .payer(payer)
             .restaking_program(jito_restaking_program::id())
             .system_program(system_program::id())
+            .ncn_fee_group(ncn_fee_group.group)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_route_base_rewards(&mut self, ncn: Pubkey, slot: u64) -> TestResult<()> {
+        self.route_base_rewards(ncn, slot).await
+    }
+
+    pub async fn route_base_rewards(&mut self, ncn: Pubkey, slot: u64) -> TestResult<()> {
+        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
+
+        let restaking_config_account = self.get_restaking_config().await?;
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
+
+        let (epoch_snapshot, _, _) =
+            EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
+
+        let (ballot_box, _, _) =
+            BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
+
+        let (base_reward_router, _, _) =
+            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
+
+        let ix = RouteBaseRewardsBuilder::new()
+            .restaking_config(restaking_config)
+            .ncn(ncn)
+            .epoch_snapshot(epoch_snapshot)
+            .ballot_box(ballot_box)
+            .base_reward_router(base_reward_router)
+            .restaking_program(jito_restaking_program::id())
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_route_ncn_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        ncn: Pubkey,
+        operator: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        self.route_ncn_rewards(ncn_fee_group, ncn, operator, slot)
+            .await
+    }
+
+    pub async fn route_ncn_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        ncn: Pubkey,
+        operator: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
+
+        let restaking_config_account = self.get_restaking_config().await?;
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
+
+        let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+            &jito_tip_router_program::id(),
+            &operator,
+            &ncn,
+            ncn_epoch,
+        );
+
+        let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+            &jito_tip_router_program::id(),
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            ncn_epoch,
+        );
+
+        let ix = RouteNcnRewardsBuilder::new()
+            .restaking_config(restaking_config)
+            .ncn(ncn)
+            .operator(operator)
+            .operator_snapshot(operator_snapshot)
+            .ncn_reward_router(ncn_reward_router)
+            .restaking_program(jito_restaking_program::id())
+            .ncn_fee_group(ncn_fee_group.group)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_distribute_base_rewards(
+        &mut self,
+        base_fee_group: BaseFeeGroup,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        self.distribute_base_rewards(base_fee_group, ncn, slot)
+            .await
+    }
+
+    pub async fn distribute_base_rewards(
+        &mut self,
+        base_fee_group: BaseFeeGroup,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
+
+        let restaking_config_account = self.get_restaking_config().await?;
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
+
+        let (ncn_config, _, _) =
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
+
+        let (base_reward_router, _, _) =
+            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
+
+        let ncn_config_account = self.get_ncn_config(ncn).await?;
+        let base_fee_wallet = ncn_config_account
+            .fee_config
+            .base_fee_wallet(base_fee_group)
+            .unwrap();
+
+        let ix = DistributeBaseRewardsBuilder::new()
+            .restaking_config(restaking_config)
+            .ncn_config(ncn_config)
+            .ncn(ncn)
+            .base_reward_router(base_reward_router)
+            .base_fee_wallet(base_fee_wallet)
+            .restaking_program(jito_restaking_program::id())
+            .base_fee_group(base_fee_group.group)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_distribute_base_ncn_reward_route(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        operator: Pubkey,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        self.distribute_base_ncn_reward_route(ncn_fee_group, operator, ncn, slot)
+            .await
+    }
+
+    pub async fn distribute_base_ncn_reward_route(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        operator: Pubkey,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
+
+        let restaking_config_account = self.get_restaking_config().await?;
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
+
+        let (ncn_config, _, _) =
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
+
+        let (base_reward_router, _, _) =
+            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
+
+        let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+            &jito_tip_router_program::id(),
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            ncn_epoch,
+        );
+
+        let ix = DistributeBaseNcnRewardRouteBuilder::new()
+            .restaking_config(restaking_config)
+            .ncn_config(ncn_config)
+            .ncn(ncn)
+            .operator(operator)
+            .base_reward_router(base_reward_router)
+            .ncn_reward_router(ncn_reward_router)
+            .restaking_program(jito_restaking_program::id())
+            .ncn_fee_group(ncn_fee_group.group)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_distribute_ncn_operator_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        operator: Pubkey,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        self.distribute_ncn_operator_rewards(ncn_fee_group, operator, ncn, slot)
+            .await
+    }
+
+    pub async fn distribute_ncn_operator_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        operator: Pubkey,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
+
+        let restaking_config_account = self.get_restaking_config().await?;
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
+
+        let (ncn_config, _, _) =
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
+
+        let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+            &jito_tip_router_program::id(),
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            ncn_epoch,
+        );
+
+        let ix = DistributeNcnOperatorRewardsBuilder::new()
+            .restaking_config(restaking_config)
+            .ncn_config(ncn_config)
+            .ncn(ncn)
+            .operator(operator)
+            .ncn_reward_router(ncn_reward_router)
+            .restaking_program(jito_restaking_program::id())
+            .ncn_fee_group(ncn_fee_group.group)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_distribute_ncn_vault_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        vault: Pubkey,
+        operator: Pubkey,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        self.distribute_ncn_vault_rewards(ncn_fee_group, vault, operator, ncn, slot)
+            .await
+    }
+
+    pub async fn distribute_ncn_vault_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        vault: Pubkey,
+        operator: Pubkey,
+        ncn: Pubkey,
+        slot: u64,
+    ) -> TestResult<()> {
+        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
+
+        let restaking_config_account = self.get_restaking_config().await?;
+        let ncn_epoch = slot / restaking_config_account.epoch_length();
+
+        let (ncn_config, _, _) =
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
+
+        let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+            &jito_tip_router_program::id(),
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            ncn_epoch,
+        );
+
+        let ix = DistributeNcnVaultRewardsBuilder::new()
+            .restaking_config(restaking_config)
+            .ncn_config(ncn_config)
+            .ncn(ncn)
+            .operator(operator)
+            .vault(vault)
+            .ncn_reward_router(ncn_reward_router)
+            .restaking_program(jito_restaking_program::id())
+            .vault_program(jito_vault_program::id())
             .ncn_fee_group(ncn_fee_group.group)
             .instruction();
 
