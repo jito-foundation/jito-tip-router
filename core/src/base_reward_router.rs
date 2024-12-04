@@ -21,6 +21,8 @@ pub struct BaseRewardRouter {
 
     slot_created: PodU64,
 
+    total_rewards: PodU64,
+
     reward_pool: PodU64,
 
     rewards_processed: PodU64,
@@ -45,6 +47,7 @@ impl BaseRewardRouter {
             ncn_epoch: PodU64::from(ncn_epoch),
             bump,
             slot_created: PodU64::from(slot_created),
+            total_rewards: PodU64::from(0),
             reward_pool: PodU64::from(0),
             rewards_processed: PodU64::from(0),
             reserved: [0; 128],
@@ -114,7 +117,7 @@ impl BaseRewardRouter {
 
     // ----------------- ROUTE REWARDS ---------------------
     pub fn route_incoming_rewards(&mut self, account_balance: u64) -> Result<(), TipRouterError> {
-        let total_rewards = self.total_rewards()?;
+        let total_rewards = self.total_rewards_in_transit()?;
 
         let incoming_rewards = account_balance
             .checked_sub(total_rewards)
@@ -278,13 +281,17 @@ impl BaseRewardRouter {
     }
 
     // ------------------ REWARD TALLIES ---------------------
-    pub fn total_rewards(&self) -> Result<u64, TipRouterError> {
+    pub fn total_rewards_in_transit(&self) -> Result<u64, TipRouterError> {
         let total_rewards = self
             .reward_pool()
             .checked_add(self.rewards_processed())
             .ok_or(TipRouterError::ArithmeticOverflow)?;
 
         Ok(total_rewards)
+    }
+
+    pub fn total_rewards(&self) -> u64 {
+        self.total_rewards.into()
     }
 
     pub fn reward_pool(&self) -> u64 {
@@ -295,6 +302,12 @@ impl BaseRewardRouter {
         if rewards == 0 {
             return Ok(());
         }
+
+        self.total_rewards = PodU64::from(
+            self.total_rewards()
+                .checked_add(rewards)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
 
         self.reward_pool = PodU64::from(
             self.reward_pool()
