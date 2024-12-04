@@ -2,7 +2,7 @@ use {
     crate::{send_until_blockhash_expires, GeneratedMerkleTreeCollection},
     anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas},
     itertools::Itertools,
-    jito_tip_distribution::types::*,
+    jito_tip_distribution::state::{ClaimStatus, Config, TipDistributionAccount},
     log::{error, info, warn},
     rand::{prelude::SliceRandom, thread_rng},
     solana_client::nonblocking::rpc_client::RpcClient,
@@ -318,8 +318,8 @@ fn build_mev_claim_transactions(
             // doesn't make sense to claim for claimants that don't exist anymore
             // can't claim for something already claimed
             // don't need to claim for claimants that get 0 MEV
-            if !claimants.contains_key(&node.claimant)
-                || claim_statuses.contains_key(&node.claim_status_pubkey)
+            if claimants.get(&node.claimant).is_none()
+                || claim_statuses.get(&node.claim_status_pubkey).is_some()
                 || node.amount == 0
             {
                 continue;

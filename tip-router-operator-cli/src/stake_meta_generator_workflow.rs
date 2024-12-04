@@ -121,6 +121,7 @@ fn create_bank_from_snapshot(
         &genesis_config,
         &blockstore,
         vec![PathBuf::from(ledger_path).join(Path::new("stake-meta.accounts"))],
+        None,
         Some(&snapshot_config),
         &ProcessOptions::default(),
         None,
@@ -401,7 +402,7 @@ mod tests {
             vec![INITIAL_VALIDATOR_STAKES; 3],
         );
 
-        let (mut bank, _bank_forks) = Bank::new_with_bank_forks_for_tests(&genesis_config);
+        let (mut bank, _) = Bank::new_with_bank_forks_for_tests(&genesis_config);
 
         /* 2. Seed the Bank with [TipDistributionAccount]'s */
         let merkle_root_upload_authority = Pubkey::new_unique();

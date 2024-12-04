@@ -1,19 +1,39 @@
-use ::{
-    solana_sdk::{ pubkey::Pubkey, signature::Keypair },
-    std::{ path::PathBuf, time::Duration },
+use {
+    crate::{
+        GeneratedMerkleTree,
+        GeneratedMerkleTreeCollection,
+        StakeMetaCollection,
+        read_json_from_file,
+        sign_and_send_transactions_with_retries,
+    },
+    jito_tip_distribution::{
+        program::JitoTipDistribution,
+        sdk::instruction::{upload_merkle_root_ix, UploadMerkleRootAccounts, UploadMerkleRootArgs},
+    },
+    log::info,
+    solana_client::nonblocking::rpc_client::RpcClient,
+    solana_metrics::datapoint_info,
+    solana_sdk::{
+        pubkey::Pubkey,
+        signature::{Keypair, Signer},
+        transaction::Transaction,
+    },
+    std::{path::PathBuf, time::{Duration, Instant}},
     thiserror::Error,
     anyhow::Result,
 };
 
-use crate::{
-    read_json_from_file,
-    GeneratedMerkleTree,
-    GeneratedMerkleTreeCollection,
-    StakeMetaCollection,
-    sign_and_send_transactions_with_retries,
-    merkle_root_generator_workflow::generate_merkle_root,
-    merkle_root_upload_workflow::upload_merkle_root,
-};
+pub struct MerkleTreeGenerator {
+    rpc_url: String,
+    keypair: Keypair,
+    ncn_address: String,
+    output_path: PathBuf,
+    rpc_client: RpcClient,
+    tip_distribution_program_id: Pubkey,
+    tip_distribution_config: Pubkey,
+    merkle_root_upload_authority: Keypair,
+    ncn_program_id: Pubkey,
+}
 
 #[derive(Error, Debug)]
 pub enum MerkleTreeError {
@@ -30,26 +50,29 @@ pub enum MerkleTreeError {
 
     #[error("NCN upload error: {0}")] NcnError(String),
 }
-
-pub struct MerkleTreeGenerator {
-    rpc_url: String,
-    keypair: Keypair,
-    ncn_address: String,
-    output_path: PathBuf,
-}
-
 impl MerkleTreeGenerator {
     pub fn new(
         rpc_url: &str,
         keypair: Keypair,
         ncn_address: String,
-        output_path: PathBuf
+        output_path: PathBuf,
+        tip_distribution_program_id: Pubkey,
+        tip_distribution_config: Pubkey,
+        merkle_root_upload_authority: Keypair,
+        ncn_program_id: Pubkey,
     ) -> Result<Self> {
+        let rpc_client = RpcClient::new(rpc_url.to_string());
+        
         Ok(Self {
             rpc_url: rpc_url.to_string(),
             keypair,
             ncn_address,
             output_path,
+            rpc_client,
+            tip_distribution_program_id,
+            tip_distribution_config,
+            merkle_root_upload_authority,
+            ncn_program_id,
         })
     }
 

@@ -16,13 +16,9 @@ futures = "0.3"
 gethostname = "0.4"
 im = "15.1"
 itertools = "0.11"
-jito-tip-distribution = { git = "https://github.com/exo-tech-xyz/jito-programs.git", rev = "6e5cbce5e2866da0585ef4fa35ee1168fce4556f",     features = ["cpi"] }
-jito-tip-payment = { git = "https://github.com/exo-tech-xyz/jito-programs.git", rev = "6e5cbce5e2866da0585ef4fa35ee1168fce4556f",     features = ["cpi"] }
-log.workspace = true
-num-traits.workspace = true
-rand = "0.8"
-serde.workspace = true
-serde_json = "1.0"
+jito-tip-distribution = { git = "https://github.com/exo-tech-xyz/jito-programs.git", rev = "6e5cbce5e2866da0585ef4fa35ee1168fce4556f", features = ["cpi"] }
+jito-tip-payment = { git = "https://github.com/exo-tech-xyz/jito-programs.git", rev = "6e5cbce5e2866da0585ef4fa35ee1168fce4556f", features = ["cpi"] }
+solana-account-decoder.workspace = true
 solana-accounts-db.workspace = true
 solana-client.workspace = true
 solana-genesis-utils.workspace = true
@@ -32,20 +28,26 @@ solana-merkle-tree.workspace = true
 solana-metrics.workspace = true
 solana-program.workspace = true
 solana-program-runtime.workspace = true
+solana-program-test.workspace = true
+solana-rpc-client.workspace = true
 solana-rpc-client-api.workspace = true
 solana-runtime.workspace = true
 solana-sdk.workspace = true
 solana-stake-program.workspace = true
 solana-transaction-status.workspace = true
 solana-vote.workspace = true
+solana-cli-config.workspace = true
+spl-token.workspace = true
+spl-token-2022.workspace = true
+log.workspace = true
+num-traits.workspace = true
+rand = "0.8"
+serde.workspace = true
+serde_json = "1.0"
 tempfile = "3.2"
 thiserror.workspace = true
 tokio.workspace = true
 tokio-test = "0.4"
-
-[dev-dependencies]
-solana-runtime = { workspace = true, features = ["dev-context-only-utils"] }
-solana-sdk = { workspace = true, features = ["dev-context-only-utils"] }
 
 [[bin]]
 name = "solana-stake-meta-generator"
