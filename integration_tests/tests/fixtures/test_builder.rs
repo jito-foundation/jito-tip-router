@@ -412,7 +412,7 @@ impl TestBuilder {
             let operator = operator_root.operator_pubkey;
 
             tip_router_client
-                .do_initalize_operator_snapshot(operator, ncn, slot)
+                .do_initialize_operator_snapshot(operator, ncn, slot)
                 .await?;
         }
 

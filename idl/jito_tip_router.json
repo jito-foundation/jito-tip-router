@@ -1176,6 +1176,12 @@
             }
           },
           {
+            "name": "totalRewards",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
             "name": "rewardPool",
             "type": {
               "defined": "PodU64"
@@ -1487,6 +1493,12 @@
           },
           {
             "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "totalRewards",
             "type": {
               "defined": "PodU64"
             }

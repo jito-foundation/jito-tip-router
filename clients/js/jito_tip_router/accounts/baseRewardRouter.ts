@@ -51,6 +51,7 @@ export type BaseRewardRouter = {
   ncnEpoch: bigint;
   bump: number;
   slotCreated: bigint;
+  totalRewards: bigint;
   rewardPool: bigint;
   rewardsProcessed: bigint;
   reserved: Array<number>;
@@ -65,6 +66,7 @@ export type BaseRewardRouterArgs = {
   ncnEpoch: number | bigint;
   bump: number;
   slotCreated: number | bigint;
+  totalRewards: number | bigint;
   rewardPool: number | bigint;
   rewardsProcessed: number | bigint;
   reserved: Array<number>;
@@ -80,6 +82,7 @@ export function getBaseRewardRouterEncoder(): Encoder<BaseRewardRouterArgs> {
     ['ncnEpoch', getU64Encoder()],
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
+    ['totalRewards', getU64Encoder()],
     ['rewardPool', getU64Encoder()],
     ['rewardsProcessed', getU64Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
@@ -105,6 +108,7 @@ export function getBaseRewardRouterDecoder(): Decoder<BaseRewardRouter> {
     ['ncnEpoch', getU64Decoder()],
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
+    ['totalRewards', getU64Decoder()],
     ['rewardPool', getU64Decoder()],
     ['rewardsProcessed', getU64Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],

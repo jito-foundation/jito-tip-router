@@ -27,6 +27,7 @@ pub struct NcnRewardRouter {
     pub ncn_epoch: u64,
     pub bump: u8,
     pub slot_created: u64,
+    pub total_rewards: u64,
     pub reward_pool: u64,
     pub rewards_processed: u64,
     pub operator_rewards: u64,
