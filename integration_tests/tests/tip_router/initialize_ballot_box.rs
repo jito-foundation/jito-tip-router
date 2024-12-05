@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
 
+    use jito_tip_router_core::constants::DEFAULT_CONSENSUS_REACHED_SLOT;
+
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
 
     #[tokio::test]
@@ -26,7 +28,10 @@ mod tests {
         assert_eq!(ballot_box.unique_ballots(), 0);
         assert_eq!(ballot_box.operators_voted(), 0);
         assert!(!ballot_box.is_consensus_reached());
-        assert_eq!(ballot_box.slot_consensus_reached(), 0);
+        assert_eq!(
+            ballot_box.slot_consensus_reached(),
+            DEFAULT_CONSENSUS_REACHED_SLOT
+        );
         assert!(ballot_box.get_winning_ballot().is_err(),);
 
         Ok(())

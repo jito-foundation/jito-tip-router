@@ -10,7 +10,11 @@ use solana_program::{
 };
 use spl_math::precise_number::PreciseNumber;
 
-use crate::{constants::precise_consensus, discriminators::Discriminators, error::TipRouterError};
+use crate::{
+    constants::{precise_consensus, DEFAULT_CONSENSUS_REACHED_SLOT},
+    discriminators::Discriminators,
+    error::TipRouterError,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
 #[repr(C)]
@@ -208,7 +212,7 @@ impl BallotBox {
             epoch: PodU64::from(epoch),
             bump,
             slot_created: PodU64::from(current_slot),
-            slot_consensus_reached: PodU64::from(0),
+            slot_consensus_reached: PodU64::from(DEFAULT_CONSENSUS_REACHED_SLOT),
             operators_voted: PodU64::from(0),
             unique_ballots: PodU64::from(0),
             winning_ballot: Ballot::default(),
@@ -296,11 +300,13 @@ impl BallotBox {
     }
 
     pub fn is_consensus_reached(&self) -> bool {
-        self.slot_consensus_reached() > 0 || self.winning_ballot.is_valid()
+        self.slot_consensus_reached() != DEFAULT_CONSENSUS_REACHED_SLOT
+            || self.winning_ballot.is_valid()
     }
 
     pub fn tie_breaker_set(&self) -> bool {
-        self.slot_consensus_reached() == 0 && self.winning_ballot.is_valid()
+        self.slot_consensus_reached() == DEFAULT_CONSENSUS_REACHED_SLOT
+            && self.winning_ballot.is_valid()
     }
 
     pub fn get_winning_ballot(&self) -> Result<Ballot, TipRouterError> {
@@ -399,7 +405,7 @@ impl BallotBox {
         total_stake_weight: u128,
         current_slot: u64,
     ) -> Result<(), TipRouterError> {
-        if self.slot_consensus_reached() != 0 {
+        if self.slot_consensus_reached() != DEFAULT_CONSENSUS_REACHED_SLOT {
             return Ok(());
         }
 
@@ -424,7 +430,7 @@ impl BallotBox {
         let consensus_reached =
             ballot_percentage_of_total.greater_than_or_equal(&target_precise_percentage);
 
-        if consensus_reached {
+        if consensus_reached && !self.winning_ballot.is_valid() {
             self.slot_consensus_reached = PodU64::from(current_slot);
 
             self.set_winning_ballot(max_tally.ballot());
@@ -478,13 +484,21 @@ impl BallotBox {
         current_slot: u64,
         valid_slots_after_consensus: u64,
     ) -> Result<bool, TipRouterError> {
-        let vote_window_valid = current_slot
-            <= self
-                .slot_consensus_reached()
-                .checked_add(valid_slots_after_consensus)
-                .ok_or(TipRouterError::ArithmeticOverflow)?;
+        if self.tie_breaker_set() {
+            return Ok(false);
+        }
 
-        Ok((!self.is_consensus_reached() || vote_window_valid) && !self.tie_breaker_set())
+        if self.is_consensus_reached() {
+            let vote_window_valid = current_slot
+                <= self
+                    .slot_consensus_reached()
+                    .checked_add(valid_slots_after_consensus)
+                    .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+            return Ok(vote_window_valid);
+        }
+
+        Ok(true)
     }
 
     pub fn verify_merkle_root(
@@ -687,7 +701,10 @@ mod tests {
             .tally_votes(total_stake_weight, current_slot)
             .unwrap();
         assert!(!ballot_box.is_consensus_reached());
-        assert_eq!(ballot_box.slot_consensus_reached(), 0);
+        assert_eq!(
+            ballot_box.slot_consensus_reached(),
+            DEFAULT_CONSENSUS_REACHED_SLOT
+        );
         assert!(matches!(
             ballot_box.get_winning_ballot(),
             Err(TipRouterError::ConsensusNotReached)

@@ -1,6 +1,5 @@
 use anchor_lang::AccountDeserialize;
 use jito_tip_distribution_sdk::{jito_tip_distribution, TipDistributionAccount};
-// Getters for the Tip Distribution account to verify that we've set the merkle root correctly
 use solana_program::{pubkey::Pubkey, system_instruction::transfer};
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 use solana_sdk::{
@@ -181,9 +180,7 @@ impl TipDistributionClient {
             jito_tip_distribution_sdk::derive_config_account_address(&jito_tip_distribution::ID);
         let system_program = solana_program::system_program::id();
         let validator_vote_account = vote_keypair.pubkey();
-        println!("Checkpoint E.1");
         self.airdrop(&validator_vote_account, 1.0).await?;
-        println!("Checkpoint E.2");
         let (tip_distribution_account, account_bump) =
             jito_tip_distribution_sdk::derive_tip_distribution_account_address(
                 &jito_tip_distribution::ID,

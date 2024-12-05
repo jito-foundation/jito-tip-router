@@ -515,8 +515,6 @@ impl TipRouterClient {
 
         let restaking_config_account = self.get_restaking_config().await?;
         let ncn_epoch = slot / restaking_config_account.epoch_length();
-        println!("Epoch length: {}", restaking_config_account.epoch_length());
-        println!("ncn_epoch: {}", ncn_epoch);
 
         let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let tracked_mints =
@@ -526,7 +524,6 @@ impl TipRouterClient {
 
         let epoch_snapshot =
             EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch).0;
-        println!("epoch_snapshot: {:?}", epoch_snapshot);
 
         let ix = InitializeEpochSnapshotBuilder::new()
             .ncn_config(config_pda)
@@ -766,7 +763,6 @@ impl TipRouterClient {
                 ncn_epoch,
             )
             .0;
-        println!("epoch_snapshot: {:?}", epoch_snapshot);
 
         let operator_snapshot =
             jito_tip_router_core::epoch_snapshot::OperatorSnapshot::find_program_address(

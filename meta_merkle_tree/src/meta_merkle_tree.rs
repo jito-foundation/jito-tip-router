@@ -189,8 +189,6 @@ impl MetaMerkleTree {
             }
         }
 
-        println!("Verified proof");
-
         Ok(())
     }
 

@@ -30,7 +30,6 @@ pub fn process_cast_vote(
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
-    // Check admin is operator admin
 
     BallotBox::load(program_id, ncn.key, epoch, ballot_box, true)?;
     EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;
@@ -42,6 +41,13 @@ pub fn process_cast_vote(
         operator_snapshot,
         false,
     )?;
+
+    let operator_data = operator.data.borrow();
+    let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
+
+    if *operator_admin.key != operator_account.admin {
+        return Err(TipRouterError::OperatorAdminInvalid.into());
+    }
 
     let valid_slots_after_consensus = {
         let ncn_config_data = ncn_config.data.borrow();

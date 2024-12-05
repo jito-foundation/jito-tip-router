@@ -16,3 +16,5 @@ pub fn precise_consensus() -> Result<PreciseNumber, TipRouterError> {
         )
         .ok_or(TipRouterError::DenominatorIsZero)
 }
+
+pub const DEFAULT_CONSENSUS_REACHED_SLOT: u64 = u64::MAX;

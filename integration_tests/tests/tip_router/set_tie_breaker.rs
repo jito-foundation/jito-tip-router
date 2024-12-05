@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use jito_tip_router_core::ballot_box::Ballot;
+    use jito_tip_router_core::{ballot_box::Ballot, constants::DEFAULT_CONSENSUS_REACHED_SLOT};
 
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
 
@@ -40,7 +40,10 @@ mod tests {
 
         let ballot_box = tip_router_client.get_ballot_box(ncn, ncn_epoch).await?;
         assert!(ballot_box.has_ballot(&Ballot::new(meta_merkle_root)));
-        assert_eq!(ballot_box.slot_consensus_reached(), 0);
+        assert_eq!(
+            ballot_box.slot_consensus_reached(),
+            DEFAULT_CONSENSUS_REACHED_SLOT
+        );
         assert!(!ballot_box.is_consensus_reached());
 
         // Wait a bunch of epochs for voting window to expire (TODO use the exact length)

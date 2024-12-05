@@ -1682,6 +1682,11 @@
       "code": 8739,
       "name": "InvalidMerkleProof",
       "msg": "Invalid merkle proof"
+    },
+    {
+      "code": 8740,
+      "name": "OperatorAdminInvalid",
+      "msg": "Operator admin needs to sign its vote"
     }
   ],
   "metadata": {

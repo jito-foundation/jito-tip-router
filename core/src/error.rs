@@ -87,6 +87,8 @@ pub enum TipRouterError {
     TieBreakerNotInPriorVotes,
     #[error("Invalid merkle proof")]
     InvalidMerkleProof,
+    #[error("Operator admin needs to sign its vote")]
+    OperatorAdminInvalid,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

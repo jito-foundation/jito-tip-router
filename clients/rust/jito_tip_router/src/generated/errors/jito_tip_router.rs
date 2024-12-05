@@ -132,6 +132,9 @@ pub enum JitoTipRouterError {
     /// 8739 - Invalid merkle proof
     #[error("Invalid merkle proof")]
     InvalidMerkleProof = 0x2223,
+    /// 8740 - Operator admin needs to sign its vote
+    #[error("Operator admin needs to sign its vote")]
+    OperatorAdminInvalid = 0x2224,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

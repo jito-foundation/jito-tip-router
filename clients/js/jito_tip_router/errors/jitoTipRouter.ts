@@ -96,6 +96,8 @@ export const JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED = 0x2221; // 8737
 export const JITO_TIP_ROUTER_ERROR__TIE_BREAKER_NOT_IN_PRIOR_VOTES = 0x2222; // 8738
 /** InvalidMerkleProof: Invalid merkle proof */
 export const JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF = 0x2223; // 8739
+/** OperatorAdminInvalid: Operator admin needs to sign its vote */
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID = 0x2224; // 8740
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
@@ -122,6 +124,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__NO_OPERATORS
+  | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL
   | typeof JITO_TIP_ROUTER_ERROR__TIE_BREAKER_ADMIN_INVALID
@@ -167,6 +170,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR]: `New precise number error`,
     [JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE]: `There are no mints in the table`,
     [JITO_TIP_ROUTER_ERROR__NO_OPERATORS]: `No operators in ncn`,
+    [JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID]: `Operator admin needs to sign its vote`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED]: `Operator is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL]: `Operator votes full`,
     [JITO_TIP_ROUTER_ERROR__TIE_BREAKER_ADMIN_INVALID]: `Tie breaker admin invalid`,
