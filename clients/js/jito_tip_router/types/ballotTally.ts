@@ -37,7 +37,7 @@ import {
 export type BallotTally = {
   index: number;
   ballot: Ballot;
-  stakeWeight: StakeWeights;
+  stakeWeights: StakeWeights;
   tally: bigint;
   reserved: ReadonlyUint8Array;
 };
@@ -45,7 +45,7 @@ export type BallotTally = {
 export type BallotTallyArgs = {
   index: number;
   ballot: BallotArgs;
-  stakeWeight: StakeWeightsArgs;
+  stakeWeights: StakeWeightsArgs;
   tally: number | bigint;
   reserved: ReadonlyUint8Array;
 };
@@ -54,7 +54,7 @@ export function getBallotTallyEncoder(): Encoder<BallotTallyArgs> {
   return getStructEncoder([
     ['index', getU16Encoder()],
     ['ballot', getBallotEncoder()],
-    ['stakeWeight', getStakeWeightsEncoder()],
+    ['stakeWeights', getStakeWeightsEncoder()],
     ['tally', getU64Encoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 64)],
   ]);
@@ -64,7 +64,7 @@ export function getBallotTallyDecoder(): Decoder<BallotTally> {
   return getStructDecoder([
     ['index', getU16Decoder()],
     ['ballot', getBallotDecoder()],
-    ['stakeWeight', getStakeWeightsDecoder()],
+    ['stakeWeights', getStakeWeightsDecoder()],
     ['tally', getU64Decoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 64)],
   ]);

@@ -22,6 +22,14 @@ impl Default for StakeWeights {
 }
 
 impl StakeWeights {
+    pub fn new(stake_weight: u128) -> Self {
+        Self {
+            stake_weight: PodU128::from(stake_weight),
+            ncn_fee_group_stake_weights: [NcnFeeGroupWeight::default();
+                NcnFeeGroup::FEE_GROUP_COUNT],
+        }
+    }
+
     pub fn snapshot(
         ncn_fee_group: NcnFeeGroup,
         stake_weight: u128,

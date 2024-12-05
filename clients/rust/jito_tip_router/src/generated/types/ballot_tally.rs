@@ -13,7 +13,7 @@ use crate::generated::types::{Ballot, StakeWeights};
 pub struct BallotTally {
     pub index: u16,
     pub ballot: Ballot,
-    pub stake_weight: StakeWeights,
+    pub stake_weights: StakeWeights,
     pub tally: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 64],

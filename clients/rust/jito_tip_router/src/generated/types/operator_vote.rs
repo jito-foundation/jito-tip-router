@@ -18,7 +18,7 @@ pub struct OperatorVote {
     )]
     pub operator: Pubkey,
     pub slot_voted: u64,
-    pub stake_weight: StakeWeights,
+    pub stake_weights: StakeWeights,
     pub ballot_index: u16,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 64],

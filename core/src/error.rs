@@ -80,10 +80,25 @@ pub enum TipRouterError {
     OperatorVotesFull,
     #[error("Merkle root tally full")]
     BallotTallyFull,
-    #[error("Consensus already reached")]
+    #[error("Consensus already reached, cannot change vote")]
     ConsensusAlreadyReached,
     #[error("Consensus not reached")]
     ConsensusNotReached,
+
+    #[error("Epoch snapshot not finalized")]
+    EpochSnapshotNotFinalized,
+    #[error("Voting not valid, too many slots after consensus reached")]
+    VotingNotValid,
+    #[error("Tie breaker admin invalid")]
+    TieBreakerAdminInvalid,
+    #[error("Voting not finalized")]
+    VotingNotFinalized,
+    #[error("Tie breaking ballot must be one of the prior votes")]
+    TieBreakerNotInPriorVotes,
+    #[error("Invalid merkle proof")]
+    InvalidMerkleProof,
+    #[error("Operator admin needs to sign its vote")]
+    OperatorAdminInvalid,
     #[error("Not a valid NCN fee group")]
     InvalidNcnFeeGroup,
     #[error("Not a valid base fee group")]

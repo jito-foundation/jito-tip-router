@@ -36,7 +36,7 @@ import {
 export type OperatorVote = {
   operator: Address;
   slotVoted: bigint;
-  stakeWeight: StakeWeights;
+  stakeWeights: StakeWeights;
   ballotIndex: number;
   reserved: ReadonlyUint8Array;
 };
@@ -44,7 +44,7 @@ export type OperatorVote = {
 export type OperatorVoteArgs = {
   operator: Address;
   slotVoted: number | bigint;
-  stakeWeight: StakeWeightsArgs;
+  stakeWeights: StakeWeightsArgs;
   ballotIndex: number;
   reserved: ReadonlyUint8Array;
 };
@@ -53,7 +53,7 @@ export function getOperatorVoteEncoder(): Encoder<OperatorVoteArgs> {
   return getStructEncoder([
     ['operator', getAddressEncoder()],
     ['slotVoted', getU64Encoder()],
-    ['stakeWeight', getStakeWeightsEncoder()],
+    ['stakeWeights', getStakeWeightsEncoder()],
     ['ballotIndex', getU16Encoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 64)],
   ]);
@@ -63,7 +63,7 @@ export function getOperatorVoteDecoder(): Decoder<OperatorVote> {
   return getStructDecoder([
     ['operator', getAddressDecoder()],
     ['slotVoted', getU64Decoder()],
-    ['stakeWeight', getStakeWeightsDecoder()],
+    ['stakeWeights', getStakeWeightsDecoder()],
     ['ballotIndex', getU16Decoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 64)],
   ]);

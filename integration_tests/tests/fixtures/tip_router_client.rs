@@ -2,16 +2,19 @@ use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{
     config::Config, ncn_operator_state::NcnOperatorState, ncn_vault_ticket::NcnVaultTicket,
 };
+use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, jito_tip_distribution};
 use jito_tip_router_client::{
     instructions::{
-        AdminUpdateWeightTableBuilder, DistributeBaseNcnRewardRouteBuilder,
+        AdminUpdateWeightTableBuilder, CastVoteBuilder, DistributeBaseNcnRewardRouteBuilder,
         DistributeBaseRewardsBuilder, DistributeNcnOperatorRewardsBuilder,
-        DistributeNcnVaultRewardsBuilder, InitializeBaseRewardRouterBuilder,
-        InitializeEpochSnapshotBuilder, InitializeNCNConfigBuilder,
-        InitializeNcnRewardRouterBuilder, InitializeOperatorSnapshotBuilder,
-        InitializeTrackedMintsBuilder, InitializeWeightTableBuilder, RegisterMintBuilder,
-        RouteBaseRewardsBuilder, RouteNcnRewardsBuilder, SetConfigFeesBuilder, SetNewAdminBuilder,
-        SetTrackedMintNcnFeeGroupBuilder, SnapshotVaultOperatorDelegationBuilder,
+        DistributeNcnVaultRewardsBuilder, InitializeBallotBoxBuilder,
+        InitializeBaseRewardRouterBuilder, InitializeEpochSnapshotBuilder,
+        InitializeNCNConfigBuilder, InitializeNcnRewardRouterBuilder,
+        InitializeOperatorSnapshotBuilder, InitializeTrackedMintsBuilder,
+        InitializeWeightTableBuilder, RegisterMintBuilder, RouteBaseRewardsBuilder,
+        RouteNcnRewardsBuilder, SetConfigFeesBuilder, SetMerkleRootBuilder, SetNewAdminBuilder,
+        SetTieBreakerBuilder, SetTrackedMintNcnFeeGroupBuilder,
+        SnapshotVaultOperatorDelegationBuilder,
     },
     types::ConfigAdminRole,
 };
@@ -178,6 +181,13 @@ impl TipRouterClient {
             OperatorSnapshot::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap();
 
         Ok(*account)
+    }
+
+    pub async fn get_ballot_box(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<BallotBox> {
+        let address =
+            BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+        let raw_account = self.banks_client.get_account(address).await?.unwrap();
+        Ok(*BallotBox::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap())
     }
 
     pub async fn get_base_reward_router(
@@ -811,6 +821,290 @@ impl TipRouterClient {
             .vault_program(jito_vault_program::id())
             .restaking_program(jito_restaking_program::id())
             .first_slot_of_ncn_epoch(slot)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_initialize_ballot_box(
+        &mut self,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+    ) -> Result<(), TestError> {
+        let ncn_config = jito_tip_router_core::ncn_config::NcnConfig::find_program_address(
+            &jito_tip_router_program::id(),
+            &ncn,
+        )
+        .0;
+
+        let ballot_box = jito_tip_router_core::ballot_box::BallotBox::find_program_address(
+            &jito_tip_router_program::id(),
+            &ncn,
+            ncn_epoch,
+        )
+        .0;
+
+        self.initialize_ballot_box(ncn_config, ballot_box, ncn, ncn_epoch)
+            .await
+    }
+
+    pub async fn initialize_ballot_box(
+        &mut self,
+        ncn_config: Pubkey,
+        ballot_box: Pubkey,
+        ncn: Pubkey,
+        epoch: u64,
+    ) -> Result<(), TestError> {
+        let ix = InitializeBallotBoxBuilder::new()
+            .ncn_config(ncn_config)
+            .ballot_box(ballot_box)
+            .ncn(ncn)
+            .epoch(epoch)
+            .payer(self.payer.pubkey())
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_cast_vote(
+        &mut self,
+        ncn: Pubkey,
+        operator: Pubkey,
+        operator_admin: &Keypair,
+        meta_merkle_root: [u8; 32],
+        ncn_epoch: u64,
+    ) -> Result<(), TestError> {
+        let ncn_config = jito_tip_router_core::ncn_config::NcnConfig::find_program_address(
+            &jito_tip_router_program::id(),
+            &ncn,
+        )
+        .0;
+
+        let ballot_box = jito_tip_router_core::ballot_box::BallotBox::find_program_address(
+            &jito_tip_router_program::id(),
+            &ncn,
+            ncn_epoch,
+        )
+        .0;
+
+        let epoch_snapshot =
+            jito_tip_router_core::epoch_snapshot::EpochSnapshot::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                ncn_epoch,
+            )
+            .0;
+
+        let operator_snapshot =
+            jito_tip_router_core::epoch_snapshot::OperatorSnapshot::find_program_address(
+                &jito_tip_router_program::id(),
+                &operator,
+                &ncn,
+                ncn_epoch,
+            )
+            .0;
+
+        self.cast_vote(
+            ncn_config,
+            ballot_box,
+            ncn,
+            epoch_snapshot,
+            operator_snapshot,
+            operator,
+            operator_admin,
+            meta_merkle_root,
+            ncn_epoch,
+        )
+        .await
+    }
+
+    pub async fn cast_vote(
+        &mut self,
+        ncn_config: Pubkey,
+        ballot_box: Pubkey,
+        ncn: Pubkey,
+        epoch_snapshot: Pubkey,
+        operator_snapshot: Pubkey,
+        operator: Pubkey,
+        operator_admin: &Keypair,
+        meta_merkle_root: [u8; 32],
+        epoch: u64,
+    ) -> Result<(), TestError> {
+        let ix = CastVoteBuilder::new()
+            .ncn_config(ncn_config)
+            .ballot_box(ballot_box)
+            .ncn(ncn)
+            .epoch_snapshot(epoch_snapshot)
+            .operator_snapshot(operator_snapshot)
+            .operator(operator)
+            .operator_admin(operator_admin.pubkey())
+            .restaking_program(jito_restaking_program::id())
+            .meta_merkle_root(meta_merkle_root)
+            .epoch(epoch)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer, operator_admin],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_set_merkle_root(
+        &mut self,
+        ncn: Pubkey,
+        vote_account: Pubkey,
+        proof: Vec<[u8; 32]>,
+        merkle_root: [u8; 32],
+        max_total_claim: u64,
+        max_num_nodes: u64,
+        epoch: u64,
+    ) -> Result<(), TestError> {
+        let ncn_config = jito_tip_router_core::ncn_config::NcnConfig::find_program_address(
+            &jito_tip_router_program::id(),
+            &ncn,
+        )
+        .0;
+        let ballot_box =
+            BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
+        let tip_distribution_program_id = jito_tip_distribution::ID;
+        let tip_distribution_account = derive_tip_distribution_account_address(
+            &tip_distribution_program_id,
+            &vote_account,
+            epoch,
+        )
+        .0;
+
+        let tip_distribution_config =
+            jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program_id)
+                .0;
+        let restaking_program_id = jito_restaking_program::id();
+
+        self.set_merkle_root(
+            ncn_config,
+            ncn,
+            ballot_box,
+            vote_account,
+            tip_distribution_account,
+            tip_distribution_config,
+            tip_distribution_program_id,
+            restaking_program_id,
+            proof,
+            merkle_root,
+            max_total_claim,
+            max_num_nodes,
+            epoch,
+        )
+        .await
+    }
+
+    pub async fn set_merkle_root(
+        &mut self,
+        ncn_config: Pubkey,
+        ncn: Pubkey,
+        ballot_box: Pubkey,
+        vote_account: Pubkey,
+        tip_distribution_account: Pubkey,
+        tip_distribution_config: Pubkey,
+        tip_distribution_program_id: Pubkey,
+        restaking_program_id: Pubkey,
+        proof: Vec<[u8; 32]>,
+        merkle_root: [u8; 32],
+        max_total_claim: u64,
+        max_num_nodes: u64,
+        epoch: u64,
+    ) -> Result<(), TestError> {
+        let ix = SetMerkleRootBuilder::new()
+            .ncn_config(ncn_config)
+            .ncn(ncn)
+            .ballot_box(ballot_box)
+            .vote_account(vote_account)
+            .tip_distribution_account(tip_distribution_account)
+            .tip_distribution_config(tip_distribution_config)
+            .tip_distribution_program(tip_distribution_program_id)
+            .restaking_program(restaking_program_id)
+            .proof(proof)
+            .merkle_root(merkle_root)
+            .max_total_claim(max_total_claim)
+            .max_num_nodes(max_num_nodes)
+            .epoch(epoch)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_set_tie_breaker(
+        &mut self,
+        ncn: Pubkey,
+        meta_merkle_root: [u8; 32],
+        epoch: u64,
+    ) -> Result<(), TestError> {
+        let ncn_config = jito_tip_router_core::ncn_config::NcnConfig::find_program_address(
+            &jito_tip_router_program::id(),
+            &ncn,
+        )
+        .0;
+        let ballot_box =
+            BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
+        let tie_breaker_admin = self.payer.pubkey();
+        let restaking_program_id = jito_restaking_program::id();
+
+        self.set_tie_breaker(
+            ncn_config,
+            ballot_box,
+            ncn,
+            tie_breaker_admin,
+            meta_merkle_root,
+            epoch,
+            restaking_program_id,
+        )
+        .await
+    }
+
+    pub async fn set_tie_breaker(
+        &mut self,
+        ncn_config: Pubkey,
+        ballot_box: Pubkey,
+        ncn: Pubkey,
+        tie_breaker_admin: Pubkey,
+        meta_merkle_root: [u8; 32],
+        epoch: u64,
+        restaking_program_id: Pubkey,
+    ) -> Result<(), TestError> {
+        let ix = SetTieBreakerBuilder::new()
+            .ncn_config(ncn_config)
+            .ballot_box(ballot_box)
+            .ncn(ncn)
+            .tie_breaker_admin(tie_breaker_admin)
+            .meta_merkle_root(meta_merkle_root)
+            .epoch(epoch)
+            .restaking_program(restaking_program_id)
             .instruction();
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;

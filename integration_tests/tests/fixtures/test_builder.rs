@@ -1,14 +1,24 @@
-use std::fmt::{Debug, Formatter};
+use std::{
+    borrow::BorrowMut,
+    fmt::{Debug, Formatter},
+};
 
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
+use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
     clock::Clock, native_token::sol_to_lamports, pubkey::Pubkey, system_instruction::transfer,
 };
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
-use solana_sdk::{commitment_config::CommitmentLevel, signature::Signer, transaction::Transaction};
+use solana_sdk::{
+    account::Account, commitment_config::CommitmentLevel, epoch_schedule::EpochSchedule,
+    signature::Signer, transaction::Transaction,
+};
 
-use super::{restaking_client::NcnRoot, tip_router_client::TipRouterClient};
+use super::{
+    restaking_client::NcnRoot, tip_distribution_client::TipDistributionClient,
+    tip_router_client::TipRouterClient,
+};
 use crate::fixtures::{
     restaking_client::{OperatorRoot, RestakingProgramClient},
     vault_client::{VaultProgramClient, VaultRoot},
@@ -46,22 +56,41 @@ impl Debug for TestBuilder {
 
 impl TestBuilder {
     pub async fn new() -> Self {
-        let mut program_test = ProgramTest::new(
-            "jito_tip_router_program",
-            jito_tip_router_program::id(),
-            processor!(jito_tip_router_program::process_instruction),
-        );
-        program_test.add_program(
-            "jito_vault_program",
-            jito_vault_program::id(),
-            processor!(jito_vault_program::process_instruction),
-        );
-        program_test.add_program(
-            "jito_restaking_program",
-            jito_restaking_program::id(),
-            processor!(jito_restaking_program::process_instruction),
-        );
-        program_test.prefer_bpf(true);
+        let run_as_bpf = std::env::vars().any(|(key, _)| key.eq("SBF_OUT_DIR"));
+
+        let program_test = if run_as_bpf {
+            let mut program_test = ProgramTest::new(
+                "jito_tip_router_program",
+                jito_tip_router_program::id(),
+                None,
+            );
+            program_test.add_program("jito_vault_program", jito_vault_program::id(), None);
+            program_test.add_program("jito_restaking_program", jito_restaking_program::id(), None);
+
+            // Tests that invoke this program should be in the "bpf" module so we can run them separately with the bpf vm.
+            // Anchor programs do not expose a compatible entrypoint for solana_program_test::processor!
+            program_test.add_program("jito_tip_distribution", jito_tip_distribution::ID, None);
+
+            program_test
+        } else {
+            let mut program_test = ProgramTest::new(
+                "jito_tip_router_program",
+                jito_tip_router_program::id(),
+                processor!(jito_tip_router_program::process_instruction),
+            );
+            program_test.add_program(
+                "jito_vault_program",
+                jito_vault_program::id(),
+                processor!(jito_vault_program::process_instruction),
+            );
+            program_test.add_program(
+                "jito_restaking_program",
+                jito_restaking_program::id(),
+                processor!(jito_restaking_program::process_instruction),
+            );
+
+            program_test
+        };
 
         Self {
             context: program_test.start_with_context().await,
@@ -79,7 +108,17 @@ impl TestBuilder {
         Ok(())
     }
 
+    pub async fn set_account(&mut self, address: Pubkey, account: Account) {
+        self.context
+            .borrow_mut()
+            .set_account(&address, &account.into())
+    }
+
     pub async fn clock(&mut self) -> Clock {
+        self.context.banks_client.get_sysvar().await.unwrap()
+    }
+
+    pub async fn epoch_schedule(&mut self) -> EpochSchedule {
         self.context.banks_client.get_sysvar().await.unwrap()
     }
 
@@ -111,18 +150,22 @@ impl TestBuilder {
         )
     }
 
+    pub fn tip_distribution_client(&self) -> TipDistributionClient {
+        TipDistributionClient::new(
+            self.context.banks_client.clone(),
+            self.context.payer.insecure_clone(),
+        )
+    }
+
     #[allow(dead_code)]
     pub async fn transfer(&mut self, to: &Pubkey, sol: f64) -> Result<(), BanksClientError> {
         let blockhash = self.context.banks_client.get_latest_blockhash().await?;
+        let lamports = sol_to_lamports(sol);
         self.context
             .banks_client
             .process_transaction_with_preflight_and_commitment(
                 Transaction::new_signed_with_payer(
-                    &[transfer(
-                        &self.context.payer.pubkey(),
-                        to,
-                        sol_to_lamports(sol),
-                    )],
+                    &[transfer(&self.context.payer.pubkey(), to, lamports)],
                     Some(&self.context.payer.pubkey()),
                     &[&self.context.payer],
                     blockhash,

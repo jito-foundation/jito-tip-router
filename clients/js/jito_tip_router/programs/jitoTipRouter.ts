@@ -14,10 +14,12 @@ import {
 } from '@solana/web3.js';
 import {
   type ParsedAdminUpdateWeightTableInstruction,
+  type ParsedCastVoteInstruction,
   type ParsedDistributeBaseNcnRewardRouteInstruction,
   type ParsedDistributeBaseRewardsInstruction,
   type ParsedDistributeNcnOperatorRewardsInstruction,
   type ParsedDistributeNcnVaultRewardsInstruction,
+  type ParsedInitializeBallotBoxInstruction,
   type ParsedInitializeBaseRewardRouterInstruction,
   type ParsedInitializeEpochSnapshotInstruction,
   type ParsedInitializeNCNConfigInstruction,
@@ -29,7 +31,9 @@ import {
   type ParsedRouteBaseRewardsInstruction,
   type ParsedRouteNcnRewardsInstruction,
   type ParsedSetConfigFeesInstruction,
+  type ParsedSetMerkleRootInstruction,
   type ParsedSetNewAdminInstruction,
+  type ParsedSetTieBreakerInstruction,
   type ParsedSetTrackedMintNcnFeeGroupInstruction,
   type ParsedSnapshotVaultOperatorDelegationInstruction,
 } from '../instructions';
@@ -68,6 +72,10 @@ export enum JitoTipRouterInstruction {
   DistributeNcnOperatorRewards,
   DistributeNcnVaultRewards,
   SetTrackedMintNcnFeeGroup,
+  InitializeBallotBox,
+  CastVote,
+  SetMerkleRoot,
+  SetTieBreaker,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -130,6 +138,18 @@ export function identifyJitoTipRouterInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(18), 0)) {
     return JitoTipRouterInstruction.SetTrackedMintNcnFeeGroup;
+  }
+  if (containsBytes(data, getU8Encoder().encode(19), 0)) {
+    return JitoTipRouterInstruction.InitializeBallotBox;
+  }
+  if (containsBytes(data, getU8Encoder().encode(20), 0)) {
+    return JitoTipRouterInstruction.CastVote;
+  }
+  if (containsBytes(data, getU8Encoder().encode(21), 0)) {
+    return JitoTipRouterInstruction.SetMerkleRoot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(22), 0)) {
+    return JitoTipRouterInstruction.SetTieBreaker;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -195,4 +215,16 @@ export type ParsedJitoTipRouterInstruction<
     } & ParsedDistributeNcnVaultRewardsInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.SetTrackedMintNcnFeeGroup;
-    } & ParsedSetTrackedMintNcnFeeGroupInstruction<TProgram>);
+    } & ParsedSetTrackedMintNcnFeeGroupInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeBallotBox;
+    } & ParsedInitializeBallotBoxInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.CastVote;
+    } & ParsedCastVoteInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.SetMerkleRoot;
+    } & ParsedSetMerkleRootInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.SetTieBreaker;
+    } & ParsedSetTieBreakerInstruction<TProgram>);

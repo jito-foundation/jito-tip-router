@@ -171,7 +171,7 @@ impl BaseRewardRouter {
         ballot_box: &BallotBox,
     ) -> Result<(), TipRouterError> {
         let winning_ballot = ballot_box.get_winning_ballot()?;
-        let winning_stake_weight = winning_ballot.stake_weight();
+        let winning_stake_weight = winning_ballot.stake_weights();
 
         for votes in ballot_box.operator_votes().iter() {
             if votes.ballot_index() == winning_ballot.index() {
@@ -182,7 +182,7 @@ impl BaseRewardRouter {
                     let winning_reward_stake_weight =
                         winning_stake_weight.ncn_fee_group_stake_weight(*group)?;
                     let ncn_route_reward_stake_weight =
-                        votes.stake_weight().ncn_fee_group_stake_weight(*group)?;
+                        votes.stake_weights().ncn_fee_group_stake_weight(*group)?;
 
                     let ncn_fee_group_route_reward = Self::calculate_ncn_fee_group_route_reward(
                         ncn_route_reward_stake_weight,

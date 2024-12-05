@@ -1732,6 +1732,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 
 [[package]]
+name = "fast-math"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2465292146cdfc2011350fe3b1c616ac83cf0faeedb33463ba1c332ed8948d66"
+dependencies = [
+ "ieee754",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2217,6 +2226,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ieee754"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9007da9cacbd3e6343da136e98b0d2df013f553d35bdec8b518f07bea768e19c"
+
+[[package]]
 name = "im"
 version = "15.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2444,6 +2459,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "jito-tip-distribution-sdk"
+version = "0.0.1"
+dependencies = [
+ "anchor-lang",
+]
+
+[[package]]
 name = "jito-tip-router-cli"
 version = "0.0.1"
 dependencies = [
@@ -2501,6 +2523,7 @@ dependencies = [
  "jito-restaking-sdk",
  "jito-vault-core",
  "jito-vault-sdk",
+ "meta-merkle-tree",
  "shank",
  "solana-program 1.18.26",
  "spl-associated-token-account",
@@ -2513,12 +2536,15 @@ dependencies = [
 name = "jito-tip-router-integration-tests"
 version = "0.0.1"
 dependencies = [
+ "anchor-lang",
  "borsh 0.10.4",
+ "bytemuck",
  "jito-bytemuck",
  "jito-jsm-core",
  "jito-restaking-core",
  "jito-restaking-program",
  "jito-restaking-sdk",
+ "jito-tip-distribution-sdk",
  "jito-tip-router-client",
  "jito-tip-router-core",
  "jito-tip-router-program",
@@ -2526,6 +2552,7 @@ dependencies = [
  "jito-vault-program",
  "jito-vault-sdk",
  "log",
+ "meta-merkle-tree",
  "shank",
  "solana-program 1.18.26",
  "solana-program-test",
@@ -2551,6 +2578,7 @@ dependencies = [
  "jito-restaking-core",
  "jito-restaking-program",
  "jito-restaking-sdk",
+ "jito-tip-distribution-sdk",
  "jito-tip-router-core",
  "jito-vault-core",
  "jito-vault-program",
@@ -2863,6 +2891,33 @@ dependencies = [
  "keccak",
  "rand_core 0.6.4",
  "zeroize",
+]
+
+[[package]]
+name = "meta-merkle-tree"
+version = "0.0.1"
+dependencies = [
+ "borsh 0.10.4",
+ "bytemuck",
+ "fast-math",
+ "hex",
+ "jito-bytemuck",
+ "jito-jsm-core",
+ "jito-restaking-core",
+ "jito-restaking-sdk",
+ "jito-tip-distribution-sdk",
+ "jito-vault-core",
+ "jito-vault-sdk",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "shank",
+ "solana-program 1.18.26",
+ "solana-sdk",
+ "spl-associated-token-account",
+ "spl-math",
+ "spl-token",
+ "thiserror",
 ]
 
 [[package]]
@@ -3922,9 +3977,9 @@ dependencies = [
 
 [[package]]
 name = "schannel"
-version = "0.1.26"
+version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01227be5826fa0690321a2ba6c5cd57a19cf3f6a09e76973b58e61de6ab9d1c1"
+checksum = "1f29ebaa345f945cec9fbbc532eb307f0fdad8161f281b6369539c8d84876b3d"
 dependencies = [
  "windows-sys 0.59.0",
 ]
@@ -3980,9 +4035,9 @@ dependencies = [
 
 [[package]]
 name = "security-framework-sys"
-version = "2.12.0"
+version = "2.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea4a292869320c0272d7bc55a5a6aafaff59b4f63404a003887b679a2e05b4b6"
+checksum = "fa39c7303dc58b5543c94d22c1766b0d31f2ee58306363ea622b10bbc075eaa2"
 dependencies = [
  "core-foundation-sys",
  "libc",
@@ -6098,9 +6153,9 @@ dependencies = [
 
 [[package]]
 name = "tar"
-version = "0.4.42"
+version = "0.4.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ff6c40d3aedb5e06b57c6f669ad17ab063dd1e63d977c6a88e7f4dfa4f04020"
+checksum = "c65998313f8e17d0d553d28f91a0df93e4dbbbf770279c7bc21ca0f09ea1a1f6"
 dependencies = [
  "filetime",
  "libc",

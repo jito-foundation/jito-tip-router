@@ -1064,6 +1064,242 @@
         "type": "u8",
         "value": 18
       }
+    },
+    {
+      "name": "InitializeBallotBox",
+      "accounts": [
+        {
+          "name": "ncnConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ballotBox",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "epoch",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 19
+      }
+    },
+    {
+      "name": "CastVote",
+      "accounts": [
+        {
+          "name": "ncnConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ballotBox",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "epochSnapshot",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "operatorSnapshot",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "operator",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "operatorAdmin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "metaMerkleRoot",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "epoch",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 20
+      }
+    },
+    {
+      "name": "SetMerkleRoot",
+      "accounts": [
+        {
+          "name": "ncnConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ballotBox",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "voteAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "merkleRoot",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "maxTotalClaim",
+          "type": "u64"
+        },
+        {
+          "name": "maxNumNodes",
+          "type": "u64"
+        },
+        {
+          "name": "epoch",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 21
+      }
+    },
+    {
+      "name": "SetTieBreaker",
+      "accounts": [
+        {
+          "name": "ncnConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ballotBox",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tieBreakerAdmin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "metaMerkleRoot",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "epoch",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 22
+      }
     }
   ],
   "accounts": [
@@ -1077,7 +1313,7 @@
             "type": "publicKey"
           },
           {
-            "name": "ncnEpoch",
+            "name": "epoch",
             "type": {
               "defined": "PodU64"
             }
@@ -1441,6 +1677,18 @@
             "type": "publicKey"
           },
           {
+            "name": "validSlotsAfterConsensus",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "epochsBeforeStall",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
             "name": "feeConfig",
             "type": {
               "defined": "FeeConfig"
@@ -1674,7 +1922,7 @@
             }
           },
           {
-            "name": "stakeWeight",
+            "name": "stakeWeights",
             "type": {
               "defined": "StakeWeights"
             }
@@ -1713,7 +1961,7 @@
             }
           },
           {
-            "name": "stakeWeight",
+            "name": "stakeWeights",
             "type": {
               "defined": "StakeWeights"
             }
@@ -2283,7 +2531,7 @@
     {
       "code": 8734,
       "name": "ConsensusAlreadyReached",
-      "msg": "Consensus already reached"
+      "msg": "Consensus already reached, cannot change vote"
     },
     {
       "code": 8735,
@@ -2292,46 +2540,81 @@
     },
     {
       "code": 8736,
+      "name": "EpochSnapshotNotFinalized",
+      "msg": "Epoch snapshot not finalized"
+    },
+    {
+      "code": 8737,
+      "name": "VotingNotValid",
+      "msg": "Voting not valid, too many slots after consensus reached"
+    },
+    {
+      "code": 8738,
+      "name": "TieBreakerAdminInvalid",
+      "msg": "Tie breaker admin invalid"
+    },
+    {
+      "code": 8739,
+      "name": "VotingNotFinalized",
+      "msg": "Voting not finalized"
+    },
+    {
+      "code": 8740,
+      "name": "TieBreakerNotInPriorVotes",
+      "msg": "Tie breaking ballot must be one of the prior votes"
+    },
+    {
+      "code": 8741,
+      "name": "InvalidMerkleProof",
+      "msg": "Invalid merkle proof"
+    },
+    {
+      "code": 8742,
+      "name": "OperatorAdminInvalid",
+      "msg": "Operator admin needs to sign its vote"
+    },
+    {
+      "code": 8743,
       "name": "InvalidNcnFeeGroup",
       "msg": "Not a valid NCN fee group"
     },
     {
-      "code": 8737,
+      "code": 8744,
       "name": "InvalidBaseFeeGroup",
       "msg": "Not a valid base fee group"
     },
     {
-      "code": 8738,
+      "code": 8745,
       "name": "OperatorRewardListFull",
       "msg": "Operator reward list full"
     },
     {
-      "code": 8739,
+      "code": 8746,
       "name": "OperatorRewardNotFound",
       "msg": "Operator Reward not found"
     },
     {
-      "code": 8740,
+      "code": 8747,
       "name": "VaultRewardNotFound",
       "msg": "Vault Reward not found"
     },
     {
-      "code": 8741,
+      "code": 8748,
       "name": "DestinationMismatch",
       "msg": "Destination mismatch"
     },
     {
-      "code": 8742,
+      "code": 8749,
       "name": "NcnRewardRouteNotFound",
       "msg": "Ncn reward route not found"
     },
     {
-      "code": 8743,
+      "code": 8750,
       "name": "FeeNotActive",
       "msg": "Fee not active"
     },
     {
-      "code": 8744,
+      "code": 8751,
       "name": "NoRewards",
       "msg": "No rewards to distribute"
     }

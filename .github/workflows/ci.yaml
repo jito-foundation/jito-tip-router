@@ -85,7 +85,8 @@ jobs:
           crate: cargo-sort
       - run: cargo sort --workspace --check
       - run: cargo fmt --all --check
-      - run: cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D clippy::integer_division -D clippy::arithmetic_side_effects -D clippy::style -D clippy::perf
+      - run: |
+          cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D clippy::integer_division -D clippy::arithmetic_side_effects -D clippy::style -D clippy::perf
 
   build:
     name: build
@@ -105,11 +106,12 @@ jobs:
         run: cargo-build-sbf
         env:
           TIP_ROUTER_PROGRAM_ID: ${{ env.TIP_ROUTER_PROGRAM_ID }}
+          SBF_OUT_DIR: ${{ github.workspace }}/target/sbf-solana-solana/release
       - name: Upload MEV Tip Distribution NCN program
         uses: actions/upload-artifact@v4
         with:
           name: jito_tip_router_program.so
-          path: target/sbf-solana-solana/release/jito_tip_router_program.so
+          path: target/sbf-solana-solana/release/
           if-no-files-found: error
 
   # coverage:
@@ -150,11 +152,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: jito_tip_router_program.so
-          path: target/sbf-solana-solana/release/
+          path: integration_tests/tests/fixtures/
       - uses: taiki-e/install-action@nextest
-      - run: cargo nextest run --all-features
+      # Test the non-BPF tests and the BPF tests separately
+      - run: cargo nextest run --all-features -E 'not test(bpf)'
+      - run: cargo nextest run --all-features -E 'test(bpf)'
         env:
-          SBF_OUT_DIR: ${{ github.workspace }}/target/sbf-solana-solana/release
+          SBF_OUT_DIR: ${{ github.workspace }}/integration_tests/tests/fixtures
 
   # create_release:
   #   name: Create Release

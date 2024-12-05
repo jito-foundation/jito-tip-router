@@ -90,28 +90,42 @@ export const JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST = 0x221b; // 8731
 export const JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL = 0x221c; // 8732
 /** BallotTallyFull: Merkle root tally full */
 export const JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL = 0x221d; // 8733
-/** ConsensusAlreadyReached: Consensus already reached */
+/** ConsensusAlreadyReached: Consensus already reached, cannot change vote */
 export const JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED = 0x221e; // 8734
 /** ConsensusNotReached: Consensus not reached */
 export const JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED = 0x221f; // 8735
+/** EpochSnapshotNotFinalized: Epoch snapshot not finalized */
+export const JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED = 0x2220; // 8736
+/** VotingNotValid: Voting not valid, too many slots after consensus reached */
+export const JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID = 0x2221; // 8737
+/** TieBreakerAdminInvalid: Tie breaker admin invalid */
+export const JITO_TIP_ROUTER_ERROR__TIE_BREAKER_ADMIN_INVALID = 0x2222; // 8738
+/** VotingNotFinalized: Voting not finalized */
+export const JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED = 0x2223; // 8739
+/** TieBreakerNotInPriorVotes: Tie breaking ballot must be one of the prior votes */
+export const JITO_TIP_ROUTER_ERROR__TIE_BREAKER_NOT_IN_PRIOR_VOTES = 0x2224; // 8740
+/** InvalidMerkleProof: Invalid merkle proof */
+export const JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF = 0x2225; // 8741
+/** OperatorAdminInvalid: Operator admin needs to sign its vote */
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID = 0x2226; // 8742
 /** InvalidNcnFeeGroup: Not a valid NCN fee group */
-export const JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP = 0x2220; // 8736
+export const JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP = 0x2227; // 8743
 /** InvalidBaseFeeGroup: Not a valid base fee group */
-export const JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP = 0x2221; // 8737
+export const JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP = 0x2228; // 8744
 /** OperatorRewardListFull: Operator reward list full */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL = 0x2222; // 8738
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL = 0x2229; // 8745
 /** OperatorRewardNotFound: Operator Reward not found */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND = 0x2223; // 8739
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND = 0x222a; // 8746
 /** VaultRewardNotFound: Vault Reward not found */
-export const JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND = 0x2224; // 8740
+export const JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND = 0x222b; // 8747
 /** DestinationMismatch: Destination mismatch */
-export const JITO_TIP_ROUTER_ERROR__DESTINATION_MISMATCH = 0x2225; // 8741
+export const JITO_TIP_ROUTER_ERROR__DESTINATION_MISMATCH = 0x222c; // 8748
 /** NcnRewardRouteNotFound: Ncn reward route not found */
-export const JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND = 0x2226; // 8742
+export const JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND = 0x222d; // 8749
 /** FeeNotActive: Fee not active */
-export const JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE = 0x2227; // 8743
+export const JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE = 0x222e; // 8750
 /** NoRewards: No rewards to distribute */
-export const JITO_TIP_ROUTER_ERROR__NO_REWARDS = 0x2228; // 8744
+export const JITO_TIP_ROUTER_ERROR__NO_REWARDS = 0x222f; // 8751
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR
@@ -131,6 +145,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST
+  | typeof JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED
   | typeof JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN
@@ -138,6 +153,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP
   | typeof JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND
@@ -147,10 +163,13 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__NO_OPERATORS
   | typeof JITO_TIP_ROUTER_ERROR__NO_REWARDS
+  | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL
+  | typeof JITO_TIP_ROUTER_ERROR__TIE_BREAKER_ADMIN_INVALID
+  | typeof JITO_TIP_ROUTER_ERROR__TIE_BREAKER_NOT_IN_PRIOR_VOTES
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS
   | typeof JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL
@@ -158,6 +177,8 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND
+  | typeof JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED
+  | typeof JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND
@@ -176,7 +197,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR]: `Cast to u64 error`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL]: `NCN config vaults are at capacity`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED]: `Config supported mints do not match NCN Vault Count`,
-    [JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED]: `Consensus already reached`,
+    [JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED]: `Consensus already reached, cannot change vote`,
     [JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED]: `Consensus not reached`,
     [JITO_TIP_ROUTER_ERROR__DEFAULT_DAO_WALLET]: `DAO wallet cannot be default`,
     [JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO]: `Zero in the denominator`,
@@ -184,6 +205,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE]: `Duplicate mints in table`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION]: `Duplicate vault operator delegation`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST]: `Duplicate Vote Cast`,
+    [JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED]: `Epoch snapshot not finalized`,
     [JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED]: `Fee cap exceeded`,
     [JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE]: `Fee not active`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN]: `Incorrect fee admin`,
@@ -191,6 +213,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN]: `Incorrect NCN Admin`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN]: `Incorrect weight table admin`,
     [JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP]: `Not a valid base fee group`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF]: `Invalid merkle proof`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE]: `Invalid mint for weight table`,
     [JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP]: `Not a valid NCN fee group`,
     [JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND]: `Mint Entry not found`,
@@ -200,10 +223,13 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE]: `There are no mints in the table`,
     [JITO_TIP_ROUTER_ERROR__NO_OPERATORS]: `No operators in ncn`,
     [JITO_TIP_ROUTER_ERROR__NO_REWARDS]: `No rewards to distribute`,
+    [JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID]: `Operator admin needs to sign its vote`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED]: `Operator is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL]: `Operator reward list full`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND]: `Operator Reward not found`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL]: `Operator votes full`,
+    [JITO_TIP_ROUTER_ERROR__TIE_BREAKER_ADMIN_INVALID]: `Tie breaker admin invalid`,
+    [JITO_TIP_ROUTER_ERROR__TIE_BREAKER_NOT_IN_PRIOR_VOTES]: `Tie breaking ballot must be one of the prior votes`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE]: `Too many mints for table`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS]: `Too many vault operator delegations`,
     [JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL]: `Tracked mints are at capacity`,
@@ -211,6 +237,8 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE]: `Vault index already in use by a different mint`,
     [JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED]: `Vault operator delegation is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND]: `Vault Reward not found`,
+    [JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED]: `Voting not finalized`,
+    [JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID]: `Voting not valid, too many slots after consensus reached`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH]: `Weight mints do not match - length`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH]: `Weight mints do not match - mint hash`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND]: `Weight not found`,

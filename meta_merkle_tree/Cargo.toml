@@ -1,0 +1,35 @@
+[package]
+name = "meta-merkle-tree"
+description = "Meta Merkle Tree"
+version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+readme = { workspace = true }
+
+[dependencies]
+borsh = { workspace = true }
+bytemuck = { workspace = true }
+fast-math = { workspace = true }
+hex = { workspace = true }
+jito-bytemuck = { workspace = true }
+jito-jsm-core = { workspace = true }
+jito-restaking-core = { workspace = true }
+jito-restaking-sdk = { workspace = true }
+jito-tip-distribution-sdk = { workspace = true }
+jito-vault-core = { workspace = true }
+jito-vault-sdk = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+shank = { workspace = true }
+solana-program = { workspace = true }
+spl-associated-token-account = { workspace = true }
+spl-math = { workspace = true }
+spl-token = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+solana-sdk = { workspace = true }

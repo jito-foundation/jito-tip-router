@@ -34,6 +34,7 @@ jito-jsm-core = { workspace = true }
 jito-restaking-core = { workspace = true }
 jito-restaking-program = { workspace = true }
 jito-restaking-sdk = { workspace = true }
+jito-tip-distribution-sdk = { workspace = true }
 jito-tip-router-core = { workspace = true }
 jito-vault-core = { workspace = true }
 jito-vault-program = { workspace = true }

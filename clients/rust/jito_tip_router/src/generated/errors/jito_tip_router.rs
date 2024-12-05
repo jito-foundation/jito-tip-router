@@ -123,39 +123,60 @@ pub enum JitoTipRouterError {
     /// 8733 - Merkle root tally full
     #[error("Merkle root tally full")]
     BallotTallyFull = 0x221D,
-    /// 8734 - Consensus already reached
-    #[error("Consensus already reached")]
+    /// 8734 - Consensus already reached, cannot change vote
+    #[error("Consensus already reached, cannot change vote")]
     ConsensusAlreadyReached = 0x221E,
     /// 8735 - Consensus not reached
     #[error("Consensus not reached")]
     ConsensusNotReached = 0x221F,
-    /// 8736 - Not a valid NCN fee group
+    /// 8736 - Epoch snapshot not finalized
+    #[error("Epoch snapshot not finalized")]
+    EpochSnapshotNotFinalized = 0x2220,
+    /// 8737 - Voting not valid, too many slots after consensus reached
+    #[error("Voting not valid, too many slots after consensus reached")]
+    VotingNotValid = 0x2221,
+    /// 8738 - Tie breaker admin invalid
+    #[error("Tie breaker admin invalid")]
+    TieBreakerAdminInvalid = 0x2222,
+    /// 8739 - Voting not finalized
+    #[error("Voting not finalized")]
+    VotingNotFinalized = 0x2223,
+    /// 8740 - Tie breaking ballot must be one of the prior votes
+    #[error("Tie breaking ballot must be one of the prior votes")]
+    TieBreakerNotInPriorVotes = 0x2224,
+    /// 8741 - Invalid merkle proof
+    #[error("Invalid merkle proof")]
+    InvalidMerkleProof = 0x2225,
+    /// 8742 - Operator admin needs to sign its vote
+    #[error("Operator admin needs to sign its vote")]
+    OperatorAdminInvalid = 0x2226,
+    /// 8743 - Not a valid NCN fee group
     #[error("Not a valid NCN fee group")]
-    InvalidNcnFeeGroup = 0x2220,
-    /// 8737 - Not a valid base fee group
+    InvalidNcnFeeGroup = 0x2227,
+    /// 8744 - Not a valid base fee group
     #[error("Not a valid base fee group")]
-    InvalidBaseFeeGroup = 0x2221,
-    /// 8738 - Operator reward list full
+    InvalidBaseFeeGroup = 0x2228,
+    /// 8745 - Operator reward list full
     #[error("Operator reward list full")]
-    OperatorRewardListFull = 0x2222,
-    /// 8739 - Operator Reward not found
+    OperatorRewardListFull = 0x2229,
+    /// 8746 - Operator Reward not found
     #[error("Operator Reward not found")]
-    OperatorRewardNotFound = 0x2223,
-    /// 8740 - Vault Reward not found
+    OperatorRewardNotFound = 0x222A,
+    /// 8747 - Vault Reward not found
     #[error("Vault Reward not found")]
-    VaultRewardNotFound = 0x2224,
-    /// 8741 - Destination mismatch
+    VaultRewardNotFound = 0x222B,
+    /// 8748 - Destination mismatch
     #[error("Destination mismatch")]
-    DestinationMismatch = 0x2225,
-    /// 8742 - Ncn reward route not found
+    DestinationMismatch = 0x222C,
+    /// 8749 - Ncn reward route not found
     #[error("Ncn reward route not found")]
-    NcnRewardRouteNotFound = 0x2226,
-    /// 8743 - Fee not active
+    NcnRewardRouteNotFound = 0x222D,
+    /// 8750 - Fee not active
     #[error("Fee not active")]
-    FeeNotActive = 0x2227,
-    /// 8744 - No rewards to distribute
+    FeeNotActive = 0x222E,
+    /// 8751 - No rewards to distribute
     #[error("No rewards to distribute")]
-    NoRewards = 0x2228,
+    NoRewards = 0x222F,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {
