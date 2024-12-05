@@ -4,11 +4,16 @@ pub mod merkle_root_upload_workflow;
 pub mod reclaim_rent_workflow;
 pub mod stake_meta_generator_workflow;
 pub mod snapshot;
+pub mod merkle_tree;
+pub mod meta_merkle_tree;
+
 use {
     crate::{
         merkle_root_generator_workflow::MerkleRootGeneratorError,
         stake_meta_generator_workflow::StakeMetaGeneratorError::CheckedMathError,
+        merkle_tree::MerkleTreeError,  
     },
+    ellipsis_client::EllipsisClient, 
     anchor_lang::Id,
     jito_tip_distribution::{
         program::JitoTipDistribution,
@@ -126,10 +131,35 @@ fn emit_inconsistent_tree_node_amount_dp(
     }
 }
 
+impl GeneratedMerkleTree {
+    pub fn add_claimant(&mut self, claimant: Pubkey, amount: u64) -> Result<(), MerkleTreeError> {
+        let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
+            &[
+                ClaimStatus::SEED,
+                &claimant.to_bytes(),
+                &self.tip_distribution_account.to_bytes(),
+            ],
+            &JitoTipDistribution::id(),
+        );
+
+        self.tree_nodes.push(TreeNode {
+            claimant,
+            claim_status_pubkey,
+            claim_status_bump,
+            staker_pubkey: Pubkey::default(),
+            withdrawer_pubkey: Pubkey::default(),
+            amount,
+            proof: None,
+        });
+
+        Ok(())
+    }
+}
+
 impl GeneratedMerkleTreeCollection {
     pub fn new_from_stake_meta_collection(
         stake_meta_coll: StakeMetaCollection,
-        maybe_rpc_client: Option<SyncRpcClient>,
+        rpc_client: Option<Arc<EllipsisClient>>,
     ) -> Result<GeneratedMerkleTreeCollection, MerkleRootGeneratorError> {
         let generated_merkle_trees = stake_meta_coll
             .stake_metas
@@ -141,7 +171,7 @@ impl GeneratedMerkleTreeCollection {
                     Ok(maybe_tree_nodes) => maybe_tree_nodes,
                 }?;
 
-                if let Some(rpc_client) = &maybe_rpc_client {
+                if let Some(rpc_client) = &rpc_client {
                     if let Some(tda) = stake_meta.maybe_tip_distribution_meta.as_ref() {
                         emit_inconsistent_tree_node_amount_dp(
                             &tree_nodes[..],

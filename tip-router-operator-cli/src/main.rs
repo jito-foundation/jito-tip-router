@@ -4,8 +4,6 @@ use log::info;
 use snapshot::SnapshotCreator;
 use std::path::PathBuf;
 use solana_sdk::signer::keypair::read_keypair_file;
-use solana_metrics::datapoint_info;
-use std::time::Instant;
 use tip_router_operator_cli::*;  // Add this line to use your library crate
 
 #[cfg(test)]

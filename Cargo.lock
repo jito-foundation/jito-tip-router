@@ -7911,7 +7911,7 @@ dependencies = [
  "solana-account-decoder 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-sdk",
  "spl-associated-token-account",
- "spl-memo",
+ "spl-memo 4.0.0",
  "spl-token",
  "spl-token-2022 1.0.0",
  "thiserror",
@@ -8284,6 +8284,15 @@ dependencies = [
 
 [[package]]
 name = "spl-memo"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd0dc6f70db6bacea7ff25870b016a65ba1d1b6013536f08e4fd79a8f9005325"
+dependencies = [
+ "solana-program 1.18.26",
+]
+
+[[package]]
+name = "spl-memo"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0f180b03318c3dbab3ef4e1e4d46d5211ae3c780940dd0a28695aba4b59a75a"
@@ -8424,7 +8433,7 @@ dependencies = [
  "solana-program 1.18.26",
  "solana-security-txt",
  "solana-zk-token-sdk 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "spl-memo",
+ "spl-memo 4.0.0",
  "spl-pod 0.1.0",
  "spl-token",
  "spl-token-group-interface 0.1.0",
@@ -8448,7 +8457,7 @@ dependencies = [
  "solana-program 1.18.26",
  "solana-security-txt",
  "solana-zk-token-sdk 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "spl-memo",
+ "spl-memo 4.0.0",
  "spl-pod 0.2.5",
  "spl-token",
  "spl-token-group-interface 0.2.5",
@@ -8985,6 +8994,7 @@ dependencies = [
  "solana-stake-program 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-transaction-status",
  "solana-vote 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "spl-memo 3.0.1",
  "spl-token",
  "spl-token-2022 1.0.0",
  "tempfile",

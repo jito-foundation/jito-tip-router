@@ -1,6 +1,5 @@
 use anyhow::{ anyhow, Result };
 use log::{ info, warn };
-use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::{
     clock::Slot,
     epoch_schedule::EpochSchedule,
@@ -18,7 +17,6 @@ use solana_runtime::snapshot_utils::ArchiveFormat;
 use ellipsis_client::EllipsisClient;
 use std::collections::HashMap;
 use serde::{ Serialize, Deserialize };
-use solana_stake_program;
 use std::time::Instant;
 
 #[derive(Serialize, Deserialize, Debug)]
