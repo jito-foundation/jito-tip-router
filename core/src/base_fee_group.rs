@@ -16,7 +16,7 @@ pub enum BaseFeeGroupType {
     Reserved7 = 0x7,
 }
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
+#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, PartialEq, Eq)]
 #[repr(C)]
 pub struct BaseFeeGroup {
     pub group: u8,
@@ -218,7 +218,6 @@ mod tests {
             Err(TipRouterError::InvalidNcnFeeGroup)
         ));
     }
-
     #[test]
     fn test_all_groups() {
         let all_groups = BaseFeeGroup::all_groups();
@@ -226,16 +225,19 @@ mod tests {
         // Verify count matches FEE_GROUP_COUNT
         assert_eq!(all_groups.len(), BaseFeeGroup::FEE_GROUP_COUNT);
 
-        // Verify groups are in correct order
-        for (i, group) in all_groups.iter().enumerate() {
-            assert_eq!(group.group as usize, i);
-        }
+        // Verify groups are in correct order and have expected values
+        let expected_groups = vec![
+            BaseFeeGroup::new(BaseFeeGroupType::DAO),
+            BaseFeeGroup::new(BaseFeeGroupType::Reserved1),
+            BaseFeeGroup::new(BaseFeeGroupType::Reserved2),
+            BaseFeeGroup::new(BaseFeeGroupType::Reserved3),
+            BaseFeeGroup::new(BaseFeeGroupType::Reserved4),
+            BaseFeeGroup::new(BaseFeeGroupType::Reserved5),
+            BaseFeeGroup::new(BaseFeeGroupType::Reserved6),
+            BaseFeeGroup::new(BaseFeeGroupType::Reserved7),
+        ];
 
-        // Verify no duplicates
-        let mut unique_groups: Vec<u8> = all_groups.iter().map(|g| g.group).collect();
-        unique_groups.sort();
-        unique_groups.dedup();
-        assert_eq!(unique_groups.len(), BaseFeeGroup::FEE_GROUP_COUNT);
+        assert_eq!(all_groups, expected_groups);
     }
 
     #[test]

@@ -496,3 +496,54 @@ impl VaultRewardRoute {
         self.set_rewards(new_rewards)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use solana_program::pubkey::Pubkey;
+
+    use super::*;
+
+    #[test]
+    fn test_route_incoming_rewards() {
+        let mut router = NcnRewardRouter::new(
+            NcnFeeGroup::default(),
+            Pubkey::new_unique(), // ncn
+            Pubkey::new_unique(), // ncn
+            1,                    // ncn_epoch
+            1,                    // bump
+            100,                  // slot_created
+        );
+
+        // Initial state checks
+        assert_eq!(router.total_rewards(), 0);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test routing 1000 lamports
+        let account_balance = 1000;
+        router.route_incoming_rewards(account_balance).unwrap();
+
+        // Verify rewards were routed correctly
+        assert_eq!(router.total_rewards(), 1000);
+        assert_eq!(router.reward_pool(), 1000);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test routing additional 500 lamports
+        let account_balance = 1500;
+        router.route_incoming_rewards(account_balance).unwrap();
+
+        // Verify total rewards increased by difference
+        assert_eq!(router.total_rewards(), 1500);
+        assert_eq!(router.reward_pool(), 1500);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test attempting to route with lower balance (should fail)
+        let result = router.route_incoming_rewards(1000);
+        assert!(result.is_err());
+
+        // Verify state didn't change after failed routing
+        assert_eq!(router.total_rewards(), 1500);
+        assert_eq!(router.reward_pool(), 1500);
+        assert_eq!(router.rewards_processed(), 0);
+    }
+}
