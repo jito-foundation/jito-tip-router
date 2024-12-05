@@ -730,212 +730,206 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_update_fees() {
-    //     const BLOCK_ENGINE_FEE: u64 = 100;
-    //     const DAO_FEE: u64 = 200;
-    //     const DEFAULT_NCN_FEE: u64 = 300;
-    //     const STARTING_EPOCH: u64 = 10;
+    #[test]
+    fn test_update_fees_no_change() {
+        const BLOCK_ENGINE_FEE: u16 = 100;
+        const DAO_FEE: u16 = 200;
+        const DEFAULT_NCN_FEE: u16 = 300;
+        const STARTING_EPOCH: u64 = 10;
 
-    //     let dao_fee_wallet = Pubkey::new_unique();
+        let dao_fee_wallet = Pubkey::new_unique();
 
-    //     let mut fee_config = FeeConfig::new(
-    //         dao_fee_wallet,
-    //         BLOCK_ENGINE_FEE,
-    //         DAO_FEE,
-    //         DEFAULT_NCN_FEE,
-    //         STARTING_EPOCH,
-    //     )
-    //     .unwrap();
+        let mut fee_config = FeeConfig::new(
+            dao_fee_wallet,
+            BLOCK_ENGINE_FEE,
+            DAO_FEE,
+            DEFAULT_NCN_FEE,
+            STARTING_EPOCH,
+        )
+        .unwrap();
 
-    //     assert_eq!(fee_config.fee_wallet(), dao_fee_wallet);
+        fee_config
+            .update_fee_config(None, None, None, None, None, None, STARTING_EPOCH)
+            .unwrap();
 
-    //     assert_eq!(fee_config.fee_1.activation_epoch(), STARTING_EPOCH);
-    //     assert_eq!(fee_config.fee_1.block_engine_fee_bps(), BLOCK_ENGINE_FEE);
-    //     assert_eq!(fee_config.fee_1.dao_fee_bps(), DAO_FEE);
-    //     assert_eq!(
-    //         fee_config
-    //             .fee_1
-    //             .ncn_fee_bps(NcnFeeGroup::default())
-    //             .unwrap(),
-    //         DEFAULT_NCN_FEE
-    //     );
+        assert_eq!(fee_config.block_engine_fee_bps(), BLOCK_ENGINE_FEE);
 
-    //     assert_eq!(fee_config.fee_2.activation_epoch(), STARTING_EPOCH);
-    //     assert_eq!(fee_config.fee_2.block_engine_fee_bps(), BLOCK_ENGINE_FEE);
-    //     assert_eq!(fee_config.fee_2.dao_fee_bps(), DAO_FEE);
-    //     assert_eq!(
-    //         fee_config
-    //             .fee_2
-    //             .ncn_fee_bps(NcnFeeGroup::default())
-    //             .unwrap(),
-    //         DEFAULT_NCN_FEE
-    //     );
+        let dao_fee_group = BaseFeeGroup::default();
 
-    //     let new_fees = Fees::new(500, 600, 700, 10).unwrap();
-    //     let new_wallet = Pubkey::new_unique();
+        assert_eq!(
+            fee_config.base_fee_wallet(dao_fee_group).unwrap(),
+            dao_fee_wallet
+        );
 
-    //     fee_config
-    //         .update_fee_config(
-    //             Some(new_wallet),
-    //             Some(new_fees.block_engine_fee_bps()),
-    //             Some(new_fees.dao_fee_bps()),
-    //             Some(new_fees.ncn_fee_bps(NcnFeeGroup::default()).unwrap()),
-    //             None,
-    //             STARTING_EPOCH,
-    //         )
-    //         .unwrap();
+        let current_fees = fee_config.current_fees(STARTING_EPOCH);
+        let next_epoch_fees = fee_config.current_fees(STARTING_EPOCH + 1);
 
-    //     assert_eq!(fee_config.fee_wallet(), new_wallet);
+        assert_eq!(current_fees.base_fee_bps(dao_fee_group).unwrap(), DAO_FEE);
+        assert_eq!(
+            next_epoch_fees.base_fee_bps(dao_fee_group).unwrap(),
+            DAO_FEE
+        );
 
-    //     assert_eq!(fee_config.fee_1.activation_epoch(), STARTING_EPOCH + 1);
-    //     assert_eq!(fee_config.fee_1.block_engine_fee_bps(), 500);
-    //     assert_eq!(fee_config.fee_1.dao_fee_bps(), 600);
-    //     assert_eq!(
-    //         fee_config
-    //             .fee_1
-    //             .ncn_fee_bps(NcnFeeGroup::default())
-    //             .unwrap(),
-    //         700
-    //     );
+        let default_ncn_fee_group = NcnFeeGroup::default();
 
-    //     assert_eq!(fee_config.fee_2.activation_epoch(), STARTING_EPOCH);
-    //     assert_eq!(fee_config.fee_2.block_engine_fee_bps(), 500); // This will change regardless
-    //     assert_eq!(fee_config.fee_2.dao_fee_bps(), DAO_FEE);
-    //     assert_eq!(
-    //         fee_config
-    //             .fee_2
-    //             .ncn_fee_bps(NcnFeeGroup::default())
-    //             .unwrap(),
-    //         DEFAULT_NCN_FEE
-    //     );
-    // }
+        assert_eq!(
+            current_fees.ncn_fee_bps(default_ncn_fee_group).unwrap(),
+            DEFAULT_NCN_FEE
+        );
+        assert_eq!(
+            next_epoch_fees.ncn_fee_bps(default_ncn_fee_group).unwrap(),
+            DEFAULT_NCN_FEE
+        );
+    }
 
-    // #[test]
-    // fn test_update_fees() {
-    //     let mut fees = Fees::new(Pubkey::new_unique(), 100, 200, 300, 5);
-    //     let new_wallet = Pubkey::new_unique();
+    #[test]
+    fn test_update_different_group_fees() {
+        const BLOCK_ENGINE_FEE: u16 = 100;
+        const DAO_FEE: u16 = 200;
+        const NEW_BASE_FEE: u16 = 500;
+        const DEFAULT_NCN_FEE: u16 = 300;
+        const NEW_NCN_FEE: u16 = 600;
+        const STARTING_EPOCH: u64 = 10;
 
-    //     fees.set_new_fees(Some(400), None, None, Some(new_wallet), 10)
-    //         .unwrap();
-    //     assert_eq!(fees.fee_1.dao_share_bps(), 400);
-    //     assert_eq!(fees.wallet, new_wallet);
-    //     assert_eq!(fees.fee_1.activation_epoch(), 11);
-    // }
+        let dao_fee_wallet = Pubkey::new_unique();
+        let new_base_fee = Pubkey::new_unique();
 
-    // #[test]
-    // fn test_update_all_fees() {
-    //     let mut fees = Fees::new(Pubkey::new_unique(), 0, 0, 0, 5);
+        let mut fee_config = FeeConfig::new(
+            dao_fee_wallet,
+            BLOCK_ENGINE_FEE,
+            DAO_FEE,
+            DEFAULT_NCN_FEE,
+            STARTING_EPOCH,
+        )
+        .unwrap();
 
-    //     fees.set_new_fees(Some(100), Some(200), Some(300), None, 10)
-    //         .unwrap();
-    //     assert_eq!(fees.fee_1.dao_share_bps(), 100);
-    //     assert_eq!(fees.fee_1.ncn_share_bps(), 200);
-    //     assert_eq!(fees.block_engine_fee_bps(), 300);
-    //     assert_eq!(fees.fee_1.activation_epoch(), 11);
-    // }
+        for base_fee_group in BaseFeeGroup::all_groups().iter() {
+            fee_config
+                .update_fee_config(
+                    None,
+                    Some(*base_fee_group),
+                    Some(new_base_fee),
+                    Some(NEW_BASE_FEE),
+                    None,
+                    None,
+                    STARTING_EPOCH,
+                )
+                .unwrap();
 
-    // #[test]
-    // fn test_update_fees_no_changes() {
-    //     const DAO_SHARE_FEE_BPS: u64 = 100;
-    //     const NCN_SHARE_FEE_BPS: u64 = 100;
-    //     const BLOCK_ENGINE_FEE: u64 = 100;
-    //     const STARTING_EPOCH: u64 = 10;
+            assert_eq!(
+                fee_config.base_fee_wallet(*base_fee_group).unwrap(),
+                new_base_fee
+            );
 
-    //     let wallet = Pubkey::new_unique();
+            let current_fees = fee_config.current_fees(STARTING_EPOCH);
+            let next_epoch_fees = fee_config.current_fees(STARTING_EPOCH + 1);
 
-    //     let mut fees = Fees::new(
-    //         wallet,
-    //         DAO_SHARE_FEE_BPS,
-    //         NCN_SHARE_FEE_BPS,
-    //         BLOCK_ENGINE_FEE,
-    //         STARTING_EPOCH,
-    //     );
+            if base_fee_group.group == BaseFeeGroup::default().group {
+                assert_eq!(current_fees.base_fee_bps(*base_fee_group).unwrap(), DAO_FEE);
+            } else {
+                assert_eq!(current_fees.base_fee_bps(*base_fee_group).unwrap(), 0);
+            }
 
-    //     fees.set_new_fees(None, None, None, None, STARTING_EPOCH)
-    //         .unwrap();
-    //     assert_eq!(fees.fee_1.dao_share_bps(), DAO_SHARE_FEE_BPS);
-    //     assert_eq!(fees.fee_1.ncn_share_bps(), NCN_SHARE_FEE_BPS);
-    //     assert_eq!(fees.block_engine_fee_bps(), BLOCK_ENGINE_FEE);
-    //     assert_eq!(fees.wallet, wallet);
-    //     assert_eq!(fees.fee_1.activation_epoch(), STARTING_EPOCH + 1);
-    // }
+            assert_eq!(
+                next_epoch_fees.base_fee_bps(*base_fee_group).unwrap(),
+                NEW_BASE_FEE
+            );
+        }
 
-    // #[test]
-    // fn test_update_fees_errors() {
-    //     let mut fees = Fees::new(Pubkey::new_unique(), 100, 200, 300, 5);
+        for ncn_fee_group in NcnFeeGroup::all_groups().iter() {
+            fee_config
+                .update_fee_config(
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some(*ncn_fee_group),
+                    Some(NEW_NCN_FEE),
+                    STARTING_EPOCH,
+                )
+                .unwrap();
 
-    //     assert_eq!(
-    //         fees.set_new_fees(Some(10001), None, None, None, 10),
-    //         Err(TipRouterError::FeeCapExceeded)
-    //     );
+            let current_fees = fee_config.current_fees(STARTING_EPOCH);
+            let next_epoch_fees = fee_config.current_fees(STARTING_EPOCH + 1);
 
-    //     let mut fees = Fees::new(Pubkey::new_unique(), 100, 200, 300, 5);
+            if ncn_fee_group.group == NcnFeeGroup::default().group {
+                assert_eq!(
+                    current_fees.ncn_fee_bps(*ncn_fee_group).unwrap(),
+                    DEFAULT_NCN_FEE
+                );
+            } else {
+                assert_eq!(current_fees.ncn_fee_bps(*ncn_fee_group).unwrap(), 0);
+            }
 
-    //     assert_eq!(
-    //         fees.set_new_fees(None, None, None, None, u64::MAX),
-    //         Err(TipRouterError::ArithmeticOverflow)
-    //     );
+            assert_eq!(
+                next_epoch_fees.ncn_fee_bps(*ncn_fee_group).unwrap(),
+                NEW_NCN_FEE
+            );
+        }
 
-    //     let mut fees = Fees::new(Pubkey::new_unique(), 100, 200, 300, 5);
+        assert_eq!(fee_config.block_engine_fee_bps(), BLOCK_ENGINE_FEE);
+    }
 
-    //     assert_eq!(
-    //         fees.set_new_fees(None, None, Some(MAX_FEE_BPS), None, 10),
-    //         Err(TipRouterError::FeeCapExceeded)
-    //     );
-    // }
+    #[test]
+    fn test_check_fees_okay() {
+        const BLOCK_ENGINE_FEE: u16 = 100;
+        const DAO_FEE: u16 = 200;
+        const DEFAULT_NCN_FEE: u16 = 300;
+        const STARTING_EPOCH: u64 = 10;
 
-    // #[test]
-    // fn test_check_fees_okay() {
-    //     let fees = Fees::new(Pubkey::new_unique(), 0, 0, 0, 5);
+        let dao_fee_wallet = Pubkey::new_unique();
 
-    //     fees.check_fees_okay(5).unwrap();
+        let fee_config = FeeConfig::new(
+            dao_fee_wallet,
+            BLOCK_ENGINE_FEE,
+            DAO_FEE,
+            DEFAULT_NCN_FEE,
+            STARTING_EPOCH,
+        )
+        .unwrap();
 
-    //     let fees = Fees::new(Pubkey::new_unique(), 0, 0, MAX_FEE_BPS, 5);
+        fee_config.check_fees_okay(STARTING_EPOCH).unwrap();
+    }
 
-    //     assert_eq!(
-    //         fees.check_fees_okay(5),
-    //         Err(TipRouterError::DenominatorIsZero)
-    //     );
-    // }
+    #[test]
+    fn test_current_fee() {
+        let mut fee_config = FeeConfig::new(Pubkey::new_unique(), 100, 200, 300, 5).unwrap();
 
-    // #[test]
-    // fn test_current_fee() {
-    //     let mut fees = Fees::new(Pubkey::new_unique(), 100, 200, 300, 5);
+        assert_eq!(fee_config.current_fees(5).activation_epoch(), 5);
 
-    //     assert_eq!(fees.current_fee(5).activation_epoch(), 5);
+        fee_config.fee_1.set_activation_epoch(10);
 
-    //     fees.fee_1.set_activation_epoch(10);
+        assert_eq!(fee_config.current_fees(5).activation_epoch(), 5);
+        assert_eq!(fee_config.current_fees(10).activation_epoch(), 10);
 
-    //     assert_eq!(fees.current_fee(5).activation_epoch(), 5);
-    //     assert_eq!(fees.current_fee(10).activation_epoch(), 10);
+        fee_config.fee_2.set_activation_epoch(15);
 
-    //     fees.fee_2.set_activation_epoch(15);
+        assert_eq!(fee_config.current_fees(12).activation_epoch(), 10);
+        assert_eq!(fee_config.current_fees(15).activation_epoch(), 15);
+    }
 
-    //     assert_eq!(fees.current_fee(12).activation_epoch(), 10);
-    //     assert_eq!(fees.current_fee(15).activation_epoch(), 15);
-    // }
+    #[test]
+    fn test_get_updatable_fee_mut() {
+        let mut fee_config = FeeConfig::new(Pubkey::new_unique(), 100, 200, 300, 5).unwrap();
 
-    // #[test]
-    // fn test_get_updatable_fee_mut() {
-    //     let mut fees = Fees::new(Pubkey::new_unique(), 100, 200, 300, 5);
+        let base_fee_group = BaseFeeGroup::default();
 
-    //     let fee = fees.get_updatable_fee_mut(10);
-    //     fee.set_dao_share_bps(400);
-    //     fee.set_activation_epoch(11);
+        let fees = fee_config.updatable_fees(10);
+        fees.set_base_fee_bps(base_fee_group, 400).unwrap();
+        fees.set_activation_epoch(11);
 
-    //     assert_eq!(fees.fee_1.dao_share_bps(), 400);
-    //     assert_eq!(fees.fee_1.activation_epoch(), 11);
+        assert_eq!(fee_config.fee_1.base_fee_bps(base_fee_group).unwrap(), 400);
+        assert_eq!(fee_config.fee_1.activation_epoch(), 11);
 
-    //     fees.fee_2.set_activation_epoch(13);
+        fee_config.fee_2.set_activation_epoch(13);
 
-    //     let fee = fees.get_updatable_fee_mut(12);
-    //     fee.set_dao_share_bps(500);
-    //     fee.set_activation_epoch(13);
+        let fees = fee_config.updatable_fees(12);
+        fees.set_base_fee_bps(base_fee_group, 500).unwrap();
+        fees.set_activation_epoch(13);
 
-    //     assert_eq!(fees.fee_2.dao_share_bps(), 500);
-    //     assert_eq!(fees.fee_2.activation_epoch(), 13);
+        assert_eq!(fee_config.fee_2.base_fee_bps(base_fee_group).unwrap(), 500);
+        assert_eq!(fee_config.fee_2.activation_epoch(), 13);
 
-    //     assert_eq!(fees.get_updatable_fee_mut(u64::MAX).activation_epoch(), 11);
-    // }
+        assert_eq!(fee_config.updatable_fees(u64::MAX).activation_epoch(), 11);
+    }
 }
