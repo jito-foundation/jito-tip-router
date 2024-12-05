@@ -111,10 +111,15 @@ pub fn process_snapshot_vault_operator_delegation(
         vault_ncn_okay && ncn_vault_okay && !delegation_dne
     };
 
-    let ncn_fee_group = {
+    let (ncn_fee_group, reward_multiplier_bps) = {
         let tracked_mints_data = tracked_mints.data.borrow();
         let tracked_mints_account = TrackedMints::try_from_slice_unchecked(&tracked_mints_data)?;
-        tracked_mints_account.get_ncn_fee_group(vault_index)?
+        let mint_entry = tracked_mints_account.get_mint_entry(vault_index)?;
+
+        (
+            mint_entry.ncn_fee_group(),
+            mint_entry.reward_multiplier_bps(),
+        )
     };
 
     let total_stake_weight: u128 = if is_active {
@@ -139,7 +144,8 @@ pub fn process_snapshot_vault_operator_delegation(
     let operator_snapshot_account =
         OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
 
-    let stake_weights = StakeWeights::new(ncn_fee_group, total_stake_weight)?;
+    let stake_weights =
+        StakeWeights::snapshot(ncn_fee_group, total_stake_weight, reward_multiplier_bps)?;
 
     operator_snapshot_account.increment_vault_operator_delegation_registration(
         current_slot,

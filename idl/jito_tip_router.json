@@ -2018,6 +2018,12 @@
             }
           },
           {
+            "name": "rewardMultiplierBps",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [

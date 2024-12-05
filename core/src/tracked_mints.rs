@@ -13,15 +13,19 @@ pub struct MintEntry {
     st_mint: Pubkey,
     vault_index: PodU64,
     ncn_fee_group: NcnFeeGroup,
+    reward_multiplier_bps: PodU64,
     reserved: [u8; 32],
 }
 
 impl MintEntry {
     pub fn new(mint: Pubkey, vault_index: u64) -> Self {
+        const REWARD_FEE_MULTIPLIER_BPS: u64 = 10_000; // 100% as default
+
         Self {
             st_mint: mint,
             vault_index: PodU64::from(vault_index),
             ncn_fee_group: NcnFeeGroup::default(),
+            reward_multiplier_bps: PodU64::from(REWARD_FEE_MULTIPLIER_BPS),
             reserved: [0; 32],
         }
     }
@@ -32,6 +36,10 @@ impl MintEntry {
 
     pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
         self.ncn_fee_group
+    }
+
+    pub fn reward_multiplier_bps(&self) -> u64 {
+        self.reward_multiplier_bps.into()
     }
 }
 
@@ -172,6 +180,16 @@ impl TrackedMints {
             .ok_or(TipRouterError::MintEntryNotFound)?;
 
         Ok(mint_entry.ncn_fee_group)
+    }
+
+    pub fn get_mint_entry(&self, vault_index: u64) -> Result<MintEntry, ProgramError> {
+        let mint_entry = self
+            .st_mint_list
+            .iter()
+            .find(|m| m.vault_index() == vault_index)
+            .ok_or(TipRouterError::MintEntryNotFound)?;
+
+        Ok(*mint_entry)
     }
 
     pub fn set_ncn_fee_group(

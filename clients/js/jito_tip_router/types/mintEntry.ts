@@ -35,6 +35,7 @@ export type MintEntry = {
   stMint: Address;
   vaultIndex: bigint;
   ncnFeeGroup: NcnFeeGroup;
+  rewardMultiplierBps: bigint;
   reserved: ReadonlyUint8Array;
 };
 
@@ -42,6 +43,7 @@ export type MintEntryArgs = {
   stMint: Address;
   vaultIndex: number | bigint;
   ncnFeeGroup: NcnFeeGroupArgs;
+  rewardMultiplierBps: number | bigint;
   reserved: ReadonlyUint8Array;
 };
 
@@ -50,6 +52,7 @@ export function getMintEntryEncoder(): Encoder<MintEntryArgs> {
     ['stMint', getAddressEncoder()],
     ['vaultIndex', getU64Encoder()],
     ['ncnFeeGroup', getNcnFeeGroupEncoder()],
+    ['rewardMultiplierBps', getU64Encoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 32)],
   ]);
 }
@@ -59,6 +62,7 @@ export function getMintEntryDecoder(): Decoder<MintEntry> {
     ['stMint', getAddressDecoder()],
     ['vaultIndex', getU64Decoder()],
     ['ncnFeeGroup', getNcnFeeGroupDecoder()],
+    ['rewardMultiplierBps', getU64Decoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }

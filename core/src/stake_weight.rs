@@ -22,11 +22,19 @@ impl Default for StakeWeights {
 }
 
 impl StakeWeights {
-    pub fn new(ncn_fee_group: NcnFeeGroup, stake_weight: u128) -> Result<Self, TipRouterError> {
+    pub fn snapshot(
+        ncn_fee_group: NcnFeeGroup,
+        stake_weight: u128,
+        reward_multiplier_bps: u64,
+    ) -> Result<Self, TipRouterError> {
         let mut stake_weights = Self::default();
 
+        let reward_stake_weight = (reward_multiplier_bps as u128)
+            .checked_mul(stake_weight)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
         stake_weights.increment_stake_weight(stake_weight)?;
-        stake_weights.increment_ncn_fee_group_stake_weight(ncn_fee_group, stake_weight)?;
+        stake_weights.increment_ncn_fee_group_stake_weight(ncn_fee_group, reward_stake_weight)?;
 
         Ok(stake_weights)
     }

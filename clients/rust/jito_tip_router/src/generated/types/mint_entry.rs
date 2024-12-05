@@ -19,5 +19,6 @@ pub struct MintEntry {
     pub st_mint: Pubkey,
     pub vault_index: u64,
     pub ncn_fee_group: NcnFeeGroup,
+    pub reward_multiplier_bps: u64,
     pub reserved: [u8; 32],
 }
