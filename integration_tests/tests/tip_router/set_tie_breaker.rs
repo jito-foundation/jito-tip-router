@@ -59,7 +59,10 @@ mod tests {
         assert!(ballot_box.has_ballot(&ballot));
         assert_eq!(ballot_box.get_winning_ballot().unwrap(), ballot);
         // No official consensus reached so no slot set
-        assert_eq!(ballot_box.slot_consensus_reached(), 0);
+        assert_eq!(
+            ballot_box.slot_consensus_reached(),
+            DEFAULT_CONSENSUS_REACHED_SLOT
+        );
         assert!(ballot_box.is_consensus_reached());
 
         Ok(())
