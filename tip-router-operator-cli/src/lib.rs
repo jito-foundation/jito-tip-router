@@ -3,7 +3,7 @@ pub mod merkle_root_generator_workflow;
 pub mod merkle_root_upload_workflow;
 pub mod reclaim_rent_workflow;
 pub mod stake_meta_generator_workflow;
-
+pub mod snapshot;
 use {
     crate::{
         merkle_root_generator_workflow::MerkleRootGeneratorError,
@@ -711,7 +711,7 @@ async fn signed_send(
     (txn, res)
 }
 
-async fn get_batched_accounts(
+pub async fn get_batched_accounts(
     rpc_client: &RpcClient,
     pubkeys: &[Pubkey],
 ) -> solana_rpc_client_api::client_error::Result<HashMap<Pubkey, Option<Account>>> {

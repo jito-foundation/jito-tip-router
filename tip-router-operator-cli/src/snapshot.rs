@@ -1,6 +1,6 @@
 use anyhow::{ anyhow, Result };
 use log::{ info, warn };
-use solana_client::rpc_client::RpcClient;
+use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::{
     clock::Slot,
     epoch_schedule::EpochSchedule,
@@ -63,7 +63,10 @@ impl SnapshotCreator {
         keypair: Keypair,
         blockstore_path: PathBuf
     ) -> Result<Self> {
-        let rpc_client = EllipsisClient::from_rpc(RpcClient::new(rpc_url), &keypair)?;
+        let rpc_client = EllipsisClient::from_rpc(
+            solana_rpc_client::rpc_client::RpcClient::new(rpc_url),
+            &keypair
+        )?;
         Ok(Self {
             rpc_client,
             output_dir: PathBuf::from(output_dir),
@@ -283,7 +286,8 @@ impl SnapshotCreator {
                 None,
                 None,
                 None,
-                Arc::new(AtomicBool::new(false))
+                Arc::new(AtomicBool::new(false)),
+                false // Add this missing boolean argument for accounts_db_skip_shrink
             )?;
 
         let bank = bank_forks

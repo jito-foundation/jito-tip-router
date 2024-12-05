@@ -6,12 +6,7 @@ use std::path::PathBuf;
 use solana_sdk::signer::keypair::read_keypair_file;
 use solana_metrics::datapoint_info;
 use std::time::Instant;
-
-mod snapshot;
-mod merkle_tree;
-mod claim_mev_workflow;
-mod merkle_root_generator_workflow;
-mod merkle_root_upload_workflow;
+use tip_router_operator_cli::*;  // Add this line to use your library crate
 
 #[cfg(test)]
 mod tests;
@@ -70,36 +65,36 @@ async fn main() -> Result<()> {
                 anyhow::Error::msg(e.to_string())
             )?;
 
-            let merkle_tree_generator = merkle_tree::MerkleTreeGenerator::new(
-                &cli.rpc_url,
-                keypair,
-                ncn_address.parse()?,
-                PathBuf::from("output") // Configure this
-            )?;
+            // let merkle_tree_generator = merkle_tree::MerkleTreeGenerator::new(
+            //     &cli.rpc_url,
+            //     keypair,
+            //     ncn_address.parse()?,
+            //     PathBuf::from("output") // Configure this
+            // )?;
 
-            loop {
-                let current_epoch = merkle_tree_generator.wait_for_epoch_boundary().await?;
-                info!("Starting workflow for epoch {}", current_epoch);
-                let start = Instant::now();
+            // loop {
+            //     let current_epoch = merkle_tree_generator.wait_for_epoch_boundary().await?;
+            //     info!("Starting workflow for epoch {}", current_epoch);
+            //     let start = Instant::now();
 
-                // Generate and upload regular merkle trees
-                let stake_meta = merkle_tree_generator.generate_stake_meta(current_epoch).await?;
-                let merkle_trees =
-                    merkle_tree_generator.generate_and_upload_merkle_trees(stake_meta).await?;
+            //     // Generate and upload regular merkle trees
+            //     let stake_meta = merkle_tree_generator.generate_stake_meta(current_epoch).await?;
+            //     let merkle_trees =
+            //         merkle_tree_generator.generate_and_upload_merkle_trees(stake_meta).await?;
 
-                // Generate and upload meta merkle tree
-                let meta_tree = merkle_tree_generator.generate_meta_merkle_tree(
-                    &merkle_trees
-                ).await?;
-                merkle_tree_generator.upload_to_ncn(&meta_tree).await?;
+            //     // Generate and upload meta merkle tree
+            //     let meta_tree = merkle_tree_generator.generate_meta_merkle_tree(
+            //         &merkle_trees
+            //     ).await?;
+            //     merkle_tree_generator.upload_to_ncn(&meta_tree).await?;
 
-                let elapsed = start.elapsed();
-                datapoint_info!(
-                    "tip_router_workflow",
-                    ("epoch", current_epoch, i64),
-                    ("elapsed_ms", elapsed.as_millis(), i64)
-                );
-            }
+            //     let elapsed = start.elapsed();
+            //     datapoint_info!(
+            //         "tip_router_workflow",
+            //         ("epoch", current_epoch, i64),
+            //         ("elapsed_ms", elapsed.as_millis(), i64)
+            //     );
+            // }
         }
         Commands::Snapshot { output_dir, max_snapshots, compression } => {
             info!("Starting snapshot creator");

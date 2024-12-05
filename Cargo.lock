@@ -1985,7 +1985,7 @@ dependencies = [
  "solana-program 1.18.26",
  "solana-program-test 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-sdk",
- "solana-transaction-status 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-transaction-status",
  "thiserror",
  "tokio",
 ]
@@ -3174,8 +3174,8 @@ dependencies = [
  "solana-account-decoder 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-cli-config",
  "solana-program 1.18.26",
- "solana-rpc-client 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client-api 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-rpc-client",
+ "solana-rpc-client-api",
  "solana-sdk",
  "spl-associated-token-account",
  "spl-token",
@@ -5864,7 +5864,7 @@ dependencies = [
  "solana-program-runtime 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-runtime 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-sdk",
- "solana-transaction-status 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-transaction-status",
  "thiserror",
 ]
 
@@ -5937,8 +5937,8 @@ dependencies = [
  "solana-metrics 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-pubsub-client 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-quic-client 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-rpc-client 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-rpc-client-api 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-rpc-client",
+ "solana-rpc-client-api",
  "solana-rpc-client-nonce-utils 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-sdk",
  "solana-streamer 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5969,8 +5969,8 @@ dependencies = [
  "solana-metrics 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-pubsub-client 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-quic-client 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client-api 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-rpc-client",
+ "solana-rpc-client-api",
  "solana-rpc-client-nonce-utils 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-sdk",
  "solana-streamer 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
@@ -6295,7 +6295,7 @@ dependencies = [
  "log",
  "solana-accounts-db 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-download-utils",
- "solana-rpc-client 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-rpc-client",
  "solana-sdk",
 ]
 
@@ -6448,7 +6448,7 @@ dependencies = [
  "solana-stake-program 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-storage-bigtable",
  "solana-storage-proto",
- "solana-transaction-status 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-transaction-status",
  "solana-vote 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-vote-program 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "spl-token",
@@ -7039,7 +7039,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "solana-account-decoder 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-rpc-client-api 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-rpc-client-api",
  "solana-sdk",
  "thiserror",
  "tokio",
@@ -7063,7 +7063,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "solana-account-decoder 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client-api 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-rpc-client-api",
  "solana-sdk",
  "thiserror",
  "tokio",
@@ -7093,7 +7093,7 @@ dependencies = [
  "solana-measure 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-metrics 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-net-utils 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-rpc-client-api 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-rpc-client-api",
  "solana-sdk",
  "solana-streamer 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror",
@@ -7119,7 +7119,7 @@ dependencies = [
  "solana-measure 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-metrics 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-net-utils 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client-api 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-rpc-client-api",
  "solana-sdk",
  "solana-streamer 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "thiserror",
@@ -7197,32 +7197,6 @@ dependencies = [
 [[package]]
 name = "solana-rpc-client"
 version = "1.18.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36ed4628e338077c195ddbf790693d410123d17dec0a319b5accb4aaee3fb15c"
-dependencies = [
- "async-trait",
- "base64 0.21.7",
- "bincode",
- "bs58 0.4.0",
- "indicatif",
- "log",
- "reqwest",
- "semver",
- "serde",
- "serde_derive",
- "serde_json",
- "solana-account-decoder 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-rpc-client-api 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-sdk",
- "solana-transaction-status 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-version 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-vote-program 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio",
-]
-
-[[package]]
-name = "solana-rpc-client"
-version = "1.18.26"
 source = "git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5#0bbcbe476c0e728907ac01135115e661c16538e5"
 dependencies = [
  "async-trait",
@@ -7237,34 +7211,12 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "solana-account-decoder 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client-api 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-rpc-client-api",
  "solana-sdk",
- "solana-transaction-status 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-transaction-status",
  "solana-version 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-vote-program 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "tokio",
-]
-
-[[package]]
-name = "solana-rpc-client-api"
-version = "1.18.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83c913551faa4a1ae4bbfef6af19f3a5cf847285c05b4409e37c8993b3444229"
-dependencies = [
- "base64 0.21.7",
- "bs58 0.4.0",
- "jsonrpc-core",
- "reqwest",
- "semver",
- "serde",
- "serde_derive",
- "serde_json",
- "solana-account-decoder 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-sdk",
- "solana-transaction-status 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-version 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "spl-token-2022 1.0.0",
- "thiserror",
 ]
 
 [[package]]
@@ -7284,7 +7236,7 @@ dependencies = [
  "solana-accounts-db 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-bundle",
  "solana-sdk",
- "solana-transaction-status 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-transaction-status",
  "solana-version 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "spl-token-2022 1.0.0",
  "thiserror",
@@ -7298,7 +7250,7 @@ checksum = "1a47b6bb1834e6141a799db62bbdcf80d17a7d58d7bc1684c614e01a7293d7cf"
 dependencies = [
  "clap 2.34.0",
  "solana-clap-utils 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-rpc-client 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-rpc-client",
  "solana-sdk",
  "thiserror",
 ]
@@ -7310,7 +7262,7 @@ source = "git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0
 dependencies = [
  "clap 2.34.0",
  "solana-clap-utils 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-rpc-client",
  "solana-sdk",
  "thiserror",
 ]
@@ -7731,7 +7683,7 @@ dependencies = [
  "solana-metrics 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-sdk",
  "solana-storage-proto",
- "solana-transaction-status 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-transaction-status",
  "thiserror",
  "tokio",
  "tonic",
@@ -7750,7 +7702,7 @@ dependencies = [
  "serde",
  "solana-account-decoder 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-sdk",
- "solana-transaction-status 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-transaction-status",
  "tonic-build",
 ]
 
@@ -7865,8 +7817,8 @@ dependencies = [
  "log",
  "rayon",
  "solana-connection-cache 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-rpc-client 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-rpc-client-api 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-rpc-client",
+ "solana-rpc-client-api",
  "solana-sdk",
 ]
 
@@ -7879,8 +7831,8 @@ dependencies = [
  "log",
  "rayon",
  "solana-connection-cache 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client-api 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-rpc-client",
+ "solana-rpc-client-api",
  "solana-sdk",
 ]
 
@@ -7901,8 +7853,8 @@ dependencies = [
  "solana-measure 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-metrics 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-pubsub-client 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-rpc-client 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-rpc-client-api 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-rpc-client",
+ "solana-rpc-client-api",
  "solana-sdk",
  "thiserror",
  "tokio",
@@ -7924,8 +7876,8 @@ dependencies = [
  "solana-measure 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-metrics 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-pubsub-client 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client-api 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-rpc-client",
+ "solana-rpc-client-api",
  "solana-sdk",
  "thiserror",
  "tokio",
@@ -7939,31 +7891,6 @@ checksum = "941819f2d9a9c747417417ce7e569de5093809726667ea81ceec3a002a9de5b7"
 dependencies = [
  "solana-instruction",
  "solana-sanitize",
-]
-
-[[package]]
-name = "solana-transaction-status"
-version = "1.18.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d3d36db1b2ab2801afd5482aad9fb15ed7959f774c81a77299fdd0ddcf839d4"
-dependencies = [
- "Inflector",
- "base64 0.21.7",
- "bincode",
- "borsh 0.10.4",
- "bs58 0.4.0",
- "lazy_static",
- "log",
- "serde",
- "serde_derive",
- "serde_json",
- "solana-account-decoder 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "solana-sdk",
- "spl-associated-token-account",
- "spl-memo",
- "spl-token",
- "spl-token-2022 1.0.0",
- "thiserror",
 ]
 
 [[package]]
@@ -9051,12 +8978,12 @@ dependencies = [
  "solana-program 1.18.26",
  "solana-program-runtime 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-program-test 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-rpc-client-api 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-rpc-client",
+ "solana-rpc-client-api",
  "solana-runtime 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-sdk",
  "solana-stake-program 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-transaction-status 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
+ "solana-transaction-status",
  "solana-vote 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "spl-token",
  "spl-token-2022 1.0.0",
