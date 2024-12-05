@@ -469,7 +469,7 @@ impl Fees {
         self.activation_epoch = PodU64::from(value);
     }
 
-    fn set_base_fee_bps(
+    pub fn set_base_fee_bps(
         &mut self,
         base_fee_group: BaseFeeGroup,
         value: u16,

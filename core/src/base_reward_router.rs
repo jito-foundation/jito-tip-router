@@ -658,4 +658,78 @@ mod tests {
         assert_eq!(router.reward_pool(), 1500);
         assert_eq!(router.rewards_processed(), 0);
     }
+
+    #[test]
+    fn test_route_reward_pool() {
+        const INCOMING_REWARDS: u64 = 1000;
+
+        let mut router = BaseRewardRouter::new(
+            Pubkey::new_unique(), // ncn
+            1,                    // ncn_epoch
+            1,                    // bump
+            100,                  // slot_created
+        );
+
+        // Groups
+        let base_group = BaseFeeGroup::default();
+        let ncn_group = NcnFeeGroup::default();
+
+        // Fees
+        let fees = Fees::new(900, 100, 1).unwrap();
+
+        // Route incoming rewards
+        router.route_incoming_rewards(INCOMING_REWARDS).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+
+        router.route_reward_pool(&fees).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.base_fee_group_rewards(base_group).unwrap(), 900);
+        assert_eq!(router.ncn_fee_group_rewards(ncn_group).unwrap(), 100);
+    }
+
+    #[test]
+    fn test_route_reward_pool_multiple_groups() {
+        const INCOMING_REWARDS: u64 = 1600;
+
+        let mut router = BaseRewardRouter::new(
+            Pubkey::new_unique(), // ncn
+            1,                    // ncn_epoch
+            1,                    // bump
+            100,                  // slot_created
+        );
+
+        // Fees
+        let mut fees = Fees::new(100, 100, 1).unwrap();
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            fees.set_base_fee_bps(*group, 100).unwrap();
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            fees.set_ncn_fee_bps(*group, 100).unwrap();
+        }
+
+        // Route incoming rewards
+        router.route_incoming_rewards(INCOMING_REWARDS).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+
+        router.route_reward_pool(&fees).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            assert_eq!(router.base_fee_group_rewards(*group).unwrap(), 100);
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            assert_eq!(router.ncn_fee_group_rewards(*group).unwrap(), 100);
+        }
+    }
 }
