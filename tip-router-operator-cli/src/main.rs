@@ -3,11 +3,14 @@ use anyhow::Result;
 use log::info;
 use snapshot::SnapshotCreator;
 use std::path::PathBuf;
-use solana_sdk::signer::keypair::read_keypair_file;
-use tip_router_operator_cli::*;  // Add this line to use your library crate
-
-#[cfg(test)]
-mod tests;
+use solana_sdk::{
+    signer::keypair::{ read_keypair_file, Keypair },
+    pubkey::Pubkey,
+    slot_history::Slot,
+};
+use solana_client::rpc_client::RpcClient;
+use tip_router_operator_cli::*;
+use solana_metrics::datapoint_info;
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -20,96 +23,129 @@ struct Cli {
     #[arg(short, long, default_value = "http://localhost:8899")]
     rpc_url: String,
 
+    /// Path to ledger
+    #[arg(short, long)]
+    ledger_path: PathBuf,
+
+    /// Snapshot output directory
+    #[arg(short, long)]
+    snapshot_output_dir: PathBuf,
+
     #[command(subcommand)]
     command: Commands,
 }
 
 #[derive(clap::Subcommand)]
 enum Commands {
-    /// Start monitoring tips
     Monitor {
-        /// NCN address
         #[arg(short, long)]
         ncn_address: String,
-    },
-    /// Create and validate snapshots at epoch boundaries
-    Snapshot {
-        /// Output directory for snapshots
-        #[arg(short, long)]
-        output_dir: String,
 
-        /// Maximum number of snapshots to retain
-        #[arg(short, long, default_value = "2")]
-        max_snapshots: u32,
+        /// Tip distribution program ID
+        #[arg(long)]
+        tip_distribution_program_id: Pubkey,
 
-        /// Snapshot compression type (none, bzip2, gzip, zstd)
-        #[arg(short, long, default_value = "zstd")]
-        compression: String,
+        /// Tip payment program ID
+        #[arg(long)]
+        tip_payment_program_id: Pubkey,
     },
+}
+
+async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<Slot> {
+    let epoch_info = rpc_client.get_epoch_info()?;
+    let current_epoch = epoch_info.epoch;
+    let current_slot = epoch_info.absolute_slot;
+    let slot_index = epoch_info.slot_index;
+
+    let epoch_start_slot = current_slot - slot_index;
+    let previous_epoch_final_slot = epoch_start_slot - 1;
+
+    // Find the last slot with a block
+    let mut slot = previous_epoch_final_slot;
+    while rpc_client.get_block(slot).is_err() {
+        slot -= 1;
+    }
+
+    Ok(slot)
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
+    let rpc_client = RpcClient::new(cli.rpc_url.clone());
 
     match cli.command {
-        Commands::Monitor { ncn_address } => {
-            info!("Starting monitor for NCN address: {}", ncn_address);
-            info!("Using keypair at: {}", cli.keypair_path);
-            info!("Connected to RPC: {}", cli.rpc_url);
+        Commands::Monitor { ncn_address, tip_distribution_program_id, tip_payment_program_id } => {
+            loop {
+                let previous_epoch_slot = get_previous_epoch_last_slot(&rpc_client).await?;
+                info!("Processing slot {} for previous epoch", previous_epoch_slot);
 
-            let keypair = read_keypair_file(&cli.keypair_path).map_err(|e|
-                anyhow::Error::msg(e.to_string())
-            )?;
+                // 1. Create snapshot
+                let snapshot_creator = SnapshotCreator::new(
+                    &cli.rpc_url,
+                    cli.snapshot_output_dir.to_str().unwrap().to_string(),
+                    5, // max_snapshots
+                    "bzip2".to_string(),
+                    read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
+                    cli.ledger_path.clone()
+                )?;
 
-            // let merkle_tree_generator = merkle_tree::MerkleTreeGenerator::new(
-            //     &cli.rpc_url,
-            //     keypair,
-            //     ncn_address.parse()?,
-            //     PathBuf::from("output") // Configure this
-            // )?;
+                snapshot_creator.create_snapshot(previous_epoch_slot).await?;
 
-            // loop {
-            //     let current_epoch = merkle_tree_generator.wait_for_epoch_boundary().await?;
-            //     info!("Starting workflow for epoch {}", current_epoch);
-            //     let start = Instant::now();
+                // 2. Generate stake metadata
+                let stake_meta_path = cli.snapshot_output_dir.join(
+                    format!("stake-meta-{}.json", previous_epoch_slot)
+                );
 
-            //     // Generate and upload regular merkle trees
-            //     let stake_meta = merkle_tree_generator.generate_stake_meta(current_epoch).await?;
-            //     let merkle_trees =
-            //         merkle_tree_generator.generate_and_upload_merkle_trees(stake_meta).await?;
+                let merkle_tree_generator = merkle_tree::MerkleTreeGenerator::new(
+                    &cli.rpc_url,
+                    read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
+                    ncn_address.clone(),
+                    cli.snapshot_output_dir.clone(),
+                    tip_distribution_program_id,
+                    Keypair::new(), // merkle_root_upload_authority
+                    Pubkey::find_program_address(&[b"config"], &tip_distribution_program_id).0
+                )?;
 
-            //     // Generate and upload meta merkle tree
-            //     let meta_tree = merkle_tree_generator.generate_meta_merkle_tree(
-            //         &merkle_trees
-            //     ).await?;
-            //     merkle_tree_generator.upload_to_ncn(&meta_tree).await?;
+                let stake_meta = stake_meta_generator_workflow::generate_stake_meta(
+                    &cli.ledger_path,
+                    &previous_epoch_slot,
+                    &tip_distribution_program_id,
+                    stake_meta_path.to_str().unwrap(),
+                    &tip_payment_program_id
+                )?;
 
-            //     let elapsed = start.elapsed();
-            //     datapoint_info!(
-            //         "tip_router_workflow",
-            //         ("epoch", current_epoch, i64),
-            //         ("elapsed_ms", elapsed.as_millis(), i64)
-            //     );
-            // }
-        }
-        Commands::Snapshot { output_dir, max_snapshots, compression } => {
-            info!("Starting snapshot creator");
-            let keypair = read_keypair_file(&cli.keypair_path).map_err(|e|
-                anyhow::Error::msg(e.to_string())
-            )?;
-            let snapshot_creator = SnapshotCreator::new(
-                &cli.rpc_url,
-                output_dir,
-                max_snapshots,
-                compression,
-                keypair,
-                PathBuf::from("blockstore") // You'll need to provide the correct path
-            )?;
-            snapshot_creator.monitor_epoch_boundary().await?;
+                // Load the stake metadata from the generated file
+                let file = std::fs::File::open(&stake_meta_path)?;
+                let stake_meta_collection: StakeMetaCollection = serde_json::from_reader(file)?;
+
+                // 3. Create merkle trees
+                let merkle_trees =
+                    merkle_tree_generator.generate_and_upload_merkle_trees(
+                        stake_meta_collection
+                    ).await?;
+
+                datapoint_info!(
+                    "tip_router_merkle_trees",
+                    ("count", merkle_trees.generated_merkle_trees.len(), i64),
+                    ("slot", previous_epoch_slot, i64)
+                );
+
+                // 4. Create meta merkle tree
+                let meta_merkle_tree = merkle_tree_generator.generate_meta_merkle_tree(
+                    &merkle_trees
+                ).await?;
+
+                // 5. Upload meta merkle tree to NCN
+                merkle_tree_generator.upload_to_ncn(&meta_merkle_tree).await?;
+
+                info!("Generated and uploaded merkle trees and meta merkle tree for epoch");
+
+                // Wait for next epoch
+                merkle_tree_generator.wait_for_epoch_boundary().await?;
+            }
         }
     }
-
     Ok(())
 }

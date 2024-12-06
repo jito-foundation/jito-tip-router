@@ -127,7 +127,7 @@ impl SnapshotCreator {
         }
     }
 
-    async fn create_snapshot(&self, slot: Slot) -> Result<()> {
+    pub async fn create_snapshot(&self, slot: Slot) -> Result<()> {
         datapoint_info!("tip_router_snapshot", ("slot", slot, i64), ("event", "start", String));
 
         let result = self.create_snapshot_internal(slot).await;
