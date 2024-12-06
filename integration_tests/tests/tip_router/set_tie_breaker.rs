@@ -15,7 +15,6 @@ mod tests {
 
         ///// TipRouter Setup /////
         fixture.snapshot_test_ncn(&test_ncn).await?;
-        //////
 
         let clock = fixture.clock().await;
         let slot = clock.slot;
@@ -32,8 +31,8 @@ mod tests {
         let operator = test_ncn.operators[0].operator_pubkey;
         let operator_admin = &test_ncn.operators[0].operator_admin;
 
-        // Cast a vote so that this vote is one of the valid options
-        // Gets to 50% consensus weight
+        // // Cast a vote so that this vote is one of the valid options
+        // // Gets to 50% consensus weight
         tip_router_client
             .do_cast_vote(ncn, operator, operator_admin, meta_merkle_root, ncn_epoch)
             .await?;
@@ -57,7 +56,10 @@ mod tests {
 
         let ballot = Ballot::new(meta_merkle_root);
         assert!(ballot_box.has_ballot(&ballot));
-        assert_eq!(ballot_box.get_winning_ballot().unwrap().ballot(), ballot);
+        assert_eq!(
+            ballot_box.get_winning_ballot_tally().unwrap().ballot(),
+            ballot
+        );
         // No official consensus reached so no slot set
         assert_eq!(
             ballot_box.slot_consensus_reached(),

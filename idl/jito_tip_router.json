@@ -1356,7 +1356,7 @@
             }
           },
           {
-            "name": "winningBallot",
+            "name": "winningBallotTally",
             "type": {
               "defined": "BallotTally"
             }
@@ -1368,7 +1368,7 @@
                 {
                   "defined": "OperatorVote"
                 },
-                32
+                16
               ]
             }
           },
@@ -1379,7 +1379,7 @@
                 {
                   "defined": "BallotTally"
                 },
-                32
+                16
               ]
             }
           }
@@ -1931,15 +1931,6 @@
             "name": "tally",
             "type": {
               "defined": "PodU64"
-            }
-          },
-          {
-            "name": "reserved",
-            "type": {
-              "array": [
-                "u8",
-                64
-              ]
             }
           }
         ]

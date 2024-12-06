@@ -15,6 +15,4 @@ pub struct BallotTally {
     pub ballot: Ballot,
     pub stake_weights: StakeWeights,
     pub tally: u64,
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
-    pub reserved: [u8; 64],
 }

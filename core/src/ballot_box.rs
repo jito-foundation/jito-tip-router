@@ -59,7 +59,7 @@ pub struct BallotTally {
     ballot: Ballot,
     stake_weights: StakeWeights,
     tally: PodU64,
-    reserved: [u8; 64],
+    // reserved: [u8; 64],
 }
 
 impl Default for BallotTally {
@@ -69,7 +69,7 @@ impl Default for BallotTally {
             ballot: Ballot::default(),
             stake_weights: StakeWeights::default(),
             tally: PodU64::from(0),
-            reserved: [0; 64],
+            // reserved: [0; 64],
         }
     }
 }
@@ -81,7 +81,7 @@ impl BallotTally {
             ballot,
             stake_weights: *stake_weights,
             tally: PodU64::from(1),
-            reserved: [0; 64],
+            // reserved: [0; 64],
         }
     }
 
@@ -103,6 +103,10 @@ impl BallotTally {
 
     pub fn is_empty(&self) -> bool {
         self.index() == u16::MAX
+    }
+
+    pub fn is_valid(&self) -> bool {
+        !self.is_empty()
     }
 
     pub fn increment_tally(&mut self, stake_weights: &StakeWeights) -> Result<(), TipRouterError> {
@@ -194,11 +198,11 @@ pub struct BallotBox {
     operators_voted: PodU64,
     unique_ballots: PodU64,
 
-    winning_ballot: BallotTally,
+    winning_ballot_tally: BallotTally,
 
     //TODO fix 32 -> MAX_OPERATORS
-    operator_votes: [OperatorVote; 32],
-    ballot_tallies: [BallotTally; 32],
+    operator_votes: [OperatorVote; 16],
+    ballot_tallies: [BallotTally; 16],
 }
 
 impl Discriminator for BallotBox {
@@ -215,10 +219,10 @@ impl BallotBox {
             slot_consensus_reached: PodU64::from(DEFAULT_CONSENSUS_REACHED_SLOT),
             operators_voted: PodU64::from(0),
             unique_ballots: PodU64::from(0),
-            winning_ballot: BallotTally::default(),
+            winning_ballot_tally: BallotTally::default(),
             //TODO fix 32 -> MAX_OPERATORS
-            operator_votes: [OperatorVote::default(); 32],
-            ballot_tallies: [BallotTally::default(); 32],
+            operator_votes: [OperatorVote::default(); 16],
+            ballot_tallies: [BallotTally::default(); 16],
             reserved: [0; 128],
         }
     }
@@ -299,28 +303,38 @@ impl BallotBox {
         self.operators_voted.into()
     }
 
-    pub fn is_consensus_reached(&self) -> bool {
-        self.slot_consensus_reached() > 0
+    pub fn has_ballot(&self, ballot: &Ballot) -> bool {
+        self.ballot_tallies.iter().any(|t| t.ballot.eq(ballot))
     }
 
-    pub fn get_winning_ballot(&self) -> Result<&BallotTally, TipRouterError> {
-        if self.winning_ballot.is_empty() {
+    pub fn is_consensus_reached(&self) -> bool {
+        self.slot_consensus_reached() != DEFAULT_CONSENSUS_REACHED_SLOT
+            || self.winning_ballot_tally.is_valid()
+    }
+
+    pub fn tie_breaker_set(&self) -> bool {
+        self.slot_consensus_reached() == DEFAULT_CONSENSUS_REACHED_SLOT
+            && self.winning_ballot_tally.is_valid()
+    }
+
+    pub fn get_winning_ballot_tally(&self) -> Result<&BallotTally, TipRouterError> {
+        if self.winning_ballot_tally.is_empty() {
             Err(TipRouterError::ConsensusNotReached)
         } else {
-            Ok(&self.winning_ballot)
+            Ok(&self.winning_ballot_tally)
         }
     }
 
     pub fn has_winning_ballot(&self) -> bool {
-        !self.winning_ballot.is_empty()
+        !self.winning_ballot_tally.is_empty()
     }
 
-    pub const fn operator_votes(&self) -> &[OperatorVote; 32] {
+    pub const fn operator_votes(&self) -> &[OperatorVote; 16] {
         &self.operator_votes
     }
 
-    pub fn set_winning_ballot(&mut self, ballot: BallotTally) {
-        self.winning_ballot = ballot;
+    pub fn set_winning_ballot_tally(&mut self, ballot: BallotTally) {
+        self.winning_ballot_tally = ballot;
     }
 
     fn increment_or_create_ballot_tally(
@@ -432,10 +446,10 @@ impl BallotBox {
         let consensus_reached =
             ballot_percentage_of_total.greater_than_or_equal(&target_precise_percentage);
 
-        if consensus_reached && self.winning_ballot.is_empty() {
+        if consensus_reached && self.winning_ballot_tally.is_empty() {
             self.slot_consensus_reached = PodU64::from(current_slot);
 
-            self.set_winning_ballot(*max_tally);
+            self.set_winning_ballot_tally(*max_tally);
         }
 
         Ok(())
@@ -480,17 +494,8 @@ impl BallotBox {
         //     return Err(TipRouterError::TieBreakerNotInPriorVotes);
         // }
 
-        self.slot_consensus_reached = PodU64::from(0);
-        self.set_winning_ballot(*finalized_ballot_tally);
+        self.set_winning_ballot_tally(*finalized_ballot_tally);
         Ok(())
-    }
-
-    pub fn has_ballot(&self, ballot: &Ballot) -> bool {
-        self.ballot_tallies.iter().any(|t| t.ballot.eq(ballot))
-    }
-
-    pub fn tie_breaker_set(&self) -> bool {
-        self.slot_consensus_reached() == 0
     }
 
     /// Determines if an operator can still cast their vote.
@@ -537,7 +542,7 @@ impl BallotBox {
 
         if !meta_merkle_tree::verify::verify(
             proof,
-            self.winning_ballot.ballot.root(),
+            self.winning_ballot_tally.ballot.root(),
             node_hash.to_bytes(),
         ) {
             return Err(TipRouterError::InvalidMerkleProof);
@@ -635,7 +640,7 @@ mod tests {
         );
 
         // Test error on changing vote after consensus
-        ballot_box.set_winning_ballot(*new_tally);
+        ballot_box.set_winning_ballot_tally(*new_tally);
         ballot_box.slot_consensus_reached = PodU64::from(new_slot);
         let result = ballot_box.cast_vote(
             operator,
@@ -704,7 +709,7 @@ mod tests {
         assert_eq!(ballot_box.ballot_tallies[1].ballot(), ballot2);
 
         // Test error when ballot tallies are full
-        for i in 3..=32 {
+        for i in 3..=16 {
             let ballot = Ballot::new([i as u8; 32]);
             ballot_box
                 .increment_or_create_ballot_tally(&ballot, &stake_weights)
@@ -740,7 +745,7 @@ mod tests {
             DEFAULT_CONSENSUS_REACHED_SLOT
         );
         assert!(matches!(
-            ballot_box.get_winning_ballot(),
+            ballot_box.get_winning_ballot_tally(),
             Err(TipRouterError::ConsensusNotReached)
         ));
 
@@ -753,7 +758,10 @@ mod tests {
             .unwrap();
         assert!(ballot_box.is_consensus_reached());
         assert_eq!(ballot_box.slot_consensus_reached(), current_slot);
-        assert_eq!(ballot_box.get_winning_ballot().unwrap().ballot(), ballot);
+        assert_eq!(
+            ballot_box.get_winning_ballot_tally().unwrap().ballot(),
+            ballot
+        );
 
         // Consensus remains after additional votes
         let ballot2 = Ballot::new([2; 32]);
@@ -765,7 +773,10 @@ mod tests {
             .unwrap();
         assert!(ballot_box.is_consensus_reached());
         assert_eq!(ballot_box.slot_consensus_reached(), current_slot);
-        assert_eq!(ballot_box.get_winning_ballot().unwrap().ballot(), ballot);
+        assert_eq!(
+            ballot_box.get_winning_ballot_tally().unwrap().ballot(),
+            ballot
+        );
 
         // Test with multiple competing ballots
         let mut ballot_box = BallotBox::new(ncn, epoch, 0, current_slot);
@@ -796,7 +807,10 @@ mod tests {
             .tally_votes(total_stake_weight, current_slot)
             .unwrap();
         assert!(ballot_box.is_consensus_reached());
-        assert_eq!(ballot_box.get_winning_ballot().unwrap().ballot(), ballot3);
+        assert_eq!(
+            ballot_box.get_winning_ballot_tally().unwrap().ballot(),
+            ballot3
+        );
     }
 
     #[test]
@@ -822,6 +836,7 @@ mod tests {
         // Test setting tie breaker before voting is stalled
         let current_epoch = epoch + 1;
         let epochs_before_stall = 3;
+
         assert_eq!(
             ballot_box.set_tie_breaker_ballot(ballot1.root(), current_epoch, epochs_before_stall),
             Err(TipRouterError::VotingNotFinalized)
@@ -833,7 +848,10 @@ mod tests {
             .set_tie_breaker_ballot(ballot1.root(), current_epoch, epochs_before_stall)
             .unwrap();
         assert!(ballot_box.is_consensus_reached());
-        assert_eq!(ballot_box.get_winning_ballot().unwrap().ballot(), ballot1);
+        assert_eq!(
+            ballot_box.get_winning_ballot_tally().unwrap().ballot(),
+            ballot1
+        );
 
         // Test setting tie breaker with invalid merkle root
         let mut ballot_box = BallotBox::new(ncn, epoch, 0, current_slot);

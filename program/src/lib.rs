@@ -293,41 +293,5 @@ pub fn process_instruction(
             msg!("Instruction: SetTieBreaker");
             process_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
         }
-        TipRouterInstruction::InitializeBallotBox { epoch } => {
-            msg!("Instruction: InitializeBallotBox");
-            process_initialize_ballot_box(program_id, accounts, epoch)
-        }
-        TipRouterInstruction::CastVote {
-            meta_merkle_root,
-            epoch,
-        } => {
-            msg!("Instruction: CastVote");
-            process_cast_vote(program_id, accounts, meta_merkle_root, epoch)
-        }
-        TipRouterInstruction::SetMerkleRoot {
-            proof,
-            merkle_root,
-            max_total_claim,
-            max_num_nodes,
-            epoch,
-        } => {
-            msg!("Instruction: SetMerkleRoot");
-            process_set_merkle_root(
-                program_id,
-                accounts,
-                proof,
-                merkle_root,
-                max_total_claim,
-                max_num_nodes,
-                epoch,
-            )
-        }
-        TipRouterInstruction::SetTieBreaker {
-            meta_merkle_root,
-            epoch,
-        } => {
-            msg!("Instruction: SetTieBreaker");
-            process_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
-        }
     }
 }

@@ -204,7 +204,7 @@ mod set_merkle_root {
             let winning_ballot = Ballot::new(winning_root);
             let winning_ballot_tally =
                 BallotTally::new(0, winning_ballot, &StakeWeights::default());
-            ballot_box.set_winning_ballot(winning_ballot_tally);
+            ballot_box.set_winning_ballot_tally(winning_ballot_tally);
             ballot_box
         };
 

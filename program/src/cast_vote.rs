@@ -95,7 +95,7 @@ pub fn process_cast_vote(
         msg!(
             "Consensus reached for epoch {} with ballot {:?}",
             epoch,
-            ballot_box.get_winning_ballot()?
+            ballot_box.get_winning_ballot_tally()?
         );
     }
 

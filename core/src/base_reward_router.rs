@@ -170,7 +170,7 @@ impl BaseRewardRouter {
         &mut self,
         ballot_box: &BallotBox,
     ) -> Result<(), TipRouterError> {
-        let winning_ballot = ballot_box.get_winning_ballot()?;
+        let winning_ballot = ballot_box.get_winning_ballot_tally()?;
         let winning_stake_weight = winning_ballot.stake_weights();
 
         for votes in ballot_box.operator_votes().iter() {

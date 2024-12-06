@@ -8,10 +8,6 @@
 
 import {
   combineCodec,
-  fixDecoderSize,
-  fixEncoderSize,
-  getBytesDecoder,
-  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU16Decoder,
@@ -21,7 +17,6 @@ import {
   type Codec,
   type Decoder,
   type Encoder,
-  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
   getBallotDecoder,
@@ -39,7 +34,6 @@ export type BallotTally = {
   ballot: Ballot;
   stakeWeights: StakeWeights;
   tally: bigint;
-  reserved: ReadonlyUint8Array;
 };
 
 export type BallotTallyArgs = {
@@ -47,7 +41,6 @@ export type BallotTallyArgs = {
   ballot: BallotArgs;
   stakeWeights: StakeWeightsArgs;
   tally: number | bigint;
-  reserved: ReadonlyUint8Array;
 };
 
 export function getBallotTallyEncoder(): Encoder<BallotTallyArgs> {
@@ -56,7 +49,6 @@ export function getBallotTallyEncoder(): Encoder<BallotTallyArgs> {
     ['ballot', getBallotEncoder()],
     ['stakeWeights', getStakeWeightsEncoder()],
     ['tally', getU64Encoder()],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 64)],
   ]);
 }
 
@@ -66,7 +58,6 @@ export function getBallotTallyDecoder(): Decoder<BallotTally> {
     ['ballot', getBallotDecoder()],
     ['stakeWeights', getStakeWeightsDecoder()],
     ['tally', getU64Decoder()],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 64)],
   ]);
 }
 
