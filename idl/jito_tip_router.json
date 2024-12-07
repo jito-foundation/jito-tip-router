@@ -22,7 +22,7 @@
         },
         {
           "name": "ncnAdmin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
