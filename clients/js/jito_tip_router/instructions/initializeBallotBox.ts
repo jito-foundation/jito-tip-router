@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_BALLOT_BOX_DISCRIMINATOR = 10;
+export const INITIALIZE_BALLOT_BOX_DISCRIMINATOR = 19;
 
 export function getInitializeBallotBoxDiscriminatorBytes() {
   return getU8Encoder().encode(INITIALIZE_BALLOT_BOX_DISCRIMINATOR);

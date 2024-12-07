@@ -27,7 +27,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const REGISTER_MINT_DISCRIMINATOR = 8;
+export const REGISTER_MINT_DISCRIMINATOR = 9;
 
 export function getRegisterMintDiscriminatorBytes() {
   return getU8Encoder().encode(REGISTER_MINT_DISCRIMINATOR);

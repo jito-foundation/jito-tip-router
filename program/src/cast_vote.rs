@@ -58,7 +58,7 @@ pub fn process_cast_vote(
     let mut ballot_box_data = ballot_box.data.borrow_mut();
     let ballot_box = BallotBox::try_from_slice_unchecked_mut(&mut ballot_box_data)?;
 
-    let total_stake_weight = {
+    let total_stake_weights = {
         let epoch_snapshot_data = epoch_snapshot.data.borrow();
         let epoch_snapshot = EpochSnapshot::try_from_slice_unchecked(&epoch_snapshot_data)?;
 
@@ -66,15 +66,15 @@ pub fn process_cast_vote(
             return Err(TipRouterError::EpochSnapshotNotFinalized.into());
         }
 
-        epoch_snapshot.stake_weight()
+        *epoch_snapshot.stake_weights()
     };
 
-    let operator_stake_weight = {
+    let operator_stake_weights = {
         let operator_snapshot_data = operator_snapshot.data.borrow();
         let operator_snapshot =
             OperatorSnapshot::try_from_slice_unchecked(&operator_snapshot_data)?;
 
-        operator_snapshot.stake_weight()
+        *operator_snapshot.stake_weights()
     };
 
     let slot = Clock::get()?.slot;
@@ -84,18 +84,18 @@ pub fn process_cast_vote(
     ballot_box.cast_vote(
         *operator.key,
         ballot,
-        operator_stake_weight,
+        &operator_stake_weights,
         slot,
         valid_slots_after_consensus,
     )?;
 
-    ballot_box.tally_votes(total_stake_weight, slot)?;
+    ballot_box.tally_votes(total_stake_weights.stake_weight(), slot)?;
 
     if ballot_box.is_consensus_reached() {
         msg!(
-            "Consensus reached for epoch {} with ballot {}",
+            "Consensus reached for epoch {} with ballot {:?}",
             epoch,
-            ballot_box.get_winning_ballot()?
+            ballot_box.get_winning_ballot_tally()?
         );
     }
 

@@ -12,6 +12,8 @@ pub struct SnapshotVaultOperatorDelegation {
 
     pub restaking_config: solana_program::pubkey::Pubkey,
 
+    pub tracked_mints: solana_program::pubkey::Pubkey,
+
     pub ncn: solana_program::pubkey::Pubkey,
 
     pub operator: solana_program::pubkey::Pubkey,
@@ -48,13 +50,17 @@ impl SnapshotVaultOperatorDelegation {
         args: SnapshotVaultOperatorDelegationInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(13 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(14 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn_config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_config,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.tracked_mints,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -121,7 +127,7 @@ pub struct SnapshotVaultOperatorDelegationInstructionData {
 
 impl SnapshotVaultOperatorDelegationInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 7 }
+        Self { discriminator: 8 }
     }
 }
 
@@ -143,21 +149,23 @@ pub struct SnapshotVaultOperatorDelegationInstructionArgs {
 ///
 ///   0. `[]` ncn_config
 ///   1. `[]` restaking_config
-///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[]` vault
-///   5. `[]` vault_ncn_ticket
-///   6. `[]` ncn_vault_ticket
-///   7. `[]` vault_operator_delegation
-///   8. `[]` weight_table
-///   9. `[writable]` epoch_snapshot
-///   10. `[writable]` operator_snapshot
-///   11. `[]` vault_program
-///   12. `[]` restaking_program
+///   2. `[]` tracked_mints
+///   3. `[]` ncn
+///   4. `[]` operator
+///   5. `[]` vault
+///   6. `[]` vault_ncn_ticket
+///   7. `[]` ncn_vault_ticket
+///   8. `[]` vault_operator_delegation
+///   9. `[]` weight_table
+///   10. `[writable]` epoch_snapshot
+///   11. `[writable]` operator_snapshot
+///   12. `[]` vault_program
+///   13. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct SnapshotVaultOperatorDelegationBuilder {
     ncn_config: Option<solana_program::pubkey::Pubkey>,
     restaking_config: Option<solana_program::pubkey::Pubkey>,
+    tracked_mints: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
     vault: Option<solana_program::pubkey::Pubkey>,
@@ -188,6 +196,11 @@ impl SnapshotVaultOperatorDelegationBuilder {
         restaking_config: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
         self.restaking_config = Some(restaking_config);
+        self
+    }
+    #[inline(always)]
+    pub fn tracked_mints(&mut self, tracked_mints: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.tracked_mints = Some(tracked_mints);
         self
     }
     #[inline(always)]
@@ -289,6 +302,7 @@ impl SnapshotVaultOperatorDelegationBuilder {
         let accounts = SnapshotVaultOperatorDelegation {
             ncn_config: self.ncn_config.expect("ncn_config is not set"),
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
+            tracked_mints: self.tracked_mints.expect("tracked_mints is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             operator: self.operator.expect("operator is not set"),
             vault: self.vault.expect("vault is not set"),
@@ -321,6 +335,8 @@ pub struct SnapshotVaultOperatorDelegationCpiAccounts<'a, 'b> {
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub operator: &'b solana_program::account_info::AccountInfo<'a>,
@@ -352,6 +368,8 @@ pub struct SnapshotVaultOperatorDelegationCpi<'a, 'b> {
     pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -388,6 +406,7 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpi<'a, 'b> {
             __program: program,
             ncn_config: accounts.ncn_config,
             restaking_config: accounts.restaking_config,
+            tracked_mints: accounts.tracked_mints,
             ncn: accounts.ncn,
             operator: accounts.operator,
             vault: accounts.vault,
@@ -435,13 +454,17 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(13 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(14 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_config.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.tracked_mints.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -506,10 +529,11 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(13 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(14 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.ncn_config.clone());
         account_infos.push(self.restaking_config.clone());
+        account_infos.push(self.tracked_mints.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
         account_infos.push(self.vault.clone());
@@ -539,17 +563,18 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpi<'a, 'b> {
 ///
 ///   0. `[]` ncn_config
 ///   1. `[]` restaking_config
-///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[]` vault
-///   5. `[]` vault_ncn_ticket
-///   6. `[]` ncn_vault_ticket
-///   7. `[]` vault_operator_delegation
-///   8. `[]` weight_table
-///   9. `[writable]` epoch_snapshot
-///   10. `[writable]` operator_snapshot
-///   11. `[]` vault_program
-///   12. `[]` restaking_program
+///   2. `[]` tracked_mints
+///   3. `[]` ncn
+///   4. `[]` operator
+///   5. `[]` vault
+///   6. `[]` vault_ncn_ticket
+///   7. `[]` ncn_vault_ticket
+///   8. `[]` vault_operator_delegation
+///   9. `[]` weight_table
+///   10. `[writable]` epoch_snapshot
+///   11. `[writable]` operator_snapshot
+///   12. `[]` vault_program
+///   13. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct SnapshotVaultOperatorDelegationCpiBuilder<'a, 'b> {
     instruction: Box<SnapshotVaultOperatorDelegationCpiBuilderInstruction<'a, 'b>>,
@@ -561,6 +586,7 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpiBuilder<'a, 'b> {
             __program: program,
             ncn_config: None,
             restaking_config: None,
+            tracked_mints: None,
             ncn: None,
             operator: None,
             vault: None,
@@ -591,6 +617,14 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpiBuilder<'a, 'b> {
         restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.restaking_config = Some(restaking_config);
+        self
+    }
+    #[inline(always)]
+    pub fn tracked_mints(
+        &mut self,
+        tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.tracked_mints = Some(tracked_mints);
         self
     }
     #[inline(always)]
@@ -735,6 +769,11 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpiBuilder<'a, 'b> {
                 .restaking_config
                 .expect("restaking_config is not set"),
 
+            tracked_mints: self
+                .instruction
+                .tracked_mints
+                .expect("tracked_mints is not set"),
+
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
             operator: self.instruction.operator.expect("operator is not set"),
@@ -794,6 +833,7 @@ struct SnapshotVaultOperatorDelegationCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    tracked_mints: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,

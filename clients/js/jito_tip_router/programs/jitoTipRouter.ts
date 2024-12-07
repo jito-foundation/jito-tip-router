@@ -15,17 +15,26 @@ import {
 import {
   type ParsedAdminUpdateWeightTableInstruction,
   type ParsedCastVoteInstruction,
+  type ParsedDistributeBaseNcnRewardRouteInstruction,
+  type ParsedDistributeBaseRewardsInstruction,
+  type ParsedDistributeNcnOperatorRewardsInstruction,
+  type ParsedDistributeNcnVaultRewardsInstruction,
   type ParsedInitializeBallotBoxInstruction,
+  type ParsedInitializeBaseRewardRouterInstruction,
   type ParsedInitializeEpochSnapshotInstruction,
   type ParsedInitializeNCNConfigInstruction,
+  type ParsedInitializeNcnRewardRouterInstruction,
   type ParsedInitializeOperatorSnapshotInstruction,
   type ParsedInitializeTrackedMintsInstruction,
   type ParsedInitializeWeightTableInstruction,
   type ParsedRegisterMintInstruction,
+  type ParsedRouteBaseRewardsInstruction,
+  type ParsedRouteNcnRewardsInstruction,
   type ParsedSetConfigFeesInstruction,
   type ParsedSetMerkleRootInstruction,
   type ParsedSetNewAdminInstruction,
   type ParsedSetTieBreakerInstruction,
+  type ParsedSetTrackedMintNcnFeeGroupInstruction,
   type ParsedSnapshotVaultOperatorDelegationInstruction,
 } from '../instructions';
 
@@ -34,15 +43,18 @@ export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
 
 export enum JitoTipRouterAccount {
   BallotBox,
+  BaseRewardRouter,
   EpochSnapshot,
   OperatorSnapshot,
   NcnConfig,
+  NcnRewardRouter,
   TrackedMints,
   WeightTable,
 }
 
 export enum JitoTipRouterInstruction {
   InitializeNCNConfig,
+  InitializeTrackedMints,
   SetConfigFees,
   SetNewAdmin,
   InitializeWeightTable,
@@ -51,7 +63,15 @@ export enum JitoTipRouterInstruction {
   InitializeOperatorSnapshot,
   SnapshotVaultOperatorDelegation,
   RegisterMint,
-  InitializeTrackedMints,
+  InitializeBaseRewardRouter,
+  InitializeNcnRewardRouter,
+  RouteBaseRewards,
+  RouteNcnRewards,
+  DistributeBaseRewards,
+  DistributeBaseNcnRewardRoute,
+  DistributeNcnOperatorRewards,
+  DistributeNcnVaultRewards,
+  SetTrackedMintNcnFeeGroup,
   InitializeBallotBox,
   CastVote,
   SetMerkleRoot,
@@ -66,42 +86,69 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.InitializeNCNConfig;
   }
   if (containsBytes(data, getU8Encoder().encode(1), 0)) {
-    return JitoTipRouterInstruction.SetConfigFees;
-  }
-  if (containsBytes(data, getU8Encoder().encode(2), 0)) {
-    return JitoTipRouterInstruction.SetNewAdmin;
-  }
-  if (containsBytes(data, getU8Encoder().encode(3), 0)) {
-    return JitoTipRouterInstruction.InitializeWeightTable;
-  }
-  if (containsBytes(data, getU8Encoder().encode(4), 0)) {
-    return JitoTipRouterInstruction.AdminUpdateWeightTable;
-  }
-  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
-    return JitoTipRouterInstruction.InitializeEpochSnapshot;
-  }
-  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
-    return JitoTipRouterInstruction.InitializeOperatorSnapshot;
-  }
-  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
-    return JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
-  }
-  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
-    return JitoTipRouterInstruction.RegisterMint;
-  }
-  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
     return JitoTipRouterInstruction.InitializeTrackedMints;
   }
+  if (containsBytes(data, getU8Encoder().encode(2), 0)) {
+    return JitoTipRouterInstruction.SetConfigFees;
+  }
+  if (containsBytes(data, getU8Encoder().encode(3), 0)) {
+    return JitoTipRouterInstruction.SetNewAdmin;
+  }
+  if (containsBytes(data, getU8Encoder().encode(4), 0)) {
+    return JitoTipRouterInstruction.InitializeWeightTable;
+  }
+  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
+    return JitoTipRouterInstruction.AdminUpdateWeightTable;
+  }
+  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
+    return JitoTipRouterInstruction.InitializeEpochSnapshot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
+    return JitoTipRouterInstruction.InitializeOperatorSnapshot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
+    return JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
+  }
+  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
+    return JitoTipRouterInstruction.RegisterMint;
+  }
   if (containsBytes(data, getU8Encoder().encode(10), 0)) {
-    return JitoTipRouterInstruction.InitializeBallotBox;
+    return JitoTipRouterInstruction.InitializeBaseRewardRouter;
   }
   if (containsBytes(data, getU8Encoder().encode(11), 0)) {
-    return JitoTipRouterInstruction.CastVote;
+    return JitoTipRouterInstruction.InitializeNcnRewardRouter;
   }
   if (containsBytes(data, getU8Encoder().encode(12), 0)) {
-    return JitoTipRouterInstruction.SetMerkleRoot;
+    return JitoTipRouterInstruction.RouteBaseRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(13), 0)) {
+    return JitoTipRouterInstruction.RouteNcnRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(14), 0)) {
+    return JitoTipRouterInstruction.DistributeBaseRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(15), 0)) {
+    return JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
+  }
+  if (containsBytes(data, getU8Encoder().encode(16), 0)) {
+    return JitoTipRouterInstruction.DistributeNcnOperatorRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(17), 0)) {
+    return JitoTipRouterInstruction.DistributeNcnVaultRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(18), 0)) {
+    return JitoTipRouterInstruction.SetTrackedMintNcnFeeGroup;
+  }
+  if (containsBytes(data, getU8Encoder().encode(19), 0)) {
+    return JitoTipRouterInstruction.InitializeBallotBox;
+  }
+  if (containsBytes(data, getU8Encoder().encode(20), 0)) {
+    return JitoTipRouterInstruction.CastVote;
+  }
+  if (containsBytes(data, getU8Encoder().encode(21), 0)) {
+    return JitoTipRouterInstruction.SetMerkleRoot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(22), 0)) {
     return JitoTipRouterInstruction.SetTieBreaker;
   }
   throw new Error(
@@ -115,6 +162,9 @@ export type ParsedJitoTipRouterInstruction<
   | ({
       instructionType: JitoTipRouterInstruction.InitializeNCNConfig;
     } & ParsedInitializeNCNConfigInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeTrackedMints;
+    } & ParsedInitializeTrackedMintsInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.SetConfigFees;
     } & ParsedSetConfigFeesInstruction<TProgram>)
@@ -140,8 +190,32 @@ export type ParsedJitoTipRouterInstruction<
       instructionType: JitoTipRouterInstruction.RegisterMint;
     } & ParsedRegisterMintInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.InitializeTrackedMints;
-    } & ParsedInitializeTrackedMintsInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.InitializeBaseRewardRouter;
+    } & ParsedInitializeBaseRewardRouterInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.InitializeNcnRewardRouter;
+    } & ParsedInitializeNcnRewardRouterInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.RouteBaseRewards;
+    } & ParsedRouteBaseRewardsInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.RouteNcnRewards;
+    } & ParsedRouteNcnRewardsInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.DistributeBaseRewards;
+    } & ParsedDistributeBaseRewardsInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
+    } & ParsedDistributeBaseNcnRewardRouteInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.DistributeNcnOperatorRewards;
+    } & ParsedDistributeNcnOperatorRewardsInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.DistributeNcnVaultRewards;
+    } & ParsedDistributeNcnVaultRewardsInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.SetTrackedMintNcnFeeGroup;
+    } & ParsedSetTrackedMintNcnFeeGroupInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.InitializeBallotBox;
     } & ParsedInitializeBallotBoxInstruction<TProgram>)

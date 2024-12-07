@@ -36,7 +36,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR = 3;
+export const INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR = 4;
 
 export function getInitializeWeightTableDiscriminatorBytes() {
   return getU8Encoder().encode(INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR);

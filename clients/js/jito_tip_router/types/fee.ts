@@ -8,52 +8,25 @@
 
 import {
   combineCodec,
-  getAddressDecoder,
-  getAddressEncoder,
   getStructDecoder,
   getStructEncoder,
-  getU64Decoder,
-  getU64Encoder,
-  type Address,
+  getU16Decoder,
+  getU16Encoder,
   type Codec,
   type Decoder,
   type Encoder,
 } from '@solana/web3.js';
 
-export type Fee = {
-  wallet: Address;
-  daoShareBps: bigint;
-  ncnShareBps: bigint;
-  blockEngineFeeBps: bigint;
-  activationEpoch: bigint;
-};
+export type Fee = { fee: number };
 
-export type FeeArgs = {
-  wallet: Address;
-  daoShareBps: number | bigint;
-  ncnShareBps: number | bigint;
-  blockEngineFeeBps: number | bigint;
-  activationEpoch: number | bigint;
-};
+export type FeeArgs = Fee;
 
 export function getFeeEncoder(): Encoder<FeeArgs> {
-  return getStructEncoder([
-    ['wallet', getAddressEncoder()],
-    ['daoShareBps', getU64Encoder()],
-    ['ncnShareBps', getU64Encoder()],
-    ['blockEngineFeeBps', getU64Encoder()],
-    ['activationEpoch', getU64Encoder()],
-  ]);
+  return getStructEncoder([['fee', getU16Encoder()]]);
 }
 
 export function getFeeDecoder(): Decoder<Fee> {
-  return getStructDecoder([
-    ['wallet', getAddressDecoder()],
-    ['daoShareBps', getU64Decoder()],
-    ['ncnShareBps', getU64Decoder()],
-    ['blockEngineFeeBps', getU64Decoder()],
-    ['activationEpoch', getU64Decoder()],
-  ]);
+  return getStructDecoder([['fee', getU16Decoder()]]);
 }
 
 export function getFeeCodec(): Codec<FeeArgs, Fee> {

@@ -10,8 +10,8 @@ import {
   combineCodec,
   getStructDecoder,
   getStructEncoder,
-  getU64Decoder,
-  getU64Encoder,
+  getU16Decoder,
+  getU16Encoder,
   getU8Decoder,
   getU8Encoder,
   transformEncoder,
@@ -84,24 +84,24 @@ export type InitializeNCNConfigInstruction<
 
 export type InitializeNCNConfigInstructionData = {
   discriminator: number;
-  daoFeeBps: bigint;
-  ncnFeeBps: bigint;
-  blockEngineFeeBps: bigint;
+  blockEngineFeeBps: number;
+  daoFeeBps: number;
+  defaultNcnFeeBps: number;
 };
 
 export type InitializeNCNConfigInstructionDataArgs = {
-  daoFeeBps: number | bigint;
-  ncnFeeBps: number | bigint;
-  blockEngineFeeBps: number | bigint;
+  blockEngineFeeBps: number;
+  daoFeeBps: number;
+  defaultNcnFeeBps: number;
 };
 
 export function getInitializeNCNConfigInstructionDataEncoder(): Encoder<InitializeNCNConfigInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['daoFeeBps', getU64Encoder()],
-      ['ncnFeeBps', getU64Encoder()],
-      ['blockEngineFeeBps', getU64Encoder()],
+      ['blockEngineFeeBps', getU16Encoder()],
+      ['daoFeeBps', getU16Encoder()],
+      ['defaultNcnFeeBps', getU16Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -113,9 +113,9 @@ export function getInitializeNCNConfigInstructionDataEncoder(): Encoder<Initiali
 export function getInitializeNCNConfigInstructionDataDecoder(): Decoder<InitializeNCNConfigInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['daoFeeBps', getU64Decoder()],
-    ['ncnFeeBps', getU64Decoder()],
-    ['blockEngineFeeBps', getU64Decoder()],
+    ['blockEngineFeeBps', getU16Decoder()],
+    ['daoFeeBps', getU16Decoder()],
+    ['defaultNcnFeeBps', getU16Decoder()],
   ]);
 }
 
@@ -147,9 +147,9 @@ export type InitializeNCNConfigInput<
   tieBreakerAdmin: Address<TAccountTieBreakerAdmin>;
   restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
-  daoFeeBps: InitializeNCNConfigInstructionDataArgs['daoFeeBps'];
-  ncnFeeBps: InitializeNCNConfigInstructionDataArgs['ncnFeeBps'];
   blockEngineFeeBps: InitializeNCNConfigInstructionDataArgs['blockEngineFeeBps'];
+  daoFeeBps: InitializeNCNConfigInstructionDataArgs['daoFeeBps'];
+  defaultNcnFeeBps: InitializeNCNConfigInstructionDataArgs['defaultNcnFeeBps'];
 };
 
 export function getInitializeNCNConfigInstruction<

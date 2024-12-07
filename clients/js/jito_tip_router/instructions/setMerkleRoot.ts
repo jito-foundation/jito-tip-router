@@ -36,7 +36,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const SET_MERKLE_ROOT_DISCRIMINATOR = 12;
+export const SET_MERKLE_ROOT_DISCRIMINATOR = 21;
 
 export function getSetMerkleRootDiscriminatorBytes() {
   return getU8Encoder().encode(SET_MERKLE_ROOT_DISCRIMINATOR);

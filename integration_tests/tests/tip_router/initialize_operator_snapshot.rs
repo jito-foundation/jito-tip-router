@@ -38,7 +38,7 @@ mod tests {
         let operator = test_ncn.operators[0].operator_pubkey;
 
         tip_router_client
-            .do_initalize_operator_snapshot(operator, ncn, slot)
+            .do_initialize_operator_snapshot(operator, ncn, slot)
             .await?;
 
         Ok(())

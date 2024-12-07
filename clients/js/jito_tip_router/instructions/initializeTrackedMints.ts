@@ -30,7 +30,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_TRACKED_MINTS_DISCRIMINATOR = 9;
+export const INITIALIZE_TRACKED_MINTS_DISCRIMINATOR = 1;
 
 export function getInitializeTrackedMintsDiscriminatorBytes() {
   return getU8Encoder().encode(INITIALIZE_TRACKED_MINTS_DISCRIMINATOR);

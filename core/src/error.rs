@@ -7,12 +7,18 @@ pub enum TipRouterError {
     DenominatorIsZero = 0x2100,
     #[error("Overflow")]
     ArithmeticOverflow,
+    #[error("Underflow")]
+    ArithmeticUnderflowError,
+    #[error("Floor Overflow")]
+    ArithmeticFloorError,
     #[error("Modulo Overflow")]
     ModuloOverflow,
     #[error("New precise number error")]
     NewPreciseNumberError,
     #[error("Cast to imprecise number error")]
     CastToImpreciseNumberError,
+    #[error("Cast to u64 error")]
+    CastToU64Error,
 
     #[error("Incorrect weight table admin")]
     IncorrectWeightTableAdmin = 0x2200,
@@ -42,8 +48,12 @@ pub enum TipRouterError {
     TrackedMintsLocked,
     #[error("Vault index already in use by a different mint")]
     VaultIndexAlreadyInUse,
+    #[error("Mint Entry not found")]
+    MintEntryNotFound,
     #[error("Fee cap exceeded")]
     FeeCapExceeded,
+    #[error("DAO wallet cannot be default")]
+    DefaultDaoWallet,
     #[error("Incorrect NCN Admin")]
     IncorrectNcnAdmin,
     #[error("Incorrect NCN")]
@@ -89,6 +99,24 @@ pub enum TipRouterError {
     InvalidMerkleProof,
     #[error("Operator admin needs to sign its vote")]
     OperatorAdminInvalid,
+    #[error("Not a valid NCN fee group")]
+    InvalidNcnFeeGroup,
+    #[error("Not a valid base fee group")]
+    InvalidBaseFeeGroup,
+    #[error("Operator reward list full")]
+    OperatorRewardListFull,
+    #[error("Operator Reward not found")]
+    OperatorRewardNotFound,
+    #[error("Vault Reward not found")]
+    VaultRewardNotFound,
+    #[error("Destination mismatch")]
+    DestinationMismatch,
+    #[error("Ncn reward route not found")]
+    NcnRewardRouteNotFound,
+    #[error("Fee not active")]
+    FeeNotActive,
+    #[error("No rewards to distribute")]
+    NoRewards,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

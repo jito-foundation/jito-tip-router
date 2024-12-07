@@ -35,10 +35,10 @@ import {
   type MaybeEncodedAccount,
 } from '@solana/web3.js';
 import {
-  getFeesDecoder,
-  getFeesEncoder,
-  type Fees,
-  type FeesArgs,
+  getFeeConfigDecoder,
+  getFeeConfigEncoder,
+  type FeeConfig,
+  type FeeConfigArgs,
 } from '../types';
 
 export type NcnConfig = {
@@ -48,7 +48,7 @@ export type NcnConfig = {
   feeAdmin: Address;
   validSlotsAfterConsensus: bigint;
   epochsBeforeStall: bigint;
-  fees: Fees;
+  feeConfig: FeeConfig;
   bump: number;
   reserved: Array<number>;
 };
@@ -60,7 +60,7 @@ export type NcnConfigArgs = {
   feeAdmin: Address;
   validSlotsAfterConsensus: number | bigint;
   epochsBeforeStall: number | bigint;
-  fees: FeesArgs;
+  feeConfig: FeeConfigArgs;
   bump: number;
   reserved: Array<number>;
 };
@@ -73,7 +73,7 @@ export function getNcnConfigEncoder(): Encoder<NcnConfigArgs> {
     ['feeAdmin', getAddressEncoder()],
     ['validSlotsAfterConsensus', getU64Encoder()],
     ['epochsBeforeStall', getU64Encoder()],
-    ['fees', getFeesEncoder()],
+    ['feeConfig', getFeeConfigEncoder()],
     ['bump', getU8Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 127 })],
   ]);
@@ -87,7 +87,7 @@ export function getNcnConfigDecoder(): Decoder<NcnConfig> {
     ['feeAdmin', getAddressDecoder()],
     ['validSlotsAfterConsensus', getU64Decoder()],
     ['epochsBeforeStall', getU64Decoder()],
-    ['fees', getFeesDecoder()],
+    ['feeConfig', getFeeConfigDecoder()],
     ['bump', getU8Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 127 })],
   ]);

@@ -7,7 +7,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::Fees;
+use crate::generated::types::FeeConfig;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -30,7 +30,7 @@ pub struct NcnConfig {
     pub fee_admin: Pubkey,
     pub valid_slots_after_consensus: u64,
     pub epochs_before_stall: u64,
-    pub fees: Fees,
+    pub fee_config: FeeConfig,
     pub bump: u8,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 127],

@@ -19,8 +19,6 @@ import {
   getArrayEncoder,
   getStructDecoder,
   getStructEncoder,
-  getU128Decoder,
-  getU128Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -39,8 +37,12 @@ import {
 import {
   getFeesDecoder,
   getFeesEncoder,
+  getStakeWeightsDecoder,
+  getStakeWeightsEncoder,
   type Fees,
   type FeesArgs,
+  type StakeWeights,
+  type StakeWeightsArgs,
 } from '../types';
 
 export type EpochSnapshot = {
@@ -50,12 +52,12 @@ export type EpochSnapshot = {
   bump: number;
   slotCreated: bigint;
   slotFinalized: bigint;
-  ncnFees: Fees;
+  fees: Fees;
   operatorCount: bigint;
   vaultCount: bigint;
   operatorsRegistered: bigint;
   validOperatorVaultDelegations: bigint;
-  stakeWeight: bigint;
+  stakeWeights: StakeWeights;
   reserved: Array<number>;
 };
 
@@ -66,12 +68,12 @@ export type EpochSnapshotArgs = {
   bump: number;
   slotCreated: number | bigint;
   slotFinalized: number | bigint;
-  ncnFees: FeesArgs;
+  fees: FeesArgs;
   operatorCount: number | bigint;
   vaultCount: number | bigint;
   operatorsRegistered: number | bigint;
   validOperatorVaultDelegations: number | bigint;
-  stakeWeight: number | bigint;
+  stakeWeights: StakeWeightsArgs;
   reserved: Array<number>;
 };
 
@@ -83,12 +85,12 @@ export function getEpochSnapshotEncoder(): Encoder<EpochSnapshotArgs> {
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
     ['slotFinalized', getU64Encoder()],
-    ['ncnFees', getFeesEncoder()],
+    ['fees', getFeesEncoder()],
     ['operatorCount', getU64Encoder()],
     ['vaultCount', getU64Encoder()],
     ['operatorsRegistered', getU64Encoder()],
     ['validOperatorVaultDelegations', getU64Encoder()],
-    ['stakeWeight', getU128Encoder()],
+    ['stakeWeights', getStakeWeightsEncoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
   ]);
 }
@@ -101,12 +103,12 @@ export function getEpochSnapshotDecoder(): Decoder<EpochSnapshot> {
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
     ['slotFinalized', getU64Decoder()],
-    ['ncnFees', getFeesDecoder()],
+    ['fees', getFeesDecoder()],
     ['operatorCount', getU64Decoder()],
     ['vaultCount', getU64Decoder()],
     ['operatorsRegistered', getU64Decoder()],
     ['validOperatorVaultDelegations', getU64Decoder()],
-    ['stakeWeight', getU128Decoder()],
+    ['stakeWeights', getStakeWeightsDecoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
   ]);
 }

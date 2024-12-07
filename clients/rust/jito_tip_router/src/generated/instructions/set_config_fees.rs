@@ -73,7 +73,7 @@ pub struct SetConfigFeesInstructionData {
 
 impl SetConfigFeesInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 1 }
+        Self { discriminator: 2 }
     }
 }
 
@@ -86,10 +86,12 @@ impl Default for SetConfigFeesInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SetConfigFeesInstructionArgs {
-    pub new_dao_fee_bps: Option<u64>,
-    pub new_ncn_fee_bps: Option<u64>,
-    pub new_block_engine_fee_bps: Option<u64>,
-    pub new_fee_wallet: Option<Pubkey>,
+    pub new_block_engine_fee_bps: Option<u16>,
+    pub base_fee_group: Option<u8>,
+    pub new_base_fee_wallet: Option<Pubkey>,
+    pub new_base_fee_bps: Option<u16>,
+    pub ncn_fee_group: Option<u8>,
+    pub new_ncn_fee_bps: Option<u16>,
 }
 
 /// Instruction builder for `SetConfigFees`.
@@ -108,10 +110,12 @@ pub struct SetConfigFeesBuilder {
     ncn: Option<solana_program::pubkey::Pubkey>,
     ncn_admin: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
-    new_dao_fee_bps: Option<u64>,
-    new_ncn_fee_bps: Option<u64>,
-    new_block_engine_fee_bps: Option<u64>,
-    new_fee_wallet: Option<Pubkey>,
+    new_block_engine_fee_bps: Option<u16>,
+    base_fee_group: Option<u8>,
+    new_base_fee_wallet: Option<Pubkey>,
+    new_base_fee_bps: Option<u16>,
+    ncn_fee_group: Option<u8>,
+    new_ncn_fee_bps: Option<u16>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
@@ -152,26 +156,38 @@ impl SetConfigFeesBuilder {
     }
     /// `[optional argument]`
     #[inline(always)]
-    pub fn new_dao_fee_bps(&mut self, new_dao_fee_bps: u64) -> &mut Self {
-        self.new_dao_fee_bps = Some(new_dao_fee_bps);
-        self
-    }
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn new_ncn_fee_bps(&mut self, new_ncn_fee_bps: u64) -> &mut Self {
-        self.new_ncn_fee_bps = Some(new_ncn_fee_bps);
-        self
-    }
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn new_block_engine_fee_bps(&mut self, new_block_engine_fee_bps: u64) -> &mut Self {
+    pub fn new_block_engine_fee_bps(&mut self, new_block_engine_fee_bps: u16) -> &mut Self {
         self.new_block_engine_fee_bps = Some(new_block_engine_fee_bps);
         self
     }
     /// `[optional argument]`
     #[inline(always)]
-    pub fn new_fee_wallet(&mut self, new_fee_wallet: Pubkey) -> &mut Self {
-        self.new_fee_wallet = Some(new_fee_wallet);
+    pub fn base_fee_group(&mut self, base_fee_group: u8) -> &mut Self {
+        self.base_fee_group = Some(base_fee_group);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn new_base_fee_wallet(&mut self, new_base_fee_wallet: Pubkey) -> &mut Self {
+        self.new_base_fee_wallet = Some(new_base_fee_wallet);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn new_base_fee_bps(&mut self, new_base_fee_bps: u16) -> &mut Self {
+        self.new_base_fee_bps = Some(new_base_fee_bps);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
+        self.ncn_fee_group = Some(ncn_fee_group);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn new_ncn_fee_bps(&mut self, new_ncn_fee_bps: u16) -> &mut Self {
+        self.new_ncn_fee_bps = Some(new_ncn_fee_bps);
         self
     }
     /// Add an additional account to the instruction.
@@ -204,10 +220,12 @@ impl SetConfigFeesBuilder {
                 .expect("restaking_program is not set"),
         };
         let args = SetConfigFeesInstructionArgs {
-            new_dao_fee_bps: self.new_dao_fee_bps.clone(),
-            new_ncn_fee_bps: self.new_ncn_fee_bps.clone(),
             new_block_engine_fee_bps: self.new_block_engine_fee_bps.clone(),
-            new_fee_wallet: self.new_fee_wallet.clone(),
+            base_fee_group: self.base_fee_group.clone(),
+            new_base_fee_wallet: self.new_base_fee_wallet.clone(),
+            new_base_fee_bps: self.new_base_fee_bps.clone(),
+            ncn_fee_group: self.ncn_fee_group.clone(),
+            new_ncn_fee_bps: self.new_ncn_fee_bps.clone(),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -373,10 +391,12 @@ impl<'a, 'b> SetConfigFeesCpiBuilder<'a, 'b> {
             ncn: None,
             ncn_admin: None,
             restaking_program: None,
-            new_dao_fee_bps: None,
-            new_ncn_fee_bps: None,
             new_block_engine_fee_bps: None,
-            new_fee_wallet: None,
+            base_fee_group: None,
+            new_base_fee_wallet: None,
+            new_base_fee_bps: None,
+            ncn_fee_group: None,
+            new_ncn_fee_bps: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -420,26 +440,38 @@ impl<'a, 'b> SetConfigFeesCpiBuilder<'a, 'b> {
     }
     /// `[optional argument]`
     #[inline(always)]
-    pub fn new_dao_fee_bps(&mut self, new_dao_fee_bps: u64) -> &mut Self {
-        self.instruction.new_dao_fee_bps = Some(new_dao_fee_bps);
-        self
-    }
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn new_ncn_fee_bps(&mut self, new_ncn_fee_bps: u64) -> &mut Self {
-        self.instruction.new_ncn_fee_bps = Some(new_ncn_fee_bps);
-        self
-    }
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn new_block_engine_fee_bps(&mut self, new_block_engine_fee_bps: u64) -> &mut Self {
+    pub fn new_block_engine_fee_bps(&mut self, new_block_engine_fee_bps: u16) -> &mut Self {
         self.instruction.new_block_engine_fee_bps = Some(new_block_engine_fee_bps);
         self
     }
     /// `[optional argument]`
     #[inline(always)]
-    pub fn new_fee_wallet(&mut self, new_fee_wallet: Pubkey) -> &mut Self {
-        self.instruction.new_fee_wallet = Some(new_fee_wallet);
+    pub fn base_fee_group(&mut self, base_fee_group: u8) -> &mut Self {
+        self.instruction.base_fee_group = Some(base_fee_group);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn new_base_fee_wallet(&mut self, new_base_fee_wallet: Pubkey) -> &mut Self {
+        self.instruction.new_base_fee_wallet = Some(new_base_fee_wallet);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn new_base_fee_bps(&mut self, new_base_fee_bps: u16) -> &mut Self {
+        self.instruction.new_base_fee_bps = Some(new_base_fee_bps);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
+        self.instruction.ncn_fee_group = Some(ncn_fee_group);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn new_ncn_fee_bps(&mut self, new_ncn_fee_bps: u16) -> &mut Self {
+        self.instruction.new_ncn_fee_bps = Some(new_ncn_fee_bps);
         self
     }
     /// Add an additional account to the instruction.
@@ -484,10 +516,12 @@ impl<'a, 'b> SetConfigFeesCpiBuilder<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
         let args = SetConfigFeesInstructionArgs {
-            new_dao_fee_bps: self.instruction.new_dao_fee_bps.clone(),
-            new_ncn_fee_bps: self.instruction.new_ncn_fee_bps.clone(),
             new_block_engine_fee_bps: self.instruction.new_block_engine_fee_bps.clone(),
-            new_fee_wallet: self.instruction.new_fee_wallet.clone(),
+            base_fee_group: self.instruction.base_fee_group.clone(),
+            new_base_fee_wallet: self.instruction.new_base_fee_wallet.clone(),
+            new_base_fee_bps: self.instruction.new_base_fee_bps.clone(),
+            ncn_fee_group: self.instruction.ncn_fee_group.clone(),
+            new_ncn_fee_bps: self.instruction.new_ncn_fee_bps.clone(),
         };
         let instruction = SetConfigFeesCpi {
             __program: self.instruction.__program,
@@ -524,10 +558,12 @@ struct SetConfigFeesCpiBuilderInstruction<'a, 'b> {
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    new_dao_fee_bps: Option<u64>,
-    new_ncn_fee_bps: Option<u64>,
-    new_block_engine_fee_bps: Option<u64>,
-    new_fee_wallet: Option<Pubkey>,
+    new_block_engine_fee_bps: Option<u16>,
+    base_fee_group: Option<u8>,
+    new_base_fee_wallet: Option<Pubkey>,
+    new_base_fee_bps: Option<u16>,
+    ncn_fee_group: Option<u8>,
+    new_ncn_fee_bps: Option<u16>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,
