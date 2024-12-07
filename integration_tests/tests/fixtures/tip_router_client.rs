@@ -290,10 +290,10 @@ impl TipRouterClient {
     pub async fn do_set_config_fees(
         &mut self,
         new_block_engine_fee_bps: Option<u16>,
-        base_fee_group: BaseFeeGroup,
+        base_fee_group: Option<BaseFeeGroup>,
         new_base_fee_wallet: Option<Pubkey>,
         new_base_fee_bps: Option<u16>,
-        ncn_fee_group: NcnFeeGroup,
+        ncn_fee_group: Option<NcnFeeGroup>,
         new_ncn_fee_bps: Option<u16>,
         ncn_root: &NcnRoot,
     ) -> TestResult<()> {
@@ -317,10 +317,10 @@ impl TipRouterClient {
         &mut self,
         config_pda: Pubkey,
         new_block_engine_fee_bps: Option<u16>,
-        base_fee_group: BaseFeeGroup,
+        base_fee_group: Option<BaseFeeGroup>,
         new_base_fee_wallet: Option<Pubkey>,
         new_base_fee_bps: Option<u16>,
-        ncn_fee_group: NcnFeeGroup,
+        ncn_fee_group: Option<NcnFeeGroup>,
         new_ncn_fee_bps: Option<u16>,
         ncn_root: &NcnRoot,
     ) -> TestResult<()> {
@@ -333,12 +333,14 @@ impl TipRouterClient {
                 .config(config_pda)
                 .ncn(ncn_root.ncn_pubkey)
                 .ncn_admin(ncn_root.ncn_admin.pubkey())
-                .restaking_program(jito_restaking_program::id())
-                .base_fee_group(base_fee_group.group)
-                .ncn_fee_group(ncn_fee_group.group);
+                .restaking_program(jito_restaking_program::id());
 
             if let Some(new_block_engine_fee_bps) = new_block_engine_fee_bps {
                 builder.new_block_engine_fee_bps(new_block_engine_fee_bps);
+            }
+
+            if let Some(base_fee_group) = base_fee_group {
+                builder.base_fee_group(base_fee_group.group);
             }
 
             if let Some(new_base_fee_wallet) = new_base_fee_wallet {
@@ -347,6 +349,10 @@ impl TipRouterClient {
 
             if let Some(new_base_fee_bps) = new_base_fee_bps {
                 builder.new_base_fee_bps(new_base_fee_bps);
+            }
+
+            if let Some(ncn_fee_group) = ncn_fee_group {
+                builder.ncn_fee_group(ncn_fee_group.group);
             }
 
             if let Some(new_ncn_fee_bps) = new_ncn_fee_bps {
@@ -618,9 +624,6 @@ impl TipRouterClient {
 
         let (ncn_config, _, _) =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
-
-        let (base_reward_router, _, _) =
-            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
 
         //TODO: Check admin is correct
         let admin = self.payer.pubkey();
