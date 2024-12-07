@@ -53,6 +53,8 @@ tokio-test = "0.4"
 [dev-dependencies]
 solana-runtime = { workspace = true, features = ["dev-context-only-utils"] }
 solana-sdk = { workspace = true, features = ["dev-context-only-utils"] }
+tar = "0.4"
+bzip2 = "0.4"
 
 [[bin]]
 name = "solana-stake-meta-generator"
