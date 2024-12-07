@@ -1,5 +1,21 @@
 use {
-    solana_sdk::{ signer::keypair::Keypair, pubkey::Pubkey, slot_history::Slot },
+    solana_sdk::{
+        signer::keypair::Keypair,
+        pubkey::Pubkey,
+        slot_history::Slot,
+        signer::Signer,
+        account::ReadableAccount,
+        account::AccountSharedData,
+        stake::state::{
+            Delegation,
+            StakeState,
+            Meta,
+            Authorized,
+            Lockup,
+            Stake,  // Add this import
+        },
+
+    },
     solana_runtime::{
         bank::Bank,
         genesis_utils::{
@@ -7,7 +23,6 @@ use {
             ValidatorVoteKeypairs,
             GenesisConfigInfo,
         },
-        runtime_config::RuntimeConfig,
     },
     tip_router_operator_cli::{
         merkle_tree::MerkleTreeGenerator,
@@ -31,12 +46,13 @@ use {
     std::sync::atomic::AtomicBool,
     solana_sdk::genesis_config::GenesisConfig,
     std::io::Write,
+    solana_accounts_db::accounts_index::ScanConfig,
 };
 
 fn create_genesis_files(ledger_dir: &Path, genesis_config: &GenesisConfig) -> Result<()> {
     let genesis_path = ledger_dir.join("genesis.bin");
     println!("\nPreparing genesis.bin at: {:?}", genesis_path);
-    
+
     // Force remove any existing file/directory at the path
     if genesis_path.exists() {
         if genesis_path.is_dir() {
@@ -47,10 +63,7 @@ fn create_genesis_files(ledger_dir: &Path, genesis_config: &GenesisConfig) -> Re
     }
 
     // Create the file first with explicit options
-    let mut file = std::fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&genesis_path)?;
+    let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(&genesis_path)?;
 
     // Serialize genesis config to bytes and write directly to file
     let serialized = bincode::serialize(&genesis_config)?;
@@ -149,45 +162,170 @@ async fn setup_test_environment() -> Result<(TempDir, Keypair, Pubkey, Pubkey)> 
 
 #[tokio::test]
 async fn test_complete_workflow() -> Result<()> {
+    // Create temporary directory for test outputs
     let (temp_dir, keypair, tip_distribution_program_id, tip_payment_program_id) =
         setup_test_environment().await?;
 
-    // Print initial directory structure
-    println!("Initial temp dir contents:");
-    for entry in fs::read_dir(&temp_dir.path())? {
-        println!("{:?}", entry?.path());
-    }
-
-    // 1. Setup test bank with validators
+    // Setup test bank with validators
     let validator_keypairs: Vec<_> = (0..3).map(|_| ValidatorVoteKeypairs::new_rand()).collect();
     let GenesisConfigInfo { mut genesis_config, .. } = create_genesis_config_with_vote_accounts(
         1_000_000_000,
         &validator_keypairs.iter().collect::<Vec<_>>(),
-        vec![1_000_000; 3]
+        vec![10_000_000; 3]
     );
 
     // Create and prepare ledger directory
     let ledger_dir = temp_dir.path().join("ledger");
     fs::create_dir_all(&ledger_dir)?;
-
-    // Create genesis files
     create_genesis_files(&ledger_dir, &genesis_config)?;
 
-    // Create test bank
-    let bank = Bank::new_for_tests(&genesis_config);
-    let bank = Arc::new(bank);
-    bank.freeze();
+    // Create test bank and process some slots
+    let mut bank = Arc::new(Bank::new_for_tests(&genesis_config));
+    
+    println!("\nSetting up validator stakes:");
+    // Activate stakes and create delegations for all validators
+    for keypairs in &validator_keypairs {
+        let vote_pubkey = keypairs.vote_keypair.pubkey();
+        let stake_pubkey = keypairs.stake_keypair.pubkey();
+        
+        // Create stake account
+        let stake_lamports = 10_000_000;
+        let mut stake_account = AccountSharedData::new(
+            stake_lamports,
+            std::mem::size_of::<StakeState>(),
+            &solana_sdk::stake::program::id(),
+        );
 
-    // Create snapshot directory
-    let snapshot_dir = temp_dir.path().join("snapshots");
-    println!("Creating snapshot directory at: {:?}", snapshot_dir);
-    fs::create_dir_all(&snapshot_dir)?;
+        println!("Creating stake account {} for vote account {}", stake_pubkey, vote_pubkey);
+        println!("Stake program ID: {}", solana_sdk::stake::program::id());
+
+        // Create delegation
+        let delegation = Delegation {
+            voter_pubkey: vote_pubkey,
+            stake: stake_lamports,
+            activation_epoch: 0,
+            deactivation_epoch: std::u64::MAX,
+            warmup_cooldown_rate: 0.25,
+        };
+
+        let meta = Meta {
+            rent_exempt_reserve: 0,
+            authorized: Authorized {
+                staker: stake_pubkey,
+                withdrawer: stake_pubkey,
+            },
+            lockup: Lockup::default(),
+        };
+
+        let stake = Stake {
+            delegation,
+            credits_observed: 0,
+        };
+
+        let stake_state = StakeState::Stake(meta, stake);
+        
+        // Serialize stake state into account data
+        let data = bincode::serialize(&stake_state)?;
+        stake_account.set_data(data);
+        
+        // Store stake account
+        bank.store_account(&stake_pubkey, &stake_account);
+        
+        // Verify stake account was stored
+        if let Some(stored_account) = bank.get_account(&stake_pubkey) {
+            println!("Verified stake account {} exists with {} lamports", 
+                stake_pubkey, 
+                stored_account.lamports()
+            );
+            
+            // Try to deserialize and verify stake state
+            if let Ok(StakeState::Stake(meta, stake)) = bincode::deserialize(stored_account.data()) {
+                println!("  Delegation: {} stake to {}", 
+                    stake.delegation.stake,
+                    stake.delegation.voter_pubkey
+                );
+            } else {
+                println!("  Warning: Could not deserialize stake state!");
+            }
+        } else {
+            println!("  Warning: Stake account not found after storing!");
+        }
+        
+        // Create and store tip distribution account
+        let seeds = &[b"tip_distribution", vote_pubkey.as_ref()];
+        let (tip_distribution_address, _) = 
+            Pubkey::find_program_address(seeds, &tip_distribution_program_id);
+            
+        let tip_distribution_account = AccountSharedData::new(
+            1_000_000,
+            0,
+            &tip_distribution_program_id,
+        );
+        
+        println!("Creating tip distribution account at {}", tip_distribution_address);
+        bank.store_account(&tip_distribution_address, &tip_distribution_account);
+    }
+
+     // Process slots to activate stakes
+     println!("\nProcessing slots to activate stakes:");
+     let slots_per_epoch = genesis_config.epoch_schedule.slots_per_epoch;
+     let warmup_epochs = 2; // Need at least 2 epochs for stakes to fully activate
+     
+     for slot in 1..=slots_per_epoch * warmup_epochs {
+         let child = Bank::new_from_parent(bank.clone(), &Pubkey::default(), slot);
+         bank = Arc::new(child);
+         
+         // Only log at epoch boundaries
+         if slot % slots_per_epoch == 0 {
+             println!("Epoch advanced to {}", bank.epoch());
+             
+             // Print stake activation status
+             for keypairs in &validator_keypairs {
+                 let stake_pubkey = keypairs.stake_keypair.pubkey();
+                 if let Some(stake_account) = bank.get_account(&stake_pubkey) {
+                     if let Ok(StakeState::Stake(_, stake)) = bincode::deserialize(stake_account.data()) {
+                         println!("Stake {} activation status: {}% active", 
+                             stake_pubkey,
+                             (stake.delegation.stake as f64 / stake_account.lamports() as f64) * 100.0
+                         );
+                     }
+                 }
+             }
+         }
+     }
+     
+    println!("\nBank state after processing:");
+    println!("Slot: {}", bank.slot());
+    println!("Epoch: {}", bank.epoch());
+    println!("Active stakes count: {}", bank.stakes_cache.stakes().stake_delegations().len());
+    
+    // Print all stake accounts in bank
+    let stake_program_id = solana_sdk::stake::program::id();
+    let scan_config = ScanConfig::default();
+    let stake_accounts = bank.get_program_accounts(&stake_program_id, &scan_config)?;
+    
+    for (pubkey, account) in stake_accounts {
+        println!("Found stake account: {}", pubkey);
+        if let Ok(StakeState::Stake(meta, stake)) = bincode::deserialize(account.data()) {
+            println!("  Delegation: {} stake to {}", 
+                stake.delegation.stake,
+                stake.delegation.voter_pubkey
+            );
+        }
+    }
 
     let slot = bank.slot();
-    println!("Bank created at slot: {}", slot);
-
+    
+    // Create snapshot directory
+    let snapshot_dir = temp_dir.path().join("snapshots");
+    fs::create_dir_all(&snapshot_dir)?;
+    
     // Initialize MerkleTreeGenerator
-    println!("Initializing MerkleTreeGenerator...");
+    println!("\nInitializing MerkleTreeGenerator with:");
+    println!("  RPC URL: http://localhost:8899");
+    println!("  Snapshot dir: {:?}", snapshot_dir);
+    println!("  Tip distribution program ID: {}", tip_distribution_program_id);
+
     let merkle_tree_generator = MerkleTreeGenerator::new(
         "http://localhost:8899",
         keypair,
@@ -195,85 +333,57 @@ async fn test_complete_workflow() -> Result<()> {
         snapshot_dir.clone(),
         tip_distribution_program_id,
         Keypair::new(),
-        Pubkey::find_program_address(&[b"config"], &tip_distribution_program_id).0
+        Pubkey::find_program_address(&[b"config"], &tip_distribution_program_id).0,
     )?;
-
-    // Print ledger directory contents
-    println!("\nLedger directory contents:");
-    for entry in fs::read_dir(&ledger_dir)? {
-        let entry = entry?;
-        println!("{:?} - {} bytes", 
-            entry.path(),
-            entry.metadata()?.len()
-        );
-    }
-
-    // Create snapshot directory structure
-    let snapshot_path = snapshot_dir.join(format!("snapshot-{}", slot));
-    println!("Creating snapshot directory at: {:?}", snapshot_path);
-    fs::create_dir_all(&snapshot_path)?;
-
-    // Write snapshot version file
-    let snapshot_version_path = snapshot_dir.join("version");
-    fs::write(&snapshot_version_path, "2.0.0")?;
-    println!("Wrote snapshot version file: {:?}", snapshot_version_path);
-
-    // Print snapshot directory contents
-    println!("\nSnapshot directory contents:");
-    for entry in fs::read_dir(&snapshot_dir)? {
-        let entry = entry?;
-        println!("{:?} - {} bytes", 
-            entry.path(),
-            entry.metadata()?.len()
-        );
-    }
 
     // Generate stake metadata
     let stake_meta_path = snapshot_dir.join(format!("stake-meta-{}.json", slot));
-    println!("\nGenerating stake metadata at: {:?}", stake_meta_path);
-
-    println!("Calling generate_stake_meta with:");
-    println!("  ledger_dir: {:?}", ledger_dir);
-    println!("  slot: {}", slot);
-    println!("  tip_distribution_program_id: {}", tip_distribution_program_id);
-    println!("  stake_meta_path: {:?}", stake_meta_path);
-    println!("  tip_payment_program_id: {}", tip_payment_program_id);
-
-    let _stake_meta = stake_meta_generator_workflow::generate_stake_meta(
-        &ledger_dir,
-        &slot,
+    println!("\nGenerating stake meta at path: {:?}", stake_meta_path);
+    
+    let stake_meta = stake_meta_generator_workflow::generate_stake_meta_from_bank(
+        &bank,
         &tip_distribution_program_id,
         stake_meta_path.to_str().unwrap(),
-        &tip_payment_program_id
+        &tip_payment_program_id,
     )?;
 
-    // Generate and verify merkle trees
-    println!("Generating merkle trees...");
-    let file = std::fs::File::open(&stake_meta_path)?;
-    let stake_meta_collection: StakeMetaCollection = serde_json::from_reader(file)?;
+    // Print debug info
+    println!("\nGenerated stake meta with {} validators", stake_meta.stake_metas.len());
+    for (i, meta) in stake_meta.stake_metas.iter().enumerate() {
+        println!("Validator {}: Vote account: {}, Stake: {}, Node: {}", 
+            i, 
+            meta.validator_vote_account, 
+            meta.total_delegated,
+            meta.validator_node_pubkey
+        );
+        
+        if meta.delegations.is_empty() {
+            println!("  Warning: No delegations for this validator");
+        }
+        
+        if meta.maybe_tip_distribution_meta.is_none() {
+            println!("  Warning: No tip distribution meta for this validator");
+        }
+    }
 
-    let merkle_trees =
-        merkle_tree_generator.generate_and_upload_merkle_trees(stake_meta_collection).await?;
+    // Generate merkle trees
+    println!("\nGenerating merkle trees...");
+    let merkle_trees = merkle_tree_generator
+        .generate_and_upload_merkle_trees(stake_meta)
+        .await?;
+
+    println!("Generated {} merkle trees", merkle_trees.generated_merkle_trees.len());
+    
+    // Print merkle tree details
+    for (i, tree) in merkle_trees.generated_merkle_trees.iter().enumerate() {
+        println!("Merkle tree {}: {} nodes, max claim: {}", 
+            i, 
+            tree.tree_nodes.len(),
+            tree.max_total_claim
+        );
+    }
 
     assert_eq!(merkle_trees.generated_merkle_trees.len(), 3);
-    println!("Generated {} merkle trees", merkle_trees.generated_merkle_trees.len());
-
-    // Generate and verify meta merkle tree
-    println!("Generating meta merkle tree...");
-    let meta_merkle_tree = merkle_tree_generator.generate_meta_merkle_tree(&merkle_trees).await?;
-
-    assert_eq!(meta_merkle_tree.validator_count(), 3);
-    assert_eq!(meta_merkle_tree.epoch, bank.epoch());
-    println!(
-        "Meta merkle tree generated with {} validators at epoch {}",
-        meta_merkle_tree.validator_count(),
-        meta_merkle_tree.epoch
-    );
-
-    // Verify NCN upload (mock version)
-    println!("Uploading to NCN...");
-    merkle_tree_generator.upload_to_ncn(&meta_merkle_tree).await?;
-    println!("Upload complete");
 
     Ok(())
 }

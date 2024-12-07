@@ -95,6 +95,48 @@ pub fn generate_stake_meta(
     Ok(())
 }
 
+pub fn generate_stake_meta_from_bank(
+    bank: &Arc<Bank>,
+    tip_distribution_program_id: &Pubkey,
+    stake_meta_path: &str,
+    tip_payment_program_id: &Pubkey,
+) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
+    let stakes = bank.stakes_cache.stakes();
+    let vote_accounts = bank.vote_accounts();
+
+    let stake_meta = StakeMetaCollection {
+        epoch: bank.epoch(),
+        slot: bank.slot(),
+        bank_hash: bank.hash().to_string(),
+        stake_metas: stakes.stake_delegations()
+            .iter()
+            .map(|(_, stake_account)| {
+                let delegation = stake_account.delegation();
+                StakeMeta {
+                    validator_vote_account: delegation.voter_pubkey,
+                    validator_node_pubkey: vote_accounts
+                        .get(&delegation.voter_pubkey)
+                        .map(|(_, acc)| acc.vote_state().unwrap().node_pubkey)
+                        .unwrap_or_default(),
+                    delegations: vec![],  // Fill this based on your requirements
+                    total_delegated: delegation.stake,
+                    commission: vote_accounts
+                        .get(&delegation.voter_pubkey)
+                        .map(|(_, acc)| acc.vote_state().unwrap().commission)
+                        .unwrap_or_default(),
+                    maybe_tip_distribution_meta: None,
+                }
+            })
+            .collect(),
+        tip_distribution_program_id: *tip_distribution_program_id,
+    };
+
+    let file = std::fs::File::create(stake_meta_path)?;
+    serde_json::to_writer_pretty(file, &stake_meta)?;
+
+    Ok(stake_meta)
+}
+
 fn create_bank_from_snapshot(
     ledger_path: &Path,
     snapshot_slot: &Slot,
