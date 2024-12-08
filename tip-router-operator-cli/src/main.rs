@@ -1,16 +1,18 @@
-use clap::Parser;
-use anyhow::Result;
-use log::info;
-use snapshot::SnapshotCreator;
-use std::path::PathBuf;
-use solana_sdk::{
-    signer::keypair::{ read_keypair_file, Keypair },
-    pubkey::Pubkey,
-    slot_history::Slot,
+use {
+    anyhow::Result,
+    clap::Parser,
+    log::info,
+    snapshot::SnapshotCreator,
+    solana_client::rpc_client::RpcClient,
+    solana_metrics::datapoint_info,
+    solana_sdk::{
+        pubkey::Pubkey,
+        signer::keypair::{read_keypair_file, Keypair},
+        slot_history::Slot,
+    },
+    std::path::PathBuf,
+    tip_router_operator_cli::*,
 };
-use solana_client::rpc_client::RpcClient;
-use tip_router_operator_cli::*;
-use solana_metrics::datapoint_info;
 
 #[derive(Parser)]
 #[command(author, version, about)]
