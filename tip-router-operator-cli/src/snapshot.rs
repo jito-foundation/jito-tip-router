@@ -1,23 +1,34 @@
-use anyhow::{ anyhow, Result };
-use log::{ info, warn };
-use solana_sdk::{
-    clock::Slot,
-    epoch_schedule::EpochSchedule,
-    signature::Keypair,
-    genesis_config::GenesisConfig,
+use {
+    anyhow::{anyhow, Result},
+    ellipsis_client::EllipsisClient,
+    log::{info, warn},
+    serde::{Deserialize, Serialize},
+    solana_ledger::{
+        bank_forks_utils,
+        blockstore::Blockstore,
+        blockstore_processor::ProcessOptions,
+    },
+    solana_metrics::{datapoint_error, datapoint_info},
+    solana_runtime::{
+        self,
+        snapshot_bank_utils,
+        snapshot_utils::{ArchiveFormat, SnapshotVersion},
+    },
+    solana_sdk::{
+        clock::Slot,
+        epoch_schedule::EpochSchedule,
+        genesis_config::GenesisConfig,
+        signature::Keypair,
+    },
+    std::{
+        collections::HashMap,
+        fs,
+        num::NonZeroUsize,
+        path::PathBuf,
+        sync::{atomic::AtomicBool, Arc},
+        time::Instant,
+    },
 };
-use solana_metrics::{ datapoint_info, datapoint_error };
-use solana_ledger::{ bank_forks_utils, blockstore::Blockstore };
-use std::{ path::PathBuf, fs, sync::Arc };
-use std::sync::atomic::AtomicBool;
-use solana_ledger::blockstore_processor::ProcessOptions;
-use solana_runtime::{ self, snapshot_utils::SnapshotVersion, snapshot_bank_utils };
-use std::num::NonZeroUsize;
-use solana_runtime::snapshot_utils::ArchiveFormat;
-use ellipsis_client::EllipsisClient;
-use std::collections::HashMap;
-use serde::{ Serialize, Deserialize };
-use std::time::Instant;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct StakeMetaAccount {
@@ -48,7 +59,6 @@ pub struct SnapshotCreator {
     output_dir: PathBuf,
     max_snapshots: u32,
     compression: String,
-    keypair: Arc<Keypair>,
     blockstore_path: PathBuf,
 }
 
@@ -70,7 +80,6 @@ impl SnapshotCreator {
             output_dir: PathBuf::from(output_dir),
             max_snapshots,
             compression,
-            keypair: Arc::new(keypair),
             blockstore_path,
         })
     }

@@ -99,7 +99,6 @@ pub fn generate_stake_meta_from_bank(
     bank: &Arc<Bank>,
     tip_distribution_program_id: &Pubkey,
     stake_meta_path: &str,
-    tip_payment_program_id: &Pubkey,
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     let stakes = bank.stakes_cache.stakes();
     let vote_accounts = bank.vote_accounts();

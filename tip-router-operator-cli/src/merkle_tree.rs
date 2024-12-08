@@ -45,11 +45,9 @@ pub enum MerkleTreeError {
 }
 
 pub struct MerkleTreeGenerator {
-    rpc_url: String,
-    keypair: Keypair,
     ncn_address: String,
     output_dir: PathBuf,
-    rpc_client: Arc<EllipsisClient>,  // Change this line
+    rpc_client: Arc<EllipsisClient>,
     tip_distribution_program_id: Pubkey,
     merkle_root_upload_authority: Keypair,
     tip_distribution_config: Pubkey,
@@ -72,8 +70,6 @@ impl MerkleTreeGenerator {
         )?);
     
         Ok(Self {
-            rpc_url: rpc_url.to_string(),
-            keypair,
             ncn_address,
             output_dir,
             rpc_client,
@@ -266,7 +262,7 @@ impl MerkleTreeGenerator {
         meta_merkle_tree: &MetaMerkleTree
     ) -> Result<(), MerkleTreeError> {
         let start = Instant::now();
-        info!("Uploading meta merkle root to NCN for epoch {}", meta_merkle_tree.epoch);
+        info!("Uploading meta merkle root to NCN {} for epoch {}", self.ncn_address, meta_merkle_tree.epoch);
 
         // Create memo instruction (temporary until NCN is ready)
         let memo_ix = build_memo(

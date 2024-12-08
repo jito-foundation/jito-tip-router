@@ -2,16 +2,21 @@ use {
     anyhow::Result,
     clap::Parser,
     log::info,
-    snapshot::SnapshotCreator,
     solana_client::rpc_client::RpcClient,
     solana_metrics::datapoint_info,
     solana_sdk::{
         pubkey::Pubkey,
-        signer::keypair::{read_keypair_file, Keypair},
+        signer::{
+            keypair::{read_keypair_file, Keypair},
+            Signer,  // Add this trait import
+        },
         slot_history::Slot,
     },
     std::path::PathBuf,
-    tip_router_operator_cli::*,
+    tip_router_operator_cli::{
+        snapshot::SnapshotCreator,  // Import SnapshotCreator through the crate path
+        *,
+    },
 };
 
 #[derive(Parser)]
@@ -55,7 +60,7 @@ enum Commands {
 
 async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<Slot> {
     let epoch_info = rpc_client.get_epoch_info()?;
-    let current_epoch = epoch_info.epoch;
+    // let current_epoch: u64 = epoch_info.epoch;
     let current_slot = epoch_info.absolute_slot;
     let slot_index = epoch_info.slot_index;
 
@@ -100,17 +105,23 @@ async fn main() -> Result<()> {
                     format!("stake-meta-{}.json", previous_epoch_slot)
                 );
 
-                let merkle_tree_generator = merkle_tree::MerkleTreeGenerator::new(
-                    &cli.rpc_url,
-                    read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
-                    ncn_address.clone(),
-                    cli.snapshot_output_dir.clone(),
-                    tip_distribution_program_id,
-                    Keypair::new(), // merkle_root_upload_authority
-                    Pubkey::find_program_address(&[b"config"], &tip_distribution_program_id).0
-                )?;
+                let merkle_root_upload_authority = Keypair::new();
 
-                let stake_meta = stake_meta_generator_workflow::generate_stake_meta(
+                let merkle_tree_generator = {
+                    let _merkle_root_upload_authority = Keypair::new();
+                    let authority_pubkey = _merkle_root_upload_authority.pubkey();  // Get pubkey before moving
+                    merkle_tree::MerkleTreeGenerator::new(
+                        &cli.rpc_url,
+                        read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
+                        ncn_address,
+                        cli.snapshot_output_dir.clone(),
+                        tip_distribution_program_id,
+                        merkle_root_upload_authority,  // Move happens here
+                        authority_pubkey,  // Use the previously obtained pubkey
+                    )?
+                };
+
+                stake_meta_generator_workflow::generate_stake_meta(
                     &cli.ledger_path,
                     &previous_epoch_slot,
                     &tip_distribution_program_id,
@@ -146,8 +157,9 @@ async fn main() -> Result<()> {
 
                 // Wait for next epoch
                 merkle_tree_generator.wait_for_epoch_boundary().await?;
+
+                break Ok(());
             }
         }
     }
-    Ok(())
 }
