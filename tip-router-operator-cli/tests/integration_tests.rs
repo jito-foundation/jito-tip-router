@@ -22,6 +22,9 @@ use ::{
         snapshot::SnapshotCreator,
         StakeMetaCollection,
         GeneratedMerkleTreeCollection,
+        TipDistributionMeta,
+        Delegation,
+        StakeMeta,
     },
 };
 
@@ -51,6 +54,10 @@ struct TestContext {
     temp_dir: tempfile::TempDir,
     program_context: ProgramTestContext,
     validator_keypairs: Vec<ValidatorKeypairs>,
+    // Add these new fields
+    vote_pubkey: Pubkey,
+    stake_pubkey: Pubkey,
+    tip_distribution_address: Pubkey,
 }
 
 impl TestContext {
@@ -88,6 +95,11 @@ impl TestContext {
             )?
         );
 
+        // Generate the new pubkeys
+        let vote_pubkey = Pubkey::new_unique();
+        let stake_pubkey = Pubkey::new_unique();
+        let tip_distribution_address = Pubkey::new_unique();
+
         Ok(Self {
             rpc_client,
             keypair,
@@ -100,24 +112,44 @@ impl TestContext {
             temp_dir,
             program_context,
             validator_keypairs,
+            // Add the new fields
+            vote_pubkey,
+            stake_pubkey,
+            tip_distribution_address,
         })
     }
 
     fn create_test_stake_meta(&self) -> Result<StakeMetaCollection> {
-        Ok(StakeMetaCollection {
-            stake_metas: self.validator_keypairs
-                .iter()
-                .map(|kp| {
-                    // Create appropriate stake meta structure based on your implementation
-                    // This is a placeholder - adjust according to your StakeMetaCollection structure
-                    unimplemented!("Implement stake meta creation")
-                })
-                .collect(),
-            tip_distribution_program_id: self.tip_distribution_program_id,
-            bank_hash: "0".to_string(), // Changed from [0; 32] to String
-            slot: 0, // Use appropriate slot
+        // Create a sample stake meta for testing
+        let stake_meta = StakeMeta {
+            validator_vote_account: self.vote_pubkey,
+            validator_node_pubkey: self.stake_pubkey,
+            maybe_tip_distribution_meta: Some(TipDistributionMeta {
+                total_tips: 1_000_000,
+                merkle_root_upload_authority: Pubkey::new_unique(),
+                tip_distribution_pubkey: self.tip_distribution_program_id,
+                validator_fee_bps: 1000, // 10% in basis points
+            }),
+            delegations: vec![Delegation {
+                stake_account_pubkey: self.stake_pubkey,
+                staker_pubkey: self.vote_pubkey,
+                withdrawer_pubkey: self.vote_pubkey,
+                lamports_delegated: 1_000_000,
+            }],
+            total_delegated: 1_000_000,
+            commission: 10,
+        };
+
+        // Create a collection with our stake meta
+        let stake_meta_collection = StakeMetaCollection {
             epoch: 0,
-        })
+            stake_metas: vec![stake_meta],
+            bank_hash: "test_bank_hash".to_string(),
+            slot: 0,
+            tip_distribution_program_id: self.tip_distribution_program_id, // Add this field
+        };
+
+        Ok(stake_meta_collection)
     }
 
     async fn wait_for_next_epoch(&self) -> Result<()> {
