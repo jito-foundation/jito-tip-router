@@ -40,8 +40,8 @@ async fn setup_validator_accounts(
         let stake_pubkey = keypairs.stake_keypair.pubkey();
 
         println!("Creating accounts for validator:");
-        println!("  Vote account: {}", vote_pubkey);
-        println!("  Stake account: {}", stake_pubkey);
+        println!("Vote account: {}", vote_pubkey);
+        println!("Stake account: {}", stake_pubkey);
 
         // Create vote account
         let vote_account = AccountSharedData::new(1_000_000, 200, &vote_program_id());
@@ -195,7 +195,6 @@ async fn test_full_workflow() -> Result<()> {
         &Arc::new(bank),
         &tip_distribution_program_id,
         stake_meta_path.to_str().unwrap(),
-        &tip_payment_program_id
     )?;
 
     assert_eq!(stake_meta.stake_metas.len(), num_validators);
@@ -215,14 +214,20 @@ async fn test_full_workflow() -> Result<()> {
     // 3. Upload merkle roots
     println!("3. Uploading merkle roots...");
     println!("Using keypair path: {:?}", keypair_path);
-    merkle_root_upload_workflow::upload_merkle_root(
+    match merkle_root_upload_workflow::upload_merkle_root(
         &merkle_tree_path,
         &keypair_path,
         "http://localhost:8899",
         &tip_distribution_program_id,
         100,
         64
-    )?;
+    ).await {
+        Ok(_) => (),  // Return unit type
+        Err(e) => {
+            eprintln!("Error uploading merkle root: {}", e);
+            panic!("Failed to upload merkle root");  // Or handle error appropriately
+        }
+    };
 
     // 4. Test claiming tips
     println!("4. Testing tip claiming...");
