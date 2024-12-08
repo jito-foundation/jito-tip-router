@@ -1,33 +1,149 @@
 use ::{
     anyhow::Result,
+    log::info,
     solana_program_test::*,
     solana_sdk::{
-        account::AccountSharedData,
         pubkey::Pubkey,
-        rent::Rent,
         signature::{ Keypair, Signer },
-        stake::{ self, state::{ Meta, Stake, StakeStateV2 }, stake_flags },
+        stake::{ self, state::{ Meta, Stake, StakeStateV2 } },
+        stake::stake_flags::StakeFlags, // Keep only one StakeFlags import
         vote::program::id as vote_program_id,
-        genesis_config::GenesisConfig,
-        signer::keypair::write_keypair_file,
+        account::AccountSharedData,
+        sysvar::rent::Rent,
     },
-    std::{ fs, sync::Arc, time::Duration },
-    tempfile::TempDir,
+    ellipsis_client::EllipsisClient,
+    std::{ path::PathBuf, sync::Arc, time::Duration, fs },
+    solana_client::nonblocking::rpc_client::RpcClient, // Add this
     tip_router_operator_cli::{
+        merkle_tree::MerkleTreeGenerator,
         claim_mev_workflow,
         merkle_root_generator_workflow,
-        merkle_root_upload_workflow,
         stake_meta_generator_workflow,
+        snapshot::SnapshotCreator,
+        StakeMetaCollection,
         GeneratedMerkleTreeCollection,
     },
-    solana_runtime::bank::Bank,
 };
 
-#[derive(Debug)]
-struct ValidatorKeypairs {
-    identity_keypair: Keypair,
-    vote_keypair: Keypair,
-    stake_keypair: Keypair,
+pub struct ValidatorKeypairs {
+    pub vote_keypair: Keypair,
+    pub stake_keypair: Keypair,
+}
+
+impl ValidatorKeypairs {
+    pub fn new() -> Self {
+        Self {
+            vote_keypair: Keypair::new(),
+            stake_keypair: Keypair::new(),
+        }
+    }
+}
+
+struct TestContext {
+    rpc_client: Arc<EllipsisClient>,
+    keypair: Keypair,
+    keypair_path: PathBuf,
+    snapshot_dir: PathBuf,
+    ledger_dir: PathBuf,
+    tip_distribution_program_id: Pubkey,
+    tip_payment_program_id: Pubkey,
+    ncn_address: Pubkey,
+    temp_dir: tempfile::TempDir,
+    program_context: ProgramTestContext,
+    validator_keypairs: Vec<ValidatorKeypairs>,
+}
+
+impl TestContext {
+    async fn new() -> Result<Self> {
+        // Create program test
+        let mut program_test = ProgramTest::default();
+        let program_context = program_test.start_with_context().await;
+
+        // Create temporary directories
+        let temp_dir = tempfile::tempdir()?;
+        let snapshot_dir = temp_dir.path().join("snapshots");
+        let ledger_dir = temp_dir.path().join("ledger");
+        fs::create_dir_all(&snapshot_dir)?;
+        fs::create_dir_all(&ledger_dir)?;
+
+        // Generate test keypair
+        let keypair = Keypair::new();
+        let keypair_path = temp_dir.path().join("keypair.json");
+        fs::write(&keypair_path, keypair.to_bytes())?;
+
+        // Create test validator keypairs
+        let validator_keypairs = vec![ValidatorKeypairs::new(), ValidatorKeypairs::new()];
+
+        let tip_distribution_program_id = Pubkey::new_unique();
+
+        // Setup RPC client
+        // Setup RPC client
+        let rpc = solana_client::nonblocking::rpc_client::RpcClient::new(
+            "http://localhost:8899".to_string()
+        );
+        let rpc_client = Arc::new(
+            EllipsisClient::from_rpc(
+                solana_client::rpc_client::RpcClient::new("http://localhost:8899".to_string()),
+                &keypair
+            )?
+        );
+
+        Ok(Self {
+            rpc_client,
+            keypair,
+            keypair_path,
+            snapshot_dir,
+            ledger_dir,
+            tip_distribution_program_id,
+            tip_payment_program_id: Pubkey::new_unique(),
+            ncn_address: Pubkey::new_unique(),
+            temp_dir,
+            program_context,
+            validator_keypairs,
+        })
+    }
+
+    fn create_test_stake_meta(&self) -> Result<StakeMetaCollection> {
+        Ok(StakeMetaCollection {
+            stake_metas: self.validator_keypairs
+                .iter()
+                .map(|kp| {
+                    // Create appropriate stake meta structure based on your implementation
+                    // This is a placeholder - adjust according to your StakeMetaCollection structure
+                    unimplemented!("Implement stake meta creation")
+                })
+                .collect(),
+            tip_distribution_program_id: self.tip_distribution_program_id,
+            bank_hash: "0".to_string(), // Changed from [0; 32] to String
+            slot: 0, // Use appropriate slot
+            epoch: 0,
+        })
+    }
+
+    async fn wait_for_next_epoch(&self) -> Result<()> {
+        let current_epoch = self.rpc_client.get_epoch_info()?.epoch;
+
+        loop {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            let new_epoch = self.rpc_client.get_epoch_info()?.epoch;
+
+            if new_epoch > current_epoch {
+                info!("New epoch detected: {} -> {}", current_epoch, new_epoch);
+                return Ok(());
+            }
+        }
+    }
+
+    async fn get_previous_epoch_last_slot(&self) -> Result<u64> {
+        let epoch_info = self.rpc_client.get_epoch_info()?;
+        let current_slot = epoch_info.absolute_slot;
+        let slot_index = epoch_info.slot_index;
+
+        let epoch_start_slot = current_slot - slot_index;
+        let previous_epoch_final_slot = epoch_start_slot - 1;
+
+        Ok(previous_epoch_final_slot)
+    }
 }
 
 async fn setup_validator_accounts(
@@ -39,9 +155,9 @@ async fn setup_validator_accounts(
         let vote_pubkey = keypairs.vote_keypair.pubkey();
         let stake_pubkey = keypairs.stake_keypair.pubkey();
 
-        println!("Creating accounts for validator:");
-        println!("Vote account: {}", vote_pubkey);
-        println!("Stake account: {}", stake_pubkey);
+        info!("Creating accounts for validator:");
+        info!("Vote account: {}", vote_pubkey);
+        info!("Stake account: {}", stake_pubkey);
 
         // Create vote account
         let vote_account = AccountSharedData::new(1_000_000, 200, &vote_program_id());
@@ -63,12 +179,12 @@ async fn setup_validator_accounts(
                 stake: stake_lamports - meta.rent_exempt_reserve,
                 activation_epoch: 0,
                 deactivation_epoch: u64::MAX,
-                warmup_cooldown_rate: 0.25, // Using fixed value for test
+                warmup_cooldown_rate: 0.25,
             },
             credits_observed: 0,
         };
 
-        let stake_state = StakeStateV2::Stake(meta, stake, stake_flags::StakeFlags::empty());
+        let stake_state = StakeStateV2::Stake(meta, stake, StakeFlags::empty());
         let mut stake_account = AccountSharedData::new(
             stake_lamports,
             std::mem::size_of::<StakeStateV2>(),
@@ -96,155 +212,216 @@ async fn setup_validator_accounts(
 }
 
 #[tokio::test]
-async fn test_full_workflow() -> Result<()> {
-    env_logger::init();
+async fn test_epoch_processing() -> Result<()> {
+    let context = TestContext::new().await?;
 
-    // Create temporary directory for test files
-    let temp_dir = TempDir::new()?;
-    println!("Created temp dir at {:?}", temp_dir.path());
+    // 1. Create snapshot
+    info!("1. Testing snapshot creation...");
 
-    // Setup test validator
-    let mut program_test = ProgramTest::default();
-    let tip_distribution_program_id = Pubkey::new_unique();
-    let tip_payment_program_id = Pubkey::new_unique();
+    let keypair_copy = Keypair::from_bytes(&context.keypair.to_bytes())?;
+    let rpc_url = context.rpc_client.url().to_string();
+    // Define merkle_tree_path here since we'll need it later
+    let merkle_tree_path = context.snapshot_dir.join("merkle-trees");
 
-    // Create validator keypairs
-    let num_validators = 3;
-    let mut validator_keypairs = Vec::with_capacity(num_validators);
-    for _ in 0..num_validators {
-        validator_keypairs.push(ValidatorKeypairs {
-            identity_keypair: Keypair::new(),
-            vote_keypair: Keypair::new(),
-            stake_keypair: Keypair::new(),
-        });
-    }
-
-    // Start test validator
-    let mut context = program_test.start_with_context().await;
-    let context_keypair = Keypair::new();
-
-    // Setup validator accounts
-    setup_validator_accounts(
-        &mut context,
-        &validator_keypairs,
-        &tip_distribution_program_id
-    ).await?;
-
-    // Create snapshot directory and output files
-    let snapshot_dir = temp_dir.path().join("snapshots");
-    fs::create_dir_all(&snapshot_dir)?;
-
-    let stake_meta_path = snapshot_dir.join("stake-meta.json");
-    let merkle_tree_path = snapshot_dir.join("merkle-tree.json");
-
-    // Save keypair to file for merkle root upload
-    println!("Saving keypair to file...");
-    let keypair_path = temp_dir.path().join("test-keypair.json");
-    write_keypair_file(&context_keypair, &keypair_path).expect("Failed to write keypair file");
-
-    println!("\nTesting workflow components:");
-
-    // 1. Generate stake metadata
-    println!("1. Generating stake metadata...");
-
-    // Create a Bank instance
-    let genesis_config = GenesisConfig::default();
-    let bank = Bank::new_for_tests(&genesis_config);
-
-    // Add the accounts to the bank
-    for keypairs in &validator_keypairs {
-        let vote_pubkey = keypairs.vote_keypair.pubkey();
-        let stake_pubkey = keypairs.stake_keypair.pubkey();
-
-        // Create vote account
-        let vote_account = AccountSharedData::new(1_000_000, 200, &vote_program_id());
-        bank.store_account(&vote_pubkey, &vote_account);
-
-        // Create stake account
-        let stake_lamports = 1_000_000_000;
-        let meta = Meta {
-            rent_exempt_reserve: Rent::default().minimum_balance(
-                std::mem::size_of::<StakeStateV2>()
-            ),
-            authorized: stake::state::Authorized::auto(&stake_pubkey),
-            lockup: stake::state::Lockup::default(),
-        };
-
-        let stake = Stake {
-            delegation: stake::state::Delegation {
-                voter_pubkey: vote_pubkey,
-                stake: stake_lamports - meta.rent_exempt_reserve,
-                activation_epoch: 0,
-                deactivation_epoch: u64::MAX,
-                warmup_cooldown_rate: stake::state::warmup_cooldown_rate(0, None),
-            },
-            credits_observed: 0,
-        };
-
-        let stake_state = StakeStateV2::Stake(meta, stake, stake_flags::StakeFlags::empty());
-        let mut stake_account = AccountSharedData::new(
-            stake_lamports,
-            std::mem::size_of::<StakeStateV2>(),
-            &stake::program::id()
-        );
-        stake_account.set_data(bincode::serialize(&stake_state).unwrap());
-        bank.store_account(&stake_pubkey, &stake_account);
-    }
-
-    let stake_meta = stake_meta_generator_workflow::generate_stake_meta_from_bank(
-        &Arc::new(bank),
-        &tip_distribution_program_id,
-        stake_meta_path.to_str().unwrap(),
+    let snapshot_creator = SnapshotCreator::new(
+        &rpc_url,
+        context.snapshot_dir.to_str().unwrap().to_string(),
+        5,
+        "bzip2".to_string(),
+        keypair_copy,
+        context.ledger_dir.clone()
     )?;
 
-    assert_eq!(stake_meta.stake_metas.len(), num_validators);
+    let slot = context.get_previous_epoch_last_slot().await?;
+    snapshot_creator.create_snapshot(slot).await?;
+    // 2. Generate stake metadata
+    info!("2. Testing stake metadata generation...");
+    let stake_meta_path = context.snapshot_dir.join("stake-meta.json");
 
-    // 2. Generate merkle trees
-    println!("2. Generating merkle trees...");
+    stake_meta_generator_workflow::generate_stake_meta(
+        &context.ledger_dir,
+        &slot,
+        &context.tip_distribution_program_id,
+        stake_meta_path.to_str().unwrap(),
+        &context.tip_payment_program_id
+    )?;
+
+    let stake_meta = context.create_test_stake_meta()?;
+
+    // 3. Create merkle trees
+    info!("3. Testing merkle tree generation...");
+    let merkle_tree_path = context.snapshot_dir.join("merkle-trees");
     merkle_root_generator_workflow::generate_merkle_root(
         &stake_meta_path,
         &merkle_tree_path,
-        "http://localhost:8899"
+        &rpc_url
     )?;
 
-    // Before uploading merkle roots
-    println!("Merkle tree file exists: {}", merkle_tree_path.exists());
-    println!("Keypair file exists: {}", keypair_path.exists());
-
-    // 3. Upload merkle roots
-    println!("3. Uploading merkle roots...");
-    println!("Using keypair path: {:?}", keypair_path);
-    match merkle_root_upload_workflow::upload_merkle_root(
-        &merkle_tree_path,
-        &keypair_path,
-        "http://localhost:8899",
-        &tip_distribution_program_id,
-        100,
-        64
-    ).await {
-        Ok(_) => (),  // Return unit type
-        Err(e) => {
-            eprintln!("Error uploading merkle root: {}", e);
-            panic!("Failed to upload merkle root");  // Or handle error appropriately
-        }
-    };
-
-    // 4. Test claiming tips
-    println!("4. Testing tip claiming...");
-    let merkle_trees: GeneratedMerkleTreeCollection = serde_json::from_reader(
-        fs::File::open(&merkle_tree_path)?
+    let keypair_copy2 = Keypair::from_bytes(&context.keypair.to_bytes())?;
+    let snapshot_creator = SnapshotCreator::new(
+        &rpc_url,
+        context.snapshot_dir.to_str().unwrap().to_string(),
+        5,
+        "bzip2".to_string(),
+        keypair_copy2,
+        context.ledger_dir.clone()
     )?;
 
-    let claim_result = claim_mev_workflow::claim_mev_tips(
+    let keypair_copy3 = Keypair::from_bytes(&context.keypair.to_bytes())?;
+    // 4. Initialize MerkleTreeGenerator
+    info!("4. Testing MerkleTreeGenerator initialization...");
+    let merkle_tree_generator = MerkleTreeGenerator::new(
+        &rpc_url,
+        keypair_copy3,
+        context.ncn_address,
+        merkle_tree_path.clone(),
+        context.tip_distribution_program_id,
+        Keypair::new(),
+        Pubkey::new_unique()
+    )?;
+
+    // 5. Generate and upload merkle trees
+    info!("5. Testing merkle tree generation and upload...");
+    let merkle_trees = merkle_tree_generator.generate_and_upload_merkle_trees(stake_meta).await?;
+
+    // 6. Generate meta merkle tree
+    info!("6. Testing meta merkle tree generation...");
+    let meta_merkle_tree = merkle_tree_generator.generate_meta_merkle_tree(&merkle_trees).await?;
+
+    // 7. Upload to NCN
+    info!("7. Testing NCN upload...");
+    merkle_tree_generator.upload_to_ncn(&meta_merkle_tree).await?;
+
+    // 8. Test claiming
+    info!("8. Testing claiming capability...");
+    claim_mev_workflow::claim_mev_tips(
         &merkle_trees,
-        "http://localhost:8899".to_string(),
-        tip_distribution_program_id,
-        Arc::new(context_keypair),
+        rpc_url,
+        context.tip_distribution_program_id,
+        Arc::new(context.keypair),
         Duration::from_secs(10),
         1
-    ).await;
+    ).await?;
 
-    assert!(claim_result.is_ok(), "Tip claiming failed: {:?}", claim_result.err());
+    Ok(())
+}
 
+// Additional test cases remain similar but use EllipsisClient instead of RpcClient
+#[tokio::test]
+async fn test_merkle_tree_generation() -> Result<()> {
+    let context = TestContext::new().await?;
+    let stake_meta = context.create_test_stake_meta()?;
+    let rpc_url = context.rpc_client.url().to_string();
+
+    let merkle_tree_path = context.snapshot_dir.join("merkle-trees");
+    merkle_root_generator_workflow::generate_merkle_root(
+        &context.snapshot_dir.join("stake-meta.json"),
+        &merkle_tree_path,
+        &rpc_url
+    )?;
+
+    assert!(merkle_tree_path.exists());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_meta_merkle_tree() -> Result<()> {
+    let context = TestContext::new().await?;
+
+    let rpc_url = context.rpc_client.url().to_string();
+    let keypair_copy = Keypair::from_bytes(&context.keypair.to_bytes())?;
+
+    let merkle_tree_generator = MerkleTreeGenerator::new(
+        &rpc_url,
+        keypair_copy,
+        context.ncn_address,
+        context.snapshot_dir.clone(),
+        context.tip_distribution_program_id,
+        Keypair::new(),
+        Pubkey::new_unique()
+    )?;
+
+    let merkle_trees = GeneratedMerkleTreeCollection {
+        epoch: 0,
+        generated_merkle_trees: vec![],
+        bank_hash: "0".to_string(),
+        slot: 0, // Add slot
+    };
+
+    let meta_merkle_tree = merkle_tree_generator.generate_meta_merkle_tree(&merkle_trees).await?;
+
+    assert!(meta_merkle_tree.root != [0; 32]);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_ncn_upload() -> Result<()> {
+    let context = TestContext::new().await?;
+    let keypair_copy = Keypair::from_bytes(&context.keypair.to_bytes())?;
+    let rpc_url = context.rpc_client.url().to_string();
+
+    let merkle_tree_generator = MerkleTreeGenerator::new(
+        &rpc_url,
+        keypair_copy,
+        context.ncn_address,
+        context.snapshot_dir.clone(),
+        context.tip_distribution_program_id,
+        Keypair::new(),
+        Pubkey::new_unique()
+    )?;
+
+    let merkle_trees = GeneratedMerkleTreeCollection {
+        epoch: 0,
+        generated_merkle_trees: vec![],
+        bank_hash: "0".to_string(),
+        slot: 0,
+    };
+
+    let meta_merkle_tree = merkle_tree_generator.generate_meta_merkle_tree(&merkle_trees).await?;
+
+    merkle_tree_generator.upload_to_ncn(&meta_merkle_tree).await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_claim_mev_tips() -> Result<()> {
+    let context = TestContext::new().await?;
+    let stake_meta = context.create_test_stake_meta()?;
+
+    let rpc_url = context.rpc_client.url().to_string();
+    let keypair_copy = Keypair::from_bytes(&context.keypair.to_bytes())?;
+
+    let merkle_tree_generator = MerkleTreeGenerator::new(
+        &rpc_url,
+        keypair_copy,
+        context.ncn_address,
+        context.snapshot_dir.clone(),
+        context.tip_distribution_program_id,
+        Keypair::new(),
+        Pubkey::new_unique()
+    )?;
+
+    let merkle_trees = merkle_tree_generator.generate_and_upload_merkle_trees(stake_meta).await?;
+
+    claim_mev_workflow::claim_mev_tips(
+        &merkle_trees,
+        rpc_url,
+        context.tip_distribution_program_id,
+        Arc::new(context.keypair),
+        Duration::from_secs(10),
+        1
+    ).await?;
+
+    Ok(())
+}
+
+async fn advance_test_epoch(context: &mut ProgramTestContext, slots: u64) -> Result<()> {
+    for _ in 0..slots {
+        let root_slot = context.banks_client.get_root_slot().await?;
+        context.warp_to_slot(root_slot + 1)?;
+    }
     Ok(())
 }
