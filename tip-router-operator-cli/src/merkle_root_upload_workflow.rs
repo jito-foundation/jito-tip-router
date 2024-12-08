@@ -24,7 +24,6 @@ use {
     },
     std::{ path::PathBuf, time::Duration },
     thiserror::Error,
-    tokio::runtime::Builder,
 };
 
 #[derive(Error, Debug)]

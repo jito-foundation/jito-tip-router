@@ -45,7 +45,7 @@ pub enum MerkleTreeError {
 }
 
 pub struct MerkleTreeGenerator {
-    ncn_address: String,
+    ncn_address: Pubkey,
     output_dir: PathBuf,
     rpc_client: Arc<EllipsisClient>,
     tip_distribution_program_id: Pubkey,
@@ -57,7 +57,7 @@ impl MerkleTreeGenerator {
     pub fn new(
         rpc_url: &str,
         keypair: Keypair,
-        ncn_address: String,
+        ncn_address: Pubkey,
         output_dir: PathBuf,
         tip_distribution_program_id: Pubkey,
         merkle_root_upload_authority: Keypair,

@@ -1,21 +1,17 @@
-use {
+use ::{
     anyhow::Result,
     clap::Parser,
-    log::info,
+    log::{ info, error },
     solana_client::rpc_client::RpcClient,
-    solana_metrics::datapoint_info,
-    solana_sdk::{
-        pubkey::Pubkey,
-        signer::{
-            keypair::{ read_keypair_file, Keypair },
-            Signer, // Add this trait import
-        },
-        slot_history::Slot,
-    },
-    std::path::PathBuf,
+    solana_sdk::{ pubkey::Pubkey, signature::Keypair, signer::keypair::read_keypair_file },
+    std::{ sync::Arc, time::Duration, path::PathBuf },
     tip_router_operator_cli::{
-        snapshot::SnapshotCreator, // Import SnapshotCreator through the crate path
-        *,
+        merkle_tree::MerkleTreeGenerator,
+        claim_mev_workflow,
+        merkle_root_generator_workflow,
+        stake_meta_generator_workflow,
+        snapshot::SnapshotCreator,
+        StakeMetaCollection, // Add this import
     },
 };
 
@@ -46,7 +42,7 @@ struct Cli {
 enum Commands {
     Monitor {
         #[arg(short, long)]
-        ncn_address: String,
+        ncn_address: Pubkey,
 
         /// Tip distribution program ID
         #[arg(long)]
@@ -58,9 +54,22 @@ enum Commands {
     },
 }
 
-async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<Slot> {
+async fn wait_for_next_epoch(rpc_client: &RpcClient) -> Result<()> {
+    let current_epoch = rpc_client.get_epoch_info()?.epoch;
+
+    loop {
+        tokio::time::sleep(Duration::from_secs(10)).await; // Check every 10 seconds
+        let new_epoch = rpc_client.get_epoch_info()?.epoch;
+
+        if new_epoch > current_epoch {
+            info!("New epoch detected: {} -> {}", current_epoch, new_epoch);
+            return Ok(());
+        }
+    }
+}
+
+async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<u64> {
     let epoch_info = rpc_client.get_epoch_info()?;
-    // let current_epoch: u64 = epoch_info.epoch;
     let current_slot = epoch_info.absolute_slot;
     let slot_index = epoch_info.slot_index;
 
@@ -76,78 +85,133 @@ async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<Slot> {
     Ok(slot)
 }
 
+async fn process_epoch(
+    previous_epoch_slot: u64,
+    cli: &Cli,
+    tip_distribution_program_id: &Pubkey,
+    tip_payment_program_id: &Pubkey,
+    ncn_address: &Pubkey
+) -> Result<()> {
+    // 1. Create snapshot
+    info!("1. Creating snapshot of previous epoch...");
+    let snapshot_creator = SnapshotCreator::new(
+        &cli.rpc_url,
+        cli.snapshot_output_dir.to_str().unwrap().to_string(),
+        5,
+        "bzip2".to_string(),
+        read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
+        cli.ledger_path.clone()
+    )?;
+    snapshot_creator.create_snapshot(previous_epoch_slot).await?;
+
+    // 2. Generate stake metadata
+    info!("2. Generating stake metadata from snapshot...");
+    let stake_meta_path = cli.snapshot_output_dir.join("stake-meta.json");
+
+    // First generate the stake meta file
+    stake_meta_generator_workflow::generate_stake_meta(
+        &cli.ledger_path,
+        &previous_epoch_slot,
+        tip_distribution_program_id,
+        stake_meta_path.to_str().unwrap(),
+        tip_payment_program_id
+    )?;
+
+    // Then read the generated file to get the StakeMetaCollection
+    let stake_meta: StakeMetaCollection = serde_json::from_reader(
+        std::fs::File::open(&stake_meta_path)?
+    )?;
+
+    info!("Successfully loaded stake meta collection from generated file");
+
+    // 3. Create merkle trees
+    info!("3. Generating merkle trees for each validator...");
+    let merkle_tree_path = cli.snapshot_output_dir.join("merkle-trees");
+    merkle_root_generator_workflow::generate_merkle_root(
+        &stake_meta_path,
+        &merkle_tree_path,
+        &cli.rpc_url
+    )?;
+
+    // 4. Initialize MerkleTreeGenerator for meta tree and uploads
+    info!("4. Initializing MerkleTreeGenerator...");
+    let merkle_tree_generator = MerkleTreeGenerator::new(
+        &cli.rpc_url,
+        read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
+        *ncn_address,
+        merkle_tree_path.clone(),
+        *tip_distribution_program_id,
+        Keypair::new(),
+        Pubkey::new_unique()
+    )?;
+
+    // 5. Generate and upload individual merkle trees
+    info!("5. Generating and uploading merkle trees...");
+    let merkle_trees = merkle_tree_generator.generate_and_upload_merkle_trees(stake_meta).await?;
+
+    // 6. Generate meta merkle tree
+    info!("6. Generating meta merkle tree...");
+    let meta_merkle_tree = merkle_tree_generator.generate_meta_merkle_tree(&merkle_trees).await?;
+
+    info!("Generated meta merkle tree: {:?}", meta_merkle_tree);
+
+    // 7. Upload meta merkle root to NCN
+    info!("7. Uploading meta merkle root to NCN...");
+    merkle_tree_generator.upload_to_ncn(&meta_merkle_tree).await?;
+
+    // 8. Optional: Test claiming
+    info!("8. Testing tip claiming capability...");
+    let context_keypair = read_keypair_file(&cli.keypair_path).expect(
+        "Failed to read keypair file"
+    );
+
+    claim_mev_workflow::claim_mev_tips(
+        &merkle_trees,
+        cli.rpc_url.clone(),
+        *tip_distribution_program_id,
+        Arc::new(context_keypair),
+        Duration::from_secs(10),
+        1
+    ).await?;
+
+    info!("Successfully completed all steps for epoch processing");
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
     let rpc_client = RpcClient::new(cli.rpc_url.clone());
 
-    match cli.command {
+    match &cli.command {
         Commands::Monitor { ncn_address, tip_distribution_program_id, tip_payment_program_id } => {
+            info!("Starting epoch monitor...");
+
             loop {
+                // Wait for epoch change
+                wait_for_next_epoch(&rpc_client).await?;
+
+                // Get the last slot of the previous epoch
                 let previous_epoch_slot = get_previous_epoch_last_slot(&rpc_client).await?;
                 info!("Processing slot {} for previous epoch", previous_epoch_slot);
 
-                // 1. Create snapshot
-                let snapshot_creator = SnapshotCreator::new(
-                    &cli.rpc_url,
-                    cli.snapshot_output_dir.to_str().unwrap().to_string(),
-                    5, // max_snapshots
-                    "bzip2".to_string(),
-                    read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
-                    cli.ledger_path.clone()
-                )?;
-
-                snapshot_creator.create_snapshot(previous_epoch_slot).await?;
-
-                // 2. Generate stake metadata
-                println!("2. Generating stake metadata...");
-                let stake_meta = stake_meta_generator_workflow::generate_stake_meta(
-                    &ledger_path,
-                    &0, // slot
-                    &tip_distribution_program_id,
-                    stake_meta_path.to_str().unwrap(),
-                    &tip_payment_program_id
-                )?;
-                info!("Generated stake metadata: {:?}", stake_meta);
-
-                // 3. Create merkle trees
-                println!("3. Creating merkle trees...");
-                let merkle_tree_generator = merkle_tree::MerkleTreeGenerator::new(
-                    "http://localhost:8899",
-                    context_keypair.clone(),
-                    merkle_tree_path.parent().unwrap().to_path_buf(),
-                    tip_distribution_program_id,
-                    Keypair::new(), // merkle_root_upload_authority
-                    merkle_root_upload_authority.pubkey()
-                ).await()?;
-
-                let merkle_trees = merkle_tree_generator.generate_merkle_trees(stake_meta)?;
-                info!("Generated merkle trees: {:?}", merkle_trees);
-
-                // 4. Create meta merkle tree
-                println!("4. Creating meta merkle tree...");
-                let meta_merkle_tree = merkle_tree_generator.generate_meta_merkle_tree(
-                    &merkle_trees
-                ).await?;
-                info!("Generated meta merkle tree: {:?}", meta_merkle_tree);
-
-                // 5. Upload meta merkle root to NCN
-                println!("5. Uploading meta merkle root to NCN...");
-                merkle_tree_generator.upload_to_ncn(&meta_merkle_tree).await?;
-
-                // 6. Test tip claiming (optional, for verification)
-                println!("6. Testing tip claiming...");
-                let claim_result = claim_mev_workflow::claim_mev_tips(
-                    &merkle_trees,
-                    "http://localhost:8899".to_string(),
-                    tip_distribution_program_id,
-                    Arc::new(context_keypair),
-                    Duration::from_secs(10),
-                    1
-                ).await?;
-
-                break Ok(());
+                // Process the epoch
+                match
+                    process_epoch(
+                        previous_epoch_slot,
+                        &cli,
+                        tip_distribution_program_id,
+                        tip_payment_program_id,
+                        ncn_address
+                    ).await
+                {
+                    Ok(_) => info!("Successfully processed epoch"),
+                    Err(e) => {
+                        error!("Error processing epoch: {}", e);
+                        // Continue to next epoch even if this one failed
+                    }
+                }
             }
         }
     }
