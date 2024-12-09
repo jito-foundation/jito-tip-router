@@ -187,20 +187,23 @@ async fn setup_validator_accounts(
         let vote_pubkey = keypairs.vote_keypair.pubkey();
         let stake_pubkey = keypairs.stake_keypair.pubkey();
 
-        info!("Creating accounts for validator:");
-        info!("Vote account: {}", vote_pubkey);
-        info!("Stake account: {}", stake_pubkey);
+        // Create vote account with proper vote state
+        let mut vote_state = VoteState::default();
+        vote_state.authorized_voters = AuthorizedVoters::new(0, vote_pubkey);
+        vote_state.node_pubkey = keypairs.node_keypair.pubkey();
 
-        // Create vote account
-        let vote_account = AccountSharedData::new(1_000_000, 200, &vote_program_id());
+        let mut vote_account = AccountSharedData::new(
+            1_000_000,
+            VoteState::size_of(),
+            &vote::program::id()
+        );
+        vote_state.serialize(&mut vote_account.data_as_mut_slice())?;
         context.set_account(&vote_pubkey, &vote_account);
 
-        // Create stake account
+        // Create stake account with active delegation
         let stake_lamports = 1_000_000_000;
         let meta = Meta {
-            rent_exempt_reserve: Rent::default().minimum_balance(
-                std::mem::size_of::<StakeStateV2>()
-            ),
+            rent_exempt_reserve: Rent::default().minimum_balance(std::mem::size_of::<StakeStateV2>()),
             authorized: stake::state::Authorized::auto(&stake_pubkey),
             lockup: stake::state::Lockup::default(),
         };
@@ -208,7 +211,7 @@ async fn setup_validator_accounts(
         let stake = Stake {
             delegation: stake::state::Delegation {
                 voter_pubkey: vote_pubkey,
-                stake: stake_lamports - meta.rent_exempt_reserve,
+                stake: stake_lamports,
                 activation_epoch: 0,
                 deactivation_epoch: u64::MAX,
                 warmup_cooldown_rate: 0.25,
