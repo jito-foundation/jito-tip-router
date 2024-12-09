@@ -243,7 +243,7 @@ async fn setup_validator_accounts(
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_epoch_processing() -> Result<()> {
     let context = TestContext::new().await?;
 
@@ -339,7 +339,7 @@ async fn test_epoch_processing() -> Result<()> {
 }
 
 // Additional test cases remain similar but use EllipsisClient instead of RpcClient
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_merkle_tree_generation() -> Result<()> {
     let context = TestContext::new().await?;
     let stake_meta = context.create_test_stake_meta()?;
@@ -357,7 +357,7 @@ async fn test_merkle_tree_generation() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_meta_merkle_tree() -> Result<()> {
     let context = TestContext::new().await?;
 
@@ -388,7 +388,7 @@ async fn test_meta_merkle_tree() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_ncn_upload() -> Result<()> {
     let context = TestContext::new().await?;
     let keypair_copy = Keypair::from_bytes(&context.keypair.to_bytes())?;
@@ -418,7 +418,7 @@ async fn test_ncn_upload() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_claim_mev_tips() -> Result<()> {
     let context = TestContext::new().await?;
     let stake_meta = context.create_test_stake_meta()?;
