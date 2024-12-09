@@ -2,7 +2,7 @@ use ::{
     anyhow::Result,
     clap::Parser,
     log::{ info, error },
-    solana_client::rpc_client::RpcClient,
+    solana_rpc_client::rpc_client::RpcClient,
     solana_sdk::{ pubkey::Pubkey, signature::Keypair, signer::keypair::read_keypair_file },
     std::{ sync::Arc, time::Duration, path::PathBuf },
     tip_router_operator_cli::{
@@ -14,6 +14,7 @@ use ::{
         StakeMetaCollection, // Add this import
     },
     tokio::time::Instant,
+    ellipsis_client::EllipsisClient,
     solana_metrics::datapoint_info,
 };
 
@@ -56,7 +57,7 @@ enum Commands {
     },
 }
 
-async fn wait_for_next_epoch(rpc_client: &RpcClient) -> Result<()> {
+async fn wait_for_next_epoch(rpc_client: &EllipsisClient) -> Result<()> {
     let current_epoch = rpc_client.get_epoch_info()?.epoch;
 
     loop {
@@ -70,7 +71,8 @@ async fn wait_for_next_epoch(rpc_client: &RpcClient) -> Result<()> {
     }
 }
 
-async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<u64> {
+
+async fn get_previous_epoch_last_slot(rpc_client: &EllipsisClient) -> Result<u64> {
     let epoch_info = rpc_client.get_epoch_info()?;
     let current_slot = epoch_info.absolute_slot;
     let slot_index = epoch_info.slot_index;
@@ -238,7 +240,10 @@ async fn process_epoch(
 async fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
-    let rpc_client = RpcClient::new(cli.rpc_url.clone());
+    let rpc_client = EllipsisClient::from_rpc(
+        RpcClient::new(cli.rpc_url.clone()),
+        &read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file")
+    )?;
 
     match &cli.command {
         Commands::Monitor { ncn_address, tip_distribution_program_id, tip_payment_program_id } => {
