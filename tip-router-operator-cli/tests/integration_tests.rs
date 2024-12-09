@@ -18,8 +18,8 @@ use ::{
         },
         vote::state::VoteInit,
         sysvar::clock::Clock,
-        account::Account as SolanaAccount, 
-        genesis_config::GenesisConfig,     
+        account::Account as SolanaAccount,
+        genesis_config::GenesisConfig,
     },
     ellipsis_client::EllipsisClient,
     std::{ path::PathBuf, sync::Arc, time::Duration, fs },
@@ -39,7 +39,7 @@ use ::{
     },
     solana_client::rpc_client::RpcClient,
     serde::Serialize,
-    solana_sdk::vote::state::VoteStateVersions
+    solana_sdk::vote::state::VoteStateVersions,
 };
 
 pub struct ValidatorKeypairs {
@@ -78,43 +78,72 @@ impl TestContext {
     async fn new() -> Result<Self> {
         // Create validator keypairs first
         let validator_keypairs = vec![ValidatorKeypairs::new(), ValidatorKeypairs::new()];
-        
+
         // Create program test
         let mut program_test = ProgramTest::default();
-        
-        // Add accounts directly to program test
-        for keypairs in &validator_keypairs {
-            // Add vote account
-            program_test.add_account(
-                keypairs.vote_keypair.pubkey(),
-                SolanaAccount {
-                    lamports: 1_000_000,
-                    owner: vote_program_id(),
-                    executable: false,
-                    rent_epoch: 0,
-                    data: vec![],  // Will be set up properly in setup_validator_accounts
-                }
-            );
 
-            // Add stake account
-            program_test.add_account(
-                keypairs.stake_keypair.pubkey(),
-                SolanaAccount {
-                    lamports: 1_000_000_000,  // 1 SOL
-                    owner: stake::program::id(),
-                    executable: false,
-                    rent_epoch: 0,
-                    data: vec![],  // Will be set up properly in setup_validator_accounts
-                }
-            );
+        // Add accounts with proper initialization
+        for keypairs in &validator_keypairs {
+            // Create and initialize vote account
+            let vote_init = VoteInit {
+                node_pubkey: keypairs.vote_keypair.pubkey(),
+                authorized_voter: keypairs.vote_keypair.pubkey(),
+                authorized_withdrawer: keypairs.vote_keypair.pubkey(),
+                commission: 0,
+            };
+
+            let vote_state = VoteState::new(&vote_init, &Clock::default());
+            let versioned_state = VoteStateVersions::new_current(vote_state);
+            let mut vote_data = vec![0; VoteState::size_of()];
+            bincode::serialize_into(&mut vote_data[..], &versioned_state)?;
+
+            program_test.add_account(keypairs.vote_keypair.pubkey(), SolanaAccount {
+                lamports: 1_000_000,
+                owner: vote_program_id(),
+                executable: false,
+                rent_epoch: 0,
+                data: vote_data,
+            });
+
+            // Create and initialize stake account with delegation
+            let meta = Meta {
+                rent_exempt_reserve: Rent::default().minimum_balance(
+                    std::mem::size_of::<StakeStateV2>()
+                ),
+                authorized: stake::state::Authorized::auto(&keypairs.stake_keypair.pubkey()),
+                lockup: stake::state::Lockup::default(),
+            };
+
+            let stake = Stake {
+                delegation: stake::state::Delegation {
+                    voter_pubkey: keypairs.vote_keypair.pubkey(),
+                    stake: 1_000_000_000, // 1 SOL
+                    activation_epoch: 0,
+                    deactivation_epoch: u64::MAX,
+                    warmup_cooldown_rate: 0.25,
+                },
+                credits_observed: 0,
+            };
+
+            let stake_state = StakeStateV2::Stake(meta, stake, StakeFlags::empty());
+            let mut stake_data = vec![0; std::mem::size_of::<StakeStateV2>()];
+            bincode::serialize_into(&mut stake_data[..], &stake_state)?;
+
+            program_test.add_account(keypairs.stake_keypair.pubkey(), SolanaAccount {
+                lamports: 1_000_000_000, // 1 SOL
+                owner: stake::program::id(),
+                executable: false,
+                rent_epoch: 0,
+                data: stake_data,
+            });
         }
-        
+
         // Create a new context
         let mut program_context = program_test.start_with_context().await;
 
         // Rest of the function remains the same...
         let tip_distribution_program_id = Pubkey::new_unique();
-        
+
         setup_validator_accounts(
             &mut program_context,
             &validator_keypairs,
@@ -250,7 +279,7 @@ async fn setup_validator_accounts(
             VoteState::size_of(),
             &vote_program_id()
         );
-        
+
         let versioned_state = VoteStateVersions::new_current(vote_state);
         vote_account.set_data(bincode::serialize(&versioned_state)?);
         context.set_account(&vote_pubkey, &vote_account);
