@@ -223,7 +223,7 @@ pub enum TipRouterInstruction {
     #[account(0, name = "restaking_config")]
     #[account(1, name = "ncn_config")]
     #[account(2, name = "ncn")]
-    #[account(3, name = "operator")]
+    #[account(3, writable, name = "operator")]
     #[account(4, writable, name = "ncn_reward_router")]
     #[account(5, name = "restaking_program")]
     DistributeNcnOperatorRewards{
@@ -236,7 +236,7 @@ pub enum TipRouterInstruction {
     #[account(1, name = "ncn_config")]
     #[account(2, name = "ncn")]
     #[account(3, name = "operator")]
-    #[account(4, name = "vault")]
+    #[account(4, writable, name = "vault")]
     #[account(5, writable, name = "ncn_reward_router")]
     #[account(6, name = "restaking_program")]
     #[account(7, name = "vault_program")]

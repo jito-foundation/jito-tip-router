@@ -6,7 +6,7 @@ use jito_tip_router_core::{
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
 /// Can be backfilled for previous epochs
@@ -48,7 +48,9 @@ pub fn process_route_base_rewards(
     let base_reward_router_account =
         BaseRewardRouter::try_from_slice_unchecked_mut(&mut base_reward_router_data)?;
 
-    base_reward_router_account.route_incoming_rewards(base_reward_router_balance)?;
+    let rent_cost = base_reward_router_account.rent_cost(&Rent::get()?)?;
+
+    base_reward_router_account.route_incoming_rewards(rent_cost, base_reward_router_balance)?;
 
     base_reward_router_account.route_reward_pool(epoch_snapshot_account.fees())?;
 

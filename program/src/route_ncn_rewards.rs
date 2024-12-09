@@ -6,7 +6,7 @@ use jito_tip_router_core::{
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
 /// Can be backfilled for previous epochs
@@ -63,7 +63,9 @@ pub fn process_route_ncn_rewards(
     let ncn_reward_router_account =
         NcnRewardRouter::try_from_slice_unchecked_mut(&mut ncn_reward_router_data)?;
 
-    ncn_reward_router_account.route_incoming_rewards(account_balance)?;
+    let rent_cost = ncn_reward_router_account.rent_cost(&Rent::get()?)?;
+
+    ncn_reward_router_account.route_incoming_rewards(rent_cost, account_balance)?;
 
     ncn_reward_router_account.route_reward_pool(operator_snapshot_account)?;
 

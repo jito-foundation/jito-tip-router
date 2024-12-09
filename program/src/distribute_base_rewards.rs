@@ -27,6 +27,11 @@ pub fn process_distribute_base_rewards(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    if !base_fee_wallet.is_writable {
+        msg!("Base fee wallet is not writable");
+        return Err(ProgramError::InvalidAccountData);
+    }
+
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
@@ -34,6 +39,7 @@ pub fn process_distribute_base_rewards(
     let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
 
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
+
     BaseRewardRouter::load(program_id, ncn.key, ncn_epoch, base_reward_router, true)?;
 
     let group = BaseFeeGroup::try_from(base_fee_group)?;

@@ -60,7 +60,7 @@ export type DistributeNcnOperatorRewardsInstruction<
         : TAccountNcnConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountOperator extends string
-        ? ReadonlyAccount<TAccountOperator>
+        ? WritableAccount<TAccountOperator>
         : TAccountOperator,
       TAccountNcnRewardRouter extends string
         ? WritableAccount<TAccountNcnRewardRouter>
@@ -172,7 +172,7 @@ export function getDistributeNcnOperatorRewardsInstruction<
     },
     ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    operator: { value: input.operator ?? null, isWritable: false },
+    operator: { value: input.operator ?? null, isWritable: true },
     ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
     restakingProgram: {
       value: input.restakingProgram ?? null,

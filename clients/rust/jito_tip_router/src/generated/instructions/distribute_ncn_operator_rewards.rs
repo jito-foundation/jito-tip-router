@@ -46,7 +46,7 @@ impl DistributeNcnOperatorRewards {
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        accounts.push(solana_program::instruction::AccountMeta::new(
             self.operator,
             false,
         ));
@@ -104,7 +104,7 @@ pub struct DistributeNcnOperatorRewardsInstructionArgs {
 ///   0. `[]` restaking_config
 ///   1. `[]` ncn_config
 ///   2. `[]` ncn
-///   3. `[]` operator
+///   3. `[writable]` operator
 ///   4. `[writable]` ncn_reward_router
 ///   5. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
@@ -316,7 +316,7 @@ impl<'a, 'b> DistributeNcnOperatorRewardsCpi<'a, 'b> {
             *self.ncn.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        accounts.push(solana_program::instruction::AccountMeta::new(
             *self.operator.key,
             false,
         ));
@@ -373,7 +373,7 @@ impl<'a, 'b> DistributeNcnOperatorRewardsCpi<'a, 'b> {
 ///   0. `[]` restaking_config
 ///   1. `[]` ncn_config
 ///   2. `[]` ncn
-///   3. `[]` operator
+///   3. `[writable]` operator
 ///   4. `[writable]` ncn_reward_router
 ///   5. `[]` restaking_program
 #[derive(Clone, Debug)]

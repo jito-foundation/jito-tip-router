@@ -29,7 +29,7 @@ pub fn process_distribute_ncn_operator_rewards(
 
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
-    Operator::load(restaking_program.key, operator, false)?;
+    Operator::load(restaking_program.key, operator, true)?;
 
     let current_slot = Clock::get()?.slot;
     let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;

@@ -65,7 +65,7 @@ export type DistributeNcnVaultRewardsInstruction<
         ? ReadonlyAccount<TAccountOperator>
         : TAccountOperator,
       TAccountVault extends string
-        ? ReadonlyAccount<TAccountVault>
+        ? WritableAccount<TAccountVault>
         : TAccountVault,
       TAccountNcnRewardRouter extends string
         ? WritableAccount<TAccountNcnRewardRouter>
@@ -191,7 +191,7 @@ export function getDistributeNcnVaultRewardsInstruction<
     ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     operator: { value: input.operator ?? null, isWritable: false },
-    vault: { value: input.vault ?? null, isWritable: false },
+    vault: { value: input.vault ?? null, isWritable: true },
     ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
     restakingProgram: {
       value: input.restakingProgram ?? null,

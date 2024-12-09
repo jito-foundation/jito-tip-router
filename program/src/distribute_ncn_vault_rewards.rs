@@ -7,7 +7,7 @@ use jito_tip_router_core::{
 use jito_vault_core::vault::Vault;
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
 /// Can be backfilled for previous epochs
@@ -36,7 +36,7 @@ pub fn process_distribute_ncn_vault_rewards(
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
-    Vault::load(vault_program.key, vault, false)?;
+    Vault::load(vault_program.key, vault, true)?;
 
     let current_slot = Clock::get()?.slot;
     let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
@@ -69,6 +69,18 @@ pub fn process_distribute_ncn_vault_rewards(
         return Err(TipRouterError::NoRewards.into());
     }
 
+    {
+        msg!("rewards {}", rewards);
+        msg!("vault {}", vault.key);
+        msg!("vault {}", vault.lamports.borrow_mut());
+        msg!("router {}", ncn_reward_router.key);
+        msg!("router {}", ncn_reward_router.lamports.borrow_mut());
+        msg!(
+            "rent {}",
+            Rent::get()?.minimum_balance(ncn_reward_router.data_len())
+        );
+    }
+
     // Send rewards
     {
         **vault.lamports.borrow_mut() = vault
@@ -78,7 +90,33 @@ pub fn process_distribute_ncn_vault_rewards(
         **ncn_reward_router.lamports.borrow_mut() = ncn_reward_router
             .lamports()
             .checked_sub(rewards)
-            .ok_or(TipRouterError::ArithmeticOverflow)?;
+            .ok_or(TipRouterError::ArithmeticUnderflowError)?;
+
+        // let ix = transfer(vault.key, ncn_reward_router.key, rewards);
+
+        // solana_program::program::invoke(&ix, &[vault, ncn_reward_router])?;
+
+        // let (_, ncn_reward_router_bump, mut ncn_reward_router_seeds) =
+        //     NcnRewardRouter::find_program_address(
+        //         program_id,
+        //         ncn_fee_group,
+        //         operator.key,
+        //         ncn.key,
+        //         ncn_epoch,
+        //     );
+        // ncn_reward_router_seeds.push(vec![ncn_reward_router_bump]);
+
+        // // Convert Vec<Vec<u8>> to slice of slices
+        // let seeds: &[&[u8]] = &ncn_reward_router_seeds
+        //     .iter()
+        //     .map(|v| v.as_slice())
+        //     .collect::<Vec<&[u8]>>();
+
+        // invoke_signed(
+        //     &system_instruction::transfer(ncn_reward_router.key, vault.key, rewards),
+        //     &[ncn_reward_router.clone(), vault.clone()],
+        //     &[seeds],
+        // )?;
     }
 
     Ok(())

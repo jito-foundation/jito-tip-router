@@ -203,7 +203,6 @@ impl TipRouterClient {
 
         let account =
             BaseRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap();
-
         Ok(*account)
     }
 
@@ -1125,14 +1124,6 @@ impl TipRouterClient {
         ncn: Pubkey,
         slot: u64,
     ) -> TestResult<()> {
-        self.initialize_base_reward_router(ncn, slot).await
-    }
-
-    pub async fn initialize_base_reward_router(
-        &mut self,
-        ncn: Pubkey,
-        slot: u64,
-    ) -> TestResult<()> {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let restaking_config_account = self.get_restaking_config().await?;
@@ -1144,14 +1135,23 @@ impl TipRouterClient {
         let (base_reward_router, _, _) =
             BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
 
-        let payer = self.payer.pubkey();
+        self.initialize_base_reward_router(restaking_config, ncn, ballot_box, base_reward_router)
+            .await
+    }
 
+    pub async fn initialize_base_reward_router(
+        &mut self,
+        restaking_config: Pubkey,
+        ncn: Pubkey,
+        ballot_box: Pubkey,
+        base_reward_router: Pubkey,
+    ) -> TestResult<()> {
         let ix = InitializeBaseRewardRouterBuilder::new()
             .restaking_config(restaking_config)
             .ncn(ncn)
             .ballot_box(ballot_box)
             .base_reward_router(base_reward_router)
-            .payer(payer)
+            .payer(self.payer.pubkey())
             .restaking_program(jito_restaking_program::id())
             .system_program(system_program::id())
             .instruction();
@@ -1167,17 +1167,6 @@ impl TipRouterClient {
     }
 
     pub async fn do_initialize_ncn_reward_router(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        ncn: Pubkey,
-        operator: Pubkey,
-        slot: u64,
-    ) -> TestResult<()> {
-        self.initialize_ncn_reward_router(ncn_fee_group, ncn, operator, slot)
-            .await
-    }
-
-    pub async fn initialize_ncn_reward_router(
         &mut self,
         ncn_fee_group: NcnFeeGroup,
         ncn: Pubkey,
@@ -1200,15 +1189,33 @@ impl TipRouterClient {
             ncn_epoch,
         );
 
-        let payer = self.payer.pubkey();
+        self.initialize_ncn_reward_router(
+            ncn_fee_group,
+            ncn,
+            operator,
+            restaking_config,
+            ballot_box,
+            ncn_reward_router,
+        )
+        .await
+    }
 
+    pub async fn initialize_ncn_reward_router(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        ncn: Pubkey,
+        operator: Pubkey,
+        restaking_config: Pubkey,
+        ballot_box: Pubkey,
+        ncn_reward_router: Pubkey,
+    ) -> TestResult<()> {
         let ix = InitializeNcnRewardRouterBuilder::new()
             .restaking_config(restaking_config)
             .ncn(ncn)
             .operator(operator)
             .ballot_box(ballot_box)
             .ncn_reward_router(ncn_reward_router)
-            .payer(payer)
+            .payer(self.payer.pubkey())
             .restaking_program(jito_restaking_program::id())
             .system_program(system_program::id())
             .ncn_fee_group(ncn_fee_group.group)
@@ -1225,10 +1232,6 @@ impl TipRouterClient {
     }
 
     pub async fn do_route_base_rewards(&mut self, ncn: Pubkey, slot: u64) -> TestResult<()> {
-        self.route_base_rewards(ncn, slot).await
-    }
-
-    pub async fn route_base_rewards(&mut self, ncn: Pubkey, slot: u64) -> TestResult<()> {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let restaking_config_account = self.get_restaking_config().await?;
@@ -1243,6 +1246,24 @@ impl TipRouterClient {
         let (base_reward_router, _, _) =
             BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
 
+        self.route_base_rewards(
+            ncn,
+            restaking_config,
+            epoch_snapshot,
+            ballot_box,
+            base_reward_router,
+        )
+        .await
+    }
+
+    pub async fn route_base_rewards(
+        &mut self,
+        ncn: Pubkey,
+        restaking_config: Pubkey,
+        epoch_snapshot: Pubkey,
+        ballot_box: Pubkey,
+        base_reward_router: Pubkey,
+    ) -> TestResult<()> {
         let ix = RouteBaseRewardsBuilder::new()
             .restaking_config(restaking_config)
             .ncn(ncn)
@@ -1269,17 +1290,6 @@ impl TipRouterClient {
         operator: Pubkey,
         slot: u64,
     ) -> TestResult<()> {
-        self.route_ncn_rewards(ncn_fee_group, ncn, operator, slot)
-            .await
-    }
-
-    pub async fn route_ncn_rewards(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        ncn: Pubkey,
-        operator: Pubkey,
-        slot: u64,
-    ) -> TestResult<()> {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let restaking_config_account = self.get_restaking_config().await?;
@@ -1300,6 +1310,26 @@ impl TipRouterClient {
             ncn_epoch,
         );
 
+        self.route_ncn_rewards(
+            ncn_fee_group,
+            ncn,
+            operator,
+            restaking_config,
+            operator_snapshot,
+            ncn_reward_router,
+        )
+        .await
+    }
+
+    pub async fn route_ncn_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        ncn: Pubkey,
+        operator: Pubkey,
+        restaking_config: Pubkey,
+        operator_snapshot: Pubkey,
+        ncn_reward_router: Pubkey,
+    ) -> TestResult<()> {
         let ix = RouteNcnRewardsBuilder::new()
             .restaking_config(restaking_config)
             .ncn(ncn)
@@ -1326,16 +1356,6 @@ impl TipRouterClient {
         ncn: Pubkey,
         slot: u64,
     ) -> TestResult<()> {
-        self.distribute_base_rewards(base_fee_group, ncn, slot)
-            .await
-    }
-
-    pub async fn distribute_base_rewards(
-        &mut self,
-        base_fee_group: BaseFeeGroup,
-        ncn: Pubkey,
-        slot: u64,
-    ) -> TestResult<()> {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let restaking_config_account = self.get_restaking_config().await?;
@@ -1353,6 +1373,26 @@ impl TipRouterClient {
             .base_fee_wallet(base_fee_group)
             .unwrap();
 
+        self.distribute_base_rewards(
+            base_fee_group,
+            ncn,
+            restaking_config,
+            ncn_config,
+            base_reward_router,
+            base_fee_wallet,
+        )
+        .await
+    }
+
+    pub async fn distribute_base_rewards(
+        &mut self,
+        base_fee_group: BaseFeeGroup,
+        ncn: Pubkey,
+        restaking_config: Pubkey,
+        ncn_config: Pubkey,
+        base_reward_router: Pubkey,
+        base_fee_wallet: Pubkey,
+    ) -> TestResult<()> {
         let ix = DistributeBaseRewardsBuilder::new()
             .restaking_config(restaking_config)
             .ncn_config(ncn_config)
@@ -1380,17 +1420,6 @@ impl TipRouterClient {
         ncn: Pubkey,
         slot: u64,
     ) -> TestResult<()> {
-        self.distribute_base_ncn_reward_route(ncn_fee_group, operator, ncn, slot)
-            .await
-    }
-
-    pub async fn distribute_base_ncn_reward_route(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        operator: Pubkey,
-        ncn: Pubkey,
-        slot: u64,
-    ) -> TestResult<()> {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let restaking_config_account = self.get_restaking_config().await?;
@@ -1410,6 +1439,28 @@ impl TipRouterClient {
             ncn_epoch,
         );
 
+        self.distribute_base_ncn_reward_route(
+            ncn_fee_group,
+            operator,
+            ncn,
+            restaking_config,
+            ncn_config,
+            base_reward_router,
+            ncn_reward_router,
+        )
+        .await
+    }
+
+    pub async fn distribute_base_ncn_reward_route(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        operator: Pubkey,
+        ncn: Pubkey,
+        restaking_config: Pubkey,
+        ncn_config: Pubkey,
+        base_reward_router: Pubkey,
+        ncn_reward_router: Pubkey,
+    ) -> TestResult<()> {
         let ix = DistributeBaseNcnRewardRouteBuilder::new()
             .restaking_config(restaking_config)
             .ncn_config(ncn_config)
@@ -1438,17 +1489,6 @@ impl TipRouterClient {
         ncn: Pubkey,
         slot: u64,
     ) -> TestResult<()> {
-        self.distribute_ncn_operator_rewards(ncn_fee_group, operator, ncn, slot)
-            .await
-    }
-
-    pub async fn distribute_ncn_operator_rewards(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        operator: Pubkey,
-        ncn: Pubkey,
-        slot: u64,
-    ) -> TestResult<()> {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let restaking_config_account = self.get_restaking_config().await?;
@@ -1465,6 +1505,26 @@ impl TipRouterClient {
             ncn_epoch,
         );
 
+        self.distribute_ncn_operator_rewards(
+            ncn_fee_group,
+            operator,
+            ncn,
+            restaking_config,
+            ncn_config,
+            ncn_reward_router,
+        )
+        .await
+    }
+
+    pub async fn distribute_ncn_operator_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        operator: Pubkey,
+        ncn: Pubkey,
+        restaking_config: Pubkey,
+        ncn_config: Pubkey,
+        ncn_reward_router: Pubkey,
+    ) -> TestResult<()> {
         let ix = DistributeNcnOperatorRewardsBuilder::new()
             .restaking_config(restaking_config)
             .ncn_config(ncn_config)
@@ -1493,18 +1553,6 @@ impl TipRouterClient {
         ncn: Pubkey,
         slot: u64,
     ) -> TestResult<()> {
-        self.distribute_ncn_vault_rewards(ncn_fee_group, vault, operator, ncn, slot)
-            .await
-    }
-
-    pub async fn distribute_ncn_vault_rewards(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        vault: Pubkey,
-        operator: Pubkey,
-        ncn: Pubkey,
-        slot: u64,
-    ) -> TestResult<()> {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let restaking_config_account = self.get_restaking_config().await?;
@@ -1521,6 +1569,28 @@ impl TipRouterClient {
             ncn_epoch,
         );
 
+        self.distribute_ncn_vault_rewards(
+            ncn_fee_group,
+            vault,
+            operator,
+            ncn,
+            restaking_config,
+            ncn_config,
+            ncn_reward_router,
+        )
+        .await
+    }
+
+    pub async fn distribute_ncn_vault_rewards(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        vault: Pubkey,
+        operator: Pubkey,
+        ncn: Pubkey,
+        restaking_config: Pubkey,
+        ncn_config: Pubkey,
+        ncn_reward_router: Pubkey,
+    ) -> TestResult<()> {
         let ix = DistributeNcnVaultRewardsBuilder::new()
             .restaking_config(restaking_config)
             .ncn_config(ncn_config)

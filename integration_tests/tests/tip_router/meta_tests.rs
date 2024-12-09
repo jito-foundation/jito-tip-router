@@ -27,6 +27,13 @@ mod tests {
         fixture
             .add_vault_operator_delegation_snapshots_to_test_ncn(&test_ncn)
             .await?;
+        fixture.add_ballot_box_to_test_ncn(&test_ncn).await?;
+        fixture.cast_votes_for_test_ncn(&test_ncn).await?;
+        fixture.add_routers_for_tests_ncn(&test_ncn).await?;
+        fixture
+            .route_in_base_rewards_for_test_ncn(&test_ncn, 100)
+            .await?;
+        fixture.route_in_ncn_rewards_for_test_ncn(&test_ncn).await?;
 
         Ok(())
     }

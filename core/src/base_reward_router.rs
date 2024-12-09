@@ -1,7 +1,11 @@
+use core::mem::size_of;
+
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{
+    account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
+};
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
@@ -116,14 +120,22 @@ impl BaseRewardRouter {
     }
 
     // ----------------- ROUTE REWARDS ---------------------
-    pub fn route_incoming_rewards(&mut self, account_balance: u64) -> Result<(), TipRouterError> {
+    pub fn route_incoming_rewards(
+        &mut self,
+        rent_cost: u64,
+        account_balance: u64,
+    ) -> Result<(), TipRouterError> {
         let total_rewards = self.total_rewards_in_transit()?;
 
         let incoming_rewards = account_balance
             .checked_sub(total_rewards)
             .ok_or(TipRouterError::ArithmeticUnderflowError)?;
 
-        self.route_to_reward_pool(incoming_rewards)?;
+        let rewards_to_route = incoming_rewards
+            .checked_sub(rent_cost)
+            .ok_or(TipRouterError::ArithmeticUnderflowError)?;
+
+        self.route_to_reward_pool(rewards_to_route)?;
 
         Ok(())
     }
@@ -290,6 +302,14 @@ impl BaseRewardRouter {
         Ok(total_rewards)
     }
 
+    pub fn rent_cost(&self, rent: &Rent) -> Result<u64, TipRouterError> {
+        let size = 8_u64
+            .checked_add(size_of::<Self>() as u64)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        Ok(rent.minimum_balance(size as usize))
+    }
+
     pub fn total_rewards(&self) -> u64 {
         self.total_rewards.into()
     }
@@ -364,7 +384,7 @@ impl BaseRewardRouter {
 
     // ------------------ BASE FEE GROUP REWARDS ---------------------
 
-    pub fn base_fee_group_rewards(&self, group: BaseFeeGroup) -> Result<u64, TipRouterError> {
+    pub fn base_fee_group_reward(&self, group: BaseFeeGroup) -> Result<u64, TipRouterError> {
         let group_index = group.group_index()?;
         Ok(self.base_fee_group_rewards[group_index].rewards())
     }
@@ -380,7 +400,7 @@ impl BaseRewardRouter {
 
         let group_index = group.group_index()?;
         self.base_fee_group_rewards[group_index].rewards = PodU64::from(
-            self.base_fee_group_rewards(group)?
+            self.base_fee_group_reward(group)?
                 .checked_add(rewards)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
@@ -396,7 +416,7 @@ impl BaseRewardRouter {
     ) -> Result<u64, TipRouterError> {
         let group_index = group.group_index()?;
 
-        let rewards = self.base_fee_group_rewards(group)?;
+        let rewards = self.base_fee_group_reward(group)?;
         self.base_fee_group_rewards[group_index].rewards = PodU64::from(
             rewards
                 .checked_sub(rewards)
@@ -456,6 +476,16 @@ impl BaseRewardRouter {
     }
 
     // ------------------ NCN REWARD ROUTES ---------------------
+
+    pub fn has_operator_reward_route(&self, operator: &Pubkey) -> bool {
+        for ncn_route_reward in self.ncn_fee_group_reward_routes.iter() {
+            if ncn_route_reward.operator.eq(operator) {
+                return true;
+            }
+        }
+
+        false
+    }
 
     pub fn ncn_fee_group_reward_route(
         &self,
@@ -633,7 +663,7 @@ mod tests {
 
         // Test routing 1000 lamports
         let account_balance = 1000;
-        router.route_incoming_rewards(account_balance).unwrap();
+        router.route_incoming_rewards(0, account_balance).unwrap();
 
         // Verify rewards were routed correctly
         assert_eq!(router.total_rewards(), 1000);
@@ -642,7 +672,7 @@ mod tests {
 
         // Test routing additional 500 lamports
         let account_balance = 1500;
-        router.route_incoming_rewards(account_balance).unwrap();
+        router.route_incoming_rewards(0, account_balance).unwrap();
 
         // Verify total rewards increased by difference
         assert_eq!(router.total_rewards(), 1500);
@@ -650,7 +680,7 @@ mod tests {
         assert_eq!(router.rewards_processed(), 0);
 
         // Test attempting to route with lower balance (should fail)
-        let result = router.route_incoming_rewards(1000);
+        let result = router.route_incoming_rewards(0, 1000);
         assert!(result.is_err());
 
         // Verify state didn't change after failed routing
@@ -678,7 +708,7 @@ mod tests {
         let fees = Fees::new(900, 100, 1).unwrap();
 
         // Route incoming rewards
-        router.route_incoming_rewards(INCOMING_REWARDS).unwrap();
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
 
         assert_eq!(router.total_rewards(), INCOMING_REWARDS);
         assert_eq!(router.reward_pool(), INCOMING_REWARDS);
@@ -687,7 +717,7 @@ mod tests {
 
         assert_eq!(router.total_rewards(), INCOMING_REWARDS);
         assert_eq!(router.reward_pool(), 0);
-        assert_eq!(router.base_fee_group_rewards(base_group).unwrap(), 900);
+        assert_eq!(router.base_fee_group_reward(base_group).unwrap(), 900);
         assert_eq!(router.ncn_fee_group_rewards(ncn_group).unwrap(), 100);
     }
 
@@ -714,7 +744,7 @@ mod tests {
         }
 
         // Route incoming rewards
-        router.route_incoming_rewards(INCOMING_REWARDS).unwrap();
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
 
         assert_eq!(router.total_rewards(), INCOMING_REWARDS);
         assert_eq!(router.reward_pool(), INCOMING_REWARDS);
@@ -725,7 +755,7 @@ mod tests {
         assert_eq!(router.reward_pool(), 0);
 
         for group in BaseFeeGroup::all_groups().iter() {
-            assert_eq!(router.base_fee_group_rewards(*group).unwrap(), 100);
+            assert_eq!(router.base_fee_group_reward(*group).unwrap(), 100);
         }
 
         for group in NcnFeeGroup::all_groups().iter() {
