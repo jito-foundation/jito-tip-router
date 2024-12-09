@@ -11,7 +11,7 @@ use ::{
         merkle_root_generator_workflow,
         stake_meta_generator_workflow,
         snapshot::SnapshotCreator,
-        StakeMetaCollection, // Add this import
+        StakeMetaCollection,
     },
     tokio::time::Instant,
     ellipsis_client::EllipsisClient,
@@ -70,7 +70,6 @@ async fn wait_for_next_epoch(rpc_client: &EllipsisClient) -> Result<()> {
         }
     }
 }
-
 
 async fn get_previous_epoch_last_slot(rpc_client: &EllipsisClient) -> Result<u64> {
     let epoch_info = rpc_client.get_epoch_info()?;

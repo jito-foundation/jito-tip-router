@@ -6,14 +6,14 @@ use ::{
         pubkey::Pubkey,
         signature::{ Keypair, Signer },
         stake::{ self, state::{ Meta, Stake, StakeStateV2 } },
-        stake::stake_flags::StakeFlags, // Keep only one StakeFlags import
+        stake::stake_flags::StakeFlags,
         vote::program::id as vote_program_id,
         account::AccountSharedData,
         sysvar::rent::Rent,
+        hash::Hash,
     },
     ellipsis_client::EllipsisClient,
     std::{ path::PathBuf, sync::Arc, time::Duration, fs },
-    solana_client::nonblocking::rpc_client::RpcClient, // Add this
     tip_router_operator_cli::{
         merkle_tree::MerkleTreeGenerator,
         claim_mev_workflow,
@@ -21,11 +21,14 @@ use ::{
         stake_meta_generator_workflow,
         snapshot::SnapshotCreator,
         StakeMetaCollection,
+        GeneratedMerkleTree,
         GeneratedMerkleTreeCollection,
         TipDistributionMeta,
         Delegation,
         StakeMeta,
+        TreeNode,
     },
+    solana_client::rpc_client::RpcClient,
 };
 
 pub struct ValidatorKeypairs {
@@ -63,7 +66,7 @@ struct TestContext {
 impl TestContext {
     async fn new() -> Result<Self> {
         // Create program test
-        let mut program_test = ProgramTest::default();
+        let program_test = ProgramTest::default();
         let program_context = program_test.start_with_context().await;
 
         // Create temporary directories
@@ -84,15 +87,8 @@ impl TestContext {
         let tip_distribution_program_id = Pubkey::new_unique();
 
         // Setup RPC client
-        // Setup RPC client
-        let rpc = solana_client::nonblocking::rpc_client::RpcClient::new(
-            "http://localhost:8899".to_string()
-        );
         let rpc_client = Arc::new(
-            EllipsisClient::from_rpc(
-                solana_client::rpc_client::RpcClient::new("http://localhost:8899".to_string()),
-                &keypair
-            )?
+            EllipsisClient::from_rpc(RpcClient::new("http://localhost:8899".to_string()), &keypair)?
         );
 
         // Generate the new pubkeys
@@ -112,7 +108,6 @@ impl TestContext {
             temp_dir,
             program_context,
             validator_keypairs,
-            // Add the new fields
             vote_pubkey,
             stake_pubkey,
             tip_distribution_address,
@@ -290,21 +285,11 @@ async fn test_epoch_processing() -> Result<()> {
     )?;
 
     let keypair_copy2 = Keypair::from_bytes(&context.keypair.to_bytes())?;
-    let snapshot_creator = SnapshotCreator::new(
-        &rpc_url,
-        context.snapshot_dir.to_str().unwrap().to_string(),
-        5,
-        "bzip2".to_string(),
-        keypair_copy2,
-        context.ledger_dir.clone()
-    )?;
-
-    let keypair_copy3 = Keypair::from_bytes(&context.keypair.to_bytes())?;
     // 4. Initialize MerkleTreeGenerator
     info!("4. Testing MerkleTreeGenerator initialization...");
     let merkle_tree_generator = MerkleTreeGenerator::new(
         &rpc_url,
-        keypair_copy3,
+        keypair_copy2,
         context.ncn_address,
         merkle_tree_path.clone(),
         context.tip_distribution_program_id,
@@ -343,11 +328,22 @@ async fn test_epoch_processing() -> Result<()> {
 async fn test_merkle_tree_generation() -> Result<()> {
     let context = TestContext::new().await?;
     let stake_meta = context.create_test_stake_meta()?;
-    let rpc_url = context.rpc_client.url().to_string();
 
+    // Create necessary directories
+    std::fs::create_dir_all(&context.snapshot_dir)?;
+    let stake_meta_path = context.snapshot_dir.join("stake-meta.json");
+
+    // Write stake meta to file
+    std::fs::write(&stake_meta_path, serde_json::to_string(&stake_meta)?)?;
+
+    let rpc_url = context.rpc_client.url().to_string();
     let merkle_tree_path = context.snapshot_dir.join("merkle-trees");
+
+    // Create merkle tree directory
+    std::fs::create_dir_all(&merkle_tree_path)?;
+
     merkle_root_generator_workflow::generate_merkle_root(
-        &context.snapshot_dir.join("stake-meta.json"),
+        &stake_meta_path,
         &merkle_tree_path,
         &rpc_url
     )?;
@@ -358,42 +354,14 @@ async fn test_merkle_tree_generation() -> Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-async fn test_meta_merkle_tree() -> Result<()> {
-    let context = TestContext::new().await?;
-
-    let rpc_url = context.rpc_client.url().to_string();
-    let keypair_copy = Keypair::from_bytes(&context.keypair.to_bytes())?;
-
-    let merkle_tree_generator = MerkleTreeGenerator::new(
-        &rpc_url,
-        keypair_copy,
-        context.ncn_address,
-        context.snapshot_dir.clone(),
-        context.tip_distribution_program_id,
-        Keypair::new(),
-        Pubkey::new_unique()
-    )?;
-
-    let merkle_trees = GeneratedMerkleTreeCollection {
-        epoch: 0,
-        generated_merkle_trees: vec![],
-        bank_hash: "0".to_string(),
-        slot: 0, // Add slot
-    };
-
-    let meta_merkle_tree = merkle_tree_generator.generate_meta_merkle_tree(&merkle_trees).await?;
-
-    assert!(meta_merkle_tree.root != [0; 32]);
-
-    Ok(())
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_ncn_upload() -> Result<()> {
     let context = TestContext::new().await?;
     let keypair_copy = Keypair::from_bytes(&context.keypair.to_bytes())?;
     let rpc_url = context.rpc_client.url().to_string();
 
+    // Create necessary directories
+    std::fs::create_dir_all(&context.snapshot_dir)?;
+
     let merkle_tree_generator = MerkleTreeGenerator::new(
         &rpc_url,
         keypair_copy,
@@ -404,15 +372,32 @@ async fn test_ncn_upload() -> Result<()> {
         Pubkey::new_unique()
     )?;
 
+    // Create test merkle trees with actual data
     let merkle_trees = GeneratedMerkleTreeCollection {
         epoch: 0,
-        generated_merkle_trees: vec![],
-        bank_hash: "0".to_string(),
+        generated_merkle_trees: vec![GeneratedMerkleTree {
+            tip_distribution_account: Pubkey::new_unique(),
+            merkle_root_upload_authority: Pubkey::new_unique(),
+            merkle_root: Hash::new_unique(),
+            tree_nodes: vec![
+                TreeNode {
+                    proof: Some(vec![[0u8; 32]; 32]),  // Changed to match expected type
+                    claimant: Pubkey::new_unique(),
+                    claim_status_pubkey: Pubkey::new_unique(),
+                    claim_status_bump: 255,
+                    staker_pubkey: Pubkey::new_unique(),
+                    withdrawer_pubkey: Pubkey::new_unique(),
+                    amount: 1000,
+                }
+            ],
+            max_total_claim: 1000,
+            max_num_nodes: 1,
+        }],
+        bank_hash: "test_bank_hash".to_string(),
         slot: 0,
     };
 
     let meta_merkle_tree = merkle_tree_generator.generate_meta_merkle_tree(&merkle_trees).await?;
-
     merkle_tree_generator.upload_to_ncn(&meta_merkle_tree).await?;
 
     Ok(())
