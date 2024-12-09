@@ -76,16 +76,15 @@ async fn get_previous_epoch_last_slot(rpc_client: &EllipsisClient) -> Result<u64
     let current_slot = epoch_info.absolute_slot;
     let slot_index = epoch_info.slot_index;
 
-    let epoch_start_slot = current_slot - slot_index;
-    let previous_epoch_final_slot = epoch_start_slot - 1;
-
-    // Find the last slot with a block
-    let mut slot = previous_epoch_final_slot;
-    while rpc_client.get_block(slot).is_err() {
-        slot -= 1;
+    // Handle case where we're in the first epoch
+    if current_slot < slot_index {
+        return Ok(0);
     }
 
-    Ok(slot)
+    let epoch_start_slot = current_slot - slot_index;
+    let previous_epoch_final_slot = epoch_start_slot.saturating_sub(1);
+
+    Ok(previous_epoch_final_slot)
 }
 
 async fn process_epoch(

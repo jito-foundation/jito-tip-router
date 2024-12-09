@@ -165,10 +165,15 @@ impl TestContext {
         let epoch_info = self.rpc_client.get_epoch_info()?;
         let current_slot = epoch_info.absolute_slot;
         let slot_index = epoch_info.slot_index;
-
+    
+        // Handle case where we're in the first epoch
+        if current_slot < slot_index {
+            return Ok(0);
+        }
+    
         let epoch_start_slot = current_slot - slot_index;
-        let previous_epoch_final_slot = epoch_start_slot - 1;
-
+        let previous_epoch_final_slot = epoch_start_slot.saturating_sub(1);
+    
         Ok(previous_epoch_final_slot)
     }
 }
@@ -326,10 +331,18 @@ async fn test_epoch_processing() -> Result<()> {
 // Additional test cases remain similar but use EllipsisClient instead of RpcClient
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_merkle_tree_generation() -> Result<()> {
-    let context = TestContext::new().await?;
+    let mut context = TestContext::new().await?;
+    
+    // Set up validator accounts first
+    setup_validator_accounts(
+        &mut context.program_context,
+        &context.validator_keypairs,
+        &context.tip_distribution_program_id
+    ).await?;
+
     let stake_meta = context.create_test_stake_meta()?;
 
-    // Create necessary directories
+    // Rest of the test remains the same...
     std::fs::create_dir_all(&context.snapshot_dir)?;
     let stake_meta_path = context.snapshot_dir.join("stake-meta.json");
 
