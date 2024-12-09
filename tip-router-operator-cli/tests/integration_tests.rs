@@ -18,6 +18,8 @@ use ::{
         },
         vote::state::VoteInit,
         sysvar::clock::Clock,
+        account::Account as SolanaAccount, 
+        genesis_config::GenesisConfig,     
     },
     ellipsis_client::EllipsisClient,
     std::{ path::PathBuf, sync::Arc, time::Duration, fs },
@@ -74,9 +76,50 @@ struct TestContext {
 
 impl TestContext {
     async fn new() -> Result<Self> {
+        // Create validator keypairs first
+        let validator_keypairs = vec![ValidatorKeypairs::new(), ValidatorKeypairs::new()];
+        
         // Create program test
-        let program_test = ProgramTest::default();
-        let program_context = program_test.start_with_context().await;
+        let mut program_test = ProgramTest::default();
+        
+        // Add accounts directly to program test
+        for keypairs in &validator_keypairs {
+            // Add vote account
+            program_test.add_account(
+                keypairs.vote_keypair.pubkey(),
+                SolanaAccount {
+                    lamports: 1_000_000,
+                    owner: vote_program_id(),
+                    executable: false,
+                    rent_epoch: 0,
+                    data: vec![],  // Will be set up properly in setup_validator_accounts
+                }
+            );
+
+            // Add stake account
+            program_test.add_account(
+                keypairs.stake_keypair.pubkey(),
+                SolanaAccount {
+                    lamports: 1_000_000_000,  // 1 SOL
+                    owner: stake::program::id(),
+                    executable: false,
+                    rent_epoch: 0,
+                    data: vec![],  // Will be set up properly in setup_validator_accounts
+                }
+            );
+        }
+        
+        // Create a new context
+        let mut program_context = program_test.start_with_context().await;
+
+        // Rest of the function remains the same...
+        let tip_distribution_program_id = Pubkey::new_unique();
+        
+        setup_validator_accounts(
+            &mut program_context,
+            &validator_keypairs,
+            &tip_distribution_program_id
+        ).await?;
 
         // Create temporary directories
         let temp_dir = tempfile::tempdir()?;
@@ -90,19 +133,14 @@ impl TestContext {
         let keypair_path = temp_dir.path().join("keypair.json");
         fs::write(&keypair_path, keypair.to_bytes())?;
 
-        // Create test validator keypairs
-        let validator_keypairs = vec![ValidatorKeypairs::new(), ValidatorKeypairs::new()];
-
-        let tip_distribution_program_id = Pubkey::new_unique();
-
         // Setup RPC client
         let rpc_client = Arc::new(
             EllipsisClient::from_rpc(RpcClient::new("http://localhost:8899".to_string()), &keypair)?
         );
 
         // Generate the new pubkeys
-        let vote_pubkey = Pubkey::new_unique();
-        let stake_pubkey = Pubkey::new_unique();
+        let vote_pubkey = validator_keypairs[0].vote_keypair.pubkey();
+        let stake_pubkey = validator_keypairs[0].stake_keypair.pubkey();
         let tip_distribution_address = Pubkey::new_unique();
 
         Ok(Self {
@@ -355,14 +393,6 @@ async fn test_epoch_processing() -> Result<()> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_merkle_tree_generation() -> Result<()> {
     let mut context = TestContext::new().await?;
-
-    // Set up validator accounts first
-    setup_validator_accounts(
-        &mut context.program_context,
-        &context.validator_keypairs,
-        &context.tip_distribution_program_id
-    ).await?;
-
     let stake_meta = context.create_test_stake_meta()?;
 
     // Rest of the test remains the same...
