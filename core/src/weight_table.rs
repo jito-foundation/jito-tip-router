@@ -50,6 +50,10 @@ impl WeightTable {
         }
     }
 
+    pub fn initialize(&mut self, ncn: Pubkey, ncn_epoch: u64, slot_created: u64, bump: u8) {
+        *self = WeightTable::new(ncn, ncn_epoch, slot_created, bump);
+    }
+
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
