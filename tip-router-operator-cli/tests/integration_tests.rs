@@ -7,10 +7,17 @@ use ::{
         signature::{ Keypair, Signer },
         stake::{ self, state::{ Meta, Stake, StakeStateV2 } },
         stake::stake_flags::StakeFlags,
-        vote::program::id as vote_program_id,
         account::AccountSharedData,
         sysvar::rent::Rent,
         hash::Hash,
+        account::WritableAccount,
+        vote::{
+            state::VoteState,
+            authorized_voters::AuthorizedVoters,
+            program::id as vote_program_id,
+        },
+        vote::state::VoteInit,
+        sysvar::clock::Clock,
     },
     ellipsis_client::EllipsisClient,
     std::{ path::PathBuf, sync::Arc, time::Duration, fs },
@@ -29,6 +36,8 @@ use ::{
         TreeNode,
     },
     solana_client::rpc_client::RpcClient,
+    serde::Serialize,
+    solana_sdk::vote::state::VoteStateVersions
 };
 
 pub struct ValidatorKeypairs {
@@ -165,15 +174,15 @@ impl TestContext {
         let epoch_info = self.rpc_client.get_epoch_info()?;
         let current_slot = epoch_info.absolute_slot;
         let slot_index = epoch_info.slot_index;
-    
+
         // Handle case where we're in the first epoch
         if current_slot < slot_index {
             return Ok(0);
         }
-    
+
         let epoch_start_slot = current_slot - slot_index;
         let previous_epoch_final_slot = epoch_start_slot.saturating_sub(1);
-    
+
         Ok(previous_epoch_final_slot)
     }
 }
@@ -188,22 +197,32 @@ async fn setup_validator_accounts(
         let stake_pubkey = keypairs.stake_keypair.pubkey();
 
         // Create vote account with proper vote state
-        let mut vote_state = VoteState::default();
-        vote_state.authorized_voters = AuthorizedVoters::new(0, vote_pubkey);
-        vote_state.node_pubkey = keypairs.node_keypair.pubkey();
+        let mut vote_state = VoteState::new(
+            &(VoteInit {
+                node_pubkey: keypairs.vote_keypair.pubkey(),
+                authorized_voter: vote_pubkey,
+                authorized_withdrawer: vote_pubkey,
+                commission: 0,
+            }),
+            &Clock::default()
+        );
 
         let mut vote_account = AccountSharedData::new(
             1_000_000,
             VoteState::size_of(),
-            &vote::program::id()
+            &vote_program_id()
         );
-        vote_state.serialize(&mut vote_account.data_as_mut_slice())?;
+        
+        let versioned_state = VoteStateVersions::new_current(vote_state);
+        vote_account.set_data(bincode::serialize(&versioned_state)?);
         context.set_account(&vote_pubkey, &vote_account);
 
         // Create stake account with active delegation
         let stake_lamports = 1_000_000_000;
         let meta = Meta {
-            rent_exempt_reserve: Rent::default().minimum_balance(std::mem::size_of::<StakeStateV2>()),
+            rent_exempt_reserve: Rent::default().minimum_balance(
+                std::mem::size_of::<StakeStateV2>()
+            ),
             authorized: stake::state::Authorized::auto(&stake_pubkey),
             lockup: stake::state::Lockup::default(),
         };
@@ -214,6 +233,7 @@ async fn setup_validator_accounts(
                 stake: stake_lamports,
                 activation_epoch: 0,
                 deactivation_epoch: u64::MAX,
+                // Use a fixed value since this is just for testing
                 warmup_cooldown_rate: 0.25,
             },
             credits_observed: 0,
@@ -335,7 +355,7 @@ async fn test_epoch_processing() -> Result<()> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_merkle_tree_generation() -> Result<()> {
     let mut context = TestContext::new().await?;
-    
+
     // Set up validator accounts first
     setup_validator_accounts(
         &mut context.program_context,
@@ -395,17 +415,15 @@ async fn test_ncn_upload() -> Result<()> {
             tip_distribution_account: Pubkey::new_unique(),
             merkle_root_upload_authority: Pubkey::new_unique(),
             merkle_root: Hash::new_unique(),
-            tree_nodes: vec![
-                TreeNode {
-                    proof: Some(vec![[0u8; 32]; 32]),  // Changed to match expected type
-                    claimant: Pubkey::new_unique(),
-                    claim_status_pubkey: Pubkey::new_unique(),
-                    claim_status_bump: 255,
-                    staker_pubkey: Pubkey::new_unique(),
-                    withdrawer_pubkey: Pubkey::new_unique(),
-                    amount: 1000,
-                }
-            ],
+            tree_nodes: vec![TreeNode {
+                proof: Some(vec![[0u8; 32]; 32]), // Changed to match expected type
+                claimant: Pubkey::new_unique(),
+                claim_status_pubkey: Pubkey::new_unique(),
+                claim_status_bump: 255,
+                staker_pubkey: Pubkey::new_unique(),
+                withdrawer_pubkey: Pubkey::new_unique(),
+                amount: 1000,
+            }],
             max_total_claim: 1000,
             max_num_nodes: 1,
         }],
