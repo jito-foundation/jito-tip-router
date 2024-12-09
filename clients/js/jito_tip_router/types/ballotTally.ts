@@ -8,57 +8,56 @@
 
 import {
   combineCodec,
-  fixDecoderSize,
-  fixEncoderSize,
-  getBytesDecoder,
-  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
-  getU128Decoder,
-  getU128Encoder,
+  getU16Decoder,
+  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
   type Codec,
   type Decoder,
   type Encoder,
-  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
   getBallotDecoder,
   getBallotEncoder,
+  getStakeWeightsDecoder,
+  getStakeWeightsEncoder,
   type Ballot,
   type BallotArgs,
+  type StakeWeights,
+  type StakeWeightsArgs,
 } from '.';
 
 export type BallotTally = {
+  index: number;
   ballot: Ballot;
-  stakeWeight: bigint;
+  stakeWeights: StakeWeights;
   tally: bigint;
-  reserved: ReadonlyUint8Array;
 };
 
 export type BallotTallyArgs = {
+  index: number;
   ballot: BallotArgs;
-  stakeWeight: number | bigint;
+  stakeWeights: StakeWeightsArgs;
   tally: number | bigint;
-  reserved: ReadonlyUint8Array;
 };
 
 export function getBallotTallyEncoder(): Encoder<BallotTallyArgs> {
   return getStructEncoder([
+    ['index', getU16Encoder()],
     ['ballot', getBallotEncoder()],
-    ['stakeWeight', getU128Encoder()],
+    ['stakeWeights', getStakeWeightsEncoder()],
     ['tally', getU64Encoder()],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 64)],
   ]);
 }
 
 export function getBallotTallyDecoder(): Decoder<BallotTally> {
   return getStructDecoder([
+    ['index', getU16Decoder()],
     ['ballot', getBallotDecoder()],
-    ['stakeWeight', getU128Decoder()],
+    ['stakeWeights', getStakeWeightsDecoder()],
     ['tally', getU64Decoder()],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 64)],
   ]);
 }
 

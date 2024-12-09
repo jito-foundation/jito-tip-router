@@ -86,7 +86,7 @@ pub fn process_initialize_epoch_snapshot(
     let ncn_fees: fees::Fees = {
         let ncn_config_data = ncn_config.data.borrow();
         let ncn_config_account = NcnConfig::try_from_slice_unchecked(&ncn_config_data)?;
-        ncn_config_account.fees
+        *ncn_config_account.fee_config.current_fees(ncn_epoch)
     };
 
     let operator_count: u64 = {

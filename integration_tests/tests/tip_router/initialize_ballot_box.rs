@@ -32,7 +32,7 @@ mod tests {
             ballot_box.slot_consensus_reached(),
             DEFAULT_CONSENSUS_REACHED_SLOT
         );
-        assert!(ballot_box.get_winning_ballot().is_err(),);
+        assert!(ballot_box.get_winning_ballot_tally().is_err(),);
 
         Ok(())
     }

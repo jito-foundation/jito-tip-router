@@ -37,7 +37,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const SET_TIE_BREAKER_DISCRIMINATOR = 13;
+export const SET_TIE_BREAKER_DISCRIMINATOR = 22;
 
 export function getSetTieBreakerDiscriminatorBytes() {
   return getU8Encoder().encode(SET_TIE_BREAKER_DISCRIMINATOR);

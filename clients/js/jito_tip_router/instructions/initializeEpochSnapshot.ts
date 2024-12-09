@@ -36,7 +36,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_EPOCH_SNAPSHOT_DISCRIMINATOR = 5;
+export const INITIALIZE_EPOCH_SNAPSHOT_DISCRIMINATOR = 6;
 
 export function getInitializeEpochSnapshotDiscriminatorBytes() {
   return getU8Encoder().encode(INITIALIZE_EPOCH_SNAPSHOT_DISCRIMINATOR);
