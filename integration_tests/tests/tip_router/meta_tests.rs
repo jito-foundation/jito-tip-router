@@ -31,7 +31,7 @@ mod tests {
         fixture.cast_votes_for_test_ncn(&test_ncn).await?;
         fixture.add_routers_for_tests_ncn(&test_ncn).await?;
         fixture
-            .route_in_base_rewards_for_test_ncn(&test_ncn, 100)
+            .route_in_base_rewards_for_test_ncn(&test_ncn, 10_000)
             .await?;
         fixture.route_in_ncn_rewards_for_test_ncn(&test_ncn).await?;
 
@@ -61,6 +61,16 @@ mod tests {
 
         assert!(epoch_snapshot.finalized());
 
+        fixture.vote_test_ncn(&test_ncn).await?;
+
+        let ballot_box = tip_router_client
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .await?;
+
+        assert!(ballot_box.has_winning_ballot());
+
+        fixture.reward_test_ncn(&test_ncn, 10_000).await?;
+
         Ok(())
     }
 
@@ -86,6 +96,16 @@ mod tests {
             .await?;
 
         assert!(epoch_snapshot.finalized());
+
+        fixture.vote_test_ncn(&test_ncn).await?;
+
+        let ballot_box = tip_router_client
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .await?;
+
+        assert!(ballot_box.has_winning_ballot());
+
+        fixture.reward_test_ncn(&test_ncn, 10_000).await?;
 
         Ok(())
     }
@@ -113,6 +133,16 @@ mod tests {
 
         assert!(epoch_snapshot.finalized());
 
+        fixture.vote_test_ncn(&test_ncn).await?;
+
+        let ballot_box = tip_router_client
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .await?;
+
+        assert!(ballot_box.has_winning_ballot());
+
+        fixture.reward_test_ncn(&test_ncn, 10_000).await?;
+
         Ok(())
     }
 
@@ -138,6 +168,16 @@ mod tests {
             .await?;
 
         assert!(epoch_snapshot.finalized());
+
+        fixture.vote_test_ncn(&test_ncn).await?;
+
+        let ballot_box = tip_router_client
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .await?;
+
+        assert!(ballot_box.has_winning_ballot());
+
+        fixture.reward_test_ncn(&test_ncn, 10_000).await?;
 
         Ok(())
     }

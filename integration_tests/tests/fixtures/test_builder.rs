@@ -8,13 +8,13 @@ use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup, base_reward_router::BaseRewardRouter, ncn_fee_group::NcnFeeGroup,
 };
-use jito_vault_core::{vault, vault_ncn_ticket::VaultNcnTicket};
+use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
     clock::Clock, native_token::sol_to_lamports, pubkey::Pubkey, system_instruction::transfer,
 };
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
-    account::Account, commitment_config::CommitmentLevel, epoch_schedule::EpochSchedule, msg,
+    account::Account, commitment_config::CommitmentLevel, epoch_schedule::EpochSchedule,
     native_token::lamports_to_sol, signature::Signer, transaction::Transaction,
 };
 
@@ -698,11 +698,6 @@ impl TestBuilder {
                         let vault_rewards = vault_reward_route.rewards();
 
                         if vault_rewards > 0 {
-                            // println!(
-                            //     "\n\n\n\n\n\n\n\n\n\n\n\n\nPayer: {:?}",
-                            //     self.context.payer.pubkey()
-                            // );
-
                             tip_router_client
                                 .do_distribute_ncn_vault_rewards(*group, vault, operator, ncn, slot)
                                 .await?;
@@ -711,6 +706,16 @@ impl TestBuilder {
                 }
             }
         }
+
+        Ok(())
+    }
+
+    // Intermission 4 - route rewards
+    pub async fn reward_test_ncn(&mut self, test_ncn: &TestNcn, rewards: u64) -> TestResult<()> {
+        self.add_routers_for_tests_ncn(test_ncn).await?;
+        self.route_in_base_rewards_for_test_ncn(test_ncn, rewards)
+            .await?;
+        self.route_in_ncn_rewards_for_test_ncn(test_ncn).await?;
 
         Ok(())
     }
