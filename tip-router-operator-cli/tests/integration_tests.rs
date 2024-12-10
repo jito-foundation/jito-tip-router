@@ -72,7 +72,6 @@ struct TestContext {
     tip_payment_program_id: Pubkey,
     ncn_address: Pubkey,
     temp_dir: tempfile::TempDir,
-    program_context: ProgramTestContext,
     validator_keypairs: Vec<ValidatorKeypairs>,
     // Add these new fields
     vote_pubkey: Pubkey,
@@ -117,10 +116,6 @@ impl TestContext {
             });
         }
 
-        // Create program test (but don't add accounts since they exist on the test validator)
-        let mut program_test = ProgramTest::default();
-        let mut program_context = program_test.start_with_context().await;
-
         let tip_distribution_program_id = Pubkey::new_unique();
 
         // Create temporary directories
@@ -155,7 +150,6 @@ impl TestContext {
             tip_payment_program_id: Pubkey::new_unique(),
             ncn_address: Pubkey::new_unique(),
             temp_dir,
-            program_context,
             validator_keypairs,
             vote_pubkey,
             stake_pubkey,
@@ -239,13 +233,15 @@ async fn test_epoch_processing() -> Result<()> {
     // Define merkle_tree_path here since we'll need it later
     let merkle_tree_path = context.snapshot_dir.join("merkle-trees");
 
+    let local_ledger_dir = PathBuf::from("test-ledger");
+
     let snapshot_creator = SnapshotCreator::new(
         &rpc_url,
         context.snapshot_dir.to_str().unwrap().to_string(),
         5,
         "bzip2".to_string(),
         keypair_copy,
-        context.ledger_dir.clone()
+        local_ledger_dir.clone()  // Add .clone() here
     )?;
 
     let slot = context.get_previous_epoch_last_slot().await?;
@@ -255,7 +251,7 @@ async fn test_epoch_processing() -> Result<()> {
     let stake_meta_path = context.snapshot_dir.join("stake-meta.json");
 
     stake_meta_generator_workflow::generate_stake_meta(
-        &context.ledger_dir,
+        &local_ledger_dir,
         &slot,
         &context.tip_distribution_program_id,
         stake_meta_path.to_str().unwrap(),
@@ -315,7 +311,7 @@ async fn test_epoch_processing() -> Result<()> {
 // Additional test cases remain similar but use EllipsisClient instead of RpcClient
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_merkle_tree_generation() -> Result<()> {
-    let mut context = TestContext::new().await?;
+    let context = TestContext::new().await?;
     let stake_meta = context.create_test_stake_meta()?;
 
     // Rest of the test remains the same...
@@ -422,10 +418,10 @@ async fn test_claim_mev_tips() -> Result<()> {
     Ok(())
 }
 
-async fn advance_test_epoch(context: &mut ProgramTestContext, slots: u64) -> Result<()> {
-    for _ in 0..slots {
-        let root_slot = context.banks_client.get_root_slot().await?;
-        context.warp_to_slot(root_slot + 1)?;
-    }
-    Ok(())
-}
+// async fn advance_test_epoch(context: &mut ProgramTestContext, slots: u64) -> Result<()> {
+//     for _ in 0..slots {
+//         let root_slot = context.banks_client.get_root_slot().await?;
+//         context.warp_to_slot(root_slot + 1)?;
+//     }
+//     Ok(())
+// }
