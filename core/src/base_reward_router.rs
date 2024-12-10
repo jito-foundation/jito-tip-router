@@ -9,8 +9,8 @@ use solana_program::{
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    ballot_box::BallotBox, base_fee_group::BaseFeeGroup, discriminators::Discriminators,
-    error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup,
+    ballot_box::BallotBox, base_fee_group::BaseFeeGroup, constants::MAX_OPERATORS,
+    discriminators::Discriminators, error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -36,8 +36,7 @@ pub struct BaseRewardRouter {
     base_fee_group_rewards: [BaseRewardRouterRewards; 8],
     ncn_fee_group_rewards: [BaseRewardRouterRewards; 8],
 
-    //TODO change to 256
-    ncn_fee_group_reward_routes: [NcnRewardRoute; 32],
+    ncn_fee_group_reward_routes: [NcnRewardRoute; 256],
 }
 
 impl Discriminator for BaseRewardRouter {
@@ -59,7 +58,7 @@ impl BaseRewardRouter {
                 NcnFeeGroup::FEE_GROUP_COUNT],
             ncn_fee_group_rewards: [BaseRewardRouterRewards::default();
                 NcnFeeGroup::FEE_GROUP_COUNT],
-            ncn_fee_group_reward_routes: [NcnRewardRoute::default(); 32],
+            ncn_fee_group_reward_routes: [NcnRewardRoute::default(); MAX_OPERATORS],
         }
     }
 
@@ -659,6 +658,24 @@ mod tests {
     use solana_program::pubkey::Pubkey;
 
     use super::*;
+    #[test]
+    fn test_len() {
+        use std::mem::size_of;
+
+        let expected_total = size_of::<Pubkey>() // ncn
+            + size_of::<PodU64>() // ncn_epoch
+            + 1 // bump
+            + size_of::<PodU64>() // slot_created
+            + size_of::<PodU64>() // total_rewards
+            + size_of::<PodU64>() // reward_pool
+            + size_of::<PodU64>() // rewards_processed
+            + 128 // reserved
+            + size_of::<BaseRewardRouterRewards>() * NcnFeeGroup::FEE_GROUP_COUNT // base_fee_group_rewards
+            + size_of::<BaseRewardRouterRewards>() * NcnFeeGroup::FEE_GROUP_COUNT // ncn_fee_group_rewards
+            + size_of::<NcnRewardRoute>() * MAX_OPERATORS; // ncn_fee_group_reward_routes
+
+        assert_eq!(size_of::<BaseRewardRouter>(), expected_total);
+    }
 
     #[test]
     fn test_route_incoming_rewards() {

@@ -214,51 +214,7 @@ pub struct OperatorSnapshot {
     stake_weights: StakeWeights,
     reserved: [u8; 256],
 
-    //TODO change to 64
-    vault_operator_stake_weight: [VaultOperatorStakeWeight; 32],
-}
-
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
-#[repr(C)]
-pub struct VaultOperatorStakeWeight {
-    vault: Pubkey,
-    stake_weight: PodU128,
-    vault_index: PodU64,
-    reserved: [u8; 32],
-}
-
-impl Default for VaultOperatorStakeWeight {
-    fn default() -> Self {
-        Self {
-            vault: Pubkey::default(),
-            vault_index: PodU64::from(u64::MAX),
-            stake_weight: PodU128::from(0),
-            reserved: [0; 32],
-        }
-    }
-}
-
-impl VaultOperatorStakeWeight {
-    pub fn new(vault: Pubkey, stake_weight: u128, vault_index: u64) -> Self {
-        Self {
-            vault,
-            vault_index: PodU64::from(vault_index),
-            stake_weight: PodU128::from(stake_weight),
-            reserved: [0; 32],
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.vault_index() == u64::MAX
-    }
-
-    pub fn vault_index(&self) -> u64 {
-        self.vault_index.into()
-    }
-
-    pub fn stake_weight(&self) -> u128 {
-        self.stake_weight.into()
-    }
+    vault_operator_stake_weight: [VaultOperatorStakeWeight; 64],
 }
 
 impl Discriminator for OperatorSnapshot {
@@ -601,7 +557,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_len() {
+    fn test_operator_snapshot_size() {
         use std::mem::size_of;
 
         let expected_total = size_of::<Pubkey>() // operator
@@ -617,10 +573,12 @@ mod tests {
             + size_of::<PodU64>() // vault_operator_delegation_count
             + size_of::<PodU64>() // vault_operator_delegations_registered
             + size_of::<PodU64>() // valid_operator_vault_delegations
-            + size_of::<PodU128>() // stake_weight
+            + size_of::<StakeWeights>() // stake_weight
             + 256 // reserved
             + size_of::<VaultOperatorStakeWeight>() * MAX_VAULT_OPERATOR_DELEGATIONS; // vault_operator_stake_weight
 
         assert_eq!(size_of::<OperatorSnapshot>(), expected_total);
+        println!("expected_total: {}", expected_total);
+        assert!(false);
     }
 }

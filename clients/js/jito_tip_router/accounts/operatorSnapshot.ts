@@ -109,7 +109,7 @@ export function getOperatorSnapshotEncoder(): Encoder<OperatorSnapshotArgs> {
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 256 })],
     [
       'vaultOperatorStakeWeight',
-      getArrayEncoder(getVaultOperatorStakeWeightEncoder(), { size: 32 }),
+      getArrayEncoder(getVaultOperatorStakeWeightEncoder(), { size: 64 }),
     ],
   ]);
 }
@@ -134,7 +134,7 @@ export function getOperatorSnapshotDecoder(): Decoder<OperatorSnapshot> {
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 256 })],
     [
       'vaultOperatorStakeWeight',
-      getArrayDecoder(getVaultOperatorStakeWeightDecoder(), { size: 32 }),
+      getArrayDecoder(getVaultOperatorStakeWeightDecoder(), { size: 64 }),
     ],
   ]);
 }

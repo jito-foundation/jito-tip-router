@@ -7,8 +7,8 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 
 use crate::{
     constants::MAX_VAULT_OPERATOR_DELEGATIONS, discriminators::Discriminators,
-    error::TipRouterError,
-, ncn_fee_group::NcnFeeGroup};
+    error::TipRouterError, ncn_fee_group::NcnFeeGroup,
+};
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]

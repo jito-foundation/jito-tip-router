@@ -21,7 +21,7 @@ pub struct WeightTable {
     pub ncn_epoch: u64,
     pub slot_created: u64,
     pub bump: u8,
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 128],
     pub table: [WeightEntry; 32],
 }

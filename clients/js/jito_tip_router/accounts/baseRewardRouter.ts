@@ -96,7 +96,7 @@ export function getBaseRewardRouterEncoder(): Encoder<BaseRewardRouterArgs> {
     ],
     [
       'ncnFeeGroupRewardRoutes',
-      getArrayEncoder(getNcnRewardRouteEncoder(), { size: 32 }),
+      getArrayEncoder(getNcnRewardRouteEncoder(), { size: 256 }),
     ],
   ]);
 }
@@ -122,7 +122,7 @@ export function getBaseRewardRouterDecoder(): Decoder<BaseRewardRouter> {
     ],
     [
       'ncnFeeGroupRewardRoutes',
-      getArrayDecoder(getNcnRewardRouteDecoder(), { size: 32 }),
+      getArrayDecoder(getNcnRewardRouteDecoder(), { size: 256 }),
     ],
   ]);
 }

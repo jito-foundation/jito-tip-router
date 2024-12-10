@@ -353,7 +353,7 @@ impl BallotBox {
         self.winning_ballot.is_valid()
     }
 
-    pub const fn operator_votes(&self) -> &[OperatorVote; 16] {
+    pub const fn operator_votes(&self) -> &[OperatorVote; MAX_OPERATORS] {
         &self.operator_votes
     }
 
