@@ -205,7 +205,7 @@ impl TestContext {
             tip_distribution_address,
         })
     }
-    
+
     fn create_test_stake_meta(&self) -> Result<StakeMetaCollection> {
         // Create a sample stake meta for testing
         let stake_meta = StakeMeta {
@@ -348,12 +348,16 @@ async fn test_epoch_processing() -> Result<()> {
     // Create rocksdb directory after copying
     fs::create_dir_all(test_ledger.join("rocksdb"))?;
 
-    let latest_snapshot_slot = fs::read_dir(&test_ledger)?
+    let latest_snapshot_slot = fs
+        ::read_dir(&test_ledger)?
         .filter_map(|entry| entry.ok())
         .filter_map(|entry| {
             let file_name = entry.file_name().to_string_lossy().to_string();
             if file_name.starts_with("snapshot-") && file_name.ends_with(".tar.zst") {
-                file_name.split('-').nth(1).and_then(|s| s.parse::<u64>().ok())
+                file_name
+                    .split('-')
+                    .nth(1)
+                    .and_then(|s| s.parse::<u64>().ok())
             } else {
                 None
             }
@@ -369,11 +373,11 @@ async fn test_epoch_processing() -> Result<()> {
         5,
         "zstd".to_string(),
         keypair_copy,
-        test_ledger.clone(),
+        test_ledger.clone()
     )?;
-    let slot = context.get_previous_epoch_last_slot().await?;
+    let slot = latest_snapshot_slot; // Use the snapshot slot instead of getting previous epoch
     snapshot_creator.create_snapshot(latest_snapshot_slot);
-
+    
     info!("2. Testing stake metadata generation...");
     let stake_meta_path = context.snapshot_dir.join("stake-meta.json");
 
@@ -382,7 +386,7 @@ async fn test_epoch_processing() -> Result<()> {
         &slot,
         &context.tip_distribution_program_id,
         stake_meta_path.to_str().unwrap(),
-        &context.tip_payment_program_id,
+        &context.tip_payment_program_id
     )?;
 
     let stake_meta = context.create_test_stake_meta()?;

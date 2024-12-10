@@ -24,11 +24,23 @@ wait_for_validator() {
 }
 
 setup_test_validator() {
+    # Get program IDs from the programs
+    TIP_PAYMENT_ID="4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7"  # From tip-payment/src/lib.rs
+    TIP_DISTRIBUTION_ID="T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"  # From tip-distribution/src/lib.rs
+
+    # Use programs from local programs directory
+    PROGRAMS_DIR="../programs"
+    TIP_PAYMENT_PROGRAM="$PROGRAMS_DIR/tip-payment/src/lib.rs"
+    TIP_DISTRIBUTION_PROGRAM="$PROGRAMS_DIR/tip-distribution/src/lib.rs"
+
     solana-test-validator \
         --slots-per-epoch 32 \
         --ticks-per-slot 8 \
         --quiet \
-        --reset &
+        --reset \
+        --bpf-program "$TIP_PAYMENT_ID" "$TIP_PAYMENT_PROGRAM" \
+        --bpf-program "$TIP_DISTRIBUTION_ID" "$TIP_DISTRIBUTION_PROGRAM" \
+        &
     
     VALIDATOR_PID=$!
     solana config set --url http://127.0.0.1:8899

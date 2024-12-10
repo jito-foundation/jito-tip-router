@@ -86,16 +86,7 @@ pub fn generate_stake_meta(
     info!("Creating bank from ledger path...");
     let bank = create_bank_from_snapshot(ledger_path, snapshot_slot)?;
 
-    // Verify bank slot is within acceptable range
-    if bank.slot() < *snapshot_slot {
-        warn!(
-            "Bank slot {} is less than requested snapshot slot {}",
-            bank.slot(),
-            snapshot_slot
-        );
-    }
-
-    info!("Generating stake_meta_collection object for slot {}...", bank.slot());
+    info!("Generating stake_meta_collection object...");
     let stake_meta_coll =
         generate_stake_meta_collection(&bank, tip_distribution_program_id, tip_payment_program_id)?;
 
@@ -104,7 +95,6 @@ pub fn generate_stake_meta(
 
     Ok(())
 }
-
 
 fn create_bank_from_snapshot(
     ledger_path: &Path,
@@ -143,8 +133,11 @@ fn create_bank_from_snapshot(
     )?;
 
     let working_bank = bank_forks.read().unwrap().working_bank();
-    info!(
-        "Bank loaded from snapshot. Working bank slot: {}",
+    assert_eq!(
+        working_bank.slot(),
+        *snapshot_slot,
+        "expected working bank slot {}, found {}",
+        snapshot_slot,
         working_bank.slot()
     );
 
