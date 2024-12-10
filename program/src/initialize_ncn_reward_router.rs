@@ -7,8 +7,7 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
-    ballot_box::BallotBox, loaders::load_ncn_epoch, ncn_fee_group::NcnFeeGroup,
-    ncn_reward_router::NcnRewardRouter,
+    loaders::load_ncn_epoch, ncn_fee_group::NcnFeeGroup, ncn_reward_router::NcnRewardRouter,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -22,7 +21,7 @@ pub fn process_initialize_ncn_reward_router(
     ncn_fee_group: u8,
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    let [restaking_config, ncn, operator, ballot_box, ncn_reward_router, payer, restaking_program, system_program] =
+    let [restaking_config, ncn, operator, ncn_reward_router, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -45,17 +44,6 @@ pub fn process_initialize_ncn_reward_router(
 
     let current_slot = Clock::get()?.slot;
     let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
-
-    let has_winning_ballot = {
-        let ballot_box_data = ballot_box.data.borrow();
-        let ballot_box = BallotBox::try_from_slice_unchecked(&ballot_box_data)?;
-        ballot_box.has_winning_ballot()
-    };
-
-    if !has_winning_ballot {
-        msg!("Ballot has to be finalized before initializing ncn reward router");
-        return Err(ProgramError::InvalidAccountData);
-    }
 
     let (ncn_reward_router_pubkey, ncn_reward_router_bump, mut ncn_reward_router_seeds) =
         NcnRewardRouter::find_program_address(

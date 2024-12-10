@@ -53,8 +53,6 @@ pub fn process_distribute_ncn_vault_rewards(
         true,
     )?;
 
-    //TODO do we want an Operator Fee Wallet?
-
     // Get rewards and update state
     let rewards = {
         let mut ncn_reward_router_data = ncn_reward_router.try_borrow_mut_data()?;
@@ -63,12 +61,6 @@ pub fn process_distribute_ncn_vault_rewards(
 
         ncn_reward_router_account.distribute_vault_reward_route(vault.key)?
     };
-
-    //TODO should this be an error?
-    // if rewards == 0 {
-    //     msg!("No rewards to distribute");
-    //     return Err(TipRouterError::NoRewards.into());
-    // }
 
     // Send rewards
     if rewards > 0 {

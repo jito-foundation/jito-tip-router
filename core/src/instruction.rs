@@ -43,12 +43,12 @@ pub enum TipRouterInstruction {
     #[account(3, signer, name = "ncn_admin")]
     #[account(4, name = "restaking_program")]
     SetConfigFees {
-    new_block_engine_fee_bps: Option<u16>,
-    base_fee_group: Option<u8>,
-    new_base_fee_wallet: Option<Pubkey>,
-    new_base_fee_bps: Option<u16>,
-    ncn_fee_group: Option<u8>,
-    new_ncn_fee_bps: Option<u16>,
+        new_block_engine_fee_bps: Option<u16>,
+        base_fee_group: Option<u8>,
+        new_base_fee_wallet: Option<Pubkey>,
+        new_base_fee_bps: Option<u16>,
+        ncn_fee_group: Option<u8>,
+        new_ncn_fee_bps: Option<u16>,
     },
 
     /// Sets a new secondary admin for the NCN
@@ -147,11 +147,10 @@ pub enum TipRouterInstruction {
     /// Initializes the base reward router
     #[account(0, name = "restaking_config")]
     #[account(1, name = "ncn")]
-    #[account(2, name = "ballot_box")]
-    #[account(3, writable, name = "base_reward_router")]
-    #[account(4, writable, signer, name = "payer")]
-    #[account(5, name = "restaking_program")]
-    #[account(6, name = "system_program")]
+    #[account(2, writable, name = "base_reward_router")]
+    #[account(3, writable, signer, name = "payer")]
+    #[account(4, name = "restaking_program")]
+    #[account(5, name = "system_program")]
     InitializeBaseRewardRouter{
         first_slot_of_ncn_epoch: Option<u64>,
     },
@@ -160,11 +159,10 @@ pub enum TipRouterInstruction {
     #[account(0, name = "restaking_config")]
     #[account(1, name = "ncn")]
     #[account(2, name = "operator")]
-    #[account(3, name = "ballot_box")]
-    #[account(4, writable, name = "ncn_reward_router")]
-    #[account(5, writable, signer, name = "payer")]
-    #[account(6, name = "restaking_program")]
-    #[account(7, name = "system_program")]
+    #[account(3, writable, name = "ncn_reward_router")]
+    #[account(4, writable, signer, name = "payer")]
+    #[account(5, name = "restaking_program")]
+    #[account(6, name = "system_program")]
     InitializeNcnRewardRouter{
         ncn_fee_group: u8,
         first_slot_of_ncn_epoch: Option<u64>,

@@ -1129,13 +1129,10 @@ impl TipRouterClient {
         let restaking_config_account = self.get_restaking_config().await?;
         let ncn_epoch = slot / restaking_config_account.epoch_length();
 
-        let (ballot_box, _, _) =
-            BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
-
         let (base_reward_router, _, _) =
             BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
 
-        self.initialize_base_reward_router(restaking_config, ncn, ballot_box, base_reward_router)
+        self.initialize_base_reward_router(restaking_config, ncn, base_reward_router)
             .await
     }
 
@@ -1143,13 +1140,11 @@ impl TipRouterClient {
         &mut self,
         restaking_config: Pubkey,
         ncn: Pubkey,
-        ballot_box: Pubkey,
         base_reward_router: Pubkey,
     ) -> TestResult<()> {
         let ix = InitializeBaseRewardRouterBuilder::new()
             .restaking_config(restaking_config)
             .ncn(ncn)
-            .ballot_box(ballot_box)
             .base_reward_router(base_reward_router)
             .payer(self.payer.pubkey())
             .restaking_program(jito_restaking_program::id())
@@ -1178,9 +1173,6 @@ impl TipRouterClient {
         let restaking_config_account = self.get_restaking_config().await?;
         let ncn_epoch = slot / restaking_config_account.epoch_length();
 
-        let (ballot_box, _, _) =
-            BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
-
         let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
             &jito_tip_router_program::id(),
             ncn_fee_group,
@@ -1194,7 +1186,6 @@ impl TipRouterClient {
             ncn,
             operator,
             restaking_config,
-            ballot_box,
             ncn_reward_router,
         )
         .await
@@ -1206,14 +1197,12 @@ impl TipRouterClient {
         ncn: Pubkey,
         operator: Pubkey,
         restaking_config: Pubkey,
-        ballot_box: Pubkey,
         ncn_reward_router: Pubkey,
     ) -> TestResult<()> {
         let ix = InitializeNcnRewardRouterBuilder::new()
             .restaking_config(restaking_config)
             .ncn(ncn)
             .operator(operator)
-            .ballot_box(ballot_box)
             .ncn_reward_router(ncn_reward_router)
             .payer(self.payer.pubkey())
             .restaking_program(jito_restaking_program::id())

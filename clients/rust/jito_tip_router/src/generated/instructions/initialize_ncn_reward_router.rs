@@ -14,8 +14,6 @@ pub struct InitializeNcnRewardRouter {
 
     pub operator: solana_program::pubkey::Pubkey,
 
-    pub ballot_box: solana_program::pubkey::Pubkey,
-
     pub ncn_reward_router: solana_program::pubkey::Pubkey,
 
     pub payer: solana_program::pubkey::Pubkey,
@@ -38,7 +36,7 @@ impl InitializeNcnRewardRouter {
         args: InitializeNcnRewardRouterInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_config,
             false,
@@ -48,10 +46,6 @@ impl InitializeNcnRewardRouter {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.operator,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ballot_box,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -115,17 +109,15 @@ pub struct InitializeNcnRewardRouterInstructionArgs {
 ///   0. `[]` restaking_config
 ///   1. `[]` ncn
 ///   2. `[]` operator
-///   3. `[]` ballot_box
-///   4. `[writable]` ncn_reward_router
-///   5. `[writable, signer]` payer
-///   6. `[]` restaking_program
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   3. `[writable]` ncn_reward_router
+///   4. `[writable, signer]` payer
+///   5. `[]` restaking_program
+///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeNcnRewardRouterBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
-    ballot_box: Option<solana_program::pubkey::Pubkey>,
     ncn_reward_router: Option<solana_program::pubkey::Pubkey>,
     payer: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
@@ -155,11 +147,6 @@ impl InitializeNcnRewardRouterBuilder {
     #[inline(always)]
     pub fn operator(&mut self, operator: solana_program::pubkey::Pubkey) -> &mut Self {
         self.operator = Some(operator);
-        self
-    }
-    #[inline(always)]
-    pub fn ballot_box(&mut self, ballot_box: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ballot_box = Some(ballot_box);
         self
     }
     #[inline(always)]
@@ -224,7 +211,6 @@ impl InitializeNcnRewardRouterBuilder {
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             operator: self.operator.expect("operator is not set"),
-            ballot_box: self.ballot_box.expect("ballot_box is not set"),
             ncn_reward_router: self
                 .ncn_reward_router
                 .expect("ncn_reward_router is not set"),
@@ -256,8 +242,6 @@ pub struct InitializeNcnRewardRouterCpiAccounts<'a, 'b> {
 
     pub operator: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub payer: &'b solana_program::account_info::AccountInfo<'a>,
@@ -277,8 +261,6 @@ pub struct InitializeNcnRewardRouterCpi<'a, 'b> {
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub operator: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -302,7 +284,6 @@ impl<'a, 'b> InitializeNcnRewardRouterCpi<'a, 'b> {
             restaking_config: accounts.restaking_config,
             ncn: accounts.ncn,
             operator: accounts.operator,
-            ballot_box: accounts.ballot_box,
             ncn_reward_router: accounts.ncn_reward_router,
             payer: accounts.payer,
             restaking_program: accounts.restaking_program,
@@ -343,7 +324,7 @@ impl<'a, 'b> InitializeNcnRewardRouterCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_config.key,
             false,
@@ -354,10 +335,6 @@ impl<'a, 'b> InitializeNcnRewardRouterCpi<'a, 'b> {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.operator.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ballot_box.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -394,12 +371,11 @@ impl<'a, 'b> InitializeNcnRewardRouterCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
-        account_infos.push(self.ballot_box.clone());
         account_infos.push(self.ncn_reward_router.clone());
         account_infos.push(self.payer.clone());
         account_infos.push(self.restaking_program.clone());
@@ -423,11 +399,10 @@ impl<'a, 'b> InitializeNcnRewardRouterCpi<'a, 'b> {
 ///   0. `[]` restaking_config
 ///   1. `[]` ncn
 ///   2. `[]` operator
-///   3. `[]` ballot_box
-///   4. `[writable]` ncn_reward_router
-///   5. `[writable, signer]` payer
-///   6. `[]` restaking_program
-///   7. `[]` system_program
+///   3. `[writable]` ncn_reward_router
+///   4. `[writable, signer]` payer
+///   5. `[]` restaking_program
+///   6. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeNcnRewardRouterCpiBuilder<'a, 'b> {
     instruction: Box<InitializeNcnRewardRouterCpiBuilderInstruction<'a, 'b>>,
@@ -440,7 +415,6 @@ impl<'a, 'b> InitializeNcnRewardRouterCpiBuilder<'a, 'b> {
             restaking_config: None,
             ncn: None,
             operator: None,
-            ballot_box: None,
             ncn_reward_router: None,
             payer: None,
             restaking_program: None,
@@ -470,14 +444,6 @@ impl<'a, 'b> InitializeNcnRewardRouterCpiBuilder<'a, 'b> {
         operator: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.operator = Some(operator);
-        self
-    }
-    #[inline(always)]
-    pub fn ballot_box(
-        &mut self,
-        ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.ballot_box = Some(ballot_box);
         self
     }
     #[inline(always)]
@@ -581,8 +547,6 @@ impl<'a, 'b> InitializeNcnRewardRouterCpiBuilder<'a, 'b> {
 
             operator: self.instruction.operator.expect("operator is not set"),
 
-            ballot_box: self.instruction.ballot_box.expect("ballot_box is not set"),
-
             ncn_reward_router: self
                 .instruction
                 .ncn_reward_router
@@ -614,7 +578,6 @@ struct InitializeNcnRewardRouterCpiBuilderInstruction<'a, 'b> {
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,

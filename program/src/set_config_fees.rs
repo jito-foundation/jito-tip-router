@@ -59,17 +59,8 @@ pub fn process_set_config_fees(
         return Err(TipRouterError::IncorrectFeeAdmin.into());
     }
 
-    let base_fee_group = if let Some(base_fee_group) = base_fee_group {
-        Some(BaseFeeGroup::try_from(base_fee_group)?)
-    } else {
-        None
-    };
-
-    let ncn_fee_group = if let Some(ncn_fee_group) = ncn_fee_group {
-        Some(NcnFeeGroup::try_from(ncn_fee_group)?)
-    } else {
-        None
-    };
+    let base_fee_group = base_fee_group.map(BaseFeeGroup::try_from).transpose()?;
+    let ncn_fee_group = ncn_fee_group.map(NcnFeeGroup::try_from).transpose()?;
 
     config.fee_config.update_fee_config(
         new_block_engine_fee_bps,

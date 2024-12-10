@@ -85,7 +85,7 @@ pub fn process_register_mint(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
     let vault_data = vault.data.borrow();
     let vault = Vault::try_from_slice_unchecked(&vault_data)?;
 
-    //TODO add logic to sort into group
+    //TODO FOR FUTURE PR: add logic to sort into group
 
     let mut tracked_mints_data = tracked_mints.try_borrow_mut_data()?;
     let tracked_mints = TrackedMints::try_from_slice_unchecked_mut(&mut tracked_mints_data)?;

@@ -47,7 +47,6 @@ export type InitializeNcnRewardRouterInstruction<
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
-  TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcnRewardRouter extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
@@ -66,9 +65,6 @@ export type InitializeNcnRewardRouterInstruction<
       TAccountOperator extends string
         ? ReadonlyAccount<TAccountOperator>
         : TAccountOperator,
-      TAccountBallotBox extends string
-        ? ReadonlyAccount<TAccountBallotBox>
-        : TAccountBallotBox,
       TAccountNcnRewardRouter extends string
         ? WritableAccount<TAccountNcnRewardRouter>
         : TAccountNcnRewardRouter,
@@ -133,7 +129,6 @@ export type InitializeNcnRewardRouterInput<
   TAccountRestakingConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
-  TAccountBallotBox extends string = string,
   TAccountNcnRewardRouter extends string = string,
   TAccountPayer extends string = string,
   TAccountRestakingProgram extends string = string,
@@ -142,7 +137,6 @@ export type InitializeNcnRewardRouterInput<
   restakingConfig: Address<TAccountRestakingConfig>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
-  ballotBox: Address<TAccountBallotBox>;
   ncnRewardRouter: Address<TAccountNcnRewardRouter>;
   payer: TransactionSigner<TAccountPayer>;
   restakingProgram: Address<TAccountRestakingProgram>;
@@ -155,7 +149,6 @@ export function getInitializeNcnRewardRouterInstruction<
   TAccountRestakingConfig extends string,
   TAccountNcn extends string,
   TAccountOperator extends string,
-  TAccountBallotBox extends string,
   TAccountNcnRewardRouter extends string,
   TAccountPayer extends string,
   TAccountRestakingProgram extends string,
@@ -166,7 +159,6 @@ export function getInitializeNcnRewardRouterInstruction<
     TAccountRestakingConfig,
     TAccountNcn,
     TAccountOperator,
-    TAccountBallotBox,
     TAccountNcnRewardRouter,
     TAccountPayer,
     TAccountRestakingProgram,
@@ -178,7 +170,6 @@ export function getInitializeNcnRewardRouterInstruction<
   TAccountRestakingConfig,
   TAccountNcn,
   TAccountOperator,
-  TAccountBallotBox,
   TAccountNcnRewardRouter,
   TAccountPayer,
   TAccountRestakingProgram,
@@ -196,7 +187,6 @@ export function getInitializeNcnRewardRouterInstruction<
     },
     ncn: { value: input.ncn ?? null, isWritable: false },
     operator: { value: input.operator ?? null, isWritable: false },
-    ballotBox: { value: input.ballotBox ?? null, isWritable: false },
     ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
     payer: { value: input.payer ?? null, isWritable: true },
     restakingProgram: {
@@ -225,7 +215,6 @@ export function getInitializeNcnRewardRouterInstruction<
       getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
-      getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncnRewardRouter),
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.restakingProgram),
@@ -240,7 +229,6 @@ export function getInitializeNcnRewardRouterInstruction<
     TAccountRestakingConfig,
     TAccountNcn,
     TAccountOperator,
-    TAccountBallotBox,
     TAccountNcnRewardRouter,
     TAccountPayer,
     TAccountRestakingProgram,
@@ -259,11 +247,10 @@ export type ParsedInitializeNcnRewardRouterInstruction<
     restakingConfig: TAccountMetas[0];
     ncn: TAccountMetas[1];
     operator: TAccountMetas[2];
-    ballotBox: TAccountMetas[3];
-    ncnRewardRouter: TAccountMetas[4];
-    payer: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
-    systemProgram: TAccountMetas[7];
+    ncnRewardRouter: TAccountMetas[3];
+    payer: TAccountMetas[4];
+    restakingProgram: TAccountMetas[5];
+    systemProgram: TAccountMetas[6];
   };
   data: InitializeNcnRewardRouterInstructionData;
 };
@@ -276,7 +263,7 @@ export function parseInitializeNcnRewardRouterInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeNcnRewardRouterInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -292,7 +279,6 @@ export function parseInitializeNcnRewardRouterInstruction<
       restakingConfig: getNextAccount(),
       ncn: getNextAccount(),
       operator: getNextAccount(),
-      ballotBox: getNextAccount(),
       ncnRewardRouter: getNextAccount(),
       payer: getNextAccount(),
       restakingProgram: getNextAccount(),

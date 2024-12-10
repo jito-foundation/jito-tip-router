@@ -595,11 +595,6 @@
           "isSigner": false
         },
         {
-          "name": "ballotBox",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "baseRewardRouter",
           "isMut": true,
           "isSigner": false
@@ -648,11 +643,6 @@
         },
         {
           "name": "operator",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "ballotBox",
           "isMut": false,
           "isSigner": false
         },

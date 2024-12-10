@@ -12,8 +12,6 @@ pub struct InitializeBaseRewardRouter {
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub ballot_box: solana_program::pubkey::Pubkey,
-
     pub base_reward_router: solana_program::pubkey::Pubkey,
 
     pub payer: solana_program::pubkey::Pubkey,
@@ -36,17 +34,13 @@ impl InitializeBaseRewardRouter {
         args: InitializeBaseRewardRouterInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ballot_box,
-            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.base_reward_router,
@@ -107,16 +101,14 @@ pub struct InitializeBaseRewardRouterInstructionArgs {
 ///
 ///   0. `[]` restaking_config
 ///   1. `[]` ncn
-///   2. `[]` ballot_box
-///   3. `[writable]` base_reward_router
-///   4. `[writable, signer]` payer
-///   5. `[]` restaking_program
-///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   2. `[writable]` base_reward_router
+///   3. `[writable, signer]` payer
+///   4. `[]` restaking_program
+///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeBaseRewardRouterBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    ballot_box: Option<solana_program::pubkey::Pubkey>,
     base_reward_router: Option<solana_program::pubkey::Pubkey>,
     payer: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
@@ -140,11 +132,6 @@ impl InitializeBaseRewardRouterBuilder {
     #[inline(always)]
     pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
         self.ncn = Some(ncn);
-        self
-    }
-    #[inline(always)]
-    pub fn ballot_box(&mut self, ballot_box: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ballot_box = Some(ballot_box);
         self
     }
     #[inline(always)]
@@ -203,7 +190,6 @@ impl InitializeBaseRewardRouterBuilder {
         let accounts = InitializeBaseRewardRouter {
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            ballot_box: self.ballot_box.expect("ballot_box is not set"),
             base_reward_router: self
                 .base_reward_router
                 .expect("base_reward_router is not set"),
@@ -229,8 +215,6 @@ pub struct InitializeBaseRewardRouterCpiAccounts<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub payer: &'b solana_program::account_info::AccountInfo<'a>,
@@ -248,8 +232,6 @@ pub struct InitializeBaseRewardRouterCpi<'a, 'b> {
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -272,7 +254,6 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
             __program: program,
             restaking_config: accounts.restaking_config,
             ncn: accounts.ncn,
-            ballot_box: accounts.ballot_box,
             base_reward_router: accounts.base_reward_router,
             payer: accounts.payer,
             restaking_program: accounts.restaking_program,
@@ -313,17 +294,13 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ballot_box.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -360,11 +337,10 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.ballot_box.clone());
         account_infos.push(self.base_reward_router.clone());
         account_infos.push(self.payer.clone());
         account_infos.push(self.restaking_program.clone());
@@ -387,11 +363,10 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
 ///
 ///   0. `[]` restaking_config
 ///   1. `[]` ncn
-///   2. `[]` ballot_box
-///   3. `[writable]` base_reward_router
-///   4. `[writable, signer]` payer
-///   5. `[]` restaking_program
-///   6. `[]` system_program
+///   2. `[writable]` base_reward_router
+///   3. `[writable, signer]` payer
+///   4. `[]` restaking_program
+///   5. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
     instruction: Box<InitializeBaseRewardRouterCpiBuilderInstruction<'a, 'b>>,
@@ -403,7 +378,6 @@ impl<'a, 'b> InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
             __program: program,
             restaking_config: None,
             ncn: None,
-            ballot_box: None,
             base_reward_router: None,
             payer: None,
             restaking_program: None,
@@ -424,14 +398,6 @@ impl<'a, 'b> InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.ncn = Some(ncn);
-        self
-    }
-    #[inline(always)]
-    pub fn ballot_box(
-        &mut self,
-        ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.ballot_box = Some(ballot_box);
         self
     }
     #[inline(always)]
@@ -523,8 +489,6 @@ impl<'a, 'b> InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            ballot_box: self.instruction.ballot_box.expect("ballot_box is not set"),
-
             base_reward_router: self
                 .instruction
                 .base_reward_router
@@ -555,7 +519,6 @@ struct InitializeBaseRewardRouterCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     base_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,

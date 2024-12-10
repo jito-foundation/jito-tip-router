@@ -254,7 +254,7 @@ impl NcnRewardRouter {
             return Ok(0);
         }
 
-        let precise_dao_fee_bps =
+        let precise_operator_fee_bps =
             PreciseNumber::new(fee_bps as u128).ok_or(TipRouterError::NewPreciseNumberError)?;
 
         let precise_max_bps =
@@ -263,23 +263,23 @@ impl NcnRewardRouter {
         let precise_rewards_to_process = PreciseNumber::new(rewards_to_process as u128)
             .ok_or(TipRouterError::NewPreciseNumberError)?;
 
-        let precise_dao_rewards = precise_rewards_to_process
-            .checked_mul(&precise_dao_fee_bps)
+        let precise_operator_rewards = precise_rewards_to_process
+            .checked_mul(&precise_operator_fee_bps)
             .and_then(|x| x.checked_div(&precise_max_bps))
             .ok_or(TipRouterError::ArithmeticOverflow)?;
 
-        let floored_precise_dao_rewards = precise_dao_rewards
+        let floored_precise_operator_rewards = precise_operator_rewards
             .floor()
             .ok_or(TipRouterError::ArithmeticFloorError)?;
 
-        let dao_rewards_u128: u128 = floored_precise_dao_rewards
+        let operator_rewards_u128: u128 = floored_precise_operator_rewards
             .to_imprecise()
             .ok_or(TipRouterError::CastToImpreciseNumberError)?;
-        let dao_rewards: u64 = dao_rewards_u128
+        let operator_rewards: u64 = operator_rewards_u128
             .try_into()
             .map_err(|_| TipRouterError::CastToU64Error)?;
 
-        Ok(dao_rewards)
+        Ok(operator_rewards)
     }
 
     fn calculate_vault_reward(
@@ -300,24 +300,24 @@ impl NcnRewardRouter {
         let precise_operator_reward_stake_weight = PreciseNumber::new(operator_reward_stake_weight)
             .ok_or(TipRouterError::NewPreciseNumberError)?;
 
-        let precise_operator_reward = precise_rewards_to_process
+        let precise_vault_reward = precise_rewards_to_process
             .checked_mul(&precise_vault_reward_stake_weight)
             .and_then(|x| x.checked_div(&precise_operator_reward_stake_weight))
             .ok_or(TipRouterError::ArithmeticOverflow)?;
 
-        let floored_precise_operator_reward = precise_operator_reward
+        let floored_precise_vault_reward = precise_vault_reward
             .floor()
             .ok_or(TipRouterError::ArithmeticFloorError)?;
 
-        let operator_reward_u128: u128 = floored_precise_operator_reward
+        let vault_reward_u128: u128 = floored_precise_vault_reward
             .to_imprecise()
             .ok_or(TipRouterError::CastToImpreciseNumberError)?;
 
-        let operator_reward: u64 = operator_reward_u128
+        let vault_reward: u64 = vault_reward_u128
             .try_into()
             .map_err(|_| TipRouterError::CastToU64Error)?;
 
-        Ok(operator_reward)
+        Ok(vault_reward)
     }
 
     // ------------------------ REWARD POOL ------------------------
