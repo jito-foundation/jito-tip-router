@@ -236,8 +236,6 @@ pub enum TipRouterInstruction {
     #[account(3, name = "operator")]
     #[account(4, writable, name = "vault")]
     #[account(5, writable, name = "ncn_reward_router")]
-    #[account(6, name = "restaking_program")]
-    #[account(7, name = "vault_program")]
     DistributeNcnVaultRewards{
         ncn_fee_group: u8,
         first_slot_of_ncn_epoch: Option<u64>,

@@ -972,16 +972,6 @@
           "name": "ncnRewardRouter",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "vaultProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [

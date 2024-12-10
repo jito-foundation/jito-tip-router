@@ -6,7 +6,7 @@ use jito_tip_router_core::{
 };
 use jito_vault_core::vault::Vault;
 use solana_program::{
-    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
+    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
@@ -17,26 +17,17 @@ pub fn process_distribute_ncn_vault_rewards(
     ncn_fee_group: u8,
     first_slot_of_ncn_epoch: Option<u64>,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn, operator, vault, ncn_reward_router, restaking_program, vault_program] =
-        accounts
-    else {
+    let [restaking_config, ncn_config, ncn, operator, vault, ncn_reward_router] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
+    let restaking_program = jito_restaking_program::id();
+    let vault_program = jito_vault_program::id();
 
-    if vault_program.key.ne(&jito_vault_program::id()) {
-        msg!("Incorrect vault program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    Config::load(restaking_program.key, restaking_config, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
-    Operator::load(restaking_program.key, operator, false)?;
-    Vault::load(vault_program.key, vault, true)?;
+    Config::load(&restaking_program, restaking_config, false)?;
+    Ncn::load(&restaking_program, ncn, false)?;
+    Operator::load(&restaking_program, operator, false)?;
+    Vault::load(&vault_program, vault, true)?;
 
     let current_slot = Clock::get()?.slot;
     let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;

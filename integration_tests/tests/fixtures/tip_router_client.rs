@@ -1587,8 +1587,6 @@ impl TipRouterClient {
             .operator(operator)
             .vault(vault)
             .ncn_reward_router(ncn_reward_router)
-            .restaking_program(jito_restaking_program::id())
-            .vault_program(jito_vault_program::id())
             .ncn_fee_group(ncn_fee_group.group)
             .instruction();
 

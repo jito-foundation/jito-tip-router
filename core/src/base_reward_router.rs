@@ -188,20 +188,6 @@ impl BaseRewardRouter {
         for group in NcnFeeGroup::all_groups().iter() {
             let rewards_to_process = self.ncn_fee_group_rewards(*group)?;
 
-            msg!("{:?}", ballot_box.operator_votes()[0]);
-            msg!("{:?}", ballot_box.operator_votes()[1]);
-            msg!("{:?}", ballot_box.operator_votes()[2]);
-            msg!("{:?}", ballot_box.operator_votes()[3]);
-            msg!("{:?}", ballot_box.operator_votes()[4]);
-            msg!("{:?}", ballot_box.operator_votes()[5]);
-            msg!("{:?}", ballot_box.operator_votes()[6]);
-            msg!("{:?}", ballot_box.operator_votes()[7]);
-            msg!("{:?}", ballot_box.operator_votes()[8]);
-            msg!("{:?}", ballot_box.operator_votes()[9]);
-            msg!("{:?}", ballot_box.operator_votes()[10]);
-            msg!("{:?}", ballot_box.operator_votes()[11]);
-            msg!("{:?}", ballot_box.operator_votes()[12]);
-
             for votes in ballot_box.operator_votes().iter() {
                 if votes.ballot_index() == winning_ballot.index() {
                     let operator = votes.operator();
@@ -216,21 +202,6 @@ impl BaseRewardRouter {
                         winning_reward_stake_weight,
                         rewards_to_process,
                     )?;
-
-                    // msg!("   ");
-                    // msg!("{} -   votes: {:?}", operator, votes.stake_weights());
-                    // msg!("{} - winning: {:?}", operator, winning_stake_weight);
-                    // msg!(
-                    //     "Route NCN Fee Group Rewards: {:?} {:?} {:?} {}/{} {}/{}",
-                    //     group,
-                    //     operator,
-                    //     ncn_fee_group_route_reward,
-                    //     ncn_route_reward_stake_weight,
-                    //     winning_reward_stake_weight,
-                    //     self.ncn_fee_group_rewards(*group)?,
-                    //     rewards_to_process
-                    // );
-                    // msg!("   ");
 
                     self.route_from_ncn_fee_group_rewards(*group, ncn_fee_group_route_reward)?;
                     self.route_to_ncn_fee_group_reward_route(
