@@ -20,8 +20,11 @@ use ::{
         sysvar::clock::Clock,
         account::Account as SolanaAccount,
         genesis_config::GenesisConfig,
+        signer::keypair::read_keypair_file,
     },
     ellipsis_client::EllipsisClient,
+    std::error::Error as StdError,
+    std::io::{ BufRead, Error as IoError },
     std::{ path::PathBuf, sync::Arc, time::Duration, fs },
     tip_router_operator_cli::{
         merkle_tree::MerkleTreeGenerator,
@@ -42,9 +45,11 @@ use ::{
     solana_sdk::vote::state::VoteStateVersions,
 };
 
+// Update ValidatorKeypairs struct to include identity keypair
 pub struct ValidatorKeypairs {
     pub vote_keypair: Keypair,
     pub stake_keypair: Keypair,
+    pub identity_keypair: Keypair,
 }
 
 impl ValidatorKeypairs {
@@ -52,6 +57,7 @@ impl ValidatorKeypairs {
         Self {
             vote_keypair: Keypair::new(),
             stake_keypair: Keypair::new(),
+            identity_keypair: Keypair::new(),
         }
     }
 }
@@ -76,79 +82,46 @@ struct TestContext {
 
 impl TestContext {
     async fn new() -> Result<Self> {
-        // Create validator keypairs first
-        let validator_keypairs = vec![ValidatorKeypairs::new(), ValidatorKeypairs::new()];
+        // Read validator info from file
+        let validator_file = std::fs::File
+            ::open("scripts/validators.txt")
+            .map_err(|e| anyhow::anyhow!("Failed to open validators.txt: {}", e))?;
+        let reader = std::io::BufReader::new(validator_file);
 
-        // Create program test
-        let mut program_test = ProgramTest::default();
+        let mut validator_keypairs = Vec::new();
 
-        // Add accounts with proper initialization
-        for keypairs in &validator_keypairs {
-            // Create and initialize vote account
-            let vote_init = VoteInit {
-                node_pubkey: keypairs.vote_keypair.pubkey(),
-                authorized_voter: keypairs.vote_keypair.pubkey(),
-                authorized_withdrawer: keypairs.vote_keypair.pubkey(),
-                commission: 0,
-            };
+        // Each line contains a vote account pubkey
+        for (i, line) in reader.lines().enumerate() {
+            let vote_pubkey_str = line
+                .map_err(|e| anyhow::anyhow!("Failed to read line: {}", e))?
+                .trim()
+                .to_string();
 
-            let vote_state = VoteState::new(&vote_init, &Clock::default());
-            let versioned_state = VoteStateVersions::new_current(vote_state);
-            let mut vote_data = vec![0; VoteState::size_of()];
-            bincode::serialize_into(&mut vote_data[..], &versioned_state)?;
+            // Load the corresponding keypairs from the test-validator-keys directory
+            let vote_keypair = read_keypair_file(
+                format!("scripts/test-validator-keys/vote_{}.json", i + 1)
+            ).map_err(|e| anyhow::anyhow!("Failed to read vote keypair: {}", e))?;
 
-            program_test.add_account(keypairs.vote_keypair.pubkey(), SolanaAccount {
-                lamports: 1_000_000,
-                owner: vote_program_id(),
-                executable: false,
-                rent_epoch: 0,
-                data: vote_data,
-            });
+            let stake_keypair = read_keypair_file(
+                format!("scripts/test-validator-keys/stake_{}.json", i + 1)
+            ).map_err(|e| anyhow::anyhow!("Failed to read stake keypair: {}", e))?;
 
-            // Create and initialize stake account with delegation
-            let meta = Meta {
-                rent_exempt_reserve: Rent::default().minimum_balance(
-                    std::mem::size_of::<StakeStateV2>()
-                ),
-                authorized: stake::state::Authorized::auto(&keypairs.stake_keypair.pubkey()),
-                lockup: stake::state::Lockup::default(),
-            };
+            let identity_keypair = read_keypair_file(
+                format!("scripts/test-validator-keys/identity_{}.json", i + 1)
+            ).map_err(|e| anyhow::anyhow!("Failed to read identity keypair: {}", e))?;
 
-            let stake = Stake {
-                delegation: stake::state::Delegation {
-                    voter_pubkey: keypairs.vote_keypair.pubkey(),
-                    stake: 1_000_000_000, // 1 SOL
-                    activation_epoch: 0,
-                    deactivation_epoch: u64::MAX,
-                    warmup_cooldown_rate: 0.25,
-                },
-                credits_observed: 0,
-            };
-
-            let stake_state = StakeStateV2::Stake(meta, stake, StakeFlags::empty());
-            let mut stake_data = vec![0; std::mem::size_of::<StakeStateV2>()];
-            bincode::serialize_into(&mut stake_data[..], &stake_state)?;
-
-            program_test.add_account(keypairs.stake_keypair.pubkey(), SolanaAccount {
-                lamports: 1_000_000_000, // 1 SOL
-                owner: stake::program::id(),
-                executable: false,
-                rent_epoch: 0,
-                data: stake_data,
+            validator_keypairs.push(ValidatorKeypairs {
+                vote_keypair,
+                stake_keypair,
+                identity_keypair,
             });
         }
 
-        // Create a new context
+        // Create program test (but don't add accounts since they exist on the test validator)
+        let mut program_test = ProgramTest::default();
         let mut program_context = program_test.start_with_context().await;
 
-        // Rest of the function remains the same...
         let tip_distribution_program_id = Pubkey::new_unique();
-
-        setup_validator_accounts(
-            &mut program_context,
-            &validator_keypairs,
-            &tip_distribution_program_id
-        ).await?;
 
         // Create temporary directories
         let temp_dir = tempfile::tempdir()?;
@@ -167,7 +140,7 @@ impl TestContext {
             EllipsisClient::from_rpc(RpcClient::new("http://localhost:8899".to_string()), &keypair)?
         );
 
-        // Generate the new pubkeys
+        // Use the first validator's keypairs for the test context
         let vote_pubkey = validator_keypairs[0].vote_keypair.pubkey();
         let stake_pubkey = validator_keypairs[0].stake_keypair.pubkey();
         let tip_distribution_address = Pubkey::new_unique();
@@ -252,85 +225,6 @@ impl TestContext {
 
         Ok(previous_epoch_final_slot)
     }
-}
-
-async fn setup_validator_accounts(
-    context: &mut ProgramTestContext,
-    validator_keypairs: &[ValidatorKeypairs],
-    tip_distribution_program_id: &Pubkey
-) -> Result<()> {
-    for keypairs in validator_keypairs {
-        let vote_pubkey = keypairs.vote_keypair.pubkey();
-        let stake_pubkey = keypairs.stake_keypair.pubkey();
-
-        // Create vote account with proper vote state
-        let mut vote_state = VoteState::new(
-            &(VoteInit {
-                node_pubkey: keypairs.vote_keypair.pubkey(),
-                authorized_voter: vote_pubkey,
-                authorized_withdrawer: vote_pubkey,
-                commission: 0,
-            }),
-            &Clock::default()
-        );
-
-        let mut vote_account = AccountSharedData::new(
-            1_000_000,
-            VoteState::size_of(),
-            &vote_program_id()
-        );
-
-        let versioned_state = VoteStateVersions::new_current(vote_state);
-        vote_account.set_data(bincode::serialize(&versioned_state)?);
-        context.set_account(&vote_pubkey, &vote_account);
-
-        // Create stake account with active delegation
-        let stake_lamports = 1_000_000_000;
-        let meta = Meta {
-            rent_exempt_reserve: Rent::default().minimum_balance(
-                std::mem::size_of::<StakeStateV2>()
-            ),
-            authorized: stake::state::Authorized::auto(&stake_pubkey),
-            lockup: stake::state::Lockup::default(),
-        };
-
-        let stake = Stake {
-            delegation: stake::state::Delegation {
-                voter_pubkey: vote_pubkey,
-                stake: stake_lamports,
-                activation_epoch: 0,
-                deactivation_epoch: u64::MAX,
-                // Use a fixed value since this is just for testing
-                warmup_cooldown_rate: 0.25,
-            },
-            credits_observed: 0,
-        };
-
-        let stake_state = StakeStateV2::Stake(meta, stake, StakeFlags::empty());
-        let mut stake_account = AccountSharedData::new(
-            stake_lamports,
-            std::mem::size_of::<StakeStateV2>(),
-            &stake::program::id()
-        );
-        stake_account.set_data(bincode::serialize(&stake_state)?);
-        context.set_account(&stake_pubkey, &stake_account);
-
-        // Create tip distribution account
-        let seeds = &[b"tip_distribution", vote_pubkey.as_ref()];
-        let (tip_distribution_address, _) = Pubkey::find_program_address(
-            seeds,
-            tip_distribution_program_id
-        );
-
-        let tip_distribution_account = AccountSharedData::new(
-            1_000_000,
-            0,
-            tip_distribution_program_id
-        );
-        context.set_account(&tip_distribution_address, &tip_distribution_account);
-    }
-
-    Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
