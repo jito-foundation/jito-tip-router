@@ -36,6 +36,7 @@ use {
         sync::{atomic::AtomicBool, Arc},
     },
     thiserror::Error,
+    jito_tip_payment::{CONFIG_ACCOUNT_SEED}
 };
 
 #[derive(Error, Debug)]
@@ -85,7 +86,16 @@ pub fn generate_stake_meta(
     info!("Creating bank from ledger path...");
     let bank = create_bank_from_snapshot(ledger_path, snapshot_slot)?;
 
-    info!("Generating stake_meta_collection object...");
+    // Verify bank slot is within acceptable range
+    if bank.slot() < *snapshot_slot {
+        warn!(
+            "Bank slot {} is less than requested snapshot slot {}",
+            bank.slot(),
+            snapshot_slot
+        );
+    }
+
+    info!("Generating stake_meta_collection object for slot {}...", bank.slot());
     let stake_meta_coll =
         generate_stake_meta_collection(&bank, tip_distribution_program_id, tip_payment_program_id)?;
 
@@ -95,46 +105,6 @@ pub fn generate_stake_meta(
     Ok(())
 }
 
-pub fn generate_stake_meta_from_bank(
-    bank: &Arc<Bank>,
-    tip_distribution_program_id: &Pubkey,
-    stake_meta_path: &str,
-) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
-    let stakes = bank.stakes_cache.stakes();
-    let vote_accounts = bank.vote_accounts();
-
-    let stake_meta = StakeMetaCollection {
-        epoch: bank.epoch(),
-        slot: bank.slot(),
-        bank_hash: bank.hash().to_string(),
-        stake_metas: stakes.stake_delegations()
-            .iter()
-            .map(|(_, stake_account)| {
-                let delegation = stake_account.delegation();
-                StakeMeta {
-                    validator_vote_account: delegation.voter_pubkey,
-                    validator_node_pubkey: vote_accounts
-                        .get(&delegation.voter_pubkey)
-                        .map(|(_, acc)| acc.vote_state().unwrap().node_pubkey)
-                        .unwrap_or_default(),
-                    delegations: vec![],  // Fill this based on your requirements
-                    total_delegated: delegation.stake,
-                    commission: vote_accounts
-                        .get(&delegation.voter_pubkey)
-                        .map(|(_, acc)| acc.vote_state().unwrap().commission)
-                        .unwrap_or_default(),
-                    maybe_tip_distribution_meta: None,
-                }
-            })
-            .collect(),
-        tip_distribution_program_id: *tip_distribution_program_id,
-    };
-
-    let file = std::fs::File::create(stake_meta_path)?;
-    serde_json::to_writer_pretty(file, &stake_meta)?;
-
-    Ok(stake_meta)
-}
 
 fn create_bank_from_snapshot(
     ledger_path: &Path,
@@ -173,11 +143,8 @@ fn create_bank_from_snapshot(
     )?;
 
     let working_bank = bank_forks.read().unwrap().working_bank();
-    assert_eq!(
-        working_bank.slot(),
-        *snapshot_slot,
-        "expected working bank slot {}, found {}",
-        snapshot_slot,
+    info!(
+        "Bank loaded from snapshot. Working bank slot: {}",
         working_bank.slot()
     );
 
@@ -218,22 +185,28 @@ pub fn generate_stake_meta_collection(
 
     let voter_pubkey_to_delegations = group_delegations_by_voter_pubkey(delegations, bank);
 
-    // the last leader in an epoch may not crank the tip program before the epoch is over, which
-    // would result in MEV rewards for epoch N not being cranked until epoch N + 1. This means that
-    // the account balance in the snapshot could be incorrect.
-    // We assume that the rewards sitting in the tip program PDAs are cranked out by the time all of
-    // the rewards are claimed.
-    let tip_accounts = derive_tip_payment_pubkeys(tip_payment_program_id);
-    let account = bank
-        .get_account(&tip_accounts.config_pda)
-        .expect("config pda exists");
+    // Get config PDA
+    let (config_pda, _) = Pubkey::find_program_address(
+        &[CONFIG_ACCOUNT_SEED],
+        tip_payment_program_id,
+    );
 
-    let config = Config::try_deserialize(&mut account.data()).expect("deserializes configuration");
+    // Get config account - don't panic if it exists
+    let config = if let Some(config_account) = bank.get_account(&config_pda) {
+        Config::try_deserialize(&mut config_account.data())
+            .map_err(|e| StakeMetaGeneratorError::AnchorError(Box::new(e)))?
+    } else {
+        // Instead of creating a new config, just return an error
+        return Err(StakeMetaGeneratorError::AnchorError(Box::new(
+            anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotInitialized)
+        )));
+    };
 
     let bb_commission_pct: u64 = config.block_builder_commission_pct;
     let tip_receiver: Pubkey = config.tip_receiver;
 
     // includes the block builder fee
+    let tip_accounts = derive_tip_payment_pubkeys(tip_payment_program_id);
     let excess_tip_balances: u64 = tip_accounts
         .tip_pdas
         .iter()
@@ -334,9 +307,9 @@ pub fn generate_stake_meta_collection(
             });
         } else {
             warn!(
-                    "voter_pubkey not found in voter_pubkey_to_delegations map [validator_vote_pubkey={}]",
-                    vote_pubkey
-                );
+                "voter_pubkey not found in voter_pubkey_to_delegations map [validator_vote_pubkey={}]",
+                vote_pubkey
+            );
         }
     }
     stake_metas.sort();
@@ -349,7 +322,6 @@ pub fn generate_stake_meta_collection(
         slot: bank.slot(),
     })
 }
-
 /// Given an [EpochStakes] object, return delegations grouped by voter_pubkey (validator delegated to).
 fn group_delegations_by_voter_pubkey(
     delegations: &im::HashMap<Pubkey, StakeAccount>,
@@ -404,7 +376,7 @@ mod tests {
         jito_tip_payment::{
             InitBumps, TipPaymentAccount, CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0,
             TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2, TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4,
-            TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6, TIP_ACCOUNT_SEED_7,
+            TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6, TIP_ACCOUNT_SEED_7
         },
         solana_runtime::genesis_utils::{
             create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,

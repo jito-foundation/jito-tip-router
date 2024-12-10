@@ -136,6 +136,54 @@ wait_for_stake_activation() {
     exit 1
 }
 
+initialize_tip_payment_config() {
+    echo "Initializing tip payment config..."
+    
+    # Create a funding keypair if it doesn't exist
+    FUNDER_KEYPAIR="$KEYS_DIR/funder.json"
+    if [ ! -f "$FUNDER_KEYPAIR" ]; then
+        solana-keygen new --no-passphrase --force -o "$FUNDER_KEYPAIR"
+        
+        # Request airdrop for the funder
+        solana airdrop 100 "$(solana-keygen pubkey "$FUNDER_KEYPAIR")" || {
+            echo "Failed to airdrop SOL to funder"
+            exit 1
+        }
+        sleep 5  # Wait for airdrop to confirm
+    fi
+    
+    # Create and fund config account
+    CONFIG_KEYPAIR="$KEYS_DIR/config.json"
+    solana-keygen new --no-passphrase --force -o "$CONFIG_KEYPAIR"
+    
+    solana transfer \
+        --from "$FUNDER_KEYPAIR" \
+        --allow-unfunded-recipient \
+        "$(solana-keygen pubkey "$CONFIG_KEYPAIR")" \
+        2 \
+        || {
+        echo "Failed to fund config account"
+        exit 1
+    }
+    
+    # Create and fund tip payment accounts
+    for SEED in {0..7}; do
+        TIP_KEYPAIR="$KEYS_DIR/tip_$SEED.json"
+        solana-keygen new --no-passphrase --force -o "$TIP_KEYPAIR"
+        
+        solana transfer \
+            --from "$FUNDER_KEYPAIR" \
+            --allow-unfunded-recipient \
+            "$(solana-keygen pubkey "$TIP_KEYPAIR")" \
+            2 \
+            || {
+            echo "Failed to fund tip payment account $SEED"
+            continue
+        }
+    done
+    
+    sleep 5  # Wait for transactions to confirm
+}
 # cleanup() {
 #     # Kill the validator if it's still running
 #     if [ ! -z "$VALIDATOR_PID" ]; then
@@ -157,6 +205,9 @@ main() {
     
     echo "Waiting for all stakes to activate..."
     wait_for_stake_activation
+
+    echo "Initializing tip payment config..."
+    initialize_tip_payment_config
 
     echo "Setup complete! Validator vote accounts are listed in $VALIDATOR_FILE"
 }
