@@ -45,7 +45,49 @@ use ::{
     serde::Serialize,
     solana_sdk::vote::state::VoteStateVersions,
     env_logger,
+    std::path::Path,
 };
+
+// Recursively copy the entire ledger directory
+fn copy_dir_all<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Result<()> {
+    fs::create_dir_all(&dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let src_path = entry.path();
+        let dst_path = dst.as_ref().join(entry.file_name());
+
+        if ty.is_dir() {
+            // Skip copying the rocksdb directory
+            if entry.file_name() == "rocksdb" {
+                continue;
+            }
+            copy_dir_all(&src_path, &dst_path)?;
+        } else if ty.is_file() {
+            // Skip LOCK and other RocksDB files
+            let filename = entry.file_name();
+            let skip_files = ["LOCK", "CURRENT", "LOG"];
+            if !skip_files.contains(&filename.to_str().unwrap_or("")) {
+                fs::copy(src_path, dst_path)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn copy_genesis_files(src_dir: &Path, dst_dir: &Path) -> Result<()> {
+    let genesis_files = ["genesis.bin", "genesis.tar.bz2"];
+
+    for file in genesis_files.iter() {
+        let src_path = src_dir.join(file);
+        let dst_path = dst_dir.join(file);
+
+        if src_path.exists() {
+            fs::copy(&src_path, &dst_path)?;
+        }
+    }
+    Ok(())
+}
 
 // Update ValidatorKeypairs struct to include identity keypair
 pub struct ValidatorKeypairs {
@@ -123,7 +165,7 @@ impl TestContext {
         // Create temporary directories
         let temp_dir = tempfile::tempdir()?;
         let snapshot_dir = temp_dir.path().join("snapshots");
-        let ledger_dir = PathBuf::from("scripts/test-ledger");
+        let ledger_dir = temp_dir.path().join("ledger");
 
         fs::create_dir_all(&snapshot_dir)?;
         fs::create_dir_all(&ledger_dir)?;
@@ -294,31 +336,137 @@ async fn test_epoch_processing() -> Result<()> {
     // Define merkle_tree_path here since we'll need it later
     let merkle_tree_path = context.snapshot_dir.join("merkle-trees");
 
-    let local_ledger_dir = PathBuf::from("scripts/test-ledger");
+    // let local_ledger_dir: PathBuf = PathBuf::from("scripts/test-ledger");
+    let source_ledger = Path::new("scripts/test-ledger");
+    info!(
+        "Files in source ledger before copying: {:?}",
+        fs
+            ::read_dir(source_ledger)?
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.file_name().to_string_lossy().to_string())
+            .collect::<Vec<_>>()
+    );
+
+    let test_ledger = context.temp_dir.path().join("test-ledger");
+
+    let accounts_dir = test_ledger.join("accounts");
+    if accounts_dir.exists() {
+        info!(
+            "Files in accounts directory: {:?}",
+            fs
+                ::read_dir(&accounts_dir)?
+                .filter_map(|entry| entry.ok())
+                .map(|entry| entry.file_name().to_string_lossy().to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+    fs::create_dir_all(&test_ledger)?;
+
+    // Copy genesis files first
+    copy_genesis_files(Path::new("scripts/test-ledger"), &test_ledger)?;
+
+    // Copy the rest of the ledger files
+    copy_dir_all(PathBuf::from("scripts/test-ledger"), &test_ledger)?;
+
+    // Create rocksdb directory after copying
+    fs::create_dir_all(test_ledger.join("rocksdb"))?;
+
+    // Add debug logging to check stake accounts
+    let stake_accounts = fs
+        ::read_dir(&test_ledger)?
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().to_string())
+        .collect::<Vec<_>>();
+    info!("Files in test ledger after copying: {:?}", stake_accounts);
+
+    // Check specific stake account
+    for keypair in &context.validator_keypairs {
+        let stake_pubkey = keypair.stake_keypair.pubkey();
+        info!("Checking for stake account: {}", stake_pubkey);
+        if let Ok(stake_activation) = context.rpc_client.get_stake_activation(stake_pubkey, None) {
+            info!("Stake activation state: {:?}", stake_activation);
+        }
+    }
+
+    // Before creating snapshot
+    info!("Checking ledger directory contents at {:?}", test_ledger);
+    if let Ok(entries) = std::fs::read_dir(&test_ledger) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                info!("Found file: {:?}", entry.path());
+            }
+        }
+    }
+
+    // Create rocksdb directory if it doesn't exist
+    let rocksdb_dir = test_ledger.join("rocksdb");
+    std::fs::create_dir_all(&rocksdb_dir)?;
+
+    // Find the latest snapshot slot from the ledger
+    let latest_snapshot_slot = fs
+        ::read_dir(&test_ledger)?
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            if file_name.starts_with("snapshot-") && file_name.ends_with(".tar.zst") {
+                // Extract slot number from filename like "snapshot-20100-Hash.tar.zst"
+                file_name
+                    .split('-')
+                    .nth(1)
+                    .and_then(|s| s.parse::<u64>().ok())
+            } else {
+                None
+            }
+        })
+        .max()
+        .ok_or_else(|| anyhow::anyhow!("No snapshot files found in ledger"))?;
+
+    info!("Using latest snapshot slot: {}", latest_snapshot_slot);
 
     let snapshot_creator = SnapshotCreator::new(
         &rpc_url,
         context.snapshot_dir.to_str().unwrap().to_string(),
         5,
-        "bzip2".to_string(),
+        "zstd".to_string(),
         keypair_copy,
-        local_ledger_dir.clone()
+        test_ledger.clone()
     )?;
-
     let slot = context.get_previous_epoch_last_slot().await?;
-    snapshot_creator.create_snapshot(slot).await?;
+
+    snapshot_creator.create_snapshot(latest_snapshot_slot);
+
     // 2. Generate stake metadata
     info!("2. Testing stake metadata generation...");
     let stake_meta_path = context.snapshot_dir.join("stake-meta.json");
+    // Find the latest snapshot slot first
+    let latest_snapshot_slot = fs
+        ::read_dir(&test_ledger)?
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            if file_name.starts_with("snapshot-") && file_name.ends_with(".tar.zst") {
+                file_name
+                    .split('-')
+                    .nth(1)
+                    .and_then(|s| s.parse::<u64>().ok())
+            } else {
+                None
+            }
+        })
+        .max()
+        .ok_or_else(|| anyhow::anyhow!("No snapshot files found in ledger"))?;
 
+    info!("Using latest snapshot slot: {}", latest_snapshot_slot);
+
+    // Use this slot for both snapshot creation and stake metadata generation
     stake_meta_generator_workflow::generate_stake_meta(
-        &local_ledger_dir,
-        &slot,
+        &test_ledger,
+        &latest_snapshot_slot, // Use latest_snapshot_slot instead of slot
         &context.tip_distribution_program_id,
         stake_meta_path.to_str().unwrap(),
         &context.tip_payment_program_id
     )?;
-
+    
     let stake_meta = context.create_test_stake_meta()?;
 
     // 3. Create merkle trees
