@@ -35,9 +35,10 @@ pub struct OperatorSnapshot {
     pub vault_operator_delegations_registered: u64,
     pub valid_operator_vault_delegations: u64,
     pub stake_weights: StakeWeights,
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 256],
-    pub vault_operator_stake_weight: [VaultOperatorStakeWeight; 32],
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub vault_operator_stake_weight: [VaultOperatorStakeWeight; 64],
 }
 
 impl OperatorSnapshot {

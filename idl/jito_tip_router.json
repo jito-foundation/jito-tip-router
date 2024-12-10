@@ -1348,7 +1348,7 @@
                 {
                   "defined": "OperatorVote"
                 },
-                16
+                256
               ]
             }
           },
@@ -1359,7 +1359,7 @@
                 {
                   "defined": "BallotTally"
                 },
-                16
+                256
               ]
             }
           }
@@ -1447,7 +1447,7 @@
                 {
                   "defined": "NcnRewardRoute"
                 },
-                32
+                256
               ]
             }
           }
@@ -1632,7 +1632,7 @@
                 {
                   "defined": "VaultOperatorStakeWeight"
                 },
-                32
+                64
               ]
             }
           }
@@ -1765,7 +1765,7 @@
                 {
                   "defined": "VaultRewardRoute"
                 },
-                32
+                64
               ]
             }
           }
@@ -1790,7 +1790,7 @@
             "type": {
               "array": [
                 "u8",
-                7
+                127
               ]
             }
           },
@@ -1801,7 +1801,7 @@
                 {
                   "defined": "MintEntry"
                 },
-                16
+                64
               ]
             }
           }

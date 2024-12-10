@@ -31,9 +31,10 @@ pub struct NcnRewardRouter {
     pub reward_pool: u64,
     pub rewards_processed: u64,
     pub operator_rewards: u64,
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 128],
-    pub vault_reward_routes: [VaultRewardRoute; 32],
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub vault_reward_routes: [VaultRewardRoute; 64],
 }
 
 impl NcnRewardRouter {

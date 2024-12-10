@@ -14,7 +14,7 @@ use crate::generated::types::Fees;
 pub struct FeeConfig {
     pub block_engine_fee_bps: u16,
     pub base_fee_wallets: [Pubkey; 8],
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 128],
     pub fee1: Fees,
     pub fee2: Fees,

@@ -10,8 +10,8 @@ use solana_program::{
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    discriminators::Discriminators, epoch_snapshot::OperatorSnapshot, error::TipRouterError,
-    ncn_fee_group::NcnFeeGroup,
+    constants::MAX_VAULT_OPERATOR_DELEGATIONS, discriminators::Discriminators,
+    epoch_snapshot::OperatorSnapshot, error::TipRouterError, ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -40,8 +40,7 @@ pub struct NcnRewardRouter {
 
     reserved: [u8; 128],
 
-    //TODO change to 64
-    vault_reward_routes: [VaultRewardRoute; 32],
+    vault_reward_routes: [VaultRewardRoute; 64],
 }
 
 impl Discriminator for NcnRewardRouter {
@@ -69,7 +68,7 @@ impl NcnRewardRouter {
             rewards_processed: PodU64::from(0),
             operator_rewards: PodU64::from(0),
             reserved: [0; 128],
-            vault_reward_routes: [VaultRewardRoute::default(); 32],
+            vault_reward_routes: [VaultRewardRoute::default(); MAX_VAULT_OPERATOR_DELEGATIONS],
         }
     }
 
@@ -551,6 +550,26 @@ mod tests {
     use solana_program::pubkey::Pubkey;
 
     use super::*;
+
+    #[test]
+    fn test_len() {
+        use std::mem::size_of;
+
+        let expected_total = size_of::<NcnFeeGroup>() // ncn_fee_group
+            + size_of::<Pubkey>() // operator
+            + size_of::<Pubkey>() // ncn
+            + size_of::<PodU64>() // ncn_epoch
+            + 1 // bump
+            + size_of::<PodU64>() // slot_created
+            + size_of::<PodU64>() // total_rewards
+            + size_of::<PodU64>() // reward_pool
+            + size_of::<PodU64>() // rewards_processed
+            + size_of::<PodU64>() // operator_rewards
+            + 128 // reserved
+            + size_of::<VaultRewardRoute>() * MAX_VAULT_OPERATOR_DELEGATIONS; // vault_reward_routes
+
+        assert_eq!(size_of::<NcnRewardRouter>(), expected_total);
+    }
 
     #[test]
     fn test_route_incoming_rewards() {

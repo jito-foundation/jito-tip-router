@@ -12,7 +12,7 @@ use crate::generated::types::Fee;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fees {
     pub activation_epoch: u64,
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 128],
     pub base_fee_groups_bps: [Fee; 8],
     pub ncn_fee_groups_bps: [Fee; 8],

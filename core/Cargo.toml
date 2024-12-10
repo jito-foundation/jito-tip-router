@@ -19,6 +19,8 @@ jito-restaking-sdk = { workspace = true }
 jito-vault-core = { workspace = true }
 jito-vault-sdk = { workspace = true }
 meta-merkle-tree = { workspace = true }
+serde = { workspace = true }
+serde_with = { workspace = true }
 shank = { workspace = true }
 solana-program = { workspace = true }
 spl-associated-token-account = { workspace = true }

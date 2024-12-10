@@ -24,11 +24,12 @@ pub struct BaseRewardRouter {
     pub total_rewards: u64,
     pub reward_pool: u64,
     pub rewards_processed: u64,
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 128],
     pub base_fee_group_rewards: [BaseRewardRouterRewards; 8],
     pub ncn_fee_group_rewards: [BaseRewardRouterRewards; 8],
-    pub ncn_fee_group_reward_routes: [NcnRewardRoute; 32],
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub ncn_fee_group_reward_routes: [NcnRewardRoute; 256],
 }
 
 impl BaseRewardRouter {

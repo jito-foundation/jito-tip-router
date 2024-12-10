@@ -5,7 +5,10 @@ use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
-use crate::{discriminators::Discriminators, error::TipRouterError, ncn_fee_group::NcnFeeGroup};
+use crate::{
+    constants::MAX_VAULT_OPERATOR_DELEGATIONS, discriminators::Discriminators,
+    error::TipRouterError, ncn_fee_group::NcnFeeGroup,
+};
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
@@ -54,8 +57,8 @@ impl Default for MintEntry {
 pub struct TrackedMints {
     pub ncn: Pubkey,
     pub bump: u8,
-    pub reserved: [u8; 7], // TODO extend to 127; figure out serde issue
-    pub st_mint_list: [MintEntry; 16], // TODO extend to 64; figure out serde issue
+    pub reserved: [u8; 127],
+    pub st_mint_list: [MintEntry; 64],
 }
 
 impl Discriminator for TrackedMints {
@@ -67,8 +70,8 @@ impl TrackedMints {
         Self {
             ncn,
             bump,
-            reserved: [0; 7],
-            st_mint_list: [MintEntry::default(); 16],
+            reserved: [0; 127],
+            st_mint_list: [MintEntry::default(); MAX_VAULT_OPERATOR_DELEGATIONS],
         }
     }
 
@@ -211,6 +214,24 @@ impl TrackedMints {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_len() {
+        use std::mem::size_of;
+
+        let expected_total = size_of::<Pubkey>() // ncn
+            + 1 // bump
+            + 127 // reserved
+            + size_of::<MintEntry>() * MAX_VAULT_OPERATOR_DELEGATIONS; // st_mint_list
+
+        assert_eq!(size_of::<TrackedMints>(), expected_total);
+
+        let tracked_mints = TrackedMints::new(Pubkey::default(), 0);
+        assert_eq!(
+            tracked_mints.st_mint_list.len(),
+            MAX_VAULT_OPERATOR_DELEGATIONS
+        );
+    }
 
     #[test]
     fn test_add_mint() {

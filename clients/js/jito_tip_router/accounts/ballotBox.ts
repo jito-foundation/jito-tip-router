@@ -91,8 +91,8 @@ export function getBallotBoxEncoder(): Encoder<BallotBoxArgs> {
     ['operatorsVoted', getU64Encoder()],
     ['uniqueBallots', getU64Encoder()],
     ['winningBallot', getBallotEncoder()],
-    ['operatorVotes', getArrayEncoder(getOperatorVoteEncoder(), { size: 16 })],
-    ['ballotTallies', getArrayEncoder(getBallotTallyEncoder(), { size: 16 })],
+    ['operatorVotes', getArrayEncoder(getOperatorVoteEncoder(), { size: 256 })],
+    ['ballotTallies', getArrayEncoder(getBallotTallyEncoder(), { size: 256 })],
   ]);
 }
 
@@ -108,8 +108,8 @@ export function getBallotBoxDecoder(): Decoder<BallotBox> {
     ['operatorsVoted', getU64Decoder()],
     ['uniqueBallots', getU64Decoder()],
     ['winningBallot', getBallotDecoder()],
-    ['operatorVotes', getArrayDecoder(getOperatorVoteDecoder(), { size: 16 })],
-    ['ballotTallies', getArrayDecoder(getBallotTallyDecoder(), { size: 16 })],
+    ['operatorVotes', getArrayDecoder(getOperatorVoteDecoder(), { size: 256 })],
+    ['ballotTallies', getArrayDecoder(getBallotTallyDecoder(), { size: 256 })],
   ]);
 }
 

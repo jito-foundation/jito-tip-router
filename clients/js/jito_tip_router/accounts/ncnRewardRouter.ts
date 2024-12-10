@@ -93,7 +93,7 @@ export function getNcnRewardRouterEncoder(): Encoder<NcnRewardRouterArgs> {
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
     [
       'vaultRewardRoutes',
-      getArrayEncoder(getVaultRewardRouteEncoder(), { size: 32 }),
+      getArrayEncoder(getVaultRewardRouteEncoder(), { size: 64 }),
     ],
   ]);
 }
@@ -114,7 +114,7 @@ export function getNcnRewardRouterDecoder(): Decoder<NcnRewardRouter> {
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
     [
       'vaultRewardRoutes',
-      getArrayDecoder(getVaultRewardRouteDecoder(), { size: 32 }),
+      getArrayDecoder(getVaultRewardRouteDecoder(), { size: 64 }),
     ],
   ]);
 }
