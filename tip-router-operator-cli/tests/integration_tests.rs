@@ -44,6 +44,7 @@ use ::{
     solana_client::rpc_client::RpcClient,
     serde::Serialize,
     solana_sdk::vote::state::VoteStateVersions,
+    env_logger,
 };
 
 // Update ValidatorKeypairs struct to include identity keypair
@@ -223,16 +224,34 @@ impl TestContext {
 
     async fn wait_for_stakes_to_activate(&self) -> Result<()> {
         info!("Waiting for stakes to activate...");
-        for validator in &self.validator_keypairs {
+        let timeout = Duration::from_secs(180); // 3 minute timeout
+        let start = std::time::Instant::now();
+    
+        for (i, validator) in self.validator_keypairs.iter().enumerate() {
+            info!("Checking validator {} with stake pubkey: {}", i, validator.stake_keypair.pubkey());
+            
             loop {
+                if start.elapsed() > timeout {
+                    return Err(anyhow::anyhow!("Timeout waiting for stakes to activate after {} seconds", timeout.as_secs()));
+                }
+    
                 let stake_status = self.rpc_client
                     .get_stake_activation(validator.stake_keypair.pubkey(), None)?;
                 
+                info!(
+                    "Validator {}: stake status = {:?} for pubkey {}",
+                    i,
+                    stake_status.state,
+                    validator.stake_keypair.pubkey()
+                );
+                    
                 if stake_status.state == StakeActivationState::Active {
+                    info!("Validator {} stake activated", i);
                     break;
                 }
                 
-                tokio::time::sleep(Duration::from_secs(1)).await;
+                info!("Waiting 5 seconds before next check...");
+                tokio::time::sleep(Duration::from_secs(5)).await;
             }
         }
         info!("All stakes are now active");
@@ -242,11 +261,15 @@ impl TestContext {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_epoch_processing() -> Result<()> {
+    let _ = env_logger::builder().is_test(true).try_init();
+
     let context = TestContext::new().await?;
     
     // Wait for stakes to activate before proceeding
     context.wait_for_stakes_to_activate().await?;
     
+    // context.wait_for_next_epoch().await?;
+
     // Rest of the test...
     info!("1. Testing snapshot creation...");
 
@@ -255,7 +278,7 @@ async fn test_epoch_processing() -> Result<()> {
     // Define merkle_tree_path here since we'll need it later
     let merkle_tree_path = context.snapshot_dir.join("merkle-trees");
 
-    let local_ledger_dir = PathBuf::from("test-ledger");
+    let local_ledger_dir = PathBuf::from("scripts/test-ledger");
 
     let snapshot_creator = SnapshotCreator::new(
         &rpc_url,
