@@ -65,6 +65,10 @@ impl BaseFeeGroup {
         }
     }
 
+    pub const fn dao() -> Self {
+        Self::new(BaseFeeGroupType::DAO)
+    }
+
     pub const fn group_type(&self) -> Result<BaseFeeGroupType, TipRouterError> {
         match self.group {
             0x0 => Ok(BaseFeeGroupType::DAO),

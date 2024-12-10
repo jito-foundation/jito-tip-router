@@ -80,6 +80,8 @@ pub enum TipRouterError {
     OperatorVotesFull,
     #[error("Merkle root tally full")]
     BallotTallyFull,
+    #[error("Ballot tally not found")]
+    BallotTallyNotFoundFull,
     #[error("Consensus already reached, cannot change vote")]
     ConsensusAlreadyReached,
     #[error("Consensus not reached")]

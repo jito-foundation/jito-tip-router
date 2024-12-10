@@ -4,10 +4,9 @@ mod set_merkle_root {
         jito_tip_distribution,
     };
     use jito_tip_router_core::{
-        ballot_box::{Ballot, BallotBox, BallotTally},
+        ballot_box::{Ballot, BallotBox},
         error::TipRouterError,
         ncn_config::NcnConfig,
-        stake_weight::StakeWeights,
     };
     use meta_merkle_tree::{
         generated_merkle_tree::{
@@ -202,9 +201,7 @@ mod set_merkle_root {
         let ballot_box_fixture = {
             let mut ballot_box = BallotBox::new(ncn_address, epoch, bump, 0);
             let winning_ballot = Ballot::new(winning_root);
-            let winning_ballot_tally =
-                BallotTally::new(0, winning_ballot, &StakeWeights::default());
-            ballot_box.set_winning_ballot_tally(winning_ballot_tally);
+            ballot_box.set_winning_ballot(winning_ballot);
             ballot_box
         };
 

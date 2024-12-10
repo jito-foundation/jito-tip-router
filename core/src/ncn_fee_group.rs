@@ -65,6 +65,14 @@ impl NcnFeeGroup {
         }
     }
 
+    pub const fn lst() -> Self {
+        Self::new(NcnFeeGroupType::Default)
+    }
+
+    pub const fn jto() -> Self {
+        Self::new(NcnFeeGroupType::JTO)
+    }
+
     pub const fn group_type(&self) -> Result<NcnFeeGroupType, TipRouterError> {
         match self.group {
             0x0 => Ok(NcnFeeGroupType::Default),

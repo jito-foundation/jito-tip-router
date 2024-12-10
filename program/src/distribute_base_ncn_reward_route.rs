@@ -57,13 +57,14 @@ pub fn process_distribute_base_ncn_reward_route(
             .distribute_ncn_fee_group_reward_route(ncn_fee_group, operator.key)?
     };
 
-    if rewards == 0 {
-        msg!("No rewards to distribute");
-        return Err(TipRouterError::NoRewards.into());
-    }
+    //TODO should this be an error?
+    // if rewards == 0 {
+    //     msg!("No rewards to distribute");
+    //     return Err(TipRouterError::NoRewards.into());
+    // }
 
     // Send rewards
-    {
+    if rewards > 0 {
         **ncn_reward_router.lamports.borrow_mut() = ncn_reward_router
             .lamports()
             .checked_add(rewards)

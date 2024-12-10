@@ -185,12 +185,27 @@ impl BaseRewardRouter {
         let winning_ballot = ballot_box.get_winning_ballot_tally()?;
         let winning_stake_weight = winning_ballot.stake_weights();
 
-        for votes in ballot_box.operator_votes().iter() {
-            if votes.ballot_index() == winning_ballot.index() {
-                let operator = votes.operator();
+        for group in NcnFeeGroup::all_groups().iter() {
+            let rewards_to_process = self.ncn_fee_group_rewards(*group)?;
 
-                for group in NcnFeeGroup::all_groups().iter() {
-                    let rewards_to_process = self.ncn_fee_group_rewards(*group)?;
+            msg!("{:?}", ballot_box.operator_votes()[0]);
+            msg!("{:?}", ballot_box.operator_votes()[1]);
+            msg!("{:?}", ballot_box.operator_votes()[2]);
+            msg!("{:?}", ballot_box.operator_votes()[3]);
+            msg!("{:?}", ballot_box.operator_votes()[4]);
+            msg!("{:?}", ballot_box.operator_votes()[5]);
+            msg!("{:?}", ballot_box.operator_votes()[6]);
+            msg!("{:?}", ballot_box.operator_votes()[7]);
+            msg!("{:?}", ballot_box.operator_votes()[8]);
+            msg!("{:?}", ballot_box.operator_votes()[9]);
+            msg!("{:?}", ballot_box.operator_votes()[10]);
+            msg!("{:?}", ballot_box.operator_votes()[11]);
+            msg!("{:?}", ballot_box.operator_votes()[12]);
+
+            for votes in ballot_box.operator_votes().iter() {
+                if votes.ballot_index() == winning_ballot.index() {
+                    let operator = votes.operator();
+
                     let winning_reward_stake_weight =
                         winning_stake_weight.ncn_fee_group_stake_weight(*group)?;
                     let ncn_route_reward_stake_weight =
@@ -201,6 +216,21 @@ impl BaseRewardRouter {
                         winning_reward_stake_weight,
                         rewards_to_process,
                     )?;
+
+                    // msg!("   ");
+                    // msg!("{} -   votes: {:?}", operator, votes.stake_weights());
+                    // msg!("{} - winning: {:?}", operator, winning_stake_weight);
+                    // msg!(
+                    //     "Route NCN Fee Group Rewards: {:?} {:?} {:?} {}/{} {}/{}",
+                    //     group,
+                    //     operator,
+                    //     ncn_fee_group_route_reward,
+                    //     ncn_route_reward_stake_weight,
+                    //     winning_reward_stake_weight,
+                    //     self.ncn_fee_group_rewards(*group)?,
+                    //     rewards_to_process
+                    // );
+                    // msg!("   ");
 
                     self.route_from_ncn_fee_group_rewards(*group, ncn_fee_group_route_reward)?;
                     self.route_to_ncn_fee_group_reward_route(
@@ -316,6 +346,18 @@ impl BaseRewardRouter {
 
     pub fn reward_pool(&self) -> u64 {
         self.reward_pool.into()
+    }
+
+    pub const fn ncn(&self) -> &Pubkey {
+        &self.ncn
+    }
+
+    pub fn ncn_epoch(&self) -> u64 {
+        self.ncn_epoch.into()
+    }
+
+    pub fn slot_created(&self) -> u64 {
+        self.slot_created.into()
     }
 
     pub fn route_to_reward_pool(&mut self, rewards: u64) -> Result<(), TipRouterError> {

@@ -50,10 +50,13 @@ pub fn process_route_base_rewards(
 
     let rent_cost = base_reward_router_account.rent_cost(&Rent::get()?)?;
 
+    msg!("incoming");
     base_reward_router_account.route_incoming_rewards(rent_cost, base_reward_router_balance)?;
 
+    msg!("reward pool");
     base_reward_router_account.route_reward_pool(epoch_snapshot_account.fees())?;
 
+    msg!("ncn fee group rewards");
     base_reward_router_account.route_ncn_fee_group_rewards(ballot_box_account)?;
 
     Ok(())

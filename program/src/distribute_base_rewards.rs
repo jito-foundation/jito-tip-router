@@ -67,13 +67,14 @@ pub fn process_distribute_base_rewards(
         base_reward_router_account.distribute_base_fee_group_rewards(group)?
     };
 
-    if rewards == 0 {
-        msg!("No rewards to distribute");
-        return Err(TipRouterError::NoRewards.into());
-    }
+    //TODO should this be an error?
+    // if rewards == 0 {
+    //     msg!("No rewards to distribute");
+    //     return Err(TipRouterError::NoRewards.into());
+    // }
 
     // Send rewards
-    {
+    if rewards > 0 {
         **base_fee_wallet.lamports.borrow_mut() = base_fee_wallet
             .lamports()
             .checked_add(rewards)

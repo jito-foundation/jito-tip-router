@@ -1,9 +1,12 @@
 mod admin_update_weight_table;
 mod bpf;
 mod cast_vote;
+mod distribute_rewards;
 mod initialize_ballot_box;
+mod initialize_base_reward_router;
 mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
+mod initialize_ncn_reward_router;
 mod initialize_operator_snapshot;
 mod initialize_tracked_mints;
 mod initialize_weight_table;

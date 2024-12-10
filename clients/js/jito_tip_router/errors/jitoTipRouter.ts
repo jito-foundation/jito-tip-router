@@ -90,48 +90,51 @@ export const JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST = 0x221b; // 8731
 export const JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL = 0x221c; // 8732
 /** BallotTallyFull: Merkle root tally full */
 export const JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL = 0x221d; // 8733
+/** BallotTallyNotFoundFull: Ballot tally not found */
+export const JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL = 0x221e; // 8734
 /** ConsensusAlreadyReached: Consensus already reached, cannot change vote */
-export const JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED = 0x221e; // 8734
+export const JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED = 0x221f; // 8735
 /** ConsensusNotReached: Consensus not reached */
-export const JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED = 0x221f; // 8735
+export const JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED = 0x2220; // 8736
 /** EpochSnapshotNotFinalized: Epoch snapshot not finalized */
-export const JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED = 0x2220; // 8736
+export const JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED = 0x2221; // 8737
 /** VotingNotValid: Voting not valid, too many slots after consensus reached */
-export const JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID = 0x2221; // 8737
+export const JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID = 0x2222; // 8738
 /** TieBreakerAdminInvalid: Tie breaker admin invalid */
-export const JITO_TIP_ROUTER_ERROR__TIE_BREAKER_ADMIN_INVALID = 0x2222; // 8738
+export const JITO_TIP_ROUTER_ERROR__TIE_BREAKER_ADMIN_INVALID = 0x2223; // 8739
 /** VotingNotFinalized: Voting not finalized */
-export const JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED = 0x2223; // 8739
+export const JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED = 0x2224; // 8740
 /** TieBreakerNotInPriorVotes: Tie breaking ballot must be one of the prior votes */
-export const JITO_TIP_ROUTER_ERROR__TIE_BREAKER_NOT_IN_PRIOR_VOTES = 0x2224; // 8740
+export const JITO_TIP_ROUTER_ERROR__TIE_BREAKER_NOT_IN_PRIOR_VOTES = 0x2225; // 8741
 /** InvalidMerkleProof: Invalid merkle proof */
-export const JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF = 0x2225; // 8741
+export const JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF = 0x2226; // 8742
 /** OperatorAdminInvalid: Operator admin needs to sign its vote */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID = 0x2226; // 8742
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID = 0x2227; // 8743
 /** InvalidNcnFeeGroup: Not a valid NCN fee group */
-export const JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP = 0x2227; // 8743
+export const JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP = 0x2228; // 8744
 /** InvalidBaseFeeGroup: Not a valid base fee group */
-export const JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP = 0x2228; // 8744
+export const JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP = 0x2229; // 8745
 /** OperatorRewardListFull: Operator reward list full */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL = 0x2229; // 8745
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL = 0x222a; // 8746
 /** OperatorRewardNotFound: Operator Reward not found */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND = 0x222a; // 8746
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND = 0x222b; // 8747
 /** VaultRewardNotFound: Vault Reward not found */
-export const JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND = 0x222b; // 8747
+export const JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND = 0x222c; // 8748
 /** DestinationMismatch: Destination mismatch */
-export const JITO_TIP_ROUTER_ERROR__DESTINATION_MISMATCH = 0x222c; // 8748
+export const JITO_TIP_ROUTER_ERROR__DESTINATION_MISMATCH = 0x222d; // 8749
 /** NcnRewardRouteNotFound: Ncn reward route not found */
-export const JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND = 0x222d; // 8749
+export const JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND = 0x222e; // 8750
 /** FeeNotActive: Fee not active */
-export const JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE = 0x222e; // 8750
+export const JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE = 0x222f; // 8751
 /** NoRewards: No rewards to distribute */
-export const JITO_TIP_ROUTER_ERROR__NO_REWARDS = 0x222f; // 8751
+export const JITO_TIP_ROUTER_ERROR__NO_REWARDS = 0x2230; // 8752
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL
+  | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR
@@ -192,6 +195,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW]: `Overflow`,
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR]: `Underflow`,
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL]: `Merkle root tally full`,
+    [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL]: `Ballot tally not found`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR]: `Cast to u64 error`,

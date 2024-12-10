@@ -145,6 +145,30 @@ impl NcnRewardRouter {
         Ok(())
     }
 
+    pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
+        self.ncn_fee_group
+    }
+
+    pub const fn operator(&self) -> Pubkey {
+        self.operator
+    }
+
+    pub const fn ncn(&self) -> Pubkey {
+        self.ncn
+    }
+
+    pub fn ncn_epoch(&self) -> u64 {
+        self.ncn_epoch.into()
+    }
+
+    pub fn slot_created(&self) -> u64 {
+        self.slot_created.into()
+    }
+
+    pub const fn vault_reward_routes(&self) -> &[VaultRewardRoute] {
+        &self.vault_reward_routes
+    }
+
     // ------------------------ ROUTING ------------------------
     pub fn route_incoming_rewards(
         &mut self,
@@ -185,12 +209,12 @@ impl NcnRewardRouter {
         // Vault Rewards
         {
             let operator_stake_weight = operator_snapshot.stake_weights();
+            let vault_ncn_fee_group = self.ncn_fee_group();
             let rewards_to_process: u64 = self.reward_pool();
 
             for vault_operator_delegation in operator_snapshot.vault_operator_stake_weight().iter()
             {
                 let vault = vault_operator_delegation.vault();
-                let vault_ncn_fee_group = vault_operator_delegation.ncn_fee_group();
 
                 let vault_reward_stake_weight = vault_operator_delegation
                     .stake_weights()

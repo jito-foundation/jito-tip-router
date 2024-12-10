@@ -7,7 +7,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::{BallotTally, OperatorVote};
+use crate::generated::types::{Ballot, BallotTally, OperatorVote};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -26,7 +26,7 @@ pub struct BallotBox {
     pub reserved: [u8; 128],
     pub operators_voted: u64,
     pub unique_ballots: u64,
-    pub winning_ballot_tally: BallotTally,
+    pub winning_ballot: Ballot,
     pub operator_votes: [OperatorVote; 16],
     pub ballot_tallies: [BallotTally; 16],
 }

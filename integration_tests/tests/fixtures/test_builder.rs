@@ -100,6 +100,10 @@ impl TestBuilder {
         }
     }
 
+    pub async fn get_balance(&mut self, pubkey: &Pubkey) -> Result<u64, BanksClientError> {
+        Ok(self.context.banks_client.get_balance(*pubkey).await?)
+    }
+
     pub async fn warp_slot_incremental(
         &mut self,
         incremental_slots: u64,

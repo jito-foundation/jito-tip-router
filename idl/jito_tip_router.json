@@ -1356,9 +1356,9 @@
             }
           },
           {
-            "name": "winningBallotTally",
+            "name": "winningBallot",
             "type": {
-              "defined": "BallotTally"
+              "defined": "Ballot"
             }
           },
           {
@@ -1893,11 +1893,17 @@
             }
           },
           {
+            "name": "isValid",
+            "type": {
+              "defined": "PodBool"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                64
+                63
               ]
             }
           }
@@ -2521,91 +2527,96 @@
     },
     {
       "code": 8734,
+      "name": "BallotTallyNotFoundFull",
+      "msg": "Ballot tally not found"
+    },
+    {
+      "code": 8735,
       "name": "ConsensusAlreadyReached",
       "msg": "Consensus already reached, cannot change vote"
     },
     {
-      "code": 8735,
+      "code": 8736,
       "name": "ConsensusNotReached",
       "msg": "Consensus not reached"
     },
     {
-      "code": 8736,
+      "code": 8737,
       "name": "EpochSnapshotNotFinalized",
       "msg": "Epoch snapshot not finalized"
     },
     {
-      "code": 8737,
+      "code": 8738,
       "name": "VotingNotValid",
       "msg": "Voting not valid, too many slots after consensus reached"
     },
     {
-      "code": 8738,
+      "code": 8739,
       "name": "TieBreakerAdminInvalid",
       "msg": "Tie breaker admin invalid"
     },
     {
-      "code": 8739,
+      "code": 8740,
       "name": "VotingNotFinalized",
       "msg": "Voting not finalized"
     },
     {
-      "code": 8740,
+      "code": 8741,
       "name": "TieBreakerNotInPriorVotes",
       "msg": "Tie breaking ballot must be one of the prior votes"
     },
     {
-      "code": 8741,
+      "code": 8742,
       "name": "InvalidMerkleProof",
       "msg": "Invalid merkle proof"
     },
     {
-      "code": 8742,
+      "code": 8743,
       "name": "OperatorAdminInvalid",
       "msg": "Operator admin needs to sign its vote"
     },
     {
-      "code": 8743,
+      "code": 8744,
       "name": "InvalidNcnFeeGroup",
       "msg": "Not a valid NCN fee group"
     },
     {
-      "code": 8744,
+      "code": 8745,
       "name": "InvalidBaseFeeGroup",
       "msg": "Not a valid base fee group"
     },
     {
-      "code": 8745,
+      "code": 8746,
       "name": "OperatorRewardListFull",
       "msg": "Operator reward list full"
     },
     {
-      "code": 8746,
+      "code": 8747,
       "name": "OperatorRewardNotFound",
       "msg": "Operator Reward not found"
     },
     {
-      "code": 8747,
+      "code": 8748,
       "name": "VaultRewardNotFound",
       "msg": "Vault Reward not found"
     },
     {
-      "code": 8748,
+      "code": 8749,
       "name": "DestinationMismatch",
       "msg": "Destination mismatch"
     },
     {
-      "code": 8749,
+      "code": 8750,
       "name": "NcnRewardRouteNotFound",
       "msg": "Ncn reward route not found"
     },
     {
-      "code": 8750,
+      "code": 8751,
       "name": "FeeNotActive",
       "msg": "Fee not active"
     },
     {
-      "code": 8751,
+      "code": 8752,
       "name": "NoRewards",
       "msg": "No rewards to distribute"
     }
