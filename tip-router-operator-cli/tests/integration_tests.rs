@@ -123,7 +123,8 @@ impl TestContext {
         // Create temporary directories
         let temp_dir = tempfile::tempdir()?;
         let snapshot_dir = temp_dir.path().join("snapshots");
-        let ledger_dir = temp_dir.path().join("ledger");
+        let ledger_dir = PathBuf::from("scripts/test-ledger");
+
         fs::create_dir_all(&snapshot_dir)?;
         fs::create_dir_all(&ledger_dir)?;
 
@@ -158,7 +159,6 @@ impl TestContext {
             tip_distribution_address,
         })
     }
-
     fn create_test_stake_meta(&self) -> Result<StakeMetaCollection> {
         // Create a sample stake meta for testing
         let stake_meta = StakeMeta {
@@ -226,30 +226,41 @@ impl TestContext {
         info!("Waiting for stakes to activate...");
         let timeout = Duration::from_secs(180); // 3 minute timeout
         let start = std::time::Instant::now();
-    
+
         for (i, validator) in self.validator_keypairs.iter().enumerate() {
-            info!("Checking validator {} with stake pubkey: {}", i, validator.stake_keypair.pubkey());
-            
+            info!(
+                "Checking validator {} with stake pubkey: {}",
+                i,
+                validator.stake_keypair.pubkey()
+            );
+
             loop {
                 if start.elapsed() > timeout {
-                    return Err(anyhow::anyhow!("Timeout waiting for stakes to activate after {} seconds", timeout.as_secs()));
+                    return Err(
+                        anyhow::anyhow!(
+                            "Timeout waiting for stakes to activate after {} seconds",
+                            timeout.as_secs()
+                        )
+                    );
                 }
-    
-                let stake_status = self.rpc_client
-                    .get_stake_activation(validator.stake_keypair.pubkey(), None)?;
-                
+
+                let stake_status = self.rpc_client.get_stake_activation(
+                    validator.stake_keypair.pubkey(),
+                    None
+                )?;
+
                 info!(
                     "Validator {}: stake status = {:?} for pubkey {}",
                     i,
                     stake_status.state,
                     validator.stake_keypair.pubkey()
                 );
-                    
+
                 if stake_status.state == StakeActivationState::Active {
                     info!("Validator {} stake activated", i);
                     break;
                 }
-                
+
                 info!("Waiting 5 seconds before next check...");
                 tokio::time::sleep(Duration::from_secs(5)).await;
             }
@@ -264,10 +275,17 @@ async fn test_epoch_processing() -> Result<()> {
     let _ = env_logger::builder().is_test(true).try_init();
 
     let context = TestContext::new().await?;
-    
+
     // Wait for stakes to activate before proceeding
     context.wait_for_stakes_to_activate().await?;
-    
+
+    // Add delay to ensure validator state is fully propagated
+    tokio::time::sleep(Duration::from_secs(10)).await;
+
+    // Add check for validator readiness
+    let genesis_hash = context.rpc_client.get_genesis_hash()?;
+    info!("Genesis hash: {}", genesis_hash);
+
     // Rest of the test...
     info!("1. Testing snapshot creation...");
 
@@ -276,15 +294,15 @@ async fn test_epoch_processing() -> Result<()> {
     // Define merkle_tree_path here since we'll need it later
     let merkle_tree_path = context.snapshot_dir.join("merkle-trees");
 
-    let local_ledger_dir = context.ledger_dir.clone();
-    
+    let local_ledger_dir = PathBuf::from("scripts/test-ledger");
+
     let snapshot_creator = SnapshotCreator::new(
         &rpc_url,
         context.snapshot_dir.to_str().unwrap().to_string(),
         5,
         "bzip2".to_string(),
         keypair_copy,
-        local_ledger_dir.clone()  // Add .clone() here
+        local_ledger_dir.clone()
     )?;
 
     let slot = context.get_previous_epoch_last_slot().await?;
