@@ -25,7 +25,7 @@ wait_for_validator() {
 
 setup_test_validator() {
     solana-test-validator \
-        --slots-per-epoch 8 \
+        --slots-per-epoch 32 \
         --ticks-per-slot 8 \
         --quiet \
         --reset &
