@@ -268,8 +268,6 @@ async fn test_epoch_processing() -> Result<()> {
     // Wait for stakes to activate before proceeding
     context.wait_for_stakes_to_activate().await?;
     
-    // context.wait_for_next_epoch().await?;
-
     // Rest of the test...
     info!("1. Testing snapshot creation...");
 
@@ -278,8 +276,8 @@ async fn test_epoch_processing() -> Result<()> {
     // Define merkle_tree_path here since we'll need it later
     let merkle_tree_path = context.snapshot_dir.join("merkle-trees");
 
-    let local_ledger_dir = PathBuf::from("scripts/test-ledger");
-
+    let local_ledger_dir = context.ledger_dir.clone();
+    
     let snapshot_creator = SnapshotCreator::new(
         &rpc_url,
         context.snapshot_dir.to_str().unwrap().to_string(),
