@@ -291,7 +291,7 @@ mod set_merkle_root {
         let mut tip_router_client = fixture.tip_router_client();
         let mut tip_distribution_client = fixture.tip_distribution_client();
 
-        let test_ncn = fixture.create_initial_test_ncn(1, 1).await?;
+        let test_ncn = fixture.create_initial_test_ncn(1, 1, None).await?;
 
         ///// TipRouter Setup /////
         fixture.warp_slot_incremental(1000).await?;

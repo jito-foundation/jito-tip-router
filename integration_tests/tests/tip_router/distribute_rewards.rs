@@ -19,7 +19,8 @@ mod tests {
         let mut tip_router_client = fixture.tip_router_client();
 
         // Setup with 2 operators for interesting reward splits
-        let test_ncn = fixture.create_initial_test_ncn(2, 2).await?;
+        // 10% Operator fee
+        let test_ncn = fixture.create_initial_test_ncn(2, 2, Some(1000)).await?;
 
         ///// TipRouter Setup /////
         fixture.warp_slot_incremental(1000).await?;
@@ -90,6 +91,22 @@ mod tests {
                     .base_fee_wallet(BaseFeeGroup::default())
                     .unwrap(),
             )
+            .await?;
+
+        let operator_1_initial_balance = fixture
+            .get_balance(&test_ncn.operators[0].operator_pubkey)
+            .await?;
+
+        let operator_2_initial_balance = fixture
+            .get_balance(&test_ncn.operators[1].operator_pubkey)
+            .await?;
+
+        let vault_1_initial_balance = fixture
+            .get_balance(&test_ncn.vaults[0].vault_pubkey)
+            .await?;
+
+        let vault_2_initial_balance = fixture
+            .get_balance(&test_ncn.vaults[1].vault_pubkey)
             .await?;
 
         // Route in 3_000 lamports
@@ -168,47 +185,54 @@ mod tests {
             )
             .await?;
 
-        let operator_1_ncn_router_total_rewards = {
-            let operator = test_ncn.operators[0].operator_pubkey;
+        let operator_total_rewards = {
+            let mut operator_total_rewards = Vec::new();
 
-            let mut total_rewards = 0;
-            for group in NcnFeeGroup::all_groups().iter() {
-                tip_router_client
-                    .do_route_ncn_rewards(*group, ncn, operator, slot)
-                    .await?;
+            for operator_root in test_ncn.operators.iter() {
+                let operator = operator_root.operator_pubkey;
 
-                // Distribute to operators
+                let mut total_rewards = 0;
+                for group in NcnFeeGroup::all_groups().iter() {
+                    tip_router_client
+                        .do_route_ncn_rewards(*group, ncn, operator, slot)
+                        .await?;
 
-                // Distribute to vaults
+                    // Distribute to operators
+                    tip_router_client
+                        .do_distribute_ncn_operator_rewards(*group, operator, ncn, slot)
+                        .await?;
 
-                let ncn_router = tip_router_client
-                    .get_ncn_reward_router(*group, operator, ncn, ncn_epoch)
-                    .await?;
+                    // Distribute to vaults
+                    for vault_root in test_ncn.vaults.iter() {
+                        let vault = vault_root.vault_pubkey;
 
-                println!("\nTotal Rewards: {}", ncn_router.total_rewards());
-                total_rewards += ncn_router.total_rewards();
+                        {
+                            let ncn_reward_router = tip_router_client
+                                .get_ncn_reward_router(*group, operator, ncn, ncn_epoch)
+                                .await?;
+
+                            // Skip if the vault is not in the reward route
+                            if ncn_reward_router.vault_reward_route(&vault).is_err() {
+                                continue;
+                            }
+
+                            tip_router_client
+                                .do_distribute_ncn_vault_rewards(*group, vault, operator, ncn, slot)
+                                .await?;
+                        }
+                    }
+
+                    let ncn_router = tip_router_client
+                        .get_ncn_reward_router(*group, operator, ncn, ncn_epoch)
+                        .await?;
+
+                    println!("\nTotal Rewards: {}", ncn_router.total_rewards());
+                    total_rewards += ncn_router.total_rewards();
+                }
+
+                operator_total_rewards.push(total_rewards);
             }
-
-            total_rewards
-        };
-
-        let operator_2_ncn_router_total_rewards = {
-            let operator = test_ncn.operators[1].operator_pubkey;
-
-            let mut total_rewards = 0;
-            for group in NcnFeeGroup::all_groups().iter() {
-                tip_router_client
-                    .do_route_ncn_rewards(*group, ncn, operator, slot)
-                    .await?;
-
-                let ncn_router = tip_router_client
-                    .get_ncn_reward_router(*group, operator, ncn, ncn_epoch)
-                    .await?;
-
-                total_rewards += ncn_router.total_rewards();
-            }
-
-            total_rewards
+            operator_total_rewards
         };
 
         // Check reward distributions
@@ -219,13 +243,39 @@ mod tests {
         // JTO = 15 -> 150
 
         let dao_reward = dao_final_balance - dao_initial_balance;
-        assert_eq!(dao_initial_balance, 1_000_000_000);
-        assert_eq!(dao_final_balance, 1_000_002_700);
         assert_eq!(dao_reward, 2_700);
 
         // NCN Reward Routes
-        assert_eq!(operator_1_ncn_router_total_rewards, 150);
-        assert_eq!(operator_2_ncn_router_total_rewards, 150);
+        assert_eq!(*operator_total_rewards.get(0).unwrap(), 150);
+        assert_eq!(*operator_total_rewards.get(1).unwrap(), 150);
+
+        // Operator 1 Rewards
+        let operator_1_final_balance = fixture
+            .get_balance(&test_ncn.operators[0].operator_pubkey)
+            .await?;
+        let operator_1_reward = operator_1_final_balance - operator_1_initial_balance;
+        assert_eq!(operator_1_reward, 14);
+
+        // Operator 2 Rewards
+        let operator_2_final_balance = fixture
+            .get_balance(&test_ncn.operators[1].operator_pubkey)
+            .await?;
+        let operator_2_reward = operator_2_final_balance - operator_2_initial_balance;
+        assert_eq!(operator_2_reward, 14);
+
+        // Vault 1 Rewards
+        let vault_1_final_balance = fixture
+            .get_balance(&test_ncn.vaults[0].vault_pubkey)
+            .await?;
+        let vault_1_reward = vault_1_final_balance - vault_1_initial_balance;
+        assert_eq!(vault_1_reward, 136);
+
+        // Vault 2 Rewards
+        let vault_2_final_balance = fixture
+            .get_balance(&test_ncn.vaults[1].vault_pubkey)
+            .await?;
+        let vault_1_reward = vault_2_final_balance - vault_2_initial_balance;
+        assert_eq!(vault_1_reward, 136);
 
         Ok(())
     }

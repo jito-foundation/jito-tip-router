@@ -233,11 +233,14 @@ impl TestBuilder {
         &mut self,
         test_ncn: &mut TestNcn,
         operator_count: usize,
+        operator_fees_bps: Option<u16>,
     ) -> TestResult<()> {
         let mut restaking_program_client = self.restaking_program_client();
 
         for _ in 0..operator_count {
-            let operator_root = restaking_program_client.do_initialize_operator().await?;
+            let operator_root = restaking_program_client
+                .do_initialize_operator(operator_fees_bps)
+                .await?;
 
             // ncn <> operator
             restaking_program_client
@@ -407,9 +410,10 @@ impl TestBuilder {
         &mut self,
         operator_count: usize,
         vault_count: usize,
+        operator_fees_bps: Option<u16>,
     ) -> TestResult<TestNcn> {
         let mut test_ncn = self.create_test_ncn().await?;
-        self.add_operators_to_test_ncn(&mut test_ncn, operator_count)
+        self.add_operators_to_test_ncn(&mut test_ncn, operator_count, operator_fees_bps)
             .await?;
         self.add_vaults_to_test_ncn(&mut test_ncn, vault_count)
             .await?;

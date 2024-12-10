@@ -11,7 +11,7 @@ mod tests {
         let mut tip_router_client = fixture.tip_router_client();
 
         // Each operator gets 50% voting share
-        let test_ncn = fixture.create_initial_test_ncn(2, 1).await?;
+        let test_ncn = fixture.create_initial_test_ncn(2, 1, None).await?;
 
         ///// TipRouter Setup /////
         fixture.snapshot_test_ncn(&test_ncn).await?;
@@ -31,8 +31,8 @@ mod tests {
         let operator = test_ncn.operators[0].operator_pubkey;
         let operator_admin = &test_ncn.operators[0].operator_admin;
 
-        // // Cast a vote so that this vote is one of the valid options
-        // // Gets to 50% consensus weight
+        // Cast a vote so that this vote is one of the valid options
+        // Gets to 50% consensus weight
         tip_router_client
             .do_cast_vote(ncn, operator, operator_admin, meta_merkle_root, ncn_epoch)
             .await?;

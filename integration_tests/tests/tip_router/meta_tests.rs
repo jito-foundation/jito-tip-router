@@ -12,7 +12,7 @@ mod tests {
 
         let mut test_ncn = fixture.create_test_ncn().await?;
         fixture
-            .add_operators_to_test_ncn(&mut test_ncn, OPERATOR_COUNT)
+            .add_operators_to_test_ncn(&mut test_ncn, OPERATOR_COUNT, None)
             .await?;
         fixture
             .add_vaults_to_test_ncn(&mut test_ncn, VAULT_COUNT)
@@ -48,7 +48,7 @@ mod tests {
         const VAULT_COUNT: usize = 1;
 
         let test_ncn = fixture
-            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT)
+            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, None)
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
@@ -84,7 +84,7 @@ mod tests {
         const VAULT_COUNT: usize = 1;
 
         let test_ncn = fixture
-            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT)
+            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, None)
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
@@ -120,7 +120,7 @@ mod tests {
         const VAULT_COUNT: usize = 10;
 
         let test_ncn = fixture
-            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT)
+            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, None)
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
@@ -156,7 +156,7 @@ mod tests {
         const VAULT_COUNT: usize = 10;
 
         let test_ncn = fixture
-            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT)
+            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, None)
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
