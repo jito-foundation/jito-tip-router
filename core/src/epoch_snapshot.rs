@@ -9,8 +9,9 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    discriminators::Discriminators, error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup,
-    stake_weight::StakeWeights, weight_table::WeightTable,
+    constants::MAX_VAULT_OPERATOR_DELEGATIONS, discriminators::Discriminators,
+    error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup, stake_weight::StakeWeights,
+    weight_table::WeightTable,
 };
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
@@ -217,6 +218,49 @@ pub struct OperatorSnapshot {
     vault_operator_stake_weight: [VaultOperatorStakeWeight; 32],
 }
 
+#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[repr(C)]
+pub struct VaultOperatorStakeWeight {
+    vault: Pubkey,
+    stake_weight: PodU128,
+    vault_index: PodU64,
+    reserved: [u8; 32],
+}
+
+impl Default for VaultOperatorStakeWeight {
+    fn default() -> Self {
+        Self {
+            vault: Pubkey::default(),
+            vault_index: PodU64::from(u64::MAX),
+            stake_weight: PodU128::from(0),
+            reserved: [0; 32],
+        }
+    }
+}
+
+impl VaultOperatorStakeWeight {
+    pub fn new(vault: Pubkey, stake_weight: u128, vault_index: u64) -> Self {
+        Self {
+            vault,
+            vault_index: PodU64::from(vault_index),
+            stake_weight: PodU128::from(stake_weight),
+            reserved: [0; 32],
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.vault_index() == u64::MAX
+    }
+
+    pub fn vault_index(&self) -> u64 {
+        self.vault_index.into()
+    }
+
+    pub fn stake_weight(&self) -> u128 {
+        self.stake_weight.into()
+    }
+}
+
 impl Discriminator for OperatorSnapshot {
     const DISCRIMINATOR: u8 = Discriminators::OperatorSnapshot as u8;
 }
@@ -257,7 +301,8 @@ impl OperatorSnapshot {
             valid_operator_vault_delegations: PodU64::from(0),
             stake_weights: StakeWeights::default(),
             reserved: [0; 256],
-            vault_operator_stake_weight: [VaultOperatorStakeWeight::default(); 32],
+            vault_operator_stake_weight: [VaultOperatorStakeWeight::default();
+                MAX_VAULT_OPERATOR_DELEGATIONS],
         })
     }
 
@@ -548,5 +593,34 @@ impl VaultOperatorStakeWeight {
 
     pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
         self.ncn_fee_group
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_len() {
+        use std::mem::size_of;
+
+        let expected_total = size_of::<Pubkey>() // operator
+            + size_of::<Pubkey>() // ncn
+            + size_of::<PodU64>() // ncn_epoch
+            + 1 // bump
+            + size_of::<PodU64>() // slot_created
+            + size_of::<PodU64>() // slot_finalized
+            + size_of::<PodBool>() // is_active
+            + size_of::<PodU64>() // ncn_operator_index
+            + size_of::<PodU64>() // operator_index
+            + size_of::<PodU16>() // operator_fee_bps
+            + size_of::<PodU64>() // vault_operator_delegation_count
+            + size_of::<PodU64>() // vault_operator_delegations_registered
+            + size_of::<PodU64>() // valid_operator_vault_delegations
+            + size_of::<PodU128>() // stake_weight
+            + 256 // reserved
+            + size_of::<VaultOperatorStakeWeight>() * MAX_VAULT_OPERATOR_DELEGATIONS; // vault_operator_stake_weight
+
+        assert_eq!(size_of::<OperatorSnapshot>(), expected_total);
     }
 }

@@ -119,11 +119,32 @@ weightTableKinobi.update(kinobi.bottomUpTransformerVisitor([
             };
         },
     },
+    // Override the default behavior for large arrays
+    {
+        select: (node) => {
+            return (
+                (kinobi.isNode(node, "structFieldTypeNode") &&
+                    ((kinobi.isNode(node.type, "arrayTypeNode") &&
+                        kinobi.isNode(node.type.count, "fixedCountNode") &&
+                        node.type.count.value > 32) ||
+                        (kinobi.isNode(node.type, ["bytesTypeNode", "stringTypeNode"]) &&
+                            kinobi.isNode(node.type, "fixedSizeTypeNode") &&
+                            node.type.size > 32)))
+            );
+        },
+        transform: (node) => {
+            // Just return the node without adding the serde_with attribute
+            return node;
+        },
+    },
+
+
 ]));
 weightTableKinobi.accept(renderers.renderRustVisitor(path.join(rustWeightTableClientDir, "src", "generated"), {
     formatCode: true,
     crateFolder: rustWeightTableClientDir,
     deleteFolderBeforeRendering: true,
     toolchain: "+nightly-2024-07-25"
+    
 }));
 weightTableKinobi.accept(renderers.renderJavaScriptVisitor(path.join(jsWeightTableClientDir), {}));
