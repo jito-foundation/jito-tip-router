@@ -5,3 +5,4 @@ node_modules
 tip-router-operator-cli/scripts/test-ledger
 tip-router-operator-cli/scripts/test-validator-keys
 tip-router-operator-cli/scripts/validators.txt
+tip-router-operator-cli/test-ledger/*
