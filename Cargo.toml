@@ -4,10 +4,9 @@ members = [
     "clients/rust/jito_tip_router",
     "core",
     "integration_tests",
-    "meta_merkle_tree",
     "program",
     "shank_cli",
-    "tip_router_operator_cli",
+    "tip-router-operator-cli",
     "tip_distribution_sdk",
 ]
 

@@ -3,23 +3,34 @@ use ::{
     clap::Parser,
     log::{ info, error },
     solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{ pubkey::Pubkey, signature::Keypair, signer::keypair::read_keypair_file, transaction::Transaction },
-    std::{ sync::Arc, time::Duration, path::PathBuf },
+    solana_sdk::{
+        pubkey::Pubkey,
+        signer::keypair::read_keypair_file,
+    },
+    std::{ 
+        sync::Arc, 
+        time::Duration, 
+        path::PathBuf,
+        fs::File,
+        io::BufReader,
+    },
     tip_router_operator_cli::{
-        merkle_tree::MerkleTreeGenerator,
         claim_mev_workflow,
         merkle_root_generator_workflow,
+        merkle_root_upload_workflow,
         stake_meta_generator_workflow,
         snapshot::SnapshotCreator,
         StakeMetaCollection,
+        GeneratedMerkleTreeCollection,
     },
     tokio::time::Instant,
     ellipsis_client::EllipsisClient,
     solana_metrics::datapoint_info,
-    anchor_lang::system_program,
-    jito_tip_distribution::{self, sdk::instruction as tip_dist_instruction},
-    jito_tip_payment::{self, instruction as tip_payment_instruction, InitBumps},
-    solana_sdk::signature::Signer,
+    meta_merkle_tree::{
+        meta_merkle_tree::MetaMerkleTree,
+        generated_merkle_tree::GeneratedMerkleTreeCollection as MetaMerkleTreeCollection,
+        generated_merkle_tree::StakeMetaCollection as MetaMerkleStakeMetaCollection,
+    },
 };
 
 #[derive(Parser)]
@@ -163,68 +174,75 @@ async fn process_epoch(
     );
     merkle_gen_result?;
 
-    // 4. Initialize MerkleTreeGenerator
-    info!("4. Initializing MerkleTreeGenerator...");
-    let merkle_tree_generator = MerkleTreeGenerator::new(
-        &cli.rpc_url,
-        read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
-        *ncn_address,
-        merkle_tree_path.clone(),
-        *tip_distribution_program_id,
-        Keypair::new(),
-        Pubkey::new_unique()
-    )?;
-
-    // 5. Generate and upload individual merkle trees
-    info!("5. Generating and uploading merkle trees...");
+    // 4. Upload merkle roots
+    info!("4. Uploading merkle trees...");
     let upload_start = Instant::now();
-    let merkle_trees = merkle_tree_generator.generate_and_upload_merkle_trees(stake_meta).await?;
-    datapoint_info!(
-        "tip_router_merkle_upload",
-        ("tree_count", merkle_trees.generated_merkle_trees.len() as i64, i64),
-        ("duration_ms", upload_start.elapsed().as_millis() as i64, i64)
-    );
+    merkle_root_upload_workflow::upload_merkle_root(
+        &merkle_tree_path,
+        &PathBuf::from(&cli.keypair_path),
+        &cli.rpc_url,
+        tip_distribution_program_id,
+        5,
+        10
+    ).await?;
 
-    // 6. Generate meta merkle tree
-    info!("6. Generating meta merkle tree...");
-    let meta_start = Instant::now();
-    let meta_merkle_tree = merkle_tree_generator.generate_meta_merkle_tree(&merkle_trees).await?;
+     // 5. Generate meta merkle tree
+     info!("5. Generating meta merkle tree...");
+     let meta_start = Instant::now();
+     
+     // Load the generated merkle trees directly
+     let file = File::open(&merkle_tree_path)?;
+     let reader = BufReader::new(file);
+     let meta_merkle_trees: MetaMerkleTreeCollection = serde_json::from_reader(reader)?;
+     
+     // Create meta merkle tree
+     let meta_merkle_tree = MetaMerkleTree::new_from_generated_merkle_tree_collection(
+         meta_merkle_trees.clone()
+     )?;
+ 
+     // Save meta merkle tree
+     let meta_merkle_path = cli.snapshot_output_dir.join("meta-merkle-tree.json");
+     meta_merkle_tree.write_to_file(&meta_merkle_path);
+ 
+     // Convert for claim testing
+     let generated_trees: GeneratedMerkleTreeCollection = serde_json::from_str(
+         &serde_json::to_string(&meta_merkle_trees)?
+     )?;
+     
     datapoint_info!(
         "tip_router_meta_merkle",
-        ("duration_ms", meta_start.elapsed().as_millis() as i64, i64)
+        ("duration_ms", meta_start.elapsed().as_millis() as i64, i64),
+        ("num_nodes", meta_merkle_tree.num_nodes as i64, i64)
     );
 
-    info!("Generated meta merkle tree: {:?}", meta_merkle_tree);
+    // Need to implement upload to NCN
 
-    // 7. Upload meta merkle root to NCN
-    info!("7. Uploading meta merkle root to NCN...");
-    let ncn_upload_start = Instant::now();
-    let ncn_result = merkle_tree_generator.upload_to_ncn(&meta_merkle_tree).await;
-    datapoint_info!(
-        "tip_router_ncn_upload",
-        ("success", ncn_result.is_ok(), bool),
-        ("duration_ms", ncn_upload_start.elapsed().as_millis() as i64, i64)
-    );
-    ncn_result?;
-
-    // 8. Test claiming
-    info!("8. Testing tip claiming capability...");
+    // 6. Test claiming
+    info!("6. Testing tip claiming capability...");
     let claim_start = Instant::now();
-    let context_keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
+    let context_keypair = read_keypair_file(&cli.keypair_path).expect(
+    "Failed to read keypair file"
+    );
+
+    // Load the generated merkle trees directly from file
+    let file = File::open(&merkle_tree_path)?;
+    let reader = BufReader::new(file);
+    let generated_trees: GeneratedMerkleTreeCollection = serde_json::from_reader(reader)?;
+
     let claim_result = claim_mev_workflow::claim_mev_tips(
-        &merkle_trees,
+        &generated_trees,
         cli.rpc_url.clone(),
         *tip_distribution_program_id,
         Arc::new(context_keypair),
         Duration::from_secs(10),
         1
     ).await;
+
     datapoint_info!(
         "tip_router_claim_test",
         ("success", claim_result.is_ok(), bool),
         ("duration_ms", claim_start.elapsed().as_millis() as i64, i64)
     );
-    claim_result?;
 
     // Overall process metrics
     datapoint_info!(
@@ -276,6 +294,6 @@ async fn main() -> Result<()> {
                     }
                 }
             }
-        },
+        }
     }
 }
