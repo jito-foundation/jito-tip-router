@@ -25,8 +25,6 @@ use ::{
     },
     jito_tip_distribution::{self, ID as TIP_DISTRIBUTION_ID},
     jito_tip_payment::{self, ID as TIP_PAYMENT_ID},
-    jito_tip_distribution::processor::process_instruction as tip_distribution_process_instruction,
-    jito_tip_payment::processor::process_instruction as tip_payment_process_instruction,
 };
 
 struct TestContext {
@@ -53,13 +51,13 @@ impl TestContext {
         program_test.add_program(
             "jito_tip_distribution",
             TIP_DISTRIBUTION_ID,
-            processor!(tip_distribution_process_instruction),
+            None,
         );
         
         program_test.add_program(
             "jito_tip_payment",
             TIP_PAYMENT_ID,
-            processor!(tip_payment_process_instruction),
+            None,
         );
 
         let mut context = program_test.start_with_context().await;
