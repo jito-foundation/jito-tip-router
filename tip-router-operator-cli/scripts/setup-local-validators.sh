@@ -29,18 +29,24 @@ setup_test_validator() {
     TIP_DISTRIBUTION_ID="T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"  # From tip-distribution/src/lib.rs
 
     # Use programs from local programs directory
-    PROGRAMS_DIR="../programs"
-    TIP_PAYMENT_PROGRAM="$PROGRAMS_DIR/tip-payment/src/lib.rs"
-    TIP_DISTRIBUTION_PROGRAM="$PROGRAMS_DIR/tip-distribution/src/lib.rs"
+    PROGRAMS_DIR="../target/deploy"
+    TIP_PAYMENT_PROGRAM="$PROGRAMS_DIR/jito_tip_payment.so"
+    TIP_DISTRIBUTION_PROGRAM="$PROGRAMS_DIR/jito_tip_distribution.so"
+
+# Build programs if they don't exist
+    if [ ! -f "$TIP_PAYMENT_PROGRAM" ] || [ ! -f "$TIP_DISTRIBUTION_PROGRAM" ]; then
+        echo "Building programs..."
+        (cd .. && cargo build-bpf)
+    fi
 
     solana-test-validator \
-        --slots-per-epoch 32 \
-        --ticks-per-slot 8 \
-        --quiet \
-        --reset \
-        --bpf-program "$TIP_PAYMENT_ID" "$TIP_PAYMENT_PROGRAM" \
-        --bpf-program "$TIP_DISTRIBUTION_ID" "$TIP_DISTRIBUTION_PROGRAM" \
-        &
+    --slots-per-epoch 32 \
+    --ticks-per-slot 8 \
+    --quiet \
+    --reset \
+    --bpf-program "$TIP_PAYMENT_ID" "$TIP_PAYMENT_PROGRAM" \
+    --bpf-program "$TIP_DISTRIBUTION_ID" "$TIP_DISTRIBUTION_PROGRAM" \
+    &
     
     VALIDATOR_PID=$!
     solana config set --url http://127.0.0.1:8899
@@ -57,6 +63,7 @@ setup_test_validator() {
     # Wait for airdrop to confirm
     sleep 5
 }
+
 
 create_keypair() {
     if test ! -f "$1"; then
@@ -205,7 +212,6 @@ initialize_tip_payment_config() {
 # }
 
 
-# # Set up cleanup trap
 # trap cleanup EXIT
 
 main() {

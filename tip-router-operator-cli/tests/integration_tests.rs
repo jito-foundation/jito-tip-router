@@ -49,6 +49,8 @@ use ::{
     jito_tip_payment::{ Config, CONFIG_ACCOUNT_SEED },
     solana_sdk::transaction::Transaction,
     std::ops::Deref,
+    anchor_lang::{system_program, InstructionData, ToAccountMetas},
+    solana_sdk::instruction::Instruction,
 };
 
 // Recursively copy the entire ledger directory
@@ -332,6 +334,94 @@ async fn test_epoch_processing() -> Result<()> {
     let genesis_hash = context.rpc_client.get_genesis_hash()?;
     info!("Genesis hash: {}", genesis_hash);
 
+    // Add this right after line 330 (after the sleep)
+    info!("0. Initializing programs...");
+    let authority = context.keypair.pubkey();
+    let expired_funds = Keypair::new().pubkey();
+
+    // Initialize tip distribution program
+    match context.rpc_client.get_account(&context.tip_distribution_program_id).await {
+        Ok(_) => info!("Tip distribution program already initialized"),
+        Err(_) => {
+            let (config, bump) = jito_tip_distribution::sdk::derive_config_account_address(
+                &context.tip_distribution_program_id
+            );
+
+            let ix = jito_tip_distribution::sdk::instruction::initialize_ix(
+                context.tip_distribution_program_id,
+                jito_tip_distribution::sdk::instruction::InitializeArgs {
+                    authority,
+                    expired_funds_account: expired_funds,
+                    num_epochs_valid: 3,
+                    max_validator_commission_bps: 1000,
+                    bump,
+                },
+                jito_tip_distribution::sdk::instruction::InitializeAccounts {
+                    config,
+                    system_program: system_program::ID,
+                    initializer: context.keypair.pubkey(),
+                }
+            );
+
+            let latest_blockhash = context.rpc_client.get_latest_blockhash().await?;
+            let tx = Transaction::new_signed_with_payer(
+                &[ix],
+                Some(&context.keypair.pubkey()),
+                &[&context.keypair],
+                latest_blockhash
+            );
+            context.rpc_client.send_and_confirm_transaction(&tx).await?;
+            info!("Tip distribution program initialized");
+        }
+    }
+
+    // Initialize tip payment program
+    match context.rpc_client.get_account(&context.tip_payment_program_id).await {
+        Ok(_) => info!("Tip payment program already initialized"),
+        Err(_) => {
+            let (config, bump) = Pubkey::find_program_address(
+                &[b"config"],
+                &context.tip_payment_program_id
+            );
+
+            // Create the accounts struct required by the program
+            let accounts = jito_tip_payment::accounts::Initialize {
+                config,
+                system_program: system_program::ID,
+                payer: context.keypair.pubkey(),
+            };
+
+            // Create the instruction with proper context and bumps
+            let bumps = jito_tip_payment::InitBumps {
+                config: bump,
+                tip_payment_account_0: 0,
+                tip_payment_account_1: 0,
+                tip_payment_account_2: 0,
+                tip_payment_account_3: 0,
+                tip_payment_account_4: 0,
+                tip_payment_account_5: 0,
+                tip_payment_account_6: 0,
+                tip_payment_account_7: 0,
+            };
+
+            let ix = Instruction {
+                program_id: context.tip_payment_program_id,
+                accounts: accounts.to_account_metas(None),
+                data: (jito_tip_payment::instruction::Initialize { bumps }).data(),
+            };
+
+            let latest_blockhash = context.rpc_client.get_latest_blockhash().await?;
+            let tx = Transaction::new_signed_with_payer(
+                &[ix],
+                Some(&context.keypair.pubkey()),
+                &[&context.keypair],
+                latest_blockhash
+            );
+            context.rpc_client.send_and_confirm_transaction(&tx).await?;
+            info!("Tip payment program initialized");
+        }
+    }
+
     info!("1. Testing snapshot creation...");
     let keypair_copy = Keypair::from_bytes(&context.keypair.to_bytes())?;
     let rpc_url = context.rpc_client.url().to_string();
@@ -377,7 +467,7 @@ async fn test_epoch_processing() -> Result<()> {
     )?;
     let slot = latest_snapshot_slot; // Use the snapshot slot instead of getting previous epoch
     snapshot_creator.create_snapshot(latest_snapshot_slot);
-    
+
     info!("2. Testing stake metadata generation...");
     let stake_meta_path = context.snapshot_dir.join("stake-meta.json");
 

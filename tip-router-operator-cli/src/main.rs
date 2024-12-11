@@ -3,7 +3,7 @@ use ::{
     clap::Parser,
     log::{ info, error },
     solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{ pubkey::Pubkey, signature::Keypair, signer::keypair::read_keypair_file },
+    solana_sdk::{ pubkey::Pubkey, signature::Keypair, signer::keypair::read_keypair_file, transaction::Transaction },
     std::{ sync::Arc, time::Duration, path::PathBuf },
     tip_router_operator_cli::{
         merkle_tree::MerkleTreeGenerator,
@@ -16,6 +16,10 @@ use ::{
     tokio::time::Instant,
     ellipsis_client::EllipsisClient,
     solana_metrics::datapoint_info,
+    anchor_lang::system_program,
+    jito_tip_distribution::{self, sdk::instruction as tip_dist_instruction},
+    jito_tip_payment::{self, instruction as tip_payment_instruction, InitBumps},
+    solana_sdk::signature::Signer,
 };
 
 #[derive(Parser)]
@@ -272,6 +276,6 @@ async fn main() -> Result<()> {
                     }
                 }
             }
-        }
+        },
     }
 }
