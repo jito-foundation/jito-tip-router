@@ -18,7 +18,7 @@ pub struct BallotBox {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub ncn: Pubkey,
-    pub ncn_epoch: u64,
+    pub epoch: u64,
     pub bump: u8,
     pub slot_created: u64,
     pub slot_consensus_reached: u64,
@@ -27,8 +27,8 @@ pub struct BallotBox {
     pub operators_voted: u64,
     pub unique_ballots: u64,
     pub winning_ballot: Ballot,
-    pub operator_votes: [OperatorVote; 32],
-    pub ballot_tallies: [BallotTally; 32],
+    pub operator_votes: [OperatorVote; 16],
+    pub ballot_tallies: [BallotTally; 16],
 }
 
 impl BallotBox {

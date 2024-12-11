@@ -2098,6 +2098,18 @@ checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 [[package]]
 name = "fast-math"
 version = "0.1.1"
+<<<<<<< HEAD
+=======
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2465292146cdfc2011350fe3b1c616ac83cf0faeedb33463ba1c332ed8948d66"
+dependencies = [
+ "ieee754",
+]
+
+[[package]]
+name = "fastrand"
+version = "2.1.1"
+>>>>>>> origin/master
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2465292146cdfc2011350fe3b1c616ac83cf0faeedb33463ba1c332ed8948d66"
 dependencies = [
@@ -2470,6 +2482,7 @@ name = "hashbrown"
 version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf151400ff0baff5465007dd2f3e717f3fe502074ca563069ce3a6629d07b289"
+<<<<<<< HEAD
 
 [[package]]
 name = "headers"
@@ -2494,6 +2507,8 @@ checksum = "e7f66481bfee273957b1f20485a4ff3362987f85b2c236580d81b4eb7a326429"
 dependencies = [
  "http",
 ]
+=======
+>>>>>>> origin/master
 
 [[package]]
 name = "heck"
@@ -2868,6 +2883,7 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "idna_adapter"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2878,6 +2894,8 @@ dependencies = [
 ]
 
 [[package]]
+=======
+>>>>>>> origin/master
 name = "ieee754"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2943,7 +2961,10 @@ checksum = "62f822373a4fe84d4bb149bf54e584a7f4abec90e072ed49cda0edea5b95471f"
 dependencies = [
  "equivalent",
  "hashbrown 0.15.2",
+<<<<<<< HEAD
  "rayon",
+=======
+>>>>>>> origin/master
  "serde",
 ]
 
@@ -3133,6 +3154,7 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "jito-tip-distribution"
 version = "0.1.5"
 source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=6e5cbce5e2866da0585ef4fa35ee1168fce4556f#6e5cbce5e2866da0585ef4fa35ee1168fce4556f"
@@ -3152,6 +3174,12 @@ dependencies = [
  "anchor-lang 0.30.1",
  "default-env",
  "solana-security-txt",
+=======
+name = "jito-tip-distribution-sdk"
+version = "0.0.1"
+dependencies = [
+ "anchor-lang",
+>>>>>>> origin/master
 ]
 
 [[package]]
@@ -3212,6 +3240,7 @@ dependencies = [
  "jito-restaking-sdk",
  "jito-vault-core",
  "jito-vault-sdk",
+ "meta-merkle-tree",
  "shank",
  "solana-program 1.18.26",
  "spl-associated-token-account",
@@ -3224,12 +3253,15 @@ dependencies = [
 name = "jito-tip-router-integration-tests"
 version = "0.0.1"
 dependencies = [
+ "anchor-lang",
  "borsh 0.10.4",
+ "bytemuck",
  "jito-bytemuck",
  "jito-jsm-core",
  "jito-restaking-core",
  "jito-restaking-program",
  "jito-restaking-sdk",
+ "jito-tip-distribution-sdk",
  "jito-tip-router-client",
  "jito-tip-router-core",
  "jito-tip-router-program",
@@ -3237,6 +3269,7 @@ dependencies = [
  "jito-vault-program",
  "jito-vault-sdk",
  "log",
+ "meta-merkle-tree",
  "shank",
  "solana-program 1.18.26",
  "solana-program-test 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
@@ -3262,6 +3295,7 @@ dependencies = [
  "jito-restaking-core",
  "jito-restaking-program",
  "jito-restaking-sdk",
+ "jito-tip-distribution-sdk",
  "jito-tip-router-core",
  "jito-vault-core",
  "jito-vault-program",
@@ -3645,6 +3679,33 @@ dependencies = [
  "keccak",
  "rand_core 0.6.4",
  "zeroize",
+]
+
+[[package]]
+name = "meta-merkle-tree"
+version = "0.0.1"
+dependencies = [
+ "borsh 0.10.4",
+ "bytemuck",
+ "fast-math",
+ "hex",
+ "jito-bytemuck",
+ "jito-jsm-core",
+ "jito-restaking-core",
+ "jito-restaking-sdk",
+ "jito-tip-distribution-sdk",
+ "jito-vault-core",
+ "jito-vault-sdk",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "shank",
+ "solana-program 1.18.26",
+ "solana-sdk",
+ "spl-associated-token-account",
+ "spl-math",
+ "spl-token",
+ "thiserror",
 ]
 
 [[package]]

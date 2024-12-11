@@ -1,5 +1,5 @@
 [profile.default]
-retries = { backoff = "exponential", count = 5, delay = "1s", jitter = true, max-delay = "10s" }
+# retries = { backoff = "exponential", count = 3, delay = "10ms", jitter = true, max-delay = "100ms" }
 test-threads = "num-cpus"
 threads-required = 1
 fail-fast = false

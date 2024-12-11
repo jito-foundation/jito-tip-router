@@ -12,7 +12,7 @@ mod tests {
 
         let mut test_ncn = fixture.create_test_ncn().await?;
         fixture
-            .add_operators_to_test_ncn(&mut test_ncn, OPERATOR_COUNT)
+            .add_operators_to_test_ncn(&mut test_ncn, OPERATOR_COUNT, None)
             .await?;
         fixture
             .add_vaults_to_test_ncn(&mut test_ncn, VAULT_COUNT)
@@ -27,6 +27,13 @@ mod tests {
         fixture
             .add_vault_operator_delegation_snapshots_to_test_ncn(&test_ncn)
             .await?;
+        fixture.add_ballot_box_to_test_ncn(&test_ncn).await?;
+        fixture.cast_votes_for_test_ncn(&test_ncn).await?;
+        fixture.add_routers_for_tests_ncn(&test_ncn).await?;
+        fixture
+            .route_in_base_rewards_for_test_ncn(&test_ncn, 10_000)
+            .await?;
+        fixture.route_in_ncn_rewards_for_test_ncn(&test_ncn).await?;
 
         Ok(())
     }
@@ -41,7 +48,7 @@ mod tests {
         const VAULT_COUNT: usize = 1;
 
         let test_ncn = fixture
-            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT)
+            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, None)
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
@@ -53,6 +60,16 @@ mod tests {
             .await?;
 
         assert!(epoch_snapshot.finalized());
+
+        fixture.vote_test_ncn(&test_ncn).await?;
+
+        let ballot_box = tip_router_client
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .await?;
+
+        assert!(ballot_box.has_winning_ballot());
+
+        fixture.reward_test_ncn(&test_ncn, 10_000).await?;
 
         Ok(())
     }
@@ -67,7 +84,7 @@ mod tests {
         const VAULT_COUNT: usize = 1;
 
         let test_ncn = fixture
-            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT)
+            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, None)
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
@@ -79,6 +96,16 @@ mod tests {
             .await?;
 
         assert!(epoch_snapshot.finalized());
+
+        fixture.vote_test_ncn(&test_ncn).await?;
+
+        let ballot_box = tip_router_client
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .await?;
+
+        assert!(ballot_box.has_winning_ballot());
+
+        fixture.reward_test_ncn(&test_ncn, 10_000).await?;
 
         Ok(())
     }
@@ -93,7 +120,7 @@ mod tests {
         const VAULT_COUNT: usize = 10;
 
         let test_ncn = fixture
-            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT)
+            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, None)
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
@@ -105,6 +132,16 @@ mod tests {
             .await?;
 
         assert!(epoch_snapshot.finalized());
+
+        fixture.vote_test_ncn(&test_ncn).await?;
+
+        let ballot_box = tip_router_client
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .await?;
+
+        assert!(ballot_box.has_winning_ballot());
+
+        fixture.reward_test_ncn(&test_ncn, 10_000).await?;
 
         Ok(())
     }
@@ -119,7 +156,7 @@ mod tests {
         const VAULT_COUNT: usize = 10;
 
         let test_ncn = fixture
-            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT)
+            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, None)
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
@@ -131,6 +168,16 @@ mod tests {
             .await?;
 
         assert!(epoch_snapshot.finalized());
+
+        fixture.vote_test_ncn(&test_ncn).await?;
+
+        let ballot_box = tip_router_client
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .await?;
+
+        assert!(ballot_box.has_winning_ballot());
+
+        fixture.reward_test_ncn(&test_ncn, 10_000).await?;
 
         Ok(())
     }

@@ -1,9 +1,9 @@
 use bytemuck::{Pod, Zeroable};
-use jito_bytemuck::{AccountDeserialize, Discriminator};
+use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
-use crate::{discriminators::Discriminators, fees::Fees};
+use crate::{discriminators::Discriminators, fees::FeeConfig};
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
@@ -15,7 +15,13 @@ pub struct NcnConfig {
 
     pub fee_admin: Pubkey,
 
-    pub fees: Fees,
+    /// Number of slots after consensus reached where voting is still valid
+    pub valid_slots_after_consensus: PodU64,
+
+    /// Number of epochs before voting is considered stalled
+    pub epochs_before_stall: PodU64,
+
+    pub fee_config: FeeConfig,
 
     /// Bump seed for the PDA
     pub bump: u8,
@@ -28,17 +34,19 @@ impl Discriminator for NcnConfig {
 }
 
 impl NcnConfig {
-    pub const fn new(
+    pub fn new(
         ncn: Pubkey,
         tie_breaker_admin: Pubkey,
         fee_admin: Pubkey,
-        fees: Fees,
+        fee_config: &FeeConfig,
     ) -> Self {
         Self {
             ncn,
             tie_breaker_admin,
             fee_admin,
-            fees,
+            valid_slots_after_consensus: PodU64::from(0), // TODO set this
+            epochs_before_stall: PodU64::from(0),         // TODO set this
+            fee_config: *fee_config,
             bump: 0,
             reserved: [0; 127],
         }
@@ -97,5 +105,13 @@ impl NcnConfig {
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
+    }
+
+    pub fn valid_slots_after_consensus(&self) -> u64 {
+        self.valid_slots_after_consensus.into()
+    }
+
+    pub fn epochs_before_stall(&self) -> u64 {
+        self.epochs_before_stall.into()
     }
 }

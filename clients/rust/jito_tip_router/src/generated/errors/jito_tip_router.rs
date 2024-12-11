@@ -15,15 +15,24 @@ pub enum JitoTipRouterError {
     /// 8449 - Overflow
     #[error("Overflow")]
     ArithmeticOverflow = 0x2101,
-    /// 8450 - Modulo Overflow
+    /// 8450 - Underflow
+    #[error("Underflow")]
+    ArithmeticUnderflowError = 0x2102,
+    /// 8451 - Floor Overflow
+    #[error("Floor Overflow")]
+    ArithmeticFloorError = 0x2103,
+    /// 8452 - Modulo Overflow
     #[error("Modulo Overflow")]
-    ModuloOverflow = 0x2102,
-    /// 8451 - New precise number error
+    ModuloOverflow = 0x2104,
+    /// 8453 - New precise number error
     #[error("New precise number error")]
-    NewPreciseNumberError = 0x2103,
-    /// 8452 - Cast to imprecise number error
+    NewPreciseNumberError = 0x2105,
+    /// 8454 - Cast to imprecise number error
     #[error("Cast to imprecise number error")]
-    CastToImpreciseNumberError = 0x2104,
+    CastToImpreciseNumberError = 0x2106,
+    /// 8455 - Cast to u64 error
+    #[error("Cast to u64 error")]
+    CastToU64Error = 0x2107,
     /// 8704 - Incorrect weight table admin
     #[error("Incorrect weight table admin")]
     IncorrectWeightTableAdmin = 0x2200,
@@ -66,54 +75,111 @@ pub enum JitoTipRouterError {
     /// 8717 - Vault index already in use by a different mint
     #[error("Vault index already in use by a different mint")]
     VaultIndexAlreadyInUse = 0x220D,
-    /// 8718 - Fee cap exceeded
+    /// 8718 - Mint Entry not found
+    #[error("Mint Entry not found")]
+    MintEntryNotFound = 0x220E,
+    /// 8719 - Fee cap exceeded
     #[error("Fee cap exceeded")]
-    FeeCapExceeded = 0x220E,
-    /// 8719 - Incorrect NCN Admin
+    FeeCapExceeded = 0x220F,
+    /// 8720 - DAO wallet cannot be default
+    #[error("DAO wallet cannot be default")]
+    DefaultDaoWallet = 0x2210,
+    /// 8721 - Incorrect NCN Admin
     #[error("Incorrect NCN Admin")]
-    IncorrectNcnAdmin = 0x220F,
-    /// 8720 - Incorrect NCN
+    IncorrectNcnAdmin = 0x2211,
+    /// 8722 - Incorrect NCN
     #[error("Incorrect NCN")]
-    IncorrectNcn = 0x2210,
-    /// 8721 - Incorrect fee admin
+    IncorrectNcn = 0x2212,
+    /// 8723 - Incorrect fee admin
     #[error("Incorrect fee admin")]
-    IncorrectFeeAdmin = 0x2211,
-    /// 8722 - Weight table not finalized
+    IncorrectFeeAdmin = 0x2213,
+    /// 8724 - Weight table not finalized
     #[error("Weight table not finalized")]
-    WeightTableNotFinalized = 0x2212,
-    /// 8723 - Weight not found
+    WeightTableNotFinalized = 0x2214,
+    /// 8725 - Weight not found
     #[error("Weight not found")]
-    WeightNotFound = 0x2213,
-    /// 8724 - No operators in ncn
+    WeightNotFound = 0x2215,
+    /// 8726 - No operators in ncn
     #[error("No operators in ncn")]
-    NoOperators = 0x2214,
-    /// 8725 - Vault operator delegation is already finalized - should not happen
+    NoOperators = 0x2216,
+    /// 8727 - Vault operator delegation is already finalized - should not happen
     #[error("Vault operator delegation is already finalized - should not happen")]
-    VaultOperatorDelegationFinalized = 0x2215,
-    /// 8726 - Operator is already finalized - should not happen
+    VaultOperatorDelegationFinalized = 0x2217,
+    /// 8728 - Operator is already finalized - should not happen
     #[error("Operator is already finalized - should not happen")]
-    OperatorFinalized = 0x2216,
-    /// 8727 - Too many vault operator delegations
+    OperatorFinalized = 0x2218,
+    /// 8729 - Too many vault operator delegations
     #[error("Too many vault operator delegations")]
-    TooManyVaultOperatorDelegations = 0x2217,
-    /// 8728 - Duplicate vault operator delegation
+    TooManyVaultOperatorDelegations = 0x2219,
+    /// 8730 - Duplicate vault operator delegation
     #[error("Duplicate vault operator delegation")]
-    DuplicateVaultOperatorDelegation = 0x2218,
-    /// 8729 - Duplicate Vote Cast
+    DuplicateVaultOperatorDelegation = 0x221A,
+    /// 8731 - Duplicate Vote Cast
     #[error("Duplicate Vote Cast")]
-    DuplicateVoteCast = 0x2219,
-    /// 8730 - Operator votes full
+    DuplicateVoteCast = 0x221B,
+    /// 8732 - Operator votes full
     #[error("Operator votes full")]
-    OperatorVotesFull = 0x221A,
-    /// 8731 - Merkle root tally full
+    OperatorVotesFull = 0x221C,
+    /// 8733 - Merkle root tally full
     #[error("Merkle root tally full")]
-    BallotTallyFull = 0x221B,
-    /// 8732 - Consensus already reached
-    #[error("Consensus already reached")]
-    ConsensusAlreadyReached = 0x221C,
-    /// 8733 - Consensus not reached
+    BallotTallyFull = 0x221D,
+    /// 8734 - Ballot tally not found
+    #[error("Ballot tally not found")]
+    BallotTallyNotFoundFull = 0x221E,
+    /// 8735 - Consensus already reached, cannot change vote
+    #[error("Consensus already reached, cannot change vote")]
+    ConsensusAlreadyReached = 0x221F,
+    /// 8736 - Consensus not reached
     #[error("Consensus not reached")]
-    ConsensusNotReached = 0x221D,
+    ConsensusNotReached = 0x2220,
+    /// 8737 - Epoch snapshot not finalized
+    #[error("Epoch snapshot not finalized")]
+    EpochSnapshotNotFinalized = 0x2221,
+    /// 8738 - Voting not valid, too many slots after consensus reached
+    #[error("Voting not valid, too many slots after consensus reached")]
+    VotingNotValid = 0x2222,
+    /// 8739 - Tie breaker admin invalid
+    #[error("Tie breaker admin invalid")]
+    TieBreakerAdminInvalid = 0x2223,
+    /// 8740 - Voting not finalized
+    #[error("Voting not finalized")]
+    VotingNotFinalized = 0x2224,
+    /// 8741 - Tie breaking ballot must be one of the prior votes
+    #[error("Tie breaking ballot must be one of the prior votes")]
+    TieBreakerNotInPriorVotes = 0x2225,
+    /// 8742 - Invalid merkle proof
+    #[error("Invalid merkle proof")]
+    InvalidMerkleProof = 0x2226,
+    /// 8743 - Operator admin needs to sign its vote
+    #[error("Operator admin needs to sign its vote")]
+    OperatorAdminInvalid = 0x2227,
+    /// 8744 - Not a valid NCN fee group
+    #[error("Not a valid NCN fee group")]
+    InvalidNcnFeeGroup = 0x2228,
+    /// 8745 - Not a valid base fee group
+    #[error("Not a valid base fee group")]
+    InvalidBaseFeeGroup = 0x2229,
+    /// 8746 - Operator reward list full
+    #[error("Operator reward list full")]
+    OperatorRewardListFull = 0x222A,
+    /// 8747 - Operator Reward not found
+    #[error("Operator Reward not found")]
+    OperatorRewardNotFound = 0x222B,
+    /// 8748 - Vault Reward not found
+    #[error("Vault Reward not found")]
+    VaultRewardNotFound = 0x222C,
+    /// 8749 - Destination mismatch
+    #[error("Destination mismatch")]
+    DestinationMismatch = 0x222D,
+    /// 8750 - Ncn reward route not found
+    #[error("Ncn reward route not found")]
+    NcnRewardRouteNotFound = 0x222E,
+    /// 8751 - Fee not active
+    #[error("Fee not active")]
+    FeeNotActive = 0x222F,
+    /// 8752 - No rewards to distribute
+    #[error("No rewards to distribute")]
+    NoRewards = 0x2230,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

@@ -5,27 +5,41 @@ use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
-use crate::{discriminators::Discriminators, error::TipRouterError};
+use crate::{discriminators::Discriminators, error::TipRouterError, ncn_fee_group::NcnFeeGroup};
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct MintEntry {
     st_mint: Pubkey,
     vault_index: PodU64,
+    ncn_fee_group: NcnFeeGroup,
+    reward_multiplier_bps: PodU64,
     reserved: [u8; 32],
 }
 
 impl MintEntry {
     pub fn new(mint: Pubkey, vault_index: u64) -> Self {
+        const REWARD_FEE_MULTIPLIER_BPS: u64 = 10_000; // 100% as default
+
         Self {
             st_mint: mint,
             vault_index: PodU64::from(vault_index),
+            ncn_fee_group: NcnFeeGroup::default(),
+            reward_multiplier_bps: PodU64::from(REWARD_FEE_MULTIPLIER_BPS),
             reserved: [0; 32],
         }
     }
 
     pub fn vault_index(&self) -> u64 {
         self.vault_index.into()
+    }
+
+    pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
+        self.ncn_fee_group
+    }
+
+    pub fn reward_multiplier_bps(&self) -> u64 {
+        self.reward_multiplier_bps.into()
     }
 }
 
@@ -155,6 +169,41 @@ impl TrackedMints {
             return Err(ProgramError::InvalidAccountData);
         }
 
+        Ok(())
+    }
+
+    pub fn get_ncn_fee_group(&self, vault_index: u64) -> Result<NcnFeeGroup, ProgramError> {
+        let mint_entry = self
+            .st_mint_list
+            .iter()
+            .find(|m| m.vault_index() == vault_index)
+            .ok_or(TipRouterError::MintEntryNotFound)?;
+
+        Ok(mint_entry.ncn_fee_group)
+    }
+
+    pub fn get_mint_entry(&self, vault_index: u64) -> Result<MintEntry, ProgramError> {
+        let mint_entry = self
+            .st_mint_list
+            .iter()
+            .find(|m| m.vault_index() == vault_index)
+            .ok_or(TipRouterError::MintEntryNotFound)?;
+
+        Ok(*mint_entry)
+    }
+
+    pub fn set_ncn_fee_group(
+        &mut self,
+        vault_index: u64,
+        ncn_fee_group: NcnFeeGroup,
+    ) -> Result<(), ProgramError> {
+        let mint_entry = self
+            .st_mint_list
+            .iter_mut()
+            .find(|m| m.vault_index() == vault_index)
+            .ok_or(TipRouterError::MintEntryNotFound)?;
+
+        mint_entry.ncn_fee_group = ncn_fee_group;
         Ok(())
     }
 }

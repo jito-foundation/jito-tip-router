@@ -7,7 +7,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::Fees;
+use crate::generated::types::{Fees, StakeWeights};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -22,12 +22,12 @@ pub struct EpochSnapshot {
     pub bump: u8,
     pub slot_created: u64,
     pub slot_finalized: u64,
-    pub ncn_fees: Fees,
+    pub fees: Fees,
     pub operator_count: u64,
     pub vault_count: u64,
     pub operators_registered: u64,
     pub valid_operator_vault_delegations: u64,
-    pub stake_weight: u128,
+    pub stake_weights: StakeWeights,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
     pub reserved: [u8; 128],
 }

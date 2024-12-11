@@ -10,6 +10,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ballot {
     pub merkle_root: [u8; 32],
+    pub is_valid: bool,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
-    pub reserved: [u8; 64],
+    pub reserved: [u8; 63],
 }
