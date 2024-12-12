@@ -8,8 +8,6 @@
 
 import {
   combineCodec,
-  getOptionDecoder,
-  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -26,8 +24,6 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
-  type Option,
-  type OptionOrNullable,
   type ReadonlyAccount,
   type TransactionSigner,
   type WritableAccount,
@@ -80,18 +76,18 @@ export type InitializeBaseRewardRouterInstruction<
 
 export type InitializeBaseRewardRouterInstructionData = {
   discriminator: number;
-  firstSlotOfNcnEpoch: Option<bigint>;
+  epoch: bigint;
 };
 
 export type InitializeBaseRewardRouterInstructionDataArgs = {
-  firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
+  epoch: number | bigint;
 };
 
 export function getInitializeBaseRewardRouterInstructionDataEncoder(): Encoder<InitializeBaseRewardRouterInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['firstSlotOfNcnEpoch', getOptionEncoder(getU64Encoder())],
+      ['epoch', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -103,7 +99,7 @@ export function getInitializeBaseRewardRouterInstructionDataEncoder(): Encoder<I
 export function getInitializeBaseRewardRouterInstructionDataDecoder(): Decoder<InitializeBaseRewardRouterInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
+    ['epoch', getU64Decoder()],
   ]);
 }
 
@@ -131,7 +127,7 @@ export type InitializeBaseRewardRouterInput<
   payer: TransactionSigner<TAccountPayer>;
   restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
-  firstSlotOfNcnEpoch: InitializeBaseRewardRouterInstructionDataArgs['firstSlotOfNcnEpoch'];
+  epoch: InitializeBaseRewardRouterInstructionDataArgs['epoch'];
 };
 
 export function getInitializeBaseRewardRouterInstruction<

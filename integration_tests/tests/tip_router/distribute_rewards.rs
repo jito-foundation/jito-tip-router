@@ -83,6 +83,8 @@ mod tests {
         let restaking_config_account = tip_router_client.get_restaking_config().await?;
         let ncn_epoch = slot / restaking_config_account.epoch_length();
         let ncn_config = tip_router_client.get_ncn_config(ncn).await?;
+        let clock = fixture.clock().await;
+        let epoch = clock.epoch;
 
         let dao_initial_balance = fixture
             .get_balance(
@@ -111,7 +113,7 @@ mod tests {
 
         // Route in 3_000 lamports
         let (base_reward_router, _, _) =
-            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
+            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
         // Send rewards to base reward router
         let sol_rewards = lamports_to_sol(3_000);
@@ -124,9 +126,8 @@ mod tests {
         tip_router_client.do_route_base_rewards(ncn, slot).await?;
 
         // Check Rewards
-        let base_reward_router_account = tip_router_client
-            .get_base_reward_router(ncn, ncn_epoch)
-            .await?;
+        let base_reward_router_account =
+            tip_router_client.get_base_reward_router(ncn, epoch).await?;
 
         let dao_rewards = base_reward_router_account
             .base_fee_group_reward(BaseFeeGroup::default())
@@ -194,12 +195,12 @@ mod tests {
                 let mut total_rewards = 0;
                 for group in NcnFeeGroup::all_groups().iter() {
                     tip_router_client
-                        .do_route_ncn_rewards(*group, ncn, operator, slot)
+                        .do_route_ncn_rewards(*group, ncn, operator, epoch)
                         .await?;
 
                     // Distribute to operators
                     tip_router_client
-                        .do_distribute_ncn_operator_rewards(*group, operator, ncn, slot)
+                        .do_distribute_ncn_operator_rewards(*group, operator, ncn, epoch)
                         .await?;
 
                     // Distribute to vaults
@@ -208,7 +209,7 @@ mod tests {
 
                         {
                             let ncn_reward_router = tip_router_client
-                                .get_ncn_reward_router(*group, operator, ncn, ncn_epoch)
+                                .get_ncn_reward_router(*group, operator, ncn, epoch)
                                 .await?;
 
                             // Skip if the vault is not in the reward route
@@ -223,7 +224,7 @@ mod tests {
                     }
 
                     let ncn_router = tip_router_client
-                        .get_ncn_reward_router(*group, operator, ncn, ncn_epoch)
+                        .get_ncn_reward_router(*group, operator, ncn, epoch)
                         .await?;
 
                     println!("\nTotal Rewards: {}", ncn_router.total_rewards());

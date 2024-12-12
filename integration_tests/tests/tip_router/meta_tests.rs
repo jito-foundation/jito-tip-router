@@ -52,11 +52,11 @@ mod tests {
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
-        let slot = fixture.clock().await.slot;
-        let ncn_epoch = restaking_client.get_ncn_epoch(slot).await?;
+        let clock = fixture.clock().await;
+        let epoch = clock.epoch;
 
         let epoch_snapshot = tip_router_client
-            .get_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .get_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         assert!(epoch_snapshot.finalized());
@@ -64,7 +64,7 @@ mod tests {
         fixture.vote_test_ncn(&test_ncn).await?;
 
         let ballot_box = tip_router_client
-            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         assert!(ballot_box.has_winning_ballot());
@@ -88,11 +88,11 @@ mod tests {
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
-        let slot = fixture.clock().await.slot;
-        let ncn_epoch = restaking_client.get_ncn_epoch(slot).await?;
+        let clock = fixture.clock().await;
+        let epoch = clock.epoch;
 
         let epoch_snapshot = tip_router_client
-            .get_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .get_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         assert!(epoch_snapshot.finalized());
@@ -100,7 +100,7 @@ mod tests {
         fixture.vote_test_ncn(&test_ncn).await?;
 
         let ballot_box = tip_router_client
-            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         assert!(ballot_box.has_winning_ballot());
@@ -124,11 +124,11 @@ mod tests {
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
-        let slot = fixture.clock().await.slot;
-        let ncn_epoch = restaking_client.get_ncn_epoch(slot).await?;
+        let clock = fixture.clock().await;
+        let epoch = clock.epoch;
 
         let epoch_snapshot = tip_router_client
-            .get_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .get_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         assert!(epoch_snapshot.finalized());
@@ -136,7 +136,7 @@ mod tests {
         fixture.vote_test_ncn(&test_ncn).await?;
 
         let ballot_box = tip_router_client
-            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         assert!(ballot_box.has_winning_ballot());
@@ -150,7 +150,6 @@ mod tests {
     async fn test_multiple_operators_and_vaults() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut restaking_client = fixture.restaking_program_client();
 
         const OPERATOR_COUNT: usize = 10;
         const VAULT_COUNT: usize = 10;
@@ -160,11 +159,11 @@ mod tests {
             .await?;
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
-        let slot = fixture.clock().await.slot;
-        let ncn_epoch = restaking_client.get_ncn_epoch(slot).await?;
+        let clock = fixture.clock().await;
+        let epoch = clock.epoch;
 
         let epoch_snapshot = tip_router_client
-            .get_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .get_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         assert!(epoch_snapshot.finalized());
@@ -172,7 +171,7 @@ mod tests {
         fixture.vote_test_ncn(&test_ncn).await?;
 
         let ballot_box = tip_router_client
-            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, ncn_epoch)
+            .get_ballot_box(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         assert!(ballot_box.has_winning_ballot());

@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
     types::{PodBool, PodU16, PodU64},
@@ -50,6 +52,8 @@ impl Discriminator for EpochSnapshot {
 }
 
 impl EpochSnapshot {
+    pub const SIZE: usize = 8 + size_of::<Self>();
+
     pub fn new(
         ncn: Pubkey,
         ncn_epoch: u64,
@@ -223,6 +227,7 @@ impl Discriminator for OperatorSnapshot {
 
 impl OperatorSnapshot {
     pub const MAX_VAULT_OPERATOR_STAKE_WEIGHT: usize = 64;
+    pub const SIZE: usize = 8 + size_of::<Self>();
 
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -371,6 +376,14 @@ impl OperatorSnapshot {
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
+    }
+
+    pub fn operator(&self) -> Pubkey {
+        self.operator
+    }
+
+    pub fn ncn(&self) -> Pubkey {
+        self.ncn
     }
 
     pub fn operator_fee_bps(&self) -> u16 {
@@ -579,6 +592,5 @@ mod tests {
 
         assert_eq!(size_of::<OperatorSnapshot>(), expected_total);
         println!("expected_total: {}", expected_total);
-        assert!(false);
     }
 }

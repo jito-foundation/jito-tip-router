@@ -44,6 +44,8 @@ impl Discriminator for BaseRewardRouter {
 }
 
 impl BaseRewardRouter {
+    pub const SIZE: usize = 8 + size_of::<Self>();
+
     pub fn new(ncn: Pubkey, ncn_epoch: u64, bump: u8, slot_created: u64) -> Self {
         Self {
             ncn,
@@ -79,7 +81,7 @@ impl BaseRewardRouter {
         ncn: &Pubkey,
         ncn_epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(ncn, ncn_epoch);
+        let seeds: Vec<Vec<u8>> = Self::seeds(ncn, ncn_epoch);
         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
         (pda, bump, seeds)
@@ -675,6 +677,7 @@ mod tests {
             + size_of::<NcnRewardRoute>() * MAX_OPERATORS; // ncn_fee_group_reward_routes
 
         assert_eq!(size_of::<BaseRewardRouter>(), expected_total);
+        println!("expected_total: {}", expected_total);
     }
 
     #[test]

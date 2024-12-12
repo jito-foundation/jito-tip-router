@@ -7,64 +7,52 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
-pub struct InitializeWeightTable {
-    pub restaking_config: solana_program::pubkey::Pubkey,
+pub struct ReallocBaseRewardRouter {
+    pub ncn_config: solana_program::pubkey::Pubkey,
 
-    pub tracked_mints: solana_program::pubkey::Pubkey,
+    pub base_reward_router: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub weight_table: solana_program::pubkey::Pubkey,
-
     pub payer: solana_program::pubkey::Pubkey,
-
-    pub restaking_program: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
 
-impl InitializeWeightTable {
+impl ReallocBaseRewardRouter {
     pub fn instruction(
         &self,
-        args: InitializeWeightTableInstructionArgs,
+        args: ReallocBaseRewardRouterInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: InitializeWeightTableInstructionArgs,
+        args: ReallocBaseRewardRouterInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_config,
+            self.ncn_config,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.tracked_mints,
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.base_reward_router,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.weight_table,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
             self.payer, true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program,
-            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = InitializeWeightTableInstructionData::new()
+        let mut data = ReallocBaseRewardRouterInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -79,17 +67,17 @@ impl InitializeWeightTable {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct InitializeWeightTableInstructionData {
+pub struct ReallocBaseRewardRouterInstructionData {
     discriminator: u8,
 }
 
-impl InitializeWeightTableInstructionData {
+impl ReallocBaseRewardRouterInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 4 }
+        Self { discriminator: 25 }
     }
 }
 
-impl Default for InitializeWeightTableInstructionData {
+impl Default for ReallocBaseRewardRouterInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -97,49 +85,45 @@ impl Default for InitializeWeightTableInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct InitializeWeightTableInstructionArgs {
+pub struct ReallocBaseRewardRouterInstructionArgs {
     pub epoch: u64,
 }
 
-/// Instruction builder for `InitializeWeightTable`.
+/// Instruction builder for `ReallocBaseRewardRouter`.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` tracked_mints
+///   0. `[]` ncn_config
+///   1. `[writable]` base_reward_router
 ///   2. `[]` ncn
-///   3. `[writable]` weight_table
-///   4. `[writable, signer]` payer
-///   5. `[]` restaking_program
-///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   3. `[writable, signer]` payer
+///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
-pub struct InitializeWeightTableBuilder {
-    restaking_config: Option<solana_program::pubkey::Pubkey>,
-    tracked_mints: Option<solana_program::pubkey::Pubkey>,
+pub struct ReallocBaseRewardRouterBuilder {
+    ncn_config: Option<solana_program::pubkey::Pubkey>,
+    base_reward_router: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    weight_table: Option<solana_program::pubkey::Pubkey>,
     payer: Option<solana_program::pubkey::Pubkey>,
-    restaking_program: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl InitializeWeightTableBuilder {
+impl ReallocBaseRewardRouterBuilder {
     pub fn new() -> Self {
         Self::default()
     }
     #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_config = Some(restaking_config);
+    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.ncn_config = Some(ncn_config);
         self
     }
     #[inline(always)]
-    pub fn tracked_mints(&mut self, tracked_mints: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.tracked_mints = Some(tracked_mints);
+    pub fn base_reward_router(
+        &mut self,
+        base_reward_router: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.base_reward_router = Some(base_reward_router);
         self
     }
     #[inline(always)]
@@ -148,21 +132,8 @@ impl InitializeWeightTableBuilder {
         self
     }
     #[inline(always)]
-    pub fn weight_table(&mut self, weight_table: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.weight_table = Some(weight_table);
-        self
-    }
-    #[inline(always)]
     pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
         self.payer = Some(payer);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_program = Some(restaking_program);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -196,20 +167,18 @@ impl InitializeWeightTableBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = InitializeWeightTable {
-            restaking_config: self.restaking_config.expect("restaking_config is not set"),
-            tracked_mints: self.tracked_mints.expect("tracked_mints is not set"),
+        let accounts = ReallocBaseRewardRouter {
+            ncn_config: self.ncn_config.expect("ncn_config is not set"),
+            base_reward_router: self
+                .base_reward_router
+                .expect("base_reward_router is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            weight_table: self.weight_table.expect("weight_table is not set"),
             payer: self.payer.expect("payer is not set"),
-            restaking_program: self
-                .restaking_program
-                .expect("restaking_program is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
         };
-        let args = InitializeWeightTableInstructionArgs {
+        let args = ReallocBaseRewardRouterInstructionArgs {
             epoch: self.epoch.clone().expect("epoch is not set"),
         };
 
@@ -217,59 +186,49 @@ impl InitializeWeightTableBuilder {
     }
 }
 
-/// `initialize_weight_table` CPI accounts.
-pub struct InitializeWeightTableCpiAccounts<'a, 'b> {
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
+/// `realloc_base_reward_router` CPI accounts.
+pub struct ReallocBaseRewardRouterCpiAccounts<'a, 'b> {
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `initialize_weight_table` CPI instruction.
-pub struct InitializeWeightTableCpi<'a, 'b> {
+/// `realloc_base_reward_router` CPI instruction.
+pub struct ReallocBaseRewardRouterCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: InitializeWeightTableInstructionArgs,
+    pub __args: ReallocBaseRewardRouterInstructionArgs,
 }
 
-impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
+impl<'a, 'b> ReallocBaseRewardRouterCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: InitializeWeightTableCpiAccounts<'a, 'b>,
-        args: InitializeWeightTableInstructionArgs,
+        accounts: ReallocBaseRewardRouterCpiAccounts<'a, 'b>,
+        args: ReallocBaseRewardRouterInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
-            restaking_config: accounts.restaking_config,
-            tracked_mints: accounts.tracked_mints,
+            ncn_config: accounts.ncn_config,
+            base_reward_router: accounts.base_reward_router,
             ncn: accounts.ncn,
-            weight_table: accounts.weight_table,
             payer: accounts.payer,
-            restaking_program: accounts.restaking_program,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -307,13 +266,13 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_config.key,
+            *self.ncn_config.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.tracked_mints.key,
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.base_reward_router.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -321,16 +280,8 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.weight_table.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
             *self.payer.key,
             true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program.key,
-            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
@@ -343,7 +294,7 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = InitializeWeightTableInstructionData::new()
+        let mut data = ReallocBaseRewardRouterInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
@@ -354,14 +305,12 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.restaking_config.clone());
-        account_infos.push(self.tracked_mints.clone());
+        account_infos.push(self.ncn_config.clone());
+        account_infos.push(self.base_reward_router.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.weight_table.clone());
         account_infos.push(self.payer.clone());
-        account_infos.push(self.restaking_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -375,32 +324,28 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `InitializeWeightTable` via CPI.
+/// Instruction builder for `ReallocBaseRewardRouter` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` tracked_mints
+///   0. `[]` ncn_config
+///   1. `[writable]` base_reward_router
 ///   2. `[]` ncn
-///   3. `[writable]` weight_table
-///   4. `[writable, signer]` payer
-///   5. `[]` restaking_program
-///   6. `[]` system_program
+///   3. `[writable, signer]` payer
+///   4. `[]` system_program
 #[derive(Clone, Debug)]
-pub struct InitializeWeightTableCpiBuilder<'a, 'b> {
-    instruction: Box<InitializeWeightTableCpiBuilderInstruction<'a, 'b>>,
+pub struct ReallocBaseRewardRouterCpiBuilder<'a, 'b> {
+    instruction: Box<ReallocBaseRewardRouterCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
+impl<'a, 'b> ReallocBaseRewardRouterCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(InitializeWeightTableCpiBuilderInstruction {
+        let instruction = Box::new(ReallocBaseRewardRouterCpiBuilderInstruction {
             __program: program,
-            restaking_config: None,
-            tracked_mints: None,
+            ncn_config: None,
+            base_reward_router: None,
             ncn: None,
-            weight_table: None,
             payer: None,
-            restaking_program: None,
             system_program: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
@@ -408,19 +353,19 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
         Self { instruction }
     }
     #[inline(always)]
-    pub fn restaking_config(
+    pub fn ncn_config(
         &mut self,
-        restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
+        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.restaking_config = Some(restaking_config);
+        self.instruction.ncn_config = Some(ncn_config);
         self
     }
     #[inline(always)]
-    pub fn tracked_mints(
+    pub fn base_reward_router(
         &mut self,
-        tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+        base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.tracked_mints = Some(tracked_mints);
+        self.instruction.base_reward_router = Some(base_reward_router);
         self
     }
     #[inline(always)]
@@ -429,24 +374,8 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn weight_table(
-        &mut self,
-        weight_table: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.weight_table = Some(weight_table);
-        self
-    }
-    #[inline(always)]
     pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.payer = Some(payer);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -503,35 +432,22 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = InitializeWeightTableInstructionArgs {
+        let args = ReallocBaseRewardRouterInstructionArgs {
             epoch: self.instruction.epoch.clone().expect("epoch is not set"),
         };
-        let instruction = InitializeWeightTableCpi {
+        let instruction = ReallocBaseRewardRouterCpi {
             __program: self.instruction.__program,
 
-            restaking_config: self
-                .instruction
-                .restaking_config
-                .expect("restaking_config is not set"),
+            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
 
-            tracked_mints: self
+            base_reward_router: self
                 .instruction
-                .tracked_mints
-                .expect("tracked_mints is not set"),
+                .base_reward_router
+                .expect("base_reward_router is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            weight_table: self
-                .instruction
-                .weight_table
-                .expect("weight_table is not set"),
-
             payer: self.instruction.payer.expect("payer is not set"),
-
-            restaking_program: self
-                .instruction
-                .restaking_program
-                .expect("restaking_program is not set"),
 
             system_program: self
                 .instruction
@@ -547,14 +463,12 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct InitializeWeightTableCpiBuilderInstruction<'a, 'b> {
+struct ReallocBaseRewardRouterCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    tracked_mints: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    base_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

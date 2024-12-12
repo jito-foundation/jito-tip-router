@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
     types::{PodBool, PodU16, PodU64},
@@ -221,6 +223,8 @@ impl Discriminator for BallotBox {
 }
 
 impl BallotBox {
+    pub const SIZE: usize = 8 + size_of::<Self>();
+
     pub fn new(ncn: Pubkey, epoch: u64, bump: u8, current_slot: u64) -> Self {
         Self {
             ncn,
@@ -591,6 +595,7 @@ mod tests {
         let ballot_box = BallotBox::new(Pubkey::default(), 0, 0, 0);
         assert_eq!(ballot_box.operator_votes.len(), MAX_OPERATORS);
         assert_eq!(ballot_box.ballot_tallies.len(), MAX_OPERATORS);
+        println!("expected_total: {}", expected_total);
     }
 
     #[test]

@@ -28,11 +28,16 @@ pub fn process_cast_vote(
     load_signer(operator_admin, false)?;
 
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
+    msg!("Loaded NcnConfig");
     Ncn::load(restaking_program.key, ncn, false)?;
+    msg!("Loaded Ncn");
     Operator::load(restaking_program.key, operator, false)?;
+    msg!("Loaded Operator");
 
     BallotBox::load(program_id, ncn.key, epoch, ballot_box, true)?;
+    msg!("Loaded BallotBox");
     EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;
+    msg!("Loaded EpochSnapshot");
     OperatorSnapshot::load(
         program_id,
         operator.key,
@@ -41,7 +46,7 @@ pub fn process_cast_vote(
         operator_snapshot,
         false,
     )?;
-
+    msg!("Loaded OperatorSnapshot");
     let operator_data = operator.data.borrow();
     let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
 

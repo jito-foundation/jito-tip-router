@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, mem::size_of};
 
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
@@ -66,6 +66,8 @@ impl Discriminator for TrackedMints {
 }
 
 impl TrackedMints {
+    pub const SIZE: usize = 8 + size_of::<Self>();
+
     pub fn new(ncn: Pubkey, bump: u8) -> Self {
         Self {
             ncn,

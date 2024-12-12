@@ -32,18 +32,21 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR = 4;
+export const REALLOC_OPERATOR_SNAPSHOT_DISCRIMINATOR = 24;
 
-export function getInitializeWeightTableDiscriminatorBytes() {
-  return getU8Encoder().encode(INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR);
+export function getReallocOperatorSnapshotDiscriminatorBytes() {
+  return getU8Encoder().encode(REALLOC_OPERATOR_SNAPSHOT_DISCRIMINATOR);
 }
 
-export type InitializeWeightTableInstruction<
+export type ReallocOperatorSnapshotInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountNcnConfig extends string | IAccountMeta<string> = string,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
-  TAccountTrackedMints extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountWeightTable extends string | IAccountMeta<string> = string,
+  TAccountOperator extends string | IAccountMeta<string> = string,
+  TAccountNcnOperatorState extends string | IAccountMeta<string> = string,
+  TAccountEpochSnapshot extends string | IAccountMeta<string> = string,
+  TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
@@ -54,16 +57,25 @@ export type InitializeWeightTableInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountNcnConfig extends string
+        ? ReadonlyAccount<TAccountNcnConfig>
+        : TAccountNcnConfig,
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
-      TAccountTrackedMints extends string
-        ? ReadonlyAccount<TAccountTrackedMints>
-        : TAccountTrackedMints,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountWeightTable extends string
-        ? WritableAccount<TAccountWeightTable>
-        : TAccountWeightTable,
+      TAccountOperator extends string
+        ? ReadonlyAccount<TAccountOperator>
+        : TAccountOperator,
+      TAccountNcnOperatorState extends string
+        ? ReadonlyAccount<TAccountNcnOperatorState>
+        : TAccountNcnOperatorState,
+      TAccountEpochSnapshot extends string
+        ? WritableAccount<TAccountEpochSnapshot>
+        : TAccountEpochSnapshot,
+      TAccountOperatorSnapshot extends string
+        ? WritableAccount<TAccountOperatorSnapshot>
+        : TAccountOperatorSnapshot,
       TAccountPayer extends string
         ? WritableSignerAccount<TAccountPayer> &
             IAccountSignerMeta<TAccountPayer>
@@ -78,16 +90,16 @@ export type InitializeWeightTableInstruction<
     ]
   >;
 
-export type InitializeWeightTableInstructionData = {
+export type ReallocOperatorSnapshotInstructionData = {
   discriminator: number;
   epoch: bigint;
 };
 
-export type InitializeWeightTableInstructionDataArgs = {
+export type ReallocOperatorSnapshotInstructionDataArgs = {
   epoch: number | bigint;
 };
 
-export function getInitializeWeightTableInstructionDataEncoder(): Encoder<InitializeWeightTableInstructionDataArgs> {
+export function getReallocOperatorSnapshotInstructionDataEncoder(): Encoder<ReallocOperatorSnapshotInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
@@ -95,73 +107,88 @@ export function getInitializeWeightTableInstructionDataEncoder(): Encoder<Initia
     ]),
     (value) => ({
       ...value,
-      discriminator: INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR,
+      discriminator: REALLOC_OPERATOR_SNAPSHOT_DISCRIMINATOR,
     })
   );
 }
 
-export function getInitializeWeightTableInstructionDataDecoder(): Decoder<InitializeWeightTableInstructionData> {
+export function getReallocOperatorSnapshotInstructionDataDecoder(): Decoder<ReallocOperatorSnapshotInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['epoch', getU64Decoder()],
   ]);
 }
 
-export function getInitializeWeightTableInstructionDataCodec(): Codec<
-  InitializeWeightTableInstructionDataArgs,
-  InitializeWeightTableInstructionData
+export function getReallocOperatorSnapshotInstructionDataCodec(): Codec<
+  ReallocOperatorSnapshotInstructionDataArgs,
+  ReallocOperatorSnapshotInstructionData
 > {
   return combineCodec(
-    getInitializeWeightTableInstructionDataEncoder(),
-    getInitializeWeightTableInstructionDataDecoder()
+    getReallocOperatorSnapshotInstructionDataEncoder(),
+    getReallocOperatorSnapshotInstructionDataDecoder()
   );
 }
 
-export type InitializeWeightTableInput<
+export type ReallocOperatorSnapshotInput<
+  TAccountNcnConfig extends string = string,
   TAccountRestakingConfig extends string = string,
-  TAccountTrackedMints extends string = string,
   TAccountNcn extends string = string,
-  TAccountWeightTable extends string = string,
+  TAccountOperator extends string = string,
+  TAccountNcnOperatorState extends string = string,
+  TAccountEpochSnapshot extends string = string,
+  TAccountOperatorSnapshot extends string = string,
   TAccountPayer extends string = string,
   TAccountRestakingProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  ncnConfig: Address<TAccountNcnConfig>;
   restakingConfig: Address<TAccountRestakingConfig>;
-  trackedMints: Address<TAccountTrackedMints>;
   ncn: Address<TAccountNcn>;
-  weightTable: Address<TAccountWeightTable>;
+  operator: Address<TAccountOperator>;
+  ncnOperatorState: Address<TAccountNcnOperatorState>;
+  epochSnapshot: Address<TAccountEpochSnapshot>;
+  operatorSnapshot: Address<TAccountOperatorSnapshot>;
   payer: TransactionSigner<TAccountPayer>;
   restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
-  epoch: InitializeWeightTableInstructionDataArgs['epoch'];
+  epoch: ReallocOperatorSnapshotInstructionDataArgs['epoch'];
 };
 
-export function getInitializeWeightTableInstruction<
+export function getReallocOperatorSnapshotInstruction<
+  TAccountNcnConfig extends string,
   TAccountRestakingConfig extends string,
-  TAccountTrackedMints extends string,
   TAccountNcn extends string,
-  TAccountWeightTable extends string,
+  TAccountOperator extends string,
+  TAccountNcnOperatorState extends string,
+  TAccountEpochSnapshot extends string,
+  TAccountOperatorSnapshot extends string,
   TAccountPayer extends string,
   TAccountRestakingProgram extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: InitializeWeightTableInput<
+  input: ReallocOperatorSnapshotInput<
+    TAccountNcnConfig,
     TAccountRestakingConfig,
-    TAccountTrackedMints,
     TAccountNcn,
-    TAccountWeightTable,
+    TAccountOperator,
+    TAccountNcnOperatorState,
+    TAccountEpochSnapshot,
+    TAccountOperatorSnapshot,
     TAccountPayer,
     TAccountRestakingProgram,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): InitializeWeightTableInstruction<
+): ReallocOperatorSnapshotInstruction<
   TProgramAddress,
+  TAccountNcnConfig,
   TAccountRestakingConfig,
-  TAccountTrackedMints,
   TAccountNcn,
-  TAccountWeightTable,
+  TAccountOperator,
+  TAccountNcnOperatorState,
+  TAccountEpochSnapshot,
+  TAccountOperatorSnapshot,
   TAccountPayer,
   TAccountRestakingProgram,
   TAccountSystemProgram
@@ -172,13 +199,22 @@ export function getInitializeWeightTableInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
     restakingConfig: {
       value: input.restakingConfig ?? null,
       isWritable: false,
     },
-    trackedMints: { value: input.trackedMints ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    weightTable: { value: input.weightTable ?? null, isWritable: true },
+    operator: { value: input.operator ?? null, isWritable: false },
+    ncnOperatorState: {
+      value: input.ncnOperatorState ?? null,
+      isWritable: false,
+    },
+    epochSnapshot: { value: input.epochSnapshot ?? null, isWritable: true },
+    operatorSnapshot: {
+      value: input.operatorSnapshot ?? null,
+      isWritable: true,
+    },
     payer: { value: input.payer ?? null, isWritable: true },
     restakingProgram: {
       value: input.restakingProgram ?? null,
@@ -203,24 +239,30 @@ export function getInitializeWeightTableInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.ncnConfig),
       getAccountMeta(accounts.restakingConfig),
-      getAccountMeta(accounts.trackedMints),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.weightTable),
+      getAccountMeta(accounts.operator),
+      getAccountMeta(accounts.ncnOperatorState),
+      getAccountMeta(accounts.epochSnapshot),
+      getAccountMeta(accounts.operatorSnapshot),
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.restakingProgram),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
-    data: getInitializeWeightTableInstructionDataEncoder().encode(
-      args as InitializeWeightTableInstructionDataArgs
+    data: getReallocOperatorSnapshotInstructionDataEncoder().encode(
+      args as ReallocOperatorSnapshotInstructionDataArgs
     ),
-  } as InitializeWeightTableInstruction<
+  } as ReallocOperatorSnapshotInstruction<
     TProgramAddress,
+    TAccountNcnConfig,
     TAccountRestakingConfig,
-    TAccountTrackedMints,
     TAccountNcn,
-    TAccountWeightTable,
+    TAccountOperator,
+    TAccountNcnOperatorState,
+    TAccountEpochSnapshot,
+    TAccountOperatorSnapshot,
     TAccountPayer,
     TAccountRestakingProgram,
     TAccountSystemProgram
@@ -229,32 +271,35 @@ export function getInitializeWeightTableInstruction<
   return instruction;
 }
 
-export type ParsedInitializeWeightTableInstruction<
+export type ParsedReallocOperatorSnapshotInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    restakingConfig: TAccountMetas[0];
-    trackedMints: TAccountMetas[1];
+    ncnConfig: TAccountMetas[0];
+    restakingConfig: TAccountMetas[1];
     ncn: TAccountMetas[2];
-    weightTable: TAccountMetas[3];
-    payer: TAccountMetas[4];
-    restakingProgram: TAccountMetas[5];
-    systemProgram: TAccountMetas[6];
+    operator: TAccountMetas[3];
+    ncnOperatorState: TAccountMetas[4];
+    epochSnapshot: TAccountMetas[5];
+    operatorSnapshot: TAccountMetas[6];
+    payer: TAccountMetas[7];
+    restakingProgram: TAccountMetas[8];
+    systemProgram: TAccountMetas[9];
   };
-  data: InitializeWeightTableInstructionData;
+  data: ReallocOperatorSnapshotInstructionData;
 };
 
-export function parseInitializeWeightTableInstruction<
+export function parseReallocOperatorSnapshotInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedInitializeWeightTableInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+): ParsedReallocOperatorSnapshotInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 10) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -267,15 +312,18 @@ export function parseInitializeWeightTableInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      ncnConfig: getNextAccount(),
       restakingConfig: getNextAccount(),
-      trackedMints: getNextAccount(),
       ncn: getNextAccount(),
-      weightTable: getNextAccount(),
+      operator: getNextAccount(),
+      ncnOperatorState: getNextAccount(),
+      epochSnapshot: getNextAccount(),
+      operatorSnapshot: getNextAccount(),
       payer: getNextAccount(),
       restakingProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
-    data: getInitializeWeightTableInstructionDataDecoder().decode(
+    data: getReallocOperatorSnapshotInstructionDataDecoder().decode(
       instruction.data
     ),
   };

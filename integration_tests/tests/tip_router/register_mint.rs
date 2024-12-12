@@ -183,6 +183,7 @@ mod tests {
     }
 
     #[tokio::test]
+    // TODO: FLAKY!!!! >:(
     async fn test_register_mint_fails_with_weight_table() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();

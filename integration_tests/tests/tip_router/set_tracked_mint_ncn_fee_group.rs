@@ -182,7 +182,7 @@ mod tests {
         }
 
         tip_router_client
-            .initialize_weight_table(ncn_root.ncn_pubkey, fixture.clock().await.slot)
+            .do_full_initialize_weight_table(ncn_root.ncn_pubkey, fixture.clock().await.epoch)
             .await?;
 
         // Should fail

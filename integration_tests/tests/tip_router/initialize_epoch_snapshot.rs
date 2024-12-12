@@ -16,7 +16,7 @@ mod tests {
         let slot = fixture.clock().await.slot;
 
         tip_router_client
-            .do_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, slot)
+            .do_full_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, slot)
             .await?;
 
         let vault_root = test_ncn.vaults[0].clone();

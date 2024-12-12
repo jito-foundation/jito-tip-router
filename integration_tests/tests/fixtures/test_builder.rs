@@ -14,8 +14,14 @@ use solana_program::{
 };
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
-    account::Account, commitment_config::CommitmentLevel, epoch_schedule::EpochSchedule,
-    native_token::lamports_to_sol, signature::Signer, transaction::Transaction,
+    account::Account,
+    clock::Slot,
+    commitment_config::CommitmentLevel,
+    epoch_schedule::EpochSchedule,
+    native_token::{lamports_to_sol, LAMPORTS_PER_SOL},
+    signature::{Keypair, Signer},
+    system_instruction,
+    transaction::Transaction,
 };
 
 use super::{
@@ -57,11 +63,21 @@ impl Debug for TestBuilder {
     }
 }
 
+pub fn system_account(lamports: u64) -> Account {
+    Account {
+        lamports,
+        owner: solana_program::system_program::ID,
+        executable: false,
+        rent_epoch: 0,
+        data: vec![],
+    }
+}
+
 impl TestBuilder {
     pub async fn new() -> Self {
         let run_as_bpf = std::env::vars().any(|(key, _)| key.eq("SBF_OUT_DIR"));
 
-        let program_test = if run_as_bpf {
+        let mut program_test = if run_as_bpf {
             let mut program_test = ProgramTest::new(
                 "jito_tip_router_program",
                 jito_tip_router_program::id(),
@@ -95,14 +111,58 @@ impl TestBuilder {
             program_test
         };
 
-        Self {
-            context: program_test.start_with_context().await,
-        }
+        // Pre-fund payer with 1M SOL
+        let whale = Keypair::new();
+        program_test.add_account(whale.pubkey(), system_account(1_000_000 * LAMPORTS_PER_SOL));
+        let mut context = program_test.start_with_context().await;
+        let transaction = Transaction::new_signed_with_payer(
+            &[system_instruction::transfer(
+                &whale.pubkey(),
+                &context.payer.pubkey(),
+                999_999 * LAMPORTS_PER_SOL,
+            )],
+            Some(&whale.pubkey()),
+            &[&whale],
+            context.last_blockhash,
+        );
+
+        context
+            .banks_client
+            .process_transaction(transaction)
+            .await
+            .expect("failed to pre-fund payer");
+
+        Self { context }
     }
 
     pub async fn get_balance(&mut self, pubkey: &Pubkey) -> Result<u64, BanksClientError> {
         Ok(self.context.banks_client.get_balance(*pubkey).await?)
     }
+
+    pub async fn get_account(
+        &mut self,
+        address: &Pubkey,
+    ) -> Result<Option<Account>, BanksClientError> {
+        self.context.banks_client.get_account(*address).await
+    }
+
+    // pub async fn airdrop(&mut self, to: &Pubkey, lamports: u64) -> Result<(), BanksClientError> {
+    //     let transaction = Transaction::new_signed_with_payer(
+    //         &[system_instruction::transfer(
+    //             &self.whale.pubkey(),
+    //             to,
+    //             lamports,
+    //         )],
+    //         Some(&self.whale.pubkey()),
+    //         &[&self.whale],
+    //         self.context.last_blockhash,
+    //     );
+
+    //     self.context
+    //         .banks_client
+    //         .process_transaction(transaction)
+    //         .await
+    // }
 
     pub async fn warp_slot_incremental(
         &mut self,
@@ -433,9 +493,10 @@ impl TestBuilder {
         // Not sure if this is needed
         self.warp_slot_incremental(1000).await?;
 
-        let slot = self.clock().await.slot;
+        let clock = self.clock().await;
+        let epoch = clock.epoch;
         tip_router_client
-            .do_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, slot)
+            .do_full_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         for vault_root in test_ncn.vaults.iter() {
@@ -444,7 +505,7 @@ impl TestBuilder {
             let mint = vault.supported_mint;
 
             tip_router_client
-                .do_admin_update_weight_table(test_ncn.ncn_root.ncn_pubkey, slot, mint, WEIGHT)
+                .do_admin_update_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch, mint, WEIGHT)
                 .await?;
         }
 
@@ -455,10 +516,11 @@ impl TestBuilder {
     pub async fn add_epoch_snapshot_to_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
 
-        let slot = self.clock().await.slot;
+        let clock = self.clock().await;
+        let epoch = clock.epoch;
 
         tip_router_client
-            .do_initialize_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, slot)
+            .do_initialize_epoch_snapshot(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         Ok(())
@@ -471,14 +533,16 @@ impl TestBuilder {
     ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
 
-        let slot = self.clock().await.slot;
+        let clock = self.clock().await;
+        let epoch = clock.epoch;
+
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
         for operator_root in test_ncn.operators.iter() {
             let operator = operator_root.operator_pubkey;
 
             tip_router_client
-                .do_initialize_operator_snapshot(operator, ncn, slot)
+                .do_full_initialize_operator_snapshot(operator, ncn, epoch)
                 .await?;
         }
 
@@ -492,7 +556,8 @@ impl TestBuilder {
     ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
 
-        let slot = self.clock().await.slot;
+        let clock = self.clock().await;
+        let epoch = clock.epoch;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
         for operator_root in test_ncn.operators.iter() {
@@ -501,7 +566,7 @@ impl TestBuilder {
                 let vault = vault_root.vault_pubkey;
 
                 tip_router_client
-                    .do_snapshot_vault_operator_delegation(vault, operator, ncn, slot)
+                    .do_snapshot_vault_operator_delegation(vault, operator, ncn, epoch)
                     .await?;
             }
         }
@@ -523,15 +588,13 @@ impl TestBuilder {
     // 10 - Initialize Ballot Box
     pub async fn add_ballot_box_to_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
-        let mut restaking_program_client = self.restaking_program_client();
 
-        let slot = self.clock().await.slot;
+        let clock = self.clock().await;
+        let epoch = clock.epoch;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
-        let ncn_epoch = restaking_program_client.get_ncn_epoch(slot).await?;
-
         tip_router_client
-            .do_initialize_ballot_box(ncn, ncn_epoch)
+            .do_full_initialize_ballot_box(ncn, epoch)
             .await?;
 
         Ok(())
@@ -540,12 +603,10 @@ impl TestBuilder {
     // 11 - Cast all votes
     pub async fn cast_votes_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
-        let mut restaking_program_client = self.restaking_program_client();
 
-        let slot = self.clock().await.slot;
+        let clock = self.clock().await;
+        let epoch = clock.epoch;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
-
-        let ncn_epoch = restaking_program_client.get_ncn_epoch(slot).await?;
 
         let meta_merkle_root = [1u8; 32];
 
@@ -558,7 +619,7 @@ impl TestBuilder {
                     operator,
                     &operator_root.operator_admin,
                     meta_merkle_root,
-                    ncn_epoch,
+                    epoch,
                 )
                 .await?;
         }
@@ -579,18 +640,36 @@ impl TestBuilder {
         let mut tip_router_client = self.tip_router_client();
 
         let ncn: Pubkey = test_ncn.ncn_root.ncn_pubkey;
-        let slot = self.clock().await.slot;
+        let clock = self.clock().await;
+        let slot = clock.slot;
+        let epoch = clock.epoch;
 
         tip_router_client
-            .do_initialize_base_reward_router(ncn, slot)
+            .do_full_initialize_base_reward_router(ncn, slot)
             .await?;
 
+        println!("Payer pubkey: {}", self.context.payer.pubkey());
+        println!(
+            "Payer funds: {}",
+            self.context
+                .banks_client
+                .get_balance(self.context.payer.pubkey())
+                .await?
+        );
         for operator_root in test_ncn.operators.iter() {
             let operator = operator_root.operator_pubkey;
 
             for group in NcnFeeGroup::all_groups().iter() {
+                println!("Payer pubkey: {}", self.context.payer.pubkey());
+                println!(
+                    "Payer funds: {}",
+                    self.context
+                        .banks_client
+                        .get_balance(self.context.payer.pubkey())
+                        .await?
+                );
                 tip_router_client
-                    .do_initialize_ncn_reward_router(*group, ncn, operator, slot)
+                    .do_initialize_ncn_reward_router(*group, ncn, operator, epoch)
                     .await?;
             }
         }

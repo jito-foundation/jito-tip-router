@@ -7,14 +7,20 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
-pub struct InitializeWeightTable {
-    pub restaking_config: solana_program::pubkey::Pubkey,
+pub struct ReallocOperatorSnapshot {
+    pub ncn_config: solana_program::pubkey::Pubkey,
 
-    pub tracked_mints: solana_program::pubkey::Pubkey,
+    pub restaking_config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub weight_table: solana_program::pubkey::Pubkey,
+    pub operator: solana_program::pubkey::Pubkey,
+
+    pub ncn_operator_state: solana_program::pubkey::Pubkey,
+
+    pub epoch_snapshot: solana_program::pubkey::Pubkey,
+
+    pub operator_snapshot: solana_program::pubkey::Pubkey,
 
     pub payer: solana_program::pubkey::Pubkey,
 
@@ -23,33 +29,45 @@ pub struct InitializeWeightTable {
     pub system_program: solana_program::pubkey::Pubkey,
 }
 
-impl InitializeWeightTable {
+impl ReallocOperatorSnapshot {
     pub fn instruction(
         &self,
-        args: InitializeWeightTableInstructionArgs,
+        args: ReallocOperatorSnapshotInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: InitializeWeightTableInstructionArgs,
+        args: ReallocOperatorSnapshotInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.ncn_config,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.tracked_mints,
+            self.ncn, false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.operator,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn, false,
+            self.ncn_operator_state,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.weight_table,
+            self.epoch_snapshot,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.operator_snapshot,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -64,7 +82,7 @@ impl InitializeWeightTable {
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = InitializeWeightTableInstructionData::new()
+        let mut data = ReallocOperatorSnapshotInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -79,17 +97,17 @@ impl InitializeWeightTable {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct InitializeWeightTableInstructionData {
+pub struct ReallocOperatorSnapshotInstructionData {
     discriminator: u8,
 }
 
-impl InitializeWeightTableInstructionData {
+impl ReallocOperatorSnapshotInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 4 }
+        Self { discriminator: 24 }
     }
 }
 
-impl Default for InitializeWeightTableInstructionData {
+impl Default for ReallocOperatorSnapshotInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -97,27 +115,33 @@ impl Default for InitializeWeightTableInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct InitializeWeightTableInstructionArgs {
+pub struct ReallocOperatorSnapshotInstructionArgs {
     pub epoch: u64,
 }
 
-/// Instruction builder for `InitializeWeightTable`.
+/// Instruction builder for `ReallocOperatorSnapshot`.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` tracked_mints
+///   0. `[]` ncn_config
+///   1. `[]` restaking_config
 ///   2. `[]` ncn
-///   3. `[writable]` weight_table
-///   4. `[writable, signer]` payer
-///   5. `[]` restaking_program
-///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   3. `[]` operator
+///   4. `[]` ncn_operator_state
+///   5. `[writable]` epoch_snapshot
+///   6. `[writable]` operator_snapshot
+///   7. `[writable, signer]` payer
+///   8. `[]` restaking_program
+///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
-pub struct InitializeWeightTableBuilder {
+pub struct ReallocOperatorSnapshotBuilder {
+    ncn_config: Option<solana_program::pubkey::Pubkey>,
     restaking_config: Option<solana_program::pubkey::Pubkey>,
-    tracked_mints: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    weight_table: Option<solana_program::pubkey::Pubkey>,
+    operator: Option<solana_program::pubkey::Pubkey>,
+    ncn_operator_state: Option<solana_program::pubkey::Pubkey>,
+    epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
+    operator_snapshot: Option<solana_program::pubkey::Pubkey>,
     payer: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
@@ -125,9 +149,14 @@ pub struct InitializeWeightTableBuilder {
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl InitializeWeightTableBuilder {
+impl ReallocOperatorSnapshotBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+    #[inline(always)]
+    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.ncn_config = Some(ncn_config);
+        self
     }
     #[inline(always)]
     pub fn restaking_config(
@@ -138,18 +167,34 @@ impl InitializeWeightTableBuilder {
         self
     }
     #[inline(always)]
-    pub fn tracked_mints(&mut self, tracked_mints: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.tracked_mints = Some(tracked_mints);
-        self
-    }
-    #[inline(always)]
     pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
         self.ncn = Some(ncn);
         self
     }
     #[inline(always)]
-    pub fn weight_table(&mut self, weight_table: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.weight_table = Some(weight_table);
+    pub fn operator(&mut self, operator: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.operator = Some(operator);
+        self
+    }
+    #[inline(always)]
+    pub fn ncn_operator_state(
+        &mut self,
+        ncn_operator_state: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.ncn_operator_state = Some(ncn_operator_state);
+        self
+    }
+    #[inline(always)]
+    pub fn epoch_snapshot(&mut self, epoch_snapshot: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.epoch_snapshot = Some(epoch_snapshot);
+        self
+    }
+    #[inline(always)]
+    pub fn operator_snapshot(
+        &mut self,
+        operator_snapshot: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.operator_snapshot = Some(operator_snapshot);
         self
     }
     #[inline(always)]
@@ -196,11 +241,18 @@ impl InitializeWeightTableBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = InitializeWeightTable {
+        let accounts = ReallocOperatorSnapshot {
+            ncn_config: self.ncn_config.expect("ncn_config is not set"),
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
-            tracked_mints: self.tracked_mints.expect("tracked_mints is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            weight_table: self.weight_table.expect("weight_table is not set"),
+            operator: self.operator.expect("operator is not set"),
+            ncn_operator_state: self
+                .ncn_operator_state
+                .expect("ncn_operator_state is not set"),
+            epoch_snapshot: self.epoch_snapshot.expect("epoch_snapshot is not set"),
+            operator_snapshot: self
+                .operator_snapshot
+                .expect("operator_snapshot is not set"),
             payer: self.payer.expect("payer is not set"),
             restaking_program: self
                 .restaking_program
@@ -209,7 +261,7 @@ impl InitializeWeightTableBuilder {
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
         };
-        let args = InitializeWeightTableInstructionArgs {
+        let args = ReallocOperatorSnapshotInstructionArgs {
             epoch: self.epoch.clone().expect("epoch is not set"),
         };
 
@@ -217,15 +269,21 @@ impl InitializeWeightTableBuilder {
     }
 }
 
-/// `initialize_weight_table` CPI accounts.
-pub struct InitializeWeightTableCpiAccounts<'a, 'b> {
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
+/// `realloc_operator_snapshot` CPI accounts.
+pub struct ReallocOperatorSnapshotCpiAccounts<'a, 'b> {
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
+    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub ncn_operator_state: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub payer: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -234,18 +292,24 @@ pub struct InitializeWeightTableCpiAccounts<'a, 'b> {
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `initialize_weight_table` CPI instruction.
-pub struct InitializeWeightTableCpi<'a, 'b> {
+/// `realloc_operator_snapshot` CPI instruction.
+pub struct ReallocOperatorSnapshotCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
+    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub ncn_operator_state: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub payer: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -253,21 +317,24 @@ pub struct InitializeWeightTableCpi<'a, 'b> {
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: InitializeWeightTableInstructionArgs,
+    pub __args: ReallocOperatorSnapshotInstructionArgs,
 }
 
-impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
+impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: InitializeWeightTableCpiAccounts<'a, 'b>,
-        args: InitializeWeightTableInstructionArgs,
+        accounts: ReallocOperatorSnapshotCpiAccounts<'a, 'b>,
+        args: ReallocOperatorSnapshotInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
+            ncn_config: accounts.ncn_config,
             restaking_config: accounts.restaking_config,
-            tracked_mints: accounts.tracked_mints,
             ncn: accounts.ncn,
-            weight_table: accounts.weight_table,
+            operator: accounts.operator,
+            ncn_operator_state: accounts.ncn_operator_state,
+            epoch_snapshot: accounts.epoch_snapshot,
+            operator_snapshot: accounts.operator_snapshot,
             payer: accounts.payer,
             restaking_program: accounts.restaking_program,
             system_program: accounts.system_program,
@@ -307,21 +374,33 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_config.key,
+            *self.ncn_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.tracked_mints.key,
+            *self.restaking_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn.key,
             false,
         ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.operator.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.ncn_operator_state.key,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.weight_table.key,
+            *self.epoch_snapshot.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.operator_snapshot.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -343,7 +422,7 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = InitializeWeightTableInstructionData::new()
+        let mut data = ReallocOperatorSnapshotInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
@@ -354,12 +433,15 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(10 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
+        account_infos.push(self.ncn_config.clone());
         account_infos.push(self.restaking_config.clone());
-        account_infos.push(self.tracked_mints.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.weight_table.clone());
+        account_infos.push(self.operator.clone());
+        account_infos.push(self.ncn_operator_state.clone());
+        account_infos.push(self.epoch_snapshot.clone());
+        account_infos.push(self.operator_snapshot.clone());
         account_infos.push(self.payer.clone());
         account_infos.push(self.restaking_program.clone());
         account_infos.push(self.system_program.clone());
@@ -375,30 +457,36 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `InitializeWeightTable` via CPI.
+/// Instruction builder for `ReallocOperatorSnapshot` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` tracked_mints
+///   0. `[]` ncn_config
+///   1. `[]` restaking_config
 ///   2. `[]` ncn
-///   3. `[writable]` weight_table
-///   4. `[writable, signer]` payer
-///   5. `[]` restaking_program
-///   6. `[]` system_program
+///   3. `[]` operator
+///   4. `[]` ncn_operator_state
+///   5. `[writable]` epoch_snapshot
+///   6. `[writable]` operator_snapshot
+///   7. `[writable, signer]` payer
+///   8. `[]` restaking_program
+///   9. `[]` system_program
 #[derive(Clone, Debug)]
-pub struct InitializeWeightTableCpiBuilder<'a, 'b> {
-    instruction: Box<InitializeWeightTableCpiBuilderInstruction<'a, 'b>>,
+pub struct ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
+    instruction: Box<ReallocOperatorSnapshotCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
+impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(InitializeWeightTableCpiBuilderInstruction {
+        let instruction = Box::new(ReallocOperatorSnapshotCpiBuilderInstruction {
             __program: program,
+            ncn_config: None,
             restaking_config: None,
-            tracked_mints: None,
             ncn: None,
-            weight_table: None,
+            operator: None,
+            ncn_operator_state: None,
+            epoch_snapshot: None,
+            operator_snapshot: None,
             payer: None,
             restaking_program: None,
             system_program: None,
@@ -406,6 +494,14 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
+    }
+    #[inline(always)]
+    pub fn ncn_config(
+        &mut self,
+        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.ncn_config = Some(ncn_config);
+        self
     }
     #[inline(always)]
     pub fn restaking_config(
@@ -416,24 +512,40 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn tracked_mints(
-        &mut self,
-        tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.tracked_mints = Some(tracked_mints);
-        self
-    }
-    #[inline(always)]
     pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.ncn = Some(ncn);
         self
     }
     #[inline(always)]
-    pub fn weight_table(
+    pub fn operator(
         &mut self,
-        weight_table: &'b solana_program::account_info::AccountInfo<'a>,
+        operator: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.weight_table = Some(weight_table);
+        self.instruction.operator = Some(operator);
+        self
+    }
+    #[inline(always)]
+    pub fn ncn_operator_state(
+        &mut self,
+        ncn_operator_state: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.ncn_operator_state = Some(ncn_operator_state);
+        self
+    }
+    #[inline(always)]
+    pub fn epoch_snapshot(
+        &mut self,
+        epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.epoch_snapshot = Some(epoch_snapshot);
+        self
+    }
+    #[inline(always)]
+    pub fn operator_snapshot(
+        &mut self,
+        operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.operator_snapshot = Some(operator_snapshot);
         self
     }
     #[inline(always)]
@@ -503,28 +615,37 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = InitializeWeightTableInstructionArgs {
+        let args = ReallocOperatorSnapshotInstructionArgs {
             epoch: self.instruction.epoch.clone().expect("epoch is not set"),
         };
-        let instruction = InitializeWeightTableCpi {
+        let instruction = ReallocOperatorSnapshotCpi {
             __program: self.instruction.__program,
+
+            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
 
             restaking_config: self
                 .instruction
                 .restaking_config
                 .expect("restaking_config is not set"),
 
-            tracked_mints: self
-                .instruction
-                .tracked_mints
-                .expect("tracked_mints is not set"),
-
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            weight_table: self
+            operator: self.instruction.operator.expect("operator is not set"),
+
+            ncn_operator_state: self
                 .instruction
-                .weight_table
-                .expect("weight_table is not set"),
+                .ncn_operator_state
+                .expect("ncn_operator_state is not set"),
+
+            epoch_snapshot: self
+                .instruction
+                .epoch_snapshot
+                .expect("epoch_snapshot is not set"),
+
+            operator_snapshot: self
+                .instruction
+                .operator_snapshot
+                .expect("operator_snapshot is not set"),
 
             payer: self.instruction.payer.expect("payer is not set"),
 
@@ -547,12 +668,15 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct InitializeWeightTableCpiBuilderInstruction<'a, 'b> {
+struct ReallocOperatorSnapshotCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
+    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    tracked_mints: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn_operator_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,

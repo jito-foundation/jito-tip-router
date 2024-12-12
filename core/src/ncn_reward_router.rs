@@ -48,6 +48,8 @@ impl Discriminator for NcnRewardRouter {
 }
 
 impl NcnRewardRouter {
+    pub const SIZE: usize = 8 + size_of::<Self>();
+
     pub fn new(
         ncn_fee_group: NcnFeeGroup,
         operator: Pubkey,
@@ -569,6 +571,7 @@ mod tests {
             + size_of::<VaultRewardRoute>() * MAX_VAULT_OPERATOR_DELEGATIONS; // vault_reward_routes
 
         assert_eq!(size_of::<NcnRewardRouter>(), expected_total);
+        println!("expected_total: {}", expected_total);
     }
 
     #[test]
