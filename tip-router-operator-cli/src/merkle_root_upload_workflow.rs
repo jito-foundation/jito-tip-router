@@ -36,7 +36,7 @@ pub enum MerkleRootUploadError {
 pub async fn upload_merkle_root(
     merkle_root_path: &PathBuf,
     keypair_path: &PathBuf,
-    client: &impl EllipsisClientTrait,
+    client: &impl EllipsisClient,
     tip_distribution_program_id: &Pubkey,
     max_concurrent_rpc_get_reqs: usize,
     txn_send_batch_size: usize
