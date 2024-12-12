@@ -39,6 +39,7 @@ use ::{
 async fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
+    let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
     let rpc_client = EllipsisClient::from_rpc(
         RpcClient::new(cli.rpc_url.clone()),
         &read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file")
@@ -61,6 +62,7 @@ async fn main() -> Result<()> {
                     process_epoch(
                         previous_epoch_slot,
                         &cli,
+                        &keypair,
                         tip_distribution_program_id,
                         tip_payment_program_id,
                         ncn_address

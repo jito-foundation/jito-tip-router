@@ -24,6 +24,7 @@ use {
     },
     std::{ path::PathBuf, time::Duration },
     thiserror::Error,
+    solana_sdk::signer::keypair::Keypair
 };
 
 #[derive(Error, Debug)]
@@ -35,7 +36,7 @@ pub enum MerkleRootUploadError {
 
 pub async fn upload_merkle_root(
     merkle_root_path: &PathBuf,
-    keypair_path: &PathBuf,
+    keypair: &Keypair,
     rpc_url: &str,
     tip_distribution_program_id: &Pubkey,
     max_concurrent_rpc_get_reqs: usize,
@@ -46,7 +47,6 @@ pub async fn upload_merkle_root(
     let merkle_tree: GeneratedMerkleTreeCollection = read_json_from_file(merkle_root_path).expect(
         "read GeneratedMerkleTreeCollection"
     );
-    let keypair = read_keypair_file(keypair_path).expect("read keypair file");
 
     let tip_distribution_config = Pubkey::find_program_address(
         &[Config::SEED],

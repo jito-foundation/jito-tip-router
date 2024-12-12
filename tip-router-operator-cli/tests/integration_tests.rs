@@ -216,7 +216,7 @@ async fn test_process_epoch() -> Result<(), Box<dyn std::error::Error>> {
     let result = process_epoch(
         64, // previous_epoch_slot
         &cli,
-        // &test_client,
+        &test_context.payer,  // Pass test keypair directly
         &TIP_DISTRIBUTION_ID,
         &TIP_PAYMENT_ID,
         &Pubkey::new_unique(), // ncn_address

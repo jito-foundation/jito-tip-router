@@ -26,6 +26,7 @@ use {
         generated_merkle_tree::GeneratedMerkleTreeCollection as MetaMerkleTreeCollection,
     },
     solana_metrics::datapoint_info,
+    solana_sdk::signer::keypair::Keypair,
     crate::{GeneratedMerkleTreeCollection, StakeMetaCollection}
 };
 
@@ -62,6 +63,7 @@ pub async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<u64>
 pub async fn process_epoch(
     previous_epoch_slot: u64,
     cli: &Cli,
+    keypair: &Keypair,  // New parameter
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     ncn_address: &Pubkey
@@ -76,7 +78,7 @@ pub async fn process_epoch(
         cli.snapshot_output_dir.to_str().unwrap().to_string(),
         5,
         "zstd".to_string(),
-        read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
+        Keypair::from_bytes(&keypair.to_bytes()).unwrap(),
         cli.ledger_path.clone()
     )?;
     let snapshot_result = snapshot_creator.create_snapshot(previous_epoch_slot).await;
@@ -136,7 +138,7 @@ pub async fn process_epoch(
     let upload_start = Instant::now();
     merkle_root_upload_workflow::upload_merkle_root(
         &merkle_tree_path,
-        &PathBuf::from(&cli.keypair_path),
+        &keypair,
         &cli.rpc_url,
         tip_distribution_program_id,
         5,
@@ -177,9 +179,6 @@ pub async fn process_epoch(
     // 6. Test claiming
     info!("6. Testing tip claiming capability...");
     let claim_start = Instant::now();
-    let context_keypair = read_keypair_file(&cli.keypair_path).expect(
-    "Failed to read keypair file"
-    );
 
     // Load the generated merkle trees directly from file
     let file = File::open(&merkle_tree_path)?;
@@ -190,7 +189,7 @@ pub async fn process_epoch(
         &generated_trees,
         cli.rpc_url.clone(),
         *tip_distribution_program_id,
-        Arc::new(context_keypair),
+        Arc::new(Keypair::from_bytes(&keypair.to_bytes()).unwrap()),
         Duration::from_secs(10),
         1
     ).await;

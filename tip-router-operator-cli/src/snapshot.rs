@@ -2,13 +2,14 @@ use anyhow::Result;
 use log::info;
 use std::process::Command;
 use std::time::Instant;
+use solana_sdk::signer::keypair::Keypair;
 
 pub struct SnapshotCreator {
     rpc_url: String,
     output_dir: String,
     max_snapshots: u32,
     compression: String,
-    keypair: solana_sdk::signer::keypair::Keypair,
+    keypair: Keypair,
     ledger_path: std::path::PathBuf,
 }
 
@@ -18,7 +19,7 @@ impl SnapshotCreator {
         output_dir: String,
         max_snapshots: u32,
         compression: String,
-        keypair: solana_sdk::signer::keypair::Keypair,
+        keypair: Keypair,
         ledger_path: std::path::PathBuf,
     ) -> Result<Self> {
         Ok(Self {
