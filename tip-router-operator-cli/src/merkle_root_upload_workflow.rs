@@ -11,7 +11,7 @@ use {
         state::{ Config, TipDistributionAccount },
     },
     log::{ error, info },
-    solana_rpc_client::nonblocking::rpc_client::RpcClient,
+    ellipsis_client::EllipsisClient,
     solana_program::{
         fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
         native_token::LAMPORTS_PER_SOL,
@@ -36,7 +36,7 @@ pub enum MerkleRootUploadError {
 pub async fn upload_merkle_root(
     merkle_root_path: &PathBuf,
     keypair_path: &PathBuf,
-    rpc_url: &str,
+    client: &impl EllipsisClientTrait,
     tip_distribution_program_id: &Pubkey,
     max_concurrent_rpc_get_reqs: usize,
     txn_send_batch_size: usize
@@ -52,12 +52,6 @@ pub async fn upload_merkle_root(
         &[Config::SEED],
         tip_distribution_program_id
     ).0;
-
-    // Remove runtime creation and block_on, just use the async context directly
-    let rpc_client = RpcClient::new_with_commitment(
-        rpc_url.to_string(),
-        CommitmentConfig::confirmed()
-    );
     
     let trees: Vec<GeneratedMerkleTree> = merkle_tree.generated_merkle_trees
         .into_iter()
@@ -68,8 +62,8 @@ pub async fn upload_merkle_root(
 
     // heuristic to make sure we have enough funds to cover execution, assumes all trees need updating
     {
-        let initial_balance = rpc_client
-            .get_balance(&keypair.pubkey()).await
+        let initial_balance = client.get_balance(&keypair.pubkey()).await
+            .map_err(|e| error!("failed to get balance: {}", e))
             .expect("failed to get balance");
         let desired_balance = (trees.len() as u64)
             .checked_mul(DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE)
@@ -96,9 +90,9 @@ pub async fn upload_merkle_root(
     
     let mut trees_needing_update: Vec<GeneratedMerkleTree> = vec![];
     for tree in trees {
-        let account = rpc_client
-            .get_account(&tree.tip_distribution_account).await
-            .expect("fetch expect");
+        let account = client.get_account(&tree.tip_distribution_account).await
+            .map_err(|e| error!("failed to get account: {}", e))
+            .expect("fetch account");
 
         let mut data = account.data.as_slice();
         let fetched_tip_distribution_account = TipDistributionAccount::try_deserialize(
@@ -140,21 +134,10 @@ pub async fn upload_merkle_root(
         })
         .collect();
 
-    let (to_process, failed_transactions) = sign_and_send_transactions_with_retries(
-        &keypair,
-        &rpc_client,
-        max_concurrent_rpc_get_reqs,
-        transactions,
-        txn_send_batch_size,
-        MAX_RETRY_DURATION
-    ).await;
-    
-    if !to_process.is_empty() {
-        panic!(
-            "{} remaining mev claim transactions, {} failed requests.",
-            to_process.len(),
-            failed_transactions.len()
-        );
+    for tx in transactions {
+        client.send_and_confirm_transaction(tx).await
+            .map_err(|e| error!("failed to send transaction: {}", e))
+            .expect("failed to send transaction");
     }
 
     Ok(())

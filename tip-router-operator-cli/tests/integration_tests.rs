@@ -1,4 +1,4 @@
-use ::{
+use {
     meta_merkle_tree::{
         meta_merkle_tree::MetaMerkleTree,
         generated_merkle_tree::GeneratedMerkleTreeCollection as MetaMerkleTreeCollection,
@@ -25,6 +25,10 @@ use ::{
     },
     jito_tip_distribution::{self, ID as TIP_DISTRIBUTION_ID},
     jito_tip_payment::{self, ID as TIP_PAYMENT_ID},
+    ellipsis_client::EllipsisClient,
+    solana_client::rpc_client::RpcClient,
+    async_trait::async_trait,
+    solana_client::mock_sender::MockSender,
 };
 
 struct TestContext {
@@ -36,7 +40,28 @@ struct TestContext {
     vote_account: Keypair,
     temp_dir: TempDir,
     output_dir: PathBuf,
-    rpc_url: String,
+}
+
+struct TestEllipsisClient {
+    banks_client: BanksClient,
+    payer: Keypair,
+    rpc_client: RpcClient,
+}
+
+#[async_trait]
+impl EllipsisClient for TestEllipsisClient {
+    fn get_rpc(&self) -> &RpcClient {
+        &self.rpc_client
+    }
+
+    fn get_payer(&self) -> &Keypair {
+        &self.payer
+    }
+
+    async fn send_and_confirm_transaction(&self, transaction: Transaction) -> Result<(), Box<dyn std::error::Error>> {
+        self.banks_client.process_transaction(transaction).await?;
+        Ok(())
+    }
 }
 
 impl TestContext {
@@ -44,24 +69,24 @@ impl TestContext {
         let temp_dir = TempDir::new()?;
         let output_dir = temp_dir.path().join("output");
         fs::create_dir_all(&output_dir)?;
-
+    
         let mut program_test = ProgramTest::default();
-
+    
         // Add programs to test environment
         program_test.add_program(
             "jito_tip_distribution",
             TIP_DISTRIBUTION_ID,
-            None,
+            None
         );
         
         program_test.add_program(
             "jito_tip_payment",
             TIP_PAYMENT_ID,
-            None,
+            None
         );
-
+    
         let mut context = program_test.start_with_context().await;
-        let payer = Keypair::new();
+        let payer = Keypair::new();  // Moved up here
         let stake_account = Keypair::new();
         let vote_account = Keypair::new();
 
@@ -110,7 +135,6 @@ impl TestContext {
             vote_account,
             temp_dir,
             output_dir,
-            rpc_url: "test".to_string(),
         })
     }
 
@@ -144,15 +168,14 @@ impl TestContext {
     }
 
     async fn advance_clock(&mut self, slots: u64) -> Result<(), Box<dyn std::error::Error>> {
-        for i in 0..slots {
-            self.context.warp_to_slot(i + 1)?;
-            self.context.last_blockhash = self.context.banks_client.get_latest_blockhash().await?;
-        }
+        let current_slot = self.context.banks_client.get_root_slot().await?;
+        self.context.warp_to_slot(current_slot + slots)?;
+        self.context.last_blockhash = self.context.banks_client.get_latest_blockhash().await?;
         Ok(())
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_process_epoch() -> Result<(), Box<dyn std::error::Error>> {
     let mut test_context = TestContext::new().await?;
 
@@ -168,10 +191,16 @@ async fn test_process_epoch() -> Result<(), Box<dyn std::error::Error>> {
     let merkle_tree_path = test_context.output_dir.join("merkle-trees");
     fs::create_dir_all(&merkle_tree_path)?;
 
+    let test_client = TestEllipsisClient {
+        banks_client: test_context.context.banks_client.clone(),
+        payer: test_context.payer.clone(),
+        rpc_client: RpcClient::new_mock_with_mocks("mock".to_string(), vec![]),
+    };
+
     merkle_root_generator_workflow::generate_merkle_root(
         &stake_meta_path,
         &merkle_tree_path,
-        &test_context.rpc_url
+        &test_client,
     )?;
 
     // Upload merkle roots
@@ -181,7 +210,7 @@ async fn test_process_epoch() -> Result<(), Box<dyn std::error::Error>> {
     merkle_root_upload_workflow::upload_merkle_root(
         &merkle_tree_path,
         &keypair_path,
-        &test_context.rpc_url,
+        &test_client,
         &test_context.tip_distribution_program_id,
         5,
         10
@@ -207,7 +236,7 @@ async fn test_process_epoch() -> Result<(), Box<dyn std::error::Error>> {
 
     let claim_result = claim_mev_workflow::claim_mev_tips(
         &tip_router_merkle_trees,
-        test_context.rpc_url.clone(),
+        &test_client,
         test_context.tip_distribution_program_id,
         Arc::new(test_context.payer),
         Duration::from_secs(10),

@@ -105,6 +105,7 @@ async fn get_previous_epoch_last_slot(rpc_client: &EllipsisClient) -> Result<u64
 async fn process_epoch(
     previous_epoch_slot: u64,
     cli: &Cli,
+    client: &EllipsisClient,
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     ncn_address: &Pubkey
@@ -165,7 +166,7 @@ async fn process_epoch(
     let merkle_gen_result = merkle_root_generator_workflow::generate_merkle_root(
         &stake_meta_path,
         &merkle_tree_path,
-        &cli.rpc_url
+        client
     );
     datapoint_info!(
         "tip_router_merkle_generation",
@@ -180,7 +181,7 @@ async fn process_epoch(
     merkle_root_upload_workflow::upload_merkle_root(
         &merkle_tree_path,
         &PathBuf::from(&cli.keypair_path),
-        &cli.rpc_url,
+        client,
         tip_distribution_program_id,
         5,
         10
@@ -208,7 +209,7 @@ async fn process_epoch(
      let generated_trees: GeneratedMerkleTreeCollection = serde_json::from_str(
          &serde_json::to_string(&meta_merkle_trees)?
      )?;
-     
+
     datapoint_info!(
         "tip_router_meta_merkle",
         ("duration_ms", meta_start.elapsed().as_millis() as i64, i64),
@@ -231,7 +232,7 @@ async fn process_epoch(
 
     let claim_result = claim_mev_workflow::claim_mev_tips(
         &generated_trees,
-        cli.rpc_url.clone(),
+        client,
         *tip_distribution_program_id,
         Arc::new(context_keypair),
         Duration::from_secs(10),
@@ -270,27 +271,21 @@ async fn main() -> Result<()> {
             info!("Starting epoch monitor...");
 
             loop {
-                // Wait for epoch change
                 wait_for_next_epoch(&rpc_client).await?;
-
-                // Get the last slot of the previous epoch
                 let previous_epoch_slot = get_previous_epoch_last_slot(&rpc_client).await?;
                 info!("Processing slot {} for previous epoch", previous_epoch_slot);
 
-                // Process the epoch
-                match
-                    process_epoch(
-                        previous_epoch_slot,
-                        &cli,
-                        tip_distribution_program_id,
-                        tip_payment_program_id,
-                        ncn_address
-                    ).await
-                {
+                match process_epoch(
+                    previous_epoch_slot,
+                    &cli,
+                    &rpc_client,
+                    tip_distribution_program_id,
+                    tip_payment_program_id,
+                    ncn_address
+                ).await {
                     Ok(_) => info!("Successfully processed epoch"),
                     Err(e) => {
                         error!("Error processing epoch: {}", e);
-                        // Continue to next epoch even if this one failed
                     }
                 }
             }

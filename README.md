@@ -15,4 +15,4 @@ Set Anchor IDL build program path:
 
 2. Run integration tests with full backtrace:
 `cd tip-router-operator-cli`
-`RUST_BACKTRACE=full SBF_OUT_DIR=target/deploy/ cargo test --test integration_tests`
+`RUST_BACKTRACE=full SBF_OUT_DIR=src/fixtures cargo test --test integration_tests`
