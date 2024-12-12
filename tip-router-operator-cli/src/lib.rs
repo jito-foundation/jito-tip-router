@@ -4,6 +4,10 @@ pub mod merkle_root_upload_workflow;
 pub mod reclaim_rent_workflow;
 pub mod stake_meta_generator_workflow;
 pub mod snapshot;
+pub use crate::cli::{Cli, Commands};
+pub mod cli;
+pub use crate::process_epoch::process_epoch;
+pub mod process_epoch;
 
 use {
     crate::{

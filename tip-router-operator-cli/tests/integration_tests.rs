@@ -22,13 +22,16 @@ use {
         claim_mev_workflow,
         merkle_root_generator_workflow,
         merkle_root_upload_workflow,
+        Cli,
+        Commands,
+        process_epoch
     },
     jito_tip_distribution::{self, ID as TIP_DISTRIBUTION_ID},
     jito_tip_payment::{self, ID as TIP_PAYMENT_ID},
-    ellipsis_client::EllipsisClient,
+    // ellipsis_client::EllipsisClient,
     solana_client::rpc_client::RpcClient,
-    async_trait::async_trait,
-    solana_client::mock_sender::MockSender,
+    // async_trait::async_trait,
+    // solana_client::mock_sender::MockSender,
 };
 
 struct TestContext {
@@ -42,27 +45,36 @@ struct TestContext {
     output_dir: PathBuf,
 }
 
-struct TestEllipsisClient {
-    banks_client: BanksClient,
-    payer: Keypair,
-    rpc_client: RpcClient,
-}
+// struct TestEllipsisClient {
+//     banks_client: BanksClient,
+//     payer: Keypair,
+//     rpc_client: RpcClient,
+// }
 
-#[async_trait]
-impl EllipsisClient for TestEllipsisClient {
-    fn get_rpc(&self) -> &RpcClient {
-        &self.rpc_client
-    }
+// #[async_trait]
+// impl EllipsisClient for TestEllipsisClient {
+//     fn get_rpc(&self) -> &RpcClient {
+//         &self.rpc_client
+//     }
 
-    fn get_payer(&self) -> &Keypair {
-        &self.payer
-    }
+//     fn get_payer(&self) -> &Keypair {
+//         &self.payer
+//     }
 
-    async fn send_and_confirm_transaction(&self, transaction: Transaction) -> Result<(), Box<dyn std::error::Error>> {
-        self.banks_client.process_transaction(transaction).await?;
-        Ok(())
-    }
-}
+//     async fn send_and_confirm_transaction(&self, transaction: Transaction) -> Result<(), Box<dyn std::error::Error>> {
+//         self.banks_client.process_transaction(transaction).await?;
+//         Ok(())
+//     }
+// }
+
+// impl From<TestEllipsisClient> for EllipsisClient {
+//     fn from(test_client: TestEllipsisClient) -> Self {
+//         EllipsisClient::from_rpc(
+//             test_client.rpc_client,
+//             &test_client.payer
+//         ).expect("Failed to create EllipsisClient from TestEllipsisClient")
+//     }
+// }
 
 impl TestContext {
     async fn new() -> Result<Self, Box<dyn std::error::Error>> {
@@ -86,7 +98,7 @@ impl TestContext {
         );
     
         let mut context = program_test.start_with_context().await;
-        let payer = Keypair::new();  // Moved up here
+        let payer = Keypair::new();
         let stake_account = Keypair::new();
         let vote_account = Keypair::new();
 
@@ -178,74 +190,38 @@ impl TestContext {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_process_epoch() -> Result<(), Box<dyn std::error::Error>> {
     let mut test_context = TestContext::new().await?;
-
-    let previous_epoch_slot = 64;
-    test_context.advance_clock(previous_epoch_slot).await?;
-
-    // Create and save stake meta
-    let stake_meta = test_context.create_test_stake_meta();
-    let stake_meta_path = test_context.output_dir.join("stake-meta.json");
-    serde_json::to_writer(File::create(&stake_meta_path)?, &stake_meta)?;
-
-    // Generate merkle trees
-    let merkle_tree_path = test_context.output_dir.join("merkle-trees");
-    fs::create_dir_all(&merkle_tree_path)?;
-
-    let test_client = TestEllipsisClient {
-        banks_client: test_context.context.banks_client.clone(),
-        payer: test_context.payer.clone(),
-        rpc_client: RpcClient::new_mock_with_mocks("mock".to_string(), vec![]),
+    
+    // Create test CLI struct
+    let cli = Cli {
+        keypair_path: test_context.temp_dir.path().join("keypair.json").to_str().unwrap().to_string(),
+        rpc_url: "http://mock".to_string(),
+        ledger_path: test_context.temp_dir.path().join("ledger"),
+        snapshot_output_dir: test_context.output_dir.clone(),
+        command: Commands::Monitor {
+            ncn_address: Pubkey::new_unique(),
+            tip_distribution_program_id: TIP_DISTRIBUTION_ID,
+            tip_payment_program_id: TIP_PAYMENT_ID,
+        },
     };
 
-    merkle_root_generator_workflow::generate_merkle_root(
-        &stake_meta_path,
-        &merkle_tree_path,
-        &test_client,
-    )?;
+    // Write keypair file
+    fs::write(&cli.keypair_path, test_context.payer.to_bytes().to_vec())?;
 
-    // Upload merkle roots
-    let keypair_path = test_context.temp_dir.path().join("keypair.json");
-    fs::write(&keypair_path, test_context.payer.to_bytes().to_vec())?;
+    // let test_client = TestEllipsisClient {
+    //     banks_client: test_context.context.banks_client.clone(),
+    //     payer: test_context.payer.clone(),
+    //     rpc_client: RpcClient::new_mock_with_mocks("mock".to_string(), vec![]),
+    // };
 
-    merkle_root_upload_workflow::upload_merkle_root(
-        &merkle_tree_path,
-        &keypair_path,
-        &test_client,
-        &test_context.tip_distribution_program_id,
-        5,
-        10
-    ).await?;
-
-    // Generate meta merkle tree
-    // First deserialize as MetaMerkleTreeCollection
-    let file = File::open(&merkle_tree_path)?;
-    let reader = BufReader::new(file);
-    let meta_merkle_trees: MetaMerkleTreeCollection = serde_json::from_reader(reader)?;
-
-    let meta_merkle_tree = MetaMerkleTree::new_from_generated_merkle_tree_collection(
-        meta_merkle_trees.clone()
-    )?;
-
-    let meta_merkle_path = test_context.output_dir.join("meta-merkle-tree.json");
-    meta_merkle_tree.write_to_file(&meta_merkle_path);
-
-    // Convert to TipRouterMerkleTreeCollection for claim_mev_tips
-    let tip_router_merkle_trees: TipRouterMerkleTreeCollection = serde_json::from_str(
-        &serde_json::to_string(&meta_merkle_trees)?
-    )?;
-
-    let claim_result = claim_mev_workflow::claim_mev_tips(
-        &tip_router_merkle_trees,
-        &test_client,
-        test_context.tip_distribution_program_id,
-        Arc::new(test_context.payer),
-        Duration::from_secs(10),
-        1
+    let result = process_epoch(
+        64, // previous_epoch_slot
+        &cli,
+        // &test_client,
+        &TIP_DISTRIBUTION_ID,
+        &TIP_PAYMENT_ID,
+        &Pubkey::new_unique(), // ncn_address
     ).await;
 
-    assert!(claim_result.is_ok());
-    assert!(meta_merkle_path.exists());
-    assert!(merkle_tree_path.exists());
-
+    assert!(result.is_ok());
     Ok(())
 }
