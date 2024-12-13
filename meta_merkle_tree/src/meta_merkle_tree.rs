@@ -210,6 +210,12 @@ mod tests {
         signature::{EncodableKey, Keypair},
         signer::Signer,
     };
+    use solana_program::hash::Hash;
+    use crate::{
+        generated_merkle_tree::{GeneratedMerkleTree, GeneratedMerkleTreeCollection},
+    };
+    use crate::generated_merkle_tree::{self, TreeNode as GeneratedTreeNode};  // Updated import
+
 
     use super::*;
 
@@ -292,63 +298,97 @@ mod tests {
     }
 
     #[test]
-    fn test_new_from_mev_tip_merkle_tree() {
-        // Create test data for multiple validators/operators
-        let validators = vec![
-            (
-                Pubkey::new_unique(),  // tip_distribution_account
-                [1; 32],               // validator_merkle_root (their own tree of delegators)
-                1000u64,               // max_total_claim for this validator
-                5u64,                  // max_num_nodes (number of delegators)
-            ),
-            (
-                Pubkey::new_unique(),  // second validator
-                [2; 32],               // different merkle root
-                2000u64,               // different claim amount
-                10u64,                 // different number of delegators
-            ),
+    fn test_new_from_generated_merkle_tree_collection() {
+        // Create test tree nodes for each generated tree
+        let tree1_nodes = vec![
+            generated_merkle_tree::TreeNode {
+                claimant: Pubkey::new_unique(),
+                claim_status_pubkey: Pubkey::new_unique(),
+                claim_status_bump: 255,
+                staker_pubkey: Pubkey::new_unique(),
+                withdrawer_pubkey: Pubkey::new_unique(),
+                amount: 500,
+                proof: None,  // Will be filled in by the tree generation
+            },
+            generated_merkle_tree::TreeNode {
+                claimant: Pubkey::new_unique(),
+                claim_status_pubkey: Pubkey::new_unique(),
+                claim_status_bump: 255,
+                staker_pubkey: Pubkey::new_unique(),
+                withdrawer_pubkey: Pubkey::new_unique(),
+                amount: 500,
+                proof: None,
+            },
         ];
-    
-        let tree_nodes: Vec<TreeNode> = validators
-            .into_iter()
-            .map(|(tip_dist, val_root, claim, nodes)| {
-                TreeNode::new(tip_dist, val_root, claim, nodes)
-            })
-            .collect();
-    
-        // Create MetaMerkleTree
-        let meta_merkle_tree = MetaMerkleTree::new(tree_nodes).unwrap();
-    
+
+        let tree2_nodes = vec![
+            generated_merkle_tree::TreeNode {
+                claimant: Pubkey::new_unique(),
+                claim_status_pubkey: Pubkey::new_unique(),
+                claim_status_bump: 255,
+                staker_pubkey: Pubkey::new_unique(),
+                withdrawer_pubkey: Pubkey::new_unique(),
+                amount: 1000,
+                proof: None,
+            },
+            generated_merkle_tree::TreeNode {
+                claimant: Pubkey::new_unique(),
+                claim_status_pubkey: Pubkey::new_unique(),
+                claim_status_bump: 255,
+                staker_pubkey: Pubkey::new_unique(),
+                withdrawer_pubkey: Pubkey::new_unique(),
+                amount: 1000,
+                proof: None,
+            },
+        ];
+
+        // Create test data with proper tree nodes
+        let generated_trees = vec![
+            GeneratedMerkleTree {
+                tip_distribution_account: Pubkey::new_unique(),
+                merkle_root_upload_authority: Pubkey::new_unique(),
+                merkle_root: Hash::new_unique(),
+                tree_nodes: tree1_nodes,
+                max_total_claim: 1000,
+                max_num_nodes: 5,
+            },
+            GeneratedMerkleTree {
+                tip_distribution_account: Pubkey::new_unique(),
+                merkle_root_upload_authority: Pubkey::new_unique(),
+                merkle_root: Hash::new_unique(),
+                tree_nodes: tree2_nodes,
+                max_total_claim: 2000,
+                max_num_nodes: 10,
+            },
+        ];
+
+        let generated_collection = GeneratedMerkleTreeCollection {
+            generated_merkle_trees: generated_trees,
+            bank_hash: "test_bank_hash".to_string(),
+            epoch: 123,
+            slot: 456,
+        };
+
+        // Create MetaMerkleTree from collection
+        let meta_merkle_tree = MetaMerkleTree::new_from_generated_merkle_tree_collection(
+            generated_collection.clone()
+        ).unwrap();
+
         // Validate structure
         assert_ne!(meta_merkle_tree.merkle_root, [0; 32], "Merkle root should not be zero");
         assert_eq!(meta_merkle_tree.num_nodes, 2, "Should have two validator nodes");
-        
-        // Validate each validator's data in the tree
-        let node1 = &meta_merkle_tree.tree_nodes[0];
-        let node2 = &meta_merkle_tree.tree_nodes[1];
-    
-        // Each node should have:
-        // 1. Unique tip distribution account
-        assert_ne!(node1.tip_distribution_account, node2.tip_distribution_account);
-        
-        // 2. Their own merkle root (for their delegator tree)
-        assert_ne!(node1.validator_merkle_root, node2.validator_merkle_root);
-        
-        // 3. Valid claim amounts
-        assert!(node1.max_total_claim > 0);
-        assert!(node2.max_total_claim > 0);
-        assert_ne!(node1.max_total_claim, node2.max_total_claim);
-        
-        // 4. Valid number of delegators
-        assert!(node1.max_num_nodes > 0);
-        assert!(node2.max_num_nodes > 0);
-        assert_ne!(node1.max_num_nodes, node2.max_num_nodes);
-        
-        // 5. Valid merkle proofs
-        assert!(node1.proof.is_some(), "Node should have a proof");
-        assert!(node2.proof.is_some(), "Node should have a proof");
-        
-        // 6. Verify the proofs are valid against the meta merkle root
+
+        // Validate each node matches its source generated tree
+        for (node, generated_tree) in meta_merkle_tree.tree_nodes.iter()
+            .zip(generated_collection.generated_merkle_trees.iter()) 
+        {
+            assert_eq!(node.tip_distribution_account, generated_tree.tip_distribution_account);
+            assert_eq!(node.max_total_claim, generated_tree.max_total_claim);
+            assert_eq!(node.max_num_nodes, generated_tree.max_num_nodes);
+            assert!(node.proof.is_some(), "Node should have a proof");
+        }
+
+        // Verify the proofs are valid
         meta_merkle_tree.verify_proof().unwrap();
     }
 }
