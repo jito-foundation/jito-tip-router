@@ -591,6 +591,5 @@ mod tests {
             + size_of::<VaultOperatorStakeWeight>() * MAX_VAULT_OPERATOR_DELEGATIONS; // vault_operator_stake_weight
 
         assert_eq!(size_of::<OperatorSnapshot>(), expected_total);
-        println!("expected_total: {}", expected_total);
     }
 }

@@ -595,7 +595,6 @@ mod tests {
         let ballot_box = BallotBox::new(Pubkey::default(), 0, 0, 0);
         assert_eq!(ballot_box.operator_votes.len(), MAX_OPERATORS);
         assert_eq!(ballot_box.ballot_tallies.len(), MAX_OPERATORS);
-        println!("expected_total: {}", expected_total);
     }
 
     #[test]

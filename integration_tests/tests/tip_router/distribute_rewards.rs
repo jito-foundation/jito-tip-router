@@ -225,7 +225,6 @@ mod tests {
                         .get_ncn_reward_router(*group, operator, ncn, epoch)
                         .await?;
 
-                    println!("\nTotal Rewards: {}", ncn_router.total_rewards());
                     total_rewards += ncn_router.total_rewards();
                 }
 

@@ -677,7 +677,6 @@ mod tests {
             + size_of::<NcnRewardRoute>() * MAX_OPERATORS; // ncn_fee_group_reward_routes
 
         assert_eq!(size_of::<BaseRewardRouter>(), expected_total);
-        println!("expected_total: {}", expected_total);
     }
 
     #[test]

@@ -571,7 +571,6 @@ mod tests {
             + size_of::<VaultRewardRoute>() * MAX_VAULT_OPERATOR_DELEGATIONS; // vault_reward_routes
 
         assert_eq!(size_of::<NcnRewardRouter>(), expected_total);
-        println!("expected_total: {}", expected_total);
     }
 
     #[test]

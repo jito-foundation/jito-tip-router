@@ -27,14 +27,6 @@ mod tests {
             epoch,
         )
         .0;
-        let raw_account = fixture.get_account(&weight_table_pda).await?;
-        println!("raw_account: {:?}", raw_account);
-        // let weight_table_account = tip_router_client
-        //     .get_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch)
-        //     .await?;
-
-        // println!("weight_table_account: {:?}", weight_table_account);
-
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
         let vault_root = test_ncn.vaults[0].clone();
