@@ -89,13 +89,6 @@ impl RestakingProgramClient {
         Ok(*Config::try_from_slice_unchecked(account.data.as_slice())?)
     }
 
-    pub async fn get_ncn_epoch(&mut self, slot: u64) -> TestResult<u64> {
-        let restaking_config_address =
-            Config::find_program_address(&jito_restaking_program::id()).0;
-        let config = self.get_config(&restaking_config_address).await.unwrap();
-        Ok(config.get_epoch_from_slot(slot).unwrap())
-    }
-
     #[allow(dead_code)]
     pub async fn get_ncn_vault_ticket(
         &mut self,

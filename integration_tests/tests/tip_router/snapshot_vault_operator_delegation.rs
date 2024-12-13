@@ -21,12 +21,6 @@ mod tests {
             .do_full_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
-        let weight_table_pda = WeightTable::find_program_address(
-            &jito_tip_router_program::id(),
-            &test_ncn.ncn_root.ncn_pubkey,
-            epoch,
-        )
-        .0;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
         let vault_root = test_ncn.vaults[0].clone();
