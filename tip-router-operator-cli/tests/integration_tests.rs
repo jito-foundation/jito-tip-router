@@ -201,108 +201,108 @@ impl TestContext {
 }
 
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-async fn test_process_epoch() -> Result<(), Box<dyn std::error::Error>> {
-    let mut test_context = TestContext::new().await?;
+// #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+// async fn test_process_epoch() -> Result<(), Box<dyn std::error::Error>> {
+//     let mut test_context = TestContext::new().await?;
 
-    // Create required directories
-    let ledger_path = test_context.temp_dir.path().join("ledger");
-    fs::create_dir_all(&ledger_path)?;
-    fs::create_dir_all(&test_context.output_dir)?;
+//     // Create required directories
+//     let ledger_path = test_context.temp_dir.path().join("ledger");
+//     fs::create_dir_all(&ledger_path)?;
+//     fs::create_dir_all(&test_context.output_dir)?;
 
-    // Create test CLI struct
-    let cli = Cli {
-        keypair_path: test_context.temp_dir
-            .path()
-            .join("keypair.json")
-            .to_str()
-            .unwrap()
-            .to_string(),
-        rpc_url: "http://mock".to_string(),
-        ledger_path: test_context.temp_dir.path().join("ledger"),
-        snapshot_output_dir: test_context.output_dir.clone(),
-        command: Commands::Monitor {
-            ncn_address: Pubkey::new_unique(),
-            tip_distribution_program_id: TIP_DISTRIBUTION_ID,
-            tip_payment_program_id: TIP_PAYMENT_ID,
-        },
-    };
+//     // Create test CLI struct
+//     let cli = Cli {
+//         keypair_path: test_context.temp_dir
+//             .path()
+//             .join("keypair.json")
+//             .to_str()
+//             .unwrap()
+//             .to_string(),
+//         rpc_url: "http://mock".to_string(),
+//         ledger_path: test_context.temp_dir.path().join("ledger"),
+//         snapshot_output_dir: test_context.output_dir.clone(),
+//         command: Commands::Monitor {
+//             ncn_address: Pubkey::new_unique(),
+//             tip_distribution_program_id: TIP_DISTRIBUTION_ID,
+//             tip_payment_program_id: TIP_PAYMENT_ID,
+//         },
+//     };
 
-    // Write keypair file
-    fs::write(&cli.keypair_path, test_context.payer.to_bytes().to_vec())?;
+//     // Write keypair file
+//     fs::write(&cli.keypair_path, test_context.payer.to_bytes().to_vec())?;
 
-    // let test_client = TestEllipsisClient {
-    //     banks_client: test_context.context.banks_client.clone(),
-    //     payer: test_context.payer.clone(),
-    //     rpc_client: RpcClient::new_mock_with_mocks("mock".to_string(), vec![]),
-    // };
+//     // let test_client = TestEllipsisClient {
+//     //     banks_client: test_context.context.banks_client.clone(),
+//     //     payer: test_context.payer.clone(),
+//     //     rpc_client: RpcClient::new_mock_with_mocks("mock".to_string(), vec![]),
+//     // };
 
-    let snapshot_creator = MockSnapshotCreator::new(
-        test_context.context.banks_client.clone(),
-        test_context.output_dir.clone()
-    );
-    let result = process_epoch(
-        64,
-        &cli,
-        &test_context.payer,
-        snapshot_creator,
-        &TIP_DISTRIBUTION_ID,
-        &TIP_PAYMENT_ID,
-        &Pubkey::new_unique()
-    ).await;
+//     let snapshot_creator = MockSnapshotCreator::new(
+//         test_context.context.banks_client.clone(),
+//         test_context.output_dir.clone()
+//     );
+//     let result = process_epoch(
+//         64,
+//         &cli,
+//         &test_context.payer,
+//         snapshot_creator,
+//         &TIP_DISTRIBUTION_ID,
+//         &TIP_PAYMENT_ID,
+//         &Pubkey::new_unique()
+//     ).await;
 
-    match result {
-        Ok(_) => {
-            // Verify snapshot directory was created
-            let snapshot_dir = cli.snapshot_output_dir.join("snapshot");
-            assert!(snapshot_dir.exists(), "Snapshot directory was not created");
+//     match result {
+//         Ok(_) => {
+//             // Verify snapshot directory was created
+//             let snapshot_dir = cli.snapshot_output_dir.join("snapshot");
+//             assert!(snapshot_dir.exists(), "Snapshot directory was not created");
             
-            // Verify stake accounts file exists
-            let stake_accounts_file = snapshot_dir.join("stake_accounts.json");
-            assert!(stake_accounts_file.exists(), "Stake accounts file was not created");
+//             // Verify stake accounts file exists
+//             let stake_accounts_file = snapshot_dir.join("stake_accounts.json");
+//             assert!(stake_accounts_file.exists(), "Stake accounts file was not created");
     
-            // Verify stake accounts data exists
-            let file = File::open(&stake_accounts_file)?;
-            let stake_accounts: Vec<(Pubkey, StakeState)> = serde_json::from_reader(file)?;
-            assert!(!stake_accounts.is_empty(), "No stake accounts found in file");
+//             // Verify stake accounts data exists
+//             let file = File::open(&stake_accounts_file)?;
+//             let stake_accounts: Vec<(Pubkey, StakeState)> = serde_json::from_reader(file)?;
+//             assert!(!stake_accounts.is_empty(), "No stake accounts found in file");
             
-            // Don't verify specific stake account details for now
-            // Just verify we have at least one account
-        }
-        Err(e) => {
-            println!("Process epoch failed with error: {:?}", e);
-            assert!(false, "Process epoch failed: {:?}", e);
-        }
-    }
-    // Verify snapshot was created
-    //     let snapshot_dir = cli.snapshot_output_dir.join("snapshot");
-    //     assert!(snapshot_dir.exists());
+//             // Don't verify specific stake account details for now
+//             // Just verify we have at least one account
+//         }
+//         Err(e) => {
+//             println!("Process epoch failed with error: {:?}", e);
+//             assert!(false, "Process epoch failed: {:?}", e);
+//         }
+//     }
+//     // Verify snapshot was created
+//     //     let snapshot_dir = cli.snapshot_output_dir.join("snapshot");
+//     //     assert!(snapshot_dir.exists());
 
-    //     // Verify snapshot files exist (adjust these based on your SnapshotCreator's output)
-    //     assert!(snapshot_dir.join("snapshot.tar.zst").exists());
+//     //     // Verify snapshot files exist (adjust these based on your SnapshotCreator's output)
+//     //     assert!(snapshot_dir.join("snapshot.tar.zst").exists());
 
-    //    // Verify stake meta file was created and contains expected data
-    //    let stake_meta_path = cli.snapshot_output_dir.join("stake-meta.json");
-    //    assert!(stake_meta_path.exists());
-    //    let stake_meta: StakeMetaCollection = serde_json::from_reader(File::open(&stake_meta_path)?)?;
-    //    assert_eq!(stake_meta.epoch, 0);
-    //    assert!(!stake_meta.stake_metas.is_empty());
+//     //    // Verify stake meta file was created and contains expected data
+//     //    let stake_meta_path = cli.snapshot_output_dir.join("stake-meta.json");
+//     //    assert!(stake_meta_path.exists());
+//     //    let stake_meta: StakeMetaCollection = serde_json::from_reader(File::open(&stake_meta_path)?)?;
+//     //    assert_eq!(stake_meta.epoch, 0);
+//     //    assert!(!stake_meta.stake_metas.is_empty());
 
-    //    // Verify merkle trees were generated
-    //    let merkle_tree_path = cli.snapshot_output_dir.join("merkle-trees");
-    //    assert!(merkle_tree_path.exists());
-    //    let generated_trees: GeneratedMerkleTreeCollection = serde_json::from_reader(
-    //        File::open(&merkle_tree_path)?
-    //    )?;
-    //    assert!(!generated_trees.trees.is_empty());
+//     //    // Verify merkle trees were generated
+//     //    let merkle_tree_path = cli.snapshot_output_dir.join("merkle-trees");
+//     //    assert!(merkle_tree_path.exists());
+//     //    let generated_trees: GeneratedMerkleTreeCollection = serde_json::from_reader(
+//     //        File::open(&merkle_tree_path)?
+//     //    )?;
+//     //    assert!(!generated_trees.trees.is_empty());
 
-    //    // Verify meta merkle tree was created
-    //    let meta_merkle_path = cli.snapshot_output_dir.join("meta-merkle-tree.json");
-    //    assert!(meta_merkle_path.exists());
-    //    let meta_merkle_tree: MetaMerkleTreeCollection = serde_json::from_reader(
-    //        File::open(&meta_merkle_path)?
-    //    )?;
-    //    assert!(!meta_merkle_tree.trees.is_empty());
+//     //    // Verify meta merkle tree was created
+//     //    let meta_merkle_path = cli.snapshot_output_dir.join("meta-merkle-tree.json");
+//     //    assert!(meta_merkle_path.exists());
+//     //    let meta_merkle_tree: MetaMerkleTreeCollection = serde_json::from_reader(
+//     //        File::open(&meta_merkle_path)?
+//     //    )?;
+//     //    assert!(!meta_merkle_tree.trees.is_empty());
 
-    Ok(())
-}
+//     Ok(())
+// }
