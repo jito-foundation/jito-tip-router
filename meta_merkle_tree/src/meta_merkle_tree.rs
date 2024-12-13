@@ -290,4 +290,37 @@ mod tests {
         assert_eq!(tree.tree_nodes[0].tip_distribution_account, pubkey1);
         assert!(tree.tree_nodes[0].proof.is_some());
     }
+
+    #[test]
+    fn test_new_from_mev_tip_merkle_tree() {
+        // Create test data
+        let tip_distribution_account = Pubkey::new_unique();
+        let validator_merkle_root = [1; 32];
+        let max_total_claim = 1000;
+        let max_num_nodes = 10;
+
+        let tree_nodes = vec![
+            TreeNode::new(
+                tip_distribution_account,
+                validator_merkle_root,
+                max_total_claim,
+                max_num_nodes,
+            ),
+        ];
+
+        // Create MetaMerkleTree
+        let meta_merkle_tree = MetaMerkleTree::new(tree_nodes).unwrap();
+
+        // Validate structure
+        assert_ne!(meta_merkle_tree.merkle_root, [0; 32], "Merkle root should not be zero");
+        assert_eq!(meta_merkle_tree.num_nodes, 1);
+        
+        // Validate tree node
+        let node = &meta_merkle_tree.tree_nodes[0];
+        assert_eq!(node.tip_distribution_account, tip_distribution_account);
+        assert_eq!(node.validator_merkle_root, validator_merkle_root);
+        assert_eq!(node.max_total_claim, max_total_claim);
+        assert_eq!(node.max_num_nodes, max_num_nodes);
+        assert!(node.proof.is_some(), "Node should have a proof");
+    }
 }
