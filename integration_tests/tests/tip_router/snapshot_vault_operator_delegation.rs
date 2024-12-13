@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
 
-    use jito_tip_router_core::weight_table::WeightTable;
-
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
 
     #[tokio::test]

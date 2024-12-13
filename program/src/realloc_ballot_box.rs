@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::{
     loader::{load_signer, load_system_program},
@@ -42,7 +44,9 @@ pub fn process_realloc_ballot_box(
         realloc(ballot_box, new_size, payer, &Rent::get()?)?;
     }
 
-    if ballot_box.data_len() >= BallotBox::SIZE {
+    if ballot_box.data_len() >= BallotBox::SIZE
+        && ballot_box.try_borrow_data()?[0] != BallotBox::DISCRIMINATOR
+    {
         let mut ballot_box_data = ballot_box.try_borrow_mut_data()?;
         ballot_box_data[0] = BallotBox::DISCRIMINATOR;
         let ballot_box_account = BallotBox::try_from_slice_unchecked_mut(&mut ballot_box_data)?;

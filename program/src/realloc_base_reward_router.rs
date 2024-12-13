@@ -42,7 +42,9 @@ pub fn process_realloc_base_reward_router(
         realloc(base_reward_router, new_size, payer, &Rent::get()?)?;
     }
 
-    if base_reward_router.data_len() >= BaseRewardRouter::SIZE {
+    if base_reward_router.data_len() >= BaseRewardRouter::SIZE
+        && base_reward_router.try_borrow_data()?[0] != BaseRewardRouter::DISCRIMINATOR
+    {
         let mut base_reward_router_data = base_reward_router.try_borrow_mut_data()?;
         base_reward_router_data[0] = BaseRewardRouter::DISCRIMINATOR;
         let base_reward_router_account =

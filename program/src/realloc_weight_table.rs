@@ -46,7 +46,9 @@ pub fn process_realloc_weight_table(
         msg!("Data is empty? {}", weight_table.data_is_empty());
     }
 
-    if weight_table.data_len() >= WeightTable::SIZE {
+    if weight_table.data_len() >= WeightTable::SIZE
+        && weight_table.try_borrow_data()?[0] != WeightTable::DISCRIMINATOR
+    {
         msg!("actually Initializing weight table");
         let unique_mints = {
             let tracked_mints_data = tracked_mints.data.borrow();

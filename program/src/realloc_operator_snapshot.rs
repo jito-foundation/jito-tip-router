@@ -68,7 +68,9 @@ pub fn process_realloc_operator_snapshot(
         realloc(operator_snapshot, new_size, payer, &Rent::get()?)?;
     }
 
-    if operator_snapshot.data_len() >= OperatorSnapshot::SIZE {
+    if operator_snapshot.data_len() >= OperatorSnapshot::SIZE
+        && operator_snapshot.try_borrow_data()?[0] != OperatorSnapshot::DISCRIMINATOR
+    {
         let current_slot = Clock::get()?.slot;
         let (_, ncn_epoch_length) = load_ncn_epoch(restaking_config, current_slot, None)?;
 
