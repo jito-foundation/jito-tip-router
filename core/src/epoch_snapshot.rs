@@ -9,8 +9,9 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    discriminators::Discriminators, error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup,
-    stake_weight::StakeWeights, weight_table::WeightTable,
+    constants::MAX_VAULT_OPERATOR_DELEGATIONS, discriminators::Discriminators,
+    error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup, stake_weight::StakeWeights,
+    weight_table::WeightTable,
 };
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
@@ -213,8 +214,7 @@ pub struct OperatorSnapshot {
     stake_weights: StakeWeights,
     reserved: [u8; 256],
 
-    //TODO change to 64
-    vault_operator_stake_weight: [VaultOperatorStakeWeight; 32],
+    vault_operator_stake_weight: [VaultOperatorStakeWeight; 64],
 }
 
 impl Discriminator for OperatorSnapshot {
@@ -257,7 +257,8 @@ impl OperatorSnapshot {
             valid_operator_vault_delegations: PodU64::from(0),
             stake_weights: StakeWeights::default(),
             reserved: [0; 256],
-            vault_operator_stake_weight: [VaultOperatorStakeWeight::default(); 32],
+            vault_operator_stake_weight: [VaultOperatorStakeWeight::default();
+                MAX_VAULT_OPERATOR_DELEGATIONS],
         })
     }
 
@@ -548,5 +549,36 @@ impl VaultOperatorStakeWeight {
 
     pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
         self.ncn_fee_group
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_operator_snapshot_size() {
+        use std::mem::size_of;
+
+        let expected_total = size_of::<Pubkey>() // operator
+            + size_of::<Pubkey>() // ncn
+            + size_of::<PodU64>() // ncn_epoch
+            + 1 // bump
+            + size_of::<PodU64>() // slot_created
+            + size_of::<PodU64>() // slot_finalized
+            + size_of::<PodBool>() // is_active
+            + size_of::<PodU64>() // ncn_operator_index
+            + size_of::<PodU64>() // operator_index
+            + size_of::<PodU16>() // operator_fee_bps
+            + size_of::<PodU64>() // vault_operator_delegation_count
+            + size_of::<PodU64>() // vault_operator_delegations_registered
+            + size_of::<PodU64>() // valid_operator_vault_delegations
+            + size_of::<StakeWeights>() // stake_weight
+            + 256 // reserved
+            + size_of::<VaultOperatorStakeWeight>() * MAX_VAULT_OPERATOR_DELEGATIONS; // vault_operator_stake_weight
+
+        assert_eq!(size_of::<OperatorSnapshot>(), expected_total);
+        println!("expected_total: {}", expected_total);
+        assert!(false);
     }
 }

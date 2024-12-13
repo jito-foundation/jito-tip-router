@@ -19,8 +19,10 @@ pub struct TrackedMints {
     )]
     pub ncn: Pubkey,
     pub bump: u8,
-    pub reserved: [u8; 7],
-    pub st_mint_list: [MintEntry; 16],
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub reserved: [u8; 127],
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub st_mint_list: [MintEntry; 64],
 }
 
 impl TrackedMints {

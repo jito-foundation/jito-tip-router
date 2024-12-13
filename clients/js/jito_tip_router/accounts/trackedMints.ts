@@ -62,8 +62,8 @@ export function getTrackedMintsEncoder(): Encoder<TrackedMintsArgs> {
     ['discriminator', getU64Encoder()],
     ['ncn', getAddressEncoder()],
     ['bump', getU8Encoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 7 })],
-    ['stMintList', getArrayEncoder(getMintEntryEncoder(), { size: 16 })],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 127 })],
+    ['stMintList', getArrayEncoder(getMintEntryEncoder(), { size: 64 })],
   ]);
 }
 
@@ -72,8 +72,8 @@ export function getTrackedMintsDecoder(): Decoder<TrackedMints> {
     ['discriminator', getU64Decoder()],
     ['ncn', getAddressDecoder()],
     ['bump', getU8Decoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 7 })],
-    ['stMintList', getArrayDecoder(getMintEntryDecoder(), { size: 16 })],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 127 })],
+    ['stMintList', getArrayDecoder(getMintEntryDecoder(), { size: 64 })],
   ]);
 }
 

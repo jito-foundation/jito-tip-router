@@ -11,7 +11,7 @@ use solana_program::{
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    constants::{precise_consensus, DEFAULT_CONSENSUS_REACHED_SLOT},
+    constants::{precise_consensus, DEFAULT_CONSENSUS_REACHED_SLOT, MAX_OPERATORS},
     discriminators::Discriminators,
     error::TipRouterError,
     stake_weight::StakeWeights,
@@ -212,9 +212,8 @@ pub struct BallotBox {
 
     winning_ballot: Ballot,
 
-    //TODO fix 32 -> MAX_OPERATORS
-    operator_votes: [OperatorVote; 16],
-    ballot_tallies: [BallotTally; 16],
+    operator_votes: [OperatorVote; 256],
+    ballot_tallies: [BallotTally; 256],
 }
 
 impl Discriminator for BallotBox {
@@ -232,9 +231,8 @@ impl BallotBox {
             operators_voted: PodU64::from(0),
             unique_ballots: PodU64::from(0),
             winning_ballot: Ballot::default(),
-            //TODO fix 32 -> MAX_OPERATORS
-            operator_votes: [OperatorVote::default(); 16],
-            ballot_tallies: [BallotTally::default(); 16],
+            operator_votes: [OperatorVote::default(); MAX_OPERATORS],
+            ballot_tallies: [BallotTally::default(); MAX_OPERATORS],
             reserved: [0; 128],
         }
     }
@@ -355,7 +353,7 @@ impl BallotBox {
         self.winning_ballot.is_valid()
     }
 
-    pub const fn operator_votes(&self) -> &[OperatorVote; 16] {
+    pub const fn operator_votes(&self) -> &[OperatorVote; MAX_OPERATORS] {
         &self.operator_votes
     }
 
@@ -571,6 +569,29 @@ impl BallotBox {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_len() {
+        use std::mem::size_of;
+
+        let expected_total = size_of::<Pubkey>() // ncn
+            + size_of::<PodU64>() // epoch
+            + 1 // bump
+            + size_of::<PodU64>() // slot_created
+            + size_of::<PodU64>() // slot_consensus_reached
+            + 128 // reserved
+            + size_of::<PodU64>() // operators_voted
+            + size_of::<PodU64>() // unique_ballots
+            + size_of::<Ballot>() // winning_ballot
+            + size_of::<OperatorVote>() * MAX_OPERATORS // operator_votes
+            + size_of::<BallotTally>() * MAX_OPERATORS; // ballot_tallies
+
+        assert_eq!(size_of::<BallotBox>(), expected_total);
+
+        let ballot_box = BallotBox::new(Pubkey::default(), 0, 0, 0);
+        assert_eq!(ballot_box.operator_votes.len(), MAX_OPERATORS);
+        assert_eq!(ballot_box.ballot_tallies.len(), MAX_OPERATORS);
+    }
 
     #[test]
     #[ignore] // TODO?

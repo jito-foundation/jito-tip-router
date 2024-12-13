@@ -4,6 +4,7 @@ use crate::error::TipRouterError;
 
 pub const MAX_FEE_BPS: u64 = 10_000;
 pub const MAX_VAULT_OPERATOR_DELEGATIONS: usize = 64;
+pub const MAX_OPERATORS: usize = 256;
 const PRECISE_CONSENSUS_NUMERATOR: u128 = 2;
 const PRECISE_CONSENSUS_DENOMINATOR: u128 = 3;
 pub fn precise_consensus() -> Result<PreciseNumber, TipRouterError> {
