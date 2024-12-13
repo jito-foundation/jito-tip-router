@@ -293,34 +293,62 @@ mod tests {
 
     #[test]
     fn test_new_from_mev_tip_merkle_tree() {
-        // Create test data
-        let tip_distribution_account = Pubkey::new_unique();
-        let validator_merkle_root = [1; 32];
-        let max_total_claim = 1000;
-        let max_num_nodes = 10;
-
-        let tree_nodes = vec![
-            TreeNode::new(
-                tip_distribution_account,
-                validator_merkle_root,
-                max_total_claim,
-                max_num_nodes,
+        // Create test data for multiple validators/operators
+        let validators = vec![
+            (
+                Pubkey::new_unique(),  // tip_distribution_account
+                [1; 32],               // validator_merkle_root (their own tree of delegators)
+                1000u64,               // max_total_claim for this validator
+                5u64,                  // max_num_nodes (number of delegators)
+            ),
+            (
+                Pubkey::new_unique(),  // second validator
+                [2; 32],               // different merkle root
+                2000u64,               // different claim amount
+                10u64,                 // different number of delegators
             ),
         ];
-
+    
+        let tree_nodes: Vec<TreeNode> = validators
+            .into_iter()
+            .map(|(tip_dist, val_root, claim, nodes)| {
+                TreeNode::new(tip_dist, val_root, claim, nodes)
+            })
+            .collect();
+    
         // Create MetaMerkleTree
         let meta_merkle_tree = MetaMerkleTree::new(tree_nodes).unwrap();
-
+    
         // Validate structure
         assert_ne!(meta_merkle_tree.merkle_root, [0; 32], "Merkle root should not be zero");
-        assert_eq!(meta_merkle_tree.num_nodes, 1);
+        assert_eq!(meta_merkle_tree.num_nodes, 2, "Should have two validator nodes");
         
-        // Validate tree node
-        let node = &meta_merkle_tree.tree_nodes[0];
-        assert_eq!(node.tip_distribution_account, tip_distribution_account);
-        assert_eq!(node.validator_merkle_root, validator_merkle_root);
-        assert_eq!(node.max_total_claim, max_total_claim);
-        assert_eq!(node.max_num_nodes, max_num_nodes);
-        assert!(node.proof.is_some(), "Node should have a proof");
+        // Validate each validator's data in the tree
+        let node1 = &meta_merkle_tree.tree_nodes[0];
+        let node2 = &meta_merkle_tree.tree_nodes[1];
+    
+        // Each node should have:
+        // 1. Unique tip distribution account
+        assert_ne!(node1.tip_distribution_account, node2.tip_distribution_account);
+        
+        // 2. Their own merkle root (for their delegator tree)
+        assert_ne!(node1.validator_merkle_root, node2.validator_merkle_root);
+        
+        // 3. Valid claim amounts
+        assert!(node1.max_total_claim > 0);
+        assert!(node2.max_total_claim > 0);
+        assert_ne!(node1.max_total_claim, node2.max_total_claim);
+        
+        // 4. Valid number of delegators
+        assert!(node1.max_num_nodes > 0);
+        assert!(node2.max_num_nodes > 0);
+        assert_ne!(node1.max_num_nodes, node2.max_num_nodes);
+        
+        // 5. Valid merkle proofs
+        assert!(node1.proof.is_some(), "Node should have a proof");
+        assert!(node2.proof.is_some(), "Node should have a proof");
+        
+        // 6. Verify the proofs are valid against the meta merkle root
+        meta_merkle_tree.verify_proof().unwrap();
     }
 }
