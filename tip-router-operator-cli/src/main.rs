@@ -33,6 +33,7 @@ use ::{
     },
     tip_router_operator_cli::process_epoch::{wait_for_next_epoch, get_previous_epoch_last_slot, process_epoch},
     tip_router_operator_cli::cli::{Cli, Commands},
+    solana_sdk::signer::keypair::Keypair
 };
 
 #[tokio::main]
@@ -57,12 +58,22 @@ async fn main() -> Result<()> {
                 let previous_epoch_slot = get_previous_epoch_last_slot(&rpc_client).await?;
                 info!("Processing slot {} for previous epoch", previous_epoch_slot);
 
+                let snapshot_creator = SnapshotCreator::new(
+                    &cli.rpc_url,
+                    cli.snapshot_output_dir.to_str().unwrap().to_string(),
+                    5,
+                    "zstd".to_string(),
+                    Keypair::from_bytes(&keypair.to_bytes()).unwrap(),
+                    cli.ledger_path.clone()
+                )?;
+                
                 // Process the epoch
                 match
                     process_epoch(
                         previous_epoch_slot,
                         &cli,
                         &keypair,
+                        snapshot_creator,
                         tip_distribution_program_id,
                         tip_payment_program_id,
                         ncn_address
