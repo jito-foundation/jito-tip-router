@@ -3,7 +3,6 @@ use solana_program::{
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
-    pubkey::Pubkey,
     rent::Rent,
     system_instruction,
 };

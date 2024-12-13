@@ -708,10 +708,8 @@
       ],
       "args": [
         {
-          "name": "firstSlotOfNcnEpoch",
-          "type": {
-            "option": "u64"
-          }
+          "name": "epoch",
+          "type": "u64"
         }
       ],
       "discriminant": {
@@ -759,10 +757,8 @@
           "type": "u8"
         },
         {
-          "name": "firstSlotOfNcnEpoch",
-          "type": {
-            "option": "u64"
-          }
+          "name": "epoch",
+          "type": "u64"
         }
       ],
       "discriminant": {
@@ -810,10 +806,8 @@
           "type": "u8"
         },
         {
-          "name": "firstSlotOfNcnEpoch",
-          "type": {
-            "option": "u64"
-          }
+          "name": "epoch",
+          "type": "u64"
         }
       ],
       "discriminant": {
@@ -866,10 +860,8 @@
           "type": "u8"
         },
         {
-          "name": "firstSlotOfNcnEpoch",
-          "type": {
-            "option": "u64"
-          }
+          "name": "epoch",
+          "type": "u64"
         }
       ],
       "discriminant": {
@@ -917,10 +909,8 @@
           "type": "u8"
         },
         {
-          "name": "firstSlotOfNcnEpoch",
-          "type": {
-            "option": "u64"
-          }
+          "name": "epoch",
+          "type": "u64"
         }
       ],
       "discriminant": {
@@ -968,10 +958,8 @@
           "type": "u8"
         },
         {
-          "name": "firstSlotOfNcnEpoch",
-          "type": {
-            "option": "u64"
-          }
+          "name": "epoch",
+          "type": "u64"
         }
       ],
       "discriminant": {

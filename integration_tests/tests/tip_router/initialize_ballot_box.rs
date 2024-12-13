@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
 
-    use std::borrow::Borrow;
-
     use jito_tip_router_core::{
         ballot_box::BallotBox,
         constants::{DEFAULT_CONSENSUS_REACHED_SLOT, MAX_REALLOC_BYTES},

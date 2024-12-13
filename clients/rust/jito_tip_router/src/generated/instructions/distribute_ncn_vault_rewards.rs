@@ -93,7 +93,7 @@ impl Default for DistributeNcnVaultRewardsInstructionData {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DistributeNcnVaultRewardsInstructionArgs {
     pub ncn_fee_group: u8,
-    pub first_slot_of_ncn_epoch: Option<u64>,
+    pub epoch: u64,
 }
 
 /// Instruction builder for `DistributeNcnVaultRewards`.
@@ -115,7 +115,7 @@ pub struct DistributeNcnVaultRewardsBuilder {
     vault: Option<solana_program::pubkey::Pubkey>,
     ncn_reward_router: Option<solana_program::pubkey::Pubkey>,
     ncn_fee_group: Option<u8>,
-    first_slot_of_ncn_epoch: Option<u64>,
+    epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
@@ -164,10 +164,9 @@ impl DistributeNcnVaultRewardsBuilder {
         self.ncn_fee_group = Some(ncn_fee_group);
         self
     }
-    /// `[optional argument]`
     #[inline(always)]
-    pub fn first_slot_of_ncn_epoch(&mut self, first_slot_of_ncn_epoch: u64) -> &mut Self {
-        self.first_slot_of_ncn_epoch = Some(first_slot_of_ncn_epoch);
+    pub fn epoch(&mut self, epoch: u64) -> &mut Self {
+        self.epoch = Some(epoch);
         self
     }
     /// Add an additional account to the instruction.
@@ -205,7 +204,7 @@ impl DistributeNcnVaultRewardsBuilder {
                 .ncn_fee_group
                 .clone()
                 .expect("ncn_fee_group is not set"),
-            first_slot_of_ncn_epoch: self.first_slot_of_ncn_epoch.clone(),
+            epoch: self.epoch.clone().expect("epoch is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -386,7 +385,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
             vault: None,
             ncn_reward_router: None,
             ncn_fee_group: None,
-            first_slot_of_ncn_epoch: None,
+            epoch: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -438,10 +437,9 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
         self.instruction.ncn_fee_group = Some(ncn_fee_group);
         self
     }
-    /// `[optional argument]`
     #[inline(always)]
-    pub fn first_slot_of_ncn_epoch(&mut self, first_slot_of_ncn_epoch: u64) -> &mut Self {
-        self.instruction.first_slot_of_ncn_epoch = Some(first_slot_of_ncn_epoch);
+    pub fn epoch(&mut self, epoch: u64) -> &mut Self {
+        self.instruction.epoch = Some(epoch);
         self
     }
     /// Add an additional account to the instruction.
@@ -491,7 +489,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
                 .ncn_fee_group
                 .clone()
                 .expect("ncn_fee_group is not set"),
-            first_slot_of_ncn_epoch: self.instruction.first_slot_of_ncn_epoch.clone(),
+            epoch: self.instruction.epoch.clone().expect("epoch is not set"),
         };
         let instruction = DistributeNcnVaultRewardsCpi {
             __program: self.instruction.__program,
@@ -532,7 +530,7 @@ struct DistributeNcnVaultRewardsCpiBuilderInstruction<'a, 'b> {
     vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_fee_group: Option<u8>,
-    first_slot_of_ncn_epoch: Option<u64>,
+    epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,

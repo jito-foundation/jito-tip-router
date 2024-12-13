@@ -8,7 +8,6 @@ mod tests {
     #[tokio::test]
     async fn test_initialize_operator_snapshot() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
-        let mut vault_client = fixture.vault_program_client();
         let mut tip_router_client = fixture.tip_router_client();
 
         let test_ncn = fixture.create_initial_test_ncn(1, 1, None).await?;

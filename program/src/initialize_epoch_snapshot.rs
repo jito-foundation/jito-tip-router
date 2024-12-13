@@ -5,8 +5,8 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    epoch_snapshot::EpochSnapshot, error::TipRouterError, fees, loaders::load_ncn_epoch,
-    ncn_config::NcnConfig, tracked_mints::TrackedMints, weight_table::WeightTable,
+    epoch_snapshot::EpochSnapshot, error::TipRouterError, fees, ncn_config::NcnConfig,
+    tracked_mints::TrackedMints, weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,

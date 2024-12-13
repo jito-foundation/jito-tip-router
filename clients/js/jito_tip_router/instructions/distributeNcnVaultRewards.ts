@@ -8,8 +8,6 @@
 
 import {
   combineCodec,
-  getOptionDecoder,
-  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -25,8 +23,6 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
-  type Option,
-  type OptionOrNullable,
   type ReadonlyAccount,
   type WritableAccount,
 } from '@solana/web3.js';
@@ -75,12 +71,12 @@ export type DistributeNcnVaultRewardsInstruction<
 export type DistributeNcnVaultRewardsInstructionData = {
   discriminator: number;
   ncnFeeGroup: number;
-  firstSlotOfNcnEpoch: Option<bigint>;
+  epoch: bigint;
 };
 
 export type DistributeNcnVaultRewardsInstructionDataArgs = {
   ncnFeeGroup: number;
-  firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
+  epoch: number | bigint;
 };
 
 export function getDistributeNcnVaultRewardsInstructionDataEncoder(): Encoder<DistributeNcnVaultRewardsInstructionDataArgs> {
@@ -88,7 +84,7 @@ export function getDistributeNcnVaultRewardsInstructionDataEncoder(): Encoder<Di
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['ncnFeeGroup', getU8Encoder()],
-      ['firstSlotOfNcnEpoch', getOptionEncoder(getU64Encoder())],
+      ['epoch', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -101,7 +97,7 @@ export function getDistributeNcnVaultRewardsInstructionDataDecoder(): Decoder<Di
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['ncnFeeGroup', getU8Decoder()],
-    ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
+    ['epoch', getU64Decoder()],
   ]);
 }
 
@@ -130,7 +126,7 @@ export type DistributeNcnVaultRewardsInput<
   vault: Address<TAccountVault>;
   ncnRewardRouter: Address<TAccountNcnRewardRouter>;
   ncnFeeGroup: DistributeNcnVaultRewardsInstructionDataArgs['ncnFeeGroup'];
-  firstSlotOfNcnEpoch: DistributeNcnVaultRewardsInstructionDataArgs['firstSlotOfNcnEpoch'];
+  epoch: DistributeNcnVaultRewardsInstructionDataArgs['epoch'];
 };
 
 export function getDistributeNcnVaultRewardsInstruction<

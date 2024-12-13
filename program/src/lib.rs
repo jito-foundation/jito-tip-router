@@ -143,66 +143,44 @@ pub fn process_instruction(
             msg!("Instruction: SnapshotVaultOperatorDelegation");
             process_snapshot_vault_operator_delegation(program_id, accounts, epoch)
         }
-        TipRouterInstruction::RouteBaseRewards {
-            first_slot_of_ncn_epoch,
-        } => {
+        TipRouterInstruction::RouteBaseRewards { epoch } => {
             msg!("Instruction: RouteBaseRewards");
-            process_route_base_rewards(program_id, accounts, first_slot_of_ncn_epoch)
+            process_route_base_rewards(program_id, accounts, epoch)
         }
         TipRouterInstruction::RouteNcnRewards {
             ncn_fee_group,
-            first_slot_of_ncn_epoch,
+            epoch,
         } => {
             msg!("Instruction: RouteNcnRewards");
-            process_route_ncn_rewards(program_id, accounts, ncn_fee_group, first_slot_of_ncn_epoch)
+            process_route_ncn_rewards(program_id, accounts, ncn_fee_group, epoch)
         }
         TipRouterInstruction::DistributeBaseRewards {
             base_fee_group,
-            first_slot_of_ncn_epoch,
+            epoch,
         } => {
             msg!("Instruction: DistributeBaseRewards");
-            process_distribute_base_rewards(
-                program_id,
-                accounts,
-                base_fee_group,
-                first_slot_of_ncn_epoch,
-            )
+            process_distribute_base_rewards(program_id, accounts, base_fee_group, epoch)
         }
         TipRouterInstruction::DistributeBaseNcnRewardRoute {
             ncn_fee_group,
-            first_slot_of_ncn_epoch,
+            epoch,
         } => {
             msg!("Instruction: DistributeBaseNcnRewardRoute");
-            process_distribute_base_ncn_reward_route(
-                program_id,
-                accounts,
-                ncn_fee_group,
-                first_slot_of_ncn_epoch,
-            )
+            process_distribute_base_ncn_reward_route(program_id, accounts, ncn_fee_group, epoch)
         }
         TipRouterInstruction::DistributeNcnOperatorRewards {
             ncn_fee_group,
-            first_slot_of_ncn_epoch,
+            epoch,
         } => {
             msg!("Instruction: DistributeNcnOperatorRewards");
-            process_distribute_ncn_operator_rewards(
-                program_id,
-                accounts,
-                ncn_fee_group,
-                first_slot_of_ncn_epoch,
-            )
+            process_distribute_ncn_operator_rewards(program_id, accounts, ncn_fee_group, epoch)
         }
         TipRouterInstruction::DistributeNcnVaultRewards {
             ncn_fee_group,
-            first_slot_of_ncn_epoch,
+            epoch,
         } => {
             msg!("Instruction: DistributeNcnVaultRewards");
-            process_distribute_ncn_vault_rewards(
-                program_id,
-                accounts,
-                ncn_fee_group,
-                first_slot_of_ncn_epoch,
-            )
+            process_distribute_ncn_vault_rewards(program_id, accounts, ncn_fee_group, epoch)
         }
         // ------------------------------------------
         // Update

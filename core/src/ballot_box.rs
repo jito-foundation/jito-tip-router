@@ -751,13 +751,13 @@ mod tests {
         assert_eq!(ballot_box.ballot_tallies[1].ballot(), ballot2);
 
         // Test error when ballot tallies are full
-        for i in 3..=16 {
-            let ballot = Ballot::new([i as u8; 32]);
+        for _ in 3..=ballot_box.ballot_tallies.len() {
+            let ballot = Ballot::new(Pubkey::new_unique().to_bytes());
             ballot_box
                 .increment_or_create_ballot_tally(&ballot, &stake_weights)
                 .unwrap();
         }
-        let ballot_full = Ballot::new([33u8; 32]);
+        let ballot_full = Ballot::new(Pubkey::new_unique().to_bytes());
         let result = ballot_box.increment_or_create_ballot_tally(&ballot_full, &stake_weights);
         assert!(matches!(result, Err(TipRouterError::BallotTallyFull)));
     }

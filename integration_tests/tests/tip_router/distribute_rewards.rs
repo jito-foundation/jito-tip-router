@@ -55,13 +55,13 @@ mod tests {
             .await?;
 
         // Set tracked mint NCN fee group
-        let slot = fixture.clock().await.slot;
+        let epoch = fixture.clock().await.epoch;
         tip_router_client
             .do_set_tracked_mint_ncn_fee_group(
                 test_ncn.ncn_root.ncn_pubkey,
                 1,
                 NcnFeeGroup::new(NcnFeeGroupType::JTO),
-                slot,
+                epoch,
             )
             .await?;
 
@@ -73,18 +73,14 @@ mod tests {
         fixture.vote_test_ncn(&test_ncn).await?;
 
         //////
-        let slot = fixture.clock().await.slot;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
         // Initialize the routers
         fixture.add_routers_for_tests_ncn(&test_ncn).await?;
 
         // Get initial balances
-        let restaking_config_account = tip_router_client.get_restaking_config().await?;
-        let ncn_epoch = slot / restaking_config_account.epoch_length();
         let ncn_config = tip_router_client.get_ncn_config(ncn).await?;
-        let clock = fixture.clock().await;
-        let epoch = clock.epoch;
+        let epoch = fixture.clock().await.epoch;
 
         let dao_initial_balance = fixture
             .get_balance(
@@ -123,7 +119,7 @@ mod tests {
             .await?;
 
         // Route rewards
-        tip_router_client.do_route_base_rewards(ncn, slot).await?;
+        tip_router_client.do_route_base_rewards(ncn, epoch).await?;
 
         // Check Rewards
         let base_reward_router_account =
@@ -162,7 +158,7 @@ mod tests {
 
         // Distribute base rewards (DAO fee)
         tip_router_client
-            .do_distribute_base_rewards(BaseFeeGroup::default(), ncn, slot)
+            .do_distribute_base_rewards(BaseFeeGroup::default(), ncn, epoch)
             .await?;
 
         // Distribute base NCN rewards (operator rewards)
@@ -171,7 +167,7 @@ mod tests {
 
             for group in NcnFeeGroup::all_groups().iter() {
                 tip_router_client
-                    .do_distribute_base_ncn_reward_route(*group, operator, ncn, slot)
+                    .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)
                     .await?;
             }
         }
@@ -218,7 +214,9 @@ mod tests {
                             }
 
                             tip_router_client
-                                .do_distribute_ncn_vault_rewards(*group, vault, operator, ncn, slot)
+                                .do_distribute_ncn_vault_rewards(
+                                    *group, vault, operator, ncn, epoch,
+                                )
                                 .await?;
                         }
                     }
@@ -247,7 +245,7 @@ mod tests {
         assert_eq!(dao_reward, 2_700);
 
         // NCN Reward Routes
-        assert_eq!(*operator_total_rewards.get(0).unwrap(), 150);
+        assert_eq!(*operator_total_rewards.first().unwrap(), 150);
         assert_eq!(*operator_total_rewards.get(1).unwrap(), 150);
 
         // Operator 1 Rewards

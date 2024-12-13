@@ -36,7 +36,7 @@ mod tests {
             .await?;
 
         let raw_account = fixture.get_account(&address).await?.unwrap();
-        assert_eq!(raw_account.data.len(), WeightTable::SIZE as usize);
+        assert_eq!(raw_account.data.len(), { WeightTable::SIZE });
         assert_eq!(raw_account.owner, jito_tip_router_program::id());
         assert_eq!(raw_account.data[0], WeightTable::DISCRIMINATOR);
 

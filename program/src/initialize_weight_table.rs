@@ -1,18 +1,15 @@
-use std::mem::size_of;
-
-use jito_bytemuck::{AccountDeserialize, Discriminator};
+use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    constants::MAX_REALLOC_BYTES, loaders::load_ncn_epoch, tracked_mints::TrackedMints,
-    weight_table::WeightTable,
+    constants::MAX_REALLOC_BYTES, tracked_mints::TrackedMints, weight_table::WeightTable,
 };
 use solana_program::{
-    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
+    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
 /// Initializes a Weight Table
@@ -41,9 +38,6 @@ pub fn process_initialize_weight_table(
     load_system_program(system_program)?;
     load_signer(payer, true)?;
 
-    let current_slot = Clock::get()?.slot;
-    let ncn_epoch = epoch;
-
     let vault_count = {
         let ncn_data = ncn.data.borrow();
         let ncn = Ncn::try_from_slice_unchecked(&ncn_data)?;
@@ -62,7 +56,7 @@ pub fn process_initialize_weight_table(
     }
 
     let (weight_table_pubkey, weight_table_bump, mut weight_table_seeds) =
-        WeightTable::find_program_address(program_id, ncn.key, ncn_epoch);
+        WeightTable::find_program_address(program_id, ncn.key, epoch);
     weight_table_seeds.push(vec![weight_table_bump]);
 
     if weight_table_pubkey.ne(weight_table.key) {
@@ -74,7 +68,7 @@ pub fn process_initialize_weight_table(
         "Initializing Weight Table {} for NCN: {} at epoch: {}",
         weight_table.key,
         ncn.key,
-        ncn_epoch
+        epoch
     );
     create_account(
         payer,

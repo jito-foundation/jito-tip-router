@@ -1,4 +1,3 @@
-use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
@@ -9,13 +8,11 @@ use jito_restaking_core::{
 use jito_tip_router_core::{
     constants::MAX_REALLOC_BYTES,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
-    loaders::load_ncn_epoch,
     ncn_config::NcnConfig,
-    stake_weight::StakeWeights,
 };
 use solana_program::{
-    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
+    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
 /// Initializes an Operator Snapshot

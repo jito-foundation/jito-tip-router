@@ -378,11 +378,11 @@ impl OperatorSnapshot {
         Ok(())
     }
 
-    pub fn operator(&self) -> Pubkey {
+    pub const fn operator(&self) -> Pubkey {
         self.operator
     }
 
-    pub fn ncn(&self) -> Pubkey {
+    pub const fn ncn(&self) -> Pubkey {
         self.ncn
     }
 

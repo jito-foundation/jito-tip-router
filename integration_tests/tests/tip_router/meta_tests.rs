@@ -42,7 +42,6 @@ mod tests {
     async fn test_intermission_test_ncn_functions() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut restaking_client = fixture.restaking_program_client();
 
         const OPERATOR_COUNT: usize = 1;
         const VAULT_COUNT: usize = 1;
@@ -78,7 +77,6 @@ mod tests {
     async fn test_multiple_operators() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut restaking_client = fixture.restaking_program_client();
 
         const OPERATOR_COUNT: usize = 10;
         const VAULT_COUNT: usize = 1;
@@ -114,7 +112,6 @@ mod tests {
     async fn test_multiple_vaults() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut restaking_client = fixture.restaking_program_client();
 
         const OPERATOR_COUNT: usize = 1;
         const VAULT_COUNT: usize = 10;

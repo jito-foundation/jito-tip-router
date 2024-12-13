@@ -177,7 +177,7 @@ pub enum TipRouterInstruction {
     #[account(4, writable, name = "base_reward_router")]
     #[account(5, name = "restaking_program")]
     RouteBaseRewards{
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Routes ncn reward router
@@ -189,7 +189,7 @@ pub enum TipRouterInstruction {
     #[account(5, name = "restaking_program")]
     RouteNcnRewards{
         ncn_fee_group: u8,
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Distributes base rewards
@@ -201,7 +201,7 @@ pub enum TipRouterInstruction {
     #[account(5, name = "restaking_program")]
     DistributeBaseRewards{
         base_fee_group: u8,
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Distributes base ncn reward routes
@@ -214,7 +214,7 @@ pub enum TipRouterInstruction {
     #[account(6, name = "restaking_program")]
     DistributeBaseNcnRewardRoute{
         ncn_fee_group: u8,
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Distributes ncn operator rewards
@@ -226,7 +226,7 @@ pub enum TipRouterInstruction {
     #[account(5, name = "restaking_program")]
     DistributeNcnOperatorRewards{
         ncn_fee_group: u8,
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Distributes ncn vault rewards
@@ -238,7 +238,7 @@ pub enum TipRouterInstruction {
     #[account(5, writable, name = "ncn_reward_router")]
     DistributeNcnVaultRewards{
         ncn_fee_group: u8,
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Sets the NCN fee group for a mint

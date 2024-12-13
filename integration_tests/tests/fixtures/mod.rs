@@ -31,12 +31,12 @@ pub enum TestError {
 impl TestError {
     pub fn to_transaction_error(&self) -> Option<TransactionError> {
         match self {
-            TestError::BanksClientError(e) => match e {
+            Self::BanksClientError(e) => match e {
                 BanksClientError::TransactionError(e) => Some(e.clone()),
                 BanksClientError::SimulationError { err, .. } => Some(err.clone()),
                 _ => None,
             },
-            TestError::ProgramError(_) => None,
+            Self::ProgramError(_) => None,
             _ => None,
         }
     }
