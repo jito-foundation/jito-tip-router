@@ -25,9 +25,7 @@ pub enum MerkleRootGeneratorError {
 
 pub fn generate_merkle_root(
     stake_meta_coll: StakeMetaCollection,
-    // rpc_url: &str,
 ) -> Result<GeneratedMerkleTreeCollection, MerkleRootGeneratorError> {
-    // let rpc_client = RpcClient::new(rpc_url);
     let merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
         stake_meta_coll,
         None,
@@ -43,8 +41,9 @@ mod tests {
         pubkey::Pubkey,
         signature::{Keypair, Signer},
     };
-    use solana_program::hash::Hash;
+    use solana_program::hash::{Hash, hashv};
     use crate::{StakeMeta, TipDistributionMeta, Delegation};
+    use meta_merkle_tree::merkle_tree::MerkleTree;
 
     #[test]
     fn test_generate_merkle_root() -> Result<(), MerkleRootGeneratorError> {
@@ -85,20 +84,44 @@ mod tests {
         };
 
         // Generate merkle tree
-        let merkle_tree_coll = generate_merkle_root(stake_meta_collection)?;
+        let merkle_tree_coll = generate_merkle_root(stake_meta_collection.clone())?;
 
         // Basic validations
-        assert_eq!(merkle_tree_coll.epoch, 0);
-        assert_eq!(merkle_tree_coll.generated_merkle_trees.len(), 1);
+        assert_eq!(merkle_tree_coll.epoch, stake_meta_collection.epoch);
+        assert_eq!(merkle_tree_coll.generated_merkle_trees.len(), stake_meta_collection.stake_metas.len());
         
         // Validate generated merkle tree
         let generated_tree = &merkle_tree_coll.generated_merkle_trees[0];
-        assert!(generated_tree.merkle_root != Hash::default(), "Merkle root should not be zero");
         
-        // The tree has 3 nodes because:
-        // - 2 leaf nodes (one for each delegation)
-        // - 1 intermediate node (parent of the two leaf nodes)
-        assert_eq!(generated_tree.tree_nodes.len(), 3, "Should have three tree nodes (2 leaves + 1 intermediate)");
+        // Assert merkle root is not default
+        assert_ne!(generated_tree.merkle_root, Hash::default(), "Merkle root should not be zero");
+        
+        // Assert the expected merkle root hash
+        // Note: This hash value needs to be updated if the merkle tree generation logic changes
+        assert_eq!(
+            generated_tree.merkle_root.to_string(),
+            "6AS26Yncvk8AqWyZt5nc4LCJt4d5JpNEFzd78DuTi55C",
+            "Merkle root hash changed - update test if this was intentional"
+        );
+        
+        // Verify the structure is valid
+        for node in &generated_tree.tree_nodes {
+            // Verify node has required data
+            assert_ne!(node.claimant, Pubkey::default(), "Node claimant should not be default");
+            assert_ne!(node.claim_status_pubkey, Pubkey::default(), "Node claim status should not be default");
+            assert!(node.amount > 0, "Node amount should be greater than 0");
+            
+            // Verify node has a proof (except possibly the root node)
+            let total_delegated: u64 = stake_meta_collection.stake_metas[0]
+                .delegations
+                .iter()
+                .map(|d| d.lamports_delegated)
+                .sum();
+                
+            if node.amount != total_delegated {
+                assert!(node.proof.is_some(), "Non-root node should have a proof");
+            }
+        }
 
         Ok(())
     }
