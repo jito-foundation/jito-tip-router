@@ -33,10 +33,8 @@ use {
     // ellipsis_client::EllipsisClient,
     solana_client::rpc_client::RpcClient,
     solana_sdk::genesis_config::GenesisConfig,
-    async_trait::async_trait,
     self::snapshot_creator::MockSnapshotCreator,
     solana_program::stake::state::StakeState
-    // async_trait::async_trait,
     // solana_client::mock_sender::MockSender,
 };
 

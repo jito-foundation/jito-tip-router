@@ -3,7 +3,6 @@ use log::info;
 use std::process::Command;
 use std::time::Instant;
 use solana_sdk::signer::keypair::Keypair;
-use async_trait::async_trait;
 
 pub struct SnapshotCreator {
     rpc_url: String,
@@ -14,13 +13,11 @@ pub struct SnapshotCreator {
     ledger_path: std::path::PathBuf,
 }
 
-#[async_trait]
 pub trait SnapshotCreatorTrait {
     async fn create_snapshot(&self, slot: u64) -> Result<()>;
 }
 
 // Implement the trait for the real SnapshotCreator
-#[async_trait]
 impl SnapshotCreatorTrait for SnapshotCreator {
     async fn create_snapshot(&self, slot: u64) -> Result<()> {
         // Call the internal implementation directly

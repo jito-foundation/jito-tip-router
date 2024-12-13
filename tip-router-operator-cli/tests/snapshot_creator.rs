@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use anyhow::Result;
 use std::{path::PathBuf, fs::{self, File}};
 use tip_router_operator_cli::snapshot::SnapshotCreatorTrait;
@@ -25,7 +24,6 @@ impl MockSnapshotCreator {
     }
 }
 
-#[async_trait]
 impl SnapshotCreatorTrait for MockSnapshotCreator {
     async fn create_snapshot(&self, _slot: u64) -> Result<()> {
         let mut banks_client = self.banks_client.lock().await;

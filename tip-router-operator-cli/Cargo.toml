@@ -5,7 +5,6 @@ edition = "2021"
 description = "CLI for Jito Tip Router"
 
 [dependencies]
-async-trait = "0.1"
 anchor-lang.workspace = true
 anyhow.workspace = true
 bincode = "1.3"
