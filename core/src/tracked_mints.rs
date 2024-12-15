@@ -6,8 +6,13 @@ use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
 use crate::{
-    constants::MAX_VAULT_OPERATOR_DELEGATIONS, discriminators::Discriminators,
-    error::TipRouterError, ncn_fee_group::NcnFeeGroup,
+    constants::{
+        DEFAULT_REWARD_MULTIPLIER_BPS, JITO_SOL_MINT, JITO_SOL_REWARD_MULTIPLIER_BPS, JTO_MINT,
+        MAX_VAULT_OPERATOR_DELEGATIONS,
+    },
+    discriminators::Discriminators,
+    error::TipRouterError,
+    ncn_fee_group::NcnFeeGroup,
 };
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
@@ -21,14 +26,32 @@ pub struct MintEntry {
 }
 
 impl MintEntry {
-    pub fn new(mint: Pubkey, vault_index: u64) -> Self {
-        const REWARD_FEE_MULTIPLIER_BPS: u64 = 10_000; // 100% as default
-
+    pub fn new(st_mint: Pubkey, vault_index: u64) -> Self {
         Self {
-            st_mint: mint,
+            st_mint,
             vault_index: PodU64::from(vault_index),
             ncn_fee_group: NcnFeeGroup::default(),
-            reward_multiplier_bps: PodU64::from(REWARD_FEE_MULTIPLIER_BPS),
+            reward_multiplier_bps: PodU64::from(DEFAULT_REWARD_MULTIPLIER_BPS),
+            reserved: [0; 32],
+        }
+    }
+
+    pub fn new_grouped(st_mint: Pubkey, vault_index: u64) -> Self {
+        let ncn_fee_group = match st_mint {
+            JTO_MINT => NcnFeeGroup::jto(),
+            _ => NcnFeeGroup::lst(),
+        };
+
+        let reward_multiplier_bps = match st_mint {
+            JITO_SOL_MINT => JITO_SOL_REWARD_MULTIPLIER_BPS,
+            _ => DEFAULT_REWARD_MULTIPLIER_BPS,
+        };
+
+        Self {
+            st_mint,
+            vault_index: PodU64::from(vault_index),
+            ncn_fee_group,
+            reward_multiplier_bps: PodU64::from(reward_multiplier_bps),
             reserved: [0; 32],
         }
     }
@@ -92,54 +115,6 @@ impl TrackedMints {
         (address, bump, seeds)
     }
 
-    pub fn add_mint(&mut self, mint: Pubkey, vault_index: u64) -> Result<(), ProgramError> {
-        // Check if (mint, vault_index) is already in the list
-        if self
-            .st_mint_list
-            .iter()
-            .any(|m| m.st_mint == mint && m.vault_index() == vault_index)
-        {
-            return Ok(());
-        }
-
-        // Check if vault_index is already in use by a different mint
-        if self
-            .st_mint_list
-            .iter()
-            .any(|m| m.vault_index() == vault_index)
-        {
-            return Err(TipRouterError::VaultIndexAlreadyInUse.into());
-        }
-
-        // Insert at the first empty slot
-        let mint_entry = self
-            .st_mint_list
-            .iter_mut()
-            .find(|m| m.st_mint == MintEntry::default().st_mint)
-            .ok_or(TipRouterError::TrackedMintListFull)?;
-
-        *mint_entry = MintEntry::new(mint, vault_index);
-        Ok(())
-    }
-
-    pub fn mint_count(&self) -> u64 {
-        self.st_mint_list
-            .iter()
-            .filter(|m| m.st_mint != Pubkey::default())
-            .count() as u64
-    }
-
-    pub fn get_unique_mints(&self) -> Vec<Pubkey> {
-        let mut unique_mints: HashSet<Pubkey> = HashSet::new();
-        self.st_mint_list
-            .iter()
-            .filter(|m| m.st_mint != Pubkey::default())
-            .for_each(|m| {
-                unique_mints.insert(m.st_mint);
-            });
-        unique_mints.into_iter().collect()
-    }
-
     pub fn load(
         program_id: &Pubkey,
         ncn: &Pubkey,
@@ -175,6 +150,54 @@ impl TrackedMints {
         }
 
         Ok(())
+    }
+
+    pub fn add_mint(&mut self, st_mint: Pubkey, vault_index: u64) -> Result<(), ProgramError> {
+        // Check if (mint, vault_index) is already in the list
+        if self
+            .st_mint_list
+            .iter()
+            .any(|m| m.st_mint == st_mint && m.vault_index() == vault_index)
+        {
+            return Ok(());
+        }
+
+        // Check if vault_index is already in use by a different mint
+        if self
+            .st_mint_list
+            .iter()
+            .any(|m| m.vault_index() == vault_index)
+        {
+            return Err(TipRouterError::VaultIndexAlreadyInUse.into());
+        }
+
+        // Insert at the first empty slot
+        let mint_entry = self
+            .st_mint_list
+            .iter_mut()
+            .find(|m| m.st_mint == MintEntry::default().st_mint)
+            .ok_or(TipRouterError::TrackedMintListFull)?;
+
+        *mint_entry = MintEntry::new_grouped(st_mint, vault_index);
+        Ok(())
+    }
+
+    pub fn mint_count(&self) -> u64 {
+        self.st_mint_list
+            .iter()
+            .filter(|m| m.st_mint != Pubkey::default())
+            .count() as u64
+    }
+
+    pub fn get_unique_mints(&self) -> Vec<Pubkey> {
+        let mut unique_mints: HashSet<Pubkey> = HashSet::new();
+        self.st_mint_list
+            .iter()
+            .filter(|m| m.st_mint != Pubkey::default())
+            .for_each(|m| {
+                unique_mints.insert(m.st_mint);
+            });
+        unique_mints.into_iter().collect()
     }
 
     pub fn get_ncn_fee_group(&self, vault_index: u64) -> Result<NcnFeeGroup, ProgramError> {
@@ -294,5 +317,39 @@ mod tests {
         // Default pubkeys should not be included
         let empty_tracked_mints = TrackedMints::new(Pubkey::default(), 0);
         assert_eq!(empty_tracked_mints.get_unique_mints().len(), 0);
+    }
+
+    #[test]
+    fn test_correct_grouping() {
+        let mut tracked_mints = TrackedMints::new(Pubkey::default(), 0);
+
+        let jto_mint = JTO_MINT;
+        let jito_sol_mint = JITO_SOL_MINT;
+        let random_mint = Pubkey::new_unique();
+
+        tracked_mints.add_mint(jto_mint, 0).unwrap();
+        tracked_mints.add_mint(jito_sol_mint, 1).unwrap();
+        tracked_mints.add_mint(random_mint, 2).unwrap();
+
+        let jto_mint_entry = tracked_mints.get_mint_entry(0).unwrap();
+        let jito_sol_mint_entry = tracked_mints.get_mint_entry(1).unwrap();
+        let random_mint_entry = tracked_mints.get_mint_entry(2).unwrap();
+
+        assert_eq!(jto_mint_entry.ncn_fee_group(), NcnFeeGroup::jto());
+        assert_eq!(jito_sol_mint_entry.ncn_fee_group(), NcnFeeGroup::lst());
+        assert_eq!(random_mint_entry.ncn_fee_group(), NcnFeeGroup::lst());
+
+        assert_eq!(
+            jto_mint_entry.reward_multiplier_bps(),
+            DEFAULT_REWARD_MULTIPLIER_BPS
+        );
+        assert_eq!(
+            jito_sol_mint_entry.reward_multiplier_bps(),
+            JITO_SOL_REWARD_MULTIPLIER_BPS
+        );
+        assert_eq!(
+            random_mint_entry.reward_multiplier_bps(),
+            DEFAULT_REWARD_MULTIPLIER_BPS
+        );
     }
 }
