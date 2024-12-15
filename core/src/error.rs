@@ -19,6 +19,8 @@ pub enum TipRouterError {
     CastToImpreciseNumberError,
     #[error("Cast to u64 error")]
     CastToU64Error,
+    #[error("Cast to u128 error")]
+    CastToU128Error,
 
     #[error("Incorrect weight table admin")]
     IncorrectWeightTableAdmin = 0x2200,

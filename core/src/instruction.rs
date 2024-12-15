@@ -84,6 +84,22 @@ pub enum TipRouterInstruction {
         weight: u128,
     },
 
+    /// Permissionlessly updates the weight table
+    #[account(0, name = "ncn")]
+    #[account(1, writable, name = "weight_table")]
+    #[account(2, name = "mint")]
+    SetLstWeight{
+        epoch: u64,
+    },
+
+    /// Permissionlessly updates the weight table
+    #[account(0, name = "ncn")]
+    #[account(1, writable, name = "weight_table")]
+    #[account(2, name = "jto_usd_feed")]
+    SetJtoWeight{
+        epoch: u64,
+    },
+
     /// Initializes the Epoch Snapshot
     #[account(0, name = "ncn_config")]
     #[account(1, name = "restaking_config")]

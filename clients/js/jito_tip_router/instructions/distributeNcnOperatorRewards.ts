@@ -29,7 +29,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const DISTRIBUTE_NCN_OPERATOR_REWARDS_DISCRIMINATOR = 16;
+export const DISTRIBUTE_NCN_OPERATOR_REWARDS_DISCRIMINATOR = 18;
 
 export function getDistributeNcnOperatorRewardsDiscriminatorBytes() {
   return getU8Encoder().encode(DISTRIBUTE_NCN_OPERATOR_REWARDS_DISCRIMINATOR);

@@ -20,6 +20,8 @@ mod register_mint;
 mod route_base_rewards;
 mod route_ncn_rewards;
 mod set_config_fees;
+mod set_jto_weight;
+mod set_lst_weight;
 mod set_merkle_root;
 mod set_new_admin;
 mod set_tie_breaker;
@@ -56,7 +58,8 @@ use crate::{
     realloc_operator_snapshot::process_realloc_operator_snapshot,
     realloc_weight_table::process_realloc_weight_table, register_mint::process_register_mint,
     route_base_rewards::process_route_base_rewards, route_ncn_rewards::process_route_ncn_rewards,
-    set_config_fees::process_set_config_fees, set_merkle_root::process_set_merkle_root,
+    set_config_fees::process_set_config_fees, set_jto_weight::process_set_jto_weight,
+    set_lst_weight::process_set_lst_weight, set_merkle_root::process_set_merkle_root,
     set_tie_breaker::process_set_tie_breaker,
     set_tracked_mint_ncn_fee_group::process_set_tracked_mint_ncn_fee_group,
     snapshot_vault_operator_delegation::process_snapshot_vault_operator_delegation,
@@ -185,6 +188,14 @@ pub fn process_instruction(
         // ------------------------------------------
         // Update
         // ------------------------------------------
+        TipRouterInstruction::SetLstWeight { epoch } => {
+            msg!("Instruction: SetLstWeight");
+            process_set_lst_weight(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::SetJtoWeight { epoch } => {
+            msg!("Instruction: SetJtoWeight");
+            process_set_jto_weight(program_id, accounts, epoch)
+        }
         TipRouterInstruction::AdminUpdateWeightTable { ncn_epoch, weight } => {
             msg!("Instruction: UpdateWeightTable");
             process_admin_update_weight_table(program_id, accounts, ncn_epoch, weight)

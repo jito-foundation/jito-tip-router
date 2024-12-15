@@ -97,7 +97,7 @@ pub struct InitializeEpochSnapshotInstructionData {
 
 impl InitializeEpochSnapshotInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 6 }
+        Self { discriminator: 8 }
     }
 }
 

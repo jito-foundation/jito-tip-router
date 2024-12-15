@@ -30,6 +30,8 @@ export const JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR = 0x2105; // 8453
 export const JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR = 0x2106; // 8454
 /** CastToU64Error: Cast to u64 error */
 export const JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR = 0x2107; // 8455
+/** CastToU128Error: Cast to u128 error */
+export const JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR = 0x2108; // 8456
 /** IncorrectWeightTableAdmin: Incorrect weight table admin */
 export const JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN = 0x2200; // 8704
 /** DuplicateMintsInTable: Duplicate mints in table */
@@ -137,6 +139,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
+  | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL
   | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED
@@ -198,6 +201,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL]: `Ballot tally not found`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
+    [JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR]: `Cast to u128 error`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR]: `Cast to u64 error`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL]: `NCN config vaults are at capacity`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED]: `Config supported mints do not match NCN Vault Count`,

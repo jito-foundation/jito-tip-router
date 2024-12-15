@@ -35,6 +35,8 @@ import {
   type ParsedRouteBaseRewardsInstruction,
   type ParsedRouteNcnRewardsInstruction,
   type ParsedSetConfigFeesInstruction,
+  type ParsedSetJtoWeightInstruction,
+  type ParsedSetLstWeightInstruction,
   type ParsedSetMerkleRootInstruction,
   type ParsedSetNewAdminInstruction,
   type ParsedSetTieBreakerInstruction,
@@ -63,6 +65,8 @@ export enum JitoTipRouterInstruction {
   SetNewAdmin,
   InitializeWeightTable,
   AdminUpdateWeightTable,
+  SetLstWeight,
+  SetJtoWeight,
   InitializeEpochSnapshot,
   InitializeOperatorSnapshot,
   SnapshotVaultOperatorDelegation,
@@ -109,66 +113,72 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.AdminUpdateWeightTable;
   }
   if (containsBytes(data, getU8Encoder().encode(6), 0)) {
-    return JitoTipRouterInstruction.InitializeEpochSnapshot;
+    return JitoTipRouterInstruction.SetLstWeight;
   }
   if (containsBytes(data, getU8Encoder().encode(7), 0)) {
-    return JitoTipRouterInstruction.InitializeOperatorSnapshot;
+    return JitoTipRouterInstruction.SetJtoWeight;
   }
   if (containsBytes(data, getU8Encoder().encode(8), 0)) {
-    return JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
+    return JitoTipRouterInstruction.InitializeEpochSnapshot;
   }
   if (containsBytes(data, getU8Encoder().encode(9), 0)) {
-    return JitoTipRouterInstruction.RegisterMint;
+    return JitoTipRouterInstruction.InitializeOperatorSnapshot;
   }
   if (containsBytes(data, getU8Encoder().encode(10), 0)) {
-    return JitoTipRouterInstruction.InitializeBaseRewardRouter;
+    return JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
   }
   if (containsBytes(data, getU8Encoder().encode(11), 0)) {
-    return JitoTipRouterInstruction.InitializeNcnRewardRouter;
+    return JitoTipRouterInstruction.RegisterMint;
   }
   if (containsBytes(data, getU8Encoder().encode(12), 0)) {
-    return JitoTipRouterInstruction.RouteBaseRewards;
+    return JitoTipRouterInstruction.InitializeBaseRewardRouter;
   }
   if (containsBytes(data, getU8Encoder().encode(13), 0)) {
-    return JitoTipRouterInstruction.RouteNcnRewards;
+    return JitoTipRouterInstruction.InitializeNcnRewardRouter;
   }
   if (containsBytes(data, getU8Encoder().encode(14), 0)) {
-    return JitoTipRouterInstruction.DistributeBaseRewards;
+    return JitoTipRouterInstruction.RouteBaseRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(15), 0)) {
-    return JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
+    return JitoTipRouterInstruction.RouteNcnRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(16), 0)) {
-    return JitoTipRouterInstruction.DistributeNcnOperatorRewards;
+    return JitoTipRouterInstruction.DistributeBaseRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(17), 0)) {
-    return JitoTipRouterInstruction.DistributeNcnVaultRewards;
+    return JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
   }
   if (containsBytes(data, getU8Encoder().encode(18), 0)) {
-    return JitoTipRouterInstruction.SetTrackedMintNcnFeeGroup;
+    return JitoTipRouterInstruction.DistributeNcnOperatorRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(19), 0)) {
-    return JitoTipRouterInstruction.InitializeBallotBox;
+    return JitoTipRouterInstruction.DistributeNcnVaultRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(20), 0)) {
-    return JitoTipRouterInstruction.CastVote;
+    return JitoTipRouterInstruction.SetTrackedMintNcnFeeGroup;
   }
   if (containsBytes(data, getU8Encoder().encode(21), 0)) {
-    return JitoTipRouterInstruction.SetMerkleRoot;
+    return JitoTipRouterInstruction.InitializeBallotBox;
   }
   if (containsBytes(data, getU8Encoder().encode(22), 0)) {
-    return JitoTipRouterInstruction.SetTieBreaker;
+    return JitoTipRouterInstruction.CastVote;
   }
   if (containsBytes(data, getU8Encoder().encode(23), 0)) {
-    return JitoTipRouterInstruction.ReallocBallotBox;
+    return JitoTipRouterInstruction.SetMerkleRoot;
   }
   if (containsBytes(data, getU8Encoder().encode(24), 0)) {
-    return JitoTipRouterInstruction.ReallocOperatorSnapshot;
+    return JitoTipRouterInstruction.SetTieBreaker;
   }
   if (containsBytes(data, getU8Encoder().encode(25), 0)) {
-    return JitoTipRouterInstruction.ReallocBaseRewardRouter;
+    return JitoTipRouterInstruction.ReallocBallotBox;
   }
   if (containsBytes(data, getU8Encoder().encode(26), 0)) {
+    return JitoTipRouterInstruction.ReallocOperatorSnapshot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(27), 0)) {
+    return JitoTipRouterInstruction.ReallocBaseRewardRouter;
+  }
+  if (containsBytes(data, getU8Encoder().encode(28), 0)) {
     return JitoTipRouterInstruction.ReallocWeightTable;
   }
   throw new Error(
@@ -197,6 +207,12 @@ export type ParsedJitoTipRouterInstruction<
   | ({
       instructionType: JitoTipRouterInstruction.AdminUpdateWeightTable;
     } & ParsedAdminUpdateWeightTableInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.SetLstWeight;
+    } & ParsedSetLstWeightInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.SetJtoWeight;
+    } & ParsedSetJtoWeightInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.InitializeEpochSnapshot;
     } & ParsedInitializeEpochSnapshotInstruction<TProgram>)

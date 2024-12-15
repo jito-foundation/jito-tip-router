@@ -26,6 +26,8 @@ pub(crate) mod r#register_mint;
 pub(crate) mod r#route_base_rewards;
 pub(crate) mod r#route_ncn_rewards;
 pub(crate) mod r#set_config_fees;
+pub(crate) mod r#set_jto_weight;
+pub(crate) mod r#set_lst_weight;
 pub(crate) mod r#set_merkle_root;
 pub(crate) mod r#set_new_admin;
 pub(crate) mod r#set_tie_breaker;
@@ -41,6 +43,7 @@ pub use self::{
     r#initialize_operator_snapshot::*, r#initialize_tracked_mints::*, r#initialize_weight_table::*,
     r#realloc_ballot_box::*, r#realloc_base_reward_router::*, r#realloc_operator_snapshot::*,
     r#realloc_weight_table::*, r#register_mint::*, r#route_base_rewards::*, r#route_ncn_rewards::*,
-    r#set_config_fees::*, r#set_merkle_root::*, r#set_new_admin::*, r#set_tie_breaker::*,
-    r#set_tracked_mint_ncn_fee_group::*, r#snapshot_vault_operator_delegation::*,
+    r#set_config_fees::*, r#set_jto_weight::*, r#set_lst_weight::*, r#set_merkle_root::*,
+    r#set_new_admin::*, r#set_tie_breaker::*, r#set_tracked_mint_ncn_fee_group::*,
+    r#snapshot_vault_operator_delegation::*,
 };

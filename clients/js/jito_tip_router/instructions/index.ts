@@ -28,6 +28,8 @@ export * from './registerMint';
 export * from './routeBaseRewards';
 export * from './routeNcnRewards';
 export * from './setConfigFees';
+export * from './setJtoWeight';
+export * from './setLstWeight';
 export * from './setMerkleRoot';
 export * from './setNewAdmin';
 export * from './setTieBreaker';

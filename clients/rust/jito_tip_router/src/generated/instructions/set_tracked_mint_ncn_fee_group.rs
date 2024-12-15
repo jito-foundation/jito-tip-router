@@ -85,7 +85,7 @@ pub struct SetTrackedMintNcnFeeGroupInstructionData {
 
 impl SetTrackedMintNcnFeeGroupInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 18 }
+        Self { discriminator: 20 }
     }
 }
 

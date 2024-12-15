@@ -86,7 +86,7 @@ pub struct DistributeBaseNcnRewardRouteInstructionData {
 
 impl DistributeBaseNcnRewardRouteInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 15 }
+        Self { discriminator: 17 }
     }
 }
 

@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const SET_TRACKED_MINT_NCN_FEE_GROUP_DISCRIMINATOR = 18;
+export const SET_TRACKED_MINT_NCN_FEE_GROUP_DISCRIMINATOR = 20;
 
 export function getSetTrackedMintNcnFeeGroupDiscriminatorBytes() {
   return getU8Encoder().encode(SET_TRACKED_MINT_NCN_FEE_GROUP_DISCRIMINATOR);
