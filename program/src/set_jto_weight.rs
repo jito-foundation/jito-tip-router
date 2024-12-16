@@ -1,7 +1,7 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    constants::{JTO_MINT, JTO_USD_FEED, MAX_STALE_SLOTS, MIN_SAMPLES, WEIGHT_PRECISION},
+    constants::{JTO_MINT, JTO_USD_FEED, MAX_STALE_SLOTS, WEIGHT_PRECISION},
     error::TipRouterError,
     weight_table::WeightTable,
 };
@@ -28,20 +28,29 @@ pub fn process_set_jto_weight(
 
     WeightTable::load(program_id, weight_table, ncn, epoch, true)?;
 
-    if jto_usd_feed.owner.ne(&JTO_USD_FEED) {
+    if jto_usd_feed.key.ne(&JTO_USD_FEED) {
         msg!("Incorrect jto usd feed");
         return Err(ProgramError::InvalidAccountData);
     }
 
     let weight: u128 = {
-        let clock = Clock::get()?;
-        let feed = PullFeedAccountData::parse(jto_usd_feed.data.borrow()).unwrap();
-        let price: Decimal = feed
-            .get_value(&clock, MAX_STALE_SLOTS, MIN_SAMPLES, true)
-            .unwrap();
+        let feed = PullFeedAccountData::parse(jto_usd_feed.data.borrow())
+            .map_err(|_| TipRouterError::BadSwitchboardFeed)?;
+        let price: Decimal = feed.value().ok_or(TipRouterError::BadSwitchboardValue)?;
+
+        let slot_delta = {
+            let current_slot = Clock::get()?.slot;
+            current_slot
+                .checked_sub(feed.result.slot)
+                .ok_or(TipRouterError::ArithmeticUnderflowError)?
+        };
+
+        if slot_delta > MAX_STALE_SLOTS {
+            msg!("Stale feed");
+            return Err(ProgramError::InvalidAccountData);
+        }
 
         msg!("Oracle Price: {}", price);
-
         let weight = price
             .checked_mul(WEIGHT_PRECISION.into())
             .ok_or(TipRouterError::ArithmeticOverflow)?

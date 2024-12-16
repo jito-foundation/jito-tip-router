@@ -121,6 +121,10 @@ pub enum TipRouterError {
     FeeNotActive,
     #[error("No rewards to distribute")]
     NoRewards,
+    #[error("Bad Switchboard Feed")]
+    BadSwitchboardFeed,
+    #[error("Bad Switchboard Value")]
+    BadSwitchboardValue,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

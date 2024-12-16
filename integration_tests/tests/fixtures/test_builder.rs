@@ -1,12 +1,14 @@
 use std::{
     borrow::BorrowMut,
     fmt::{Debug, Formatter},
+    str::FromStr,
 };
 
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
 use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
-    base_fee_group::BaseFeeGroup, base_reward_router::BaseRewardRouter, ncn_fee_group::NcnFeeGroup,
+    base_fee_group::BaseFeeGroup, base_reward_router::BaseRewardRouter, constants::JTO_USD_FEED,
+    ncn_fee_group::NcnFeeGroup,
 };
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
@@ -109,6 +111,27 @@ impl TestBuilder {
 
             program_test
         };
+
+        // Add switchboard account
+        {
+            let owner = Pubkey::from_str("SBondMDrcV3K4kxZR1HNVT7osZxAHVHgYXL5Ze1oMUv").unwrap();
+            let lamports = 23218560;
+            let space = 3208;
+            let mut account = Account::new(lamports, space, &owner);
+
+            let bytes = vec![
+                0x00, 0x00, 0x00, 0x00, 0x92, 0xe2, 0x50, 0xc2, 0xf4, 0xca, 0x2c, 0xa5, 0x09, 0x62,
+                0xa5, 0xb1, 0xc1, 0x7d, 0xfa, 0x69, 0x12, 0xdf, 0xc4, 0x94, 0x7d, 0x41, 0x7d, 0xa6,
+                0x9c, 0x88, 0x6d, 0xc0, 0xb0, 0x9e, 0x08, 0xba, 0xab, 0x9f, 0x2d, 0x09, 0x95, 0xb6,
+                0xe0, 0x0d, 0x09, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            ];
+
+            account.data = bytes;
+
+            program_test.add_account(JTO_USD_FEED, account);
+        }
 
         // Pre-fund payer with 1M SOL
         let whale = Keypair::new();

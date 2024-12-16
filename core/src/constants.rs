@@ -30,5 +30,4 @@ pub const JTO_MINT: Pubkey = pubkey!("jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mC
 pub const JITO_SOL_MINT: Pubkey = pubkey!("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn");
 
 pub const MAX_STALE_SLOTS: u64 = 100;
-pub const MIN_SAMPLES: u32 = 3;
-pub const JTO_USD_FEED: Pubkey = pubkey!("E9fHVUZnvT4i8H3jQLb6g2tSpcagunJpjwCGNTYxwKSE");
+pub const JTO_USD_FEED: Pubkey = pubkey!("5S7ErPSkFmyXuq2aE3rZ6ofwVyZpwzUt6w7m6kqekvMe");

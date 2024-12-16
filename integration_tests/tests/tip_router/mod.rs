@@ -13,6 +13,7 @@ mod initialize_weight_table;
 mod meta_tests;
 mod register_mint;
 mod set_config_fees;
+mod set_jto_weight;
 mod set_new_admin;
 mod set_tie_breaker;
 mod set_tracked_mint_ncn_fee_group;
