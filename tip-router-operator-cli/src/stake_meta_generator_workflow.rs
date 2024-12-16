@@ -1,42 +1,42 @@
-use {
-    crate::{
-        derive_tip_distribution_account_address, derive_tip_payment_pubkeys, Config, StakeMeta,
-        StakeMetaCollection, TipDistributionAccount, TipDistributionAccountWrapper,
-        TipDistributionMeta,
-    },
-    anchor_lang::AccountDeserialize,
-    itertools::Itertools,
-    log::*,
-    solana_accounts_db::hardened_unpack::{
-        open_genesis_config, OpenGenesisConfigError, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
-    },
-    solana_client::client_error::ClientError,
-    solana_ledger::{
-        bank_forks_utils,
-        bank_forks_utils::BankForksUtilsError,
-        blockstore::{Blockstore, BlockstoreError},
-        blockstore_options::{AccessType, BlockstoreOptions, LedgerColumnOptions},
-        blockstore_processor::{BlockstoreProcessorError, ProcessOptions},
-    },
-    solana_program::{stake_history::StakeHistory, sysvar},
-    solana_runtime::{bank::Bank, snapshot_config::SnapshotConfig, stakes::StakeAccount},
-    solana_sdk::{
-        account::{from_account, ReadableAccount, WritableAccount},
-        clock::Slot,
-        pubkey::Pubkey,
-    },
-    solana_vote::vote_account::VoteAccount,
-    std::{
-        collections::HashMap,
-        fmt::{Debug, Display, Formatter},
-        fs::File,
-        io::{BufWriter, Write},
-        mem::size_of,
-        path::{Path, PathBuf},
-        sync::{atomic::AtomicBool, Arc},
-    },
-    thiserror::Error,
-    jito_tip_payment::{CONFIG_ACCOUNT_SEED}
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Display, Formatter},
+    fs::File,
+    io::{BufWriter, Write},
+    mem::size_of,
+    path::{Path, PathBuf},
+    sync::{atomic::AtomicBool, Arc},
+};
+
+use anchor_lang::AccountDeserialize;
+use itertools::Itertools;
+use jito_tip_payment::CONFIG_ACCOUNT_SEED;
+use log::*;
+use solana_accounts_db::hardened_unpack::{
+    open_genesis_config, OpenGenesisConfigError, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
+};
+use solana_client::client_error::ClientError;
+use solana_ledger::{
+    bank_forks_utils,
+    bank_forks_utils::BankForksUtilsError,
+    blockstore::{Blockstore, BlockstoreError},
+    blockstore_options::{AccessType, BlockstoreOptions, LedgerColumnOptions},
+    blockstore_processor::{BlockstoreProcessorError, ProcessOptions},
+};
+use solana_program::{stake_history::StakeHistory, sysvar};
+use solana_runtime::{bank::Bank, snapshot_config::SnapshotConfig, stakes::StakeAccount};
+use solana_sdk::{
+    account::{from_account, ReadableAccount, WritableAccount},
+    clock::Slot,
+    pubkey::Pubkey,
+};
+use solana_vote::vote_account::VoteAccount;
+use thiserror::Error;
+
+use crate::{
+    derive_tip_distribution_account_address, derive_tip_payment_pubkeys, Config, StakeMeta,
+    StakeMetaCollection, TipDistributionAccount, TipDistributionAccountWrapper,
+    TipDistributionMeta,
 };
 
 #[derive(Error, Debug)]
@@ -179,10 +179,8 @@ pub fn generate_stake_meta_collection(
     let voter_pubkey_to_delegations = group_delegations_by_voter_pubkey(delegations, bank);
 
     // Get config PDA
-    let (config_pda, _) = Pubkey::find_program_address(
-        &[CONFIG_ACCOUNT_SEED],
-        tip_payment_program_id,
-    );
+    let (config_pda, _) =
+        Pubkey::find_program_address(&[CONFIG_ACCOUNT_SEED], tip_payment_program_id);
 
     // Get config account - don't panic if it exists
     let config = if let Some(config_account) = bank.get_account(&config_pda) {
@@ -191,7 +189,7 @@ pub fn generate_stake_meta_collection(
     } else {
         // Instead of creating a new config, just return an error
         return Err(StakeMetaGeneratorError::AnchorError(Box::new(
-            anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotInitialized)
+            anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotInitialized),
         )));
     };
 
@@ -361,34 +359,33 @@ fn group_delegations_by_voter_pubkey(
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::derive_tip_distribution_account_address,
-        anchor_lang::AccountSerialize,
-        jito_tip_distribution::state::TipDistributionAccount,
-        jito_tip_payment::{
-            InitBumps, TipPaymentAccount, CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0,
-            TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2, TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4,
-            TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6, TIP_ACCOUNT_SEED_7
-        },
-        solana_runtime::genesis_utils::{
-            create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
-        },
-        solana_sdk::{
-            self,
-            account::{from_account, AccountSharedData},
-            message::Message,
-            signature::{Keypair, Signer},
-            stake::{
-                self,
-                state::{Authorized, Lockup},
-            },
-            stake_history::StakeHistory,
-            sysvar,
-            transaction::Transaction,
-        },
-        solana_stake_program::stake_state,
+    use anchor_lang::AccountSerialize;
+    use jito_tip_distribution::state::TipDistributionAccount;
+    use jito_tip_payment::{
+        InitBumps, TipPaymentAccount, CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1,
+        TIP_ACCOUNT_SEED_2, TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5,
+        TIP_ACCOUNT_SEED_6, TIP_ACCOUNT_SEED_7,
     };
+    use solana_runtime::genesis_utils::{
+        create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
+    };
+    use solana_sdk::{
+        self,
+        account::{from_account, AccountSharedData},
+        message::Message,
+        signature::{Keypair, Signer},
+        stake::{
+            self,
+            state::{Authorized, Lockup},
+        },
+        stake_history::StakeHistory,
+        sysvar,
+        transaction::Transaction,
+    };
+    use solana_stake_program::stake_state;
+
+    use super::*;
+    use crate::derive_tip_distribution_account_address;
 
     #[test]
     fn test_generate_stake_meta_collection_happy_path() {

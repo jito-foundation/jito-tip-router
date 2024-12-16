@@ -1,7 +1,7 @@
+use std::{process::Command, time::Instant};
+
 use anyhow::Result;
 use log::info;
-use std::process::Command;
-use std::time::Instant;
 use solana_sdk::signer::keypair::Keypair;
 
 pub struct SnapshotCreator {
@@ -46,13 +46,16 @@ impl SnapshotCreator {
 
     pub async fn internal_create_snapshot(&self, slot: u64) -> Result<()> {
         let start_time = Instant::now();
-        info!("Creating snapshot for slot {} using solana-ledger-tool", slot);
-    
+        info!(
+            "Creating snapshot for slot {} using solana-ledger-tool",
+            slot
+        );
+
         // Ensure the ledger directory exists
         if !self.ledger_path.exists() {
             anyhow::bail!("Ledger directory does not exist: {:?}", self.ledger_path);
         }
-    
+
         let status = Command::new("solana-ledger-tool")
             .args([
                 "create-snapshot",
@@ -67,10 +70,10 @@ impl SnapshotCreator {
                 &self.max_snapshots.to_string(),
                 "--output",
                 "json",
-                "--force-update-to-open",  // Added this flag
+                "--force-update-to-open", // Added this flag
             ])
             .status()?;
-    
+
         if !status.success() {
             // Get the error output for better debugging
             let output = Command::new("solana-ledger-tool")
@@ -90,17 +93,14 @@ impl SnapshotCreator {
                     "--force-update-to-open",
                 ])
                 .output()?;
-    
+
             anyhow::bail!(
                 "Failed to create snapshot using solana-ledger-tool: {}",
                 String::from_utf8_lossy(&output.stderr)
             );
         }
-    
-        info!(
-            "Snapshot creation completed in {:?}",
-            start_time.elapsed()
-        );
+
+        info!("Snapshot creation completed in {:?}", start_time.elapsed());
         Ok(())
     }
 }

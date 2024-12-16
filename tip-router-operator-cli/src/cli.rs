@@ -1,6 +1,7 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 use solana_sdk::pubkey::Pubkey;
-use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -25,12 +26,12 @@ pub struct Cli {
 pub enum Commands {
     Monitor {
         #[arg(short, long)]
-       ncn_address: Pubkey,
+        ncn_address: Pubkey,
 
         #[arg(long)]
-       tip_distribution_program_id: Pubkey,
+        tip_distribution_program_id: Pubkey,
 
         #[arg(long)]
-       tip_payment_program_id: Pubkey,
+        tip_payment_program_id: Pubkey,
     },
 }

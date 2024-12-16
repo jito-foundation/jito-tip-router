@@ -3056,6 +3056,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "jito-programs-vote-state"
+version = "0.1.5"
+source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=c21f7a2d84cba6113d2884328ee9753ab8c368f6#c21f7a2d84cba6113d2884328ee9753ab8c368f6"
+dependencies = [
+ "anchor-lang 0.30.1",
+ "bincode",
+ "serde",
+ "serde_derive",
+ "solana-program 1.18.26",
+]
+
+[[package]]
 name = "jito-restaking-client"
 version = "0.0.3"
 source = "git+https://github.com/jito-foundation/restaking.git?rev=eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d#eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d"
@@ -3129,7 +3141,19 @@ source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=6e5cbce5e286
 dependencies = [
  "anchor-lang 0.30.1",
  "default-env",
- "jito-programs-vote-state",
+ "jito-programs-vote-state 0.1.5 (git+https://github.com/exo-tech-xyz/jito-programs.git?rev=6e5cbce5e2866da0585ef4fa35ee1168fce4556f)",
+ "solana-program 1.18.26",
+ "solana-security-txt",
+]
+
+[[package]]
+name = "jito-tip-distribution"
+version = "0.1.5"
+source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=c21f7a2d84cba6113d2884328ee9753ab8c368f6#c21f7a2d84cba6113d2884328ee9753ab8c368f6"
+dependencies = [
+ "anchor-lang 0.30.1",
+ "default-env",
+ "jito-programs-vote-state 0.1.5 (git+https://github.com/exo-tech-xyz/jito-programs.git?rev=c21f7a2d84cba6113d2884328ee9753ab8c368f6)",
  "solana-program 1.18.26",
  "solana-security-txt",
 ]
@@ -3145,6 +3169,16 @@ dependencies = [
 name = "jito-tip-payment"
 version = "0.1.5"
 source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=6e5cbce5e2866da0585ef4fa35ee1168fce4556f#6e5cbce5e2866da0585ef4fa35ee1168fce4556f"
+dependencies = [
+ "anchor-lang 0.30.1",
+ "default-env",
+ "solana-security-txt",
+]
+
+[[package]]
+name = "jito-tip-payment"
+version = "0.1.5"
+source = "git+https://github.com/exo-tech-xyz/jito-programs.git?rev=c21f7a2d84cba6113d2884328ee9753ab8c368f6#c21f7a2d84cba6113d2884328ee9753ab8c368f6"
 dependencies = [
  "anchor-lang 0.30.1",
  "default-env",
@@ -3657,6 +3691,7 @@ dependencies = [
 name = "meta-merkle-tree"
 version = "0.0.1"
 dependencies = [
+ "anchor-lang 0.30.1",
  "borsh 0.10.4",
  "bytemuck",
  "fast-math",
@@ -3665,9 +3700,12 @@ dependencies = [
  "jito-jsm-core",
  "jito-restaking-core",
  "jito-restaking-sdk",
+ "jito-tip-distribution 0.1.5 (git+https://github.com/exo-tech-xyz/jito-programs.git?rev=c21f7a2d84cba6113d2884328ee9753ab8c368f6)",
  "jito-tip-distribution-sdk",
+ "jito-tip-payment 0.1.5 (git+https://github.com/exo-tech-xyz/jito-programs.git?rev=c21f7a2d84cba6113d2884328ee9753ab8c368f6)",
  "jito-vault-core",
  "jito-vault-sdk",
+ "log",
  "rand 0.8.5",
  "serde",
  "serde_json",
@@ -8975,8 +9013,8 @@ dependencies = [
  "im",
  "itertools 0.11.0",
  "jito-restaking-program",
- "jito-tip-distribution",
- "jito-tip-payment",
+ "jito-tip-distribution 0.1.5 (git+https://github.com/exo-tech-xyz/jito-programs.git?rev=6e5cbce5e2866da0585ef4fa35ee1168fce4556f)",
+ "jito-tip-payment 0.1.5 (git+https://github.com/exo-tech-xyz/jito-programs.git?rev=6e5cbce5e2866da0585ef4fa35ee1168fce4556f)",
  "jito-tip-router-client",
  "jito-tip-router-core",
  "jito-tip-router-program",

@@ -1,33 +1,33 @@
-use {
-    crate::{send_until_blockhash_expires, GeneratedMerkleTreeCollection},
-    anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas},
-    itertools::Itertools,
-    jito_tip_distribution::state::{ClaimStatus, Config, TipDistributionAccount},
-    log::{error, info, warn},
-    rand::{prelude::SliceRandom, thread_rng},
-    solana_client::nonblocking::rpc_client::RpcClient,
-    solana_metrics::datapoint_info,
-    solana_program::{
-        fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE, native_token::LAMPORTS_PER_SOL,
-        system_program,
-    },
-    solana_rpc_client_api::config::RpcSimulateTransactionConfig,
-    solana_sdk::{
-        account::Account,
-        commitment_config::CommitmentConfig,
-        compute_budget::ComputeBudgetInstruction,
-        instruction::Instruction,
-        pubkey::Pubkey,
-        signature::{Keypair, Signer},
-        transaction::Transaction,
-    },
-    std::{
-        collections::HashMap,
-        sync::Arc,
-        time::{Duration, Instant},
-    },
-    thiserror::Error,
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, Instant},
 };
+
+use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
+use itertools::Itertools;
+use jito_tip_distribution::state::{ClaimStatus, Config, TipDistributionAccount};
+use log::{error, info, warn};
+use rand::{prelude::SliceRandom, thread_rng};
+use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_metrics::datapoint_info;
+use solana_program::{
+    fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE, native_token::LAMPORTS_PER_SOL,
+    system_program,
+};
+use solana_rpc_client_api::config::RpcSimulateTransactionConfig;
+use solana_sdk::{
+    account::Account,
+    commitment_config::CommitmentConfig,
+    compute_budget::ComputeBudgetInstruction,
+    instruction::Instruction,
+    pubkey::Pubkey,
+    signature::{Keypair, Signer},
+    transaction::Transaction,
+};
+use thiserror::Error;
+
+use crate::{send_until_blockhash_expires, GeneratedMerkleTreeCollection};
 
 #[derive(Error, Debug)]
 pub enum ClaimMevError {

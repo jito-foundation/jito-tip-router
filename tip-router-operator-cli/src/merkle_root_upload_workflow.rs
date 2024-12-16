@@ -1,37 +1,33 @@
-use {
-    crate::{
-        read_json_from_file,
-        sign_and_send_transactions_with_retries,
-        GeneratedMerkleTree,
-        GeneratedMerkleTreeCollection,
-    },
-    anchor_lang::AccountDeserialize,
-    jito_tip_distribution::{
-        sdk::instruction::{ upload_merkle_root_ix, UploadMerkleRootAccounts, UploadMerkleRootArgs },
-        state::{ Config, TipDistributionAccount },
-    },
-    log::{ error, info },
-    solana_rpc_client::nonblocking::rpc_client::RpcClient,
-    solana_program::{
-        fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
-        native_token::LAMPORTS_PER_SOL,
-    },
-    solana_sdk::{
-        commitment_config::CommitmentConfig,
-        pubkey::Pubkey,
-        signature::{ read_keypair_file, Signer },
-        transaction::Transaction,
-    },
-    std::{ path::PathBuf, time::Duration },
-    thiserror::Error,
-    solana_sdk::signer::keypair::Keypair
+use std::{path::PathBuf, time::Duration};
+
+use anchor_lang::AccountDeserialize;
+use jito_tip_distribution::{
+    sdk::instruction::{upload_merkle_root_ix, UploadMerkleRootAccounts, UploadMerkleRootArgs},
+    state::{Config, TipDistributionAccount},
+};
+use log::{error, info};
+use solana_program::{
+    fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE, native_token::LAMPORTS_PER_SOL,
+};
+use solana_rpc_client::nonblocking::rpc_client::RpcClient;
+use solana_sdk::{
+    commitment_config::CommitmentConfig, pubkey::Pubkey, signature::Signer,
+    signer::keypair::Keypair, transaction::Transaction,
+};
+use thiserror::Error;
+
+use crate::{
+    read_json_from_file, sign_and_send_transactions_with_retries, GeneratedMerkleTree,
+    GeneratedMerkleTreeCollection,
 };
 
 #[derive(Error, Debug)]
 pub enum MerkleRootUploadError {
-    #[error(transparent)] IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
 
-    #[error(transparent)] JsonError(#[from] serde_json::Error),
+    #[error(transparent)]
+    JsonError(#[from] serde_json::Error),
 }
 
 pub async fn upload_merkle_root(
@@ -40,26 +36,22 @@ pub async fn upload_merkle_root(
     rpc_url: &str,
     tip_distribution_program_id: &Pubkey,
     max_concurrent_rpc_get_reqs: usize,
-    txn_send_batch_size: usize
+    txn_send_batch_size: usize,
 ) -> Result<(), MerkleRootUploadError> {
     const MAX_RETRY_DURATION: Duration = Duration::from_secs(600);
 
-    let merkle_tree: GeneratedMerkleTreeCollection = read_json_from_file(merkle_root_path).expect(
-        "read GeneratedMerkleTreeCollection"
-    );
+    let merkle_tree: GeneratedMerkleTreeCollection =
+        read_json_from_file(merkle_root_path).expect("read GeneratedMerkleTreeCollection");
 
-    let tip_distribution_config = Pubkey::find_program_address(
-        &[Config::SEED],
-        tip_distribution_program_id
-    ).0;
+    let tip_distribution_config =
+        Pubkey::find_program_address(&[Config::SEED], tip_distribution_program_id).0;
 
     // Remove runtime creation and block_on, just use the async context directly
-    let rpc_client = RpcClient::new_with_commitment(
-        rpc_url.to_string(),
-        CommitmentConfig::confirmed()
-    );
-    
-    let trees: Vec<GeneratedMerkleTree> = merkle_tree.generated_merkle_trees
+    let rpc_client =
+        RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::confirmed());
+
+    let trees: Vec<GeneratedMerkleTree> = merkle_tree
+        .generated_merkle_trees
         .into_iter()
         .filter(|tree| tree.merkle_root_upload_authority == keypair.pubkey())
         .collect();
@@ -69,7 +61,8 @@ pub async fn upload_merkle_root(
     // heuristic to make sure we have enough funds to cover execution, assumes all trees need updating
     {
         let initial_balance = rpc_client
-            .get_balance(&keypair.pubkey()).await
+            .get_balance(&keypair.pubkey())
+            .await
             .expect("failed to get balance");
         let desired_balance = (trees.len() as u64)
             .checked_mul(DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE)
@@ -93,22 +86,22 @@ pub async fn upload_merkle_root(
             );
         }
     }
-    
+
     let mut trees_needing_update: Vec<GeneratedMerkleTree> = vec![];
     for tree in trees {
         let account = rpc_client
-            .get_account(&tree.tip_distribution_account).await
+            .get_account(&tree.tip_distribution_account)
+            .await
             .expect("fetch expect");
 
         let mut data = account.data.as_slice();
-        let fetched_tip_distribution_account = TipDistributionAccount::try_deserialize(
-            &mut data
-        ).expect("failed to deserialize tip_distribution_account state");
+        let fetched_tip_distribution_account = TipDistributionAccount::try_deserialize(&mut data)
+            .expect("failed to deserialize tip_distribution_account state");
 
         let needs_upload = match fetched_tip_distribution_account.merkle_root {
             Some(merkle_root) => {
-                merkle_root.total_funds_claimed == 0 &&
-                    merkle_root.root != tree.merkle_root.to_bytes()
+                merkle_root.total_funds_claimed == 0
+                    && merkle_root.root != tree.merkle_root.to_bytes()
             }
             None => true,
         };
@@ -134,7 +127,7 @@ pub async fn upload_merkle_root(
                     config: tip_distribution_config,
                     merkle_root_upload_authority: keypair.pubkey(),
                     tip_distribution_account: tree.tip_distribution_account,
-                }
+                },
             );
             Transaction::new_with_payer(&[ix], Some(&keypair.pubkey()))
         })
@@ -146,9 +139,10 @@ pub async fn upload_merkle_root(
         max_concurrent_rpc_get_reqs,
         transactions,
         txn_send_batch_size,
-        MAX_RETRY_DURATION
-    ).await;
-    
+        MAX_RETRY_DURATION,
+    )
+    .await;
+
     if !to_process.is_empty() {
         panic!(
             "{} remaining mev claim transactions, {} failed requests.",

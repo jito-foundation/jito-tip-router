@@ -1,34 +1,28 @@
-use {
-    anyhow::Result,
-    log::info,
-    solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{
-        pubkey::Pubkey,
-        signer::keypair::read_keypair_file,
-    },
-    std::{
-        sync::Arc,
-        time::{Duration, Instant},
-        path::PathBuf,
-        fs::File,
-        io::BufReader,
-    },
-    crate::{
-        Cli,
-        claim_mev_workflow,
-        merkle_root_generator_workflow,
-        merkle_root_upload_workflow,
-        stake_meta_generator_workflow,
-        snapshot::SnapshotCreator,
-        snapshot::SnapshotCreatorTrait,
-    },
-    meta_merkle_tree::{
-        meta_merkle_tree::MetaMerkleTree,
-        generated_merkle_tree::GeneratedMerkleTreeCollection as MetaMerkleTreeCollection,
-    },
-    solana_metrics::datapoint_info,
-    solana_sdk::signer::keypair::Keypair,
-    crate::{GeneratedMerkleTreeCollection, StakeMetaCollection},
+use std::{
+    fs::File,
+    io::BufReader,
+    path::PathBuf,
+    sync::Arc,
+    time::{Duration, Instant},
+};
+
+use anyhow::Result;
+use log::info;
+use meta_merkle_tree::{
+    generated_merkle_tree::GeneratedMerkleTreeCollection as MetaMerkleTreeCollection,
+    meta_merkle_tree::MetaMerkleTree,
+};
+use solana_metrics::datapoint_info;
+use solana_rpc_client::rpc_client::RpcClient;
+use solana_sdk::{
+    pubkey::Pubkey,
+    signer::keypair::{read_keypair_file, Keypair},
+};
+
+use crate::{
+    claim_mev_workflow, merkle_root_generator_workflow, merkle_root_upload_workflow,
+    snapshot::{SnapshotCreator, SnapshotCreatorTrait},
+    stake_meta_generator_workflow, Cli, GeneratedMerkleTreeCollection, StakeMetaCollection,
 };
 
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient) -> Result<()> {
@@ -68,7 +62,7 @@ pub async fn process_epoch<S: SnapshotCreatorTrait>(
     snapshot_creator: S,
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
-    ncn_address: &Pubkey
+    ncn_address: &Pubkey,
 ) -> Result<()> {
     let process_start = Instant::now();
 
@@ -79,7 +73,11 @@ pub async fn process_epoch<S: SnapshotCreatorTrait>(
     datapoint_info!(
         "tip_router_snapshot",
         ("success", snapshot_result.is_ok(), bool),
-        ("duration_ms", snapshot_start.elapsed().as_millis() as i64, i64),
+        (
+            "duration_ms",
+            snapshot_start.elapsed().as_millis() as i64,
+            i64
+        ),
         ("epoch_slot", previous_epoch_slot as i64, i64)
     );
     snapshot_result?;
@@ -142,26 +140,26 @@ pub async fn process_epoch<S: SnapshotCreatorTrait>(
     //  // 5. Generate meta merkle tree
     //  info!("5. Generating meta merkle tree...");
     //  let meta_start = Instant::now();
-     
+
     //  // Load the generated merkle trees directly
     //  let file = File::open(&merkle_tree_path)?;
     //  let reader = BufReader::new(file);
     //  let meta_merkle_trees: MetaMerkleTreeCollection = serde_json::from_reader(reader)?;
-     
+
     //  // Create meta merkle tree
     //  let meta_merkle_tree = MetaMerkleTree::new_from_generated_merkle_tree_collection(
     //      meta_merkle_trees.clone()
     //  )?;
- 
+
     //  // Save meta merkle tree
     //  let meta_merkle_path = cli.snapshot_output_dir.join("meta-merkle-tree.json");
     //  meta_merkle_tree.write_to_file(&meta_merkle_path);
- 
+
     //  // Convert for claim testing
     //  let generated_trees: GeneratedMerkleTreeCollection = serde_json::from_str(
     //      &serde_json::to_string(&meta_merkle_trees)?
     //  )?;
-     
+
     // datapoint_info!(
     //     "tip_router_meta_merkle",
     //     ("duration_ms", meta_start.elapsed().as_millis() as i64, i64),
