@@ -1,42 +1,41 @@
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Display, Formatter},
-    fs::File,
-    io::{BufWriter, Write},
-    mem::size_of,
-    path::{Path, PathBuf},
-    sync::{atomic::AtomicBool, Arc},
-};
-
-use anchor_lang::AccountDeserialize;
-use itertools::Itertools;
-use jito_tip_payment::CONFIG_ACCOUNT_SEED;
-use log::*;
-use solana_accounts_db::hardened_unpack::{
-    open_genesis_config, OpenGenesisConfigError, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
-};
-use solana_client::client_error::ClientError;
-use solana_ledger::{
-    bank_forks_utils,
-    bank_forks_utils::BankForksUtilsError,
-    blockstore::{Blockstore, BlockstoreError},
-    blockstore_options::{AccessType, BlockstoreOptions, LedgerColumnOptions},
-    blockstore_processor::{BlockstoreProcessorError, ProcessOptions},
-};
-use solana_program::{stake_history::StakeHistory, sysvar};
-use solana_runtime::{bank::Bank, snapshot_config::SnapshotConfig, stakes::StakeAccount};
-use solana_sdk::{
-    account::{from_account, ReadableAccount, WritableAccount},
-    clock::Slot,
-    pubkey::Pubkey,
-};
-use solana_vote::vote_account::VoteAccount;
-use thiserror::Error;
-
-use crate::{
-    derive_tip_distribution_account_address, derive_tip_payment_pubkeys, Config, StakeMeta,
-    StakeMetaCollection, TipDistributionAccount, TipDistributionAccountWrapper,
-    TipDistributionMeta,
+use {
+    crate::{
+        derive_tip_distribution_account_address, derive_tip_payment_pubkeys,
+        ledger_utils::get_bank_from_ledger, Config, StakeMeta, StakeMetaCollection,
+        TipDistributionAccount, TipDistributionAccountWrapper, TipDistributionMeta,
+    },
+    anchor_lang::AccountDeserialize,
+    itertools::Itertools,
+    jito_tip_payment::CONFIG_ACCOUNT_SEED,
+    log::*,
+    solana_accounts_db::hardened_unpack::{
+        open_genesis_config, OpenGenesisConfigError, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
+    },
+    solana_client::client_error::ClientError,
+    solana_ledger::{
+        bank_forks_utils::{self, BankForksUtilsError},
+        blockstore::{Blockstore, BlockstoreError},
+        blockstore_options::{AccessType, BlockstoreOptions, LedgerColumnOptions},
+        blockstore_processor::{BlockstoreProcessorError, ProcessOptions},
+    },
+    solana_program::{stake_history::StakeHistory, sysvar},
+    solana_runtime::{bank::Bank, snapshot_config::SnapshotConfig, stakes::StakeAccount},
+    solana_sdk::{
+        account::{from_account, ReadableAccount, WritableAccount},
+        clock::Slot,
+        pubkey::Pubkey,
+    },
+    solana_vote::vote_account::VoteAccount,
+    std::{
+        collections::HashMap,
+        fmt::{Debug, Display, Formatter},
+        fs::File,
+        io::{BufWriter, Write},
+        mem::size_of,
+        path::{Path, PathBuf},
+        sync::{atomic::AtomicBool, Arc},
+    },
+    thiserror::Error,
 };
 
 #[derive(Error, Debug)]
@@ -74,74 +73,34 @@ impl Display for StakeMetaGeneratorError {
     }
 }
 
-/// Runs the entire workflow of creating a bank from a snapshot to writing stake meta-data
-/// to a JSON file.
+/// Creates a bank from the paths at the desired slot and generates the StakeMetaCollection for
+/// that slot. Optionally writing the result as JSON file to disk.
 pub fn generate_stake_meta(
     ledger_path: &Path,
-    snapshot_slot: &Slot,
+    account_paths: Vec<PathBuf>,
+    full_snapshots_path: PathBuf,
+    desired_slot: &Slot,
     tip_distribution_program_id: &Pubkey,
     out_path: &str,
     tip_payment_program_id: &Pubkey,
-) -> Result<(), StakeMetaGeneratorError> {
+) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     info!("Creating bank from ledger path...");
-    let bank = create_bank_from_snapshot(ledger_path, snapshot_slot)?;
+    let bank = get_bank_from_ledger(
+        ledger_path,
+        account_paths,
+        full_snapshots_path,
+        desired_slot,
+    );
 
     info!("Generating stake_meta_collection object...");
     let stake_meta_coll =
         generate_stake_meta_collection(&bank, tip_distribution_program_id, tip_payment_program_id)?;
 
-    info!("Writing stake_meta_collection to JSON {}...", out_path);
-    write_to_json_file(&stake_meta_coll, out_path)?;
+    // TODO: Put this behind a CLI flag
+    // info!("Writing stake_meta_collection to JSON {}...", out_path);
+    // write_to_json_file(&stake_meta_coll, out_path)?;
 
-    Ok(())
-}
-
-fn create_bank_from_snapshot(
-    ledger_path: &Path,
-    snapshot_slot: &Slot,
-) -> Result<Arc<Bank>, StakeMetaGeneratorError> {
-    let genesis_config = open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE)?;
-    let snapshot_config = SnapshotConfig {
-        full_snapshot_archive_interval_slots: Slot::MAX,
-        incremental_snapshot_archive_interval_slots: Slot::MAX,
-        full_snapshot_archives_dir: PathBuf::from(ledger_path),
-        incremental_snapshot_archives_dir: PathBuf::from(ledger_path),
-        bank_snapshots_dir: PathBuf::from(ledger_path),
-        ..SnapshotConfig::default()
-    };
-    let blockstore = Blockstore::open_with_options(
-        ledger_path,
-        BlockstoreOptions {
-            access_type: AccessType::PrimaryForMaintenance,
-            recovery_mode: None,
-            enforce_ulimit_nofile: false,
-            column_options: LedgerColumnOptions::default(),
-        },
-    )?;
-    let (bank_forks, _, _) = bank_forks_utils::load_bank_forks(
-        &genesis_config,
-        &blockstore,
-        vec![PathBuf::from(ledger_path).join(Path::new("stake-meta.accounts"))],
-        None,
-        Some(&snapshot_config),
-        &ProcessOptions::default(),
-        None,
-        None,
-        None,
-        Arc::new(AtomicBool::new(false)),
-        false,
-    )?;
-
-    let working_bank = bank_forks.read().unwrap().working_bank();
-    assert_eq!(
-        working_bank.slot(),
-        *snapshot_slot,
-        "expected working bank slot {}, found {}",
-        snapshot_slot,
-        working_bank.slot()
-    );
-
-    Ok(working_bank)
+    Ok(stake_meta_coll)
 }
 
 fn write_to_json_file(
@@ -359,33 +318,34 @@ fn group_delegations_by_voter_pubkey(
 
 #[cfg(test)]
 mod tests {
-    use anchor_lang::AccountSerialize;
-    use jito_tip_distribution::state::TipDistributionAccount;
-    use jito_tip_payment::{
-        InitBumps, TipPaymentAccount, CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1,
-        TIP_ACCOUNT_SEED_2, TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5,
-        TIP_ACCOUNT_SEED_6, TIP_ACCOUNT_SEED_7,
-    };
-    use solana_runtime::genesis_utils::{
-        create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
-    };
-    use solana_sdk::{
-        self,
-        account::{from_account, AccountSharedData},
-        message::Message,
-        signature::{Keypair, Signer},
-        stake::{
-            self,
-            state::{Authorized, Lockup},
+    use {
+        super::*,
+        crate::derive_tip_distribution_account_address,
+        anchor_lang::AccountSerialize,
+        jito_tip_distribution::state::TipDistributionAccount,
+        jito_tip_payment::{
+            InitBumps, TipPaymentAccount, CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0,
+            TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2, TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4,
+            TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6, TIP_ACCOUNT_SEED_7,
         },
-        stake_history::StakeHistory,
-        sysvar,
-        transaction::Transaction,
+        solana_runtime::genesis_utils::{
+            create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
+        },
+        solana_sdk::{
+            self,
+            account::{from_account, AccountSharedData},
+            message::Message,
+            signature::{Keypair, Signer},
+            stake::{
+                self,
+                state::{Authorized, Lockup},
+            },
+            stake_history::StakeHistory,
+            sysvar,
+            transaction::Transaction,
+        },
+        solana_stake_program::stake_state,
     };
-    use solana_stake_program::stake_state;
-
-    use super::*;
-    use crate::derive_tip_distribution_account_address;
 
     #[test]
     fn test_generate_stake_meta_collection_happy_path() {

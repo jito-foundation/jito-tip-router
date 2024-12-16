@@ -2,10 +2,11 @@
 
 .developer
 node_modules
-tip-router-operator-cli/scripts/test-ledger
+test-ledger
 tip-router-operator-cli/scripts/test-validator-keys
 tip-router-operator-cli/scripts/validators.txt
-tip-router-operator-cli/test-ledger
+tip-router-operator-cli/tests/fixtures/local_validators.txt
+tip-router-operator-cli/tests/fixtures/keys
 
 # Debugging
 program_errors.json
