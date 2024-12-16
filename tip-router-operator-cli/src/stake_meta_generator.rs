@@ -322,7 +322,7 @@ mod tests {
         super::*,
         crate::derive_tip_distribution_account_address,
         anchor_lang::AccountSerialize,
-        jito_tip_distribution::state::TipDistributionAccount,
+        jito_tip_distribution_sdk::TIP_DISTRIBUTION_SIZE,
         jito_tip_payment::{
             InitBumps, TipPaymentAccount, CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0,
             TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2, TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4,
@@ -677,7 +677,7 @@ mod tests {
                     total_tips: tip_distro_0_tips
                         .checked_sub(
                             bank.get_minimum_balance_for_rent_exemption(
-                                TipDistributionAccount::SIZE,
+                                TIP_DISTRIBUTION_SIZE,
                             ),
                         )
                         .unwrap(),
@@ -703,7 +703,7 @@ mod tests {
                     total_tips: tip_distro_1_tips
                         .checked_sub(
                             bank.get_minimum_balance_for_rent_exemption(
-                                TipDistributionAccount::SIZE,
+                                TIP_DISTRIBUTION_SIZE,
                             ),
                         )
                         .unwrap(),
@@ -729,7 +729,7 @@ mod tests {
                     total_tips: tip_distro_2_tips
                         .checked_sub(
                             bank.get_minimum_balance_for_rent_exemption(
-                                TipDistributionAccount::SIZE,
+                                TIP_DISTRIBUTION_SIZE,
                             ),
                         )
                         .unwrap(),
@@ -854,11 +854,11 @@ mod tests {
     ) -> AccountSharedData {
         let mut account_data = AccountSharedData::new(
             lamports,
-            TipDistributionAccount::SIZE,
+            TIP_DISTRIBUTION_SIZE,
             tip_distribution_program_id,
         );
 
-        let mut data: [u8; TipDistributionAccount::SIZE] = [0u8; TipDistributionAccount::SIZE];
+        let mut data: [u8; TIP_DISTRIBUTION_SIZE] = [0u8; TIP_DISTRIBUTION_SIZE];
         let mut cursor = std::io::Cursor::new(&mut data[..]);
         tda.try_serialize(&mut cursor).unwrap();
 

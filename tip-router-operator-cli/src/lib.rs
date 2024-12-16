@@ -18,9 +18,9 @@ use std::{
 
 use anchor_lang::{prelude::*, Id};
 use ellipsis_client::EllipsisClient;
-use jito_tip_distribution::{
-    program::JitoTipDistribution,
-    state::{ClaimStatus, TipDistributionAccount},
+use jito_tip_distribution_sdk::{
+    jito_tip_distribution::accounts::{ClaimStatus, TipDistributionAccount},
+    TIP_DISTRIBUTION_SEED,
 };
 use jito_tip_payment::{
     Config, CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
@@ -310,7 +310,7 @@ pub fn derive_tip_distribution_account_address(
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
         &[
-            TipDistributionAccount::SEED,
+            TIP_DISTRIBUTION_SEED,
             vote_pubkey.to_bytes().as_ref(),
             epoch.to_le_bytes().as_ref(),
         ],

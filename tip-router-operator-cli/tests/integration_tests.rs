@@ -8,7 +8,7 @@ use std::{
 
 use anchor_lang::prelude::AnchorSerialize;
 use ellipsis_client::EllipsisClient;
-use jito_tip_distribution::{self, state::Config, ID as TIP_DISTRIBUTION_ID};
+use jito_tip_distribution_sdk::jito_tip_distribution::ID as TIP_DISTRIBUTION_ID;
 use jito_tip_payment::{self, ID as TIP_PAYMENT_ID};
 use meta_merkle_tree::{
     generated_merkle_tree::{
@@ -31,7 +31,7 @@ use solana_sdk::{
 use tempfile::TempDir;
 use thiserror::Error;
 use tip_router_operator_cli::{
-    claim_mev_workflow, merkle_root_generator_workflow, merkle_root_upload_workflow, process_epoch,
+    process_epoch,
     Cli, Commands, TipAccountConfig,
 };
 
@@ -252,11 +252,10 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
     let remaining_tips = TOTAL_TIPS - protocol_fee_amount - validator_fee_amount;
 
     // Then use it in generate_merkle_root
-    let merkle_tree_coll = merkle_root_generator_workflow::generate_merkle_root(
+    let merkle_tree_coll = MetaMerkleTreeCollection::new_from_stake_meta_collection(
         stake_meta_collection.clone(),
         PROTOCOL_FEE_BPS,
-    )
-    .await?;
+    ).unwrap();
 
     let generated_tree = &merkle_tree_coll.generated_merkle_trees[0];
 
