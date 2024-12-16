@@ -2327,16 +2327,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gethostname"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0176e0459c2e4a1fe232f984bca6890e681076abb9934f6cea7c326f3fc47818"
-dependencies = [
- "libc",
- "windows-targets 0.48.5",
-]
-
-[[package]]
 name = "getrandom"
 version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6211,19 +6201,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dae93c2bfe6a19a652d9b7c5c085540aac1e5ed6504d40ed0cb7271c935121b"
 
 [[package]]
-name = "solana-download-utils"
-version = "1.18.26"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5#0bbcbe476c0e728907ac01135115e661c16538e5"
-dependencies = [
- "console",
- "indicatif",
- "log",
- "reqwest",
- "solana-runtime 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-sdk",
-]
-
-[[package]]
 name = "solana-entry"
 version = "1.18.26"
 source = "git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5#0bbcbe476c0e728907ac01135115e661c16538e5"
@@ -6337,18 +6314,6 @@ dependencies = [
  "quote 1.0.37",
  "rustc_version",
  "syn 2.0.90",
-]
-
-[[package]]
-name = "solana-genesis-utils"
-version = "1.18.26"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5#0bbcbe476c0e728907ac01135115e661c16538e5"
-dependencies = [
- "log",
- "solana-accounts-db 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-download-utils",
- "solana-rpc-client",
- "solana-sdk",
 ]
 
 [[package]]
@@ -6596,7 +6561,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71e36052aff6be1536bdf6f737c6e69aca9dbb6a2f3f582e14ecb0ddc0cd66ce"
 dependencies = [
  "crossbeam-channel",
- "gethostname 0.2.3",
+ "gethostname",
  "lazy_static",
  "log",
  "reqwest",
@@ -6610,7 +6575,7 @@ version = "1.18.26"
 source = "git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5#0bbcbe476c0e728907ac01135115e661c16538e5"
 dependencies = [
  "crossbeam-channel",
- "gethostname 0.2.3",
+ "gethostname",
  "lazy_static",
  "log",
  "reqwest",
@@ -7963,7 +7928,7 @@ dependencies = [
  "solana-account-decoder 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-sdk",
  "spl-associated-token-account",
- "spl-memo 4.0.0",
+ "spl-memo",
  "spl-token",
  "spl-token-2022 1.0.0",
  "thiserror",
@@ -8336,15 +8301,6 @@ dependencies = [
 
 [[package]]
 name = "spl-memo"
-version = "3.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd0dc6f70db6bacea7ff25870b016a65ba1d1b6013536f08e4fd79a8f9005325"
-dependencies = [
- "solana-program 1.18.26",
-]
-
-[[package]]
-name = "spl-memo"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0f180b03318c3dbab3ef4e1e4d46d5211ae3c780940dd0a28695aba4b59a75a"
@@ -8485,7 +8441,7 @@ dependencies = [
  "solana-program 1.18.26",
  "solana-security-txt",
  "solana-zk-token-sdk 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "spl-memo 4.0.0",
+ "spl-memo",
  "spl-pod 0.1.0",
  "spl-token",
  "spl-token-group-interface 0.1.0",
@@ -8509,7 +8465,7 @@ dependencies = [
  "solana-program 1.18.26",
  "solana-security-txt",
  "solana-zk-token-sdk 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "spl-memo 4.0.0",
+ "spl-memo",
  "spl-pod 0.2.5",
  "spl-token",
  "spl-token-group-interface 0.2.5",
@@ -9011,14 +8967,11 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang 0.30.1",
  "anyhow",
- "bincode",
  "bzip2",
  "clap 4.5.23",
- "crossbeam-channel",
  "ellipsis-client",
  "env_logger 0.10.2",
  "futures",
- "gethostname 0.4.3",
  "im",
  "itertools 0.11.0",
  "jito-restaking-program",
@@ -9029,21 +8982,15 @@ dependencies = [
  "jito-tip-router-program",
  "log",
  "meta-merkle-tree",
- "num-traits",
  "rand 0.8.5",
  "serde",
  "serde_json",
- "solana-account-decoder 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-accounts-db 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-cli-config",
  "solana-client 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "solana-genesis-utils",
  "solana-ledger",
- "solana-measure 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-merkle-tree",
  "solana-metrics 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-program 1.18.26",
- "solana-program-runtime 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-program-test 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-rpc-client",
  "solana-rpc-client-api",
@@ -9052,14 +8999,10 @@ dependencies = [
  "solana-stake-program 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
  "solana-transaction-status",
  "solana-vote 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
- "spl-memo 3.0.1",
- "spl-token",
- "spl-token-2022 1.0.0",
  "tar",
  "tempfile",
  "thiserror",
  "tokio",
- "tokio-test",
 ]
 
 [[package]]
@@ -9146,19 +9089,6 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
-]
-
-[[package]]
-name = "tokio-test"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2468baabc3311435b55dd935f702f42cd1b8abb7e754fb7dfb16bd36aa88f9f7"
-dependencies = [
- "async-stream",
- "bytes",
- "futures-core",
- "tokio",
- "tokio-stream",
 ]
 
 [[package]]
