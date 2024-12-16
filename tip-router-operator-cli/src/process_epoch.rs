@@ -9,8 +9,7 @@ use std::{
 use anyhow::Result;
 use log::info;
 use meta_merkle_tree::{
-    generated_merkle_tree::GeneratedMerkleTreeCollection as MetaMerkleTreeCollection,
-    meta_merkle_tree::MetaMerkleTree,
+    generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
 };
 use solana_metrics::datapoint_info;
 use solana_rpc_client::rpc_client::RpcClient;
@@ -19,9 +18,7 @@ use solana_sdk::{
     signer::keypair::{read_keypair_file, Keypair},
 };
 
-use crate::{
-    stake_meta_generator, Cli, GeneratedMerkleTreeCollection, StakeMetaCollection,
-};
+use crate::{stake_meta_generator, Cli};
 
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient) -> Result<()> {
     let current_epoch = rpc_client.get_epoch_info()?.epoch;
@@ -61,7 +58,6 @@ pub async fn process_epoch(
     tip_payment_program_id: &Pubkey,
     ncn_address: &Pubkey,
 ) -> Result<()> {
-
     info!("Successfully completed all steps for epoch processing");
     Ok(())
 }

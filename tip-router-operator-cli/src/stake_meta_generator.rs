@@ -1,13 +1,16 @@
 use {
     crate::{
         derive_tip_distribution_account_address, derive_tip_payment_pubkeys,
-        ledger_utils::get_bank_from_ledger, Config, StakeMeta, StakeMetaCollection,
-        TipDistributionAccount, TipDistributionAccountWrapper, TipDistributionMeta,
+        ledger_utils::get_bank_from_ledger, TipDistributionAccountWrapper,
     },
     anchor_lang::AccountDeserialize,
     itertools::Itertools,
-    jito_tip_payment::CONFIG_ACCOUNT_SEED,
+    jito_tip_distribution_sdk::TipDistributionAccount,
+    jito_tip_payment::{Config, CONFIG_ACCOUNT_SEED},
     log::*,
+    meta_merkle_tree::generated_merkle_tree::{
+        Delegation, StakeMeta, StakeMetaCollection, TipDistributionMeta,
+    },
     solana_accounts_db::hardened_unpack::{
         open_genesis_config, OpenGenesisConfigError, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
     },
@@ -114,6 +117,27 @@ fn write_to_json_file(
     writer.flush()?;
 
     Ok(())
+}
+
+fn tip_distributuon_account_from_tda_wrapper(
+    tda_wrapper: TipDistributionAccountWrapper,
+    // The amount that will be left remaining in the tda to maintain rent exemption status.
+    rent_exempt_amount: u64,
+) -> Result<TipDistributionMeta, StakeMetaGeneratorError> {
+    Ok(TipDistributionMeta {
+        tip_distribution_pubkey: tda_wrapper.tip_distribution_pubkey,
+        total_tips: tda_wrapper
+            .account_data
+            .lamports()
+            .checked_sub(rent_exempt_amount)
+            .ok_or(StakeMetaGeneratorError::CheckedMathError)?,
+        validator_fee_bps: tda_wrapper
+            .tip_distribution_account
+            .validator_commission_bps,
+        merkle_root_upload_authority: tda_wrapper
+            .tip_distribution_account
+            .merkle_root_upload_authority,
+    })
 }
 
 /// Creates a collection of [StakeMeta]'s from the given bank.
@@ -237,7 +261,7 @@ pub fn generate_stake_meta_collection(
                 let rent_exempt_amount =
                     bank.get_minimum_balance_for_rent_exemption(tda.account_data.data().len());
 
-                Some(TipDistributionMeta::from_tda_wrapper(
+                Some(tip_distributuon_account_from_tda_wrapper(
                     tda,
                     rent_exempt_amount,
                 )?)
@@ -276,7 +300,7 @@ pub fn generate_stake_meta_collection(
 fn group_delegations_by_voter_pubkey(
     delegations: &im::HashMap<Pubkey, StakeAccount>,
     bank: &Bank,
-) -> HashMap<Pubkey, Vec<crate::Delegation>> {
+) -> HashMap<Pubkey, Vec<Delegation>> {
     delegations
         .into_iter()
         .filter(|(_stake_pubkey, stake_account)| {
@@ -296,7 +320,7 @@ fn group_delegations_by_voter_pubkey(
                 voter_pubkey,
                 group
                     .into_iter()
-                    .map(|(stake_pubkey, stake_account)| crate::Delegation {
+                    .map(|(stake_pubkey, stake_account)| Delegation {
                         stake_account_pubkey: *stake_pubkey,
                         staker_pubkey: stake_account
                             .stake_state()
@@ -310,7 +334,7 @@ fn group_delegations_by_voter_pubkey(
                             .unwrap_or_default(),
                         lamports_delegated: stake_account.delegation().stake,
                     })
-                    .collect::<Vec<crate::Delegation>>(),
+                    .collect::<Vec<Delegation>>(),
             )
         })
         .collect()
@@ -417,7 +441,7 @@ mod tests {
         bank.store_account(&delegator_4_pk, &d_4_data);
 
         /* 3. Delegate some stake to the initial set of validators */
-        let mut validator_0_delegations = vec![crate::Delegation {
+        let mut validator_0_delegations = vec![Delegation {
             stake_account_pubkey: validator_keypairs_0.stake_keypair.pubkey(),
             staker_pubkey: validator_keypairs_0.stake_keypair.pubkey(),
             withdrawer_pubkey: validator_keypairs_0.stake_keypair.pubkey(),
@@ -429,7 +453,7 @@ mod tests {
             &validator_keypairs_0.vote_keypair.pubkey(),
             30_000_000_000,
         );
-        validator_0_delegations.push(crate::Delegation {
+        validator_0_delegations.push(Delegation {
             stake_account_pubkey: stake_account,
             staker_pubkey: delegator_0.pubkey(),
             withdrawer_pubkey: delegator_0.pubkey(),
@@ -441,7 +465,7 @@ mod tests {
             &validator_keypairs_0.vote_keypair.pubkey(),
             3_000_000_000,
         );
-        validator_0_delegations.push(crate::Delegation {
+        validator_0_delegations.push(Delegation {
             stake_account_pubkey: stake_account,
             staker_pubkey: delegator_1.pubkey(),
             withdrawer_pubkey: delegator_1.pubkey(),
@@ -453,14 +477,14 @@ mod tests {
             &validator_keypairs_0.vote_keypair.pubkey(),
             33_000_000_000,
         );
-        validator_0_delegations.push(crate::Delegation {
+        validator_0_delegations.push(Delegation {
             stake_account_pubkey: stake_account,
             staker_pubkey: delegator_2.pubkey(),
             withdrawer_pubkey: delegator_2.pubkey(),
             lamports_delegated: 33_000_000_000,
         });
 
-        let mut validator_1_delegations = vec![crate::Delegation {
+        let mut validator_1_delegations = vec![Delegation {
             stake_account_pubkey: validator_keypairs_1.stake_keypair.pubkey(),
             staker_pubkey: validator_keypairs_1.stake_keypair.pubkey(),
             withdrawer_pubkey: validator_keypairs_1.stake_keypair.pubkey(),
@@ -472,7 +496,7 @@ mod tests {
             &validator_keypairs_1.vote_keypair.pubkey(),
             4_222_364_000,
         );
-        validator_1_delegations.push(crate::Delegation {
+        validator_1_delegations.push(Delegation {
             stake_account_pubkey: stake_account,
             staker_pubkey: delegator_3.pubkey(),
             withdrawer_pubkey: delegator_3.pubkey(),
@@ -484,14 +508,14 @@ mod tests {
             &validator_keypairs_1.vote_keypair.pubkey(),
             6_000_000_527,
         );
-        validator_1_delegations.push(crate::Delegation {
+        validator_1_delegations.push(Delegation {
             stake_account_pubkey: stake_account,
             staker_pubkey: delegator_4.pubkey(),
             withdrawer_pubkey: delegator_4.pubkey(),
             lamports_delegated: 6_000_000_527,
         });
 
-        let mut validator_2_delegations = vec![crate::Delegation {
+        let mut validator_2_delegations = vec![Delegation {
             stake_account_pubkey: validator_keypairs_2.stake_keypair.pubkey(),
             staker_pubkey: validator_keypairs_2.stake_keypair.pubkey(),
             withdrawer_pubkey: validator_keypairs_2.stake_keypair.pubkey(),
@@ -503,7 +527,7 @@ mod tests {
             &validator_keypairs_2.vote_keypair.pubkey(),
             1_300_123_156,
         );
-        validator_2_delegations.push(crate::Delegation {
+        validator_2_delegations.push(Delegation {
             stake_account_pubkey: stake_account,
             staker_pubkey: delegator_0.pubkey(),
             withdrawer_pubkey: delegator_0.pubkey(),
@@ -515,7 +539,7 @@ mod tests {
             &validator_keypairs_2.vote_keypair.pubkey(),
             1_610_565_420,
         );
-        validator_2_delegations.push(crate::Delegation {
+        validator_2_delegations.push(Delegation {
             stake_account_pubkey: stake_account,
             staker_pubkey: delegator_4.pubkey(),
             withdrawer_pubkey: delegator_4.pubkey(),
@@ -676,9 +700,7 @@ mod tests {
                     tip_distribution_pubkey: tda_0_fields.0,
                     total_tips: tip_distro_0_tips
                         .checked_sub(
-                            bank.get_minimum_balance_for_rent_exemption(
-                                TIP_DISTRIBUTION_SIZE,
-                            ),
+                            bank.get_minimum_balance_for_rent_exemption(TIP_DISTRIBUTION_SIZE),
                         )
                         .unwrap(),
                     validator_fee_bps: tda_0_fields.1,
@@ -702,9 +724,7 @@ mod tests {
                     tip_distribution_pubkey: tda_1_fields.0,
                     total_tips: tip_distro_1_tips
                         .checked_sub(
-                            bank.get_minimum_balance_for_rent_exemption(
-                                TIP_DISTRIBUTION_SIZE,
-                            ),
+                            bank.get_minimum_balance_for_rent_exemption(TIP_DISTRIBUTION_SIZE),
                         )
                         .unwrap(),
                     validator_fee_bps: tda_1_fields.1,
@@ -728,9 +748,7 @@ mod tests {
                     tip_distribution_pubkey: tda_2_fields.0,
                     total_tips: tip_distro_2_tips
                         .checked_sub(
-                            bank.get_minimum_balance_for_rent_exemption(
-                                TIP_DISTRIBUTION_SIZE,
-                            ),
+                            bank.get_minimum_balance_for_rent_exemption(TIP_DISTRIBUTION_SIZE),
                         )
                         .unwrap(),
                     validator_fee_bps: tda_2_fields.1,
@@ -852,11 +870,8 @@ mod tests {
         lamports: u64,
         tda: TipDistributionAccount,
     ) -> AccountSharedData {
-        let mut account_data = AccountSharedData::new(
-            lamports,
-            TIP_DISTRIBUTION_SIZE,
-            tip_distribution_program_id,
-        );
+        let mut account_data =
+            AccountSharedData::new(lamports, TIP_DISTRIBUTION_SIZE, tip_distribution_program_id);
 
         let mut data: [u8; TIP_DISTRIBUTION_SIZE] = [0u8; TIP_DISTRIBUTION_SIZE];
         let mut cursor = std::io::Cursor::new(&mut data[..]);
