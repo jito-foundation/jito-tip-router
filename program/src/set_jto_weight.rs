@@ -38,14 +38,15 @@ pub fn process_set_jto_weight(
             .map_err(|_| TipRouterError::BadSwitchboardFeed)?;
         let price: Decimal = feed.value().ok_or(TipRouterError::BadSwitchboardValue)?;
 
-        let slot_delta = {
-            let current_slot = Clock::get()?.slot;
-            current_slot
-                .checked_sub(feed.result.slot)
-                .ok_or(TipRouterError::ArithmeticUnderflowError)?
+        let current_slot = Clock::get()?.slot;
+        let stale_slot = {
+            feed.result
+                .slot
+                .checked_add(MAX_STALE_SLOTS)
+                .ok_or(TipRouterError::ArithmeticOverflow)?
         };
 
-        if slot_delta > MAX_STALE_SLOTS {
+        if current_slot > stale_slot {
             msg!("Stale feed");
             return Err(ProgramError::InvalidAccountData);
         }
