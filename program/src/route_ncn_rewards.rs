@@ -5,8 +5,8 @@ use jito_tip_router_core::{
     ncn_reward_router::NcnRewardRouter,
 };
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, log::sol_log_compute_units, msg,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
+    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
 /// Can be backfilled for previous epochs

@@ -1,6 +1,7 @@
 pub mod ballot_box;
 pub mod base_fee_group;
 pub mod base_reward_router;
+pub mod claim_status_payer;
 pub mod constants;
 pub mod discriminators;
 pub mod epoch_snapshot;
@@ -16,4 +17,3 @@ pub mod tracked_mints;
 pub mod utils;
 pub mod weight_entry;
 pub mod weight_table;
-pub mod claim_status_payer;

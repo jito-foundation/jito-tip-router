@@ -1,5 +1,6 @@
 mod admin_update_weight_table;
 mod cast_vote;
+mod claim_with_payer;
 mod distribute_base_ncn_reward_route;
 mod distribute_base_rewards;
 mod distribute_ncn_operator_rewards;
@@ -25,7 +26,6 @@ mod set_new_admin;
 mod set_tie_breaker;
 mod set_tracked_mint_ncn_fee_group;
 mod snapshot_vault_operator_delegation;
-mod claim_with_payer;
 
 use borsh::BorshDeserialize;
 use const_str_to_pubkey::str_to_pubkey;
@@ -40,6 +40,7 @@ use solana_security_txt::security_txt;
 
 use crate::{
     admin_update_weight_table::process_admin_update_weight_table, cast_vote::process_cast_vote,
+    claim_with_payer::process_claim_with_payer,
     distribute_base_ncn_reward_route::process_distribute_base_ncn_reward_route,
     distribute_base_rewards::process_distribute_base_rewards,
     distribute_ncn_operator_rewards::process_distribute_ncn_operator_rewards,
@@ -61,7 +62,6 @@ use crate::{
     set_tie_breaker::process_set_tie_breaker,
     set_tracked_mint_ncn_fee_group::process_set_tracked_mint_ncn_fee_group,
     snapshot_vault_operator_delegation::process_snapshot_vault_operator_delegation,
-    claim_with_payer::process_claim_with_payer,
 };
 
 declare_id!(str_to_pubkey(env!("TIP_ROUTER_PROGRAM_ID")));

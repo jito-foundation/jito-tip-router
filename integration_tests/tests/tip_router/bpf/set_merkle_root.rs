@@ -24,7 +24,6 @@ mod set_merkle_root {
             TestResult,
         },
         helpers::ballot_box::serialized_ballot_box_account,
-        tip_router,
     };
 
     struct GeneratedMerkleTreeCollectionFixture {
