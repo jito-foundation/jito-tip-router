@@ -70,7 +70,7 @@ mod tests {
         let tracked_mints = tip_router_client
             .get_tracked_mints(ncn_root.ncn_pubkey)
             .await?;
-        assert_eq!(tracked_mints.mint_count(), 1);
+        assert_eq!(tracked_mints.vault_count(), 1);
 
         Ok(())
     }
@@ -177,7 +177,7 @@ mod tests {
         let tracked_mints = tip_router_client
             .get_tracked_mints(ncn_root.ncn_pubkey)
             .await?;
-        assert_eq!(tracked_mints.mint_count(), 1);
+        assert_eq!(tracked_mints.vault_count(), 1);
 
         Ok(())
     }

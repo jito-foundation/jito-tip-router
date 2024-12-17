@@ -76,7 +76,7 @@ pub fn process_initialize_ncn_config(
         program_id,
         &Rent::get()?,
         8_u64
-            .checked_add(std::mem::size_of::<NcnConfig>() as u64)
+            .checked_add(std::mem::size_of::<Config>() as u64)
             .unwrap(),
         &config_seeds,
     )?;

@@ -12,7 +12,7 @@ pub mod ncn_config;
 pub mod ncn_fee_group;
 pub mod ncn_reward_router;
 pub mod stake_weight;
-pub mod tracked_mints;
 pub mod utils;
+pub mod vault_registry;
 pub mod weight_entry;
 pub mod weight_table;

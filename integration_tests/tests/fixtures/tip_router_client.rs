@@ -26,10 +26,10 @@ use jito_tip_router_core::{
     constants::MAX_REALLOC_BYTES,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     error::TipRouterError,
-    ncn_config::NcnConfig,
+    ncn_config::{Config, NcnConfig},
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::NcnRewardRouter,
-    tracked_mints::TrackedMints,
+    vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
 use jito_vault_core::{
@@ -114,22 +114,22 @@ impl TipRouterClient {
         Ok(*Config::try_from_slice_unchecked(restaking_config_data.data.as_slice()).unwrap())
     }
 
-    pub async fn get_ncn_config(&mut self, ncn_pubkey: Pubkey) -> TestResult<NcnConfig> {
+    pub async fn get_ncn_config(&mut self, ncn_pubkey: Pubkey) -> TestResult<Config> {
         let config_pda =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_pubkey).0;
         let config = self.banks_client.get_account(config_pda).await?.unwrap();
-        Ok(*NcnConfig::try_from_slice_unchecked(config.data.as_slice()).unwrap())
+        Ok(*Config::try_from_slice_unchecked(config.data.as_slice()).unwrap())
     }
 
-    pub async fn get_tracked_mints(&mut self, ncn_pubkey: Pubkey) -> TestResult<TrackedMints> {
+    pub async fn get_tracked_mints(&mut self, ncn_pubkey: Pubkey) -> TestResult<VaultRegistry> {
         let tracked_mints_pda =
-            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn_pubkey).0;
+            VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn_pubkey).0;
         let tracked_mints = self
             .banks_client
             .get_account(tracked_mints_pda)
             .await?
             .unwrap();
-        Ok(*TrackedMints::try_from_slice_unchecked(tracked_mints.data.as_slice()).unwrap())
+        Ok(*VaultRegistry::try_from_slice_unchecked(tracked_mints.data.as_slice()).unwrap())
     }
 
     #[allow(dead_code)]
@@ -432,7 +432,7 @@ impl TipRouterClient {
     pub async fn initialize_weight_table(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<()> {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
         let tracked_mints_pda =
-            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+            VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
@@ -501,7 +501,7 @@ impl TipRouterClient {
     pub async fn do_initialize_tracked_mints(&mut self, ncn: Pubkey) -> TestResult<()> {
         let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let tracked_mints =
-            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+            VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         self.initialize_tracked_mints(&ncn_config, &tracked_mints, &ncn)
             .await
@@ -541,7 +541,7 @@ impl TipRouterClient {
         let restaking_config_address =
             Config::find_program_address(&jito_restaking_program::id()).0;
         let tracked_mints =
-            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+            VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         let epoch = self.banks_client.get_sysvar::<Clock>().await?.epoch;
         let weight_table =
@@ -612,7 +612,7 @@ impl TipRouterClient {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let tracked_mints =
-            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+            VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
@@ -657,7 +657,7 @@ impl TipRouterClient {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
         let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let tracked_mints =
-            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+            VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
         let epoch_snapshot =
@@ -805,7 +805,7 @@ impl TipRouterClient {
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let tracked_mints =
-            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+            VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         let ix = SnapshotVaultOperatorDelegationBuilder::new()
             .ncn_config(config_pda)
@@ -851,7 +851,7 @@ impl TipRouterClient {
         ncn: Pubkey,
         epoch: u64,
     ) -> Result<(), TestError> {
-        let ncn_config = jito_tip_router_core::ncn_config::NcnConfig::find_program_address(
+        let ncn_config = jito_tip_router_core::ncn_config::Config::find_program_address(
             &jito_tip_router_program::id(),
             &ncn,
         )
@@ -899,7 +899,7 @@ impl TipRouterClient {
         epoch: u64,
         num_reallocations: u64,
     ) -> Result<(), TestError> {
-        let ncn_config = jito_tip_router_core::ncn_config::NcnConfig::find_program_address(
+        let ncn_config = jito_tip_router_core::ncn_config::Config::find_program_address(
             &jito_tip_router_program::id(),
             &ncn,
         )
@@ -952,7 +952,7 @@ impl TipRouterClient {
         meta_merkle_root: [u8; 32],
         epoch: u64,
     ) -> Result<(), TestError> {
-        let ncn_config = jito_tip_router_core::ncn_config::NcnConfig::find_program_address(
+        let ncn_config = jito_tip_router_core::ncn_config::Config::find_program_address(
             &jito_tip_router_program::id(),
             &ncn,
         )
@@ -1041,7 +1041,7 @@ impl TipRouterClient {
         max_num_nodes: u64,
         epoch: u64,
     ) -> Result<(), TestError> {
-        let ncn_config = jito_tip_router_core::ncn_config::NcnConfig::find_program_address(
+        let ncn_config = jito_tip_router_core::ncn_config::Config::find_program_address(
             &jito_tip_router_program::id(),
             &ncn,
         )
@@ -1128,7 +1128,7 @@ impl TipRouterClient {
         meta_merkle_root: [u8; 32],
         epoch: u64,
     ) -> Result<(), TestError> {
-        let ncn_config = jito_tip_router_core::ncn_config::NcnConfig::find_program_address(
+        let ncn_config = jito_tip_router_core::ncn_config::Config::find_program_address(
             &jito_tip_router_program::id(),
             &ncn,
         )
@@ -1813,7 +1813,7 @@ impl TipRouterClient {
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
         let tracked_mints =
-            TrackedMints::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+            VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         self.realloc_weight_table(
             ncn_config,

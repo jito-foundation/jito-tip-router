@@ -70,7 +70,7 @@ mod tests {
         let tracked_mints = tip_router_client
             .get_tracked_mints(ncn_root.ncn_pubkey)
             .await?;
-        assert_eq!(tracked_mints.mint_count(), 1);
+        assert_eq!(tracked_mints.vault_count(), 1);
         let epoch = fixture.clock().await.epoch;
 
         let new_ncn_fee_group = NcnFeeGroup::new(NcnFeeGroupType::Reserved7);
@@ -83,9 +83,9 @@ mod tests {
             .get_tracked_mints(ncn_root.ncn_pubkey)
             .await?;
 
-        assert_eq!(tracked_mints.mint_count(), 1);
+        assert_eq!(tracked_mints.vault_count(), 1);
         assert_eq!(
-            tracked_mints.st_mint_list[0].ncn_fee_group(),
+            tracked_mints.vault_list[0].ncn_fee_group(),
             new_ncn_fee_group
         );
 
@@ -163,9 +163,9 @@ mod tests {
                 .get_tracked_mints(ncn_root.ncn_pubkey)
                 .await?;
 
-            assert_eq!(tracked_mints.mint_count(), 1);
+            assert_eq!(tracked_mints.vault_count(), 1);
             assert_eq!(
-                tracked_mints.st_mint_list[0].ncn_fee_group(),
+                tracked_mints.vault_list[0].ncn_fee_group(),
                 new_ncn_fee_group
             );
         }

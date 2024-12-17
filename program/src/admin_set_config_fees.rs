@@ -45,7 +45,7 @@ pub fn process_set_config_fees(
     };
 
     let mut config_data = config.try_borrow_mut_data()?;
-    if config_data[0] != NcnConfig::DISCRIMINATOR {
+    if config_data[0] != Config::DISCRIMINATOR {
         return Err(ProgramError::InvalidAccountData);
     }
     let config = NcnConfig::try_from_slice_unchecked_mut(&mut config_data)?;

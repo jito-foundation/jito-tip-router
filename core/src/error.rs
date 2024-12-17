@@ -26,6 +26,8 @@ pub enum TipRouterError {
     DuplicateMintsInTable,
     #[error("There are no mints in the table")]
     NoMintsInTable,
+    #[error("Mint is already in the table")]
+    MintInTable,
     #[error("Too many mints for table")]
     TooManyMintsForTable,
     #[error("Weight table already initialized")]

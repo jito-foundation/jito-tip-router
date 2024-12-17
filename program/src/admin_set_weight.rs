@@ -8,7 +8,7 @@ use solana_program::{
 };
 
 /// Updates weight table
-pub fn process_admin_update_weight_table(
+pub fn process_admin_set_weight_table(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     ncn_epoch: u64,

@@ -15,7 +15,7 @@ use solana_program::{
     sysvar::{clock::Clock, Sysvar},
 };
 
-pub fn process_register_mint(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+pub fn process_register_vault(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     let [restaking_config, tracked_mints, ncn, weight_table, vault, vault_ncn_ticket, ncn_vault_ticket, restaking_program_id, vault_program_id] =
         accounts
     else {
@@ -43,8 +43,9 @@ pub fn process_register_mint(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
     let slot = clock.slot;
     let epoch = clock.epoch;
 
-    // Once tracked_mints.mint_count() == ncn.vault_count, the weight table can be initialized
+    // Once tracked_mints.vault_count() == ncn.vault_count, the weight table can be initialized
     // Once the weight table is initialized, you can't add any more mints
+    //TODO I don't agree with this the weight table can snapshot
     if weight_table.owner.eq(&system_program::ID) {
         let expected_pubkey = WeightTable::find_program_address(program_id, ncn.key, epoch).0;
         if weight_table.key.ne(&expected_pubkey) {
@@ -87,7 +88,7 @@ pub fn process_register_mint(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
 
     let mut tracked_mints_data = tracked_mints.try_borrow_mut_data()?;
     let tracked_mints = TrackedMints::try_from_slice_unchecked_mut(&mut tracked_mints_data)?;
-    tracked_mints.add_mint(vault.supported_mint, vault.vault_index())?;
+    tracked_mints.add_vault(vault.supported_mint, vault.vault_index())?;
 
     Ok(())
 }

@@ -1,4 +1,8 @@
-mod admin_update_weight_table;
+mod admin_set_config_fees;
+mod admin_set_new_admin;
+mod admin_set_registered_st_mint;
+mod admin_set_tie_breaker;
+mod admin_set_weight;
 mod cast_vote;
 mod distribute_base_ncn_reward_route;
 mod distribute_base_rewards;
@@ -10,26 +14,23 @@ mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
 mod initialize_ncn_reward_router;
 mod initialize_operator_snapshot;
-mod initialize_tracked_mints;
+mod initialize_vault_registry;
 mod initialize_weight_table;
 mod realloc_ballot_box;
 mod realloc_base_reward_router;
 mod realloc_operator_snapshot;
 mod realloc_weight_table;
-mod register_mint;
+mod register_vault;
 mod route_base_rewards;
 mod route_ncn_rewards;
-mod set_config_fees;
 mod set_merkle_root;
-mod set_new_admin;
-mod set_tie_breaker;
-mod set_tracked_mint_ncn_fee_group;
+mod set_weight;
 mod snapshot_vault_operator_delegation;
 
+use admin_set_new_admin::process_set_new_admin;
 use borsh::BorshDeserialize;
 use const_str_to_pubkey::str_to_pubkey;
 use jito_tip_router_core::instruction::TipRouterInstruction;
-use set_new_admin::process_set_new_admin;
 use solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult, msg,
     program_error::ProgramError, pubkey::Pubkey,
@@ -38,7 +39,10 @@ use solana_program::{
 use solana_security_txt::security_txt;
 
 use crate::{
-    admin_update_weight_table::process_admin_update_weight_table, cast_vote::process_cast_vote,
+    admin_set_config_fees::process_set_config_fees,
+    admin_set_registered_st_mint::process_set_tracked_mint_ncn_fee_group,
+    admin_set_tie_breaker::process_set_tie_breaker,
+    admin_set_weight::process_admin_set_weight_table, cast_vote::process_cast_vote,
     distribute_base_ncn_reward_route::process_distribute_base_ncn_reward_route,
     distribute_base_rewards::process_distribute_base_rewards,
     distribute_ncn_operator_rewards::process_distribute_ncn_operator_rewards,
@@ -49,16 +53,14 @@ use crate::{
     initialize_ncn_config::process_initialize_ncn_config,
     initialize_ncn_reward_router::process_initialize_ncn_reward_router,
     initialize_operator_snapshot::process_initialize_operator_snapshot,
-    initialize_tracked_mints::process_initialize_tracked_mints,
+    initialize_vault_registry::process_initialize_vault_registry,
     initialize_weight_table::process_initialize_weight_table,
     realloc_ballot_box::process_realloc_ballot_box,
     realloc_base_reward_router::process_realloc_base_reward_router,
     realloc_operator_snapshot::process_realloc_operator_snapshot,
-    realloc_weight_table::process_realloc_weight_table, register_mint::process_register_mint,
+    realloc_weight_table::process_realloc_weight_table, register_vault::process_register_vault,
     route_base_rewards::process_route_base_rewards, route_ncn_rewards::process_route_ncn_rewards,
-    set_config_fees::process_set_config_fees, set_merkle_root::process_set_merkle_root,
-    set_tie_breaker::process_set_tie_breaker,
-    set_tracked_mint_ncn_fee_group::process_set_tracked_mint_ncn_fee_group,
+    set_merkle_root::process_set_merkle_root,
     snapshot_vault_operator_delegation::process_snapshot_vault_operator_delegation,
 };
 
@@ -94,7 +96,7 @@ pub fn process_instruction(
         // ------------------------------------------
         // Initialization
         // ------------------------------------------
-        TipRouterInstruction::InitializeNCNConfig {
+        TipRouterInstruction::InitializeConfig {
             block_engine_fee_bps,
             dao_fee_bps,
             default_ncn_fee_bps,
@@ -108,9 +110,9 @@ pub fn process_instruction(
                 default_ncn_fee_bps,
             )
         }
-        TipRouterInstruction::InitializeTrackedMints => {
+        TipRouterInstruction::InitializeVaultRegistry => {
             msg!("Instruction: InitializeTrackedMints");
-            process_initialize_tracked_mints(program_id, accounts)
+            process_initialize_vault_registry(program_id, accounts)
         }
         TipRouterInstruction::InitializeWeightTable { epoch } => {
             msg!("Instruction: InitializeWeightTable");
@@ -185,9 +187,9 @@ pub fn process_instruction(
         // ------------------------------------------
         // Update
         // ------------------------------------------
-        TipRouterInstruction::AdminUpdateWeightTable { ncn_epoch, weight } => {
+        TipRouterInstruction::AdminSetWeight { ncn_epoch, weight } => {
             msg!("Instruction: UpdateWeightTable");
-            process_admin_update_weight_table(program_id, accounts, ncn_epoch, weight)
+            process_admin_set_weight_table(program_id, accounts, ncn_epoch, weight)
         }
         TipRouterInstruction::SetConfigFees {
             new_block_engine_fee_bps,
@@ -209,15 +211,15 @@ pub fn process_instruction(
                 new_ncn_fee_bps,
             )
         }
-        TipRouterInstruction::SetNewAdmin { role } => {
+        TipRouterInstruction::AdminSetNewAdmin { role } => {
             msg!("Instruction: SetNewAdmin");
             process_set_new_admin(program_id, accounts, role)
         }
-        TipRouterInstruction::RegisterMint => {
+        TipRouterInstruction::RegisterVault => {
             msg!("Instruction: RegisterMint");
-            process_register_mint(program_id, accounts)
+            process_register_vault(program_id, accounts)
         }
-        TipRouterInstruction::SetTrackedMintNcnFeeGroup {
+        TipRouterInstruction::AdminSetRegisteredStMint {
             vault_index,
             ncn_fee_group,
         } => {

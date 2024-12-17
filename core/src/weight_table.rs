@@ -1,4 +1,4 @@
-use std::{collections::HashSet, mem::size_of};
+use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
@@ -7,8 +7,8 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    constants::MAX_VAULT_OPERATOR_DELEGATIONS, discriminators::Discriminators,
-    error::TipRouterError, weight_entry::WeightEntry,
+    constants::MAX_ST_MINTS, discriminators::Discriminators, error::TipRouterError,
+    vault_registry::StMintEntry, weight_entry::WeightEntry,
 };
 
 // PDA'd ["WEIGHT_TABLE", NCN, NCN_EPOCH_SLOT]
@@ -19,11 +19,14 @@ pub struct WeightTable {
     /// this pushes the responsibility of managing the account to the NCN program.
     ncn: Pubkey,
 
-    /// The NCN epoch for which the weight table is valid
-    ncn_epoch: PodU64,
+    /// The epoch for which the weight table is valid
+    epoch: PodU64,
 
     /// Slot weight table was created
     slot_created: PodU64,
+
+    /// Number of vaults in tracked mints at the time of creation
+    vault_count: PodU64,
 
     /// Bump seed for the PDA
     bump: u8,
@@ -32,7 +35,7 @@ pub struct WeightTable {
     reserved: [u8; 128],
 
     /// The weight table
-    table: [WeightEntry; 64],
+    table: [WeightEntry; 32],
 }
 
 impl Discriminator for WeightTable {
@@ -42,14 +45,15 @@ impl Discriminator for WeightTable {
 impl WeightTable {
     pub const SIZE: usize = 8 + size_of::<Self>();
 
-    pub fn new(ncn: Pubkey, ncn_epoch: u64, slot_created: u64, bump: u8) -> Self {
+    pub fn new(ncn: Pubkey, epoch: u64, slot_created: u64, vault_count: u64, bump: u8) -> Self {
         Self {
             ncn,
-            ncn_epoch: PodU64::from(ncn_epoch),
+            epoch: PodU64::from(epoch),
             slot_created: PodU64::from(slot_created),
+            vault_count: PodU64::from(vault_count),
             bump,
             reserved: [0; 128],
-            table: [WeightEntry::default(); MAX_VAULT_OPERATOR_DELEGATIONS],
+            table: [WeightEntry::default(); MAX_ST_MINTS],
         }
     }
 
@@ -81,52 +85,43 @@ impl WeightTable {
         ncn: Pubkey,
         ncn_epoch: u64,
         slot_created: u64,
+        vault_count: u64,
         bump: u8,
-        config_supported_mints: &[Pubkey],
+        mint_entries: &[StMintEntry],
     ) -> Result<(), TipRouterError> {
         // Initializes field by field to avoid overflowing stack
         self.ncn = ncn;
-        self.ncn_epoch = PodU64::from(ncn_epoch);
+        self.epoch = PodU64::from(ncn_epoch);
         self.slot_created = PodU64::from(slot_created);
+        self.vault_count = PodU64::from(vault_count);
         self.bump = bump;
         self.reserved = [0; 128];
-        self.table = [WeightEntry::default(); MAX_VAULT_OPERATOR_DELEGATIONS];
-        self.set_supported_mints(config_supported_mints)?;
+        self.table = [WeightEntry::default(); MAX_ST_MINTS];
+        self.set_mint_entries(mint_entries)?;
         Ok(())
     }
 
-    fn set_supported_mints(
-        &mut self,
-        config_supported_mints: &[Pubkey],
-    ) -> Result<(), TipRouterError> {
+    fn set_mint_entries(&mut self, mint_entries: &[StMintEntry]) -> Result<(), TipRouterError> {
         if self.initialized() {
             return Err(TipRouterError::WeightTableAlreadyInitialized);
         }
 
         // Check for empty vector
-        if config_supported_mints.is_empty() {
+        if mint_entries.is_empty() {
             return Err(TipRouterError::NoMintsInTable);
         }
 
         // Check if vector exceeds maximum allowed entries
-        if config_supported_mints.len() > MAX_VAULT_OPERATOR_DELEGATIONS {
+        if mint_entries.len() > MAX_ST_MINTS {
             return Err(TipRouterError::TooManyMintsForTable);
         }
 
-        // Check for duplicates using nested iterators
-        let unique_mints: HashSet<_> = config_supported_mints.iter().collect();
-
-        if unique_mints.len() != config_supported_mints.len() {
-            return Err(TipRouterError::DuplicateMintsInTable);
-        }
-
         // Set table using iterator
-        self.table
-            .iter_mut()
-            .zip(config_supported_mints.iter())
-            .for_each(|(entry, &mint)| {
-                *entry = WeightEntry::new(mint);
-            });
+        self.table.iter_mut().zip(mint_entries.iter()).for_each(
+            |(weight_table_entry, &mint_entry)| {
+                *weight_table_entry = WeightEntry::new(mint_entry);
+            },
+        );
 
         self.check_initialized()?;
 
@@ -141,7 +136,7 @@ impl WeightTable {
     ) -> Result<(), TipRouterError> {
         self.table
             .iter_mut()
-            .find(|entry| entry.mint() == *mint)
+            .find(|entry| entry.st_mint() == *mint)
             .map_or(Err(TipRouterError::InvalidMintForWeightTable), |entry| {
                 entry.set_weight(weight, current_slot);
                 Ok(())
@@ -151,10 +146,17 @@ impl WeightTable {
     pub fn get_weight(&self, mint: &Pubkey) -> Result<u128, TipRouterError> {
         self.table
             .iter()
-            .find(|entry| entry.mint() == *mint)
+            .find(|entry| entry.st_mint() == *mint)
             .map_or(Err(TipRouterError::InvalidMintForWeightTable), |entry| {
                 Ok(entry.weight())
             })
+    }
+
+    pub fn get_weight_entry(&self, mint: &Pubkey) -> Result<&WeightEntry, TipRouterError> {
+        self.table
+            .iter()
+            .find(|entry| entry.st_mint() == *mint)
+            .ok_or(TipRouterError::InvalidMintForWeightTable)
     }
 
     pub fn get_precise_weight(&self, mint: &Pubkey) -> Result<PreciseNumber, TipRouterError> {
@@ -166,7 +168,7 @@ impl WeightTable {
         self.table
             .iter()
             .filter(|entry| !entry.is_empty())
-            .map(|entry| entry.mint())
+            .map(|entry| entry.st_mint())
             .collect()
     }
 
@@ -183,11 +185,15 @@ impl WeightTable {
     }
 
     pub fn ncn_epoch(&self) -> u64 {
-        self.ncn_epoch.into()
+        self.epoch.into()
     }
 
     pub fn slot_created(&self) -> u64 {
         self.slot_created.into()
+    }
+
+    pub fn vault_count(&self) -> u64 {
+        self.vault_count.into()
     }
 
     pub fn initialized(&self) -> bool {
@@ -244,9 +250,19 @@ mod tests {
     use solana_program::pubkey::Pubkey;
 
     use super::*;
+    use crate::ncn_fee_group::NcnFeeGroup;
 
-    fn get_test_pubkeys(count: usize) -> Vec<Pubkey> {
-        (0..count).map(|_| Pubkey::new_unique()).collect()
+    fn get_test_mint_entries(count: usize) -> Vec<StMintEntry> {
+        (0..count)
+            .map(|_| {
+                StMintEntry::new(
+                    Pubkey::new_unique(),
+                    NcnFeeGroup::default(),
+                    0,
+                    Pubkey::default(),
+                )
+            })
+            .collect()
     }
 
     #[test]
@@ -256,7 +272,7 @@ mod tests {
             + size_of::<PodU64>() // slot_created
             + 1 // bump
             + 128 // reserved
-            + size_of::<[WeightEntry; MAX_VAULT_OPERATOR_DELEGATIONS]>(); // weight table
+            + size_of::<[WeightEntry; MAX_ST_MINTS]>(); // weight table
 
         assert_eq!(size_of::<WeightTable>(), expected_total);
     }
@@ -264,21 +280,21 @@ mod tests {
     #[test]
     fn test_initialize_table_success() {
         let ncn = Pubkey::new_unique();
-        let mut table = WeightTable::new(ncn, 0, 0, 0);
+        let mut table = WeightTable::new(ncn, 0, 0, 0, 0);
         assert_eq!(table.mint_count(), 0);
 
-        let mints = get_test_pubkeys(2);
-        table.set_supported_mints(&mints).unwrap();
+        let mints = get_test_mint_entries(2);
+        table.set_mint_entries(&mints).unwrap();
         assert_eq!(table.mint_count(), 2);
     }
 
     #[test]
     fn test_initialize_table_too_many() {
         let ncn = Pubkey::new_unique();
-        let mut table = WeightTable::new(ncn, 0, 0, 0);
-        let many_mints = get_test_pubkeys(MAX_VAULT_OPERATOR_DELEGATIONS + 1);
+        let mut table = WeightTable::new(ncn, 0, 0, 0, 0);
+        let many_mints = get_test_mint_entries(MAX_ST_MINTS + 1);
         assert_eq!(
-            table.set_supported_mints(&many_mints),
+            table.set_mint_entries(&many_mints),
             Err(TipRouterError::TooManyMintsForTable)
         );
     }
@@ -286,22 +302,22 @@ mod tests {
     #[test]
     fn test_initialize_table_max() {
         let ncn = Pubkey::new_unique();
-        let mut table = WeightTable::new(ncn, 0, 0, 0);
-        let max_mints = get_test_pubkeys(MAX_VAULT_OPERATOR_DELEGATIONS);
-        table.set_supported_mints(&max_mints).unwrap();
-        assert_eq!(table.mint_count(), MAX_VAULT_OPERATOR_DELEGATIONS);
+        let mut table = WeightTable::new(ncn, 0, 0, 0, 0);
+        let max_mints = get_test_mint_entries(MAX_ST_MINTS);
+        table.set_mint_entries(&max_mints).unwrap();
+        assert_eq!(table.mint_count(), MAX_ST_MINTS);
     }
 
     #[test]
     fn test_initialize_table_reinitialize() {
         let ncn = Pubkey::new_unique();
-        let mut table = WeightTable::new(ncn, 0, 0, 0);
-        let first_mints = get_test_pubkeys(2);
-        table.set_supported_mints(&first_mints).unwrap();
-        let second_mints = get_test_pubkeys(3);
+        let mut table = WeightTable::new(ncn, 0, 0, 0, 0);
+        let first_mints = get_test_mint_entries(2);
+        table.set_mint_entries(&first_mints).unwrap();
+        let second_mints = get_test_mint_entries(3);
 
         assert_eq!(
-            table.set_supported_mints(&second_mints),
+            table.set_mint_entries(&second_mints),
             Err(TipRouterError::WeightTableAlreadyInitialized)
         );
     }
@@ -309,23 +325,23 @@ mod tests {
     #[test]
     fn test_set_weight_success() {
         let ncn = Pubkey::new_unique();
-        let mut table = WeightTable::new(ncn, 0, 0, 0);
-        let mints = get_test_pubkeys(2);
-        let mint = mints[0];
+        let mut table = WeightTable::new(ncn, 0, 0, 0, 0);
+        let mints = get_test_mint_entries(2);
+        let mint_entry = mints[0];
 
-        table.set_supported_mints(&mints).unwrap();
+        table.set_mint_entries(&mints).unwrap();
 
-        table.set_weight(&mint, 100, 1).unwrap();
-        assert_eq!(table.get_weight(&mint).unwrap(), 100);
+        table.set_weight(&mint_entry.st_mint(), 100, 1).unwrap();
+        assert_eq!(table.get_weight(&mint_entry.st_mint()).unwrap(), 100);
     }
 
     #[test]
     fn test_set_weight_invalid_mint() {
         let ncn = Pubkey::new_unique();
-        let mut table = WeightTable::new(ncn, 0, 0, 0);
-        let mints = get_test_pubkeys(2);
+        let mut table = WeightTable::new(ncn, 0, 0, 0, 0);
+        let mints = get_test_mint_entries(2);
 
-        table.set_supported_mints(&mints).unwrap();
+        table.set_mint_entries(&mints).unwrap();
 
         let invalid_mint = Pubkey::new_unique();
         assert_eq!(
@@ -337,49 +353,49 @@ mod tests {
     #[test]
     fn test_set_weight_update_existing() {
         let ncn = Pubkey::new_unique();
-        let mut table = WeightTable::new(ncn, 0, 0, 0);
-        let mints = get_test_pubkeys(2);
+        let mut table = WeightTable::new(ncn, 0, 0, 0, 0);
+        let mints = get_test_mint_entries(2);
         let mint = mints[0];
 
-        table.set_supported_mints(&mints).unwrap();
+        table.set_mint_entries(&mints).unwrap();
 
-        table.set_weight(&mint, 100, 1).unwrap();
-        assert_eq!(table.get_weight(&mint).unwrap(), 100);
+        table.set_weight(&mint.st_mint(), 100, 1).unwrap();
+        assert_eq!(table.get_weight(&mint.st_mint()).unwrap(), 100);
 
-        table.set_weight(&mint, 200, 2).unwrap();
-        assert_eq!(table.get_weight(&mint).unwrap(), 200);
+        table.set_weight(&mint.st_mint(), 200, 2).unwrap();
+        assert_eq!(table.get_weight(&mint.st_mint()).unwrap(), 200);
     }
 
     #[test]
     fn test_set_weight_multiple_mints() {
         let ncn = Pubkey::new_unique();
-        let mut table = WeightTable::new(ncn, 0, 0, 0);
-        let mints = get_test_pubkeys(2);
+        let mut table = WeightTable::new(ncn, 0, 0, 0, 0);
+        let mints = get_test_mint_entries(2);
         let mint1 = mints[0];
         let mint2 = mints[1];
 
-        table.set_supported_mints(&mints).unwrap();
+        table.set_mint_entries(&mints).unwrap();
 
-        table.set_weight(&mint1, 100, 1).unwrap();
-        table.set_weight(&mint2, 200, 1).unwrap();
+        table.set_weight(&mint1.st_mint(), 100, 1).unwrap();
+        table.set_weight(&mint2.st_mint(), 200, 1).unwrap();
 
-        assert_eq!(table.get_weight(&mint1).unwrap(), 100);
-        assert_eq!(table.get_weight(&mint2).unwrap(), 200);
+        assert_eq!(table.get_weight(&mint1.st_mint()).unwrap(), 100);
+        assert_eq!(table.get_weight(&mint2.st_mint()).unwrap(), 200);
     }
 
     #[test]
     fn test_set_weight_different_slots() {
         let ncn = Pubkey::new_unique();
-        let mut table = WeightTable::new(ncn, 0, 0, 0);
-        let mints = get_test_pubkeys(2);
+        let mut table = WeightTable::new(ncn, 0, 0, 0, 0);
+        let mints = get_test_mint_entries(2);
         let mint = mints[0];
 
-        table.set_supported_mints(&mints).unwrap();
+        table.set_mint_entries(&mints).unwrap();
 
-        table.set_weight(&mint, 100, 1).unwrap();
-        assert_eq!(table.get_weight(&mint).unwrap(), 100);
+        table.set_weight(&mint.st_mint(), 100, 1).unwrap();
+        assert_eq!(table.get_weight(&mint.st_mint()).unwrap(), 100);
 
-        table.set_weight(&mint, 200, 5).unwrap();
-        assert_eq!(table.get_weight(&mint).unwrap(), 200);
+        table.set_weight(&mint.st_mint(), 200, 5).unwrap();
+        assert_eq!(table.get_weight(&mint.st_mint()).unwrap(), 200);
     }
 }

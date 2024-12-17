@@ -4,6 +4,7 @@ use spl_math::precise_number::PreciseNumber;
 use crate::error::TipRouterError;
 
 pub const MAX_FEE_BPS: u64 = 10_000;
+pub const MAX_ST_MINTS: usize = 32;
 pub const MAX_VAULT_OPERATOR_DELEGATIONS: usize = 64;
 pub const MAX_OPERATORS: usize = 256;
 const PRECISE_CONSENSUS_NUMERATOR: u128 = 2;
@@ -20,3 +21,5 @@ pub fn precise_consensus() -> Result<PreciseNumber, TipRouterError> {
 
 pub const DEFAULT_CONSENSUS_REACHED_SLOT: u64 = u64::MAX;
 pub const MAX_REALLOC_BYTES: u64 = MAX_PERMITTED_DATA_INCREASE as u64; // TODO just use this?
+
+pub const WEIGHT_PRECISION: u128 = 1_000_000_000;

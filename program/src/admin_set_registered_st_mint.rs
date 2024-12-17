@@ -2,7 +2,7 @@ use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::{load_signer, load_system_account};
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    error::TipRouterError, ncn_config::NcnConfig, ncn_fee_group, tracked_mints::TrackedMints,
+    error::TipRouterError, ncn_config::NcnConfig, ncn_fee_group, vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
 use solana_program::{
@@ -28,7 +28,7 @@ pub fn process_set_tracked_mint_ncn_fee_group(
     };
 
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    TrackedMints::load(program_id, ncn.key, tracked_mints, true)?;
+    VaultRegistry::load(program_id, ncn.key, tracked_mints, true)?;
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
@@ -64,7 +64,7 @@ pub fn process_set_tracked_mint_ncn_fee_group(
 
     let mut tracked_mints_data = tracked_mints.data.borrow_mut();
     let tracked_mints_account =
-        TrackedMints::try_from_slice_unchecked_mut(&mut tracked_mints_data)?;
+        VaultRegistry::try_from_slice_unchecked_mut(&mut tracked_mints_data)?;
 
     let ncn_fee_group = ncn_fee_group::NcnFeeGroup::try_from(ncn_fee_group)?;
     tracked_mints_account.set_ncn_fee_group(vault_index, ncn_fee_group)?;

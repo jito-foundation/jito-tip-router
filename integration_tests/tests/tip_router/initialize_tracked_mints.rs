@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use jito_tip_router_core::{ncn_config::NcnConfig, tracked_mints::TrackedMints};
+    use jito_tip_router_core::{config::Config, vault_registry::VaultRegistry};
     use solana_program::instruction::InstructionError;
     use solana_sdk::{signature::Keypair, signer::Signer};
 
@@ -24,7 +24,7 @@ mod tests {
             .await?;
 
         assert_eq!(tracked_mints.ncn, ncn_root.ncn_pubkey);
-        assert_eq!(tracked_mints.mint_count(), 0);
+        assert_eq!(tracked_mints.vault_count(), 0);
         Ok(())
     }
 
@@ -39,7 +39,7 @@ mod tests {
 
         // Try to initialize with wrong NCN config
         let wrong_ncn_config = Keypair::new().pubkey();
-        let (tracked_mints_key, _, _) = TrackedMints::find_program_address(
+        let (tracked_mints_key, _, _) = VaultRegistry::find_program_address(
             &jito_tip_router_program::id(),
             &ncn_root.ncn_pubkey,
         );
@@ -64,11 +64,11 @@ mod tests {
         // Try to initialize with wrong NCN
         let wrong_ncn = Keypair::new().pubkey();
         let (tracked_mints_key, _, _) =
-            TrackedMints::find_program_address(&jito_tip_router_program::id(), &wrong_ncn);
+            VaultRegistry::find_program_address(&jito_tip_router_program::id(), &wrong_ncn);
 
         let transaction_error = tip_router_client
             .initialize_tracked_mints(
-                &NcnConfig::find_program_address(
+                &Config::find_program_address(
                     &jito_tip_router_program::id(),
                     &ncn_root.ncn_pubkey,
                 )
