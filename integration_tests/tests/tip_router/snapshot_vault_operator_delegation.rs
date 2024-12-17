@@ -9,7 +9,7 @@ mod tests {
         let mut vault_client = fixture.vault_program_client();
         let mut tip_router_client = fixture.tip_router_client();
 
-        let test_ncn = fixture.create_initial_test_ncn(1, 1).await?;
+        let test_ncn = fixture.create_initial_test_ncn(1, 1, None).await?;
 
         fixture.warp_slot_incremental(1000).await?;
 
@@ -39,7 +39,7 @@ mod tests {
         let operator = test_ncn.operators[0].operator_pubkey;
 
         tip_router_client
-            .do_initalize_operator_snapshot(operator, ncn, slot)
+            .do_initialize_operator_snapshot(operator, ncn, slot)
             .await?;
 
         tip_router_client

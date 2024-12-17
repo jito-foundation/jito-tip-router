@@ -1,19 +1,25 @@
 use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::{config::Config, ncn::Ncn};
-use jito_tip_router_core::{error::TipRouterError, ncn_config::NcnConfig};
+use jito_tip_router_core::{
+    base_fee_group::BaseFeeGroup, error::TipRouterError, ncn_config::NcnConfig,
+    ncn_fee_group::NcnFeeGroup,
+};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_set_config_fees(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    new_dao_fee_bps: Option<u64>,
-    new_ncn_fee_bps: Option<u64>,
-    new_block_engine_fee_bps: Option<u64>,
-    new_fee_wallet: Option<Pubkey>,
+    new_block_engine_fee_bps: Option<u16>,
+    base_fee_group: Option<u8>,
+    new_base_fee_wallet: Option<Pubkey>,
+    new_base_fee_bps: Option<u16>,
+    ncn_fee_group: Option<u8>,
+    new_ncn_fee_bps: Option<u16>,
 ) -> ProgramResult {
     let [restaking_config, config, ncn_account, fee_admin, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -53,11 +59,16 @@ pub fn process_set_config_fees(
         return Err(TipRouterError::IncorrectFeeAdmin.into());
     }
 
-    config.fees.set_new_fees(
-        new_dao_fee_bps,
-        new_ncn_fee_bps,
+    let base_fee_group = base_fee_group.map(BaseFeeGroup::try_from).transpose()?;
+    let ncn_fee_group = ncn_fee_group.map(NcnFeeGroup::try_from).transpose()?;
+
+    config.fee_config.update_fee_config(
         new_block_engine_fee_bps,
-        new_fee_wallet,
+        base_fee_group,
+        new_base_fee_wallet,
+        new_base_fee_bps,
+        ncn_fee_group,
+        new_ncn_fee_bps,
         epoch,
     )?;
 

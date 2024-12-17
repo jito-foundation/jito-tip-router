@@ -10,10 +10,16 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
+  getArrayDecoder,
+  getArrayEncoder,
+  getBoolDecoder,
+  getBoolEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU8Decoder,
+  getU8Encoder,
   type Codec,
   type Decoder,
   type Encoder,
@@ -22,7 +28,8 @@ import {
 
 export type Ballot = {
   merkleRoot: ReadonlyUint8Array;
-  reserved: ReadonlyUint8Array;
+  isValid: number;
+  reserved: Array<number>;
 };
 
 export type BallotArgs = Ballot;
@@ -30,14 +37,16 @@ export type BallotArgs = Ballot;
 export function getBallotEncoder(): Encoder<BallotArgs> {
   return getStructEncoder([
     ['merkleRoot', fixEncoderSize(getBytesEncoder(), 32)],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 64)],
+    ['isValid', getBoolEncoder()],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 63 })],
   ]);
 }
 
 export function getBallotDecoder(): Decoder<Ballot> {
   return getStructDecoder([
     ['merkleRoot', fixDecoderSize(getBytesDecoder(), 32)],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 64)],
+    ['isValid', getBoolDecoder()],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 63 })],
   ]);
 }
 

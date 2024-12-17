@@ -175,7 +175,10 @@ impl RestakingProgramClient {
         Ok(restaking_config_admin)
     }
 
-    pub async fn do_initialize_operator(&mut self) -> TestResult<OperatorRoot> {
+    pub async fn do_initialize_operator(
+        &mut self,
+        operator_fee_bps: Option<u16>,
+    ) -> TestResult<OperatorRoot> {
         // create operator + add operator vault
         let operator_base = Keypair::new();
         let operator_pubkey =
@@ -188,7 +191,7 @@ impl RestakingProgramClient {
             &operator_pubkey,
             &operator_admin,
             &operator_base,
-            0,
+            operator_fee_bps.unwrap_or(0),
         )
         .await?;
         Ok(OperatorRoot {

@@ -1,14 +1,27 @@
-use std::fmt::{Debug, Formatter};
+use std::{
+    borrow::BorrowMut,
+    fmt::{Debug, Formatter},
+};
 
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
+use jito_tip_distribution_sdk::jito_tip_distribution;
+use jito_tip_router_core::{
+    base_fee_group::BaseFeeGroup, base_reward_router::BaseRewardRouter, ncn_fee_group::NcnFeeGroup,
+};
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
     clock::Clock, native_token::sol_to_lamports, pubkey::Pubkey, system_instruction::transfer,
 };
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
-use solana_sdk::{commitment_config::CommitmentLevel, signature::Signer, transaction::Transaction};
+use solana_sdk::{
+    account::Account, commitment_config::CommitmentLevel, epoch_schedule::EpochSchedule,
+    native_token::lamports_to_sol, signature::Signer, transaction::Transaction,
+};
 
-use super::{restaking_client::NcnRoot, tip_router_client::TipRouterClient};
+use super::{
+    restaking_client::NcnRoot, tip_distribution_client::TipDistributionClient,
+    tip_router_client::TipRouterClient,
+};
 use crate::fixtures::{
     restaking_client::{OperatorRoot, RestakingProgramClient},
     vault_client::{VaultProgramClient, VaultRoot},
@@ -46,26 +59,49 @@ impl Debug for TestBuilder {
 
 impl TestBuilder {
     pub async fn new() -> Self {
-        let mut program_test = ProgramTest::new(
-            "jito_tip_router_program",
-            jito_tip_router_program::id(),
-            processor!(jito_tip_router_program::process_instruction),
-        );
-        program_test.add_program(
-            "jito_vault_program",
-            jito_vault_program::id(),
-            processor!(jito_vault_program::process_instruction),
-        );
-        program_test.add_program(
-            "jito_restaking_program",
-            jito_restaking_program::id(),
-            processor!(jito_restaking_program::process_instruction),
-        );
-        program_test.prefer_bpf(true);
+        let run_as_bpf = std::env::vars().any(|(key, _)| key.eq("SBF_OUT_DIR"));
+
+        let program_test = if run_as_bpf {
+            let mut program_test = ProgramTest::new(
+                "jito_tip_router_program",
+                jito_tip_router_program::id(),
+                None,
+            );
+            program_test.add_program("jito_vault_program", jito_vault_program::id(), None);
+            program_test.add_program("jito_restaking_program", jito_restaking_program::id(), None);
+
+            // Tests that invoke this program should be in the "bpf" module so we can run them separately with the bpf vm.
+            // Anchor programs do not expose a compatible entrypoint for solana_program_test::processor!
+            program_test.add_program("jito_tip_distribution", jito_tip_distribution::ID, None);
+
+            program_test
+        } else {
+            let mut program_test = ProgramTest::new(
+                "jito_tip_router_program",
+                jito_tip_router_program::id(),
+                processor!(jito_tip_router_program::process_instruction),
+            );
+            program_test.add_program(
+                "jito_vault_program",
+                jito_vault_program::id(),
+                processor!(jito_vault_program::process_instruction),
+            );
+            program_test.add_program(
+                "jito_restaking_program",
+                jito_restaking_program::id(),
+                processor!(jito_restaking_program::process_instruction),
+            );
+
+            program_test
+        };
 
         Self {
             context: program_test.start_with_context().await,
         }
+    }
+
+    pub async fn get_balance(&mut self, pubkey: &Pubkey) -> Result<u64, BanksClientError> {
+        Ok(self.context.banks_client.get_balance(*pubkey).await?)
     }
 
     pub async fn warp_slot_incremental(
@@ -79,7 +115,17 @@ impl TestBuilder {
         Ok(())
     }
 
+    pub async fn set_account(&mut self, address: Pubkey, account: Account) {
+        self.context
+            .borrow_mut()
+            .set_account(&address, &account.into())
+    }
+
     pub async fn clock(&mut self) -> Clock {
+        self.context.banks_client.get_sysvar().await.unwrap()
+    }
+
+    pub async fn epoch_schedule(&mut self) -> EpochSchedule {
         self.context.banks_client.get_sysvar().await.unwrap()
     }
 
@@ -111,18 +157,22 @@ impl TestBuilder {
         )
     }
 
+    pub fn tip_distribution_client(&self) -> TipDistributionClient {
+        TipDistributionClient::new(
+            self.context.banks_client.clone(),
+            self.context.payer.insecure_clone(),
+        )
+    }
+
     #[allow(dead_code)]
     pub async fn transfer(&mut self, to: &Pubkey, sol: f64) -> Result<(), BanksClientError> {
         let blockhash = self.context.banks_client.get_latest_blockhash().await?;
+        let lamports = sol_to_lamports(sol);
         self.context
             .banks_client
             .process_transaction_with_preflight_and_commitment(
                 Transaction::new_signed_with_payer(
-                    &[transfer(
-                        &self.context.payer.pubkey(),
-                        to,
-                        sol_to_lamports(sol),
-                    )],
+                    &[transfer(&self.context.payer.pubkey(), to, lamports)],
                     Some(&self.context.payer.pubkey()),
                     &[&self.context.payer],
                     blockhash,
@@ -159,6 +209,18 @@ impl TestBuilder {
 
         tip_router_client.setup_tip_router(&ncn_root).await?;
 
+        tip_router_client
+            .do_set_config_fees(
+                Some(300),
+                None,
+                Some(self.context.payer.pubkey()),
+                Some(270),
+                None,
+                Some(15),
+                &ncn_root,
+            )
+            .await?;
+
         Ok(TestNcn {
             ncn_root: ncn_root.clone(),
             operators: vec![],
@@ -171,11 +233,14 @@ impl TestBuilder {
         &mut self,
         test_ncn: &mut TestNcn,
         operator_count: usize,
+        operator_fees_bps: Option<u16>,
     ) -> TestResult<()> {
         let mut restaking_program_client = self.restaking_program_client();
 
         for _ in 0..operator_count {
-            let operator_root = restaking_program_client.do_initialize_operator().await?;
+            let operator_root = restaking_program_client
+                .do_initialize_operator(operator_fees_bps)
+                .await?;
 
             // ncn <> operator
             restaking_program_client
@@ -345,9 +410,10 @@ impl TestBuilder {
         &mut self,
         operator_count: usize,
         vault_count: usize,
+        operator_fees_bps: Option<u16>,
     ) -> TestResult<TestNcn> {
         let mut test_ncn = self.create_test_ncn().await?;
-        self.add_operators_to_test_ncn(&mut test_ncn, operator_count)
+        self.add_operators_to_test_ncn(&mut test_ncn, operator_count, operator_fees_bps)
             .await?;
         self.add_vaults_to_test_ncn(&mut test_ncn, vault_count)
             .await?;
@@ -412,7 +478,7 @@ impl TestBuilder {
             let operator = operator_root.operator_pubkey;
 
             tip_router_client
-                .do_initalize_operator_snapshot(operator, ncn, slot)
+                .do_initialize_operator_snapshot(operator, ncn, slot)
                 .await?;
         }
 
@@ -450,6 +516,214 @@ impl TestBuilder {
         self.add_operator_snapshots_to_test_ncn(&test_ncn).await?;
         self.add_vault_operator_delegation_snapshots_to_test_ncn(&test_ncn)
             .await?;
+
+        Ok(())
+    }
+
+    // 10 - Initialize Ballot Box
+    pub async fn add_ballot_box_to_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+        let mut restaking_program_client = self.restaking_program_client();
+
+        let slot = self.clock().await.slot;
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+
+        let ncn_epoch = restaking_program_client.get_ncn_epoch(slot).await?;
+
+        tip_router_client
+            .do_initialize_ballot_box(ncn, ncn_epoch)
+            .await?;
+
+        Ok(())
+    }
+
+    // 11 - Cast all votes
+    pub async fn cast_votes_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+        let mut restaking_program_client = self.restaking_program_client();
+
+        let slot = self.clock().await.slot;
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+
+        let ncn_epoch = restaking_program_client.get_ncn_epoch(slot).await?;
+
+        let meta_merkle_root = [1u8; 32];
+
+        for operator_root in test_ncn.operators.iter() {
+            let operator = operator_root.operator_pubkey;
+
+            tip_router_client
+                .do_cast_vote(
+                    ncn,
+                    operator,
+                    &operator_root.operator_admin,
+                    meta_merkle_root,
+                    ncn_epoch,
+                )
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    // Intermission 3 - come to consensus
+    pub async fn vote_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        self.add_ballot_box_to_test_ncn(&test_ncn).await?;
+        self.cast_votes_for_test_ncn(&test_ncn).await?;
+
+        Ok(())
+    }
+
+    // 12 - Create Routers
+    pub async fn add_routers_for_tests_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+
+        let ncn: Pubkey = test_ncn.ncn_root.ncn_pubkey;
+        let slot = self.clock().await.slot;
+
+        tip_router_client
+            .do_initialize_base_reward_router(ncn, slot)
+            .await?;
+
+        for operator_root in test_ncn.operators.iter() {
+            let operator = operator_root.operator_pubkey;
+
+            for group in NcnFeeGroup::all_groups().iter() {
+                tip_router_client
+                    .do_initialize_ncn_reward_router(*group, ncn, operator, slot)
+                    .await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    // 13 - Route base rewards
+    pub async fn route_in_base_rewards_for_test_ncn(
+        &mut self,
+        test_ncn: &TestNcn,
+        rewards: u64,
+    ) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+        let mut restaking_program_client = self.restaking_program_client();
+
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+        let slot = self.clock().await.slot;
+        let ncn_epoch = restaking_program_client.get_ncn_epoch(slot).await?;
+
+        let (base_reward_router, _, _) =
+            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch);
+
+        let sol_rewards = lamports_to_sol(rewards);
+
+        // send rewards to the base reward router
+        tip_router_client
+            .airdrop(&base_reward_router, sol_rewards)
+            .await?;
+
+        // route rewards
+        tip_router_client.do_route_base_rewards(ncn, slot).await?;
+
+        let base_reward_router = tip_router_client
+            .get_base_reward_router(ncn, ncn_epoch)
+            .await?;
+
+        // Base Rewards
+        for group in BaseFeeGroup::all_groups().iter() {
+            let rewards = base_reward_router.base_fee_group_reward(*group).unwrap();
+
+            if rewards == 0 {
+                continue;
+            }
+
+            tip_router_client
+                .do_distribute_base_rewards(*group, ncn, slot)
+                .await?;
+        }
+
+        // Ncn
+        for operator_root in test_ncn.operators.iter() {
+            let operator = operator_root.operator_pubkey;
+
+            let operator_route = base_reward_router.ncn_fee_group_reward_route(&operator);
+
+            if let Ok(operator_route) = operator_route {
+                for group in NcnFeeGroup::all_groups().iter() {
+                    let rewards = operator_route.rewards(*group).unwrap();
+
+                    if rewards == 0 {
+                        continue;
+                    }
+
+                    tip_router_client
+                        .do_distribute_base_ncn_reward_route(*group, operator, ncn, slot)
+                        .await?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    // 14 - Route ncn rewards
+    pub async fn route_in_ncn_rewards_for_test_ncn(
+        &mut self,
+        test_ncn: &TestNcn,
+    ) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+        let mut restaking_program_client = self.restaking_program_client();
+
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+        let slot = self.clock().await.slot;
+        let ncn_epoch = restaking_program_client.get_ncn_epoch(slot).await?;
+
+        for operator_root in test_ncn.operators.iter() {
+            let operator = operator_root.operator_pubkey;
+
+            for group in NcnFeeGroup::all_groups().iter() {
+                tip_router_client
+                    .do_route_ncn_rewards(*group, ncn, operator, slot)
+                    .await?;
+
+                let ncn_reward_router = tip_router_client
+                    .get_ncn_reward_router(*group, operator, ncn, ncn_epoch)
+                    .await?;
+
+                let operator_rewards = ncn_reward_router.operator_rewards();
+
+                if operator_rewards > 0 {
+                    tip_router_client
+                        .do_distribute_ncn_operator_rewards(*group, operator, ncn, slot)
+                        .await?;
+                }
+
+                for vault_root in test_ncn.vaults.iter() {
+                    let vault = vault_root.vault_pubkey;
+
+                    let vault_reward_route = ncn_reward_router.vault_reward_route(&vault);
+
+                    if let Ok(vault_reward_route) = vault_reward_route {
+                        let vault_rewards = vault_reward_route.rewards();
+
+                        if vault_rewards > 0 {
+                            tip_router_client
+                                .do_distribute_ncn_vault_rewards(*group, vault, operator, ncn, slot)
+                                .await?;
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    // Intermission 4 - route rewards
+    pub async fn reward_test_ncn(&mut self, test_ncn: &TestNcn, rewards: u64) -> TestResult<()> {
+        self.add_routers_for_tests_ncn(test_ncn).await?;
+        self.route_in_base_rewards_for_test_ncn(test_ncn, rewards)
+            .await?;
+        self.route_in_ncn_rewards_for_test_ncn(test_ncn).await?;
 
         Ok(())
     }

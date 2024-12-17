@@ -1,0 +1,13 @@
+[package]
+name = "jito-tip-distribution-sdk"
+description = "SDK for interacting with Jito's Tip Distribution Program via declare_program"
+version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+readme = { workspace = true }
+
+[dependencies]
+anchor-lang = { workspace = true }

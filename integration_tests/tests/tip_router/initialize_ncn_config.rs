@@ -67,8 +67,8 @@ mod tests {
             .initialize_config(
                 ncn_root.ncn_pubkey,
                 &ncn_root.ncn_admin,
-                ncn_admin_pubkey,
-                ncn_admin_pubkey,
+                &ncn_admin_pubkey,
+                &ncn_admin_pubkey,
                 10_001,
                 0,
                 0,
