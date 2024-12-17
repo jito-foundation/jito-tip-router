@@ -63,12 +63,8 @@ pub fn process_route_ncn_rewards(
 
     let rent_cost = ncn_reward_router_account.rent_cost(&Rent::get()?)?;
 
-    msg!("A");
-    sol_log_compute_units();
     ncn_reward_router_account.route_incoming_rewards(rent_cost, account_balance)?;
 
-    msg!("B");
-    sol_log_compute_units();
     ncn_reward_router_account.route_reward_pool(operator_snapshot_account)?;
 
     Ok(())
