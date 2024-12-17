@@ -1,4 +1,4 @@
-use solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
+use solana_program::{entrypoint::MAX_PERMITTED_DATA_INCREASE, pubkey, pubkey::Pubkey};
 use spl_math::precise_number::PreciseNumber;
 
 use crate::error::TipRouterError;
