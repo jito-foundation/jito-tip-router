@@ -5,18 +5,9 @@
 //! <https://github.com/kinobi-so/kinobi>
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fee {
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub wallet: Pubkey,
-    pub dao_share_bps: u64,
-    pub ncn_share_bps: u64,
-    pub block_engine_fee_bps: u64,
-    pub activation_epoch: u64,
+    pub fee: u16,
 }

@@ -12,6 +12,6 @@
     "yarn": "2.4.3"
   },
   "scripts": {
-    "generate-clients": "node scripts/generate-clients.js"
+    "generate-clients": "node scripts/generate-clients.js && node scripts/update-attributes.js"
   }
 }

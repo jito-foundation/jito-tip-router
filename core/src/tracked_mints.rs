@@ -5,27 +5,44 @@ use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
-use crate::{discriminators::Discriminators, error::TipRouterError};
+use crate::{
+    constants::MAX_VAULT_OPERATOR_DELEGATIONS, discriminators::Discriminators,
+    error::TipRouterError, ncn_fee_group::NcnFeeGroup,
+};
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct MintEntry {
     st_mint: Pubkey,
     vault_index: PodU64,
+    ncn_fee_group: NcnFeeGroup,
+    reward_multiplier_bps: PodU64,
     reserved: [u8; 32],
 }
 
 impl MintEntry {
     pub fn new(mint: Pubkey, vault_index: u64) -> Self {
+        const REWARD_FEE_MULTIPLIER_BPS: u64 = 10_000; // 100% as default
+
         Self {
             st_mint: mint,
             vault_index: PodU64::from(vault_index),
+            ncn_fee_group: NcnFeeGroup::default(),
+            reward_multiplier_bps: PodU64::from(REWARD_FEE_MULTIPLIER_BPS),
             reserved: [0; 32],
         }
     }
 
     pub fn vault_index(&self) -> u64 {
         self.vault_index.into()
+    }
+
+    pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
+        self.ncn_fee_group
+    }
+
+    pub fn reward_multiplier_bps(&self) -> u64 {
+        self.reward_multiplier_bps.into()
     }
 }
 
@@ -40,8 +57,8 @@ impl Default for MintEntry {
 pub struct TrackedMints {
     pub ncn: Pubkey,
     pub bump: u8,
-    pub reserved: [u8; 7], // TODO extend to 127; figure out serde issue
-    pub st_mint_list: [MintEntry; 16], // TODO extend to 64; figure out serde issue
+    pub reserved: [u8; 127],
+    pub st_mint_list: [MintEntry; 64],
 }
 
 impl Discriminator for TrackedMints {
@@ -53,8 +70,8 @@ impl TrackedMints {
         Self {
             ncn,
             bump,
-            reserved: [0; 7],
-            st_mint_list: [MintEntry::default(); 16],
+            reserved: [0; 127],
+            st_mint_list: [MintEntry::default(); MAX_VAULT_OPERATOR_DELEGATIONS],
         }
     }
 
@@ -157,11 +174,64 @@ impl TrackedMints {
 
         Ok(())
     }
+
+    pub fn get_ncn_fee_group(&self, vault_index: u64) -> Result<NcnFeeGroup, ProgramError> {
+        let mint_entry = self
+            .st_mint_list
+            .iter()
+            .find(|m| m.vault_index() == vault_index)
+            .ok_or(TipRouterError::MintEntryNotFound)?;
+
+        Ok(mint_entry.ncn_fee_group)
+    }
+
+    pub fn get_mint_entry(&self, vault_index: u64) -> Result<MintEntry, ProgramError> {
+        let mint_entry = self
+            .st_mint_list
+            .iter()
+            .find(|m| m.vault_index() == vault_index)
+            .ok_or(TipRouterError::MintEntryNotFound)?;
+
+        Ok(*mint_entry)
+    }
+
+    pub fn set_ncn_fee_group(
+        &mut self,
+        vault_index: u64,
+        ncn_fee_group: NcnFeeGroup,
+    ) -> Result<(), ProgramError> {
+        let mint_entry = self
+            .st_mint_list
+            .iter_mut()
+            .find(|m| m.vault_index() == vault_index)
+            .ok_or(TipRouterError::MintEntryNotFound)?;
+
+        mint_entry.ncn_fee_group = ncn_fee_group;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_len() {
+        use std::mem::size_of;
+
+        let expected_total = size_of::<Pubkey>() // ncn
+            + 1 // bump
+            + 127 // reserved
+            + size_of::<MintEntry>() * MAX_VAULT_OPERATOR_DELEGATIONS; // st_mint_list
+
+        assert_eq!(size_of::<TrackedMints>(), expected_total);
+
+        let tracked_mints = TrackedMints::new(Pubkey::default(), 0);
+        assert_eq!(
+            tracked_mints.st_mint_list.len(),
+            MAX_VAULT_OPERATOR_DELEGATIONS
+        );
+    }
 
     #[test]
     fn test_add_mint() {

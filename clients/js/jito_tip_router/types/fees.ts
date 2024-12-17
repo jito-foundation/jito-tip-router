@@ -8,29 +8,49 @@
 
 import {
   combineCodec,
+  getArrayDecoder,
+  getArrayEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU64Decoder,
+  getU64Encoder,
+  getU8Decoder,
+  getU8Encoder,
   type Codec,
   type Decoder,
   type Encoder,
 } from '@solana/web3.js';
 import { getFeeDecoder, getFeeEncoder, type Fee, type FeeArgs } from '.';
 
-export type Fees = { fee1: Fee; fee2: Fee };
+export type Fees = {
+  activationEpoch: bigint;
+  reserved: Array<number>;
+  baseFeeGroupsBps: Array<Fee>;
+  ncnFeeGroupsBps: Array<Fee>;
+};
 
-export type FeesArgs = { fee1: FeeArgs; fee2: FeeArgs };
+export type FeesArgs = {
+  activationEpoch: number | bigint;
+  reserved: Array<number>;
+  baseFeeGroupsBps: Array<FeeArgs>;
+  ncnFeeGroupsBps: Array<FeeArgs>;
+};
 
 export function getFeesEncoder(): Encoder<FeesArgs> {
   return getStructEncoder([
-    ['fee1', getFeeEncoder()],
-    ['fee2', getFeeEncoder()],
+    ['activationEpoch', getU64Encoder()],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['baseFeeGroupsBps', getArrayEncoder(getFeeEncoder(), { size: 8 })],
+    ['ncnFeeGroupsBps', getArrayEncoder(getFeeEncoder(), { size: 8 })],
   ]);
 }
 
 export function getFeesDecoder(): Decoder<Fees> {
   return getStructDecoder([
-    ['fee1', getFeeDecoder()],
-    ['fee2', getFeeDecoder()],
+    ['activationEpoch', getU64Decoder()],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['baseFeeGroupsBps', getArrayDecoder(getFeeDecoder(), { size: 8 })],
+    ['ncnFeeGroupsBps', getArrayDecoder(getFeeDecoder(), { size: 8 })],
   ]);
 }
 

@@ -2,3 +2,8 @@
 
 .developer
 node_modules
+
+# Debugging
+program_errors.json
+test_errors.output
+tests.output

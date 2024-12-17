@@ -18,17 +18,19 @@ pub struct BallotBox {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub ncn: Pubkey,
-    pub ncn_epoch: u64,
+    pub epoch: u64,
     pub bump: u8,
     pub slot_created: u64,
     pub slot_consensus_reached: u64,
-    #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 128],
     pub operators_voted: u64,
     pub unique_ballots: u64,
     pub winning_ballot: Ballot,
-    pub operator_votes: [OperatorVote; 32],
-    pub ballot_tallies: [BallotTally; 32],
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub operator_votes: [OperatorVote; 256],
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub ballot_tallies: [BallotTally; 256],
 }
 
 impl BallotBox {

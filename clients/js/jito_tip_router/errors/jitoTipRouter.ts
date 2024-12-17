@@ -18,12 +18,18 @@ import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 export const JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO = 0x2100; // 8448
 /** ArithmeticOverflow: Overflow */
 export const JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW = 0x2101; // 8449
+/** ArithmeticUnderflowError: Underflow */
+export const JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR = 0x2102; // 8450
+/** ArithmeticFloorError: Floor Overflow */
+export const JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR = 0x2103; // 8451
 /** ModuloOverflow: Modulo Overflow */
-export const JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW = 0x2102; // 8450
+export const JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW = 0x2104; // 8452
 /** NewPreciseNumberError: New precise number error */
-export const JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR = 0x2103; // 8451
+export const JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR = 0x2105; // 8453
 /** CastToImpreciseNumberError: Cast to imprecise number error */
-export const JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR = 0x2104; // 8452
+export const JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR = 0x2106; // 8454
+/** CastToU64Error: Cast to u64 error */
+export const JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR = 0x2107; // 8455
 /** IncorrectWeightTableAdmin: Incorrect weight table admin */
 export const JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN = 0x2200; // 8704
 /** DuplicateMintsInTable: Duplicate mints in table */
@@ -52,70 +58,130 @@ export const JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL = 0x220b; // 8715
 export const JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_LOCKED = 0x220c; // 8716
 /** VaultIndexAlreadyInUse: Vault index already in use by a different mint */
 export const JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE = 0x220d; // 8717
+/** MintEntryNotFound: Mint Entry not found */
+export const JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND = 0x220e; // 8718
 /** FeeCapExceeded: Fee cap exceeded */
-export const JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED = 0x220e; // 8718
+export const JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED = 0x220f; // 8719
+/** DefaultDaoWallet: DAO wallet cannot be default */
+export const JITO_TIP_ROUTER_ERROR__DEFAULT_DAO_WALLET = 0x2210; // 8720
 /** IncorrectNcnAdmin: Incorrect NCN Admin */
-export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN = 0x220f; // 8719
+export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN = 0x2211; // 8721
 /** IncorrectNcn: Incorrect NCN */
-export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN = 0x2210; // 8720
+export const JITO_TIP_ROUTER_ERROR__INCORRECT_NCN = 0x2212; // 8722
 /** IncorrectFeeAdmin: Incorrect fee admin */
-export const JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN = 0x2211; // 8721
+export const JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN = 0x2213; // 8723
 /** WeightTableNotFinalized: Weight table not finalized */
-export const JITO_TIP_ROUTER_ERROR__WEIGHT_TABLE_NOT_FINALIZED = 0x2212; // 8722
+export const JITO_TIP_ROUTER_ERROR__WEIGHT_TABLE_NOT_FINALIZED = 0x2214; // 8724
 /** WeightNotFound: Weight not found */
-export const JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND = 0x2213; // 8723
+export const JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND = 0x2215; // 8725
 /** NoOperators: No operators in ncn */
-export const JITO_TIP_ROUTER_ERROR__NO_OPERATORS = 0x2214; // 8724
+export const JITO_TIP_ROUTER_ERROR__NO_OPERATORS = 0x2216; // 8726
 /** VaultOperatorDelegationFinalized: Vault operator delegation is already finalized - should not happen */
-export const JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED = 0x2215; // 8725
+export const JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED = 0x2217; // 8727
 /** OperatorFinalized: Operator is already finalized - should not happen */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED = 0x2216; // 8726
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED = 0x2218; // 8728
 /** TooManyVaultOperatorDelegations: Too many vault operator delegations */
-export const JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS = 0x2217; // 8727
+export const JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS = 0x2219; // 8729
 /** DuplicateVaultOperatorDelegation: Duplicate vault operator delegation */
-export const JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION = 0x2218; // 8728
+export const JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION = 0x221a; // 8730
 /** DuplicateVoteCast: Duplicate Vote Cast */
-export const JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST = 0x2219; // 8729
+export const JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST = 0x221b; // 8731
 /** OperatorVotesFull: Operator votes full */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL = 0x221a; // 8730
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL = 0x221c; // 8732
 /** BallotTallyFull: Merkle root tally full */
-export const JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL = 0x221b; // 8731
-/** ConsensusAlreadyReached: Consensus already reached */
-export const JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED = 0x221c; // 8732
+export const JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL = 0x221d; // 8733
+/** BallotTallyNotFoundFull: Ballot tally not found */
+export const JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL = 0x221e; // 8734
+/** ConsensusAlreadyReached: Consensus already reached, cannot change vote */
+export const JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED = 0x221f; // 8735
 /** ConsensusNotReached: Consensus not reached */
-export const JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED = 0x221d; // 8733
+export const JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED = 0x2220; // 8736
+/** EpochSnapshotNotFinalized: Epoch snapshot not finalized */
+export const JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED = 0x2221; // 8737
+/** VotingNotValid: Voting not valid, too many slots after consensus reached */
+export const JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID = 0x2222; // 8738
+/** TieBreakerAdminInvalid: Tie breaker admin invalid */
+export const JITO_TIP_ROUTER_ERROR__TIE_BREAKER_ADMIN_INVALID = 0x2223; // 8739
+/** VotingNotFinalized: Voting not finalized */
+export const JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED = 0x2224; // 8740
+/** TieBreakerNotInPriorVotes: Tie breaking ballot must be one of the prior votes */
+export const JITO_TIP_ROUTER_ERROR__TIE_BREAKER_NOT_IN_PRIOR_VOTES = 0x2225; // 8741
+/** InvalidMerkleProof: Invalid merkle proof */
+export const JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF = 0x2226; // 8742
+/** OperatorAdminInvalid: Operator admin needs to sign its vote */
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID = 0x2227; // 8743
+/** InvalidNcnFeeGroup: Not a valid NCN fee group */
+export const JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP = 0x2228; // 8744
+/** InvalidBaseFeeGroup: Not a valid base fee group */
+export const JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP = 0x2229; // 8745
+/** OperatorRewardListFull: Operator reward list full */
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL = 0x222a; // 8746
+/** OperatorRewardNotFound: Operator Reward not found */
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND = 0x222b; // 8747
+/** VaultRewardNotFound: Vault Reward not found */
+export const JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND = 0x222c; // 8748
+/** DestinationMismatch: Destination mismatch */
+export const JITO_TIP_ROUTER_ERROR__DESTINATION_MISMATCH = 0x222d; // 8749
+/** NcnRewardRouteNotFound: Ncn reward route not found */
+export const JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND = 0x222e; // 8750
+/** FeeNotActive: Fee not active */
+export const JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE = 0x222f; // 8751
+/** NoRewards: No rewards to distribute */
+export const JITO_TIP_ROUTER_ERROR__NO_REWARDS = 0x2230; // 8752
 
 export type JitoTipRouterError =
+  | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
+  | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL
+  | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
+  | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL
   | typeof JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED
   | typeof JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED
   | typeof JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED
+  | typeof JITO_TIP_ROUTER_ERROR__DEFAULT_DAO_WALLET
   | typeof JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO
+  | typeof JITO_TIP_ROUTER_ERROR__DESTINATION_MISMATCH
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST
+  | typeof JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED
+  | typeof JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP
+  | typeof JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW
+  | typeof JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__NO_OPERATORS
+  | typeof JITO_TIP_ROUTER_ERROR__NO_REWARDS
+  | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED
+  | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL
+  | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL
+  | typeof JITO_TIP_ROUTER_ERROR__TIE_BREAKER_ADMIN_INVALID
+  | typeof JITO_TIP_ROUTER_ERROR__TIE_BREAKER_NOT_IN_PRIOR_VOTES
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS
   | typeof JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL
   | typeof JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_LOCKED
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED
+  | typeof JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND
+  | typeof JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED
+  | typeof JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND
@@ -125,36 +191,58 @@ export type JitoTipRouterError =
 let jitoTipRouterErrorMessages: Record<JitoTipRouterError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   jitoTipRouterErrorMessages = {
+    [JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR]: `Floor Overflow`,
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW]: `Overflow`,
+    [JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR]: `Underflow`,
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL]: `Merkle root tally full`,
+    [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL]: `Ballot tally not found`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
+    [JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR]: `Cast to u64 error`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINT_LIST_FULL]: `NCN config vaults are at capacity`,
     [JITO_TIP_ROUTER_ERROR__CONFIG_MINTS_NOT_UPDATED]: `Config supported mints do not match NCN Vault Count`,
-    [JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED]: `Consensus already reached`,
+    [JITO_TIP_ROUTER_ERROR__CONSENSUS_ALREADY_REACHED]: `Consensus already reached, cannot change vote`,
     [JITO_TIP_ROUTER_ERROR__CONSENSUS_NOT_REACHED]: `Consensus not reached`,
+    [JITO_TIP_ROUTER_ERROR__DEFAULT_DAO_WALLET]: `DAO wallet cannot be default`,
     [JITO_TIP_ROUTER_ERROR__DENOMINATOR_IS_ZERO]: `Zero in the denominator`,
+    [JITO_TIP_ROUTER_ERROR__DESTINATION_MISMATCH]: `Destination mismatch`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE]: `Duplicate mints in table`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION]: `Duplicate vault operator delegation`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST]: `Duplicate Vote Cast`,
+    [JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED]: `Epoch snapshot not finalized`,
     [JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED]: `Fee cap exceeded`,
+    [JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE]: `Fee not active`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_FEE_ADMIN]: `Incorrect fee admin`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN]: `Incorrect NCN`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN]: `Incorrect NCN Admin`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN]: `Incorrect weight table admin`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP]: `Not a valid base fee group`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF]: `Invalid merkle proof`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE]: `Invalid mint for weight table`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP]: `Not a valid NCN fee group`,
+    [JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND]: `Mint Entry not found`,
     [JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW]: `Modulo Overflow`,
+    [JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND]: `Ncn reward route not found`,
     [JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR]: `New precise number error`,
     [JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE]: `There are no mints in the table`,
     [JITO_TIP_ROUTER_ERROR__NO_OPERATORS]: `No operators in ncn`,
+    [JITO_TIP_ROUTER_ERROR__NO_REWARDS]: `No rewards to distribute`,
+    [JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID]: `Operator admin needs to sign its vote`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED]: `Operator is already finalized - should not happen`,
+    [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL]: `Operator reward list full`,
+    [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND]: `Operator Reward not found`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL]: `Operator votes full`,
+    [JITO_TIP_ROUTER_ERROR__TIE_BREAKER_ADMIN_INVALID]: `Tie breaker admin invalid`,
+    [JITO_TIP_ROUTER_ERROR__TIE_BREAKER_NOT_IN_PRIOR_VOTES]: `Tie breaking ballot must be one of the prior votes`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_MINTS_FOR_TABLE]: `Too many mints for table`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS]: `Too many vault operator delegations`,
     [JITO_TIP_ROUTER_ERROR__TRACKED_MINT_LIST_FULL]: `Tracked mints are at capacity`,
     [JITO_TIP_ROUTER_ERROR__TRACKED_MINTS_LOCKED]: `Tracked mints are locked for the epoch`,
     [JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE]: `Vault index already in use by a different mint`,
     [JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED]: `Vault operator delegation is already finalized - should not happen`,
+    [JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND]: `Vault Reward not found`,
+    [JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED]: `Voting not finalized`,
+    [JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID]: `Voting not valid, too many slots after consensus reached`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH]: `Weight mints do not match - length`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_MINT_HASH]: `Weight mints do not match - mint hash`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_NOT_FOUND]: `Weight not found`,
