@@ -21,6 +21,7 @@ mod set_new_admin;
 mod set_tie_breaker;
 mod set_tracked_mint_ncn_fee_group;
 mod snapshot_vault_operator_delegation;
+mod claim_with_payer;
 
 use borsh::BorshDeserialize;
 use const_str_to_pubkey::str_to_pubkey;
@@ -52,6 +53,7 @@ use crate::{
     set_tie_breaker::process_set_tie_breaker,
     set_tracked_mint_ncn_fee_group::process_set_tracked_mint_ncn_fee_group,
     snapshot_vault_operator_delegation::process_snapshot_vault_operator_delegation,
+    claim_with_payer::process_claim_with_payer,
 };
 
 declare_id!(str_to_pubkey(env!("TIP_ROUTER_PROGRAM_ID")));
@@ -292,6 +294,14 @@ pub fn process_instruction(
         } => {
             msg!("Instruction: SetTieBreaker");
             process_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
+        }
+        TipRouterInstruction::ClaimWithPayer {
+            proof,
+            amount,
+            bump,
+        } => {
+            msg!("Instruction: ClaimWithPayer");
+            process_claim_with_payer(program_id, accounts, proof, amount, bump)
         }
     }
 }

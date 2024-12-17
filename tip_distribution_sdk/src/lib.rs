@@ -7,7 +7,7 @@ pub use jito_tip_distribution::accounts::TipDistributionAccount;
 pub mod instruction;
 
 pub const CONFIG_SEED: &[u8] = b"CONFIG_ACCOUNT";
-pub const CLAIM_STATUS_SEED: &[u8] = b"CLAIM_STATUS_ACCOUNT";
+pub const CLAIM_STATUS_SEED: &[u8] = b"CLAIM_STATUS";
 pub const TIP_DISTRIBUTION_SEED: &[u8] = b"TIP_DISTRIBUTION_ACCOUNT";
 
 pub fn derive_tip_distribution_account_address(

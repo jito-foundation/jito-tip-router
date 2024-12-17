@@ -47,7 +47,7 @@ pub fn process_initialize_tracked_mints(
     tracked_mints_data[0] = TrackedMints::DISCRIMINATOR;
     let tracked_mints_account =
         TrackedMints::try_from_slice_unchecked_mut(&mut tracked_mints_data)?;
-    *tracked_mints_account = TrackedMints::new(*ncn_account.key, tracked_mints_bump);
+    tracked_mints_account.initialize(*ncn_account.key, tracked_mints_bump);
 
     Ok(())
 }

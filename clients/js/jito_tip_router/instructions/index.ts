@@ -8,6 +8,7 @@
 
 export * from './adminUpdateWeightTable';
 export * from './castVote';
+export * from './claimWithPayer';
 export * from './distributeBaseNcnRewardRoute';
 export * from './distributeBaseRewards';
 export * from './distributeNcnOperatorRewards';

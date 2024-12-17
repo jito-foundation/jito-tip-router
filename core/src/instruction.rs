@@ -304,5 +304,19 @@ pub enum TipRouterInstruction {
     SetTieBreaker {
         meta_merkle_root: [u8; 32],
         epoch: u64,
-    }
+    },
+
+    /// Claim tips with the program as the payer
+    #[account(0, writable, name = "claim_status_payer")]
+    #[account(1, name = "tip_distribution_program")]
+    #[account(2, name = "config")]
+    #[account(3, writable, name = "tip_distribution_account")]
+    #[account(4, writable, name = "claim_status")]
+    #[account(5, writable, name = "claimant")]
+    #[account(6, name = "system_program")]
+    ClaimWithPayer {
+        proof: Vec<[u8; 32]>,
+        amount: u64,
+        bump: u8,
+    },
 }

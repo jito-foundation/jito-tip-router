@@ -15,6 +15,7 @@ import {
 import {
   type ParsedAdminUpdateWeightTableInstruction,
   type ParsedCastVoteInstruction,
+  type ParsedClaimWithPayerInstruction,
   type ParsedDistributeBaseNcnRewardRouteInstruction,
   type ParsedDistributeBaseRewardsInstruction,
   type ParsedDistributeNcnOperatorRewardsInstruction,
@@ -76,6 +77,7 @@ export enum JitoTipRouterInstruction {
   CastVote,
   SetMerkleRoot,
   SetTieBreaker,
+  ClaimWithPayer,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -150,6 +152,9 @@ export function identifyJitoTipRouterInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(22), 0)) {
     return JitoTipRouterInstruction.SetTieBreaker;
+  }
+  if (containsBytes(data, getU8Encoder().encode(23), 0)) {
+    return JitoTipRouterInstruction.ClaimWithPayer;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -227,4 +232,7 @@ export type ParsedJitoTipRouterInstruction<
     } & ParsedSetMerkleRootInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.SetTieBreaker;
-    } & ParsedSetTieBreakerInstruction<TProgram>);
+    } & ParsedSetTieBreakerInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ClaimWithPayer;
+    } & ParsedClaimWithPayerInstruction<TProgram>);

@@ -15,3 +15,4 @@ pub mod stake_weight;
 pub mod tracked_mints;
 pub mod weight_entry;
 pub mod weight_table;
+pub mod claim_status_payer;
