@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
     types::{PodBool, PodU16, PodU64},
@@ -221,6 +223,8 @@ impl Discriminator for BallotBox {
 }
 
 impl BallotBox {
+    pub const SIZE: usize = 8 + size_of::<Self>();
+
     pub fn new(ncn: Pubkey, epoch: u64, bump: u8, current_slot: u64) -> Self {
         Self {
             ncn,
@@ -238,7 +242,18 @@ impl BallotBox {
     }
 
     pub fn initialize(&mut self, ncn: Pubkey, epoch: u64, bump: u8, current_slot: u64) {
-        *self = Self::new(ncn, epoch, bump, current_slot);
+        // Avoids overflowing stack
+        self.ncn = ncn;
+        self.epoch = PodU64::from(epoch);
+        self.bump = bump;
+        self.slot_created = PodU64::from(current_slot);
+        self.slot_consensus_reached = PodU64::from(DEFAULT_CONSENSUS_REACHED_SLOT);
+        self.operators_voted = PodU64::from(0);
+        self.unique_ballots = PodU64::from(0);
+        self.winning_ballot = Ballot::default();
+        self.operator_votes = [OperatorVote::default(); MAX_OPERATORS];
+        self.ballot_tallies = [BallotTally::default(); MAX_OPERATORS];
+        self.reserved = [0; 128];
     }
 
     pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {
@@ -746,13 +761,13 @@ mod tests {
         assert_eq!(ballot_box.ballot_tallies[1].ballot(), ballot2);
 
         // Test error when ballot tallies are full
-        for i in 3..=16 {
-            let ballot = Ballot::new([i as u8; 32]);
+        for _ in 3..=ballot_box.ballot_tallies.len() {
+            let ballot = Ballot::new(Pubkey::new_unique().to_bytes());
             ballot_box
                 .increment_or_create_ballot_tally(&ballot, &stake_weights)
                 .unwrap();
         }
-        let ballot_full = Ballot::new([33u8; 32]);
+        let ballot_full = Ballot::new(Pubkey::new_unique().to_bytes());
         let result = ballot_box.increment_or_create_ballot_tally(&ballot_full, &stake_weights);
         assert!(matches!(result, Err(TipRouterError::BallotTallyFull)));
     }

@@ -8,8 +8,6 @@
 
 import {
   combineCodec,
-  getOptionDecoder,
-  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -25,8 +23,6 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
-  type Option,
-  type OptionOrNullable,
   type ReadonlyAccount,
   type WritableAccount,
 } from '@solana/web3.js';
@@ -75,12 +71,12 @@ export type DistributeNcnOperatorRewardsInstruction<
 export type DistributeNcnOperatorRewardsInstructionData = {
   discriminator: number;
   ncnFeeGroup: number;
-  firstSlotOfNcnEpoch: Option<bigint>;
+  epoch: bigint;
 };
 
 export type DistributeNcnOperatorRewardsInstructionDataArgs = {
   ncnFeeGroup: number;
-  firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
+  epoch: number | bigint;
 };
 
 export function getDistributeNcnOperatorRewardsInstructionDataEncoder(): Encoder<DistributeNcnOperatorRewardsInstructionDataArgs> {
@@ -88,7 +84,7 @@ export function getDistributeNcnOperatorRewardsInstructionDataEncoder(): Encoder
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['ncnFeeGroup', getU8Encoder()],
-      ['firstSlotOfNcnEpoch', getOptionEncoder(getU64Encoder())],
+      ['epoch', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -101,7 +97,7 @@ export function getDistributeNcnOperatorRewardsInstructionDataDecoder(): Decoder
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['ncnFeeGroup', getU8Decoder()],
-    ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
+    ['epoch', getU64Decoder()],
   ]);
 }
 
@@ -130,7 +126,7 @@ export type DistributeNcnOperatorRewardsInput<
   ncnRewardRouter: Address<TAccountNcnRewardRouter>;
   restakingProgram: Address<TAccountRestakingProgram>;
   ncnFeeGroup: DistributeNcnOperatorRewardsInstructionDataArgs['ncnFeeGroup'];
-  firstSlotOfNcnEpoch: DistributeNcnOperatorRewardsInstructionDataArgs['firstSlotOfNcnEpoch'];
+  epoch: DistributeNcnOperatorRewardsInstructionDataArgs['epoch'];
 };
 
 export function getDistributeNcnOperatorRewardsInstruction<

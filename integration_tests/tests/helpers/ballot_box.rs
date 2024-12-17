@@ -8,13 +8,11 @@ pub fn serialized_ballot_box_account(ballot_box: &BallotBox) -> Account {
     data.extend_from_slice(&[0; 7]);
     data.extend_from_slice(bytemuck::bytes_of(ballot_box));
 
-    let account = Account {
+    Account {
         lamports: LAMPORTS_PER_SOL * 5,
         data,
         owner: jito_tip_router_program::id(),
         executable: false,
         rent_epoch: 0,
-    };
-
-    account
+    }
 }

@@ -22,7 +22,7 @@ use solana_program::{
 pub fn process_snapshot_vault_operator_delegation(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    first_slot_of_ncn_epoch: Option<u64>,
+    epoch: u64,
 ) -> ProgramResult {
     let [ncn_config, restaking_config, tracked_mints, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
         accounts
@@ -67,17 +67,16 @@ pub fn process_snapshot_vault_operator_delegation(
     }
 
     let current_slot = Clock::get()?.slot;
-    let (ncn_epoch, ncn_epoch_length) =
-        load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
+    let (_, ncn_epoch_length) = load_ncn_epoch(restaking_config, current_slot, None)?;
 
     TrackedMints::load(program_id, ncn.key, tracked_mints, false)?;
-    WeightTable::load(program_id, weight_table, ncn, ncn_epoch, false)?;
-    EpochSnapshot::load(program_id, ncn.key, ncn_epoch, epoch_snapshot, true)?;
+    WeightTable::load(program_id, weight_table, ncn, epoch, false)?;
+    EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, true)?;
     OperatorSnapshot::load(
         program_id,
         operator.key,
         ncn.key,
-        ncn_epoch,
+        epoch,
         operator_snapshot,
         true,
     )?;

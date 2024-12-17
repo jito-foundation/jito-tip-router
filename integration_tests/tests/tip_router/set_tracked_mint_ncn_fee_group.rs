@@ -71,17 +71,12 @@ mod tests {
             .get_tracked_mints(ncn_root.ncn_pubkey)
             .await?;
         assert_eq!(tracked_mints.mint_count(), 1);
-        let current_slot = fixture.clock().await.slot;
+        let epoch = fixture.clock().await.epoch;
 
         let new_ncn_fee_group = NcnFeeGroup::new(NcnFeeGroupType::Reserved7);
 
         tip_router_client
-            .do_set_tracked_mint_ncn_fee_group(
-                ncn_root.ncn_pubkey,
-                0,
-                new_ncn_fee_group,
-                current_slot,
-            )
+            .do_set_tracked_mint_ncn_fee_group(ncn_root.ncn_pubkey, 0, new_ncn_fee_group, epoch)
             .await?;
 
         let tracked_mints = tip_router_client
@@ -155,19 +150,13 @@ mod tests {
             )
             .await?;
 
+        let epoch = fixture.clock().await.epoch;
         // Is Okay
         {
-            let current_slot = fixture.clock().await.slot;
-
             let new_ncn_fee_group = NcnFeeGroup::new(NcnFeeGroupType::Reserved7);
 
             tip_router_client
-                .do_set_tracked_mint_ncn_fee_group(
-                    ncn_root.ncn_pubkey,
-                    0,
-                    new_ncn_fee_group,
-                    current_slot,
-                )
+                .do_set_tracked_mint_ncn_fee_group(ncn_root.ncn_pubkey, 0, new_ncn_fee_group, epoch)
                 .await?;
 
             let tracked_mints = tip_router_client
@@ -182,22 +171,15 @@ mod tests {
         }
 
         tip_router_client
-            .initialize_weight_table(ncn_root.ncn_pubkey, fixture.clock().await.slot)
+            .do_full_initialize_weight_table(ncn_root.ncn_pubkey, epoch)
             .await?;
 
         // Should fail
         {
-            let current_slot = fixture.clock().await.slot;
-
             let new_ncn_fee_group = NcnFeeGroup::new(NcnFeeGroupType::Reserved5);
 
             let result = tip_router_client
-                .do_set_tracked_mint_ncn_fee_group(
-                    ncn_root.ncn_pubkey,
-                    0,
-                    new_ncn_fee_group,
-                    current_slot,
-                )
+                .do_set_tracked_mint_ncn_fee_group(ncn_root.ncn_pubkey, 0, new_ncn_fee_group, epoch)
                 .await;
 
             assert!(result.is_err());

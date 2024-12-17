@@ -41,7 +41,6 @@ pub fn process_cast_vote(
         operator_snapshot,
         false,
     )?;
-
     let operator_data = operator.data.borrow();
     let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
 

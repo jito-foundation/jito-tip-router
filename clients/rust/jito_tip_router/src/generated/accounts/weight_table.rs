@@ -23,7 +23,8 @@ pub struct WeightTable {
     pub bump: u8,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 128],
-    pub table: [WeightEntry; 32],
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub table: [WeightEntry; 64],
 }
 
 impl WeightTable {

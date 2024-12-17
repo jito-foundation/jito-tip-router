@@ -48,6 +48,8 @@ impl Discriminator for NcnRewardRouter {
 }
 
 impl NcnRewardRouter {
+    pub const SIZE: usize = 8 + size_of::<Self>();
+
     pub fn new(
         ncn_fee_group: NcnFeeGroup,
         operator: Pubkey,

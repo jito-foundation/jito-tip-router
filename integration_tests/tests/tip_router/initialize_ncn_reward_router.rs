@@ -20,27 +20,27 @@ mod tests {
         fixture.vote_test_ncn(&test_ncn).await?;
         //////
 
-        let slot = fixture.clock().await.slot;
+        let clock = fixture.clock().await;
+        let slot = clock.slot;
+        let epoch = clock.epoch;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
         let operator = test_ncn.operators[0].operator_pubkey;
         let ncn_fee_group = NcnFeeGroup::default();
 
         // Initialize NCN reward router
         tip_router_client
-            .do_initialize_ncn_reward_router(ncn_fee_group, ncn, operator, slot)
+            .do_initialize_ncn_reward_router(ncn_fee_group, ncn, operator, epoch)
             .await?;
 
         // Get NCN reward router and verify initialization
-        let restaking_config_account = tip_router_client.get_restaking_config().await?;
-        let ncn_epoch = slot / restaking_config_account.epoch_length();
         let ncn_reward_router = tip_router_client
-            .get_ncn_reward_router(ncn_fee_group, operator, ncn, ncn_epoch)
+            .get_ncn_reward_router(ncn_fee_group, operator, ncn, epoch)
             .await?;
 
         // Verify initial state
         assert_eq!(ncn_reward_router.ncn(), ncn);
         assert_eq!(ncn_reward_router.operator(), operator);
-        assert_eq!(ncn_reward_router.ncn_epoch(), ncn_epoch);
+        assert_eq!(ncn_reward_router.ncn_epoch(), epoch);
         assert_eq!(ncn_reward_router.slot_created(), slot);
         assert_eq!(ncn_reward_router.reward_pool(), 0);
         assert_eq!(ncn_reward_router.rewards_processed(), 0);

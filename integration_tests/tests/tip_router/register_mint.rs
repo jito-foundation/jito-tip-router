@@ -240,8 +240,9 @@ mod tests {
             )
             .await?;
 
+        let epoch = fixture.clock().await.epoch;
         tip_router_client
-            .initialize_weight_table(ncn_root.ncn_pubkey, fixture.clock().await.slot)
+            .initialize_weight_table(ncn_root.ncn_pubkey, epoch)
             .await?;
 
         let result = tip_router_client

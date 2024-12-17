@@ -4,7 +4,7 @@ mod tests {
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
 
     #[tokio::test]
-    async fn test_initialize_operator_snapshot() -> TestResult<()> {
+    async fn test_snapshot_vault_operator_delegation() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut vault_client = fixture.vault_program_client();
         let mut tip_router_client = fixture.tip_router_client();
@@ -13,10 +13,10 @@ mod tests {
 
         fixture.warp_slot_incremental(1000).await?;
 
-        let slot = fixture.clock().await.slot;
+        let epoch = fixture.clock().await.epoch;
 
         tip_router_client
-            .do_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, slot)
+            .do_full_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         let ncn = test_ncn.ncn_root.ncn_pubkey;
@@ -29,21 +29,21 @@ mod tests {
         let weight = 100;
 
         tip_router_client
-            .do_admin_update_weight_table(ncn, slot, mint, weight)
+            .do_admin_update_weight_table(ncn, epoch, mint, weight)
             .await?;
 
         tip_router_client
-            .do_initialize_epoch_snapshot(ncn, slot)
+            .do_initialize_epoch_snapshot(ncn, epoch)
             .await?;
 
         let operator = test_ncn.operators[0].operator_pubkey;
 
         tip_router_client
-            .do_initialize_operator_snapshot(operator, ncn, slot)
+            .do_full_initialize_operator_snapshot(operator, ncn, epoch)
             .await?;
 
         tip_router_client
-            .do_snapshot_vault_operator_delegation(vault_address, operator, ncn, slot)
+            .do_snapshot_vault_operator_delegation(vault_address, operator, ncn, epoch)
             .await?;
 
         Ok(())

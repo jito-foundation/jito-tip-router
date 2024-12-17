@@ -44,6 +44,8 @@ impl Discriminator for BaseRewardRouter {
 }
 
 impl BaseRewardRouter {
+    pub const SIZE: usize = 8 + size_of::<Self>();
+
     pub fn new(ncn: Pubkey, ncn_epoch: u64, bump: u8, slot_created: u64) -> Self {
         Self {
             ncn,
@@ -60,6 +62,23 @@ impl BaseRewardRouter {
                 NcnFeeGroup::FEE_GROUP_COUNT],
             ncn_fee_group_reward_routes: [NcnRewardRoute::default(); MAX_OPERATORS],
         }
+    }
+
+    pub fn initialize(&mut self, ncn: Pubkey, ncn_epoch: u64, bump: u8, current_slot: u64) {
+        // Initializes field by field to avoid overflowing stack
+        self.ncn = ncn;
+        self.ncn_epoch = PodU64::from(ncn_epoch);
+        self.bump = bump;
+        self.slot_created = PodU64::from(current_slot);
+        self.total_rewards = PodU64::from(0);
+        self.reward_pool = PodU64::from(0);
+        self.rewards_processed = PodU64::from(0);
+        self.reserved = [0; 128];
+        self.base_fee_group_rewards =
+            [BaseRewardRouterRewards::default(); NcnFeeGroup::FEE_GROUP_COUNT];
+        self.ncn_fee_group_rewards =
+            [BaseRewardRouterRewards::default(); NcnFeeGroup::FEE_GROUP_COUNT];
+        self.ncn_fee_group_reward_routes = [NcnRewardRoute::default(); MAX_OPERATORS];
     }
 
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
@@ -79,7 +98,7 @@ impl BaseRewardRouter {
         ncn: &Pubkey,
         ncn_epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(ncn, ncn_epoch);
+        let seeds: Vec<Vec<u8>> = Self::seeds(ncn, ncn_epoch);
         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
         (pda, bump, seeds)

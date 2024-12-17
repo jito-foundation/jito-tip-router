@@ -1,17 +1,15 @@
-use std::mem::size_of;
-
-use jito_bytemuck::{AccountDeserialize, Discriminator};
+use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    loaders::load_ncn_epoch, tracked_mints::TrackedMints, weight_table::WeightTable,
+    constants::MAX_REALLOC_BYTES, tracked_mints::TrackedMints, weight_table::WeightTable,
 };
 use solana_program::{
-    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
+    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
 /// Initializes a Weight Table
@@ -19,7 +17,7 @@ use solana_program::{
 pub fn process_initialize_weight_table(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    first_slot_of_ncn_epoch: Option<u64>,
+    epoch: u64,
 ) -> ProgramResult {
     let [restaking_config, tracked_mints, ncn, weight_table, payer, restaking_program, system_program] =
         accounts
@@ -40,19 +38,16 @@ pub fn process_initialize_weight_table(
     load_system_program(system_program)?;
     load_signer(payer, true)?;
 
-    let current_slot = Clock::get()?.slot;
-    let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
-
     let vault_count = {
         let ncn_data = ncn.data.borrow();
         let ncn = Ncn::try_from_slice_unchecked(&ncn_data)?;
         ncn.vault_count()
     };
 
-    let (tracked_mint_count, unique_mints) = {
+    let tracked_mint_count = {
         let tracked_mints_data = tracked_mints.data.borrow();
         let tracked_mints = TrackedMints::try_from_slice_unchecked(&tracked_mints_data)?;
-        (tracked_mints.mint_count(), tracked_mints.get_unique_mints())
+        tracked_mints.mint_count()
     };
 
     if vault_count != tracked_mint_count {
@@ -61,7 +56,7 @@ pub fn process_initialize_weight_table(
     }
 
     let (weight_table_pubkey, weight_table_bump, mut weight_table_seeds) =
-        WeightTable::find_program_address(program_id, ncn.key, ncn_epoch);
+        WeightTable::find_program_address(program_id, ncn.key, epoch);
     weight_table_seeds.push(vec![weight_table_bump]);
 
     if weight_table_pubkey.ne(weight_table.key) {
@@ -73,7 +68,7 @@ pub fn process_initialize_weight_table(
         "Initializing Weight Table {} for NCN: {} at epoch: {}",
         weight_table.key,
         ncn.key,
-        ncn_epoch
+        epoch
     );
     create_account(
         payer,
@@ -81,17 +76,9 @@ pub fn process_initialize_weight_table(
         system_program,
         program_id,
         &Rent::get()?,
-        8_u64.checked_add(size_of::<WeightTable>() as u64).unwrap(),
+        MAX_REALLOC_BYTES,
         &weight_table_seeds,
     )?;
-
-    let mut weight_table_data = weight_table.try_borrow_mut_data()?;
-    weight_table_data[0] = WeightTable::DISCRIMINATOR;
-    let weight_table_account = WeightTable::try_from_slice_unchecked_mut(&mut weight_table_data)?;
-
-    *weight_table_account = WeightTable::new(*ncn.key, ncn_epoch, current_slot, weight_table_bump);
-
-    weight_table_account.initalize_weight_table(&unique_mints)?;
 
     Ok(())
 }

@@ -8,8 +8,6 @@
 
 import {
   combineCodec,
-  getOptionDecoder,
-  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -26,8 +24,6 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
-  type Option,
-  type OptionOrNullable,
   type ReadonlyAccount,
   type TransactionSigner,
   type WritableAccount,
@@ -92,18 +88,18 @@ export type InitializeEpochSnapshotInstruction<
 
 export type InitializeEpochSnapshotInstructionData = {
   discriminator: number;
-  firstSlotOfNcnEpoch: Option<bigint>;
+  epoch: bigint;
 };
 
 export type InitializeEpochSnapshotInstructionDataArgs = {
-  firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
+  epoch: number | bigint;
 };
 
 export function getInitializeEpochSnapshotInstructionDataEncoder(): Encoder<InitializeEpochSnapshotInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['firstSlotOfNcnEpoch', getOptionEncoder(getU64Encoder())],
+      ['epoch', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -115,7 +111,7 @@ export function getInitializeEpochSnapshotInstructionDataEncoder(): Encoder<Init
 export function getInitializeEpochSnapshotInstructionDataDecoder(): Decoder<InitializeEpochSnapshotInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
+    ['epoch', getU64Decoder()],
   ]);
 }
 
@@ -149,7 +145,7 @@ export type InitializeEpochSnapshotInput<
   payer: TransactionSigner<TAccountPayer>;
   restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
-  firstSlotOfNcnEpoch: InitializeEpochSnapshotInstructionDataArgs['firstSlotOfNcnEpoch'];
+  epoch: InitializeEpochSnapshotInstructionDataArgs['epoch'];
 };
 
 export function getInitializeEpochSnapshotInstruction<

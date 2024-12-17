@@ -28,6 +28,10 @@ import {
   type ParsedInitializeOperatorSnapshotInstruction,
   type ParsedInitializeTrackedMintsInstruction,
   type ParsedInitializeWeightTableInstruction,
+  type ParsedReallocBallotBoxInstruction,
+  type ParsedReallocBaseRewardRouterInstruction,
+  type ParsedReallocOperatorSnapshotInstruction,
+  type ParsedReallocWeightTableInstruction,
   type ParsedRegisterMintInstruction,
   type ParsedRouteBaseRewardsInstruction,
   type ParsedRouteNcnRewardsInstruction,
@@ -78,6 +82,10 @@ export enum JitoTipRouterInstruction {
   SetMerkleRoot,
   SetTieBreaker,
   ClaimWithPayer,
+  ReallocBallotBox,
+  ReallocOperatorSnapshot,
+  ReallocBaseRewardRouter,
+  ReallocWeightTable,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -155,6 +163,18 @@ export function identifyJitoTipRouterInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(23), 0)) {
     return JitoTipRouterInstruction.ClaimWithPayer;
+  }
+  if (containsBytes(data, getU8Encoder().encode(24), 0)) {
+    return JitoTipRouterInstruction.ReallocBallotBox;
+  }
+  if (containsBytes(data, getU8Encoder().encode(25), 0)) {
+    return JitoTipRouterInstruction.ReallocOperatorSnapshot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(26), 0)) {
+    return JitoTipRouterInstruction.ReallocBaseRewardRouter;
+  }
+  if (containsBytes(data, getU8Encoder().encode(27), 0)) {
+    return JitoTipRouterInstruction.ReallocWeightTable;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -235,4 +255,16 @@ export type ParsedJitoTipRouterInstruction<
     } & ParsedSetTieBreakerInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.ClaimWithPayer;
-    } & ParsedClaimWithPayerInstruction<TProgram>);
+    } & ParsedClaimWithPayerInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ReallocBallotBox;
+    } & ParsedReallocBallotBoxInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ReallocOperatorSnapshot;
+    } & ParsedReallocOperatorSnapshotInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ReallocBaseRewardRouter;
+    } & ParsedReallocBaseRewardRouterInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ReallocWeightTable;
+    } & ParsedReallocWeightTableInstruction<TProgram>);
