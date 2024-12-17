@@ -43,6 +43,7 @@ use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 use solana_sdk::{
     clock::Clock,
     commitment_config::CommitmentLevel,
+    compute_budget::ComputeBudgetInstruction,
     signature::{Keypair, Signer},
     system_program,
     transaction::{Transaction, TransactionError},
@@ -1404,7 +1405,11 @@ impl TipRouterClient {
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;
         self.process_transaction(&Transaction::new_signed_with_payer(
-            &[ix],
+            &[
+                // TODO: should make this instruction much more efficient
+                ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+                ix,
+            ],
             Some(&self.payer.pubkey()),
             &[&self.payer],
             blockhash,

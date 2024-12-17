@@ -76,7 +76,26 @@ impl WeightTable {
         (pda, bump, seeds)
     }
 
-    pub fn initalize_weight_table(
+    pub fn initialize(
+        &mut self,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+        slot_created: u64,
+        bump: u8,
+        config_supported_mints: &[Pubkey],
+    ) -> Result<(), TipRouterError> {
+        // Initializes field by field to avoid overflowing stack
+        self.ncn = ncn;
+        self.ncn_epoch = PodU64::from(ncn_epoch);
+        self.slot_created = PodU64::from(slot_created);
+        self.bump = bump;
+        self.reserved = [0; 128];
+        self.table = [WeightEntry::default(); MAX_VAULT_OPERATOR_DELEGATIONS];
+        self.set_supported_mints(config_supported_mints)?;
+        Ok(())
+    }
+
+    fn set_supported_mints(
         &mut self,
         config_supported_mints: &[Pubkey],
     ) -> Result<(), TipRouterError> {
@@ -249,7 +268,7 @@ mod tests {
         assert_eq!(table.mint_count(), 0);
 
         let mints = get_test_pubkeys(2);
-        table.initalize_weight_table(&mints).unwrap();
+        table.set_supported_mints(&mints).unwrap();
         assert_eq!(table.mint_count(), 2);
     }
 
@@ -259,7 +278,7 @@ mod tests {
         let mut table = WeightTable::new(ncn, 0, 0, 0);
         let many_mints = get_test_pubkeys(MAX_VAULT_OPERATOR_DELEGATIONS + 1);
         assert_eq!(
-            table.initalize_weight_table(&many_mints),
+            table.set_supported_mints(&many_mints),
             Err(TipRouterError::TooManyMintsForTable)
         );
     }
@@ -269,7 +288,7 @@ mod tests {
         let ncn = Pubkey::new_unique();
         let mut table = WeightTable::new(ncn, 0, 0, 0);
         let max_mints = get_test_pubkeys(MAX_VAULT_OPERATOR_DELEGATIONS);
-        table.initalize_weight_table(&max_mints).unwrap();
+        table.set_supported_mints(&max_mints).unwrap();
         assert_eq!(table.mint_count(), MAX_VAULT_OPERATOR_DELEGATIONS);
     }
 
@@ -278,11 +297,11 @@ mod tests {
         let ncn = Pubkey::new_unique();
         let mut table = WeightTable::new(ncn, 0, 0, 0);
         let first_mints = get_test_pubkeys(2);
-        table.initalize_weight_table(&first_mints).unwrap();
+        table.set_supported_mints(&first_mints).unwrap();
         let second_mints = get_test_pubkeys(3);
 
         assert_eq!(
-            table.initalize_weight_table(&second_mints),
+            table.set_supported_mints(&second_mints),
             Err(TipRouterError::WeightTableAlreadyInitialized)
         );
     }
@@ -294,7 +313,7 @@ mod tests {
         let mints = get_test_pubkeys(2);
         let mint = mints[0];
 
-        table.initalize_weight_table(&mints).unwrap();
+        table.set_supported_mints(&mints).unwrap();
 
         table.set_weight(&mint, 100, 1).unwrap();
         assert_eq!(table.get_weight(&mint).unwrap(), 100);
@@ -306,7 +325,7 @@ mod tests {
         let mut table = WeightTable::new(ncn, 0, 0, 0);
         let mints = get_test_pubkeys(2);
 
-        table.initalize_weight_table(&mints).unwrap();
+        table.set_supported_mints(&mints).unwrap();
 
         let invalid_mint = Pubkey::new_unique();
         assert_eq!(
@@ -322,7 +341,7 @@ mod tests {
         let mints = get_test_pubkeys(2);
         let mint = mints[0];
 
-        table.initalize_weight_table(&mints).unwrap();
+        table.set_supported_mints(&mints).unwrap();
 
         table.set_weight(&mint, 100, 1).unwrap();
         assert_eq!(table.get_weight(&mint).unwrap(), 100);
@@ -339,7 +358,7 @@ mod tests {
         let mint1 = mints[0];
         let mint2 = mints[1];
 
-        table.initalize_weight_table(&mints).unwrap();
+        table.set_supported_mints(&mints).unwrap();
 
         table.set_weight(&mint1, 100, 1).unwrap();
         table.set_weight(&mint2, 200, 1).unwrap();
@@ -355,7 +374,7 @@ mod tests {
         let mints = get_test_pubkeys(2);
         let mint = mints[0];
 
-        table.initalize_weight_table(&mints).unwrap();
+        table.set_supported_mints(&mints).unwrap();
 
         table.set_weight(&mint, 100, 1).unwrap();
         assert_eq!(table.get_weight(&mint).unwrap(), 100);

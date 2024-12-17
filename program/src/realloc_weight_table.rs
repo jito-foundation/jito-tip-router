@@ -42,14 +42,12 @@ pub fn process_realloc_weight_table(
             new_size
         );
         realloc(weight_table, new_size, payer, &Rent::get()?)?;
-        msg!("New size: {}", weight_table.data_len());
-        msg!("Data is empty? {}", weight_table.data_is_empty());
     }
 
-    if weight_table.data_len() >= WeightTable::SIZE
-        && weight_table.try_borrow_data()?[0] != WeightTable::DISCRIMINATOR
-    {
-        msg!("actually Initializing weight table");
+    let should_initialize = weight_table.data_len() >= WeightTable::SIZE
+        && weight_table.try_borrow_data()?[0] != WeightTable::DISCRIMINATOR;
+
+    if should_initialize {
         let unique_mints = {
             let tracked_mints_data = tracked_mints.data.borrow();
             let tracked_mints = TrackedMints::try_from_slice_unchecked(&tracked_mints_data)?;
@@ -61,11 +59,13 @@ pub fn process_realloc_weight_table(
         let weight_table_account =
             WeightTable::try_from_slice_unchecked_mut(&mut weight_table_data)?;
 
-        *weight_table_account =
-            WeightTable::new(*ncn.key, epoch, Clock::get()?.slot, weight_table_bump);
-
-        weight_table_account.initalize_weight_table(&unique_mints)?;
-        msg!("INTIIALIZZING");
+        weight_table_account.initialize(
+            *ncn.key,
+            epoch,
+            Clock::get()?.slot,
+            weight_table_bump,
+            &unique_mints,
+        )?;
     }
 
     Ok(())

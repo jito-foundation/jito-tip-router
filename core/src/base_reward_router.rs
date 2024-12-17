@@ -64,6 +64,23 @@ impl BaseRewardRouter {
         }
     }
 
+    pub fn initialize(&mut self, ncn: Pubkey, ncn_epoch: u64, bump: u8, current_slot: u64) {
+        // Initializes field by field to avoid overflowing stack
+        self.ncn = ncn;
+        self.ncn_epoch = PodU64::from(ncn_epoch);
+        self.bump = bump;
+        self.slot_created = PodU64::from(current_slot);
+        self.total_rewards = PodU64::from(0);
+        self.reward_pool = PodU64::from(0);
+        self.rewards_processed = PodU64::from(0);
+        self.reserved = [0; 128];
+        self.base_fee_group_rewards =
+            [BaseRewardRouterRewards::default(); NcnFeeGroup::FEE_GROUP_COUNT];
+        self.ncn_fee_group_rewards =
+            [BaseRewardRouterRewards::default(); NcnFeeGroup::FEE_GROUP_COUNT];
+        self.ncn_fee_group_reward_routes = [NcnRewardRoute::default(); MAX_OPERATORS];
+    }
+
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [

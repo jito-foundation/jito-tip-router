@@ -63,7 +63,6 @@ pub fn process_initialize_ncn_reward_router(
         ncn.key,
         epoch
     );
-    msg!("Payer lamports: {}", payer.lamports());
     create_account(
         payer,
         ncn_reward_router,
@@ -75,7 +74,6 @@ pub fn process_initialize_ncn_reward_router(
             .unwrap(),
         &ncn_reward_router_seeds,
     )?;
-    msg!("Payer lamports post: {}", payer.lamports());
 
     let mut ncn_reward_router_data = ncn_reward_router.try_borrow_mut_data()?;
     ncn_reward_router_data[0] = NcnRewardRouter::DISCRIMINATOR;

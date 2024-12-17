@@ -42,16 +42,21 @@ pub fn process_realloc_base_reward_router(
         realloc(base_reward_router, new_size, payer, &Rent::get()?)?;
     }
 
-    if base_reward_router.data_len() >= BaseRewardRouter::SIZE
-        && base_reward_router.try_borrow_data()?[0] != BaseRewardRouter::DISCRIMINATOR
-    {
+    let should_initialize = base_reward_router.data_len() >= BaseRewardRouter::SIZE
+        && base_reward_router.try_borrow_data()?[0] != BaseRewardRouter::DISCRIMINATOR;
+
+    if should_initialize {
         let mut base_reward_router_data = base_reward_router.try_borrow_mut_data()?;
         base_reward_router_data[0] = BaseRewardRouter::DISCRIMINATOR;
         let base_reward_router_account =
             BaseRewardRouter::try_from_slice_unchecked_mut(&mut base_reward_router_data)?;
 
-        *base_reward_router_account =
-            BaseRewardRouter::new(*ncn.key, epoch, base_reward_router_bump, Clock::get()?.slot);
+        base_reward_router_account.initialize(
+            *ncn.key,
+            epoch,
+            base_reward_router_bump,
+            Clock::get()?.slot,
+        );
     }
 
     Ok(())

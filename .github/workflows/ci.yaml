@@ -154,9 +154,7 @@ jobs:
           name: jito_tip_router_program.so
           path: integration_tests/tests/fixtures/
       - uses: taiki-e/install-action@nextest
-      # Test the non-BPF tests and the BPF tests separately
-      - run: cargo nextest run --all-features -E 'not test(bpf)'
-      - run: cargo nextest run --all-features -E 'test(bpf)'
+      - run: cargo nextest run --all-features
         env:
           SBF_OUT_DIR: ${{ github.workspace }}/integration_tests/tests/fixtures
 

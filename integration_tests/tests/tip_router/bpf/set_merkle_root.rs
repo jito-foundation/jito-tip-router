@@ -431,7 +431,7 @@ mod set_merkle_root {
 
         // Initialize ballot box
         tip_router_client
-            .do_initialize_ballot_box(ncn, ncn_epoch)
+            .do_full_initialize_ballot_box(ncn, ncn_epoch)
             .await?;
 
         // Try setting merkle root before consensus

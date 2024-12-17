@@ -77,6 +77,14 @@ impl TrackedMints {
         }
     }
 
+    pub fn initialize(&mut self, ncn: Pubkey, bump: u8) {
+        // Initializes field by field to avoid overflowing stack
+        self.ncn = ncn;
+        self.bump = bump;
+        self.reserved = [0; 127];
+        self.st_mint_list = [MintEntry::default(); MAX_VAULT_OPERATOR_DELEGATIONS];
+    }
+
     pub fn seeds(ncn: &Pubkey) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [b"tracked_mints".to_vec(), ncn.to_bytes().to_vec()]

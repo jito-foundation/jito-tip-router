@@ -242,7 +242,18 @@ impl BallotBox {
     }
 
     pub fn initialize(&mut self, ncn: Pubkey, epoch: u64, bump: u8, current_slot: u64) {
-        *self = Self::new(ncn, epoch, bump, current_slot);
+        // Avoids overflowing stack
+        self.ncn = ncn;
+        self.epoch = PodU64::from(epoch);
+        self.bump = bump;
+        self.slot_created = PodU64::from(current_slot);
+        self.slot_consensus_reached = PodU64::from(DEFAULT_CONSENSUS_REACHED_SLOT);
+        self.operators_voted = PodU64::from(0);
+        self.unique_ballots = PodU64::from(0);
+        self.winning_ballot = Ballot::default();
+        self.operator_votes = [OperatorVote::default(); MAX_OPERATORS];
+        self.ballot_tallies = [BallotTally::default(); MAX_OPERATORS];
+        self.reserved = [0; 128];
     }
 
     pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {

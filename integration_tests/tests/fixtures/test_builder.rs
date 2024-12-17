@@ -145,24 +145,6 @@ impl TestBuilder {
         self.context.banks_client.get_account(*address).await
     }
 
-    // pub async fn airdrop(&mut self, to: &Pubkey, lamports: u64) -> Result<(), BanksClientError> {
-    //     let transaction = Transaction::new_signed_with_payer(
-    //         &[system_instruction::transfer(
-    //             &self.whale.pubkey(),
-    //             to,
-    //             lamports,
-    //         )],
-    //         Some(&self.whale.pubkey()),
-    //         &[&self.whale],
-    //         self.context.last_blockhash,
-    //     );
-
-    //     self.context
-    //         .banks_client
-    //         .process_transaction(transaction)
-    //         .await
-    // }
-
     pub async fn warp_slot_incremental(
         &mut self,
         incremental_slots: u64,

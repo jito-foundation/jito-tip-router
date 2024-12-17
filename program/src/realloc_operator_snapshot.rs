@@ -68,9 +68,10 @@ pub fn process_realloc_operator_snapshot(
         realloc(operator_snapshot, new_size, payer, &Rent::get()?)?;
     }
 
-    if operator_snapshot.data_len() >= OperatorSnapshot::SIZE
-        && operator_snapshot.try_borrow_data()?[0] != OperatorSnapshot::DISCRIMINATOR
-    {
+    let should_initialize = operator_snapshot.data_len() >= OperatorSnapshot::SIZE
+        && operator_snapshot.try_borrow_data()?[0] != OperatorSnapshot::DISCRIMINATOR;
+
+    if should_initialize {
         let current_slot = Clock::get()?.slot;
         let (_, ncn_epoch_length) = load_ncn_epoch(restaking_config, current_slot, None)?;
 
@@ -114,29 +115,18 @@ pub fn process_realloc_operator_snapshot(
         let operator_snapshot_account =
             OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
 
-        *operator_snapshot_account = if is_active {
-            OperatorSnapshot::new_active(
-                *operator.key,
-                *ncn.key,
-                epoch,
-                operator_snapshot_bump,
-                current_slot,
-                ncn_operator_index,
-                operator_index,
-                operator_fee_bps,
-                vault_count,
-            )?
-        } else {
-            OperatorSnapshot::new_inactive(
-                *operator.key,
-                *ncn.key,
-                epoch,
-                operator_snapshot_bump,
-                current_slot,
-                ncn_operator_index,
-                operator_index,
-            )?
-        };
+        operator_snapshot_account.initialize(
+            *operator.key,
+            *ncn.key,
+            epoch,
+            operator_snapshot_bump,
+            current_slot,
+            is_active,
+            ncn_operator_index,
+            operator_index,
+            operator_fee_bps,
+            vault_count,
+        )?;
 
         // Increment operator registration for an inactive operator
         if !is_active {
