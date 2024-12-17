@@ -8,3 +8,4 @@ program_errors.json
 test_errors.output
 tests.output
 integration_tests/tests/fixtures/jito_tip_router_program.so
+integration_tests/tests/fixtures/jito_tip_router_program-keypair.json

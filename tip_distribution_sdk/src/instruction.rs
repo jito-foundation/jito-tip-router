@@ -96,7 +96,6 @@ pub fn claim_ix(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn upload_merkle_root_ix(
     config: Pubkey,
     merkle_root_upload_authority: Pubkey,
@@ -119,5 +118,22 @@ pub fn upload_merkle_root_ix(
             max_num_nodes,
         }
         .data(),
+    }
+}
+
+pub fn close_claim_status_ix(
+    config: Pubkey,
+    claim_status: Pubkey,
+    claim_status_payer: Pubkey,
+) -> Instruction {
+    Instruction {
+        program_id: jito_tip_distribution::ID,
+        accounts: jito_tip_distribution::client::accounts::CloseClaimStatus {
+            config,
+            claim_status,
+            claim_status_payer,
+        }
+        .to_account_metas(None),
+        data: jito_tip_distribution::client::args::CloseClaimStatus {}.data(),
     }
 }

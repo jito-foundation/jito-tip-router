@@ -71,7 +71,7 @@ pub struct ReallocBallotBoxInstructionData {
 
 impl ReallocBallotBoxInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 23 }
+        Self { discriminator: 24 }
     }
 }
 

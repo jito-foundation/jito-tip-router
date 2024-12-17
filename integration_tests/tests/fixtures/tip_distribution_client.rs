@@ -1,5 +1,8 @@
 use anchor_lang::AccountDeserialize;
-use jito_tip_distribution_sdk::{jito_tip_distribution, TipDistributionAccount};
+use jito_tip_distribution_sdk::{
+    jito_tip_distribution::{self, accounts::ClaimStatus},
+    TipDistributionAccount,
+};
 use solana_program::{pubkey::Pubkey, system_instruction::transfer};
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 use solana_sdk::{
@@ -79,6 +82,27 @@ impl TipDistributionClient {
         let tip_distribution = TipDistributionAccount::try_deserialize(&mut tip_distribution_data)?;
 
         Ok(tip_distribution)
+    }
+
+    pub async fn get_claim_status_account(
+        &mut self,
+        claimant: Pubkey,
+        tip_distribution_account: Pubkey,
+    ) -> TestResult<ClaimStatus> {
+        let (claim_status_address, _) =
+            jito_tip_distribution_sdk::derive_claim_status_account_address(
+                &jito_tip_distribution::ID,
+                &claimant,
+                &tip_distribution_account,
+            );
+        let claim_status_account = self
+            .banks_client
+            .get_account(claim_status_address)
+            .await?
+            .unwrap();
+        let mut claim_status_data = claim_status_account.data.as_slice();
+        let claim_status = ClaimStatus::try_deserialize(&mut claim_status_data)?;
+        Ok(claim_status)
     }
 
     // Sets up a vote account where the node_pubkey is the payer and the address is a new pubkey

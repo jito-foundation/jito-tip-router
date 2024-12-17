@@ -15,6 +15,7 @@ import {
 import {
   type ParsedAdminUpdateWeightTableInstruction,
   type ParsedCastVoteInstruction,
+  type ParsedClaimWithPayerInstruction,
   type ParsedDistributeBaseNcnRewardRouteInstruction,
   type ParsedDistributeBaseRewardsInstruction,
   type ParsedDistributeNcnOperatorRewardsInstruction,
@@ -80,6 +81,7 @@ export enum JitoTipRouterInstruction {
   CastVote,
   SetMerkleRoot,
   SetTieBreaker,
+  ClaimWithPayer,
   ReallocBallotBox,
   ReallocOperatorSnapshot,
   ReallocBaseRewardRouter,
@@ -160,15 +162,18 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.SetTieBreaker;
   }
   if (containsBytes(data, getU8Encoder().encode(23), 0)) {
-    return JitoTipRouterInstruction.ReallocBallotBox;
+    return JitoTipRouterInstruction.ClaimWithPayer;
   }
   if (containsBytes(data, getU8Encoder().encode(24), 0)) {
-    return JitoTipRouterInstruction.ReallocOperatorSnapshot;
+    return JitoTipRouterInstruction.ReallocBallotBox;
   }
   if (containsBytes(data, getU8Encoder().encode(25), 0)) {
-    return JitoTipRouterInstruction.ReallocBaseRewardRouter;
+    return JitoTipRouterInstruction.ReallocOperatorSnapshot;
   }
   if (containsBytes(data, getU8Encoder().encode(26), 0)) {
+    return JitoTipRouterInstruction.ReallocBaseRewardRouter;
+  }
+  if (containsBytes(data, getU8Encoder().encode(27), 0)) {
     return JitoTipRouterInstruction.ReallocWeightTable;
   }
   throw new Error(
@@ -248,6 +253,9 @@ export type ParsedJitoTipRouterInstruction<
   | ({
       instructionType: JitoTipRouterInstruction.SetTieBreaker;
     } & ParsedSetTieBreakerInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ClaimWithPayer;
+    } & ParsedClaimWithPayerInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.ReallocBallotBox;
     } & ParsedReallocBallotBoxInstruction<TProgram>)
