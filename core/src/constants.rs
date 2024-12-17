@@ -23,3 +23,12 @@ pub const DEFAULT_CONSENSUS_REACHED_SLOT: u64 = u64::MAX;
 pub const MAX_REALLOC_BYTES: u64 = MAX_PERMITTED_DATA_INCREASE as u64; // TODO just use this?
 
 pub const WEIGHT_PRECISION: u128 = 1_000_000_000;
+pub const DEFAULT_LST_WEIGHT: u128 = 1;
+
+pub const DEFAULT_REWARD_MULTIPLIER_BPS: u64 = 10_000;
+pub const JITO_SOL_REWARD_MULTIPLIER_BPS: u64 = 20_000;
+pub const JTO_MINT: Pubkey = pubkey!("jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL");
+pub const JITO_SOL_MINT: Pubkey = pubkey!("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn");
+
+pub const MAX_STALE_SLOTS: u64 = 100;
+pub const JTO_USD_FEED: Pubkey = pubkey!("5S7ErPSkFmyXuq2aE3rZ6ofwVyZpwzUt6w7m6kqekvMe");
