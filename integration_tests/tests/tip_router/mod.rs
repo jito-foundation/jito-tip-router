@@ -16,4 +16,5 @@ mod set_config_fees;
 mod set_new_admin;
 mod set_tie_breaker;
 mod set_tracked_mint_ncn_fee_group;
+mod set_weight;
 mod snapshot_vault_operator_delegation;
