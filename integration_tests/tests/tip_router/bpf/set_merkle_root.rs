@@ -283,10 +283,8 @@ mod set_merkle_root {
         Ok(())
     }
 
-    // TODO update to use this test once snapshot instructions work with BPF
-    #[ignore]
     #[tokio::test]
-    async fn _test_set_merkle_root_no_fixture() -> TestResult<()> {
+    async fn test_set_merkle_root_no_fixture() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
         let mut tip_distribution_client = fixture.tip_distribution_client();
@@ -298,15 +296,12 @@ mod set_merkle_root {
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
         let clock = fixture.clock().await;
-        let slot = clock.slot;
-        let restaking_config_account = tip_router_client.get_restaking_config().await?;
-        let ncn_epoch = slot / restaking_config_account.epoch_length();
+        let epoch = clock.epoch;
 
         let ncn = test_ncn.ncn_root.ncn_pubkey;
         let ncn_config_address =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
-        let epoch: u64 = 0;
         tip_distribution_client
             .do_initialize(ncn_config_address)
             .await?;
@@ -314,12 +309,12 @@ mod set_merkle_root {
         let vote_account = vote_keypair.pubkey();
 
         tip_distribution_client
-            .do_initialize_tip_distribution_account(
-                ncn_config_address,
-                vote_keypair,
-                ncn_epoch,
-                100,
-            )
+            .do_initialize_tip_distribution_account(ncn_config_address, vote_keypair, epoch, 100)
+            .await?;
+
+        // Initialize ballot box
+        tip_router_client
+            .do_full_initialize_ballot_box(ncn, epoch)
             .await?;
 
         let meta_merkle_tree_fixture =
@@ -330,7 +325,7 @@ mod set_merkle_root {
         let operator_admin = &test_ncn.operators[0].operator_admin;
 
         tip_router_client
-            .do_cast_vote(ncn, operator, operator_admin, winning_root, ncn_epoch)
+            .do_cast_vote(ncn, operator, operator_admin, winning_root, epoch)
             .await?;
         let tip_distribution_address = derive_tip_distribution_account_address(
             &jito_tip_distribution::ID,
@@ -356,6 +351,12 @@ mod set_merkle_root {
                 node.max_num_nodes,
             )
             .unwrap();
+
+        // Wait 1 slot before set merkle root
+        let epoch_schedule: EpochSchedule = fixture.epoch_schedule().await;
+        fixture
+            .warp_slot_incremental(epoch_schedule.get_slots_in_epoch(epoch))
+            .await?;
 
         // Invoke set_merkle_root
         tip_router_client
