@@ -1338,7 +1338,10 @@ impl TipRouterClient {
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;
         self.process_transaction(&Transaction::new_signed_with_payer(
-            &[ix],
+            &[
+                ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+                ix,
+            ],
             Some(&self.payer.pubkey()),
             &[&self.payer],
             blockhash,
