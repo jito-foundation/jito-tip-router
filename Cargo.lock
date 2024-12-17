@@ -8981,11 +8981,13 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang 0.30.1",
  "anyhow",
+ "base64 0.13.1",
  "bzip2",
  "clap 4.5.23",
  "ellipsis-client",
  "env_logger 0.10.2",
  "futures",
+ "hex",
  "im",
  "itertools 0.11.0",
  "jito-restaking-program",

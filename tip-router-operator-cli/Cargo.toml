@@ -7,6 +7,8 @@ description = "CLI for Jito Tip Router"
 [dependencies]
 anchor-lang = { workspace = true }
 anyhow = { workspace = true }
+base64 = "0.13"
+hex = "0.4"
 clap = { workspace = true }
 ellipsis-client = "0.1"
 env_logger = { workspace = true }

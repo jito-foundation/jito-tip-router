@@ -2,6 +2,7 @@
 
 FIXTURES_DIR=tests/fixtures
 LEDGER_DIR=$FIXTURES_DIR/test-ledger
+TDA_ACCOUNT_DIR=$FIXTURES_DIR/tda-accounts
 DESIRED_SLOT=150
 max_validators=10
 validator_file=$FIXTURES_DIR/local_validators.txt
@@ -20,19 +21,52 @@ create_keypair () {
   fi
 }
 
-create_vote_accounts () {
+# Function to create keypairs and serialize accounts
+prepare_keypairs_and_serialize() {
   max_validators=$1
   validator_file=$2
-  for number in $(seq 1 "$max_validators")
-  do
+
+  for number in $(seq 1 "$max_validators"); do
+    # Create keypairs for identity, vote, and withdrawer
     create_keypair "$keys_dir/identity_$number.json"
     create_keypair "$keys_dir/vote_$number.json"
     create_keypair "$keys_dir/withdrawer_$number.json"
-    solana create-vote-account "$keys_dir/vote_$number.json" "$keys_dir/identity_$number.json" "$keys_dir/withdrawer_$number.json" --commission 1
+
+    # Get the public key of the vote account
     vote_pubkey=$(solana-keygen pubkey "$keys_dir/vote_$number.json")
+
+    # Extract the public key from the identity keypair
+    merkle_root_upload_authority=$(solana-keygen pubkey "$keys_dir/identity_$number.json")
+
+    # Append the vote public key to the validator file
     echo "$vote_pubkey" >> "$validator_file"
+
+    # Dynamically run the Rust script with the vote_pubkey
+    RUST_LOG=info cargo run --bin serialize-accounts -- \
+      --validator-vote-account "$vote_pubkey" \
+      --merkle-root-upload-authority "$merkle_root_upload_authority" \
+      --epoch-created-at 4 \
+      --validator-commission-bps 1 \
+      --expires-at 1000 \
+      --bump 1
   done
 }
+
+# Function to create vote accounts
+create_vote_accounts() {
+  max_validators=$1
+  validator_file=$2
+
+  for number in $(seq 1 "$max_validators"); do
+    # Create the vote account
+    solana create-vote-account \
+      "$keys_dir/vote_$number.json" \
+      "$keys_dir/identity_$number.json" \
+      "$keys_dir/withdrawer_$number.json" \
+      --commission 1
+  done
+}
+
 
 add_validator_stakes () {
   stake_pool=$1
@@ -58,6 +92,19 @@ increase_stakes () {
   done < "$validator_list"
 }
 
+# Hoist the creation of keypairs and serialization
+echo "Preparing keypairs and serializing accounts"
+mkdir -p $FIXTURES_DIR/tda-accounts
+prepare_keypairs_and_serialize "$max_validators" "$validator_file"
+
+# Read the TDA account files and add them to args
+tda_account_args=()
+for f in "$TDA_ACCOUNT_DIR"/*; do
+  filename=$(basename $f)
+  account_address=${filename%.*}
+  tda_account_args+=( --account $account_address $f )
+done
+
 VALIDATOR_PID=
 setup_test_validator() {
   solana-test-validator \
@@ -65,6 +112,7 @@ setup_test_validator() {
    --bpf-program 4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7 $FIXTURES_DIR/jito_tip_distribution.so \
    --bpf-program T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt $FIXTURES_DIR/jito_tip_payment.so \
    --account-dir $FIXTURES_DIR/accounts \
+   "${tda_account_args[@]}" \
    --ledger $LEDGER_DIR \
    --slots-per-epoch 32 \
    --quiet --reset &
@@ -77,14 +125,10 @@ setup_test_validator() {
 
 # SETUP LOCAL NET (https://spl.solana.com/stake-pool/quickstart#optional-step-0-setup-a-local-network-for-testing)
 
-echo "Setup keys directory and clear old validator list file if found"
-if test -f "$validator_file"
-then
-  rm "$validator_file"
-fi
-
 echo "Setting up local test validator"
+set +ex
 setup_test_validator
+set -ex
 
 echo "Creating vote accounts, these accounts be added to the stake pool"
 create_vote_accounts "$max_validators" "$validator_file"
@@ -164,6 +208,8 @@ add_validator_stakes "$stake_pool_pubkey" "$validator_file"
 echo "Increasing amount delegated to each validator in stake pool"
 increase_stakes "$stake_pool_pubkey" "$validator_file" "$stake_per_validator"
 
+# Clear the validator vote pubkey file so it doesn't expand and cause errors next run
+rm $validator_file
 
 # wait for certain epoch
 echo "waiting for epoch X from validator $VALIDATOR_PID"

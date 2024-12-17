@@ -6,8 +6,8 @@ pub mod cli;
 pub use crate::process_epoch::process_epoch;
 pub mod process_epoch;
 
+use crate::ledger_utils::get_bank_from_ledger;
 use anchor_lang::prelude::*;
-
 use anchor_lang::prelude::*;
 use jito_tip_distribution_sdk::{TipDistributionAccount, TIP_DISTRIBUTION_SEED};
 use jito_tip_payment::{
@@ -15,7 +15,20 @@ use jito_tip_payment::{
     TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
     TIP_ACCOUNT_SEED_7,
 };
+use log::info;
+use meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection;
+use meta_merkle_tree::generated_merkle_tree::MerkleRootGeneratorError;
+use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
+use solana_sdk::slot_history::Slot;
 use solana_sdk::{account::AccountSharedData, pubkey::Pubkey, stake_history::Epoch};
+use std::path::{Path, PathBuf};
+
+#[derive(Debug)]
+pub enum MerkleRootError {
+    StakeMetaGeneratorError(&'static str),
+    MerkleRootGeneratorError(&'static str),
+    MerkleTreeError(&'static str),
+}
 
 // TODO where did these come from?
 pub struct TipPaymentPubkeys {
@@ -70,4 +83,46 @@ pub fn derive_tip_distribution_account_address(
         ],
         tip_distribution_program_id,
     )
+}
+
+pub fn get_merkle_root(
+    ledger_path: &Path,
+    account_paths: Vec<PathBuf>,
+    full_snapshots_path: PathBuf,
+    desired_slot: &Slot,
+    tip_distribution_program_id: &Pubkey,
+    out_path: &str,
+    tip_payment_program_id: &Pubkey,
+    protocol_fee_bps: u16,
+) -> std::result::Result<MetaMerkleTree, MerkleRootError> {
+    // Get stake meta collection
+    let stake_meta_collection = stake_meta_generator::generate_stake_meta(
+        ledger_path,
+        account_paths,
+        full_snapshots_path,
+        desired_slot,
+        tip_distribution_program_id,
+        out_path,
+        tip_payment_program_id,
+    )
+    .map_err(|_| MerkleRootError::StakeMetaGeneratorError("Failed to generate stake meta"))?;
+
+    // Generate merkle tree collection
+    let merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
+        stake_meta_collection,
+        protocol_fee_bps,
+    )
+    .map_err(|_| {
+        MerkleRootError::MerkleRootGeneratorError("Failed to generate merkle tree collection")
+    })?;
+
+    // Convert to MetaMerkleTree
+    let meta_merkle_tree = MetaMerkleTree::new_from_generated_merkle_tree_collection(
+        merkle_tree_coll,
+    )
+    .map_err(|e| {
+        info!("Meta merkle tree creation error: {:?}", e);
+        MerkleRootError::MerkleTreeError("Failed to create meta merkle tree")
+    })?;
+    Ok(meta_merkle_tree)
 }

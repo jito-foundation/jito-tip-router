@@ -1,7 +1,7 @@
 use std::{
     fs::{self, File},
     io::BufReader,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
 };
@@ -10,6 +10,7 @@ use anchor_lang::prelude::AnchorSerialize;
 use ellipsis_client::EllipsisClient;
 use jito_tip_distribution_sdk::jito_tip_distribution::ID as TIP_DISTRIBUTION_ID;
 use jito_tip_payment::{self, ID as TIP_PAYMENT_ID};
+use log::info;
 use meta_merkle_tree::{
     generated_merkle_tree::{
         Delegation, GeneratedMerkleTreeCollection, MerkleRootGeneratorError, StakeMeta,
@@ -20,6 +21,7 @@ use meta_merkle_tree::{
 use solana_client::rpc_client::RpcClient;
 use solana_program::stake::state::{StakeState, StakeStateV2};
 use solana_program_test::*;
+use solana_sdk::bs58;
 use solana_sdk::{
     account::{Account, AccountSharedData},
     genesis_config::GenesisConfig,
@@ -30,8 +32,10 @@ use solana_sdk::{
 };
 use tempfile::TempDir;
 use thiserror::Error;
-use tip_router_operator_cli::TipAccountConfig;
-
+use tip_router_operator_cli::{
+    get_merkle_root, ledger_utils::get_bank_from_ledger, process_epoch,
+    stake_meta_generator::generate_stake_meta, Cli, Commands, TipAccountConfig,
+};
 struct TestContext {
     pub context: ProgramTestContext,
     pub tip_distribution_program_id: Pubkey,
@@ -203,6 +207,69 @@ impl TestContext {
 }
 
 #[tokio::test]
+async fn test_up_to_cast_vote() {
+    // 1. Setup - create necessary variables/arguments
+    let ledger_path = Path::new("tests/fixtures/test-ledger");
+    let account_paths = vec![
+        PathBuf::from("tests/fixtures/accounts"),
+        PathBuf::from("path/to/account2"),
+    ];
+    let full_snapshots_path = PathBuf::from("path/to/full_snapshots");
+    let desired_slot = &144;
+    let tip_distribution_program_id = &TIP_DISTRIBUTION_ID;
+    let out_path = "tests/fixtures/output.json";
+    let tip_payment_program_id = &TIP_PAYMENT_ID;
+    const PROTOCOL_FEE_BPS: u16 = 300;
+
+    // 2. Call the function
+    let meta_merkle_tree = get_merkle_root(
+        ledger_path,
+        account_paths,
+        full_snapshots_path,
+        desired_slot,
+        tip_distribution_program_id,
+        out_path,
+        tip_payment_program_id,
+        PROTOCOL_FEE_BPS,
+    )
+    .unwrap();
+
+    // 3. More comprehensive validations
+    assert_ne!(
+        meta_merkle_tree.merkle_root, [0; 32],
+        "Merkle root should not be zero"
+    );
+
+    // Verify structure
+    assert!(
+        meta_merkle_tree.num_nodes > 0,
+        "Should have validator nodes"
+    );
+
+    // Verify each node
+    for node in &meta_merkle_tree.tree_nodes {
+        // Verify node has required fields
+        assert_ne!(
+            node.tip_distribution_account,
+            Pubkey::default(),
+            "Node should have valid tip distribution account"
+        );
+        assert!(
+            node.max_total_claim > 0,
+            "Node should have positive max claim"
+        );
+        assert!(
+            node.max_num_nodes > 0,
+            "Node should have positive max nodes"
+        );
+        assert!(node.proof.is_some(), "Node should have a proof");
+    }
+
+    // Verify the proofs are valid
+    meta_merkle_tree.verify_proof().unwrap();
+}
+
+#[tokio::test]
 async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>> {
     // Constants
     const PROTOCOL_FEE_BPS: u16 = 300;
@@ -219,7 +286,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
     // Create config account with protocol fee
     let config = TipAccountConfig {
         authority: test_context.payer.pubkey(),
-        protocol_fee_bps: PROTOCOL_FEE_BPS, // 5% protocol fee
+        protocol_fee_bps: PROTOCOL_FEE_BPS, // 3% protocol fee
         bump,
     };
 

@@ -1,3 +1,8 @@
+use std::{
+    path::{Path, PathBuf},
+    sync::{atomic::AtomicBool, Arc},
+};
+
 use solana_accounts_db::hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE};
 use solana_ledger::{
     bank_forks_utils::{self},
@@ -12,11 +17,6 @@ use solana_runtime::{
     snapshot_config::{SnapshotConfig, SnapshotUsage},
 };
 use solana_sdk::{clock::Slot, genesis_config::GenesisConfig};
-
-use std::{
-    path::{Path, PathBuf},
-    sync::{atomic::AtomicBool, Arc},
-};
 
 // TODO: Use Result and propagate errors more gracefully
 // TODO: Handle CLI flag to write snapshot to disk at desired slot
