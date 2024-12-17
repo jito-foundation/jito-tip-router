@@ -2830,6 +2830,16 @@
       "code": 8752,
       "name": "NoRewards",
       "msg": "No rewards to distribute"
+    },
+    {
+      "code": 8753,
+      "name": "BadSwitchboardFeed",
+      "msg": "Bad Switchboard Feed"
+    },
+    {
+      "code": 8754,
+      "name": "BadSwitchboardValue",
+      "msg": "Bad Switchboard Value"
     }
   ],
   "metadata": {

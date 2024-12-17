@@ -183,6 +183,12 @@ pub enum JitoTipRouterError {
     /// 8752 - No rewards to distribute
     #[error("No rewards to distribute")]
     NoRewards = 0x2230,
+    /// 8753 - Bad Switchboard Feed
+    #[error("Bad Switchboard Feed")]
+    BadSwitchboardFeed = 0x2231,
+    /// 8754 - Bad Switchboard Value
+    #[error("Bad Switchboard Value")]
+    BadSwitchboardValue = 0x2232,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {
