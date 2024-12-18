@@ -18,8 +18,6 @@ mod tests {
             .add_switchboard_weights_for_test_ncn(&test_ncn)
             .await?;
 
-        assert!(false);
-
         Ok(())
     }
 }

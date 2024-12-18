@@ -25,8 +25,8 @@ use solana_sdk::{
 };
 
 use super::{
-    restaking_client::NcnRoot, tip_distribution_client::TipDistributionClient,
-    tip_router_client::TipRouterClient,
+    generated_switchboard_accounts::get_switchboard_accounts, restaking_client::NcnRoot,
+    tip_distribution_client::TipDistributionClient, tip_router_client::TipRouterClient,
 };
 use crate::fixtures::{
     restaking_client::{OperatorRoot, RestakingProgramClient},
@@ -110,6 +110,15 @@ impl TestBuilder {
 
             program_test
         };
+
+        // Add switchboard account
+        {
+            let switchboard_accounts = get_switchboard_accounts();
+
+            for (address, account) in switchboard_accounts.iter() {
+                program_test.add_account(*address, account.clone());
+            }
+        }
 
         // Pre-fund payer with 1M SOL
         let whale = Keypair::new();

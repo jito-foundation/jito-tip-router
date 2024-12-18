@@ -52,23 +52,30 @@ write_account_data() {
     local ACCOUNT_DATA="$1"
     
     echo "$ACCOUNT_DATA" | awk '
-        BEGIN { count = 0 }
+        BEGIN { 
+            count = 0 
+            bytes_per_line = 16
+        }
         /^[0-9a-fA-F]{4}:/ {
-            for(i=2; i<=9; i++) {
+            # Process each byte in the row (columns 2-17 for all 16 bytes)
+            for(i=2; i<=17; i++) {
                 if($i ~ /^[0-9a-fA-F]{2}$/) {
                     if (count > 0) printf ", "
-                    if (count % 15 == 0 && count > 0) printf "\n        "
+                    if (count % bytes_per_line == 0 && count > 0) printf "\n        "
                     printf "0x%s", $i
                     count++
                 }
             }
+        }
+        END {
+            # Ensure we end with a newline
+            if (count > 0) printf "\n"
         }
     ' >> "$OUTPUT_FILE"
 }
 
 write_account_footer() {
     cat << EOF >> "$OUTPUT_FILE"
-
         ];
 
         account.data = bytes;
