@@ -60,9 +60,6 @@ fn main() {
     )
     .0;
 
-    // Use the derived TDA address
-    info!("Derived TDA address: {}", tip_distribution_pubkey);
-
     // Serialize using AnchorSerialize
     let mut binary_data = [0u8; TIP_DISTRIBUTION_SIZE];
     let dst: &mut [u8] = &mut binary_data;
