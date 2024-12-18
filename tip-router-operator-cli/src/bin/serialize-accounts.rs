@@ -30,6 +30,9 @@ struct Args {
 
     #[arg(short = 'b', long)]
     bump: u8,
+
+    #[arg(long)]
+    tda_accounts_dir: String,
 }
 
 fn main() {
@@ -87,7 +90,8 @@ fn main() {
     // Write the JSON data to a file
     // Use the validator_vote_account as part of the filename
     let filename = format!(
-        "tests/fixtures/tda-accounts/{}.json",
+        "{}/{}.json",
+        args.tda_accounts_dir,
         tip_distribution_pubkey
     );
 

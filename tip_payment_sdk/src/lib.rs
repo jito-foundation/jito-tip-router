@@ -13,6 +13,6 @@ pub const TIP_ACCOUNT_SEED_6: &[u8] = b"TIP_ACCOUNT_6";
 pub const TIP_ACCOUNT_SEED_7: &[u8] = b"TIP_ACCOUNT_7";
 
 pub const HEADER_SIZE: usize = 8;
-pub const CONFIG_SIZE: usize = HEADER_SIZE + size_of::<jito_tip_payment::accounts::Config>();
+pub const CONFIG_SIZE: usize = HEADER_SIZE + std::mem::size_of::<jito_tip_payment::accounts::Config>();
 pub const TIP_PAYMENT_ACCOUNT_SIZE: usize =
-    HEADER_SIZE + size_of::<jito_tip_payment::accounts::TipPaymentAccount>();
+    HEADER_SIZE + std::mem::size_of::<jito_tip_payment::accounts::TipPaymentAccount>();

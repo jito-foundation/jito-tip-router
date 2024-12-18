@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-FIXTURES_DIR=tests/fixtures
+SBF_PROGRAM_DIR=$PWD/integration_tests/tests/fixtures
+FIXTURES_DIR=$PWD/tip-router-operator-cli/tests/fixtures
 LEDGER_DIR=$FIXTURES_DIR/test-ledger
 TDA_ACCOUNT_DIR=$FIXTURES_DIR/tda-accounts
 DESIRED_SLOT=150
@@ -48,7 +49,8 @@ prepare_keypairs_and_serialize() {
       --epoch-created-at 4 \
       --validator-commission-bps 1 \
       --expires-at 1000 \
-      --bump 1
+      --bump 1 \
+      --tda-accounts-dir $TDA_ACCOUNT_DIR
   done
 }
 
@@ -105,12 +107,14 @@ for f in "$TDA_ACCOUNT_DIR"/*; do
   tda_account_args+=( --account $account_address $f )
 done
 
+echo "tda_account_args ${tda_account_args[@]}" 
+
 VALIDATOR_PID=
 setup_test_validator() {
   solana-test-validator \
-   --bpf-program SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy $FIXTURES_DIR/stake_pool.so \
-   --bpf-program 4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7 $FIXTURES_DIR/jito_tip_distribution.so \
-   --bpf-program T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt $FIXTURES_DIR/jito_tip_payment.so \
+   --bpf-program SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy $SBF_PROGRAM_DIR/stake_pool.so \
+   --bpf-program 4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7 $SBF_PROGRAM_DIR/jito_tip_distribution.so \
+   --bpf-program T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt $SBF_PROGRAM_DIR/jito_tip_payment.so \
    --account-dir $FIXTURES_DIR/accounts \
    "${tda_account_args[@]}" \
    --ledger $LEDGER_DIR \
