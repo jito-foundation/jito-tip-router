@@ -11,7 +11,7 @@ use solana_program::{
 };
 
 #[allow(clippy::too_many_arguments)]
-pub fn process_set_config_fees(
+pub fn process_admin_set_config_fees(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     new_block_engine_fee_bps: Option<u16>,

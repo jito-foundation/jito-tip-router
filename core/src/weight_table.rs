@@ -136,7 +136,7 @@ impl WeightTable {
     ) -> Result<(), TipRouterError> {
         self.table
             .iter_mut()
-            .find(|entry| entry.st_mint() == *mint)
+            .find(|entry| entry.st_mint().eq(mint))
             .map_or(Err(TipRouterError::InvalidMintForWeightTable), |entry| {
                 entry.set_weight(weight, current_slot);
                 Ok(())
@@ -146,7 +146,7 @@ impl WeightTable {
     pub fn get_weight(&self, mint: &Pubkey) -> Result<u128, TipRouterError> {
         self.table
             .iter()
-            .find(|entry| entry.st_mint() == *mint)
+            .find(|entry| entry.st_mint().eq(mint))
             .map_or(Err(TipRouterError::InvalidMintForWeightTable), |entry| {
                 Ok(entry.weight())
             })
@@ -155,7 +155,7 @@ impl WeightTable {
     pub fn get_weight_entry(&self, mint: &Pubkey) -> Result<&WeightEntry, TipRouterError> {
         self.table
             .iter()
-            .find(|entry| entry.st_mint() == *mint)
+            .find(|entry| entry.st_mint().eq(mint))
             .ok_or(TipRouterError::InvalidMintForWeightTable)
     }
 
@@ -260,6 +260,7 @@ mod tests {
                     NcnFeeGroup::default(),
                     0,
                     Pubkey::default(),
+                    0,
                 )
             })
             .collect()

@@ -80,8 +80,19 @@ pub enum TipRouterInstruction {
     #[account(3, name = "mint")]
     #[account(4, name = "restaking_program")]
     AdminSetWeight{
-        ncn_epoch: u64,
+        st_mint: Pubkey,
         weight: u128,
+        epoch: u64,
+    },
+
+    // Sets the weight table for a given epoch
+    #[account(0, name = "ncn")]
+    #[account(1, writable, name = "weight_table")]
+    #[account(2, signer, name = "switchboard_feed")]
+    #[account(3, name = "st_mint")]
+    SwitchboardSetWeight{
+        st_mint: Pubkey,
+        epoch: u64,
     },
 
     /// Initializes the Epoch Snapshot
@@ -238,17 +249,34 @@ pub enum TipRouterInstruction {
         epoch: u64,
     },
 
+    /// restaking_config, ncn_config, ncn, st_mint, vault_registry, admin, restaking_program
+    #[account(0, name = "restaking_config")]
+    #[account(1, name = "config")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "st_mint")]
+    #[account(4, writable, name = "vault_registry")]
+    #[account(5, signer, writable, name = "admin")]
+    #[account(6, name = "restaking_program")]
+    AdminRegisterStMint{
+        ncn_fee_group: u8,
+        reward_multiplier_bps: u64,
+        switchboard_feed: Option<Pubkey>,
+        no_feed_weight: Option<u128>,
+    },
+
     /// Sets the NCN fee group for a mint
     #[account(0, name = "restaking_config")]
     #[account(1, name = "config")]
     #[account(2, name = "ncn")]
-    #[account(3, name = "weight_table")]
-    #[account(4, writable, name = "tracked_mints")]
-    #[account(5, signer, writable, name = "admin")]
-    #[account(6, name = "restaking_program")]
-    AdminSetRegisteredStMint{
-        vault_index: u64,
-        ncn_fee_group: u8,
+    #[account(3, writable, name = "tracked_mints")]
+    #[account(4, signer, writable, name = "admin")]
+    #[account(5, name = "restaking_program")]
+    AdminSetStMint{
+        st_mint: Pubkey,
+        ncn_fee_group: Option<u8>,
+        reward_multiplier_bps: Option<u64>,
+        switchboard_feed: Option<Pubkey>,
+        no_feed_weight: Option<u128>,
     },
 
     /// Initializes the ballot box for an NCN
@@ -298,7 +326,7 @@ pub enum TipRouterInstruction {
     #[account(2, name = "ncn")]
     #[account(3, signer, name = "tie_breaker_admin")]
     #[account(4, name = "restaking_program")]
-    SetTieBreaker {
+    AdminSetTieBreaker {
         meta_merkle_root: [u8; 32],
         epoch: u64,
     },

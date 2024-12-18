@@ -1,7 +1,10 @@
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
-use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
+use jito_bytemuck::{
+    types::{PodU128, PodU64},
+    AccountDeserialize, Discriminator,
+};
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
@@ -19,6 +22,7 @@ pub struct StMintEntry {
     ncn_fee_group: NcnFeeGroup,
     reward_multiplier_bps: PodU64,
     switchboard_feed: Pubkey,
+    no_feed_weight: PodU128,
     reserved: [u8; 32],
 }
 
@@ -28,14 +32,20 @@ impl StMintEntry {
         ncn_fee_group: NcnFeeGroup,
         reward_multiplier_bps: u64,
         switchboard_feed: Pubkey,
+        no_feed_weight: u128,
     ) -> Self {
         Self {
             st_mint,
             ncn_fee_group,
             reward_multiplier_bps: PodU64::from(reward_multiplier_bps),
             switchboard_feed,
+            no_feed_weight: PodU128::from(no_feed_weight),
             reserved: [0; 32],
         }
+    }
+
+    pub fn no_feed_weight(&self) -> u128 {
+        self.no_feed_weight.into()
     }
 
     pub fn st_mint(&self) -> Pubkey {
@@ -66,6 +76,7 @@ impl Default for StMintEntry {
             NcnFeeGroup::default(),
             0,
             Pubkey::default(),
+            0,
         )
     }
 }
@@ -192,15 +203,26 @@ impl VaultRegistry {
         self.st_mint_list.iter().any(|m| m.st_mint.eq(mint))
     }
 
+    pub fn check_st_mint(&self, st_mint: &Pubkey) -> Result<(), ProgramError> {
+        let entry = self.get_mint_entry(st_mint)?;
+
+        if entry.no_feed_weight() == 0 && entry.switchboard_feed().eq(&Pubkey::default()) {
+            return Err(TipRouterError::NoFeedWeightOrSwitchboardFeed.into());
+        }
+
+        Ok(())
+    }
+
     pub fn register_st_mint(
         &mut self,
-        mint: Pubkey,
+        st_mint: &Pubkey,
         ncn_fee_group: NcnFeeGroup,
         reward_multiplier_bps: u64,
         switchboard_feed: Pubkey,
+        no_feed_weight: u128,
     ) -> Result<(), ProgramError> {
         // Check if mint is already in the list
-        if self.st_mint_list.iter().any(|m| m.st_mint == mint) {
+        if self.st_mint_list.iter().any(|m| m.st_mint.eq(st_mint)) {
             return Err(TipRouterError::MintInTable.into());
         }
 
@@ -211,26 +233,35 @@ impl VaultRegistry {
             .find(|m| m.st_mint == StMintEntry::default().st_mint)
             .ok_or(TipRouterError::TrackedMintListFull)?;
 
-        *mint_entry =
-            StMintEntry::new(mint, ncn_fee_group, reward_multiplier_bps, switchboard_feed);
+        *mint_entry = StMintEntry::new(
+            *st_mint,
+            ncn_fee_group,
+            reward_multiplier_bps,
+            switchboard_feed,
+            no_feed_weight,
+        );
+
+        self.check_st_mint(st_mint)?;
+
         Ok(())
     }
 
-    pub fn st_st_mint(
+    pub fn set_st_mint(
         &mut self,
-        mint: Pubkey,
-        ncn_fee_group: Option<NcnFeeGroup>,
+        st_mint: &Pubkey,
+        ncn_fee_group: Option<u8>,
         reward_multiplier_bps: Option<u64>,
         switchboard_feed: Option<Pubkey>,
+        no_feed_weight: Option<u128>,
     ) -> Result<(), ProgramError> {
         let mint_entry = self
             .st_mint_list
             .iter_mut()
-            .find(|m| m.st_mint == mint)
+            .find(|m| m.st_mint.eq(st_mint))
             .ok_or(TipRouterError::MintEntryNotFound)?;
 
         if let Some(ncn_fee_group) = ncn_fee_group {
-            mint_entry.ncn_fee_group = ncn_fee_group;
+            mint_entry.ncn_fee_group = NcnFeeGroup::try_from(ncn_fee_group)?;
         }
 
         if let Some(reward_multiplier_bps) = reward_multiplier_bps {
@@ -240,6 +271,12 @@ impl VaultRegistry {
         if let Some(switchboard_feed) = switchboard_feed {
             mint_entry.switchboard_feed = switchboard_feed;
         }
+
+        if let Some(no_feed_weight) = no_feed_weight {
+            mint_entry.no_feed_weight = PodU128::from(no_feed_weight);
+        }
+
+        self.check_st_mint(st_mint)?;
 
         Ok(())
     }

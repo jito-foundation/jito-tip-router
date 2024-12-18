@@ -7,18 +7,18 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
-pub fn process_set_tie_breaker(
+pub fn process_admin_set_tie_breaker(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     meta_merkle_root: [u8; 32],
-    ncn_epoch: u64,
+    epoch: u64,
 ) -> ProgramResult {
     let [ncn_config, ballot_box, ncn, tie_breaker_admin, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    BallotBox::load(program_id, ncn.key, ncn_epoch, ballot_box, false)?;
+    BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     load_signer(tie_breaker_admin, false)?;
 

@@ -1,6 +1,7 @@
+mod admin_register_st_mint;
 mod admin_set_config_fees;
 mod admin_set_new_admin;
-mod admin_set_registered_st_mint;
+mod admin_set_st_mint;
 mod admin_set_tie_breaker;
 mod admin_set_weight;
 mod cast_vote;
@@ -24,10 +25,10 @@ mod register_vault;
 mod route_base_rewards;
 mod route_ncn_rewards;
 mod set_merkle_root;
-mod set_weight;
 mod snapshot_vault_operator_delegation;
+mod switchboard_set_weight;
 
-use admin_set_new_admin::process_set_new_admin;
+use admin_set_new_admin::process_admin_set_new_admin;
 use borsh::BorshDeserialize;
 use const_str_to_pubkey::str_to_pubkey;
 use jito_tip_router_core::instruction::TipRouterInstruction;
@@ -39,9 +40,10 @@ use solana_program::{
 use solana_security_txt::security_txt;
 
 use crate::{
-    admin_set_config_fees::process_set_config_fees,
-    admin_set_registered_st_mint::process_set_tracked_mint_ncn_fee_group,
-    admin_set_tie_breaker::process_set_tie_breaker,
+    admin_register_st_mint::process_admin_register_st_mint,
+    admin_set_config_fees::process_admin_set_config_fees,
+    admin_set_st_mint::process_admin_set_st_mint,
+    admin_set_tie_breaker::process_admin_set_tie_breaker,
     admin_set_weight::process_admin_set_weight_table, cast_vote::process_cast_vote,
     distribute_base_ncn_reward_route::process_distribute_base_ncn_reward_route,
     distribute_base_rewards::process_distribute_base_rewards,
@@ -62,6 +64,7 @@ use crate::{
     route_base_rewards::process_route_base_rewards, route_ncn_rewards::process_route_ncn_rewards,
     set_merkle_root::process_set_merkle_root,
     snapshot_vault_operator_delegation::process_snapshot_vault_operator_delegation,
+    switchboard_set_weight::process_switchboard_set_weight,
 };
 
 declare_id!(str_to_pubkey(env!("TIP_ROUTER_PROGRAM_ID")));
@@ -184,12 +187,20 @@ pub fn process_instruction(
             msg!("Instruction: DistributeNcnVaultRewards");
             process_distribute_ncn_vault_rewards(program_id, accounts, ncn_fee_group, epoch)
         }
+        TipRouterInstruction::SwitchboardSetWeight { epoch, st_mint } => {
+            msg!("Instruction: SwitchboardSetWeight");
+            process_switchboard_set_weight(program_id, accounts, st_mint, epoch)
+        }
         // ------------------------------------------
         // Update
         // ------------------------------------------
-        TipRouterInstruction::AdminSetWeight { ncn_epoch, weight } => {
+        TipRouterInstruction::AdminSetWeight {
+            st_mint,
+            epoch,
+            weight,
+        } => {
             msg!("Instruction: UpdateWeightTable");
-            process_admin_set_weight_table(program_id, accounts, ncn_epoch, weight)
+            process_admin_set_weight_table(program_id, accounts, st_mint, epoch, weight)
         }
         TipRouterInstruction::SetConfigFees {
             new_block_engine_fee_bps,
@@ -200,7 +211,7 @@ pub fn process_instruction(
             new_ncn_fee_bps,
         } => {
             msg!("Instruction: SetConfigFees");
-            process_set_config_fees(
+            process_admin_set_config_fees(
                 program_id,
                 accounts,
                 new_block_engine_fee_bps,
@@ -213,18 +224,45 @@ pub fn process_instruction(
         }
         TipRouterInstruction::AdminSetNewAdmin { role } => {
             msg!("Instruction: SetNewAdmin");
-            process_set_new_admin(program_id, accounts, role)
+            process_admin_set_new_admin(program_id, accounts, role)
         }
         TipRouterInstruction::RegisterVault => {
             msg!("Instruction: RegisterMint");
             process_register_vault(program_id, accounts)
         }
-        TipRouterInstruction::AdminSetRegisteredStMint {
-            vault_index,
+        TipRouterInstruction::AdminRegisterStMint {
             ncn_fee_group,
+            reward_multiplier_bps,
+            switchboard_feed,
+            no_feed_weight,
+        } => {
+            msg!("Instruction: RegisterStMint");
+            process_admin_register_st_mint(
+                program_id,
+                accounts,
+                ncn_fee_group,
+                reward_multiplier_bps,
+                switchboard_feed,
+                no_feed_weight,
+            )
+        }
+        TipRouterInstruction::AdminSetStMint {
+            st_mint,
+            ncn_fee_group,
+            reward_multiplier_bps,
+            switchboard_feed,
+            no_feed_weight,
         } => {
             msg!("Instruction: SetTrackedMintNcnFeeGroup");
-            process_set_tracked_mint_ncn_fee_group(program_id, accounts, vault_index, ncn_fee_group)
+            process_admin_set_st_mint(
+                program_id,
+                accounts,
+                st_mint,
+                ncn_fee_group,
+                reward_multiplier_bps,
+                switchboard_feed,
+                no_feed_weight,
+            )
         }
         TipRouterInstruction::InitializeBallotBox { epoch } => {
             msg!("Instruction: InitializeBallotBox");
@@ -255,12 +293,12 @@ pub fn process_instruction(
                 epoch,
             )
         }
-        TipRouterInstruction::SetTieBreaker {
+        TipRouterInstruction::AdminSetTieBreaker {
             meta_merkle_root,
             epoch,
         } => {
             msg!("Instruction: SetTieBreaker");
-            process_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
+            process_admin_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
         }
         TipRouterInstruction::ReallocBallotBox { epoch } => {
             msg!("Instruction: ReallocBallotBox");

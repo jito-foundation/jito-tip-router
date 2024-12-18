@@ -19,6 +19,8 @@ pub enum TipRouterError {
     CastToImpreciseNumberError,
     #[error("Cast to u64 error")]
     CastToU64Error,
+    #[error("Cast to u128 error")]
+    CastToU128Error,
 
     #[error("Incorrect weight table admin")]
     IncorrectWeightTableAdmin = 0x2200,
@@ -121,6 +123,16 @@ pub enum TipRouterError {
     FeeNotActive,
     #[error("No rewards to distribute")]
     NoRewards,
+    #[error("Switchboard not registered")]
+    SwitchboardNotRegistered,
+    #[error("Bad switchboard feed")]
+    BadSwitchboardFeed,
+    #[error("Bad switchboard value")]
+    BadSwitchboardValue,
+    #[error("Stale switchboard feed")]
+    StaleSwitchboardFeed,
+    #[error("Weight entry needs either a feed or a no feed weight")]
+    NoFeedWeightOrSwitchboardFeed,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

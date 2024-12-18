@@ -9,7 +9,7 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
-pub fn process_set_new_admin(
+pub fn process_admin_set_new_admin(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     role: ConfigAdminRole,

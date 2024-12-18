@@ -1,5 +1,5 @@
 use jito_bytemuck::AccountDeserialize;
-use jito_jsm_core::loader::{load_signer, load_token_mint};
+use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{error::TipRouterError, weight_table::WeightTable};
 use solana_program::{
@@ -11,10 +11,11 @@ use solana_program::{
 pub fn process_admin_set_weight_table(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    ncn_epoch: u64,
+    st_mint: Pubkey,
+    epoch: u64,
     weight: u128,
 ) -> ProgramResult {
-    let [ncn, weight_table, weight_table_admin, mint, restaking_program] = accounts else {
+    let [ncn, weight_table, weight_table_admin, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
@@ -26,8 +27,7 @@ pub fn process_admin_set_weight_table(
     };
 
     load_signer(weight_table_admin, true)?;
-    load_token_mint(mint)?;
-    WeightTable::load(program_id, weight_table, ncn, ncn_epoch, true)?;
+    WeightTable::load(program_id, weight_table, ncn, epoch, true)?;
 
     if restaking_program.key.ne(&jito_restaking_program::id()) {
         msg!("Incorrect restaking program ID");
@@ -43,8 +43,12 @@ pub fn process_admin_set_weight_table(
     let weight_table_account = WeightTable::try_from_slice_unchecked_mut(&mut weight_table_data)?;
 
     weight_table_account.check_initialized()?;
+    if weight_table_account.finalized() {
+        msg!("Weight table is finalized");
+        return Err(ProgramError::InvalidAccountData);
+    }
 
-    weight_table_account.set_weight(mint.key, weight, Clock::get()?.slot)?;
+    weight_table_account.set_weight(&st_mint, weight, Clock::get()?.slot)?;
 
     Ok(())
 }

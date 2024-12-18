@@ -1,7 +1,7 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    constants::{JTO_MINT, JTO_USD_FEED, MAX_STALE_SLOTS, WEIGHT_PRECISION},
+    constants::{SWITCHBOARD_MAX_STALE_SLOTS, WEIGHT_PRECISION},
     error::TipRouterError,
     weight_table::WeightTable,
 };
@@ -15,12 +15,13 @@ use switchboard_on_demand::{
 };
 
 /// Updates weight table
-pub fn process_set_jto_weight(
+pub fn process_switchboard_set_weight(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
+    st_mint: Pubkey,
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn, weight_table, jto_usd_feed] = accounts else {
+    let [ncn, weight_table, switchboard_feed] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
@@ -28,13 +29,27 @@ pub fn process_set_jto_weight(
 
     WeightTable::load(program_id, weight_table, ncn, epoch, true)?;
 
-    if jto_usd_feed.key.ne(&JTO_USD_FEED) {
-        msg!("Incorrect jto usd feed");
-        return Err(ProgramError::InvalidAccountData);
-    }
+    let (registered_switchboard_feed, no_feed_weight) = {
+        let weight_table_data = weight_table.data.borrow();
+        let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
 
-    let weight: u128 = {
-        let feed = PullFeedAccountData::parse(jto_usd_feed.data.borrow())
+        let weight_entry = weight_table_account.get_weight_entry(&st_mint)?;
+
+        (
+            weight_entry.mint_entry().switchboard_feed(),
+            weight_entry.mint_entry().no_feed_weight(),
+        )
+    };
+
+    let weight: u128 = if registered_switchboard_feed.eq(&Pubkey::default()) {
+        no_feed_weight
+    } else {
+        if registered_switchboard_feed.ne(switchboard_feed.key) {
+            msg!("Switchboard feed is not registered");
+            return Err(TipRouterError::SwitchboardNotRegistered.into());
+        }
+
+        let feed = PullFeedAccountData::parse(switchboard_feed.data.borrow())
             .map_err(|_| TipRouterError::BadSwitchboardFeed)?;
         let price: Decimal = feed.value().ok_or(TipRouterError::BadSwitchboardValue)?;
 
@@ -42,13 +57,13 @@ pub fn process_set_jto_weight(
         let stale_slot = {
             feed.result
                 .slot
-                .checked_add(MAX_STALE_SLOTS)
+                .checked_add(SWITCHBOARD_MAX_STALE_SLOTS)
                 .ok_or(TipRouterError::ArithmeticOverflow)?
         };
 
         if current_slot > stale_slot {
             msg!("Stale feed");
-            return Err(ProgramError::InvalidAccountData);
+            return Err(TipRouterError::StaleSwitchboardFeed.into());
         }
 
         msg!("Oracle Price: {}", price);
@@ -71,7 +86,7 @@ pub fn process_set_jto_weight(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    weight_table_account.set_weight(&JTO_MINT, weight, Clock::get()?.slot)?;
+    weight_table_account.set_weight(&st_mint, weight, Clock::get()?.slot)?;
 
     Ok(())
 }

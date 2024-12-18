@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn test_weight_entry_new() {
         let mint = Pubkey::new_unique();
-        let mint_entry = StMintEntry::new(mint, NcnFeeGroup::default(), 0, Pubkey::new_unique());
+        let mint_entry = StMintEntry::new(mint, NcnFeeGroup::default(), 0, Pubkey::new_unique(), 0);
         let weight_entry = WeightEntry::new(mint_entry);
 
         assert_eq!(weight_entry.st_mint(), mint);
