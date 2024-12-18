@@ -1,7 +1,8 @@
 use std::{fs::File, io::BufReader, path::PathBuf};
 
-use anchor_lang::Id;
-use jito_tip_distribution::{program::JitoTipDistribution, state::ClaimStatus};
+use jito_tip_distribution_sdk::{
+    jito_tip_distribution::ID as TIP_DISTRIBUTION_ID, CLAIM_STATUS_SEED,
+};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use solana_program::{
     clock::{Epoch, Slot},
@@ -167,11 +168,11 @@ impl TreeNode {
             let (protocol_claim_status_pubkey, protocol_claim_status_bump) =
                 Pubkey::find_program_address(
                     &[
-                        ClaimStatus::SEED,
+                        CLAIM_STATUS_SEED,
                         &protocol_fee_recipient.to_bytes(),
                         &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
                     ],
-                    &JitoTipDistribution::id(),
+                    &TIP_DISTRIBUTION_ID,
                 );
 
             let mut tree_nodes = vec![TreeNode {
@@ -187,11 +188,11 @@ impl TreeNode {
             let (validator_claim_status_pubkey, validator_claim_status_bump) =
                 Pubkey::find_program_address(
                     &[
-                        ClaimStatus::SEED,
+                        CLAIM_STATUS_SEED,
                         &stake_meta.validator_node_pubkey.to_bytes(),
                         &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
                     ],
-                    &JitoTipDistribution::id(),
+                    &TIP_DISTRIBUTION_ID,
                 );
 
             tree_nodes.push(TreeNode {
@@ -221,11 +222,11 @@ impl TreeNode {
 
                         let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
                             &[
-                                ClaimStatus::SEED,
+                                CLAIM_STATUS_SEED,
                                 &delegation.staker_pubkey.to_bytes(),
                                 &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
                             ],
-                            &JitoTipDistribution::id(),
+                            &TIP_DISTRIBUTION_ID,
                         );
                         Ok(Self {
                             claimant: delegation.staker_pubkey,
@@ -394,7 +395,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use jito_tip_distribution::merkle_proof;
+    use crate::verify;
 
     use super::*;
 
@@ -407,8 +408,8 @@ mod tests {
             .iter()
             .map(|(claimant, tda)| {
                 Pubkey::find_program_address(
-                    &[ClaimStatus::SEED, &claimant.to_bytes(), &tda.to_bytes()],
-                    &JitoTipDistribution::id(),
+                    &[CLAIM_STATUS_SEED, &claimant.to_bytes(), &tda.to_bytes()],
+                    &TIP_DISTRIBUTION_ID,
                 )
             })
             .collect::<Vec<(Pubkey, u8)>>();
@@ -441,12 +442,12 @@ mod tests {
         // verify first node
         let node = solana_program::hash::hashv(&[&[0u8], &hashed_nodes[0]]);
         let proof = get_proof(&mk, 0);
-        assert!(merkle_proof::verify(proof, root, node.to_bytes()));
+        assert!(verify::verify(proof, root, node.to_bytes()));
 
         // verify second node
         let node = solana_program::hash::hashv(&[&[0u8], &hashed_nodes[1]]);
         let proof = get_proof(&mk, 1);
-        assert!(merkle_proof::verify(proof, root, node.to_bytes()));
+        assert!(verify::verify(proof, root, node.to_bytes()));
     }
 
     #[test]
@@ -563,8 +564,8 @@ mod tests {
         .iter()
         .map(|(claimant, tda)| {
             Pubkey::find_program_address(
-                &[ClaimStatus::SEED, &claimant.to_bytes(), &tda.to_bytes()],
-                &JitoTipDistribution::id(),
+                &[CLAIM_STATUS_SEED, &claimant.to_bytes(), &tda.to_bytes()],
+                &TIP_DISTRIBUTION_ID,
             )
         })
         .collect::<Vec<(Pubkey, u8)>>();

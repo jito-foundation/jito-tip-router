@@ -6,7 +6,7 @@ use {
     anchor_lang::AccountDeserialize,
     itertools::Itertools,
     jito_tip_distribution_sdk::{derive_tip_distribution_account_address, TipDistributionAccount},
-    jito_tip_payment::{Config, CONFIG_ACCOUNT_SEED},
+    jito_tip_payment_sdk::{jito_tip_payment::accounts::Config, CONFIG_ACCOUNT_SEED},
     log::*,
     meta_merkle_tree::generated_merkle_tree::{
         Delegation, StakeMeta, StakeMetaCollection, TipDistributionMeta,
@@ -327,10 +327,11 @@ mod tests {
         super::*,
         anchor_lang::AccountSerialize,
         jito_tip_distribution_sdk::TIP_DISTRIBUTION_SIZE,
-        jito_tip_payment::{
-            InitBumps, TipPaymentAccount, CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0,
-            TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2, TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4,
-            TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6, TIP_ACCOUNT_SEED_7,
+        jito_tip_payment_sdk::{
+            jito_tip_payment::{accounts::TipPaymentAccount, types::InitBumps},
+            CONFIG_SIZE, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
+            TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
+            TIP_ACCOUNT_SEED_7, TIP_PAYMENT_ACCOUNT_SIZE,
         },
         solana_runtime::genesis_utils::{
             create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
@@ -899,12 +900,12 @@ mod tests {
         };
 
         let mut config_account_data = AccountSharedData::new(
-            bank.get_minimum_balance_for_rent_exemption(Config::SIZE),
-            Config::SIZE,
+            bank.get_minimum_balance_for_rent_exemption(CONFIG_SIZE),
+            CONFIG_SIZE,
             tip_payment_program_id,
         );
 
-        let mut config_data: [u8; Config::SIZE] = [0u8; Config::SIZE];
+        let mut config_data: [u8; CONFIG_SIZE] = [0u8; CONFIG_SIZE];
         let mut config_cursor = std::io::Cursor::new(&mut config_data[..]);
         config.try_serialize(&mut config_cursor).unwrap();
         config_account_data.set_data(config_data.to_vec());
@@ -912,12 +913,12 @@ mod tests {
 
         account_datas.extend(tip_accounts.into_iter().map(|(pubkey, _)| {
             let mut tip_account_data = AccountSharedData::new(
-                bank.get_minimum_balance_for_rent_exemption(TipPaymentAccount::SIZE),
-                TipPaymentAccount::SIZE,
+                bank.get_minimum_balance_for_rent_exemption(TIP_PAYMENT_ACCOUNT_SIZE),
+                TIP_PAYMENT_ACCOUNT_SIZE,
                 tip_payment_program_id,
             );
 
-            let mut data: [u8; TipPaymentAccount::SIZE] = [0u8; TipPaymentAccount::SIZE];
+            let mut data: [u8; TIP_PAYMENT_ACCOUNT_SIZE] = [0u8; TIP_PAYMENT_ACCOUNT_SIZE];
             let mut cursor = std::io::Cursor::new(&mut data[..]);
             TipPaymentAccount::default()
                 .try_serialize(&mut cursor)

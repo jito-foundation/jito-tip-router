@@ -7,7 +7,7 @@ members = [
     "program",
     "shank_cli",
     "tip-router-operator-cli",
-    "tip_distribution_sdk",
+    "tip_distribution_sdk", "tip_payment_sdk",
 ]
 
 resolver = "2"
@@ -89,13 +89,11 @@ thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
 meta-merkle-tree = { path = "./meta_merkle_tree", version = "=0.0.1" }
 jito-tip-distribution-sdk = { path = "./tip_distribution_sdk", version = "=0.0.1" }
-# jito-tip-distribution = { default-features = false, features = ["no-entrypoint", "no-idl"], git = "https://github.com/jito-foundation/jito-programs", rev = "2849874101336e7ef6ee93bb64b1354d5e682bb9" }
+jito-tip-payment-sdk = { path = "./tip_payment_sdk", version = "=0.0.1" }
 jito-tip-router-client = { path = "./clients/rust/jito_tip_router", version = "0.0.1" }
 jito-tip-router-core = { path = "./core", version = "=0.0.1" }
 jito-tip-router-program = { path = "./program", version = "=0.0.1" }
 jito-tip-router-shank-cli = { path = "./shank_cli", version = "=0.0.1" }
-jito-tip-distribution = { git = "https://github.com/exo-tech-xyz/jito-programs.git", rev = "c21f7a2d84cba6113d2884328ee9753ab8c368f6", features = ["cpi"] }
-jito-tip-payment = { git = "https://github.com/exo-tech-xyz/jito-programs.git", rev = "c21f7a2d84cba6113d2884328ee9753ab8c368f6", features = ["cpi"] }
 jito-bytemuck = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
 jito-account-traits-derive = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
 jito-jsm-core = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
