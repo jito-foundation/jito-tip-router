@@ -1,11 +1,11 @@
 use {
     crate::{
-        derive_tip_distribution_account_address, derive_tip_payment_pubkeys,
-        ledger_utils::get_bank_from_ledger, TipDistributionAccountWrapper,
+        derive_tip_payment_pubkeys, ledger_utils::get_bank_from_ledger,
+        TipDistributionAccountWrapper,
     },
     anchor_lang::AccountDeserialize,
     itertools::Itertools,
-    jito_tip_distribution_sdk::TipDistributionAccount,
+    jito_tip_distribution_sdk::{derive_tip_distribution_account_address, TipDistributionAccount},
     jito_tip_payment::{Config, CONFIG_ACCOUNT_SEED},
     log::*,
     meta_merkle_tree::generated_merkle_tree::{
@@ -344,7 +344,6 @@ fn group_delegations_by_voter_pubkey(
 mod tests {
     use {
         super::*,
-        crate::derive_tip_distribution_account_address,
         anchor_lang::AccountSerialize,
         jito_tip_distribution_sdk::TIP_DISTRIBUTION_SIZE,
         jito_tip_payment::{
