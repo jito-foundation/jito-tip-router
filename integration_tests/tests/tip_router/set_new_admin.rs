@@ -1,6 +1,6 @@
 mod tests {
     use jito_tip_router_client::types::ConfigAdminRole;
-    use jito_tip_router_core::{error::TipRouterError, config::Config};
+    use jito_tip_router_core::{error::TipRouterError, ncn_config::NcnConfig};
     use solana_program::pubkey::Pubkey;
     use solana_sdk::{instruction::InstructionError, signature::Keypair};
 
@@ -59,7 +59,7 @@ mod tests {
 
         let result = tip_router_client
             .set_new_admin(
-                Config::find_program_address(
+                NcnConfig::find_program_address(
                     &jito_tip_router_program::id(),
                     &ncn_root.ncn_pubkey,
                 )

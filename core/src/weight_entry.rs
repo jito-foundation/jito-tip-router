@@ -56,11 +56,11 @@ impl WeightEntry {
         self.slot_updated.into()
     }
 
-    pub fn mint_entry(&self) -> &StMintEntry {
+    pub const fn mint_entry(&self) -> &StMintEntry {
         &self.mint_entry
     }
 
-    pub fn st_mint(&self) -> Pubkey {
+    pub const fn st_mint(&self) -> Pubkey {
         self.mint_entry.st_mint()
     }
 

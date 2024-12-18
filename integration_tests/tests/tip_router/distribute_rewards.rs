@@ -54,16 +54,16 @@ mod tests {
             )
             .await?;
 
-        // Set tracked mint NCN fee group
-        let epoch = fixture.clock().await.epoch;
-        tip_router_client
-            .do_set_tracked_mint_ncn_fee_group(
-                test_ncn.ncn_root.ncn_pubkey,
-                1,
-                NcnFeeGroup::new(NcnFeeGroupType::JTO),
-                epoch,
-            )
-            .await?;
+        // // Set tracked mint NCN fee group
+        // let epoch = fixture.clock().await.epoch;
+        // tip_router_client
+        //     .do_admin_set_st_mint(
+        //         test_ncn.ncn_root.ncn_pubkey,
+        //         1,
+        //         NcnFeeGroup::new(NcnFeeGroupType::JTO),
+        //         epoch,
+        //     )
+        //     .await?;
 
         fixture
             .warp_slot_incremental(DEFAULT_SLOTS_PER_EPOCH * 2)

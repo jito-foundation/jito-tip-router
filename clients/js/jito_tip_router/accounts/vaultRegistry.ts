@@ -35,101 +35,116 @@ import {
   type MaybeEncodedAccount,
 } from '@solana/web3.js';
 import {
-  getMintEntryDecoder,
-  getMintEntryEncoder,
-  type MintEntry,
-  type MintEntryArgs,
+  getStMintEntryDecoder,
+  getStMintEntryEncoder,
+  getVaultEntryDecoder,
+  getVaultEntryEncoder,
+  type StMintEntry,
+  type StMintEntryArgs,
+  type VaultEntry,
+  type VaultEntryArgs,
 } from '../types';
 
-export type TrackedMints = {
+export type VaultRegistry = {
   discriminator: bigint;
   ncn: Address;
   bump: number;
   reserved: Array<number>;
-  stMintList: Array<MintEntry>;
+  stMintList: Array<StMintEntry>;
+  vaultList: Array<VaultEntry>;
 };
 
-export type TrackedMintsArgs = {
+export type VaultRegistryArgs = {
   discriminator: number | bigint;
   ncn: Address;
   bump: number;
   reserved: Array<number>;
-  stMintList: Array<MintEntryArgs>;
+  stMintList: Array<StMintEntryArgs>;
+  vaultList: Array<VaultEntryArgs>;
 };
 
-export function getTrackedMintsEncoder(): Encoder<TrackedMintsArgs> {
+export function getVaultRegistryEncoder(): Encoder<VaultRegistryArgs> {
   return getStructEncoder([
     ['discriminator', getU64Encoder()],
     ['ncn', getAddressEncoder()],
     ['bump', getU8Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 127 })],
-    ['stMintList', getArrayEncoder(getMintEntryEncoder(), { size: 64 })],
+    ['stMintList', getArrayEncoder(getStMintEntryEncoder(), { size: 32 })],
+    ['vaultList', getArrayEncoder(getVaultEntryEncoder(), { size: 64 })],
   ]);
 }
 
-export function getTrackedMintsDecoder(): Decoder<TrackedMints> {
+export function getVaultRegistryDecoder(): Decoder<VaultRegistry> {
   return getStructDecoder([
     ['discriminator', getU64Decoder()],
     ['ncn', getAddressDecoder()],
     ['bump', getU8Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 127 })],
-    ['stMintList', getArrayDecoder(getMintEntryDecoder(), { size: 64 })],
+    ['stMintList', getArrayDecoder(getStMintEntryDecoder(), { size: 32 })],
+    ['vaultList', getArrayDecoder(getVaultEntryDecoder(), { size: 64 })],
   ]);
 }
 
-export function getTrackedMintsCodec(): Codec<TrackedMintsArgs, TrackedMints> {
-  return combineCodec(getTrackedMintsEncoder(), getTrackedMintsDecoder());
+export function getVaultRegistryCodec(): Codec<
+  VaultRegistryArgs,
+  VaultRegistry
+> {
+  return combineCodec(getVaultRegistryEncoder(), getVaultRegistryDecoder());
 }
 
-export function decodeTrackedMints<TAddress extends string = string>(
+export function decodeVaultRegistry<TAddress extends string = string>(
   encodedAccount: EncodedAccount<TAddress>
-): Account<TrackedMints, TAddress>;
-export function decodeTrackedMints<TAddress extends string = string>(
+): Account<VaultRegistry, TAddress>;
+export function decodeVaultRegistry<TAddress extends string = string>(
   encodedAccount: MaybeEncodedAccount<TAddress>
-): MaybeAccount<TrackedMints, TAddress>;
-export function decodeTrackedMints<TAddress extends string = string>(
+): MaybeAccount<VaultRegistry, TAddress>;
+export function decodeVaultRegistry<TAddress extends string = string>(
   encodedAccount: EncodedAccount<TAddress> | MaybeEncodedAccount<TAddress>
-): Account<TrackedMints, TAddress> | MaybeAccount<TrackedMints, TAddress> {
+): Account<VaultRegistry, TAddress> | MaybeAccount<VaultRegistry, TAddress> {
   return decodeAccount(
     encodedAccount as MaybeEncodedAccount<TAddress>,
-    getTrackedMintsDecoder()
+    getVaultRegistryDecoder()
   );
 }
 
-export async function fetchTrackedMints<TAddress extends string = string>(
+export async function fetchVaultRegistry<TAddress extends string = string>(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<Account<TrackedMints, TAddress>> {
-  const maybeAccount = await fetchMaybeTrackedMints(rpc, address, config);
+): Promise<Account<VaultRegistry, TAddress>> {
+  const maybeAccount = await fetchMaybeVaultRegistry(rpc, address, config);
   assertAccountExists(maybeAccount);
   return maybeAccount;
 }
 
-export async function fetchMaybeTrackedMints<TAddress extends string = string>(
+export async function fetchMaybeVaultRegistry<TAddress extends string = string>(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<MaybeAccount<TrackedMints, TAddress>> {
+): Promise<MaybeAccount<VaultRegistry, TAddress>> {
   const maybeAccount = await fetchEncodedAccount(rpc, address, config);
-  return decodeTrackedMints(maybeAccount);
+  return decodeVaultRegistry(maybeAccount);
 }
 
-export async function fetchAllTrackedMints(
+export async function fetchAllVaultRegistry(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<Account<TrackedMints>[]> {
-  const maybeAccounts = await fetchAllMaybeTrackedMints(rpc, addresses, config);
+): Promise<Account<VaultRegistry>[]> {
+  const maybeAccounts = await fetchAllMaybeVaultRegistry(
+    rpc,
+    addresses,
+    config
+  );
   assertAccountsExist(maybeAccounts);
   return maybeAccounts;
 }
 
-export async function fetchAllMaybeTrackedMints(
+export async function fetchAllMaybeVaultRegistry(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<MaybeAccount<TrackedMints>[]> {
+): Promise<MaybeAccount<VaultRegistry>[]> {
   const maybeAccounts = await fetchEncodedAccounts(rpc, addresses, config);
-  return maybeAccounts.map((maybeAccount) => decodeTrackedMints(maybeAccount));
+  return maybeAccounts.map((maybeAccount) => decodeVaultRegistry(maybeAccount));
 }

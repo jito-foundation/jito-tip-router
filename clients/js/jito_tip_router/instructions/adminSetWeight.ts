@@ -8,12 +8,12 @@
 
 import {
   combineCodec,
-  fixDecoderSize,
-  fixEncoderSize,
-  getBytesDecoder,
-  getBytesEncoder,
+  getAddressDecoder,
+  getAddressEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU128Decoder,
+  getU128Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -30,42 +30,41 @@ import {
   type IInstructionWithData,
   type ReadonlyAccount,
   type ReadonlySignerAccount,
-  type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const SET_TIE_BREAKER_DISCRIMINATOR = 22;
+export const ADMIN_SET_WEIGHT_DISCRIMINATOR = 5;
 
-export function getSetTieBreakerDiscriminatorBytes() {
-  return getU8Encoder().encode(SET_TIE_BREAKER_DISCRIMINATOR);
+export function getAdminSetWeightDiscriminatorBytes() {
+  return getU8Encoder().encode(ADMIN_SET_WEIGHT_DISCRIMINATOR);
 }
 
-export type SetTieBreakerInstruction<
+export type AdminSetWeightInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountNcnConfig extends string | IAccountMeta<string> = string,
-  TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountTieBreakerAdmin extends string | IAccountMeta<string> = string,
+  TAccountWeightTable extends string | IAccountMeta<string> = string,
+  TAccountWeightTableAdmin extends string | IAccountMeta<string> = string,
+  TAccountMint extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountNcnConfig extends string
-        ? ReadonlyAccount<TAccountNcnConfig>
-        : TAccountNcnConfig,
-      TAccountBallotBox extends string
-        ? WritableAccount<TAccountBallotBox>
-        : TAccountBallotBox,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountTieBreakerAdmin extends string
-        ? ReadonlySignerAccount<TAccountTieBreakerAdmin> &
-            IAccountSignerMeta<TAccountTieBreakerAdmin>
-        : TAccountTieBreakerAdmin,
+      TAccountWeightTable extends string
+        ? WritableAccount<TAccountWeightTable>
+        : TAccountWeightTable,
+      TAccountWeightTableAdmin extends string
+        ? ReadonlySignerAccount<TAccountWeightTableAdmin> &
+            IAccountSignerMeta<TAccountWeightTableAdmin>
+        : TAccountWeightTableAdmin,
+      TAccountMint extends string
+        ? ReadonlyAccount<TAccountMint>
+        : TAccountMint,
       TAccountRestakingProgram extends string
         ? ReadonlyAccount<TAccountRestakingProgram>
         : TAccountRestakingProgram,
@@ -73,84 +72,89 @@ export type SetTieBreakerInstruction<
     ]
   >;
 
-export type SetTieBreakerInstructionData = {
+export type AdminSetWeightInstructionData = {
   discriminator: number;
-  metaMerkleRoot: ReadonlyUint8Array;
+  stMint: Address;
+  weight: bigint;
   epoch: bigint;
 };
 
-export type SetTieBreakerInstructionDataArgs = {
-  metaMerkleRoot: ReadonlyUint8Array;
+export type AdminSetWeightInstructionDataArgs = {
+  stMint: Address;
+  weight: number | bigint;
   epoch: number | bigint;
 };
 
-export function getSetTieBreakerInstructionDataEncoder(): Encoder<SetTieBreakerInstructionDataArgs> {
+export function getAdminSetWeightInstructionDataEncoder(): Encoder<AdminSetWeightInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['metaMerkleRoot', fixEncoderSize(getBytesEncoder(), 32)],
+      ['stMint', getAddressEncoder()],
+      ['weight', getU128Encoder()],
       ['epoch', getU64Encoder()],
     ]),
-    (value) => ({ ...value, discriminator: SET_TIE_BREAKER_DISCRIMINATOR })
+    (value) => ({ ...value, discriminator: ADMIN_SET_WEIGHT_DISCRIMINATOR })
   );
 }
 
-export function getSetTieBreakerInstructionDataDecoder(): Decoder<SetTieBreakerInstructionData> {
+export function getAdminSetWeightInstructionDataDecoder(): Decoder<AdminSetWeightInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['metaMerkleRoot', fixDecoderSize(getBytesDecoder(), 32)],
+    ['stMint', getAddressDecoder()],
+    ['weight', getU128Decoder()],
     ['epoch', getU64Decoder()],
   ]);
 }
 
-export function getSetTieBreakerInstructionDataCodec(): Codec<
-  SetTieBreakerInstructionDataArgs,
-  SetTieBreakerInstructionData
+export function getAdminSetWeightInstructionDataCodec(): Codec<
+  AdminSetWeightInstructionDataArgs,
+  AdminSetWeightInstructionData
 > {
   return combineCodec(
-    getSetTieBreakerInstructionDataEncoder(),
-    getSetTieBreakerInstructionDataDecoder()
+    getAdminSetWeightInstructionDataEncoder(),
+    getAdminSetWeightInstructionDataDecoder()
   );
 }
 
-export type SetTieBreakerInput<
-  TAccountNcnConfig extends string = string,
-  TAccountBallotBox extends string = string,
+export type AdminSetWeightInput<
   TAccountNcn extends string = string,
-  TAccountTieBreakerAdmin extends string = string,
+  TAccountWeightTable extends string = string,
+  TAccountWeightTableAdmin extends string = string,
+  TAccountMint extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
-  ncnConfig: Address<TAccountNcnConfig>;
-  ballotBox: Address<TAccountBallotBox>;
   ncn: Address<TAccountNcn>;
-  tieBreakerAdmin: TransactionSigner<TAccountTieBreakerAdmin>;
+  weightTable: Address<TAccountWeightTable>;
+  weightTableAdmin: TransactionSigner<TAccountWeightTableAdmin>;
+  mint: Address<TAccountMint>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  metaMerkleRoot: SetTieBreakerInstructionDataArgs['metaMerkleRoot'];
-  epoch: SetTieBreakerInstructionDataArgs['epoch'];
+  stMint: AdminSetWeightInstructionDataArgs['stMint'];
+  weight: AdminSetWeightInstructionDataArgs['weight'];
+  epoch: AdminSetWeightInstructionDataArgs['epoch'];
 };
 
-export function getSetTieBreakerInstruction<
-  TAccountNcnConfig extends string,
-  TAccountBallotBox extends string,
+export function getAdminSetWeightInstruction<
   TAccountNcn extends string,
-  TAccountTieBreakerAdmin extends string,
+  TAccountWeightTable extends string,
+  TAccountWeightTableAdmin extends string,
+  TAccountMint extends string,
   TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: SetTieBreakerInput<
-    TAccountNcnConfig,
-    TAccountBallotBox,
+  input: AdminSetWeightInput<
     TAccountNcn,
-    TAccountTieBreakerAdmin,
+    TAccountWeightTable,
+    TAccountWeightTableAdmin,
+    TAccountMint,
     TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): SetTieBreakerInstruction<
+): AdminSetWeightInstruction<
   TProgramAddress,
-  TAccountNcnConfig,
-  TAccountBallotBox,
   TAccountNcn,
-  TAccountTieBreakerAdmin,
+  TAccountWeightTable,
+  TAccountWeightTableAdmin,
+  TAccountMint,
   TAccountRestakingProgram
 > {
   // Program address.
@@ -159,13 +163,13 @@ export function getSetTieBreakerInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
-    ballotBox: { value: input.ballotBox ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    tieBreakerAdmin: {
-      value: input.tieBreakerAdmin ?? null,
+    weightTable: { value: input.weightTable ?? null, isWritable: true },
+    weightTableAdmin: {
+      value: input.weightTableAdmin ?? null,
       isWritable: false,
     },
+    mint: { value: input.mint ?? null, isWritable: false },
     restakingProgram: {
       value: input.restakingProgram ?? null,
       isWritable: false,
@@ -182,51 +186,51 @@ export function getSetTieBreakerInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.ncnConfig),
-      getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.tieBreakerAdmin),
+      getAccountMeta(accounts.weightTable),
+      getAccountMeta(accounts.weightTableAdmin),
+      getAccountMeta(accounts.mint),
       getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
-    data: getSetTieBreakerInstructionDataEncoder().encode(
-      args as SetTieBreakerInstructionDataArgs
+    data: getAdminSetWeightInstructionDataEncoder().encode(
+      args as AdminSetWeightInstructionDataArgs
     ),
-  } as SetTieBreakerInstruction<
+  } as AdminSetWeightInstruction<
     TProgramAddress,
-    TAccountNcnConfig,
-    TAccountBallotBox,
     TAccountNcn,
-    TAccountTieBreakerAdmin,
+    TAccountWeightTable,
+    TAccountWeightTableAdmin,
+    TAccountMint,
     TAccountRestakingProgram
   >;
 
   return instruction;
 }
 
-export type ParsedSetTieBreakerInstruction<
+export type ParsedAdminSetWeightInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    ncnConfig: TAccountMetas[0];
-    ballotBox: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    tieBreakerAdmin: TAccountMetas[3];
+    ncn: TAccountMetas[0];
+    weightTable: TAccountMetas[1];
+    weightTableAdmin: TAccountMetas[2];
+    mint: TAccountMetas[3];
     restakingProgram: TAccountMetas[4];
   };
-  data: SetTieBreakerInstructionData;
+  data: AdminSetWeightInstructionData;
 };
 
-export function parseSetTieBreakerInstruction<
+export function parseAdminSetWeightInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedSetTieBreakerInstruction<TProgram, TAccountMetas> {
+): ParsedAdminSetWeightInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -240,12 +244,12 @@ export function parseSetTieBreakerInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      ncnConfig: getNextAccount(),
-      ballotBox: getNextAccount(),
       ncn: getNextAccount(),
-      tieBreakerAdmin: getNextAccount(),
+      weightTable: getNextAccount(),
+      weightTableAdmin: getNextAccount(),
+      mint: getNextAccount(),
       restakingProgram: getNextAccount(),
     },
-    data: getSetTieBreakerInstructionDataDecoder().decode(instruction.data),
+    data: getAdminSetWeightInstructionDataDecoder().decode(instruction.data),
   };
 }

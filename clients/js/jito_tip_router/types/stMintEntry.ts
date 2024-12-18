@@ -16,6 +16,8 @@ import {
   getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU128Decoder,
+  getU128Encoder,
   getU64Decoder,
   getU64Encoder,
   type Address,
@@ -31,42 +33,46 @@ import {
   type NcnFeeGroupArgs,
 } from '.';
 
-export type MintEntry = {
+export type StMintEntry = {
   stMint: Address;
-  vaultIndex: bigint;
   ncnFeeGroup: NcnFeeGroup;
   rewardMultiplierBps: bigint;
+  switchboardFeed: Address;
+  noFeedWeight: bigint;
   reserved: ReadonlyUint8Array;
 };
 
-export type MintEntryArgs = {
+export type StMintEntryArgs = {
   stMint: Address;
-  vaultIndex: number | bigint;
   ncnFeeGroup: NcnFeeGroupArgs;
   rewardMultiplierBps: number | bigint;
+  switchboardFeed: Address;
+  noFeedWeight: number | bigint;
   reserved: ReadonlyUint8Array;
 };
 
-export function getMintEntryEncoder(): Encoder<MintEntryArgs> {
+export function getStMintEntryEncoder(): Encoder<StMintEntryArgs> {
   return getStructEncoder([
     ['stMint', getAddressEncoder()],
-    ['vaultIndex', getU64Encoder()],
     ['ncnFeeGroup', getNcnFeeGroupEncoder()],
     ['rewardMultiplierBps', getU64Encoder()],
+    ['switchboardFeed', getAddressEncoder()],
+    ['noFeedWeight', getU128Encoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 32)],
   ]);
 }
 
-export function getMintEntryDecoder(): Decoder<MintEntry> {
+export function getStMintEntryDecoder(): Decoder<StMintEntry> {
   return getStructDecoder([
     ['stMint', getAddressDecoder()],
-    ['vaultIndex', getU64Decoder()],
     ['ncnFeeGroup', getNcnFeeGroupDecoder()],
     ['rewardMultiplierBps', getU64Decoder()],
+    ['switchboardFeed', getAddressDecoder()],
+    ['noFeedWeight', getU128Decoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 
-export function getMintEntryCodec(): Codec<MintEntryArgs, MintEntry> {
-  return combineCodec(getMintEntryEncoder(), getMintEntryDecoder());
+export function getStMintEntryCodec(): Codec<StMintEntryArgs, StMintEntry> {
+  return combineCodec(getStMintEntryEncoder(), getStMintEntryDecoder());
 }

@@ -439,7 +439,7 @@ impl TestBuilder {
                 NcnVaultTicket::find_program_address(&jito_restaking_program::id(), &ncn, &vault).0;
 
             tip_router_client
-                .do_register_mint(ncn, vault, vault_ncn_ticket, ncn_vault_ticket)
+                .do_register_vault(ncn, vault, vault_ncn_ticket, ncn_vault_ticket)
                 .await?;
         }
 
@@ -486,7 +486,7 @@ impl TestBuilder {
             let mint = vault.supported_mint;
 
             tip_router_client
-                .do_admin_update_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch, mint, WEIGHT)
+                .do_admin_set_weight(test_ncn.ncn_root.ncn_pubkey, epoch, mint, WEIGHT)
                 .await?;
         }
 

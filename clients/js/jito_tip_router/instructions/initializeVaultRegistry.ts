@@ -30,16 +30,16 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_TRACKED_MINTS_DISCRIMINATOR = 1;
+export const INITIALIZE_VAULT_REGISTRY_DISCRIMINATOR = 1;
 
-export function getInitializeTrackedMintsDiscriminatorBytes() {
-  return getU8Encoder().encode(INITIALIZE_TRACKED_MINTS_DISCRIMINATOR);
+export function getInitializeVaultRegistryDiscriminatorBytes() {
+  return getU8Encoder().encode(INITIALIZE_VAULT_REGISTRY_DISCRIMINATOR);
 }
 
-export type InitializeTrackedMintsInstruction<
+export type InitializeVaultRegistryInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountNcnConfig extends string | IAccountMeta<string> = string,
-  TAccountTrackedMints extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
+  TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
@@ -50,12 +50,12 @@ export type InitializeTrackedMintsInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountNcnConfig extends string
-        ? ReadonlyAccount<TAccountNcnConfig>
-        : TAccountNcnConfig,
-      TAccountTrackedMints extends string
-        ? WritableAccount<TAccountTrackedMints>
-        : TAccountTrackedMints,
+      TAccountConfig extends string
+        ? ReadonlyAccount<TAccountConfig>
+        : TAccountConfig,
+      TAccountVaultRegistry extends string
+        ? WritableAccount<TAccountVaultRegistry>
+        : TAccountVaultRegistry,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountPayer extends string
         ? WritableSignerAccount<TAccountPayer> &
@@ -68,68 +68,68 @@ export type InitializeTrackedMintsInstruction<
     ]
   >;
 
-export type InitializeTrackedMintsInstructionData = { discriminator: number };
+export type InitializeVaultRegistryInstructionData = { discriminator: number };
 
-export type InitializeTrackedMintsInstructionDataArgs = {};
+export type InitializeVaultRegistryInstructionDataArgs = {};
 
-export function getInitializeTrackedMintsInstructionDataEncoder(): Encoder<InitializeTrackedMintsInstructionDataArgs> {
+export function getInitializeVaultRegistryInstructionDataEncoder(): Encoder<InitializeVaultRegistryInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', getU8Encoder()]]),
     (value) => ({
       ...value,
-      discriminator: INITIALIZE_TRACKED_MINTS_DISCRIMINATOR,
+      discriminator: INITIALIZE_VAULT_REGISTRY_DISCRIMINATOR,
     })
   );
 }
 
-export function getInitializeTrackedMintsInstructionDataDecoder(): Decoder<InitializeTrackedMintsInstructionData> {
+export function getInitializeVaultRegistryInstructionDataDecoder(): Decoder<InitializeVaultRegistryInstructionData> {
   return getStructDecoder([['discriminator', getU8Decoder()]]);
 }
 
-export function getInitializeTrackedMintsInstructionDataCodec(): Codec<
-  InitializeTrackedMintsInstructionDataArgs,
-  InitializeTrackedMintsInstructionData
+export function getInitializeVaultRegistryInstructionDataCodec(): Codec<
+  InitializeVaultRegistryInstructionDataArgs,
+  InitializeVaultRegistryInstructionData
 > {
   return combineCodec(
-    getInitializeTrackedMintsInstructionDataEncoder(),
-    getInitializeTrackedMintsInstructionDataDecoder()
+    getInitializeVaultRegistryInstructionDataEncoder(),
+    getInitializeVaultRegistryInstructionDataDecoder()
   );
 }
 
-export type InitializeTrackedMintsInput<
-  TAccountNcnConfig extends string = string,
-  TAccountTrackedMints extends string = string,
+export type InitializeVaultRegistryInput<
+  TAccountConfig extends string = string,
+  TAccountVaultRegistry extends string = string,
   TAccountNcn extends string = string,
   TAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  ncnConfig: Address<TAccountNcnConfig>;
-  trackedMints: Address<TAccountTrackedMints>;
+  config: Address<TAccountConfig>;
+  vaultRegistry: Address<TAccountVaultRegistry>;
   ncn: Address<TAccountNcn>;
   payer: TransactionSigner<TAccountPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
 };
 
-export function getInitializeTrackedMintsInstruction<
-  TAccountNcnConfig extends string,
-  TAccountTrackedMints extends string,
+export function getInitializeVaultRegistryInstruction<
+  TAccountConfig extends string,
+  TAccountVaultRegistry extends string,
   TAccountNcn extends string,
   TAccountPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: InitializeTrackedMintsInput<
-    TAccountNcnConfig,
-    TAccountTrackedMints,
+  input: InitializeVaultRegistryInput<
+    TAccountConfig,
+    TAccountVaultRegistry,
     TAccountNcn,
     TAccountPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): InitializeTrackedMintsInstruction<
+): InitializeVaultRegistryInstruction<
   TProgramAddress,
-  TAccountNcnConfig,
-  TAccountTrackedMints,
+  TAccountConfig,
+  TAccountVaultRegistry,
   TAccountNcn,
   TAccountPayer,
   TAccountSystemProgram
@@ -140,8 +140,8 @@ export function getInitializeTrackedMintsInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
-    trackedMints: { value: input.trackedMints ?? null, isWritable: true },
+    config: { value: input.config ?? null, isWritable: false },
+    vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     payer: { value: input.payer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
@@ -160,18 +160,18 @@ export function getInitializeTrackedMintsInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.ncnConfig),
-      getAccountMeta(accounts.trackedMints),
+      getAccountMeta(accounts.config),
+      getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
-    data: getInitializeTrackedMintsInstructionDataEncoder().encode({}),
-  } as InitializeTrackedMintsInstruction<
+    data: getInitializeVaultRegistryInstructionDataEncoder().encode({}),
+  } as InitializeVaultRegistryInstruction<
     TProgramAddress,
-    TAccountNcnConfig,
-    TAccountTrackedMints,
+    TAccountConfig,
+    TAccountVaultRegistry,
     TAccountNcn,
     TAccountPayer,
     TAccountSystemProgram
@@ -180,29 +180,29 @@ export function getInitializeTrackedMintsInstruction<
   return instruction;
 }
 
-export type ParsedInitializeTrackedMintsInstruction<
+export type ParsedInitializeVaultRegistryInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    ncnConfig: TAccountMetas[0];
-    trackedMints: TAccountMetas[1];
+    config: TAccountMetas[0];
+    vaultRegistry: TAccountMetas[1];
     ncn: TAccountMetas[2];
     payer: TAccountMetas[3];
     systemProgram: TAccountMetas[4];
   };
-  data: InitializeTrackedMintsInstructionData;
+  data: InitializeVaultRegistryInstructionData;
 };
 
-export function parseInitializeTrackedMintsInstruction<
+export function parseInitializeVaultRegistryInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedInitializeTrackedMintsInstruction<TProgram, TAccountMetas> {
+): ParsedInitializeVaultRegistryInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -216,13 +216,13 @@ export function parseInitializeTrackedMintsInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      ncnConfig: getNextAccount(),
-      trackedMints: getNextAccount(),
+      config: getNextAccount(),
+      vaultRegistry: getNextAccount(),
       ncn: getNextAccount(),
       payer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
-    data: getInitializeTrackedMintsInstructionDataDecoder().decode(
+    data: getInitializeVaultRegistryInstructionDataDecoder().decode(
       instruction.data
     ),
   };

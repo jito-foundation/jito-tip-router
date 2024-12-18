@@ -48,11 +48,11 @@ impl StMintEntry {
         self.no_feed_weight.into()
     }
 
-    pub fn st_mint(&self) -> Pubkey {
+    pub const fn st_mint(&self) -> Pubkey {
         self.st_mint
     }
 
-    pub fn ncn_fee_group(&self) -> NcnFeeGroup {
+    pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
         self.ncn_fee_group
     }
 
@@ -60,7 +60,7 @@ impl StMintEntry {
         self.reward_multiplier_bps.into()
     }
 
-    pub fn switchboard_feed(&self) -> Pubkey {
+    pub const fn switchboard_feed(&self) -> Pubkey {
         self.switchboard_feed
     }
 
@@ -319,7 +319,7 @@ impl VaultRegistry {
         self.st_mint_list
             .iter()
             .filter(|m| !m.is_empty())
-            .map(|m| *m)
+            .copied()
             .collect()
     }
 

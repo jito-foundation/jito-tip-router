@@ -32,16 +32,16 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_N_C_N_CONFIG_DISCRIMINATOR = 0;
+export const INITIALIZE_CONFIG_DISCRIMINATOR = 0;
 
-export function getInitializeNCNConfigDiscriminatorBytes() {
-  return getU8Encoder().encode(INITIALIZE_N_C_N_CONFIG_DISCRIMINATOR);
+export function getInitializeConfigDiscriminatorBytes() {
+  return getU8Encoder().encode(INITIALIZE_CONFIG_DISCRIMINATOR);
 }
 
-export type InitializeNCNConfigInstruction<
+export type InitializeConfigInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
-  TAccountNcnConfig extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountNcnAdmin extends string | IAccountMeta<string> = string,
   TAccountFeeWallet extends string | IAccountMeta<string> = string,
@@ -58,9 +58,9 @@ export type InitializeNCNConfigInstruction<
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
-      TAccountNcnConfig extends string
-        ? WritableAccount<TAccountNcnConfig>
-        : TAccountNcnConfig,
+      TAccountConfig extends string
+        ? WritableAccount<TAccountConfig>
+        : TAccountConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountNcnAdmin extends string
         ? ReadonlySignerAccount<TAccountNcnAdmin> &
@@ -82,20 +82,20 @@ export type InitializeNCNConfigInstruction<
     ]
   >;
 
-export type InitializeNCNConfigInstructionData = {
+export type InitializeConfigInstructionData = {
   discriminator: number;
   blockEngineFeeBps: number;
   daoFeeBps: number;
   defaultNcnFeeBps: number;
 };
 
-export type InitializeNCNConfigInstructionDataArgs = {
+export type InitializeConfigInstructionDataArgs = {
   blockEngineFeeBps: number;
   daoFeeBps: number;
   defaultNcnFeeBps: number;
 };
 
-export function getInitializeNCNConfigInstructionDataEncoder(): Encoder<InitializeNCNConfigInstructionDataArgs> {
+export function getInitializeConfigInstructionDataEncoder(): Encoder<InitializeConfigInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
@@ -103,14 +103,11 @@ export function getInitializeNCNConfigInstructionDataEncoder(): Encoder<Initiali
       ['daoFeeBps', getU16Encoder()],
       ['defaultNcnFeeBps', getU16Encoder()],
     ]),
-    (value) => ({
-      ...value,
-      discriminator: INITIALIZE_N_C_N_CONFIG_DISCRIMINATOR,
-    })
+    (value) => ({ ...value, discriminator: INITIALIZE_CONFIG_DISCRIMINATOR })
   );
 }
 
-export function getInitializeNCNConfigInstructionDataDecoder(): Decoder<InitializeNCNConfigInstructionData> {
+export function getInitializeConfigInstructionDataDecoder(): Decoder<InitializeConfigInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['blockEngineFeeBps', getU16Decoder()],
@@ -119,19 +116,19 @@ export function getInitializeNCNConfigInstructionDataDecoder(): Decoder<Initiali
   ]);
 }
 
-export function getInitializeNCNConfigInstructionDataCodec(): Codec<
-  InitializeNCNConfigInstructionDataArgs,
-  InitializeNCNConfigInstructionData
+export function getInitializeConfigInstructionDataCodec(): Codec<
+  InitializeConfigInstructionDataArgs,
+  InitializeConfigInstructionData
 > {
   return combineCodec(
-    getInitializeNCNConfigInstructionDataEncoder(),
-    getInitializeNCNConfigInstructionDataDecoder()
+    getInitializeConfigInstructionDataEncoder(),
+    getInitializeConfigInstructionDataDecoder()
   );
 }
 
-export type InitializeNCNConfigInput<
+export type InitializeConfigInput<
   TAccountRestakingConfig extends string = string,
-  TAccountNcnConfig extends string = string,
+  TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountNcnAdmin extends string = string,
   TAccountFeeWallet extends string = string,
@@ -140,21 +137,21 @@ export type InitializeNCNConfigInput<
   TAccountSystemProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
-  ncnConfig: Address<TAccountNcnConfig>;
+  config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
   feeWallet: Address<TAccountFeeWallet>;
   tieBreakerAdmin: Address<TAccountTieBreakerAdmin>;
   restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
-  blockEngineFeeBps: InitializeNCNConfigInstructionDataArgs['blockEngineFeeBps'];
-  daoFeeBps: InitializeNCNConfigInstructionDataArgs['daoFeeBps'];
-  defaultNcnFeeBps: InitializeNCNConfigInstructionDataArgs['defaultNcnFeeBps'];
+  blockEngineFeeBps: InitializeConfigInstructionDataArgs['blockEngineFeeBps'];
+  daoFeeBps: InitializeConfigInstructionDataArgs['daoFeeBps'];
+  defaultNcnFeeBps: InitializeConfigInstructionDataArgs['defaultNcnFeeBps'];
 };
 
-export function getInitializeNCNConfigInstruction<
+export function getInitializeConfigInstruction<
   TAccountRestakingConfig extends string,
-  TAccountNcnConfig extends string,
+  TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountNcnAdmin extends string,
   TAccountFeeWallet extends string,
@@ -163,9 +160,9 @@ export function getInitializeNCNConfigInstruction<
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: InitializeNCNConfigInput<
+  input: InitializeConfigInput<
     TAccountRestakingConfig,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountNcn,
     TAccountNcnAdmin,
     TAccountFeeWallet,
@@ -174,10 +171,10 @@ export function getInitializeNCNConfigInstruction<
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): InitializeNCNConfigInstruction<
+): InitializeConfigInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
-  TAccountNcnConfig,
+  TAccountConfig,
   TAccountNcn,
   TAccountNcnAdmin,
   TAccountFeeWallet,
@@ -195,7 +192,7 @@ export function getInitializeNCNConfigInstruction<
       value: input.restakingConfig ?? null,
       isWritable: false,
     },
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: true },
+    config: { value: input.config ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
     feeWallet: { value: input.feeWallet ?? null, isWritable: false },
@@ -227,7 +224,7 @@ export function getInitializeNCNConfigInstruction<
   const instruction = {
     accounts: [
       getAccountMeta(accounts.restakingConfig),
-      getAccountMeta(accounts.ncnConfig),
+      getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.ncnAdmin),
       getAccountMeta(accounts.feeWallet),
@@ -236,13 +233,13 @@ export function getInitializeNCNConfigInstruction<
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
-    data: getInitializeNCNConfigInstructionDataEncoder().encode(
-      args as InitializeNCNConfigInstructionDataArgs
+    data: getInitializeConfigInstructionDataEncoder().encode(
+      args as InitializeConfigInstructionDataArgs
     ),
-  } as InitializeNCNConfigInstruction<
+  } as InitializeConfigInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountNcn,
     TAccountNcnAdmin,
     TAccountFeeWallet,
@@ -254,14 +251,14 @@ export function getInitializeNCNConfigInstruction<
   return instruction;
 }
 
-export type ParsedInitializeNCNConfigInstruction<
+export type ParsedInitializeConfigInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
     restakingConfig: TAccountMetas[0];
-    ncnConfig: TAccountMetas[1];
+    config: TAccountMetas[1];
     ncn: TAccountMetas[2];
     ncnAdmin: TAccountMetas[3];
     feeWallet: TAccountMetas[4];
@@ -269,17 +266,17 @@ export type ParsedInitializeNCNConfigInstruction<
     restakingProgram: TAccountMetas[6];
     systemProgram: TAccountMetas[7];
   };
-  data: InitializeNCNConfigInstructionData;
+  data: InitializeConfigInstructionData;
 };
 
-export function parseInitializeNCNConfigInstruction<
+export function parseInitializeConfigInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedInitializeNCNConfigInstruction<TProgram, TAccountMetas> {
+): ParsedInitializeConfigInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -294,7 +291,7 @@ export function parseInitializeNCNConfigInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       restakingConfig: getNextAccount(),
-      ncnConfig: getNextAccount(),
+      config: getNextAccount(),
       ncn: getNextAccount(),
       ncnAdmin: getNextAccount(),
       feeWallet: getNextAccount(),
@@ -302,8 +299,6 @@ export function parseInitializeNCNConfigInstruction<
       restakingProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
-    data: getInitializeNCNConfigInstructionDataDecoder().decode(
-      instruction.data
-    ),
+    data: getInitializeConfigInstructionDataDecoder().decode(instruction.data),
   };
 }

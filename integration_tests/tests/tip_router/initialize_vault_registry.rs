@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use jito_tip_router_core::{config::Config, vault_registry::VaultRegistry};
+    use jito_tip_router_core::{ncn_config::NcnConfig, vault_registry::VaultRegistry};
     use solana_program::instruction::InstructionError;
     use solana_sdk::{signature::Keypair, signer::Signer};
 
@@ -16,7 +16,7 @@ mod tests {
             .await?;
 
         tip_router_client
-            .do_initialize_tracked_mints(ncn_root.ncn_pubkey)
+            .do_initialize_vault_registry(ncn_root.ncn_pubkey)
             .await?;
 
         let tracked_mints = tip_router_client
@@ -45,7 +45,7 @@ mod tests {
         );
 
         let transaction_error = tip_router_client
-            .initialize_tracked_mints(&wrong_ncn_config, &tracked_mints_key, &ncn_root.ncn_pubkey)
+            .initialize_vault_registry(&wrong_ncn_config, &tracked_mints_key, &ncn_root.ncn_pubkey)
             .await;
 
         assert_ix_error(transaction_error, InstructionError::InvalidAccountOwner);
@@ -67,8 +67,8 @@ mod tests {
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &wrong_ncn);
 
         let transaction_error = tip_router_client
-            .initialize_tracked_mints(
-                &Config::find_program_address(
+            .initialize_vault_registry(
+                &NcnConfig::find_program_address(
                     &jito_tip_router_program::id(),
                     &ncn_root.ncn_pubkey,
                 )
@@ -92,14 +92,14 @@ mod tests {
             .await?;
 
         tip_router_client
-            .do_initialize_tracked_mints(ncn_root.ncn_pubkey)
+            .do_initialize_vault_registry(ncn_root.ncn_pubkey)
             .await?;
 
         fixture.warp_slot_incremental(1).await?;
 
         // Second initialization should fail
         let transaction_error = tip_router_client
-            .do_initialize_tracked_mints(ncn_root.ncn_pubkey)
+            .do_initialize_vault_registry(ncn_root.ncn_pubkey)
             .await;
 
         assert_ix_error(transaction_error, InstructionError::InvalidAccountOwner);

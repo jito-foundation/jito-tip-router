@@ -6,7 +6,7 @@ mod set_merkle_root {
     use jito_tip_router_core::{
         ballot_box::{Ballot, BallotBox},
         error::TipRouterError,
-        config::Config,
+        ncn_config::NcnConfig,
     };
     use meta_merkle_tree::{
         generated_merkle_tree::{
@@ -178,7 +178,7 @@ mod set_merkle_root {
         let test_ncn = fixture.create_test_ncn().await?;
         let ncn_address = test_ncn.ncn_root.ncn_pubkey;
         let ncn_config_address =
-            Config::find_program_address(&jito_tip_router_program::id(), &ncn_address).0;
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_address).0;
 
         let epoch = 0;
         tip_distribution_client
@@ -300,7 +300,7 @@ mod set_merkle_root {
 
         let ncn = test_ncn.ncn_root.ncn_pubkey;
         let ncn_config_address =
-            Config::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         tip_distribution_client
             .do_initialize(ncn_config_address)
@@ -394,7 +394,7 @@ mod set_merkle_root {
         let test_ncn = fixture.create_test_ncn().await?;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
         let ncn_config_address =
-            Config::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         let clock = fixture.clock().await;
         let slot = clock.slot;

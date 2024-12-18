@@ -30,7 +30,7 @@ pub enum TipRouterInstruction {
 
     /// Initializes the tracked mints account for an NCN
     #[account(0, name = "config")]
-    #[account(1, writable, name = "tracked_mints")]
+    #[account(1, writable, name = "vault_registry")]
     #[account(2, name = "ncn")]
     #[account(3, writable, signer, name = "payer")]
     #[account(4, name = "system_program")]
@@ -63,7 +63,7 @@ pub enum TipRouterInstruction {
 
     /// Initializes the weight table for a given NCN epoch
     #[account(0, name = "restaking_config")]
-    #[account(1, name = "tracked_mints")]
+    #[account(1, name = "vault_registry")]
     #[account(2, name = "ncn")]
     #[account(3, writable, name = "weight_table")]
     #[account(4, writable, signer, name = "payer")]
@@ -142,7 +142,7 @@ pub enum TipRouterInstruction {
     },
     /// Registers a mint with the NCN config
     #[account(0, name = "restaking_config")]
-    #[account(1, writable, name = "tracked_mints")]
+    #[account(1, writable, name = "vault_registry")]
     #[account(2, name = "ncn")]
     #[account(3, name = "weight_table")]
     #[account(4, name = "vault")]
@@ -268,7 +268,7 @@ pub enum TipRouterInstruction {
     #[account(0, name = "restaking_config")]
     #[account(1, name = "config")]
     #[account(2, name = "ncn")]
-    #[account(3, writable, name = "tracked_mints")]
+    #[account(3, writable, name = "vault_registry")]
     #[account(4, signer, writable, name = "admin")]
     #[account(5, name = "restaking_program")]
     AdminSetStMint{
@@ -370,7 +370,7 @@ pub enum TipRouterInstruction {
     #[account(0, name = "config")]
     #[account(1, writable, name = "weight_table")]
     #[account(2, name = "ncn")]
-    #[account(3, name = "tracked_mints")]
+    #[account(3, name = "vault_registry")]
     #[account(4, writable, signer, name = "payer")]
     #[account(5, name = "system_program")]
     ReallocWeightTable {

@@ -58,7 +58,7 @@ mod tests {
 
         // Register mint
         tip_router_client
-            .do_register_mint(
+            .do_register_vault(
                 ncn_root.ncn_pubkey,
                 vault,
                 vault_ncn_ticket,
@@ -87,7 +87,7 @@ mod tests {
         let ncn_vault_ticket = Keypair::new();
 
         let result = tip_router_client
-            .do_register_mint(
+            .do_register_vault(
                 ncn_root.ncn_pubkey,
                 vault.pubkey(),
                 vault_ncn_ticket.pubkey(),
@@ -153,7 +153,7 @@ mod tests {
 
         // Register mint first time
         tip_router_client
-            .do_register_mint(
+            .do_register_vault(
                 ncn_root.ncn_pubkey,
                 vault,
                 vault_ncn_ticket,
@@ -165,7 +165,7 @@ mod tests {
 
         // Register same mint again
         tip_router_client
-            .do_register_mint(
+            .do_register_vault(
                 ncn_root.ncn_pubkey,
                 vault,
                 vault_ncn_ticket,
@@ -232,7 +232,7 @@ mod tests {
         fixture.warp_slot_incremental(2 * epoch_length).await?;
 
         tip_router_client
-            .do_register_mint(
+            .do_register_vault(
                 ncn_root.ncn_pubkey,
                 vault,
                 vault_ncn_ticket,
@@ -246,7 +246,7 @@ mod tests {
             .await?;
 
         let result = tip_router_client
-            .do_register_mint(
+            .do_register_vault(
                 ncn_root.ncn_pubkey,
                 vault,
                 vault_ncn_ticket,

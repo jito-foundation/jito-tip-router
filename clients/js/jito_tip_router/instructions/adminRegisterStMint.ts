@@ -8,8 +8,14 @@
 
 import {
   combineCodec,
+  getAddressDecoder,
+  getAddressEncoder,
+  getOptionDecoder,
+  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU128Decoder,
+  getU128Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -24,6 +30,8 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyAccount,
   type TransactionSigner,
   type WritableAccount,
@@ -32,19 +40,19 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const SET_TRACKED_MINT_NCN_FEE_GROUP_DISCRIMINATOR = 18;
+export const ADMIN_REGISTER_ST_MINT_DISCRIMINATOR = 19;
 
-export function getSetTrackedMintNcnFeeGroupDiscriminatorBytes() {
-  return getU8Encoder().encode(SET_TRACKED_MINT_NCN_FEE_GROUP_DISCRIMINATOR);
+export function getAdminRegisterStMintDiscriminatorBytes() {
+  return getU8Encoder().encode(ADMIN_REGISTER_ST_MINT_DISCRIMINATOR);
 }
 
-export type SetTrackedMintNcnFeeGroupInstruction<
+export type AdminRegisterStMintInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
-  TAccountNcnConfig extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountWeightTable extends string | IAccountMeta<string> = string,
-  TAccountTrackedMints extends string | IAccountMeta<string> = string,
+  TAccountStMint extends string | IAccountMeta<string> = string,
+  TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountAdmin extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
@@ -55,16 +63,16 @@ export type SetTrackedMintNcnFeeGroupInstruction<
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
-      TAccountNcnConfig extends string
-        ? ReadonlyAccount<TAccountNcnConfig>
-        : TAccountNcnConfig,
+      TAccountConfig extends string
+        ? ReadonlyAccount<TAccountConfig>
+        : TAccountConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountWeightTable extends string
-        ? ReadonlyAccount<TAccountWeightTable>
-        : TAccountWeightTable,
-      TAccountTrackedMints extends string
-        ? WritableAccount<TAccountTrackedMints>
-        : TAccountTrackedMints,
+      TAccountStMint extends string
+        ? ReadonlyAccount<TAccountStMint>
+        : TAccountStMint,
+      TAccountVaultRegistry extends string
+        ? WritableAccount<TAccountVaultRegistry>
+        : TAccountVaultRegistry,
       TAccountAdmin extends string
         ? WritableSignerAccount<TAccountAdmin> &
             IAccountSignerMeta<TAccountAdmin>
@@ -76,96 +84,106 @@ export type SetTrackedMintNcnFeeGroupInstruction<
     ]
   >;
 
-export type SetTrackedMintNcnFeeGroupInstructionData = {
+export type AdminRegisterStMintInstructionData = {
   discriminator: number;
-  vaultIndex: bigint;
   ncnFeeGroup: number;
+  rewardMultiplierBps: bigint;
+  switchboardFeed: Option<Address>;
+  noFeedWeight: Option<bigint>;
 };
 
-export type SetTrackedMintNcnFeeGroupInstructionDataArgs = {
-  vaultIndex: number | bigint;
+export type AdminRegisterStMintInstructionDataArgs = {
   ncnFeeGroup: number;
+  rewardMultiplierBps: number | bigint;
+  switchboardFeed: OptionOrNullable<Address>;
+  noFeedWeight: OptionOrNullable<number | bigint>;
 };
 
-export function getSetTrackedMintNcnFeeGroupInstructionDataEncoder(): Encoder<SetTrackedMintNcnFeeGroupInstructionDataArgs> {
+export function getAdminRegisterStMintInstructionDataEncoder(): Encoder<AdminRegisterStMintInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['vaultIndex', getU64Encoder()],
       ['ncnFeeGroup', getU8Encoder()],
+      ['rewardMultiplierBps', getU64Encoder()],
+      ['switchboardFeed', getOptionEncoder(getAddressEncoder())],
+      ['noFeedWeight', getOptionEncoder(getU128Encoder())],
     ]),
     (value) => ({
       ...value,
-      discriminator: SET_TRACKED_MINT_NCN_FEE_GROUP_DISCRIMINATOR,
+      discriminator: ADMIN_REGISTER_ST_MINT_DISCRIMINATOR,
     })
   );
 }
 
-export function getSetTrackedMintNcnFeeGroupInstructionDataDecoder(): Decoder<SetTrackedMintNcnFeeGroupInstructionData> {
+export function getAdminRegisterStMintInstructionDataDecoder(): Decoder<AdminRegisterStMintInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['vaultIndex', getU64Decoder()],
     ['ncnFeeGroup', getU8Decoder()],
+    ['rewardMultiplierBps', getU64Decoder()],
+    ['switchboardFeed', getOptionDecoder(getAddressDecoder())],
+    ['noFeedWeight', getOptionDecoder(getU128Decoder())],
   ]);
 }
 
-export function getSetTrackedMintNcnFeeGroupInstructionDataCodec(): Codec<
-  SetTrackedMintNcnFeeGroupInstructionDataArgs,
-  SetTrackedMintNcnFeeGroupInstructionData
+export function getAdminRegisterStMintInstructionDataCodec(): Codec<
+  AdminRegisterStMintInstructionDataArgs,
+  AdminRegisterStMintInstructionData
 > {
   return combineCodec(
-    getSetTrackedMintNcnFeeGroupInstructionDataEncoder(),
-    getSetTrackedMintNcnFeeGroupInstructionDataDecoder()
+    getAdminRegisterStMintInstructionDataEncoder(),
+    getAdminRegisterStMintInstructionDataDecoder()
   );
 }
 
-export type SetTrackedMintNcnFeeGroupInput<
+export type AdminRegisterStMintInput<
   TAccountRestakingConfig extends string = string,
-  TAccountNcnConfig extends string = string,
+  TAccountConfig extends string = string,
   TAccountNcn extends string = string,
-  TAccountWeightTable extends string = string,
-  TAccountTrackedMints extends string = string,
+  TAccountStMint extends string = string,
+  TAccountVaultRegistry extends string = string,
   TAccountAdmin extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
-  ncnConfig: Address<TAccountNcnConfig>;
+  config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
-  weightTable: Address<TAccountWeightTable>;
-  trackedMints: Address<TAccountTrackedMints>;
+  stMint: Address<TAccountStMint>;
+  vaultRegistry: Address<TAccountVaultRegistry>;
   admin: TransactionSigner<TAccountAdmin>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  vaultIndex: SetTrackedMintNcnFeeGroupInstructionDataArgs['vaultIndex'];
-  ncnFeeGroup: SetTrackedMintNcnFeeGroupInstructionDataArgs['ncnFeeGroup'];
+  ncnFeeGroup: AdminRegisterStMintInstructionDataArgs['ncnFeeGroup'];
+  rewardMultiplierBps: AdminRegisterStMintInstructionDataArgs['rewardMultiplierBps'];
+  switchboardFeed: AdminRegisterStMintInstructionDataArgs['switchboardFeed'];
+  noFeedWeight: AdminRegisterStMintInstructionDataArgs['noFeedWeight'];
 };
 
-export function getSetTrackedMintNcnFeeGroupInstruction<
+export function getAdminRegisterStMintInstruction<
   TAccountRestakingConfig extends string,
-  TAccountNcnConfig extends string,
+  TAccountConfig extends string,
   TAccountNcn extends string,
-  TAccountWeightTable extends string,
-  TAccountTrackedMints extends string,
+  TAccountStMint extends string,
+  TAccountVaultRegistry extends string,
   TAccountAdmin extends string,
   TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: SetTrackedMintNcnFeeGroupInput<
+  input: AdminRegisterStMintInput<
     TAccountRestakingConfig,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountNcn,
-    TAccountWeightTable,
-    TAccountTrackedMints,
+    TAccountStMint,
+    TAccountVaultRegistry,
     TAccountAdmin,
     TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): SetTrackedMintNcnFeeGroupInstruction<
+): AdminRegisterStMintInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
-  TAccountNcnConfig,
+  TAccountConfig,
   TAccountNcn,
-  TAccountWeightTable,
-  TAccountTrackedMints,
+  TAccountStMint,
+  TAccountVaultRegistry,
   TAccountAdmin,
   TAccountRestakingProgram
 > {
@@ -179,10 +197,10 @@ export function getSetTrackedMintNcnFeeGroupInstruction<
       value: input.restakingConfig ?? null,
       isWritable: false,
     },
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
+    config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    weightTable: { value: input.weightTable ?? null, isWritable: false },
-    trackedMints: { value: input.trackedMints ?? null, isWritable: true },
+    stMint: { value: input.stMint ?? null, isWritable: false },
+    vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: true },
     admin: { value: input.admin ?? null, isWritable: true },
     restakingProgram: {
       value: input.restakingProgram ?? null,
@@ -201,24 +219,24 @@ export function getSetTrackedMintNcnFeeGroupInstruction<
   const instruction = {
     accounts: [
       getAccountMeta(accounts.restakingConfig),
-      getAccountMeta(accounts.ncnConfig),
+      getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.weightTable),
-      getAccountMeta(accounts.trackedMints),
+      getAccountMeta(accounts.stMint),
+      getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.admin),
       getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
-    data: getSetTrackedMintNcnFeeGroupInstructionDataEncoder().encode(
-      args as SetTrackedMintNcnFeeGroupInstructionDataArgs
+    data: getAdminRegisterStMintInstructionDataEncoder().encode(
+      args as AdminRegisterStMintInstructionDataArgs
     ),
-  } as SetTrackedMintNcnFeeGroupInstruction<
+  } as AdminRegisterStMintInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountNcn,
-    TAccountWeightTable,
-    TAccountTrackedMints,
+    TAccountStMint,
+    TAccountVaultRegistry,
     TAccountAdmin,
     TAccountRestakingProgram
   >;
@@ -226,31 +244,31 @@ export function getSetTrackedMintNcnFeeGroupInstruction<
   return instruction;
 }
 
-export type ParsedSetTrackedMintNcnFeeGroupInstruction<
+export type ParsedAdminRegisterStMintInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
     restakingConfig: TAccountMetas[0];
-    ncnConfig: TAccountMetas[1];
+    config: TAccountMetas[1];
     ncn: TAccountMetas[2];
-    weightTable: TAccountMetas[3];
-    trackedMints: TAccountMetas[4];
+    stMint: TAccountMetas[3];
+    vaultRegistry: TAccountMetas[4];
     admin: TAccountMetas[5];
     restakingProgram: TAccountMetas[6];
   };
-  data: SetTrackedMintNcnFeeGroupInstructionData;
+  data: AdminRegisterStMintInstructionData;
 };
 
-export function parseSetTrackedMintNcnFeeGroupInstruction<
+export function parseAdminRegisterStMintInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedSetTrackedMintNcnFeeGroupInstruction<TProgram, TAccountMetas> {
+): ParsedAdminRegisterStMintInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -265,14 +283,14 @@ export function parseSetTrackedMintNcnFeeGroupInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       restakingConfig: getNextAccount(),
-      ncnConfig: getNextAccount(),
+      config: getNextAccount(),
       ncn: getNextAccount(),
-      weightTable: getNextAccount(),
-      trackedMints: getNextAccount(),
+      stMint: getNextAccount(),
+      vaultRegistry: getNextAccount(),
       admin: getNextAccount(),
       restakingProgram: getNextAccount(),
     },
-    data: getSetTrackedMintNcnFeeGroupInstructionDataDecoder().decode(
+    data: getAdminRegisterStMintInstructionDataDecoder().decode(
       instruction.data
     ),
   };

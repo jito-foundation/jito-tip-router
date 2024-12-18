@@ -5,73 +5,67 @@
 //! <https://github.com/kinobi-so/kinobi>
 
 use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::pubkey::Pubkey;
 
 /// Accounts.
-pub struct InitializeNCNConfig {
+pub struct AdminRegisterStMint {
     pub restaking_config: solana_program::pubkey::Pubkey,
 
-    pub ncn_config: solana_program::pubkey::Pubkey,
+    pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub ncn_admin: solana_program::pubkey::Pubkey,
+    pub st_mint: solana_program::pubkey::Pubkey,
 
-    pub fee_wallet: solana_program::pubkey::Pubkey,
+    pub vault_registry: solana_program::pubkey::Pubkey,
 
-    pub tie_breaker_admin: solana_program::pubkey::Pubkey,
+    pub admin: solana_program::pubkey::Pubkey,
 
     pub restaking_program: solana_program::pubkey::Pubkey,
-
-    pub system_program: solana_program::pubkey::Pubkey,
 }
 
-impl InitializeNCNConfig {
+impl AdminRegisterStMint {
     pub fn instruction(
         &self,
-        args: InitializeNCNConfigInstructionArgs,
+        args: AdminRegisterStMintInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: InitializeNCNConfigInstructionArgs,
+        args: AdminRegisterStMintInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_config,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.ncn_config,
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_admin,
-            true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.fee_wallet,
+            self.st_mint,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.tie_breaker_admin,
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.vault_registry,
             false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.admin, true,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_program,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.system_program,
-            false,
-        ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = InitializeNCNConfigInstructionData::new()
+        let mut data = AdminRegisterStMintInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -86,17 +80,17 @@ impl InitializeNCNConfig {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct InitializeNCNConfigInstructionData {
+pub struct AdminRegisterStMintInstructionData {
     discriminator: u8,
 }
 
-impl InitializeNCNConfigInstructionData {
+impl AdminRegisterStMintInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 0 }
+        Self { discriminator: 19 }
     }
 }
 
-impl Default for InitializeNCNConfigInstructionData {
+impl Default for AdminRegisterStMintInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -104,41 +98,41 @@ impl Default for InitializeNCNConfigInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct InitializeNCNConfigInstructionArgs {
-    pub block_engine_fee_bps: u16,
-    pub dao_fee_bps: u16,
-    pub default_ncn_fee_bps: u16,
+pub struct AdminRegisterStMintInstructionArgs {
+    pub ncn_fee_group: u8,
+    pub reward_multiplier_bps: u64,
+    pub switchboard_feed: Option<Pubkey>,
+    pub no_feed_weight: Option<u128>,
 }
 
-/// Instruction builder for `InitializeNCNConfig`.
+/// Instruction builder for `AdminRegisterStMint`.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[writable]` ncn_config
+///   1. `[]` config
 ///   2. `[]` ncn
-///   3. `[signer]` ncn_admin
-///   4. `[]` fee_wallet
-///   5. `[]` tie_breaker_admin
+///   3. `[]` st_mint
+///   4. `[writable]` vault_registry
+///   5. `[writable, signer]` admin
 ///   6. `[]` restaking_program
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
-pub struct InitializeNCNConfigBuilder {
+pub struct AdminRegisterStMintBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
-    ncn_config: Option<solana_program::pubkey::Pubkey>,
+    config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    ncn_admin: Option<solana_program::pubkey::Pubkey>,
-    fee_wallet: Option<solana_program::pubkey::Pubkey>,
-    tie_breaker_admin: Option<solana_program::pubkey::Pubkey>,
+    st_mint: Option<solana_program::pubkey::Pubkey>,
+    vault_registry: Option<solana_program::pubkey::Pubkey>,
+    admin: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
-    system_program: Option<solana_program::pubkey::Pubkey>,
-    block_engine_fee_bps: Option<u16>,
-    dao_fee_bps: Option<u16>,
-    default_ncn_fee_bps: Option<u16>,
+    ncn_fee_group: Option<u8>,
+    reward_multiplier_bps: Option<u64>,
+    switchboard_feed: Option<Pubkey>,
+    no_feed_weight: Option<u128>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl InitializeNCNConfigBuilder {
+impl AdminRegisterStMintBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -151,8 +145,8 @@ impl InitializeNCNConfigBuilder {
         self
     }
     #[inline(always)]
-    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_config = Some(ncn_config);
+    pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.config = Some(config);
         self
     }
     #[inline(always)]
@@ -161,21 +155,18 @@ impl InitializeNCNConfigBuilder {
         self
     }
     #[inline(always)]
-    pub fn ncn_admin(&mut self, ncn_admin: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_admin = Some(ncn_admin);
+    pub fn st_mint(&mut self, st_mint: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.st_mint = Some(st_mint);
         self
     }
     #[inline(always)]
-    pub fn fee_wallet(&mut self, fee_wallet: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.fee_wallet = Some(fee_wallet);
+    pub fn vault_registry(&mut self, vault_registry: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.vault_registry = Some(vault_registry);
         self
     }
     #[inline(always)]
-    pub fn tie_breaker_admin(
-        &mut self,
-        tie_breaker_admin: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.tie_breaker_admin = Some(tie_breaker_admin);
+    pub fn admin(&mut self, admin: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.admin = Some(admin);
         self
     }
     #[inline(always)]
@@ -186,25 +177,26 @@ impl InitializeNCNConfigBuilder {
         self.restaking_program = Some(restaking_program);
         self
     }
-    /// `[optional account, default to '11111111111111111111111111111111']`
     #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.system_program = Some(system_program);
+    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
+        self.ncn_fee_group = Some(ncn_fee_group);
         self
     }
     #[inline(always)]
-    pub fn block_engine_fee_bps(&mut self, block_engine_fee_bps: u16) -> &mut Self {
-        self.block_engine_fee_bps = Some(block_engine_fee_bps);
+    pub fn reward_multiplier_bps(&mut self, reward_multiplier_bps: u64) -> &mut Self {
+        self.reward_multiplier_bps = Some(reward_multiplier_bps);
         self
     }
+    /// `[optional argument]`
     #[inline(always)]
-    pub fn dao_fee_bps(&mut self, dao_fee_bps: u16) -> &mut Self {
-        self.dao_fee_bps = Some(dao_fee_bps);
+    pub fn switchboard_feed(&mut self, switchboard_feed: Pubkey) -> &mut Self {
+        self.switchboard_feed = Some(switchboard_feed);
         self
     }
+    /// `[optional argument]`
     #[inline(always)]
-    pub fn default_ncn_fee_bps(&mut self, default_ncn_fee_bps: u16) -> &mut Self {
-        self.default_ncn_fee_bps = Some(default_ncn_fee_bps);
+    pub fn no_feed_weight(&mut self, no_feed_weight: u128) -> &mut Self {
+        self.no_feed_weight = Some(no_feed_weight);
         self
     }
     /// Add an additional account to the instruction.
@@ -227,97 +219,88 @@ impl InitializeNCNConfigBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = InitializeNCNConfig {
+        let accounts = AdminRegisterStMint {
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
-            ncn_config: self.ncn_config.expect("ncn_config is not set"),
+            config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            ncn_admin: self.ncn_admin.expect("ncn_admin is not set"),
-            fee_wallet: self.fee_wallet.expect("fee_wallet is not set"),
-            tie_breaker_admin: self
-                .tie_breaker_admin
-                .expect("tie_breaker_admin is not set"),
+            st_mint: self.st_mint.expect("st_mint is not set"),
+            vault_registry: self.vault_registry.expect("vault_registry is not set"),
+            admin: self.admin.expect("admin is not set"),
             restaking_program: self
                 .restaking_program
                 .expect("restaking_program is not set"),
-            system_program: self
-                .system_program
-                .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
         };
-        let args = InitializeNCNConfigInstructionArgs {
-            block_engine_fee_bps: self
-                .block_engine_fee_bps
+        let args = AdminRegisterStMintInstructionArgs {
+            ncn_fee_group: self
+                .ncn_fee_group
                 .clone()
-                .expect("block_engine_fee_bps is not set"),
-            dao_fee_bps: self.dao_fee_bps.clone().expect("dao_fee_bps is not set"),
-            default_ncn_fee_bps: self
-                .default_ncn_fee_bps
+                .expect("ncn_fee_group is not set"),
+            reward_multiplier_bps: self
+                .reward_multiplier_bps
                 .clone()
-                .expect("default_ncn_fee_bps is not set"),
+                .expect("reward_multiplier_bps is not set"),
+            switchboard_feed: self.switchboard_feed.clone(),
+            no_feed_weight: self.no_feed_weight.clone(),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
     }
 }
 
-/// `initialize_n_c_n_config` CPI accounts.
-pub struct InitializeNCNConfigCpiAccounts<'a, 'b> {
+/// `admin_register_st_mint` CPI accounts.
+pub struct AdminRegisterStMintCpiAccounts<'a, 'b> {
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub st_mint: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub fee_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub admin: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `initialize_n_c_n_config` CPI instruction.
-pub struct InitializeNCNConfigCpi<'a, 'b> {
+/// `admin_register_st_mint` CPI instruction.
+pub struct AdminRegisterStMintCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub st_mint: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub fee_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub admin: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: InitializeNCNConfigInstructionArgs,
+    pub __args: AdminRegisterStMintInstructionArgs,
 }
 
-impl<'a, 'b> InitializeNCNConfigCpi<'a, 'b> {
+impl<'a, 'b> AdminRegisterStMintCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: InitializeNCNConfigCpiAccounts<'a, 'b>,
-        args: InitializeNCNConfigInstructionArgs,
+        accounts: AdminRegisterStMintCpiAccounts<'a, 'b>,
+        args: AdminRegisterStMintInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
             restaking_config: accounts.restaking_config,
-            ncn_config: accounts.ncn_config,
+            config: accounts.config,
             ncn: accounts.ncn,
-            ncn_admin: accounts.ncn_admin,
-            fee_wallet: accounts.fee_wallet,
-            tie_breaker_admin: accounts.tie_breaker_admin,
+            st_mint: accounts.st_mint,
+            vault_registry: accounts.vault_registry,
+            admin: accounts.admin,
             restaking_program: accounts.restaking_program,
-            system_program: accounts.system_program,
             __args: args,
         }
     }
@@ -354,13 +337,13 @@ impl<'a, 'b> InitializeNCNConfigCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_config.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.ncn_config.key,
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -368,23 +351,19 @@ impl<'a, 'b> InitializeNCNConfigCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_admin.key,
+            *self.st_mint.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.vault_registry.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.admin.key,
             true,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.fee_wallet.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.tie_breaker_admin.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_program.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.system_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -394,7 +373,7 @@ impl<'a, 'b> InitializeNCNConfigCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = InitializeNCNConfigInstructionData::new()
+        let mut data = AdminRegisterStMintInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
@@ -405,16 +384,15 @@ impl<'a, 'b> InitializeNCNConfigCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
-        account_infos.push(self.ncn_config.clone());
+        account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.ncn_admin.clone());
-        account_infos.push(self.fee_wallet.clone());
-        account_infos.push(self.tie_breaker_admin.clone());
+        account_infos.push(self.st_mint.clone());
+        account_infos.push(self.vault_registry.clone());
+        account_infos.push(self.admin.clone());
         account_infos.push(self.restaking_program.clone());
-        account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -427,38 +405,37 @@ impl<'a, 'b> InitializeNCNConfigCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `InitializeNCNConfig` via CPI.
+/// Instruction builder for `AdminRegisterStMint` via CPI.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[writable]` ncn_config
+///   1. `[]` config
 ///   2. `[]` ncn
-///   3. `[signer]` ncn_admin
-///   4. `[]` fee_wallet
-///   5. `[]` tie_breaker_admin
+///   3. `[]` st_mint
+///   4. `[writable]` vault_registry
+///   5. `[writable, signer]` admin
 ///   6. `[]` restaking_program
-///   7. `[]` system_program
 #[derive(Clone, Debug)]
-pub struct InitializeNCNConfigCpiBuilder<'a, 'b> {
-    instruction: Box<InitializeNCNConfigCpiBuilderInstruction<'a, 'b>>,
+pub struct AdminRegisterStMintCpiBuilder<'a, 'b> {
+    instruction: Box<AdminRegisterStMintCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
+impl<'a, 'b> AdminRegisterStMintCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(InitializeNCNConfigCpiBuilderInstruction {
+        let instruction = Box::new(AdminRegisterStMintCpiBuilderInstruction {
             __program: program,
             restaking_config: None,
-            ncn_config: None,
+            config: None,
             ncn: None,
-            ncn_admin: None,
-            fee_wallet: None,
-            tie_breaker_admin: None,
+            st_mint: None,
+            vault_registry: None,
+            admin: None,
             restaking_program: None,
-            system_program: None,
-            block_engine_fee_bps: None,
-            dao_fee_bps: None,
-            default_ncn_fee_bps: None,
+            ncn_fee_group: None,
+            reward_multiplier_bps: None,
+            switchboard_feed: None,
+            no_feed_weight: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -472,11 +449,11 @@ impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn ncn_config(
+    pub fn config(
         &mut self,
-        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+        config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_config = Some(ncn_config);
+        self.instruction.config = Some(config);
         self
     }
     #[inline(always)]
@@ -485,27 +462,24 @@ impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn ncn_admin(
+    pub fn st_mint(
         &mut self,
-        ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
+        st_mint: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_admin = Some(ncn_admin);
+        self.instruction.st_mint = Some(st_mint);
         self
     }
     #[inline(always)]
-    pub fn fee_wallet(
+    pub fn vault_registry(
         &mut self,
-        fee_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+        vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.fee_wallet = Some(fee_wallet);
+        self.instruction.vault_registry = Some(vault_registry);
         self
     }
     #[inline(always)]
-    pub fn tie_breaker_admin(
-        &mut self,
-        tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.tie_breaker_admin = Some(tie_breaker_admin);
+    pub fn admin(&mut self, admin: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.admin = Some(admin);
         self
     }
     #[inline(always)]
@@ -517,26 +491,25 @@ impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn system_program(
-        &mut self,
-        system_program: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.system_program = Some(system_program);
+    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
+        self.instruction.ncn_fee_group = Some(ncn_fee_group);
         self
     }
     #[inline(always)]
-    pub fn block_engine_fee_bps(&mut self, block_engine_fee_bps: u16) -> &mut Self {
-        self.instruction.block_engine_fee_bps = Some(block_engine_fee_bps);
+    pub fn reward_multiplier_bps(&mut self, reward_multiplier_bps: u64) -> &mut Self {
+        self.instruction.reward_multiplier_bps = Some(reward_multiplier_bps);
         self
     }
+    /// `[optional argument]`
     #[inline(always)]
-    pub fn dao_fee_bps(&mut self, dao_fee_bps: u16) -> &mut Self {
-        self.instruction.dao_fee_bps = Some(dao_fee_bps);
+    pub fn switchboard_feed(&mut self, switchboard_feed: Pubkey) -> &mut Self {
+        self.instruction.switchboard_feed = Some(switchboard_feed);
         self
     }
+    /// `[optional argument]`
     #[inline(always)]
-    pub fn default_ncn_fee_bps(&mut self, default_ncn_fee_bps: u16) -> &mut Self {
-        self.instruction.default_ncn_fee_bps = Some(default_ncn_fee_bps);
+    pub fn no_feed_weight(&mut self, no_feed_weight: u128) -> &mut Self {
+        self.instruction.no_feed_weight = Some(no_feed_weight);
         self
     }
     /// Add an additional account to the instruction.
@@ -580,24 +553,21 @@ impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = InitializeNCNConfigInstructionArgs {
-            block_engine_fee_bps: self
+        let args = AdminRegisterStMintInstructionArgs {
+            ncn_fee_group: self
                 .instruction
-                .block_engine_fee_bps
+                .ncn_fee_group
                 .clone()
-                .expect("block_engine_fee_bps is not set"),
-            dao_fee_bps: self
+                .expect("ncn_fee_group is not set"),
+            reward_multiplier_bps: self
                 .instruction
-                .dao_fee_bps
+                .reward_multiplier_bps
                 .clone()
-                .expect("dao_fee_bps is not set"),
-            default_ncn_fee_bps: self
-                .instruction
-                .default_ncn_fee_bps
-                .clone()
-                .expect("default_ncn_fee_bps is not set"),
+                .expect("reward_multiplier_bps is not set"),
+            switchboard_feed: self.instruction.switchboard_feed.clone(),
+            no_feed_weight: self.instruction.no_feed_weight.clone(),
         };
-        let instruction = InitializeNCNConfigCpi {
+        let instruction = AdminRegisterStMintCpi {
             __program: self.instruction.__program,
 
             restaking_config: self
@@ -605,28 +575,23 @@ impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
                 .restaking_config
                 .expect("restaking_config is not set"),
 
-            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
+            config: self.instruction.config.expect("config is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            ncn_admin: self.instruction.ncn_admin.expect("ncn_admin is not set"),
+            st_mint: self.instruction.st_mint.expect("st_mint is not set"),
 
-            fee_wallet: self.instruction.fee_wallet.expect("fee_wallet is not set"),
-
-            tie_breaker_admin: self
+            vault_registry: self
                 .instruction
-                .tie_breaker_admin
-                .expect("tie_breaker_admin is not set"),
+                .vault_registry
+                .expect("vault_registry is not set"),
+
+            admin: self.instruction.admin.expect("admin is not set"),
 
             restaking_program: self
                 .instruction
                 .restaking_program
                 .expect("restaking_program is not set"),
-
-            system_program: self
-                .instruction
-                .system_program
-                .expect("system_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -637,19 +602,19 @@ impl<'a, 'b> InitializeNCNConfigCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct InitializeNCNConfigCpiBuilderInstruction<'a, 'b> {
+struct AdminRegisterStMintCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    fee_wallet: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    tie_breaker_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    st_mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    block_engine_fee_bps: Option<u16>,
-    dao_fee_bps: Option<u16>,
-    default_ncn_fee_bps: Option<u16>,
+    ncn_fee_group: Option<u8>,
+    reward_multiplier_bps: Option<u64>,
+    switchboard_feed: Option<Pubkey>,
+    no_feed_weight: Option<u128>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,

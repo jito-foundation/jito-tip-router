@@ -6,72 +6,56 @@
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-/// Accounts.
-pub struct CastVote {
-    pub config: solana_program::pubkey::Pubkey,
+use crate::generated::types::ConfigAdminRole;
 
-    pub ballot_box: solana_program::pubkey::Pubkey,
+/// Accounts.
+pub struct AdminSetNewAdmin {
+    pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub epoch_snapshot: solana_program::pubkey::Pubkey,
+    pub ncn_admin: solana_program::pubkey::Pubkey,
 
-    pub operator_snapshot: solana_program::pubkey::Pubkey,
-
-    pub operator: solana_program::pubkey::Pubkey,
-
-    pub operator_admin: solana_program::pubkey::Pubkey,
+    pub new_admin: solana_program::pubkey::Pubkey,
 
     pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
-impl CastVote {
+impl AdminSetNewAdmin {
     pub fn instruction(
         &self,
-        args: CastVoteInstructionArgs,
+        args: AdminSetNewAdminInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: CastVoteInstructionArgs,
+        args: AdminSetNewAdminInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.config,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.ballot_box,
+            self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.epoch_snapshot,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.operator_snapshot,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.operator,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.operator_admin,
+            self.ncn_admin,
             true,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.new_admin,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = CastVoteInstructionData::new().try_to_vec().unwrap();
+        let mut data = AdminSetNewAdminInstructionData::new().try_to_vec().unwrap();
         let mut args = args.try_to_vec().unwrap();
         data.append(&mut args);
 
@@ -84,17 +68,17 @@ impl CastVote {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct CastVoteInstructionData {
+pub struct AdminSetNewAdminInstructionData {
     discriminator: u8,
 }
 
-impl CastVoteInstructionData {
+impl AdminSetNewAdminInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 22 }
+        Self { discriminator: 3 }
     }
 }
 
-impl Default for CastVoteInstructionData {
+impl Default for AdminSetNewAdminInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -102,39 +86,31 @@ impl Default for CastVoteInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct CastVoteInstructionArgs {
-    pub meta_merkle_root: [u8; 32],
-    pub epoch: u64,
+pub struct AdminSetNewAdminInstructionArgs {
+    pub role: ConfigAdminRole,
 }
 
-/// Instruction builder for `CastVote`.
+/// Instruction builder for `AdminSetNewAdmin`.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` config
-///   1. `[writable]` ballot_box
-///   2. `[]` ncn
-///   3. `[]` epoch_snapshot
-///   4. `[]` operator_snapshot
-///   5. `[]` operator
-///   6. `[signer]` operator_admin
-///   7. `[]` restaking_program
+///   0. `[writable]` config
+///   1. `[]` ncn
+///   2. `[signer]` ncn_admin
+///   3. `[]` new_admin
+///   4. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
-pub struct CastVoteBuilder {
+pub struct AdminSetNewAdminBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
-    ballot_box: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
-    operator_snapshot: Option<solana_program::pubkey::Pubkey>,
-    operator: Option<solana_program::pubkey::Pubkey>,
-    operator_admin: Option<solana_program::pubkey::Pubkey>,
+    ncn_admin: Option<solana_program::pubkey::Pubkey>,
+    new_admin: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
-    meta_merkle_root: Option<[u8; 32]>,
-    epoch: Option<u64>,
+    role: Option<ConfigAdminRole>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl CastVoteBuilder {
+impl AdminSetNewAdminBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -144,36 +120,18 @@ impl CastVoteBuilder {
         self
     }
     #[inline(always)]
-    pub fn ballot_box(&mut self, ballot_box: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ballot_box = Some(ballot_box);
-        self
-    }
-    #[inline(always)]
     pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
         self.ncn = Some(ncn);
         self
     }
     #[inline(always)]
-    pub fn epoch_snapshot(&mut self, epoch_snapshot: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.epoch_snapshot = Some(epoch_snapshot);
+    pub fn ncn_admin(&mut self, ncn_admin: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.ncn_admin = Some(ncn_admin);
         self
     }
     #[inline(always)]
-    pub fn operator_snapshot(
-        &mut self,
-        operator_snapshot: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.operator_snapshot = Some(operator_snapshot);
-        self
-    }
-    #[inline(always)]
-    pub fn operator(&mut self, operator: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.operator = Some(operator);
-        self
-    }
-    #[inline(always)]
-    pub fn operator_admin(&mut self, operator_admin: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.operator_admin = Some(operator_admin);
+    pub fn new_admin(&mut self, new_admin: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.new_admin = Some(new_admin);
         self
     }
     #[inline(always)]
@@ -185,13 +143,8 @@ impl CastVoteBuilder {
         self
     }
     #[inline(always)]
-    pub fn meta_merkle_root(&mut self, meta_merkle_root: [u8; 32]) -> &mut Self {
-        self.meta_merkle_root = Some(meta_merkle_root);
-        self
-    }
-    #[inline(always)]
-    pub fn epoch(&mut self, epoch: u64) -> &mut Self {
-        self.epoch = Some(epoch);
+    pub fn role(&mut self, role: ConfigAdminRole) -> &mut Self {
+        self.role = Some(role);
         self
     }
     /// Add an additional account to the instruction.
@@ -214,90 +167,66 @@ impl CastVoteBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = CastVote {
+        let accounts = AdminSetNewAdmin {
             config: self.config.expect("config is not set"),
-            ballot_box: self.ballot_box.expect("ballot_box is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            epoch_snapshot: self.epoch_snapshot.expect("epoch_snapshot is not set"),
-            operator_snapshot: self
-                .operator_snapshot
-                .expect("operator_snapshot is not set"),
-            operator: self.operator.expect("operator is not set"),
-            operator_admin: self.operator_admin.expect("operator_admin is not set"),
+            ncn_admin: self.ncn_admin.expect("ncn_admin is not set"),
+            new_admin: self.new_admin.expect("new_admin is not set"),
             restaking_program: self
                 .restaking_program
                 .expect("restaking_program is not set"),
         };
-        let args = CastVoteInstructionArgs {
-            meta_merkle_root: self
-                .meta_merkle_root
-                .clone()
-                .expect("meta_merkle_root is not set"),
-            epoch: self.epoch.clone().expect("epoch is not set"),
+        let args = AdminSetNewAdminInstructionArgs {
+            role: self.role.clone().expect("role is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
     }
 }
 
-/// `cast_vote` CPI accounts.
-pub struct CastVoteCpiAccounts<'a, 'b> {
+/// `admin_set_new_admin` CPI accounts.
+pub struct AdminSetNewAdminCpiAccounts<'a, 'b> {
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub operator_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub new_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `cast_vote` CPI instruction.
-pub struct CastVoteCpi<'a, 'b> {
+/// `admin_set_new_admin` CPI instruction.
+pub struct AdminSetNewAdminCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub operator_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub new_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: CastVoteInstructionArgs,
+    pub __args: AdminSetNewAdminInstructionArgs,
 }
 
-impl<'a, 'b> CastVoteCpi<'a, 'b> {
+impl<'a, 'b> AdminSetNewAdminCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: CastVoteCpiAccounts<'a, 'b>,
-        args: CastVoteInstructionArgs,
+        accounts: AdminSetNewAdminCpiAccounts<'a, 'b>,
+        args: AdminSetNewAdminInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
             config: accounts.config,
-            ballot_box: accounts.ballot_box,
             ncn: accounts.ncn,
-            epoch_snapshot: accounts.epoch_snapshot,
-            operator_snapshot: accounts.operator_snapshot,
-            operator: accounts.operator,
-            operator_admin: accounts.operator_admin,
+            ncn_admin: accounts.ncn_admin,
+            new_admin: accounts.new_admin,
             restaking_program: accounts.restaking_program,
             __args: args,
         }
@@ -335,13 +264,9 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.config.key,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.ballot_box.key,
+            *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -349,20 +274,12 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.epoch_snapshot.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.operator_snapshot.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.operator.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.operator_admin.key,
+            *self.ncn_admin.key,
             true,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.new_admin.key,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_program.key,
@@ -375,7 +292,7 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = CastVoteInstructionData::new().try_to_vec().unwrap();
+        let mut data = AdminSetNewAdminInstructionData::new().try_to_vec().unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
         data.append(&mut args);
 
@@ -384,15 +301,12 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.config.clone());
-        account_infos.push(self.ballot_box.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.epoch_snapshot.clone());
-        account_infos.push(self.operator_snapshot.clone());
-        account_infos.push(self.operator.clone());
-        account_infos.push(self.operator_admin.clone());
+        account_infos.push(self.ncn_admin.clone());
+        account_infos.push(self.new_admin.clone());
         account_infos.push(self.restaking_program.clone());
         remaining_accounts
             .iter()
@@ -406,37 +320,30 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `CastVote` via CPI.
+/// Instruction builder for `AdminSetNewAdmin` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` config
-///   1. `[writable]` ballot_box
-///   2. `[]` ncn
-///   3. `[]` epoch_snapshot
-///   4. `[]` operator_snapshot
-///   5. `[]` operator
-///   6. `[signer]` operator_admin
-///   7. `[]` restaking_program
+///   0. `[writable]` config
+///   1. `[]` ncn
+///   2. `[signer]` ncn_admin
+///   3. `[]` new_admin
+///   4. `[]` restaking_program
 #[derive(Clone, Debug)]
-pub struct CastVoteCpiBuilder<'a, 'b> {
-    instruction: Box<CastVoteCpiBuilderInstruction<'a, 'b>>,
+pub struct AdminSetNewAdminCpiBuilder<'a, 'b> {
+    instruction: Box<AdminSetNewAdminCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> CastVoteCpiBuilder<'a, 'b> {
+impl<'a, 'b> AdminSetNewAdminCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(CastVoteCpiBuilderInstruction {
+        let instruction = Box::new(AdminSetNewAdminCpiBuilderInstruction {
             __program: program,
             config: None,
-            ballot_box: None,
             ncn: None,
-            epoch_snapshot: None,
-            operator_snapshot: None,
-            operator: None,
-            operator_admin: None,
+            ncn_admin: None,
+            new_admin: None,
             restaking_program: None,
-            meta_merkle_root: None,
-            epoch: None,
+            role: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -450,48 +357,24 @@ impl<'a, 'b> CastVoteCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn ballot_box(
-        &mut self,
-        ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.ballot_box = Some(ballot_box);
-        self
-    }
-    #[inline(always)]
     pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.ncn = Some(ncn);
         self
     }
     #[inline(always)]
-    pub fn epoch_snapshot(
+    pub fn ncn_admin(
         &mut self,
-        epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+        ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.epoch_snapshot = Some(epoch_snapshot);
+        self.instruction.ncn_admin = Some(ncn_admin);
         self
     }
     #[inline(always)]
-    pub fn operator_snapshot(
+    pub fn new_admin(
         &mut self,
-        operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+        new_admin: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.operator_snapshot = Some(operator_snapshot);
-        self
-    }
-    #[inline(always)]
-    pub fn operator(
-        &mut self,
-        operator: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.operator = Some(operator);
-        self
-    }
-    #[inline(always)]
-    pub fn operator_admin(
-        &mut self,
-        operator_admin: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.operator_admin = Some(operator_admin);
+        self.instruction.new_admin = Some(new_admin);
         self
     }
     #[inline(always)]
@@ -503,13 +386,8 @@ impl<'a, 'b> CastVoteCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn meta_merkle_root(&mut self, meta_merkle_root: [u8; 32]) -> &mut Self {
-        self.instruction.meta_merkle_root = Some(meta_merkle_root);
-        self
-    }
-    #[inline(always)]
-    pub fn epoch(&mut self, epoch: u64) -> &mut Self {
-        self.instruction.epoch = Some(epoch);
+    pub fn role(&mut self, role: ConfigAdminRole) -> &mut Self {
+        self.instruction.role = Some(role);
         self
     }
     /// Add an additional account to the instruction.
@@ -553,39 +431,19 @@ impl<'a, 'b> CastVoteCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = CastVoteInstructionArgs {
-            meta_merkle_root: self
-                .instruction
-                .meta_merkle_root
-                .clone()
-                .expect("meta_merkle_root is not set"),
-            epoch: self.instruction.epoch.clone().expect("epoch is not set"),
+        let args = AdminSetNewAdminInstructionArgs {
+            role: self.instruction.role.clone().expect("role is not set"),
         };
-        let instruction = CastVoteCpi {
+        let instruction = AdminSetNewAdminCpi {
             __program: self.instruction.__program,
 
             config: self.instruction.config.expect("config is not set"),
 
-            ballot_box: self.instruction.ballot_box.expect("ballot_box is not set"),
-
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            epoch_snapshot: self
-                .instruction
-                .epoch_snapshot
-                .expect("epoch_snapshot is not set"),
+            ncn_admin: self.instruction.ncn_admin.expect("ncn_admin is not set"),
 
-            operator_snapshot: self
-                .instruction
-                .operator_snapshot
-                .expect("operator_snapshot is not set"),
-
-            operator: self.instruction.operator.expect("operator is not set"),
-
-            operator_admin: self
-                .instruction
-                .operator_admin
-                .expect("operator_admin is not set"),
+            new_admin: self.instruction.new_admin.expect("new_admin is not set"),
 
             restaking_program: self
                 .instruction
@@ -601,18 +459,14 @@ impl<'a, 'b> CastVoteCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct CastVoteCpiBuilderInstruction<'a, 'b> {
+struct AdminSetNewAdminCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    operator_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    new_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    meta_merkle_root: Option<[u8; 32]>,
-    epoch: Option<u64>,
+    role: Option<ConfigAdminRole>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,

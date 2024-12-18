@@ -8,8 +8,14 @@
 
 import {
   combineCodec,
+  fixDecoderSize,
+  fixEncoderSize,
+  getBytesDecoder,
+  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU64Decoder,
+  getU64Encoder,
   getU8Decoder,
   getU8Encoder,
   transformEncoder,
@@ -24,30 +30,25 @@ import {
   type IInstructionWithData,
   type ReadonlyAccount,
   type ReadonlySignerAccount,
+  type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
-import {
-  getConfigAdminRoleDecoder,
-  getConfigAdminRoleEncoder,
-  type ConfigAdminRole,
-  type ConfigAdminRoleArgs,
-} from '../types';
 
-export const SET_NEW_ADMIN_DISCRIMINATOR = 3;
+export const ADMIN_SET_TIE_BREAKER_DISCRIMINATOR = 24;
 
-export function getSetNewAdminDiscriminatorBytes() {
-  return getU8Encoder().encode(SET_NEW_ADMIN_DISCRIMINATOR);
+export function getAdminSetTieBreakerDiscriminatorBytes() {
+  return getU8Encoder().encode(ADMIN_SET_TIE_BREAKER_DISCRIMINATOR);
 }
 
-export type SetNewAdminInstruction<
+export type AdminSetTieBreakerInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountConfig extends string | IAccountMeta<string> = string,
+  TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountNcnAdmin extends string | IAccountMeta<string> = string,
-  TAccountNewAdmin extends string | IAccountMeta<string> = string,
+  TAccountTieBreakerAdmin extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
@@ -55,16 +56,16 @@ export type SetNewAdminInstruction<
   IInstructionWithAccounts<
     [
       TAccountConfig extends string
-        ? WritableAccount<TAccountConfig>
+        ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
+      TAccountBallotBox extends string
+        ? WritableAccount<TAccountBallotBox>
+        : TAccountBallotBox,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountNcnAdmin extends string
-        ? ReadonlySignerAccount<TAccountNcnAdmin> &
-            IAccountSignerMeta<TAccountNcnAdmin>
-        : TAccountNcnAdmin,
-      TAccountNewAdmin extends string
-        ? ReadonlyAccount<TAccountNewAdmin>
-        : TAccountNewAdmin,
+      TAccountTieBreakerAdmin extends string
+        ? ReadonlySignerAccount<TAccountTieBreakerAdmin> &
+            IAccountSignerMeta<TAccountTieBreakerAdmin>
+        : TAccountTieBreakerAdmin,
       TAccountRestakingProgram extends string
         ? ReadonlyAccount<TAccountRestakingProgram>
         : TAccountRestakingProgram,
@@ -72,77 +73,87 @@ export type SetNewAdminInstruction<
     ]
   >;
 
-export type SetNewAdminInstructionData = {
+export type AdminSetTieBreakerInstructionData = {
   discriminator: number;
-  role: ConfigAdminRole;
+  metaMerkleRoot: ReadonlyUint8Array;
+  epoch: bigint;
 };
 
-export type SetNewAdminInstructionDataArgs = { role: ConfigAdminRoleArgs };
+export type AdminSetTieBreakerInstructionDataArgs = {
+  metaMerkleRoot: ReadonlyUint8Array;
+  epoch: number | bigint;
+};
 
-export function getSetNewAdminInstructionDataEncoder(): Encoder<SetNewAdminInstructionDataArgs> {
+export function getAdminSetTieBreakerInstructionDataEncoder(): Encoder<AdminSetTieBreakerInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['role', getConfigAdminRoleEncoder()],
+      ['metaMerkleRoot', fixEncoderSize(getBytesEncoder(), 32)],
+      ['epoch', getU64Encoder()],
     ]),
-    (value) => ({ ...value, discriminator: SET_NEW_ADMIN_DISCRIMINATOR })
+    (value) => ({
+      ...value,
+      discriminator: ADMIN_SET_TIE_BREAKER_DISCRIMINATOR,
+    })
   );
 }
 
-export function getSetNewAdminInstructionDataDecoder(): Decoder<SetNewAdminInstructionData> {
+export function getAdminSetTieBreakerInstructionDataDecoder(): Decoder<AdminSetTieBreakerInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['role', getConfigAdminRoleDecoder()],
+    ['metaMerkleRoot', fixDecoderSize(getBytesDecoder(), 32)],
+    ['epoch', getU64Decoder()],
   ]);
 }
 
-export function getSetNewAdminInstructionDataCodec(): Codec<
-  SetNewAdminInstructionDataArgs,
-  SetNewAdminInstructionData
+export function getAdminSetTieBreakerInstructionDataCodec(): Codec<
+  AdminSetTieBreakerInstructionDataArgs,
+  AdminSetTieBreakerInstructionData
 > {
   return combineCodec(
-    getSetNewAdminInstructionDataEncoder(),
-    getSetNewAdminInstructionDataDecoder()
+    getAdminSetTieBreakerInstructionDataEncoder(),
+    getAdminSetTieBreakerInstructionDataDecoder()
   );
 }
 
-export type SetNewAdminInput<
+export type AdminSetTieBreakerInput<
   TAccountConfig extends string = string,
+  TAccountBallotBox extends string = string,
   TAccountNcn extends string = string,
-  TAccountNcnAdmin extends string = string,
-  TAccountNewAdmin extends string = string,
+  TAccountTieBreakerAdmin extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
   config: Address<TAccountConfig>;
+  ballotBox: Address<TAccountBallotBox>;
   ncn: Address<TAccountNcn>;
-  ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
-  newAdmin: Address<TAccountNewAdmin>;
+  tieBreakerAdmin: TransactionSigner<TAccountTieBreakerAdmin>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  role: SetNewAdminInstructionDataArgs['role'];
+  metaMerkleRoot: AdminSetTieBreakerInstructionDataArgs['metaMerkleRoot'];
+  epoch: AdminSetTieBreakerInstructionDataArgs['epoch'];
 };
 
-export function getSetNewAdminInstruction<
+export function getAdminSetTieBreakerInstruction<
   TAccountConfig extends string,
+  TAccountBallotBox extends string,
   TAccountNcn extends string,
-  TAccountNcnAdmin extends string,
-  TAccountNewAdmin extends string,
+  TAccountTieBreakerAdmin extends string,
   TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: SetNewAdminInput<
+  input: AdminSetTieBreakerInput<
     TAccountConfig,
+    TAccountBallotBox,
     TAccountNcn,
-    TAccountNcnAdmin,
-    TAccountNewAdmin,
+    TAccountTieBreakerAdmin,
     TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): SetNewAdminInstruction<
+): AdminSetTieBreakerInstruction<
   TProgramAddress,
   TAccountConfig,
+  TAccountBallotBox,
   TAccountNcn,
-  TAccountNcnAdmin,
-  TAccountNewAdmin,
+  TAccountTieBreakerAdmin,
   TAccountRestakingProgram
 > {
   // Program address.
@@ -151,10 +162,13 @@ export function getSetNewAdminInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    config: { value: input.config ?? null, isWritable: true },
+    config: { value: input.config ?? null, isWritable: false },
+    ballotBox: { value: input.ballotBox ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
-    newAdmin: { value: input.newAdmin ?? null, isWritable: false },
+    tieBreakerAdmin: {
+      value: input.tieBreakerAdmin ?? null,
+      isWritable: false,
+    },
     restakingProgram: {
       value: input.restakingProgram ?? null,
       isWritable: false,
@@ -172,50 +186,50 @@ export function getSetNewAdminInstruction<
   const instruction = {
     accounts: [
       getAccountMeta(accounts.config),
+      getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.ncnAdmin),
-      getAccountMeta(accounts.newAdmin),
+      getAccountMeta(accounts.tieBreakerAdmin),
       getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
-    data: getSetNewAdminInstructionDataEncoder().encode(
-      args as SetNewAdminInstructionDataArgs
+    data: getAdminSetTieBreakerInstructionDataEncoder().encode(
+      args as AdminSetTieBreakerInstructionDataArgs
     ),
-  } as SetNewAdminInstruction<
+  } as AdminSetTieBreakerInstruction<
     TProgramAddress,
     TAccountConfig,
+    TAccountBallotBox,
     TAccountNcn,
-    TAccountNcnAdmin,
-    TAccountNewAdmin,
+    TAccountTieBreakerAdmin,
     TAccountRestakingProgram
   >;
 
   return instruction;
 }
 
-export type ParsedSetNewAdminInstruction<
+export type ParsedAdminSetTieBreakerInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
     config: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    ncnAdmin: TAccountMetas[2];
-    newAdmin: TAccountMetas[3];
+    ballotBox: TAccountMetas[1];
+    ncn: TAccountMetas[2];
+    tieBreakerAdmin: TAccountMetas[3];
     restakingProgram: TAccountMetas[4];
   };
-  data: SetNewAdminInstructionData;
+  data: AdminSetTieBreakerInstructionData;
 };
 
-export function parseSetNewAdminInstruction<
+export function parseAdminSetTieBreakerInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedSetNewAdminInstruction<TProgram, TAccountMetas> {
+): ParsedAdminSetTieBreakerInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -230,11 +244,13 @@ export function parseSetNewAdminInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       config: getNextAccount(),
+      ballotBox: getNextAccount(),
       ncn: getNextAccount(),
-      ncnAdmin: getNextAccount(),
-      newAdmin: getNextAccount(),
+      tieBreakerAdmin: getNextAccount(),
       restakingProgram: getNextAccount(),
     },
-    data: getSetNewAdminInstructionDataDecoder().decode(instruction.data),
+    data: getAdminSetTieBreakerInstructionDataDecoder().decode(
+      instruction.data
+    ),
   };
 }

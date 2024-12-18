@@ -8,10 +8,10 @@
 
 import {
   combineCodec,
+  getAddressDecoder,
+  getAddressEncoder,
   getStructDecoder,
   getStructEncoder,
-  getU128Decoder,
-  getU128Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -34,19 +34,18 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ADMIN_UPDATE_WEIGHT_TABLE_DISCRIMINATOR = 5;
+export const SWITCHBOARD_SET_WEIGHT_DISCRIMINATOR = 6;
 
-export function getAdminUpdateWeightTableDiscriminatorBytes() {
-  return getU8Encoder().encode(ADMIN_UPDATE_WEIGHT_TABLE_DISCRIMINATOR);
+export function getSwitchboardSetWeightDiscriminatorBytes() {
+  return getU8Encoder().encode(SWITCHBOARD_SET_WEIGHT_DISCRIMINATOR);
 }
 
-export type AdminUpdateWeightTableInstruction<
+export type SwitchboardSetWeightInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
-  TAccountWeightTableAdmin extends string | IAccountMeta<string> = string,
-  TAccountMint extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
+  TAccountSwitchboardFeed extends string | IAccountMeta<string> = string,
+  TAccountStMint extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -56,102 +55,94 @@ export type AdminUpdateWeightTableInstruction<
       TAccountWeightTable extends string
         ? WritableAccount<TAccountWeightTable>
         : TAccountWeightTable,
-      TAccountWeightTableAdmin extends string
-        ? ReadonlySignerAccount<TAccountWeightTableAdmin> &
-            IAccountSignerMeta<TAccountWeightTableAdmin>
-        : TAccountWeightTableAdmin,
-      TAccountMint extends string
-        ? ReadonlyAccount<TAccountMint>
-        : TAccountMint,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
+      TAccountSwitchboardFeed extends string
+        ? ReadonlySignerAccount<TAccountSwitchboardFeed> &
+            IAccountSignerMeta<TAccountSwitchboardFeed>
+        : TAccountSwitchboardFeed,
+      TAccountStMint extends string
+        ? ReadonlyAccount<TAccountStMint>
+        : TAccountStMint,
       ...TRemainingAccounts,
     ]
   >;
 
-export type AdminUpdateWeightTableInstructionData = {
+export type SwitchboardSetWeightInstructionData = {
   discriminator: number;
-  ncnEpoch: bigint;
-  weight: bigint;
+  stMint: Address;
+  epoch: bigint;
 };
 
-export type AdminUpdateWeightTableInstructionDataArgs = {
-  ncnEpoch: number | bigint;
-  weight: number | bigint;
+export type SwitchboardSetWeightInstructionDataArgs = {
+  stMint: Address;
+  epoch: number | bigint;
 };
 
-export function getAdminUpdateWeightTableInstructionDataEncoder(): Encoder<AdminUpdateWeightTableInstructionDataArgs> {
+export function getSwitchboardSetWeightInstructionDataEncoder(): Encoder<SwitchboardSetWeightInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['ncnEpoch', getU64Encoder()],
-      ['weight', getU128Encoder()],
+      ['stMint', getAddressEncoder()],
+      ['epoch', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
-      discriminator: ADMIN_UPDATE_WEIGHT_TABLE_DISCRIMINATOR,
+      discriminator: SWITCHBOARD_SET_WEIGHT_DISCRIMINATOR,
     })
   );
 }
 
-export function getAdminUpdateWeightTableInstructionDataDecoder(): Decoder<AdminUpdateWeightTableInstructionData> {
+export function getSwitchboardSetWeightInstructionDataDecoder(): Decoder<SwitchboardSetWeightInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['ncnEpoch', getU64Decoder()],
-    ['weight', getU128Decoder()],
+    ['stMint', getAddressDecoder()],
+    ['epoch', getU64Decoder()],
   ]);
 }
 
-export function getAdminUpdateWeightTableInstructionDataCodec(): Codec<
-  AdminUpdateWeightTableInstructionDataArgs,
-  AdminUpdateWeightTableInstructionData
+export function getSwitchboardSetWeightInstructionDataCodec(): Codec<
+  SwitchboardSetWeightInstructionDataArgs,
+  SwitchboardSetWeightInstructionData
 > {
   return combineCodec(
-    getAdminUpdateWeightTableInstructionDataEncoder(),
-    getAdminUpdateWeightTableInstructionDataDecoder()
+    getSwitchboardSetWeightInstructionDataEncoder(),
+    getSwitchboardSetWeightInstructionDataDecoder()
   );
 }
 
-export type AdminUpdateWeightTableInput<
+export type SwitchboardSetWeightInput<
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
-  TAccountWeightTableAdmin extends string = string,
-  TAccountMint extends string = string,
-  TAccountRestakingProgram extends string = string,
+  TAccountSwitchboardFeed extends string = string,
+  TAccountStMint extends string = string,
 > = {
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
-  weightTableAdmin: TransactionSigner<TAccountWeightTableAdmin>;
-  mint: Address<TAccountMint>;
-  restakingProgram: Address<TAccountRestakingProgram>;
-  ncnEpoch: AdminUpdateWeightTableInstructionDataArgs['ncnEpoch'];
-  weight: AdminUpdateWeightTableInstructionDataArgs['weight'];
+  switchboardFeed: TransactionSigner<TAccountSwitchboardFeed>;
+  stMint: Address<TAccountStMint>;
+  stMintArg: SwitchboardSetWeightInstructionDataArgs['stMint'];
+  epoch: SwitchboardSetWeightInstructionDataArgs['epoch'];
 };
 
-export function getAdminUpdateWeightTableInstruction<
+export function getSwitchboardSetWeightInstruction<
   TAccountNcn extends string,
   TAccountWeightTable extends string,
-  TAccountWeightTableAdmin extends string,
-  TAccountMint extends string,
-  TAccountRestakingProgram extends string,
+  TAccountSwitchboardFeed extends string,
+  TAccountStMint extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: AdminUpdateWeightTableInput<
+  input: SwitchboardSetWeightInput<
     TAccountNcn,
     TAccountWeightTable,
-    TAccountWeightTableAdmin,
-    TAccountMint,
-    TAccountRestakingProgram
+    TAccountSwitchboardFeed,
+    TAccountStMint
   >,
   config?: { programAddress?: TProgramAddress }
-): AdminUpdateWeightTableInstruction<
+): SwitchboardSetWeightInstruction<
   TProgramAddress,
   TAccountNcn,
   TAccountWeightTable,
-  TAccountWeightTableAdmin,
-  TAccountMint,
-  TAccountRestakingProgram
+  TAccountSwitchboardFeed,
+  TAccountStMint
 > {
   // Program address.
   const programAddress =
@@ -161,15 +152,11 @@ export function getAdminUpdateWeightTableInstruction<
   const originalAccounts = {
     ncn: { value: input.ncn ?? null, isWritable: false },
     weightTable: { value: input.weightTable ?? null, isWritable: true },
-    weightTableAdmin: {
-      value: input.weightTableAdmin ?? null,
+    switchboardFeed: {
+      value: input.switchboardFeed ?? null,
       isWritable: false,
     },
-    mint: { value: input.mint ?? null, isWritable: false },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
+    stMint: { value: input.stMint ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -177,34 +164,32 @@ export function getAdminUpdateWeightTableInstruction<
   >;
 
   // Original args.
-  const args = { ...input };
+  const args = { ...input, stMint: input.stMintArg };
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
-      getAccountMeta(accounts.weightTableAdmin),
-      getAccountMeta(accounts.mint),
-      getAccountMeta(accounts.restakingProgram),
+      getAccountMeta(accounts.switchboardFeed),
+      getAccountMeta(accounts.stMint),
     ],
     programAddress,
-    data: getAdminUpdateWeightTableInstructionDataEncoder().encode(
-      args as AdminUpdateWeightTableInstructionDataArgs
+    data: getSwitchboardSetWeightInstructionDataEncoder().encode(
+      args as SwitchboardSetWeightInstructionDataArgs
     ),
-  } as AdminUpdateWeightTableInstruction<
+  } as SwitchboardSetWeightInstruction<
     TProgramAddress,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountWeightTableAdmin,
-    TAccountMint,
-    TAccountRestakingProgram
+    TAccountSwitchboardFeed,
+    TAccountStMint
   >;
 
   return instruction;
 }
 
-export type ParsedAdminUpdateWeightTableInstruction<
+export type ParsedSwitchboardSetWeightInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -212,22 +197,21 @@ export type ParsedAdminUpdateWeightTableInstruction<
   accounts: {
     ncn: TAccountMetas[0];
     weightTable: TAccountMetas[1];
-    weightTableAdmin: TAccountMetas[2];
-    mint: TAccountMetas[3];
-    restakingProgram: TAccountMetas[4];
+    switchboardFeed: TAccountMetas[2];
+    stMint: TAccountMetas[3];
   };
-  data: AdminUpdateWeightTableInstructionData;
+  data: SwitchboardSetWeightInstructionData;
 };
 
-export function parseAdminUpdateWeightTableInstruction<
+export function parseSwitchboardSetWeightInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedAdminUpdateWeightTableInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+): ParsedSwitchboardSetWeightInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 4) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -242,11 +226,10 @@ export function parseAdminUpdateWeightTableInstruction<
     accounts: {
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
-      weightTableAdmin: getNextAccount(),
-      mint: getNextAccount(),
-      restakingProgram: getNextAccount(),
+      switchboardFeed: getNextAccount(),
+      stMint: getNextAccount(),
     },
-    data: getAdminUpdateWeightTableInstructionDataDecoder().decode(
+    data: getSwitchboardSetWeightInstructionDataDecoder().decode(
       instruction.data
     ),
   };

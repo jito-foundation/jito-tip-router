@@ -7,10 +7,10 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
-pub struct InitializeTrackedMints {
-    pub ncn_config: solana_program::pubkey::Pubkey,
+pub struct InitializeVaultRegistry {
+    pub config: solana_program::pubkey::Pubkey,
 
-    pub tracked_mints: solana_program::pubkey::Pubkey,
+    pub vault_registry: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
@@ -19,7 +19,7 @@ pub struct InitializeTrackedMints {
     pub system_program: solana_program::pubkey::Pubkey,
 }
 
-impl InitializeTrackedMints {
+impl InitializeVaultRegistry {
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(&[])
     }
@@ -30,11 +30,11 @@ impl InitializeTrackedMints {
     ) -> solana_program::instruction::Instruction {
         let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_config,
+            self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.tracked_mints,
+            self.vault_registry,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -48,7 +48,7 @@ impl InitializeTrackedMints {
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let data = InitializeTrackedMintsInstructionData::new()
+        let data = InitializeVaultRegistryInstructionData::new()
             .try_to_vec()
             .unwrap();
 
@@ -61,53 +61,53 @@ impl InitializeTrackedMints {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct InitializeTrackedMintsInstructionData {
+pub struct InitializeVaultRegistryInstructionData {
     discriminator: u8,
 }
 
-impl InitializeTrackedMintsInstructionData {
+impl InitializeVaultRegistryInstructionData {
     pub fn new() -> Self {
         Self { discriminator: 1 }
     }
 }
 
-impl Default for InitializeTrackedMintsInstructionData {
+impl Default for InitializeVaultRegistryInstructionData {
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// Instruction builder for `InitializeTrackedMints`.
+/// Instruction builder for `InitializeVaultRegistry`.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
-///   1. `[writable]` tracked_mints
+///   0. `[]` config
+///   1. `[writable]` vault_registry
 ///   2. `[]` ncn
 ///   3. `[writable, signer]` payer
 ///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
-pub struct InitializeTrackedMintsBuilder {
-    ncn_config: Option<solana_program::pubkey::Pubkey>,
-    tracked_mints: Option<solana_program::pubkey::Pubkey>,
+pub struct InitializeVaultRegistryBuilder {
+    config: Option<solana_program::pubkey::Pubkey>,
+    vault_registry: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl InitializeTrackedMintsBuilder {
+impl InitializeVaultRegistryBuilder {
     pub fn new() -> Self {
         Self::default()
     }
     #[inline(always)]
-    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_config = Some(ncn_config);
+    pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.config = Some(config);
         self
     }
     #[inline(always)]
-    pub fn tracked_mints(&mut self, tracked_mints: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.tracked_mints = Some(tracked_mints);
+    pub fn vault_registry(&mut self, vault_registry: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.vault_registry = Some(vault_registry);
         self
     }
     #[inline(always)]
@@ -146,9 +146,9 @@ impl InitializeTrackedMintsBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = InitializeTrackedMints {
-            ncn_config: self.ncn_config.expect("ncn_config is not set"),
-            tracked_mints: self.tracked_mints.expect("tracked_mints is not set"),
+        let accounts = InitializeVaultRegistry {
+            config: self.config.expect("config is not set"),
+            vault_registry: self.vault_registry.expect("vault_registry is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             payer: self.payer.expect("payer is not set"),
             system_program: self
@@ -160,11 +160,11 @@ impl InitializeTrackedMintsBuilder {
     }
 }
 
-/// `initialize_tracked_mints` CPI accounts.
-pub struct InitializeTrackedMintsCpiAccounts<'a, 'b> {
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+/// `initialize_vault_registry` CPI accounts.
+pub struct InitializeVaultRegistryCpiAccounts<'a, 'b> {
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -173,14 +173,14 @@ pub struct InitializeTrackedMintsCpiAccounts<'a, 'b> {
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `initialize_tracked_mints` CPI instruction.
-pub struct InitializeTrackedMintsCpi<'a, 'b> {
+/// `initialize_vault_registry` CPI instruction.
+pub struct InitializeVaultRegistryCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -189,15 +189,15 @@ pub struct InitializeTrackedMintsCpi<'a, 'b> {
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-impl<'a, 'b> InitializeTrackedMintsCpi<'a, 'b> {
+impl<'a, 'b> InitializeVaultRegistryCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: InitializeTrackedMintsCpiAccounts<'a, 'b>,
+        accounts: InitializeVaultRegistryCpiAccounts<'a, 'b>,
     ) -> Self {
         Self {
             __program: program,
-            ncn_config: accounts.ncn_config,
-            tracked_mints: accounts.tracked_mints,
+            config: accounts.config,
+            vault_registry: accounts.vault_registry,
             ncn: accounts.ncn,
             payer: accounts.payer,
             system_program: accounts.system_program,
@@ -238,11 +238,11 @@ impl<'a, 'b> InitializeTrackedMintsCpi<'a, 'b> {
     ) -> solana_program::entrypoint::ProgramResult {
         let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_config.key,
+            *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.tracked_mints.key,
+            *self.vault_registry.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -264,7 +264,7 @@ impl<'a, 'b> InitializeTrackedMintsCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let data = InitializeTrackedMintsInstructionData::new()
+        let data = InitializeVaultRegistryInstructionData::new()
             .try_to_vec()
             .unwrap();
 
@@ -275,8 +275,8 @@ impl<'a, 'b> InitializeTrackedMintsCpi<'a, 'b> {
         };
         let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.ncn_config.clone());
-        account_infos.push(self.tracked_mints.clone());
+        account_infos.push(self.config.clone());
+        account_infos.push(self.vault_registry.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.payer.clone());
         account_infos.push(self.system_program.clone());
@@ -292,26 +292,26 @@ impl<'a, 'b> InitializeTrackedMintsCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `InitializeTrackedMints` via CPI.
+/// Instruction builder for `InitializeVaultRegistry` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
-///   1. `[writable]` tracked_mints
+///   0. `[]` config
+///   1. `[writable]` vault_registry
 ///   2. `[]` ncn
 ///   3. `[writable, signer]` payer
 ///   4. `[]` system_program
 #[derive(Clone, Debug)]
-pub struct InitializeTrackedMintsCpiBuilder<'a, 'b> {
-    instruction: Box<InitializeTrackedMintsCpiBuilderInstruction<'a, 'b>>,
+pub struct InitializeVaultRegistryCpiBuilder<'a, 'b> {
+    instruction: Box<InitializeVaultRegistryCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> InitializeTrackedMintsCpiBuilder<'a, 'b> {
+impl<'a, 'b> InitializeVaultRegistryCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(InitializeTrackedMintsCpiBuilderInstruction {
+        let instruction = Box::new(InitializeVaultRegistryCpiBuilderInstruction {
             __program: program,
-            ncn_config: None,
-            tracked_mints: None,
+            config: None,
+            vault_registry: None,
             ncn: None,
             payer: None,
             system_program: None,
@@ -320,19 +320,19 @@ impl<'a, 'b> InitializeTrackedMintsCpiBuilder<'a, 'b> {
         Self { instruction }
     }
     #[inline(always)]
-    pub fn ncn_config(
+    pub fn config(
         &mut self,
-        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+        config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_config = Some(ncn_config);
+        self.instruction.config = Some(config);
         self
     }
     #[inline(always)]
-    pub fn tracked_mints(
+    pub fn vault_registry(
         &mut self,
-        tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+        vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.tracked_mints = Some(tracked_mints);
+        self.instruction.vault_registry = Some(vault_registry);
         self
     }
     #[inline(always)]
@@ -394,15 +394,15 @@ impl<'a, 'b> InitializeTrackedMintsCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let instruction = InitializeTrackedMintsCpi {
+        let instruction = InitializeVaultRegistryCpi {
             __program: self.instruction.__program,
 
-            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
+            config: self.instruction.config.expect("config is not set"),
 
-            tracked_mints: self
+            vault_registry: self
                 .instruction
-                .tracked_mints
-                .expect("tracked_mints is not set"),
+                .vault_registry
+                .expect("vault_registry is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
@@ -421,10 +421,10 @@ impl<'a, 'b> InitializeTrackedMintsCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct InitializeTrackedMintsCpiBuilderInstruction<'a, 'b> {
+struct InitializeVaultRegistryCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    tracked_mints: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,

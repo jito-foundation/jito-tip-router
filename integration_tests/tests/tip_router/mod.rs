@@ -8,7 +8,7 @@ mod initialize_epoch_snapshot;
 mod initialize_ncn_config;
 mod initialize_ncn_reward_router;
 mod initialize_operator_snapshot;
-mod initialize_tracked_mints;
+mod initialize_vault_registry;
 mod initialize_weight_table;
 mod meta_tests;
 mod register_mint;

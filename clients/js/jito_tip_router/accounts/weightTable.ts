@@ -44,8 +44,9 @@ import {
 export type WeightTable = {
   discriminator: bigint;
   ncn: Address;
-  ncnEpoch: bigint;
+  epoch: bigint;
   slotCreated: bigint;
+  vaultCount: bigint;
   bump: number;
   reserved: Array<number>;
   table: Array<WeightEntry>;
@@ -54,8 +55,9 @@ export type WeightTable = {
 export type WeightTableArgs = {
   discriminator: number | bigint;
   ncn: Address;
-  ncnEpoch: number | bigint;
+  epoch: number | bigint;
   slotCreated: number | bigint;
+  vaultCount: number | bigint;
   bump: number;
   reserved: Array<number>;
   table: Array<WeightEntryArgs>;
@@ -65,11 +67,12 @@ export function getWeightTableEncoder(): Encoder<WeightTableArgs> {
   return getStructEncoder([
     ['discriminator', getU64Encoder()],
     ['ncn', getAddressEncoder()],
-    ['ncnEpoch', getU64Encoder()],
+    ['epoch', getU64Encoder()],
     ['slotCreated', getU64Encoder()],
+    ['vaultCount', getU64Encoder()],
     ['bump', getU8Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
-    ['table', getArrayEncoder(getWeightEntryEncoder(), { size: 64 })],
+    ['table', getArrayEncoder(getWeightEntryEncoder(), { size: 32 })],
   ]);
 }
 
@@ -77,11 +80,12 @@ export function getWeightTableDecoder(): Decoder<WeightTable> {
   return getStructDecoder([
     ['discriminator', getU64Decoder()],
     ['ncn', getAddressDecoder()],
-    ['ncnEpoch', getU64Decoder()],
+    ['epoch', getU64Decoder()],
     ['slotCreated', getU64Decoder()],
+    ['vaultCount', getU64Decoder()],
     ['bump', getU8Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
-    ['table', getArrayDecoder(getWeightEntryDecoder(), { size: 64 })],
+    ['table', getArrayDecoder(getWeightEntryDecoder(), { size: 32 })],
   ]);
 }
 

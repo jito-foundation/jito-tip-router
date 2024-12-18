@@ -7,10 +7,10 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
-pub struct RegisterMint {
+pub struct RegisterVault {
     pub restaking_config: solana_program::pubkey::Pubkey,
 
-    pub tracked_mints: solana_program::pubkey::Pubkey,
+    pub vault_registry: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
@@ -27,7 +27,7 @@ pub struct RegisterMint {
     pub vault_program_id: solana_program::pubkey::Pubkey,
 }
 
-impl RegisterMint {
+impl RegisterVault {
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(&[])
     }
@@ -42,7 +42,7 @@ impl RegisterMint {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.tracked_mints,
+            self.vault_registry,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -72,7 +72,7 @@ impl RegisterMint {
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let data = RegisterMintInstructionData::new().try_to_vec().unwrap();
+        let data = RegisterVaultInstructionData::new().try_to_vec().unwrap();
 
         solana_program::instruction::Instruction {
             program_id: crate::JITO_TIP_ROUTER_ID,
@@ -83,28 +83,28 @@ impl RegisterMint {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct RegisterMintInstructionData {
+pub struct RegisterVaultInstructionData {
     discriminator: u8,
 }
 
-impl RegisterMintInstructionData {
+impl RegisterVaultInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 9 }
+        Self { discriminator: 10 }
     }
 }
 
-impl Default for RegisterMintInstructionData {
+impl Default for RegisterVaultInstructionData {
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// Instruction builder for `RegisterMint`.
+/// Instruction builder for `RegisterVault`.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[writable]` tracked_mints
+///   1. `[writable]` vault_registry
 ///   2. `[]` ncn
 ///   3. `[]` weight_table
 ///   4. `[]` vault
@@ -113,9 +113,9 @@ impl Default for RegisterMintInstructionData {
 ///   7. `[]` restaking_program_id
 ///   8. `[]` vault_program_id
 #[derive(Clone, Debug, Default)]
-pub struct RegisterMintBuilder {
+pub struct RegisterVaultBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
-    tracked_mints: Option<solana_program::pubkey::Pubkey>,
+    vault_registry: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     weight_table: Option<solana_program::pubkey::Pubkey>,
     vault: Option<solana_program::pubkey::Pubkey>,
@@ -126,7 +126,7 @@ pub struct RegisterMintBuilder {
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl RegisterMintBuilder {
+impl RegisterVaultBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -139,8 +139,8 @@ impl RegisterMintBuilder {
         self
     }
     #[inline(always)]
-    pub fn tracked_mints(&mut self, tracked_mints: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.tracked_mints = Some(tracked_mints);
+    pub fn vault_registry(&mut self, vault_registry: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.vault_registry = Some(vault_registry);
         self
     }
     #[inline(always)]
@@ -210,9 +210,9 @@ impl RegisterMintBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = RegisterMint {
+        let accounts = RegisterVault {
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
-            tracked_mints: self.tracked_mints.expect("tracked_mints is not set"),
+            vault_registry: self.vault_registry.expect("vault_registry is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             weight_table: self.weight_table.expect("weight_table is not set"),
             vault: self.vault.expect("vault is not set"),
@@ -228,11 +228,11 @@ impl RegisterMintBuilder {
     }
 }
 
-/// `register_mint` CPI accounts.
-pub struct RegisterMintCpiAccounts<'a, 'b> {
+/// `register_vault` CPI accounts.
+pub struct RegisterVaultCpiAccounts<'a, 'b> {
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -249,14 +249,14 @@ pub struct RegisterMintCpiAccounts<'a, 'b> {
     pub vault_program_id: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `register_mint` CPI instruction.
-pub struct RegisterMintCpi<'a, 'b> {
+/// `register_vault` CPI instruction.
+pub struct RegisterVaultCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -273,15 +273,15 @@ pub struct RegisterMintCpi<'a, 'b> {
     pub vault_program_id: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-impl<'a, 'b> RegisterMintCpi<'a, 'b> {
+impl<'a, 'b> RegisterVaultCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: RegisterMintCpiAccounts<'a, 'b>,
+        accounts: RegisterVaultCpiAccounts<'a, 'b>,
     ) -> Self {
         Self {
             __program: program,
             restaking_config: accounts.restaking_config,
-            tracked_mints: accounts.tracked_mints,
+            vault_registry: accounts.vault_registry,
             ncn: accounts.ncn,
             weight_table: accounts.weight_table,
             vault: accounts.vault,
@@ -330,7 +330,7 @@ impl<'a, 'b> RegisterMintCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.tracked_mints.key,
+            *self.vault_registry.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -368,7 +368,7 @@ impl<'a, 'b> RegisterMintCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let data = RegisterMintInstructionData::new().try_to_vec().unwrap();
+        let data = RegisterVaultInstructionData::new().try_to_vec().unwrap();
 
         let instruction = solana_program::instruction::Instruction {
             program_id: crate::JITO_TIP_ROUTER_ID,
@@ -378,7 +378,7 @@ impl<'a, 'b> RegisterMintCpi<'a, 'b> {
         let mut account_infos = Vec::with_capacity(9 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
-        account_infos.push(self.tracked_mints.clone());
+        account_infos.push(self.vault_registry.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.weight_table.clone());
         account_infos.push(self.vault.clone());
@@ -398,12 +398,12 @@ impl<'a, 'b> RegisterMintCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `RegisterMint` via CPI.
+/// Instruction builder for `RegisterVault` via CPI.
 ///
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[writable]` tracked_mints
+///   1. `[writable]` vault_registry
 ///   2. `[]` ncn
 ///   3. `[]` weight_table
 ///   4. `[]` vault
@@ -412,16 +412,16 @@ impl<'a, 'b> RegisterMintCpi<'a, 'b> {
 ///   7. `[]` restaking_program_id
 ///   8. `[]` vault_program_id
 #[derive(Clone, Debug)]
-pub struct RegisterMintCpiBuilder<'a, 'b> {
-    instruction: Box<RegisterMintCpiBuilderInstruction<'a, 'b>>,
+pub struct RegisterVaultCpiBuilder<'a, 'b> {
+    instruction: Box<RegisterVaultCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> RegisterMintCpiBuilder<'a, 'b> {
+impl<'a, 'b> RegisterVaultCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(RegisterMintCpiBuilderInstruction {
+        let instruction = Box::new(RegisterVaultCpiBuilderInstruction {
             __program: program,
             restaking_config: None,
-            tracked_mints: None,
+            vault_registry: None,
             ncn: None,
             weight_table: None,
             vault: None,
@@ -442,11 +442,11 @@ impl<'a, 'b> RegisterMintCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn tracked_mints(
+    pub fn vault_registry(
         &mut self,
-        tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+        vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.tracked_mints = Some(tracked_mints);
+        self.instruction.vault_registry = Some(vault_registry);
         self
     }
     #[inline(always)]
@@ -540,7 +540,7 @@ impl<'a, 'b> RegisterMintCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let instruction = RegisterMintCpi {
+        let instruction = RegisterVaultCpi {
             __program: self.instruction.__program,
 
             restaking_config: self
@@ -548,10 +548,10 @@ impl<'a, 'b> RegisterMintCpiBuilder<'a, 'b> {
                 .restaking_config
                 .expect("restaking_config is not set"),
 
-            tracked_mints: self
+            vault_registry: self
                 .instruction
-                .tracked_mints
-                .expect("tracked_mints is not set"),
+                .vault_registry
+                .expect("vault_registry is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
@@ -590,10 +590,10 @@ impl<'a, 'b> RegisterMintCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct RegisterMintCpiBuilderInstruction<'a, 'b> {
+struct RegisterVaultCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    tracked_mints: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,

@@ -7,11 +7,11 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::MintEntry;
+use crate::generated::types::{StMintEntry, VaultEntry};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct TrackedMints {
+pub struct VaultRegistry {
     pub discriminator: u64,
     #[cfg_attr(
         feature = "serde",
@@ -21,11 +21,12 @@ pub struct TrackedMints {
     pub bump: u8,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 127],
+    pub st_mint_list: [StMintEntry; 32],
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-    pub st_mint_list: [MintEntry; 64],
+    pub vault_list: [VaultEntry; 64],
 }
 
-impl TrackedMints {
+impl VaultRegistry {
     #[inline(always)]
     pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
         let mut data = data;
@@ -33,7 +34,7 @@ impl TrackedMints {
     }
 }
 
-impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for TrackedMints {
+impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for VaultRegistry {
     type Error = std::io::Error;
 
     fn try_from(
@@ -45,26 +46,26 @@ impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for TrackedMint
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountDeserialize for TrackedMints {
+impl anchor_lang::AccountDeserialize for VaultRegistry {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         Ok(Self::deserialize(buf)?)
     }
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountSerialize for TrackedMints {}
+impl anchor_lang::AccountSerialize for VaultRegistry {}
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::Owner for TrackedMints {
+impl anchor_lang::Owner for VaultRegistry {
     fn owner() -> Pubkey {
         crate::JITO_TIP_ROUTER_ID
     }
 }
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::IdlBuild for TrackedMints {}
+impl anchor_lang::IdlBuild for VaultRegistry {}
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::Discriminator for TrackedMints {
+impl anchor_lang::Discriminator for VaultRegistry {
     const DISCRIMINATOR: [u8; 8] = [0; 8];
 }

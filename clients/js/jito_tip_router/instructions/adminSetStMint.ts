@@ -8,8 +8,14 @@
 
 import {
   combineCodec,
+  getAddressDecoder,
+  getAddressEncoder,
+  getOptionDecoder,
+  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU128Decoder,
+  getU128Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -20,29 +26,33 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
+  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyAccount,
+  type TransactionSigner,
   type WritableAccount,
+  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const DISTRIBUTE_BASE_NCN_REWARD_ROUTE_DISCRIMINATOR = 16;
+export const ADMIN_SET_ST_MINT_DISCRIMINATOR = 20;
 
-export function getDistributeBaseNcnRewardRouteDiscriminatorBytes() {
-  return getU8Encoder().encode(DISTRIBUTE_BASE_NCN_REWARD_ROUTE_DISCRIMINATOR);
+export function getAdminSetStMintDiscriminatorBytes() {
+  return getU8Encoder().encode(ADMIN_SET_ST_MINT_DISCRIMINATOR);
 }
 
-export type DistributeBaseNcnRewardRouteInstruction<
+export type AdminSetStMintInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountOperator extends string | IAccountMeta<string> = string,
-  TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
-  TAccountNcnRewardRouter extends string | IAccountMeta<string> = string,
+  TAccountVaultRegistry extends string | IAccountMeta<string> = string,
+  TAccountAdmin extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
@@ -56,15 +66,13 @@ export type DistributeBaseNcnRewardRouteInstruction<
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountOperator extends string
-        ? ReadonlyAccount<TAccountOperator>
-        : TAccountOperator,
-      TAccountBaseRewardRouter extends string
-        ? WritableAccount<TAccountBaseRewardRouter>
-        : TAccountBaseRewardRouter,
-      TAccountNcnRewardRouter extends string
-        ? WritableAccount<TAccountNcnRewardRouter>
-        : TAccountNcnRewardRouter,
+      TAccountVaultRegistry extends string
+        ? WritableAccount<TAccountVaultRegistry>
+        : TAccountVaultRegistry,
+      TAccountAdmin extends string
+        ? WritableSignerAccount<TAccountAdmin> &
+            IAccountSignerMeta<TAccountAdmin>
+        : TAccountAdmin,
       TAccountRestakingProgram extends string
         ? ReadonlyAccount<TAccountRestakingProgram>
         : TAccountRestakingProgram,
@@ -72,97 +80,104 @@ export type DistributeBaseNcnRewardRouteInstruction<
     ]
   >;
 
-export type DistributeBaseNcnRewardRouteInstructionData = {
+export type AdminSetStMintInstructionData = {
   discriminator: number;
-  ncnFeeGroup: number;
-  epoch: bigint;
+  stMint: Address;
+  ncnFeeGroup: Option<number>;
+  rewardMultiplierBps: Option<bigint>;
+  switchboardFeed: Option<Address>;
+  noFeedWeight: Option<bigint>;
 };
 
-export type DistributeBaseNcnRewardRouteInstructionDataArgs = {
-  ncnFeeGroup: number;
-  epoch: number | bigint;
+export type AdminSetStMintInstructionDataArgs = {
+  stMint: Address;
+  ncnFeeGroup: OptionOrNullable<number>;
+  rewardMultiplierBps: OptionOrNullable<number | bigint>;
+  switchboardFeed: OptionOrNullable<Address>;
+  noFeedWeight: OptionOrNullable<number | bigint>;
 };
 
-export function getDistributeBaseNcnRewardRouteInstructionDataEncoder(): Encoder<DistributeBaseNcnRewardRouteInstructionDataArgs> {
+export function getAdminSetStMintInstructionDataEncoder(): Encoder<AdminSetStMintInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['ncnFeeGroup', getU8Encoder()],
-      ['epoch', getU64Encoder()],
+      ['stMint', getAddressEncoder()],
+      ['ncnFeeGroup', getOptionEncoder(getU8Encoder())],
+      ['rewardMultiplierBps', getOptionEncoder(getU64Encoder())],
+      ['switchboardFeed', getOptionEncoder(getAddressEncoder())],
+      ['noFeedWeight', getOptionEncoder(getU128Encoder())],
     ]),
-    (value) => ({
-      ...value,
-      discriminator: DISTRIBUTE_BASE_NCN_REWARD_ROUTE_DISCRIMINATOR,
-    })
+    (value) => ({ ...value, discriminator: ADMIN_SET_ST_MINT_DISCRIMINATOR })
   );
 }
 
-export function getDistributeBaseNcnRewardRouteInstructionDataDecoder(): Decoder<DistributeBaseNcnRewardRouteInstructionData> {
+export function getAdminSetStMintInstructionDataDecoder(): Decoder<AdminSetStMintInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['ncnFeeGroup', getU8Decoder()],
-    ['epoch', getU64Decoder()],
+    ['stMint', getAddressDecoder()],
+    ['ncnFeeGroup', getOptionDecoder(getU8Decoder())],
+    ['rewardMultiplierBps', getOptionDecoder(getU64Decoder())],
+    ['switchboardFeed', getOptionDecoder(getAddressDecoder())],
+    ['noFeedWeight', getOptionDecoder(getU128Decoder())],
   ]);
 }
 
-export function getDistributeBaseNcnRewardRouteInstructionDataCodec(): Codec<
-  DistributeBaseNcnRewardRouteInstructionDataArgs,
-  DistributeBaseNcnRewardRouteInstructionData
+export function getAdminSetStMintInstructionDataCodec(): Codec<
+  AdminSetStMintInstructionDataArgs,
+  AdminSetStMintInstructionData
 > {
   return combineCodec(
-    getDistributeBaseNcnRewardRouteInstructionDataEncoder(),
-    getDistributeBaseNcnRewardRouteInstructionDataDecoder()
+    getAdminSetStMintInstructionDataEncoder(),
+    getAdminSetStMintInstructionDataDecoder()
   );
 }
 
-export type DistributeBaseNcnRewardRouteInput<
+export type AdminSetStMintInput<
   TAccountRestakingConfig extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
-  TAccountOperator extends string = string,
-  TAccountBaseRewardRouter extends string = string,
-  TAccountNcnRewardRouter extends string = string,
+  TAccountVaultRegistry extends string = string,
+  TAccountAdmin extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
-  operator: Address<TAccountOperator>;
-  baseRewardRouter: Address<TAccountBaseRewardRouter>;
-  ncnRewardRouter: Address<TAccountNcnRewardRouter>;
+  vaultRegistry: Address<TAccountVaultRegistry>;
+  admin: TransactionSigner<TAccountAdmin>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  ncnFeeGroup: DistributeBaseNcnRewardRouteInstructionDataArgs['ncnFeeGroup'];
-  epoch: DistributeBaseNcnRewardRouteInstructionDataArgs['epoch'];
+  stMint: AdminSetStMintInstructionDataArgs['stMint'];
+  ncnFeeGroup: AdminSetStMintInstructionDataArgs['ncnFeeGroup'];
+  rewardMultiplierBps: AdminSetStMintInstructionDataArgs['rewardMultiplierBps'];
+  switchboardFeed: AdminSetStMintInstructionDataArgs['switchboardFeed'];
+  noFeedWeight: AdminSetStMintInstructionDataArgs['noFeedWeight'];
 };
 
-export function getDistributeBaseNcnRewardRouteInstruction<
+export function getAdminSetStMintInstruction<
   TAccountRestakingConfig extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
-  TAccountOperator extends string,
-  TAccountBaseRewardRouter extends string,
-  TAccountNcnRewardRouter extends string,
+  TAccountVaultRegistry extends string,
+  TAccountAdmin extends string,
   TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: DistributeBaseNcnRewardRouteInput<
+  input: AdminSetStMintInput<
     TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
-    TAccountOperator,
-    TAccountBaseRewardRouter,
-    TAccountNcnRewardRouter,
+    TAccountVaultRegistry,
+    TAccountAdmin,
     TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): DistributeBaseNcnRewardRouteInstruction<
+): AdminSetStMintInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
   TAccountConfig,
   TAccountNcn,
-  TAccountOperator,
-  TAccountBaseRewardRouter,
-  TAccountNcnRewardRouter,
+  TAccountVaultRegistry,
+  TAccountAdmin,
   TAccountRestakingProgram
 > {
   // Program address.
@@ -177,12 +192,8 @@ export function getDistributeBaseNcnRewardRouteInstruction<
     },
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    operator: { value: input.operator ?? null, isWritable: false },
-    baseRewardRouter: {
-      value: input.baseRewardRouter ?? null,
-      isWritable: true,
-    },
-    ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
+    vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: true },
+    admin: { value: input.admin ?? null, isWritable: true },
     restakingProgram: {
       value: input.restakingProgram ?? null,
       isWritable: false,
@@ -202,30 +213,28 @@ export function getDistributeBaseNcnRewardRouteInstruction<
       getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.operator),
-      getAccountMeta(accounts.baseRewardRouter),
-      getAccountMeta(accounts.ncnRewardRouter),
+      getAccountMeta(accounts.vaultRegistry),
+      getAccountMeta(accounts.admin),
       getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
-    data: getDistributeBaseNcnRewardRouteInstructionDataEncoder().encode(
-      args as DistributeBaseNcnRewardRouteInstructionDataArgs
+    data: getAdminSetStMintInstructionDataEncoder().encode(
+      args as AdminSetStMintInstructionDataArgs
     ),
-  } as DistributeBaseNcnRewardRouteInstruction<
+  } as AdminSetStMintInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
-    TAccountOperator,
-    TAccountBaseRewardRouter,
-    TAccountNcnRewardRouter,
+    TAccountVaultRegistry,
+    TAccountAdmin,
     TAccountRestakingProgram
   >;
 
   return instruction;
 }
 
-export type ParsedDistributeBaseNcnRewardRouteInstruction<
+export type ParsedAdminSetStMintInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -234,23 +243,22 @@ export type ParsedDistributeBaseNcnRewardRouteInstruction<
     restakingConfig: TAccountMetas[0];
     config: TAccountMetas[1];
     ncn: TAccountMetas[2];
-    operator: TAccountMetas[3];
-    baseRewardRouter: TAccountMetas[4];
-    ncnRewardRouter: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
+    vaultRegistry: TAccountMetas[3];
+    admin: TAccountMetas[4];
+    restakingProgram: TAccountMetas[5];
   };
-  data: DistributeBaseNcnRewardRouteInstructionData;
+  data: AdminSetStMintInstructionData;
 };
 
-export function parseDistributeBaseNcnRewardRouteInstruction<
+export function parseAdminSetStMintInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedDistributeBaseNcnRewardRouteInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+): ParsedAdminSetStMintInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -266,13 +274,10 @@ export function parseDistributeBaseNcnRewardRouteInstruction<
       restakingConfig: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
-      operator: getNextAccount(),
-      baseRewardRouter: getNextAccount(),
-      ncnRewardRouter: getNextAccount(),
+      vaultRegistry: getNextAccount(),
+      admin: getNextAccount(),
       restakingProgram: getNextAccount(),
     },
-    data: getDistributeBaseNcnRewardRouteInstructionDataDecoder().decode(
-      instruction.data
-    ),
+    data: getAdminSetStMintInstructionDataDecoder().decode(instruction.data),
   };
 }

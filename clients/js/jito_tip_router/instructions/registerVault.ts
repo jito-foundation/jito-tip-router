@@ -27,16 +27,16 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const REGISTER_MINT_DISCRIMINATOR = 9;
+export const REGISTER_VAULT_DISCRIMINATOR = 10;
 
-export function getRegisterMintDiscriminatorBytes() {
-  return getU8Encoder().encode(REGISTER_MINT_DISCRIMINATOR);
+export function getRegisterVaultDiscriminatorBytes() {
+  return getU8Encoder().encode(REGISTER_VAULT_DISCRIMINATOR);
 }
 
-export type RegisterMintInstruction<
+export type RegisterVaultInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
-  TAccountTrackedMints extends string | IAccountMeta<string> = string,
+  TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountVault extends string | IAccountMeta<string> = string,
@@ -52,9 +52,9 @@ export type RegisterMintInstruction<
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
-      TAccountTrackedMints extends string
-        ? WritableAccount<TAccountTrackedMints>
-        : TAccountTrackedMints,
+      TAccountVaultRegistry extends string
+        ? WritableAccount<TAccountVaultRegistry>
+        : TAccountVaultRegistry,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountWeightTable extends string
         ? ReadonlyAccount<TAccountWeightTable>
@@ -78,34 +78,34 @@ export type RegisterMintInstruction<
     ]
   >;
 
-export type RegisterMintInstructionData = { discriminator: number };
+export type RegisterVaultInstructionData = { discriminator: number };
 
-export type RegisterMintInstructionDataArgs = {};
+export type RegisterVaultInstructionDataArgs = {};
 
-export function getRegisterMintInstructionDataEncoder(): Encoder<RegisterMintInstructionDataArgs> {
+export function getRegisterVaultInstructionDataEncoder(): Encoder<RegisterVaultInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', getU8Encoder()]]),
-    (value) => ({ ...value, discriminator: REGISTER_MINT_DISCRIMINATOR })
+    (value) => ({ ...value, discriminator: REGISTER_VAULT_DISCRIMINATOR })
   );
 }
 
-export function getRegisterMintInstructionDataDecoder(): Decoder<RegisterMintInstructionData> {
+export function getRegisterVaultInstructionDataDecoder(): Decoder<RegisterVaultInstructionData> {
   return getStructDecoder([['discriminator', getU8Decoder()]]);
 }
 
-export function getRegisterMintInstructionDataCodec(): Codec<
-  RegisterMintInstructionDataArgs,
-  RegisterMintInstructionData
+export function getRegisterVaultInstructionDataCodec(): Codec<
+  RegisterVaultInstructionDataArgs,
+  RegisterVaultInstructionData
 > {
   return combineCodec(
-    getRegisterMintInstructionDataEncoder(),
-    getRegisterMintInstructionDataDecoder()
+    getRegisterVaultInstructionDataEncoder(),
+    getRegisterVaultInstructionDataDecoder()
   );
 }
 
-export type RegisterMintInput<
+export type RegisterVaultInput<
   TAccountRestakingConfig extends string = string,
-  TAccountTrackedMints extends string = string,
+  TAccountVaultRegistry extends string = string,
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
   TAccountVault extends string = string,
@@ -115,7 +115,7 @@ export type RegisterMintInput<
   TAccountVaultProgramId extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
-  trackedMints: Address<TAccountTrackedMints>;
+  vaultRegistry: Address<TAccountVaultRegistry>;
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   vault: Address<TAccountVault>;
@@ -125,9 +125,9 @@ export type RegisterMintInput<
   vaultProgramId: Address<TAccountVaultProgramId>;
 };
 
-export function getRegisterMintInstruction<
+export function getRegisterVaultInstruction<
   TAccountRestakingConfig extends string,
-  TAccountTrackedMints extends string,
+  TAccountVaultRegistry extends string,
   TAccountNcn extends string,
   TAccountWeightTable extends string,
   TAccountVault extends string,
@@ -137,9 +137,9 @@ export function getRegisterMintInstruction<
   TAccountVaultProgramId extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: RegisterMintInput<
+  input: RegisterVaultInput<
     TAccountRestakingConfig,
-    TAccountTrackedMints,
+    TAccountVaultRegistry,
     TAccountNcn,
     TAccountWeightTable,
     TAccountVault,
@@ -149,10 +149,10 @@ export function getRegisterMintInstruction<
     TAccountVaultProgramId
   >,
   config?: { programAddress?: TProgramAddress }
-): RegisterMintInstruction<
+): RegisterVaultInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
-  TAccountTrackedMints,
+  TAccountVaultRegistry,
   TAccountNcn,
   TAccountWeightTable,
   TAccountVault,
@@ -171,7 +171,7 @@ export function getRegisterMintInstruction<
       value: input.restakingConfig ?? null,
       isWritable: false,
     },
-    trackedMints: { value: input.trackedMints ?? null, isWritable: true },
+    vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     weightTable: { value: input.weightTable ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: false },
@@ -192,7 +192,7 @@ export function getRegisterMintInstruction<
   const instruction = {
     accounts: [
       getAccountMeta(accounts.restakingConfig),
-      getAccountMeta(accounts.trackedMints),
+      getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.vault),
@@ -202,11 +202,11 @@ export function getRegisterMintInstruction<
       getAccountMeta(accounts.vaultProgramId),
     ],
     programAddress,
-    data: getRegisterMintInstructionDataEncoder().encode({}),
-  } as RegisterMintInstruction<
+    data: getRegisterVaultInstructionDataEncoder().encode({}),
+  } as RegisterVaultInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
-    TAccountTrackedMints,
+    TAccountVaultRegistry,
     TAccountNcn,
     TAccountWeightTable,
     TAccountVault,
@@ -219,14 +219,14 @@ export function getRegisterMintInstruction<
   return instruction;
 }
 
-export type ParsedRegisterMintInstruction<
+export type ParsedRegisterVaultInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
     restakingConfig: TAccountMetas[0];
-    trackedMints: TAccountMetas[1];
+    vaultRegistry: TAccountMetas[1];
     ncn: TAccountMetas[2];
     weightTable: TAccountMetas[3];
     vault: TAccountMetas[4];
@@ -235,17 +235,17 @@ export type ParsedRegisterMintInstruction<
     restakingProgramId: TAccountMetas[7];
     vaultProgramId: TAccountMetas[8];
   };
-  data: RegisterMintInstructionData;
+  data: RegisterVaultInstructionData;
 };
 
-export function parseRegisterMintInstruction<
+export function parseRegisterVaultInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedRegisterMintInstruction<TProgram, TAccountMetas> {
+): ParsedRegisterVaultInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 9) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -260,7 +260,7 @@ export function parseRegisterMintInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       restakingConfig: getNextAccount(),
-      trackedMints: getNextAccount(),
+      vaultRegistry: getNextAccount(),
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
       vault: getNextAccount(),
@@ -269,6 +269,6 @@ export function parseRegisterMintInstruction<
       restakingProgramId: getNextAccount(),
       vaultProgramId: getNextAccount(),
     },
-    data: getRegisterMintInstructionDataDecoder().decode(instruction.data),
+    data: getRegisterVaultInstructionDataDecoder().decode(instruction.data),
   };
 }

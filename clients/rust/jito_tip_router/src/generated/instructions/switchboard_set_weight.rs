@@ -5,55 +5,52 @@
 //! <https://github.com/kinobi-so/kinobi>
 
 use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::pubkey::Pubkey;
 
 /// Accounts.
-pub struct SetTieBreaker {
-    pub ncn_config: solana_program::pubkey::Pubkey,
-
-    pub ballot_box: solana_program::pubkey::Pubkey,
-
+pub struct SwitchboardSetWeight {
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub tie_breaker_admin: solana_program::pubkey::Pubkey,
+    pub weight_table: solana_program::pubkey::Pubkey,
 
-    pub restaking_program: solana_program::pubkey::Pubkey,
+    pub switchboard_feed: solana_program::pubkey::Pubkey,
+
+    pub st_mint: solana_program::pubkey::Pubkey,
 }
 
-impl SetTieBreaker {
+impl SwitchboardSetWeight {
     pub fn instruction(
         &self,
-        args: SetTieBreakerInstructionArgs,
+        args: SwitchboardSetWeightInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: SetTieBreakerInstructionArgs,
+        args: SwitchboardSetWeightInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_config,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.ballot_box,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
         ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.weight_table,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.tie_breaker_admin,
+            self.switchboard_feed,
             true,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program,
+            self.st_mint,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = SetTieBreakerInstructionData::new().try_to_vec().unwrap();
+        let mut data = SwitchboardSetWeightInstructionData::new()
+            .try_to_vec()
+            .unwrap();
         let mut args = args.try_to_vec().unwrap();
         data.append(&mut args);
 
@@ -66,17 +63,17 @@ impl SetTieBreaker {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct SetTieBreakerInstructionData {
+pub struct SwitchboardSetWeightInstructionData {
     discriminator: u8,
 }
 
-impl SetTieBreakerInstructionData {
+impl SwitchboardSetWeightInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 22 }
+        Self { discriminator: 6 }
     }
 }
 
-impl Default for SetTieBreakerInstructionData {
+impl Default for SwitchboardSetWeightInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -84,45 +81,33 @@ impl Default for SetTieBreakerInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SetTieBreakerInstructionArgs {
-    pub meta_merkle_root: [u8; 32],
+pub struct SwitchboardSetWeightInstructionArgs {
+    pub st_mint_arg: Pubkey,
     pub epoch: u64,
 }
 
-/// Instruction builder for `SetTieBreaker`.
+/// Instruction builder for `SwitchboardSetWeight`.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
-///   1. `[writable]` ballot_box
-///   2. `[]` ncn
-///   3. `[signer]` tie_breaker_admin
-///   4. `[]` restaking_program
+///   0. `[]` ncn
+///   1. `[writable]` weight_table
+///   2. `[signer]` switchboard_feed
+///   3. `[]` st_mint
 #[derive(Clone, Debug, Default)]
-pub struct SetTieBreakerBuilder {
-    ncn_config: Option<solana_program::pubkey::Pubkey>,
-    ballot_box: Option<solana_program::pubkey::Pubkey>,
+pub struct SwitchboardSetWeightBuilder {
     ncn: Option<solana_program::pubkey::Pubkey>,
-    tie_breaker_admin: Option<solana_program::pubkey::Pubkey>,
-    restaking_program: Option<solana_program::pubkey::Pubkey>,
-    meta_merkle_root: Option<[u8; 32]>,
+    weight_table: Option<solana_program::pubkey::Pubkey>,
+    switchboard_feed: Option<solana_program::pubkey::Pubkey>,
+    st_mint: Option<solana_program::pubkey::Pubkey>,
+    st_mint_arg: Option<Pubkey>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl SetTieBreakerBuilder {
+impl SwitchboardSetWeightBuilder {
     pub fn new() -> Self {
         Self::default()
-    }
-    #[inline(always)]
-    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_config = Some(ncn_config);
-        self
-    }
-    #[inline(always)]
-    pub fn ballot_box(&mut self, ballot_box: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ballot_box = Some(ballot_box);
-        self
     }
     #[inline(always)]
     pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -130,24 +115,26 @@ impl SetTieBreakerBuilder {
         self
     }
     #[inline(always)]
-    pub fn tie_breaker_admin(
-        &mut self,
-        tie_breaker_admin: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.tie_breaker_admin = Some(tie_breaker_admin);
+    pub fn weight_table(&mut self, weight_table: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.weight_table = Some(weight_table);
         self
     }
     #[inline(always)]
-    pub fn restaking_program(
+    pub fn switchboard_feed(
         &mut self,
-        restaking_program: solana_program::pubkey::Pubkey,
+        switchboard_feed: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.restaking_program = Some(restaking_program);
+        self.switchboard_feed = Some(switchboard_feed);
         self
     }
     #[inline(always)]
-    pub fn meta_merkle_root(&mut self, meta_merkle_root: [u8; 32]) -> &mut Self {
-        self.meta_merkle_root = Some(meta_merkle_root);
+    pub fn st_mint(&mut self, st_mint: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.st_mint = Some(st_mint);
+        self
+    }
+    #[inline(always)]
+    pub fn st_mint_arg(&mut self, st_mint_arg: Pubkey) -> &mut Self {
+        self.st_mint_arg = Some(st_mint_arg);
         self
     }
     #[inline(always)]
@@ -175,22 +162,14 @@ impl SetTieBreakerBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = SetTieBreaker {
-            ncn_config: self.ncn_config.expect("ncn_config is not set"),
-            ballot_box: self.ballot_box.expect("ballot_box is not set"),
+        let accounts = SwitchboardSetWeight {
             ncn: self.ncn.expect("ncn is not set"),
-            tie_breaker_admin: self
-                .tie_breaker_admin
-                .expect("tie_breaker_admin is not set"),
-            restaking_program: self
-                .restaking_program
-                .expect("restaking_program is not set"),
+            weight_table: self.weight_table.expect("weight_table is not set"),
+            switchboard_feed: self.switchboard_feed.expect("switchboard_feed is not set"),
+            st_mint: self.st_mint.expect("st_mint is not set"),
         };
-        let args = SetTieBreakerInstructionArgs {
-            meta_merkle_root: self
-                .meta_merkle_root
-                .clone()
-                .expect("meta_merkle_root is not set"),
+        let args = SwitchboardSetWeightInstructionArgs {
+            st_mint_arg: self.st_mint_arg.clone().expect("st_mint_arg is not set"),
             epoch: self.epoch.clone().expect("epoch is not set"),
         };
 
@@ -198,50 +177,45 @@ impl SetTieBreakerBuilder {
     }
 }
 
-/// `set_tie_breaker` CPI accounts.
-pub struct SetTieBreakerCpiAccounts<'a, 'b> {
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
-
+/// `switchboard_set_weight` CPI accounts.
+pub struct SwitchboardSetWeightCpiAccounts<'a, 'b> {
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
+    pub switchboard_feed: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub st_mint: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `set_tie_breaker` CPI instruction.
-pub struct SetTieBreakerCpi<'a, 'b> {
+/// `switchboard_set_weight` CPI instruction.
+pub struct SwitchboardSetWeightCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
+    pub switchboard_feed: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub st_mint: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: SetTieBreakerInstructionArgs,
+    pub __args: SwitchboardSetWeightInstructionArgs,
 }
 
-impl<'a, 'b> SetTieBreakerCpi<'a, 'b> {
+impl<'a, 'b> SwitchboardSetWeightCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: SetTieBreakerCpiAccounts<'a, 'b>,
-        args: SetTieBreakerInstructionArgs,
+        accounts: SwitchboardSetWeightCpiAccounts<'a, 'b>,
+        args: SwitchboardSetWeightInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
-            ncn_config: accounts.ncn_config,
-            ballot_box: accounts.ballot_box,
             ncn: accounts.ncn,
-            tie_breaker_admin: accounts.tie_breaker_admin,
-            restaking_program: accounts.restaking_program,
+            weight_table: accounts.weight_table,
+            switchboard_feed: accounts.switchboard_feed,
+            st_mint: accounts.st_mint,
             __args: args,
         }
     }
@@ -278,25 +252,21 @@ impl<'a, 'b> SetTieBreakerCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_config.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.ballot_box.key,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn.key,
             false,
         ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.weight_table.key,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.tie_breaker_admin.key,
+            *self.switchboard_feed.key,
             true,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program.key,
+            *self.st_mint.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -306,7 +276,9 @@ impl<'a, 'b> SetTieBreakerCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = SetTieBreakerInstructionData::new().try_to_vec().unwrap();
+        let mut data = SwitchboardSetWeightInstructionData::new()
+            .try_to_vec()
+            .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
         data.append(&mut args);
 
@@ -315,13 +287,12 @@ impl<'a, 'b> SetTieBreakerCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(4 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.ncn_config.clone());
-        account_infos.push(self.ballot_box.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.tie_breaker_admin.clone());
-        account_infos.push(self.restaking_program.clone());
+        account_infos.push(self.weight_table.clone());
+        account_infos.push(self.switchboard_feed.clone());
+        account_infos.push(self.st_mint.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -334,50 +305,32 @@ impl<'a, 'b> SetTieBreakerCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `SetTieBreaker` via CPI.
+/// Instruction builder for `SwitchboardSetWeight` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
-///   1. `[writable]` ballot_box
-///   2. `[]` ncn
-///   3. `[signer]` tie_breaker_admin
-///   4. `[]` restaking_program
+///   0. `[]` ncn
+///   1. `[writable]` weight_table
+///   2. `[signer]` switchboard_feed
+///   3. `[]` st_mint
 #[derive(Clone, Debug)]
-pub struct SetTieBreakerCpiBuilder<'a, 'b> {
-    instruction: Box<SetTieBreakerCpiBuilderInstruction<'a, 'b>>,
+pub struct SwitchboardSetWeightCpiBuilder<'a, 'b> {
+    instruction: Box<SwitchboardSetWeightCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> SetTieBreakerCpiBuilder<'a, 'b> {
+impl<'a, 'b> SwitchboardSetWeightCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(SetTieBreakerCpiBuilderInstruction {
+        let instruction = Box::new(SwitchboardSetWeightCpiBuilderInstruction {
             __program: program,
-            ncn_config: None,
-            ballot_box: None,
             ncn: None,
-            tie_breaker_admin: None,
-            restaking_program: None,
-            meta_merkle_root: None,
+            weight_table: None,
+            switchboard_feed: None,
+            st_mint: None,
+            st_mint_arg: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
-    }
-    #[inline(always)]
-    pub fn ncn_config(
-        &mut self,
-        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.ncn_config = Some(ncn_config);
-        self
-    }
-    #[inline(always)]
-    pub fn ballot_box(
-        &mut self,
-        ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.ballot_box = Some(ballot_box);
-        self
     }
     #[inline(always)]
     pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
@@ -385,24 +338,32 @@ impl<'a, 'b> SetTieBreakerCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn tie_breaker_admin(
+    pub fn weight_table(
         &mut self,
-        tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
+        weight_table: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.tie_breaker_admin = Some(tie_breaker_admin);
+        self.instruction.weight_table = Some(weight_table);
         self
     }
     #[inline(always)]
-    pub fn restaking_program(
+    pub fn switchboard_feed(
         &mut self,
-        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
+        switchboard_feed: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.restaking_program = Some(restaking_program);
+        self.instruction.switchboard_feed = Some(switchboard_feed);
         self
     }
     #[inline(always)]
-    pub fn meta_merkle_root(&mut self, meta_merkle_root: [u8; 32]) -> &mut Self {
-        self.instruction.meta_merkle_root = Some(meta_merkle_root);
+    pub fn st_mint(
+        &mut self,
+        st_mint: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.st_mint = Some(st_mint);
+        self
+    }
+    #[inline(always)]
+    pub fn st_mint_arg(&mut self, st_mint_arg: Pubkey) -> &mut Self {
+        self.instruction.st_mint_arg = Some(st_mint_arg);
         self
     }
     #[inline(always)]
@@ -451,32 +412,30 @@ impl<'a, 'b> SetTieBreakerCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = SetTieBreakerInstructionArgs {
-            meta_merkle_root: self
+        let args = SwitchboardSetWeightInstructionArgs {
+            st_mint_arg: self
                 .instruction
-                .meta_merkle_root
+                .st_mint_arg
                 .clone()
-                .expect("meta_merkle_root is not set"),
+                .expect("st_mint_arg is not set"),
             epoch: self.instruction.epoch.clone().expect("epoch is not set"),
         };
-        let instruction = SetTieBreakerCpi {
+        let instruction = SwitchboardSetWeightCpi {
             __program: self.instruction.__program,
-
-            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
-
-            ballot_box: self.instruction.ballot_box.expect("ballot_box is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            tie_breaker_admin: self
+            weight_table: self
                 .instruction
-                .tie_breaker_admin
-                .expect("tie_breaker_admin is not set"),
+                .weight_table
+                .expect("weight_table is not set"),
 
-            restaking_program: self
+            switchboard_feed: self
                 .instruction
-                .restaking_program
-                .expect("restaking_program is not set"),
+                .switchboard_feed
+                .expect("switchboard_feed is not set"),
+
+            st_mint: self.instruction.st_mint.expect("st_mint is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -487,14 +446,13 @@ impl<'a, 'b> SetTieBreakerCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct SetTieBreakerCpiBuilderInstruction<'a, 'b> {
+struct SwitchboardSetWeightCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    tie_breaker_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    meta_merkle_root: Option<[u8; 32]>,
+    weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    switchboard_feed: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    st_mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    st_mint_arg: Option<Pubkey>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
