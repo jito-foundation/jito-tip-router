@@ -2,7 +2,6 @@ use std::{fs::File, io::BufReader, path::PathBuf};
 
 use anchor_lang::Id;
 use jito_tip_distribution::{program::JitoTipDistribution, state::ClaimStatus};
-use jito_tip_payment::CONFIG_ACCOUNT_SEED;
 use log::info;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use solana_program::{
@@ -57,11 +56,6 @@ impl GeneratedMerkleTreeCollection {
         stake_meta_coll: StakeMetaCollection,
         protocol_fee_bps: u64,
     ) -> Result<Self, MerkleRootGeneratorError> {
-        let (config_pda, _) = Pubkey::find_program_address(
-            &[CONFIG_ACCOUNT_SEED],
-            &stake_meta_coll.tip_distribution_program_id,
-        );
-
         let generated_merkle_trees = stake_meta_coll
             .stake_metas
             .into_iter()
