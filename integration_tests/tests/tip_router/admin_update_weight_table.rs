@@ -13,10 +13,11 @@ mod tests {
 
         fixture.warp_slot_incremental(1000).await?;
 
-        let slot = fixture.clock().await.slot;
+        let clock = fixture.clock().await;
+        let epoch = clock.epoch;
 
         tip_router_client
-            .do_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, slot)
+            .do_full_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
         let vault_root = test_ncn.vaults[0].clone();
@@ -26,7 +27,7 @@ mod tests {
         let weight = 100;
 
         tip_router_client
-            .do_admin_update_weight_table(test_ncn.ncn_root.ncn_pubkey, slot, mint, weight)
+            .do_admin_update_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch, mint, weight)
             .await?;
 
         Ok(())

@@ -116,7 +116,7 @@ impl Default for InitializeOperatorSnapshotInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InitializeOperatorSnapshotInstructionArgs {
-    pub first_slot_of_ncn_epoch: Option<u64>,
+    pub epoch: u64,
 }
 
 /// Instruction builder for `InitializeOperatorSnapshot`.
@@ -145,7 +145,7 @@ pub struct InitializeOperatorSnapshotBuilder {
     payer: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
-    first_slot_of_ncn_epoch: Option<u64>,
+    epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
@@ -216,10 +216,9 @@ impl InitializeOperatorSnapshotBuilder {
         self.system_program = Some(system_program);
         self
     }
-    /// `[optional argument]`
     #[inline(always)]
-    pub fn first_slot_of_ncn_epoch(&mut self, first_slot_of_ncn_epoch: u64) -> &mut Self {
-        self.first_slot_of_ncn_epoch = Some(first_slot_of_ncn_epoch);
+    pub fn epoch(&mut self, epoch: u64) -> &mut Self {
+        self.epoch = Some(epoch);
         self
     }
     /// Add an additional account to the instruction.
@@ -263,7 +262,7 @@ impl InitializeOperatorSnapshotBuilder {
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
         };
         let args = InitializeOperatorSnapshotInstructionArgs {
-            first_slot_of_ncn_epoch: self.first_slot_of_ncn_epoch.clone(),
+            epoch: self.epoch.clone().expect("epoch is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -491,7 +490,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
             payer: None,
             restaking_program: None,
             system_program: None,
-            first_slot_of_ncn_epoch: None,
+            epoch: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -570,10 +569,9 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
         self.instruction.system_program = Some(system_program);
         self
     }
-    /// `[optional argument]`
     #[inline(always)]
-    pub fn first_slot_of_ncn_epoch(&mut self, first_slot_of_ncn_epoch: u64) -> &mut Self {
-        self.instruction.first_slot_of_ncn_epoch = Some(first_slot_of_ncn_epoch);
+    pub fn epoch(&mut self, epoch: u64) -> &mut Self {
+        self.instruction.epoch = Some(epoch);
         self
     }
     /// Add an additional account to the instruction.
@@ -618,7 +616,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
         let args = InitializeOperatorSnapshotInstructionArgs {
-            first_slot_of_ncn_epoch: self.instruction.first_slot_of_ncn_epoch.clone(),
+            epoch: self.instruction.epoch.clone().expect("epoch is not set"),
         };
         let instruction = InitializeOperatorSnapshotCpi {
             __program: self.instruction.__program,
@@ -682,7 +680,7 @@ struct InitializeOperatorSnapshotCpiBuilderInstruction<'a, 'b> {
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    first_slot_of_ncn_epoch: Option<u64>,
+    epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,

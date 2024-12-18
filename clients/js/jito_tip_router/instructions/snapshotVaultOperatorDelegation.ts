@@ -8,8 +8,6 @@
 
 import {
   combineCodec,
-  getOptionDecoder,
-  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -25,8 +23,6 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
-  type Option,
-  type OptionOrNullable,
   type ReadonlyAccount,
   type WritableAccount,
 } from '@solana/web3.js';
@@ -110,18 +106,18 @@ export type SnapshotVaultOperatorDelegationInstruction<
 
 export type SnapshotVaultOperatorDelegationInstructionData = {
   discriminator: number;
-  firstSlotOfNcnEpoch: Option<bigint>;
+  epoch: bigint;
 };
 
 export type SnapshotVaultOperatorDelegationInstructionDataArgs = {
-  firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
+  epoch: number | bigint;
 };
 
 export function getSnapshotVaultOperatorDelegationInstructionDataEncoder(): Encoder<SnapshotVaultOperatorDelegationInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['firstSlotOfNcnEpoch', getOptionEncoder(getU64Encoder())],
+      ['epoch', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -133,7 +129,7 @@ export function getSnapshotVaultOperatorDelegationInstructionDataEncoder(): Enco
 export function getSnapshotVaultOperatorDelegationInstructionDataDecoder(): Decoder<SnapshotVaultOperatorDelegationInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
+    ['epoch', getU64Decoder()],
   ]);
 }
 
@@ -177,7 +173,7 @@ export type SnapshotVaultOperatorDelegationInput<
   operatorSnapshot: Address<TAccountOperatorSnapshot>;
   vaultProgram: Address<TAccountVaultProgram>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  firstSlotOfNcnEpoch: SnapshotVaultOperatorDelegationInstructionDataArgs['firstSlotOfNcnEpoch'];
+  epoch: SnapshotVaultOperatorDelegationInstructionDataArgs['epoch'];
 };
 
 export function getSnapshotVaultOperatorDelegationInstruction<

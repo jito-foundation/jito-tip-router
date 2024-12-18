@@ -5,8 +5,8 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    epoch_snapshot::EpochSnapshot, error::TipRouterError, fees, loaders::load_ncn_epoch,
-    ncn_config::NcnConfig, tracked_mints::TrackedMints, weight_table::WeightTable,
+    epoch_snapshot::EpochSnapshot, error::TipRouterError, fees, ncn_config::NcnConfig,
+    tracked_mints::TrackedMints, weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -17,7 +17,7 @@ use solana_program::{
 pub fn process_initialize_epoch_snapshot(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    first_slot_of_ncn_epoch: Option<u64>,
+    epoch: u64,
 ) -> ProgramResult {
     let [ncn_config, restaking_config, ncn, tracked_mints, weight_table, epoch_snapshot, payer, restaking_program, system_program] =
         accounts
@@ -41,7 +41,7 @@ pub fn process_initialize_epoch_snapshot(
     load_signer(payer, false)?;
 
     let current_slot = Clock::get()?.slot;
-    let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
+    let ncn_epoch = epoch;
 
     WeightTable::load(program_id, weight_table, ncn, ncn_epoch, false)?;
 

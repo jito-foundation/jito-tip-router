@@ -17,13 +17,11 @@ mod tests {
         fixture.snapshot_test_ncn(&test_ncn).await?;
 
         let clock = fixture.clock().await;
-        let slot = clock.slot;
-        let restaking_config_account = tip_router_client.get_restaking_config().await?;
-        let ncn_epoch = slot / restaking_config_account.epoch_length();
+        let epoch = clock.epoch;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
         tip_router_client
-            .do_initialize_ballot_box(ncn, ncn_epoch)
+            .do_full_initialize_ballot_box(ncn, epoch)
             .await?;
 
         let meta_merkle_root = [1; 32];
@@ -34,10 +32,10 @@ mod tests {
         // Cast a vote so that this vote is one of the valid options
         // Gets to 50% consensus weight
         tip_router_client
-            .do_cast_vote(ncn, operator, operator_admin, meta_merkle_root, ncn_epoch)
+            .do_cast_vote(ncn, operator, operator_admin, meta_merkle_root, epoch)
             .await?;
 
-        let ballot_box = tip_router_client.get_ballot_box(ncn, ncn_epoch).await?;
+        let ballot_box = tip_router_client.get_ballot_box(ncn, epoch).await?;
         assert!(ballot_box.has_ballot(&Ballot::new(meta_merkle_root)));
         assert_eq!(
             ballot_box.slot_consensus_reached(),
@@ -49,10 +47,10 @@ mod tests {
         fixture.warp_slot_incremental(1000000).await?;
 
         tip_router_client
-            .do_set_tie_breaker(ncn, meta_merkle_root, ncn_epoch)
+            .do_set_tie_breaker(ncn, meta_merkle_root, epoch)
             .await?;
 
-        let ballot_box = tip_router_client.get_ballot_box(ncn, ncn_epoch).await?;
+        let ballot_box = tip_router_client.get_ballot_box(ncn, epoch).await?;
 
         let ballot = Ballot::new(meta_merkle_root);
         assert!(ballot_box.has_ballot(&ballot));

@@ -1,7 +1,10 @@
 #[cfg(test)]
 mod tests {
 
-    use jito_tip_router_core::constants::DEFAULT_CONSENSUS_REACHED_SLOT;
+    use jito_tip_router_core::{
+        ballot_box::BallotBox,
+        constants::{DEFAULT_CONSENSUS_REACHED_SLOT, MAX_REALLOC_BYTES},
+    };
 
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
 
@@ -18,8 +21,24 @@ mod tests {
 
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
+        let num_reallocs = (jito_tip_router_core::ballot_box::BallotBox::SIZE as f64
+            / jito_tip_router_core::constants::MAX_REALLOC_BYTES as f64)
+            .ceil() as u64
+            - 1;
+
         tip_router_client
             .do_initialize_ballot_box(ncn, epoch)
+            .await?;
+
+        let address =
+            BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+        let raw_account = fixture.get_account(&address).await?.unwrap();
+        assert_eq!(raw_account.data.len(), MAX_REALLOC_BYTES as usize);
+        assert_eq!(raw_account.owner, jito_tip_router_program::id());
+        assert_eq!(raw_account.data[0], 0);
+
+        tip_router_client
+            .do_realloc_ballot_box(ncn, epoch, num_reallocs)
             .await?;
 
         let ballot_box = tip_router_client.get_ballot_box(ncn, epoch).await?;

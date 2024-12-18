@@ -39,16 +39,14 @@ pub fn process_register_mint(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
         Config::try_from_slice_unchecked(&restaking_config_data)?.epoch_length()
     };
 
-    let slot = Clock::get()?.slot;
-
-    let ncn_epoch = slot
-        .checked_div(epoch_length)
-        .ok_or(TipRouterError::DenominatorIsZero)?;
+    let clock = Clock::get()?;
+    let slot = clock.slot;
+    let epoch = clock.epoch;
 
     // Once tracked_mints.mint_count() == ncn.vault_count, the weight table can be initialized
     // Once the weight table is initialized, you can't add any more mints
     if weight_table.owner.eq(&system_program::ID) {
-        let expected_pubkey = WeightTable::find_program_address(program_id, ncn.key, ncn_epoch).0;
+        let expected_pubkey = WeightTable::find_program_address(program_id, ncn.key, epoch).0;
         if weight_table.key.ne(&expected_pubkey) {
             msg!("Weight table incorrect PDA");
             return Err(ProgramError::InvalidAccountData);
@@ -57,7 +55,7 @@ pub fn process_register_mint(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
     }
 
     if weight_table.owner.eq(program_id) {
-        WeightTable::load(program_id, weight_table, ncn, ncn_epoch, false)?;
+        WeightTable::load(program_id, weight_table, ncn, epoch, false)?;
         return Err(TipRouterError::TrackedMintsLocked.into());
     }
 

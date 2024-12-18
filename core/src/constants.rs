@@ -1,3 +1,4 @@
+use solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
 use spl_math::precise_number::PreciseNumber;
 
 use crate::error::TipRouterError;
@@ -18,3 +19,4 @@ pub fn precise_consensus() -> Result<PreciseNumber, TipRouterError> {
 }
 
 pub const DEFAULT_CONSENSUS_REACHED_SLOT: u64 = u64::MAX;
+pub const MAX_REALLOC_BYTES: u64 = MAX_PERMITTED_DATA_INCREASE as u64; // TODO just use this?

@@ -12,6 +12,10 @@ mod initialize_ncn_reward_router;
 mod initialize_operator_snapshot;
 mod initialize_tracked_mints;
 mod initialize_weight_table;
+mod realloc_ballot_box;
+mod realloc_base_reward_router;
+mod realloc_operator_snapshot;
+mod realloc_weight_table;
 mod register_mint;
 mod route_base_rewards;
 mod route_ncn_rewards;
@@ -46,7 +50,11 @@ use crate::{
     initialize_ncn_reward_router::process_initialize_ncn_reward_router,
     initialize_operator_snapshot::process_initialize_operator_snapshot,
     initialize_tracked_mints::process_initialize_tracked_mints,
-    initialize_weight_table::process_initialize_weight_table, register_mint::process_register_mint,
+    initialize_weight_table::process_initialize_weight_table,
+    realloc_ballot_box::process_realloc_ballot_box,
+    realloc_base_reward_router::process_realloc_base_reward_router,
+    realloc_operator_snapshot::process_realloc_operator_snapshot,
+    realloc_weight_table::process_realloc_weight_table, register_mint::process_register_mint,
     route_base_rewards::process_route_base_rewards, route_ncn_rewards::process_route_ncn_rewards,
     set_config_fees::process_set_config_fees, set_merkle_root::process_set_merkle_root,
     set_tie_breaker::process_set_tie_breaker,
@@ -104,116 +112,75 @@ pub fn process_instruction(
             msg!("Instruction: InitializeTrackedMints");
             process_initialize_tracked_mints(program_id, accounts)
         }
-        TipRouterInstruction::InitializeWeightTable {
-            first_slot_of_ncn_epoch,
-        } => {
+        TipRouterInstruction::InitializeWeightTable { epoch } => {
             msg!("Instruction: InitializeWeightTable");
-            process_initialize_weight_table(program_id, accounts, first_slot_of_ncn_epoch)
+            process_initialize_weight_table(program_id, accounts, epoch)
         }
-        TipRouterInstruction::InitializeEpochSnapshot {
-            first_slot_of_ncn_epoch,
-        } => {
+        TipRouterInstruction::InitializeEpochSnapshot { epoch } => {
             msg!("Instruction: InitializeEpochSnapshot");
-            process_initialize_epoch_snapshot(program_id, accounts, first_slot_of_ncn_epoch)
+            process_initialize_epoch_snapshot(program_id, accounts, epoch)
         }
-        TipRouterInstruction::InitializeOperatorSnapshot {
-            first_slot_of_ncn_epoch,
-        } => {
+        TipRouterInstruction::InitializeOperatorSnapshot { epoch } => {
             msg!("Instruction: InitializeOperatorSnapshot");
-            process_initialize_operator_snapshot(program_id, accounts, first_slot_of_ncn_epoch)
+            process_initialize_operator_snapshot(program_id, accounts, epoch)
         }
 
-        TipRouterInstruction::InitializeBaseRewardRouter {
-            first_slot_of_ncn_epoch,
-        } => {
+        TipRouterInstruction::InitializeBaseRewardRouter { epoch } => {
             msg!("Instruction: InitializeBaseRewardRouter");
-            process_initialize_base_reward_router(program_id, accounts, first_slot_of_ncn_epoch)
+            process_initialize_base_reward_router(program_id, accounts, epoch)
         }
         TipRouterInstruction::InitializeNcnRewardRouter {
             ncn_fee_group,
-            first_slot_of_ncn_epoch,
+            epoch,
         } => {
             msg!("Instruction: InitializeNcnRewardRouter");
-            process_initialize_ncn_reward_router(
-                program_id,
-                accounts,
-                ncn_fee_group,
-                first_slot_of_ncn_epoch,
-            )
+            process_initialize_ncn_reward_router(program_id, accounts, ncn_fee_group, epoch)
         }
         // ------------------------------------------
         // Cranks
         // ------------------------------------------
-        TipRouterInstruction::SnapshotVaultOperatorDelegation {
-            first_slot_of_ncn_epoch,
-        } => {
+        TipRouterInstruction::SnapshotVaultOperatorDelegation { epoch } => {
             msg!("Instruction: SnapshotVaultOperatorDelegation");
-            process_snapshot_vault_operator_delegation(
-                program_id,
-                accounts,
-                first_slot_of_ncn_epoch,
-            )
+            process_snapshot_vault_operator_delegation(program_id, accounts, epoch)
         }
-        TipRouterInstruction::RouteBaseRewards {
-            first_slot_of_ncn_epoch,
-        } => {
+        TipRouterInstruction::RouteBaseRewards { epoch } => {
             msg!("Instruction: RouteBaseRewards");
-            process_route_base_rewards(program_id, accounts, first_slot_of_ncn_epoch)
+            process_route_base_rewards(program_id, accounts, epoch)
         }
         TipRouterInstruction::RouteNcnRewards {
             ncn_fee_group,
-            first_slot_of_ncn_epoch,
+            epoch,
         } => {
             msg!("Instruction: RouteNcnRewards");
-            process_route_ncn_rewards(program_id, accounts, ncn_fee_group, first_slot_of_ncn_epoch)
+            process_route_ncn_rewards(program_id, accounts, ncn_fee_group, epoch)
         }
         TipRouterInstruction::DistributeBaseRewards {
             base_fee_group,
-            first_slot_of_ncn_epoch,
+            epoch,
         } => {
             msg!("Instruction: DistributeBaseRewards");
-            process_distribute_base_rewards(
-                program_id,
-                accounts,
-                base_fee_group,
-                first_slot_of_ncn_epoch,
-            )
+            process_distribute_base_rewards(program_id, accounts, base_fee_group, epoch)
         }
         TipRouterInstruction::DistributeBaseNcnRewardRoute {
             ncn_fee_group,
-            first_slot_of_ncn_epoch,
+            epoch,
         } => {
             msg!("Instruction: DistributeBaseNcnRewardRoute");
-            process_distribute_base_ncn_reward_route(
-                program_id,
-                accounts,
-                ncn_fee_group,
-                first_slot_of_ncn_epoch,
-            )
+            process_distribute_base_ncn_reward_route(program_id, accounts, ncn_fee_group, epoch)
         }
         TipRouterInstruction::DistributeNcnOperatorRewards {
             ncn_fee_group,
-            first_slot_of_ncn_epoch,
+            epoch,
         } => {
             msg!("Instruction: DistributeNcnOperatorRewards");
-            process_distribute_ncn_operator_rewards(
-                program_id,
-                accounts,
-                ncn_fee_group,
-                first_slot_of_ncn_epoch,
-            )
+            process_distribute_ncn_operator_rewards(program_id, accounts, ncn_fee_group, epoch)
         }
         TipRouterInstruction::DistributeNcnVaultRewards {
             ncn_fee_group,
-            first_slot_of_ncn_epoch,
+            epoch,
         } => {
             msg!("Instruction: DistributeNcnVaultRewards");
-            process_distribute_ncn_vault_rewards(
-                program_id,
-                accounts,
-                ncn_fee_group,
-                first_slot_of_ncn_epoch,
-            )
+            process_distribute_ncn_vault_rewards(program_id, accounts, ncn_fee_group, epoch)
         }
         // ------------------------------------------
         // Update
@@ -292,6 +259,22 @@ pub fn process_instruction(
         } => {
             msg!("Instruction: SetTieBreaker");
             process_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
+        }
+        TipRouterInstruction::ReallocBallotBox { epoch } => {
+            msg!("Instruction: ReallocBallotBox");
+            process_realloc_ballot_box(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::ReallocOperatorSnapshot { epoch } => {
+            msg!("Instruction: ReallocOperatorSnapshot");
+            process_realloc_operator_snapshot(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::ReallocBaseRewardRouter { epoch } => {
+            msg!("Instruction: ReallocBaseRewardRouter");
+            process_realloc_base_reward_router(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::ReallocWeightTable { epoch } => {
+            msg!("Instruction: ReallocWeightTable");
+            process_realloc_weight_table(program_id, accounts, epoch)
         }
     }
 }

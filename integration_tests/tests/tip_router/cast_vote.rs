@@ -21,11 +21,10 @@ mod tests {
         let slot = clock.slot;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
         let operator = test_ncn.operators[0].operator_pubkey;
-        let restaking_config_account = tip_router_client.get_restaking_config().await?;
-        let ncn_epoch = slot / restaking_config_account.epoch_length();
+        let epoch = clock.epoch;
 
         tip_router_client
-            .do_initialize_ballot_box(ncn, ncn_epoch)
+            .do_full_initialize_ballot_box(ncn, epoch)
             .await?;
 
         let meta_merkle_root = [1u8; 32];
@@ -33,10 +32,10 @@ mod tests {
         let operator_admin = &test_ncn.operators[0].operator_admin;
 
         tip_router_client
-            .do_cast_vote(ncn, operator, operator_admin, meta_merkle_root, ncn_epoch)
+            .do_cast_vote(ncn, operator, operator_admin, meta_merkle_root, epoch)
             .await?;
 
-        let ballot_box = tip_router_client.get_ballot_box(ncn, ncn_epoch).await?;
+        let ballot_box = tip_router_client.get_ballot_box(ncn, epoch).await?;
 
         assert!(ballot_box.has_ballot(&Ballot::new(meta_merkle_root)));
         assert_eq!(ballot_box.slot_consensus_reached(), slot);

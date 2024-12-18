@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
     types::{PodBool, PodU16, PodU64},
@@ -50,6 +52,8 @@ impl Discriminator for EpochSnapshot {
 }
 
 impl EpochSnapshot {
+    pub const SIZE: usize = 8 + size_of::<Self>();
+
     pub fn new(
         ncn: Pubkey,
         ncn_epoch: u64,
@@ -222,7 +226,7 @@ impl Discriminator for OperatorSnapshot {
 }
 
 impl OperatorSnapshot {
-    pub const MAX_VAULT_OPERATOR_STAKE_WEIGHT: usize = 64;
+    pub const SIZE: usize = 8 + size_of::<Self>();
 
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -237,7 +241,7 @@ impl OperatorSnapshot {
         operator_fee_bps: u16,
         vault_operator_delegation_count: u64,
     ) -> Result<Self, TipRouterError> {
-        if vault_operator_delegation_count > Self::MAX_VAULT_OPERATOR_STAKE_WEIGHT as u64 {
+        if vault_operator_delegation_count > MAX_VAULT_OPERATOR_DELEGATIONS as u64 {
             return Err(TipRouterError::TooManyVaultOperatorDelegations);
         }
 
@@ -314,6 +318,53 @@ impl OperatorSnapshot {
         Ok(snapshot)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn initialize(
+        &mut self,
+        operator: Pubkey,
+        ncn: Pubkey,
+        ncn_epoch: u64,
+        bump: u8,
+        current_slot: u64,
+        is_active: bool,
+        ncn_operator_index: u64,
+        operator_index: u64,
+        operator_fee_bps: u16,
+        vault_operator_delegation_count: u64,
+    ) -> Result<(), TipRouterError> {
+        if vault_operator_delegation_count > MAX_VAULT_OPERATOR_DELEGATIONS as u64 {
+            return Err(TipRouterError::TooManyVaultOperatorDelegations);
+        }
+        let slot_finalized = if !is_active { current_slot } else { 0 };
+        let operator_fee_bps_val = if is_active { operator_fee_bps } else { 0 };
+        let vault_operator_delegation_count_val = if is_active {
+            vault_operator_delegation_count
+        } else {
+            0
+        };
+
+        // Initializes field by field to avoid overflowing stack
+        self.operator = operator;
+        self.ncn = ncn;
+        self.ncn_epoch = PodU64::from(ncn_epoch);
+        self.bump = bump;
+        self.slot_created = PodU64::from(current_slot);
+        self.slot_finalized = PodU64::from(slot_finalized);
+        self.is_active = PodBool::from(is_active);
+        self.ncn_operator_index = PodU64::from(ncn_operator_index);
+        self.operator_index = PodU64::from(operator_index);
+        self.operator_fee_bps = PodU16::from(operator_fee_bps_val);
+        self.vault_operator_delegation_count = PodU64::from(vault_operator_delegation_count_val);
+        self.vault_operator_delegations_registered = PodU64::from(0);
+        self.valid_operator_vault_delegations = PodU64::from(0);
+        self.stake_weights = StakeWeights::default();
+        self.reserved = [0; 256];
+        self.vault_operator_stake_weight =
+            [VaultOperatorStakeWeight::default(); MAX_VAULT_OPERATOR_DELEGATIONS];
+
+        Ok(())
+    }
+
     pub fn seeds(operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -373,6 +424,14 @@ impl OperatorSnapshot {
         Ok(())
     }
 
+    pub const fn operator(&self) -> Pubkey {
+        self.operator
+    }
+
+    pub const fn ncn(&self) -> Pubkey {
+        self.ncn
+    }
+
     pub fn operator_fee_bps(&self) -> u16 {
         self.operator_fee_bps.into()
     }
@@ -414,9 +473,7 @@ impl OperatorSnapshot {
         ncn_fee_group: NcnFeeGroup,
         stake_weights: &StakeWeights,
     ) -> Result<(), TipRouterError> {
-        if self.vault_operator_delegations_registered()
-            > Self::MAX_VAULT_OPERATOR_STAKE_WEIGHT as u64
-        {
+        if self.vault_operator_delegations_registered() > MAX_VAULT_OPERATOR_DELEGATIONS as u64 {
             return Err(TipRouterError::TooManyVaultOperatorDelegations);
         }
 
@@ -578,7 +635,5 @@ mod tests {
             + size_of::<VaultOperatorStakeWeight>() * MAX_VAULT_OPERATOR_DELEGATIONS; // vault_operator_stake_weight
 
         assert_eq!(size_of::<OperatorSnapshot>(), expected_total);
-        println!("expected_total: {}", expected_total);
-        assert!(false);
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, mem::size_of};
 
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
@@ -66,6 +66,8 @@ impl Discriminator for TrackedMints {
 }
 
 impl TrackedMints {
+    pub const SIZE: usize = 8 + size_of::<Self>();
+
     pub fn new(ncn: Pubkey, bump: u8) -> Self {
         Self {
             ncn,
@@ -73,6 +75,14 @@ impl TrackedMints {
             reserved: [0; 127],
             st_mint_list: [MintEntry::default(); MAX_VAULT_OPERATOR_DELEGATIONS],
         }
+    }
+
+    pub fn initialize(&mut self, ncn: Pubkey, bump: u8) {
+        // Initializes field by field to avoid overflowing stack
+        self.ncn = ncn;
+        self.bump = bump;
+        self.reserved = [0; 127];
+        self.st_mint_list = [MintEntry::default(); MAX_VAULT_OPERATOR_DELEGATIONS];
     }
 
     pub fn seeds(ncn: &Pubkey) -> Vec<Vec<u8>> {

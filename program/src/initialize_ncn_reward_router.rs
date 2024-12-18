@@ -6,9 +6,7 @@ use jito_jsm_core::{
     loader::{load_signer, load_system_account, load_system_program},
 };
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
-use jito_tip_router_core::{
-    loaders::load_ncn_epoch, ncn_fee_group::NcnFeeGroup, ncn_reward_router::NcnRewardRouter,
-};
+use jito_tip_router_core::{ncn_fee_group::NcnFeeGroup, ncn_reward_router::NcnRewardRouter};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
@@ -19,7 +17,7 @@ pub fn process_initialize_ncn_reward_router(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     ncn_fee_group: u8,
-    first_slot_of_ncn_epoch: Option<u64>,
+    epoch: u64,
 ) -> ProgramResult {
     let [restaking_config, ncn, operator, ncn_reward_router, payer, restaking_program, system_program] =
         accounts
@@ -43,7 +41,6 @@ pub fn process_initialize_ncn_reward_router(
     let ncn_fee_group = NcnFeeGroup::try_from(ncn_fee_group)?;
 
     let current_slot = Clock::get()?.slot;
-    let (ncn_epoch, _) = load_ncn_epoch(restaking_config, current_slot, first_slot_of_ncn_epoch)?;
 
     let (ncn_reward_router_pubkey, ncn_reward_router_bump, mut ncn_reward_router_seeds) =
         NcnRewardRouter::find_program_address(
@@ -51,7 +48,7 @@ pub fn process_initialize_ncn_reward_router(
             ncn_fee_group,
             operator.key,
             ncn.key,
-            ncn_epoch,
+            epoch,
         );
     ncn_reward_router_seeds.push(vec![ncn_reward_router_bump]);
 
@@ -64,7 +61,7 @@ pub fn process_initialize_ncn_reward_router(
         "Initializing Epoch Reward Router {} for NCN: {} at epoch: {}",
         ncn_reward_router.key,
         ncn.key,
-        ncn_epoch
+        epoch
     );
     create_account(
         payer,
@@ -87,7 +84,7 @@ pub fn process_initialize_ncn_reward_router(
         ncn_fee_group,
         *operator.key,
         *ncn.key,
-        ncn_epoch,
+        epoch,
         ncn_reward_router_bump,
         current_slot,
     );

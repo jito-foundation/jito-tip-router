@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
@@ -34,6 +36,8 @@ impl Discriminator for NcnConfig {
 }
 
 impl NcnConfig {
+    pub const SIZE: usize = 8 + size_of::<Self>();
+
     pub fn new(
         ncn: Pubkey,
         tie_breaker_admin: Pubkey,

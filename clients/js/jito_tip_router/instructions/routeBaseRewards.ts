@@ -8,8 +8,6 @@
 
 import {
   combineCodec,
-  getOptionDecoder,
-  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -25,8 +23,6 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
-  type Option,
-  type OptionOrNullable,
   type ReadonlyAccount,
   type WritableAccount,
 } from '@solana/web3.js';
@@ -74,18 +70,16 @@ export type RouteBaseRewardsInstruction<
 
 export type RouteBaseRewardsInstructionData = {
   discriminator: number;
-  firstSlotOfNcnEpoch: Option<bigint>;
+  epoch: bigint;
 };
 
-export type RouteBaseRewardsInstructionDataArgs = {
-  firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
-};
+export type RouteBaseRewardsInstructionDataArgs = { epoch: number | bigint };
 
 export function getRouteBaseRewardsInstructionDataEncoder(): Encoder<RouteBaseRewardsInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['firstSlotOfNcnEpoch', getOptionEncoder(getU64Encoder())],
+      ['epoch', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: ROUTE_BASE_REWARDS_DISCRIMINATOR })
   );
@@ -94,7 +88,7 @@ export function getRouteBaseRewardsInstructionDataEncoder(): Encoder<RouteBaseRe
 export function getRouteBaseRewardsInstructionDataDecoder(): Decoder<RouteBaseRewardsInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
+    ['epoch', getU64Decoder()],
   ]);
 }
 
@@ -122,7 +116,7 @@ export type RouteBaseRewardsInput<
   ballotBox: Address<TAccountBallotBox>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  firstSlotOfNcnEpoch: RouteBaseRewardsInstructionDataArgs['firstSlotOfNcnEpoch'];
+  epoch: RouteBaseRewardsInstructionDataArgs['epoch'];
 };
 
 export function getRouteBaseRewardsInstruction<

@@ -70,7 +70,7 @@ pub enum TipRouterInstruction {
     #[account(5, name = "restaking_program")]
     #[account(6, name = "system_program")]
     InitializeWeightTable{
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Updates the weight table
@@ -95,7 +95,7 @@ pub enum TipRouterInstruction {
     #[account(7, name = "restaking_program")]
     #[account(8, name = "system_program")]
     InitializeEpochSnapshot{
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Initializes the Operator Snapshot
@@ -110,7 +110,7 @@ pub enum TipRouterInstruction {
     #[account(8, name = "restaking_program")]
     #[account(9, name = "system_program")]
     InitializeOperatorSnapshot{
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Initializes the Vault Operator Delegation Snapshot
@@ -129,7 +129,7 @@ pub enum TipRouterInstruction {
     #[account(12, name = "vault_program")]
     #[account(13, name = "restaking_program")]
     SnapshotVaultOperatorDelegation{
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
     /// Registers a mint with the NCN config
     #[account(0, name = "restaking_config")]
@@ -152,7 +152,7 @@ pub enum TipRouterInstruction {
     #[account(4, name = "restaking_program")]
     #[account(5, name = "system_program")]
     InitializeBaseRewardRouter{
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Initializes the ncn reward router
@@ -165,7 +165,7 @@ pub enum TipRouterInstruction {
     #[account(6, name = "system_program")]
     InitializeNcnRewardRouter{
         ncn_fee_group: u8,
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
 
@@ -177,7 +177,7 @@ pub enum TipRouterInstruction {
     #[account(4, writable, name = "base_reward_router")]
     #[account(5, name = "restaking_program")]
     RouteBaseRewards{
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Routes ncn reward router
@@ -189,7 +189,7 @@ pub enum TipRouterInstruction {
     #[account(5, name = "restaking_program")]
     RouteNcnRewards{
         ncn_fee_group: u8,
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Distributes base rewards
@@ -201,7 +201,7 @@ pub enum TipRouterInstruction {
     #[account(5, name = "restaking_program")]
     DistributeBaseRewards{
         base_fee_group: u8,
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Distributes base ncn reward routes
@@ -214,7 +214,7 @@ pub enum TipRouterInstruction {
     #[account(6, name = "restaking_program")]
     DistributeBaseNcnRewardRoute{
         ncn_fee_group: u8,
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Distributes ncn operator rewards
@@ -226,7 +226,7 @@ pub enum TipRouterInstruction {
     #[account(5, name = "restaking_program")]
     DistributeNcnOperatorRewards{
         ncn_fee_group: u8,
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Distributes ncn vault rewards
@@ -238,7 +238,7 @@ pub enum TipRouterInstruction {
     #[account(5, writable, name = "ncn_reward_router")]
     DistributeNcnVaultRewards{
         ncn_fee_group: u8,
-        first_slot_of_ncn_epoch: Option<u64>,
+        epoch: u64,
     },
 
     /// Sets the NCN fee group for a mint
@@ -304,5 +304,51 @@ pub enum TipRouterInstruction {
     SetTieBreaker {
         meta_merkle_root: [u8; 32],
         epoch: u64,
-    }
+    },
+
+    /// Resizes the ballot box account
+    #[account(0, name = "ncn_config")]
+    #[account(1, writable, name = "ballot_box")]
+    #[account(2, name = "ncn")]
+    #[account(3, writable, signer, name = "payer")]
+    #[account(4, name = "system_program")]
+    ReallocBallotBox {
+        epoch: u64,
+    },
+
+    /// Resizes the operator snapshot account
+    #[account(0, name = "ncn_config")]
+    #[account(1, name = "restaking_config")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "operator")]
+    #[account(4, name = "ncn_operator_state")]
+    #[account(5, writable, name = "epoch_snapshot")]
+    #[account(6, writable, name = "operator_snapshot")]
+    #[account(7, writable, signer, name = "payer")]
+    #[account(8, name = "restaking_program")]
+    #[account(9, name = "system_program")]
+    ReallocOperatorSnapshot {
+        epoch: u64,
+    },
+
+    /// Resizes the base reward router account
+    #[account(0, name = "ncn_config")]
+    #[account(1, writable, name = "base_reward_router")]
+    #[account(2, name = "ncn")]
+    #[account(3, writable, signer, name = "payer")]
+    #[account(4, name = "system_program")]
+    ReallocBaseRewardRouter {
+        epoch: u64,
+    },
+
+    /// Resizes the weight table account
+    #[account(0, name = "ncn_config")]
+    #[account(1, writable, name = "weight_table")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "tracked_mints")]
+    #[account(4, writable, signer, name = "payer")]
+    #[account(5, name = "system_program")]
+    ReallocWeightTable {
+        epoch: u64,
+    },
 }

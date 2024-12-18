@@ -96,7 +96,7 @@ impl TipDistributionClient {
             &self.payer.pubkey(),
             &vote_keypair.pubkey(),
             &vote_init,
-            1 * LAMPORTS_PER_SOL,
+            LAMPORTS_PER_SOL,
             CreateVoteAccountConfig {
                 space: VoteStateVersions::vote_state_size_of(true) as u64,
                 with_seed: None,

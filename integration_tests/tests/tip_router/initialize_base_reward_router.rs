@@ -1,6 +1,10 @@
 #[cfg(test)]
 mod tests {
 
+    use jito_tip_router_core::{
+        base_reward_router::BaseRewardRouter, constants::MAX_REALLOC_BYTES,
+    };
+
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
 
     #[tokio::test]
@@ -17,27 +21,41 @@ mod tests {
         fixture.vote_test_ncn(&test_ncn).await?;
         //////
 
-        let slot = fixture.clock().await.slot;
+        let clock = fixture.clock().await;
+        let epoch = clock.epoch;
+        let slot = clock.slot;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
         // Initialize base reward router
         tip_router_client
-            .do_initialize_base_reward_router(ncn, slot)
+            .do_initialize_base_reward_router(ncn, epoch)
+            .await?;
+
+        // Check initial size is MAX_REALLOC_BYTES
+        let address =
+            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+        let raw_account = fixture.get_account(&address).await?.unwrap();
+        assert_eq!(raw_account.data.len(), MAX_REALLOC_BYTES as usize);
+        assert_eq!(raw_account.owner, jito_tip_router_program::id());
+        assert_eq!(raw_account.data[0], 0);
+
+        // Calculate number of reallocs needed
+        let num_reallocs =
+            (BaseRewardRouter::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
+
+        // Realloc to full size
+        tip_router_client
+            .do_realloc_base_reward_router(ncn, epoch, num_reallocs)
             .await?;
 
         // Get base reward router and verify it was initialized correctly
-        let restaking_config_account = tip_router_client.get_restaking_config().await?;
-        let ncn_epoch = slot / restaking_config_account.epoch_length();
-        let base_reward_router = tip_router_client
-            .get_base_reward_router(ncn, ncn_epoch)
-            .await?;
+        let base_reward_router = tip_router_client.get_base_reward_router(ncn, epoch).await?;
 
         // Verify initial state
         assert_eq!(base_reward_router.reward_pool(), 0);
         assert_eq!(base_reward_router.rewards_processed(), 0);
         assert_eq!(base_reward_router.total_rewards(), 0);
         assert_eq!(base_reward_router.ncn(), &ncn);
-        assert_eq!(base_reward_router.ncn_epoch(), ncn_epoch);
         assert_eq!(base_reward_router.slot_created(), slot);
 
         Ok(())

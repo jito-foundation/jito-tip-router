@@ -8,8 +8,6 @@
 
 import {
   combineCodec,
-  getOptionDecoder,
-  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -26,8 +24,6 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
-  type Option,
-  type OptionOrNullable,
   type ReadonlyAccount,
   type TransactionSigner,
   type WritableAccount,
@@ -85,12 +81,12 @@ export type InitializeNcnRewardRouterInstruction<
 export type InitializeNcnRewardRouterInstructionData = {
   discriminator: number;
   ncnFeeGroup: number;
-  firstSlotOfNcnEpoch: Option<bigint>;
+  epoch: bigint;
 };
 
 export type InitializeNcnRewardRouterInstructionDataArgs = {
   ncnFeeGroup: number;
-  firstSlotOfNcnEpoch: OptionOrNullable<number | bigint>;
+  epoch: number | bigint;
 };
 
 export function getInitializeNcnRewardRouterInstructionDataEncoder(): Encoder<InitializeNcnRewardRouterInstructionDataArgs> {
@@ -98,7 +94,7 @@ export function getInitializeNcnRewardRouterInstructionDataEncoder(): Encoder<In
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['ncnFeeGroup', getU8Encoder()],
-      ['firstSlotOfNcnEpoch', getOptionEncoder(getU64Encoder())],
+      ['epoch', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -111,7 +107,7 @@ export function getInitializeNcnRewardRouterInstructionDataDecoder(): Decoder<In
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['ncnFeeGroup', getU8Decoder()],
-    ['firstSlotOfNcnEpoch', getOptionDecoder(getU64Decoder())],
+    ['epoch', getU64Decoder()],
   ]);
 }
 
@@ -142,7 +138,7 @@ export type InitializeNcnRewardRouterInput<
   restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   ncnFeeGroup: InitializeNcnRewardRouterInstructionDataArgs['ncnFeeGroup'];
-  firstSlotOfNcnEpoch: InitializeNcnRewardRouterInstructionDataArgs['firstSlotOfNcnEpoch'];
+  epoch: InitializeNcnRewardRouterInstructionDataArgs['epoch'];
 };
 
 export function getInitializeNcnRewardRouterInstruction<
