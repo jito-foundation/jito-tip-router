@@ -15,6 +15,7 @@ env_logger = { workspace = true }
 futures = "0.3"
 im = "15.1"
 itertools = "0.11"
+jito-bytemuck = { workspace = true }
 jito-tip-payment = { git = "https://github.com/exo-tech-xyz/jito-programs.git", rev = "6e5cbce5e2866da0585ef4fa35ee1168fce4556f", features = ["cpi"] }
 jito-tip-distribution-sdk = { workspace = true }
 jito-restaking-program = { workspace = true }

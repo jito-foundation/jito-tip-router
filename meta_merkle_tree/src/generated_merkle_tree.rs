@@ -55,7 +55,7 @@ pub struct GeneratedMerkleTree {
 impl GeneratedMerkleTreeCollection {
     pub fn new_from_stake_meta_collection(
         stake_meta_coll: StakeMetaCollection,
-        protocol_fee_bps: u16,
+        protocol_fee_bps: u64,
     ) -> Result<Self, MerkleRootGeneratorError> {
         let (config_pda, _) = Pubkey::find_program_address(
             &[CONFIG_ACCOUNT_SEED],
@@ -140,7 +140,7 @@ pub struct TreeNode {
 impl TreeNode {
     fn vec_from_stake_meta(
         stake_meta: &StakeMeta,
-        protocol_fee_bps: u16,
+        protocol_fee_bps: u64,
         tip_distribution_program_id: &Pubkey,
     ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
         if let Some(tip_distribution_meta) = stake_meta.maybe_tip_distribution_meta.as_ref() {

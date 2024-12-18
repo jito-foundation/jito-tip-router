@@ -9,11 +9,20 @@ pub struct Cli {
     #[arg(short, long)]
     pub keypair_path: String,
 
+    #[arg(short, long)]
+    pub operator_address: String,
+
     #[arg(short, long, default_value = "http://localhost:8899")]
     pub rpc_url: String,
 
     #[arg(short, long)]
     pub ledger_path: PathBuf,
+    
+    #[arg(short, long)]
+    pub account_paths: Option<Vec<PathBuf>>,
+
+    #[arg(short, long)]
+    pub full_snapshots_path: Option<PathBuf>,
 
     #[arg(short, long)]
     pub snapshot_output_dir: PathBuf,

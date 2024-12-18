@@ -219,7 +219,7 @@ async fn test_up_to_cast_vote() {
     let tip_distribution_program_id = &TIP_DISTRIBUTION_ID;
     let out_path = "tests/fixtures/output.json";
     let tip_payment_program_id = &TIP_PAYMENT_ID;
-    const PROTOCOL_FEE_BPS: u16 = 300;
+    const PROTOCOL_FEE_BPS: u64 = 300;
 
     // 2. Call the function
     let meta_merkle_tree = get_merkle_root(

@@ -1,4 +1,4 @@
-pub mod cast_vote;
+pub mod tip_router;
 pub mod ledger_utils;
 pub mod stake_meta_generator;
 pub use crate::cli::{Cli, Commands};
@@ -77,7 +77,7 @@ pub fn get_merkle_root(
     tip_distribution_program_id: &Pubkey,
     out_path: &str,
     tip_payment_program_id: &Pubkey,
-    protocol_fee_bps: u16,
+    protocol_fee_bps: u64,
 ) -> std::result::Result<MetaMerkleTree, MerkleRootError> {
     // Get stake meta collection
     let stake_meta_collection = stake_meta_generator::generate_stake_meta(
