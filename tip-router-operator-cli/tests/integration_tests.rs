@@ -272,7 +272,7 @@ async fn test_up_to_cast_vote() {
 #[tokio::test]
 async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>> {
     // Constants
-    const PROTOCOL_FEE_BPS: u16 = 300;
+    const PROTOCOL_FEE_BPS: u64 = 300;
     const VALIDATOR_FEE_BPS: u16 = 1000;
     const TOTAL_TIPS: u64 = 1_000_000;
 

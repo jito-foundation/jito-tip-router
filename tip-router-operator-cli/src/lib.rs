@@ -39,7 +39,7 @@ pub struct TipPaymentPubkeys {
 #[derive(Clone, Debug, AnchorSerialize, AnchorDeserialize)]
 pub struct TipAccountConfig {
     pub authority: Pubkey,
-    pub protocol_fee_bps: u16,
+    pub protocol_fee_bps: u64,
     pub bump: u8,
 }
 
