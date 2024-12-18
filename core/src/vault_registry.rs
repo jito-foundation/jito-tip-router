@@ -311,6 +311,14 @@ impl VaultRegistry {
         Ok(())
     }
 
+    pub fn get_vault_entries(&self) -> Vec<VaultEntry> {
+        self.vault_list
+            .iter()
+            .filter(|m| !m.is_empty())
+            .copied()
+            .collect()
+    }
+
     pub fn vault_count(&self) -> u64 {
         self.vault_list.iter().filter(|m| !m.is_empty()).count() as u64
     }
@@ -345,7 +353,8 @@ mod tests {
         let expected_total = size_of::<Pubkey>() // ncn
             + 1 // bump
             + 127 // reserved
-            + size_of::<VaultEntry>() * MAX_VAULT_OPERATOR_DELEGATIONS; // st_mint_list
+            + size_of::<StMintEntry>() * MAX_ST_MINTS // st_mint_list
+            + size_of::<VaultEntry>() * MAX_VAULT_OPERATOR_DELEGATIONS; // vault_list
 
         assert_eq!(size_of::<VaultRegistry>(), expected_total);
 
@@ -402,23 +411,21 @@ mod tests {
     }
 
     #[test]
-    fn test_get_unique_mints() {
+    fn test_no_duplicate_mints() {
         let mut tracked_mints = VaultRegistry::new(Pubkey::default(), 0);
 
         let mint1 = Pubkey::new_unique();
         let mint2 = Pubkey::new_unique();
-        tracked_mints.register_vault(mint1, 0).unwrap();
-        tracked_mints.register_vault(mint2, 1).unwrap();
-        tracked_mints.register_vault(mint1, 2).unwrap();
+        tracked_mints
+            .register_st_mint(&mint1, NcnFeeGroup::jto(), 0, Pubkey::new_unique(), 0)
+            .unwrap();
+        tracked_mints
+            .register_st_mint(&mint2, NcnFeeGroup::jto(), 0, Pubkey::new_unique(), 0)
+            .unwrap();
 
-        let unique_mints = tracked_mints.get_mint_entries();
-        assert_eq!(unique_mints.len(), 2);
-        //TODO fix
-        // assert!(unique_mints.contains(x))
-        // assert!(unique_mints.contains(&mint2));
+        let result =
+            tracked_mints.register_st_mint(&mint1, NcnFeeGroup::jto(), 0, Pubkey::new_unique(), 0);
 
-        // Default pubkeys should not be included
-        let empty_tracked_mints = VaultRegistry::new(Pubkey::default(), 0);
-        assert_eq!(empty_tracked_mints.get_mint_entries().len(), 0);
+        assert!(result.is_err());
     }
 }

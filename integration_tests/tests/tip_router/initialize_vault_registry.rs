@@ -20,7 +20,7 @@ mod tests {
             .await?;
 
         let tracked_mints = tip_router_client
-            .get_tracked_mints(ncn_root.ncn_pubkey)
+            .get_vault_registry(ncn_root.ncn_pubkey)
             .await?;
 
         assert_eq!(tracked_mints.ncn, ncn_root.ncn_pubkey);

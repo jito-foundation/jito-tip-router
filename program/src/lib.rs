@@ -44,7 +44,7 @@ use crate::{
     admin_set_config_fees::process_admin_set_config_fees,
     admin_set_st_mint::process_admin_set_st_mint,
     admin_set_tie_breaker::process_admin_set_tie_breaker,
-    admin_set_weight::process_admin_set_weight_table, cast_vote::process_cast_vote,
+    admin_set_weight::process_admin_set_weight, cast_vote::process_cast_vote,
     distribute_base_ncn_reward_route::process_distribute_base_ncn_reward_route,
     distribute_base_rewards::process_distribute_base_rewards,
     distribute_ncn_operator_rewards::process_distribute_ncn_operator_rewards,
@@ -114,7 +114,7 @@ pub fn process_instruction(
             )
         }
         TipRouterInstruction::InitializeVaultRegistry => {
-            msg!("Instruction: InitializeTrackedMints");
+            msg!("Instruction: InitializeVaultRegistry");
             process_initialize_vault_registry(program_id, accounts)
         }
         TipRouterInstruction::InitializeWeightTable { epoch } => {
@@ -199,10 +199,10 @@ pub fn process_instruction(
             epoch,
             weight,
         } => {
-            msg!("Instruction: UpdateWeightTable");
-            process_admin_set_weight_table(program_id, accounts, st_mint, epoch, weight)
+            msg!("Instruction: AdminSetWeight");
+            process_admin_set_weight(program_id, accounts, st_mint, epoch, weight)
         }
-        TipRouterInstruction::SetConfigFees {
+        TipRouterInstruction::AdminSetConfigFees {
             new_block_engine_fee_bps,
             base_fee_group,
             new_base_fee_wallet,
@@ -210,7 +210,7 @@ pub fn process_instruction(
             ncn_fee_group,
             new_ncn_fee_bps,
         } => {
-            msg!("Instruction: SetConfigFees");
+            msg!("Instruction: AdminSetConfigFees");
             process_admin_set_config_fees(
                 program_id,
                 accounts,
@@ -223,11 +223,11 @@ pub fn process_instruction(
             )
         }
         TipRouterInstruction::AdminSetNewAdmin { role } => {
-            msg!("Instruction: SetNewAdmin");
+            msg!("Instruction: AdminSetNewAdmin");
             process_admin_set_new_admin(program_id, accounts, role)
         }
         TipRouterInstruction::RegisterVault => {
-            msg!("Instruction: RegisterMint");
+            msg!("Instruction: RegisterVault");
             process_register_vault(program_id, accounts)
         }
         TipRouterInstruction::AdminRegisterStMint {
@@ -236,7 +236,7 @@ pub fn process_instruction(
             switchboard_feed,
             no_feed_weight,
         } => {
-            msg!("Instruction: RegisterStMint");
+            msg!("Instruction: AdminRegisterStMint");
             process_admin_register_st_mint(
                 program_id,
                 accounts,
@@ -253,7 +253,7 @@ pub fn process_instruction(
             switchboard_feed,
             no_feed_weight,
         } => {
-            msg!("Instruction: SetTrackedMintNcnFeeGroup");
+            msg!("Instruction: AdminSetStMint");
             process_admin_set_st_mint(
                 program_id,
                 accounts,
@@ -297,7 +297,7 @@ pub fn process_instruction(
             meta_merkle_root,
             epoch,
         } => {
-            msg!("Instruction: SetTieBreaker");
+            msg!("Instruction: AdminSetTieBreaker");
             process_admin_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
         }
         TipRouterInstruction::ReallocBallotBox { epoch } => {

@@ -7,6 +7,7 @@
  */
 
 export * from './adminRegisterStMint';
+export * from './adminSetConfigFees';
 export * from './adminSetNewAdmin';
 export * from './adminSetStMint';
 export * from './adminSetTieBreaker';
@@ -31,7 +32,6 @@ export * from './reallocWeightTable';
 export * from './registerVault';
 export * from './routeBaseRewards';
 export * from './routeNcnRewards';
-export * from './setConfigFees';
 export * from './setMerkleRoot';
 export * from './snapshotVaultOperatorDelegation';
 export * from './switchboardSetWeight';

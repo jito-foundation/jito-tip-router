@@ -24,4 +24,5 @@ pub const MAX_REALLOC_BYTES: u64 = MAX_PERMITTED_DATA_INCREASE as u64; // TODO j
 
 pub const WEIGHT_PRECISION: u128 = 1_000_000_000;
 pub const SWITCHBOARD_MAX_STALE_SLOTS: u64 = 100;
-pub const JTO_USD_FEED: Pubkey = pubkey!("5S7ErPSkFmyXuq2aE3rZ6ofwVyZpwzUt6w7m6kqekvMe");
+pub const JTO_SOL_FEED: Pubkey = pubkey!("5S7ErPSkFmyXuq2aE3rZ6ofwVyZpwzUt6w7m6kqekvMe");
+pub const JTOSOL_SOL_FEED: Pubkey = pubkey!("4Z1SLH9g4ikNBV8uP2ZctEouqjYmVqB2Tz5SZxKYBN7z");

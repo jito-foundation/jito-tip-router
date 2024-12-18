@@ -45,7 +45,6 @@ export type SwitchboardSetWeightInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountSwitchboardFeed extends string | IAccountMeta<string> = string,
-  TAccountStMint extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -59,9 +58,6 @@ export type SwitchboardSetWeightInstruction<
         ? ReadonlySignerAccount<TAccountSwitchboardFeed> &
             IAccountSignerMeta<TAccountSwitchboardFeed>
         : TAccountSwitchboardFeed,
-      TAccountStMint extends string
-        ? ReadonlyAccount<TAccountStMint>
-        : TAccountStMint,
       ...TRemainingAccounts,
     ]
   >;
@@ -113,13 +109,11 @@ export type SwitchboardSetWeightInput<
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
   TAccountSwitchboardFeed extends string = string,
-  TAccountStMint extends string = string,
 > = {
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   switchboardFeed: TransactionSigner<TAccountSwitchboardFeed>;
-  stMint: Address<TAccountStMint>;
-  stMintArg: SwitchboardSetWeightInstructionDataArgs['stMint'];
+  stMint: SwitchboardSetWeightInstructionDataArgs['stMint'];
   epoch: SwitchboardSetWeightInstructionDataArgs['epoch'];
 };
 
@@ -127,22 +121,19 @@ export function getSwitchboardSetWeightInstruction<
   TAccountNcn extends string,
   TAccountWeightTable extends string,
   TAccountSwitchboardFeed extends string,
-  TAccountStMint extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: SwitchboardSetWeightInput<
     TAccountNcn,
     TAccountWeightTable,
-    TAccountSwitchboardFeed,
-    TAccountStMint
+    TAccountSwitchboardFeed
   >,
   config?: { programAddress?: TProgramAddress }
 ): SwitchboardSetWeightInstruction<
   TProgramAddress,
   TAccountNcn,
   TAccountWeightTable,
-  TAccountSwitchboardFeed,
-  TAccountStMint
+  TAccountSwitchboardFeed
 > {
   // Program address.
   const programAddress =
@@ -156,7 +147,6 @@ export function getSwitchboardSetWeightInstruction<
       value: input.switchboardFeed ?? null,
       isWritable: false,
     },
-    stMint: { value: input.stMint ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -164,7 +154,7 @@ export function getSwitchboardSetWeightInstruction<
   >;
 
   // Original args.
-  const args = { ...input, stMint: input.stMintArg };
+  const args = { ...input };
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
@@ -172,7 +162,6 @@ export function getSwitchboardSetWeightInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.switchboardFeed),
-      getAccountMeta(accounts.stMint),
     ],
     programAddress,
     data: getSwitchboardSetWeightInstructionDataEncoder().encode(
@@ -182,8 +171,7 @@ export function getSwitchboardSetWeightInstruction<
     TProgramAddress,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountSwitchboardFeed,
-    TAccountStMint
+    TAccountSwitchboardFeed
   >;
 
   return instruction;
@@ -198,7 +186,6 @@ export type ParsedSwitchboardSetWeightInstruction<
     ncn: TAccountMetas[0];
     weightTable: TAccountMetas[1];
     switchboardFeed: TAccountMetas[2];
-    stMint: TAccountMetas[3];
   };
   data: SwitchboardSetWeightInstructionData;
 };
@@ -211,7 +198,7 @@ export function parseSwitchboardSetWeightInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedSwitchboardSetWeightInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 3) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -227,7 +214,6 @@ export function parseSwitchboardSetWeightInstruction<
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
       switchboardFeed: getNextAccount(),
-      stMint: getNextAccount(),
     },
     data: getSwitchboardSetWeightInstructionDataDecoder().decode(
       instruction.data

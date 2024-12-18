@@ -5,8 +5,8 @@ use jito_restaking_core::{
 use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, jito_tip_distribution};
 use jito_tip_router_client::{
     instructions::{
-        AdminRegisterStMintBuilder, AdminSetNewAdminBuilder, AdminSetStMintBuilder,
-        AdminSetTieBreakerBuilder, AdminSetWeightBuilder, CastVoteBuilder,
+        AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
+        AdminSetStMintBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder, CastVoteBuilder,
         DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
         DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
         InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder, InitializeConfigBuilder,
@@ -14,8 +14,8 @@ use jito_tip_router_client::{
         InitializeOperatorSnapshotBuilder, InitializeVaultRegistryBuilder,
         InitializeWeightTableBuilder, ReallocBallotBoxBuilder, ReallocBaseRewardRouterBuilder,
         ReallocOperatorSnapshotBuilder, ReallocWeightTableBuilder, RegisterVaultBuilder,
-        RouteBaseRewardsBuilder, RouteNcnRewardsBuilder, SetConfigFeesBuilder,
-        SetMerkleRootBuilder, SnapshotVaultOperatorDelegationBuilder,
+        RouteBaseRewardsBuilder, RouteNcnRewardsBuilder, SetMerkleRootBuilder,
+        SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
     },
     types::ConfigAdminRole,
 };
@@ -41,7 +41,6 @@ use solana_program::{
 };
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 use solana_sdk::{
-    clock::Clock,
     commitment_config::CommitmentLevel,
     compute_budget::ComputeBudgetInstruction,
     signature::{Keypair, Signer},
@@ -121,7 +120,7 @@ impl TipRouterClient {
         Ok(*NcnConfig::try_from_slice_unchecked(config.data.as_slice()).unwrap())
     }
 
-    pub async fn get_tracked_mints(&mut self, ncn_pubkey: Pubkey) -> TestResult<VaultRegistry> {
+    pub async fn get_vault_registry(&mut self, ncn_pubkey: Pubkey) -> TestResult<VaultRegistry> {
         let tracked_mints_pda =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn_pubkey).0;
         let tracked_mints = self
@@ -329,7 +328,7 @@ impl TipRouterClient {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let ix = {
-            let mut builder = SetConfigFeesBuilder::new();
+            let mut builder = AdminSetConfigFeesBuilder::new();
             builder
                 .restaking_config(restaking_config)
                 .config(config_pda)
@@ -461,17 +460,17 @@ impl TipRouterClient {
         &mut self,
         ncn: Pubkey,
         epoch: u64,
-        mint: Pubkey,
+        st_mint: Pubkey,
         weight: u128,
     ) -> TestResult<()> {
-        self.admin_set_weight(ncn, epoch, mint, weight).await
+        self.admin_set_weight(ncn, epoch, st_mint, weight).await
     }
 
     pub async fn admin_set_weight(
         &mut self,
         ncn: Pubkey,
         epoch: u64,
-        mint: Pubkey,
+        st_mint: Pubkey,
         weight: u128,
     ) -> TestResult<()> {
         let weight_table =
@@ -481,9 +480,52 @@ impl TipRouterClient {
             .ncn(ncn)
             .weight_table(weight_table)
             .weight_table_admin(self.payer.pubkey())
-            .mint(mint)
             .restaking_program(jito_restaking_program::id())
+            .st_mint(st_mint)
             .weight(weight)
+            .epoch(epoch)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_switchboard_set_weight(
+        &mut self,
+        ncn: Pubkey,
+        epoch: u64,
+        st_mint: Pubkey,
+    ) -> TestResult<()> {
+        let vault_registry = self.get_vault_registry(ncn).await?;
+
+        let mint_entry = vault_registry.get_mint_entry(&st_mint)?;
+        let switchboard_feed = mint_entry.switchboard_feed();
+
+        self.switchboard_set_weight(ncn, epoch, st_mint, switchboard_feed)
+            .await
+    }
+
+    pub async fn switchboard_set_weight(
+        &mut self,
+        ncn: Pubkey,
+        epoch: u64,
+        st_mint: Pubkey,
+        switchboard_feed: Pubkey,
+    ) -> TestResult<()> {
+        let weight_table =
+            WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
+        let ix = SwitchboardSetWeightBuilder::new()
+            .ncn(ncn)
+            .weight_table(weight_table)
+            .st_mint(st_mint)
+            .switchboard_feed(switchboard_feed)
             .epoch(epoch)
             .instruction();
 
@@ -542,15 +584,10 @@ impl TipRouterClient {
         let tracked_mints =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
-        let epoch = self.banks_client.get_sysvar::<Clock>().await?.epoch;
-        let weight_table =
-            WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
         self.register_vault(
             restaking_config_address,
             tracked_mints,
             ncn,
-            weight_table,
             vault,
             vault_ncn_ticket,
             ncn_vault_ticket,
@@ -563,7 +600,6 @@ impl TipRouterClient {
         restaking_config: Pubkey,
         vault_registry: Pubkey,
         ncn: Pubkey,
-        weight_table: Pubkey,
         vault: Pubkey,
         vault_ncn_ticket: Pubkey,
         ncn_vault_ticket: Pubkey,
@@ -572,7 +608,6 @@ impl TipRouterClient {
             .restaking_config(restaking_config)
             .vault_registry(vault_registry)
             .ncn(ncn)
-            .weight_table(weight_table)
             .vault(vault)
             .vault_ncn_ticket(vault_ncn_ticket)
             .ncn_vault_ticket(ncn_vault_ticket)

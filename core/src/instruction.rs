@@ -42,7 +42,7 @@ pub enum TipRouterInstruction {
     #[account(2, name = "ncn")]
     #[account(3, signer, name = "ncn_admin")]
     #[account(4, name = "restaking_program")]
-    SetConfigFees {
+    AdminSetConfigFees {
         new_block_engine_fee_bps: Option<u16>,
         base_fee_group: Option<u8>,
         new_base_fee_wallet: Option<Pubkey>,
@@ -77,8 +77,7 @@ pub enum TipRouterInstruction {
     #[account(0, name = "ncn")]
     #[account(1, writable, name = "weight_table")]
     #[account(2, signer, name = "weight_table_admin")]
-    #[account(3, name = "mint")]
-    #[account(4, name = "restaking_program")]
+    #[account(3, name = "restaking_program")]
     AdminSetWeight{
         st_mint: Pubkey,
         weight: u128,
@@ -89,7 +88,6 @@ pub enum TipRouterInstruction {
     #[account(0, name = "ncn")]
     #[account(1, writable, name = "weight_table")]
     #[account(2, signer, name = "switchboard_feed")]
-    #[account(3, name = "st_mint")]
     SwitchboardSetWeight{
         st_mint: Pubkey,
         epoch: u64,
@@ -144,12 +142,11 @@ pub enum TipRouterInstruction {
     #[account(0, name = "restaking_config")]
     #[account(1, writable, name = "vault_registry")]
     #[account(2, name = "ncn")]
-    #[account(3, name = "weight_table")]
-    #[account(4, name = "vault")]
-    #[account(5, name = "vault_ncn_ticket")]
-    #[account(6, name = "ncn_vault_ticket")]
-    #[account(7, name = "restaking_program_id")]
-    #[account(8, name = "vault_program_id")]
+    #[account(3, name = "vault")]
+    #[account(4, name = "vault_ncn_ticket")]
+    #[account(5, name = "ncn_vault_ticket")]
+    #[account(6, name = "restaking_program_id")]
+    #[account(7, name = "vault_program_id")]
     RegisterVault,
 
     /// Initializes the base reward router

@@ -6,7 +6,8 @@ use std::{
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
 use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
-    base_fee_group::BaseFeeGroup, base_reward_router::BaseRewardRouter, ncn_fee_group::NcnFeeGroup,
+    base_fee_group::BaseFeeGroup, base_reward_router::BaseRewardRouter, constants::JTO_SOL_FEED,
+    ncn_fee_group::NcnFeeGroup,
 };
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
@@ -403,7 +404,7 @@ impl TestBuilder {
     }
 
     // 5. Setup Tracked Mints
-    pub async fn add_tracked_mints_to_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+    pub async fn add_vault_registry_to_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
         let mut restaking_client = self.restaking_program_client();
         let mut vault_client = self.vault_program_client();
@@ -432,11 +433,24 @@ impl TestBuilder {
                 .do_full_vault_update(&vault, &operators)
                 .await?;
 
+            let st_mint = vault_client.get_vault(&vault).await?.supported_mint;
+
             let vault_ncn_ticket =
                 VaultNcnTicket::find_program_address(&jito_vault_program::id(), &vault, &ncn).0;
 
             let ncn_vault_ticket =
                 NcnVaultTicket::find_program_address(&jito_restaking_program::id(), &ncn, &vault).0;
+
+            tip_router_client
+                .do_admin_register_st_mint(
+                    ncn,
+                    st_mint,
+                    NcnFeeGroup::lst(),
+                    10_000,
+                    Some(JTO_SOL_FEED),
+                    None,
+                )
+                .await?;
 
             tip_router_client
                 .do_register_vault(ncn, vault, vault_ncn_ticket, ncn_vault_ticket)
@@ -459,13 +473,45 @@ impl TestBuilder {
         self.add_vaults_to_test_ncn(&mut test_ncn, vault_count)
             .await?;
         self.add_delegation_in_test_ncn(&test_ncn, 100).await?;
-        self.add_tracked_mints_to_test_ncn(&test_ncn).await?;
+        self.add_vault_registry_to_test_ncn(&test_ncn).await?;
 
         Ok(test_ncn)
     }
 
-    // 6. Set weights
-    pub async fn add_weights_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+    // 6a. Admin Set weights
+    pub async fn add_admin_weights_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+        let mut vault_client = self.vault_program_client();
+
+        const WEIGHT: u128 = 100;
+
+        // Not sure if this is needed
+        self.warp_slot_incremental(1000).await?;
+
+        let clock = self.clock().await;
+        let epoch = clock.epoch;
+        tip_router_client
+            .do_full_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch)
+            .await?;
+
+        for vault_root in test_ncn.vaults.iter() {
+            let vault = vault_client.get_vault(&vault_root.vault_pubkey).await?;
+
+            let mint = vault.supported_mint;
+
+            tip_router_client
+                .do_admin_set_weight(test_ncn.ncn_root.ncn_pubkey, epoch, mint, WEIGHT)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    // 6b. Switchboard Set weights
+    pub async fn add_switchboard_weights_for_test_ncn(
+        &mut self,
+        test_ncn: &TestNcn,
+    ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
         let mut vault_client = self.vault_program_client();
 
@@ -557,7 +603,7 @@ impl TestBuilder {
 
     // Intermission 2 - all snapshots are taken
     pub async fn snapshot_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
-        self.add_weights_for_test_ncn(test_ncn).await?;
+        self.add_admin_weights_for_test_ncn(test_ncn).await?;
         self.add_epoch_snapshot_to_test_ncn(test_ncn).await?;
         self.add_operator_snapshots_to_test_ncn(test_ncn).await?;
         self.add_vault_operator_delegation_snapshots_to_test_ncn(test_ncn)

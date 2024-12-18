@@ -38,7 +38,6 @@ export type RegisterVaultInstruction<
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountVault extends string | IAccountMeta<string> = string,
   TAccountVaultNcnTicket extends string | IAccountMeta<string> = string,
   TAccountNcnVaultTicket extends string | IAccountMeta<string> = string,
@@ -56,9 +55,6 @@ export type RegisterVaultInstruction<
         ? WritableAccount<TAccountVaultRegistry>
         : TAccountVaultRegistry,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountWeightTable extends string
-        ? ReadonlyAccount<TAccountWeightTable>
-        : TAccountWeightTable,
       TAccountVault extends string
         ? ReadonlyAccount<TAccountVault>
         : TAccountVault,
@@ -107,7 +103,6 @@ export type RegisterVaultInput<
   TAccountRestakingConfig extends string = string,
   TAccountVaultRegistry extends string = string,
   TAccountNcn extends string = string,
-  TAccountWeightTable extends string = string,
   TAccountVault extends string = string,
   TAccountVaultNcnTicket extends string = string,
   TAccountNcnVaultTicket extends string = string,
@@ -117,7 +112,6 @@ export type RegisterVaultInput<
   restakingConfig: Address<TAccountRestakingConfig>;
   vaultRegistry: Address<TAccountVaultRegistry>;
   ncn: Address<TAccountNcn>;
-  weightTable: Address<TAccountWeightTable>;
   vault: Address<TAccountVault>;
   vaultNcnTicket: Address<TAccountVaultNcnTicket>;
   ncnVaultTicket: Address<TAccountNcnVaultTicket>;
@@ -129,7 +123,6 @@ export function getRegisterVaultInstruction<
   TAccountRestakingConfig extends string,
   TAccountVaultRegistry extends string,
   TAccountNcn extends string,
-  TAccountWeightTable extends string,
   TAccountVault extends string,
   TAccountVaultNcnTicket extends string,
   TAccountNcnVaultTicket extends string,
@@ -141,7 +134,6 @@ export function getRegisterVaultInstruction<
     TAccountRestakingConfig,
     TAccountVaultRegistry,
     TAccountNcn,
-    TAccountWeightTable,
     TAccountVault,
     TAccountVaultNcnTicket,
     TAccountNcnVaultTicket,
@@ -154,7 +146,6 @@ export function getRegisterVaultInstruction<
   TAccountRestakingConfig,
   TAccountVaultRegistry,
   TAccountNcn,
-  TAccountWeightTable,
   TAccountVault,
   TAccountVaultNcnTicket,
   TAccountNcnVaultTicket,
@@ -173,7 +164,6 @@ export function getRegisterVaultInstruction<
     },
     vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    weightTable: { value: input.weightTable ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: false },
     vaultNcnTicket: { value: input.vaultNcnTicket ?? null, isWritable: false },
     ncnVaultTicket: { value: input.ncnVaultTicket ?? null, isWritable: false },
@@ -194,7 +184,6 @@ export function getRegisterVaultInstruction<
       getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.vault),
       getAccountMeta(accounts.vaultNcnTicket),
       getAccountMeta(accounts.ncnVaultTicket),
@@ -208,7 +197,6 @@ export function getRegisterVaultInstruction<
     TAccountRestakingConfig,
     TAccountVaultRegistry,
     TAccountNcn,
-    TAccountWeightTable,
     TAccountVault,
     TAccountVaultNcnTicket,
     TAccountNcnVaultTicket,
@@ -228,12 +216,11 @@ export type ParsedRegisterVaultInstruction<
     restakingConfig: TAccountMetas[0];
     vaultRegistry: TAccountMetas[1];
     ncn: TAccountMetas[2];
-    weightTable: TAccountMetas[3];
-    vault: TAccountMetas[4];
-    vaultNcnTicket: TAccountMetas[5];
-    ncnVaultTicket: TAccountMetas[6];
-    restakingProgramId: TAccountMetas[7];
-    vaultProgramId: TAccountMetas[8];
+    vault: TAccountMetas[3];
+    vaultNcnTicket: TAccountMetas[4];
+    ncnVaultTicket: TAccountMetas[5];
+    restakingProgramId: TAccountMetas[6];
+    vaultProgramId: TAccountMetas[7];
   };
   data: RegisterVaultInstructionData;
 };
@@ -246,7 +233,7 @@ export function parseRegisterVaultInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedRegisterVaultInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 9) {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -262,7 +249,6 @@ export function parseRegisterVaultInstruction<
       restakingConfig: getNextAccount(),
       vaultRegistry: getNextAccount(),
       ncn: getNextAccount(),
-      weightTable: getNextAccount(),
       vault: getNextAccount(),
       vaultNcnTicket: getNextAccount(),
       ncnVaultTicket: getNextAccount(),

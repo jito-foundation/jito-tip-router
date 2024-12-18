@@ -12,13 +12,13 @@ use solana_program::{
 };
 
 pub fn process_register_vault(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-    let [restaking_config, tracked_mints, ncn, vault, vault_ncn_ticket, ncn_vault_ticket, restaking_program_id, vault_program_id] =
+    let [restaking_config, vault_registry, ncn, vault, vault_ncn_ticket, ncn_vault_ticket, restaking_program_id, vault_program_id] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    VaultRegistry::load(program_id, ncn.key, tracked_mints, true)?;
+    VaultRegistry::load(program_id, ncn.key, vault_registry, true)?;
     Ncn::load(restaking_program_id.key, ncn, false)?;
     Vault::load(vault_program_id.key, vault, false)?;
     VaultNcnTicket::load(vault_program_id.key, vault_ncn_ticket, vault, ncn, false)?;
@@ -59,7 +59,7 @@ pub fn process_register_vault(program_id: &Pubkey, accounts: &[AccountInfo]) -> 
         return Err(ProgramError::InvalidAccountData);
     }
 
-    let mut tracked_mints_data = tracked_mints.try_borrow_mut_data()?;
+    let mut tracked_mints_data = vault_registry.try_borrow_mut_data()?;
     let tracked_mints = VaultRegistry::try_from_slice_unchecked_mut(&mut tracked_mints_data)?;
 
     let vault_data = vault.data.borrow();

@@ -1,4 +1,4 @@
-use jito_bytemuck::AccountDeserialize;
+use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
@@ -8,8 +8,8 @@ use jito_tip_router_core::{
     constants::MAX_REALLOC_BYTES, vault_registry::VaultRegistry, weight_table::WeightTable,
 };
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
 /// Initializes a Weight Table
@@ -76,8 +76,34 @@ pub fn process_initialize_weight_table(
         system_program,
         program_id,
         &Rent::get()?,
-        MAX_REALLOC_BYTES,
+        // MAX_REALLOC_BYTES,
+        8_u64
+            .checked_add(std::mem::size_of::<WeightTable>() as u64)
+            .unwrap(),
         &weight_table_seeds,
+    )?;
+
+    //TODO take out realloc?
+    let (vault_count, mint_entries) = {
+        let tracked_mints_data = tracked_mints.data.borrow();
+        let tracked_mints = VaultRegistry::try_from_slice_unchecked(&tracked_mints_data)?;
+        (
+            tracked_mints.vault_count(),
+            tracked_mints.get_mint_entries(),
+        )
+    };
+
+    let mut weight_table_data = weight_table.try_borrow_mut_data()?;
+    weight_table_data[0] = WeightTable::DISCRIMINATOR;
+    let weight_table_account = WeightTable::try_from_slice_unchecked_mut(&mut weight_table_data)?;
+
+    weight_table_account.initialize(
+        *ncn.key,
+        epoch,
+        Clock::get()?.slot,
+        vault_count,
+        weight_table_bump,
+        &mint_entries,
     )?;
 
     Ok(())

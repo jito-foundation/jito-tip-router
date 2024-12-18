@@ -14,6 +14,7 @@ import {
 } from '@solana/web3.js';
 import {
   type ParsedAdminRegisterStMintInstruction,
+  type ParsedAdminSetConfigFeesInstruction,
   type ParsedAdminSetNewAdminInstruction,
   type ParsedAdminSetStMintInstruction,
   type ParsedAdminSetTieBreakerInstruction,
@@ -38,7 +39,6 @@ import {
   type ParsedRegisterVaultInstruction,
   type ParsedRouteBaseRewardsInstruction,
   type ParsedRouteNcnRewardsInstruction,
-  type ParsedSetConfigFeesInstruction,
   type ParsedSetMerkleRootInstruction,
   type ParsedSnapshotVaultOperatorDelegationInstruction,
   type ParsedSwitchboardSetWeightInstruction,
@@ -61,7 +61,7 @@ export enum JitoTipRouterAccount {
 export enum JitoTipRouterInstruction {
   InitializeConfig,
   InitializeVaultRegistry,
-  SetConfigFees,
+  AdminSetConfigFees,
   AdminSetNewAdmin,
   InitializeWeightTable,
   AdminSetWeight,
@@ -101,7 +101,7 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.InitializeVaultRegistry;
   }
   if (containsBytes(data, getU8Encoder().encode(2), 0)) {
-    return JitoTipRouterInstruction.SetConfigFees;
+    return JitoTipRouterInstruction.AdminSetConfigFees;
   }
   if (containsBytes(data, getU8Encoder().encode(3), 0)) {
     return JitoTipRouterInstruction.AdminSetNewAdmin;
@@ -196,8 +196,8 @@ export type ParsedJitoTipRouterInstruction<
       instructionType: JitoTipRouterInstruction.InitializeVaultRegistry;
     } & ParsedInitializeVaultRegistryInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.SetConfigFees;
-    } & ParsedSetConfigFeesInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.AdminSetConfigFees;
+    } & ParsedAdminSetConfigFeesInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.AdminSetNewAdmin;
     } & ParsedAdminSetNewAdminInstruction<TProgram>)

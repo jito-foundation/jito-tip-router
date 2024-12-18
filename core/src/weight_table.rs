@@ -231,7 +231,13 @@ impl WeightTable {
             return Err(ProgramError::InvalidAccountData);
         }
         if weight_table.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Weight table account has an incorrect discriminator");
+            msg!(
+                "Weight table account has an incorrect discriminator {}/{} {}/{}",
+                weight_table.data.borrow()[0],
+                Self::DISCRIMINATOR,
+                weight_table.data_len(),
+                WeightTable::SIZE
+            );
             return Err(ProgramError::InvalidAccountData);
         }
         let expected_pubkey = Self::find_program_address(program_id, ncn.key, ncn_epoch).0;

@@ -38,13 +38,13 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const SET_CONFIG_FEES_DISCRIMINATOR = 2;
+export const ADMIN_SET_CONFIG_FEES_DISCRIMINATOR = 2;
 
-export function getSetConfigFeesDiscriminatorBytes() {
-  return getU8Encoder().encode(SET_CONFIG_FEES_DISCRIMINATOR);
+export function getAdminSetConfigFeesDiscriminatorBytes() {
+  return getU8Encoder().encode(ADMIN_SET_CONFIG_FEES_DISCRIMINATOR);
 }
 
-export type SetConfigFeesInstruction<
+export type AdminSetConfigFeesInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
@@ -74,7 +74,7 @@ export type SetConfigFeesInstruction<
     ]
   >;
 
-export type SetConfigFeesInstructionData = {
+export type AdminSetConfigFeesInstructionData = {
   discriminator: number;
   newBlockEngineFeeBps: Option<number>;
   baseFeeGroup: Option<number>;
@@ -84,7 +84,7 @@ export type SetConfigFeesInstructionData = {
   newNcnFeeBps: Option<number>;
 };
 
-export type SetConfigFeesInstructionDataArgs = {
+export type AdminSetConfigFeesInstructionDataArgs = {
   newBlockEngineFeeBps: OptionOrNullable<number>;
   baseFeeGroup: OptionOrNullable<number>;
   newBaseFeeWallet: OptionOrNullable<Address>;
@@ -93,7 +93,7 @@ export type SetConfigFeesInstructionDataArgs = {
   newNcnFeeBps: OptionOrNullable<number>;
 };
 
-export function getSetConfigFeesInstructionDataEncoder(): Encoder<SetConfigFeesInstructionDataArgs> {
+export function getAdminSetConfigFeesInstructionDataEncoder(): Encoder<AdminSetConfigFeesInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
@@ -104,11 +104,14 @@ export function getSetConfigFeesInstructionDataEncoder(): Encoder<SetConfigFeesI
       ['ncnFeeGroup', getOptionEncoder(getU8Encoder())],
       ['newNcnFeeBps', getOptionEncoder(getU16Encoder())],
     ]),
-    (value) => ({ ...value, discriminator: SET_CONFIG_FEES_DISCRIMINATOR })
+    (value) => ({
+      ...value,
+      discriminator: ADMIN_SET_CONFIG_FEES_DISCRIMINATOR,
+    })
   );
 }
 
-export function getSetConfigFeesInstructionDataDecoder(): Decoder<SetConfigFeesInstructionData> {
+export function getAdminSetConfigFeesInstructionDataDecoder(): Decoder<AdminSetConfigFeesInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['newBlockEngineFeeBps', getOptionDecoder(getU16Decoder())],
@@ -120,17 +123,17 @@ export function getSetConfigFeesInstructionDataDecoder(): Decoder<SetConfigFeesI
   ]);
 }
 
-export function getSetConfigFeesInstructionDataCodec(): Codec<
-  SetConfigFeesInstructionDataArgs,
-  SetConfigFeesInstructionData
+export function getAdminSetConfigFeesInstructionDataCodec(): Codec<
+  AdminSetConfigFeesInstructionDataArgs,
+  AdminSetConfigFeesInstructionData
 > {
   return combineCodec(
-    getSetConfigFeesInstructionDataEncoder(),
-    getSetConfigFeesInstructionDataDecoder()
+    getAdminSetConfigFeesInstructionDataEncoder(),
+    getAdminSetConfigFeesInstructionDataDecoder()
   );
 }
 
-export type SetConfigFeesInput<
+export type AdminSetConfigFeesInput<
   TAccountRestakingConfig extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
@@ -142,15 +145,15 @@ export type SetConfigFeesInput<
   ncn: Address<TAccountNcn>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  newBlockEngineFeeBps: SetConfigFeesInstructionDataArgs['newBlockEngineFeeBps'];
-  baseFeeGroup: SetConfigFeesInstructionDataArgs['baseFeeGroup'];
-  newBaseFeeWallet: SetConfigFeesInstructionDataArgs['newBaseFeeWallet'];
-  newBaseFeeBps: SetConfigFeesInstructionDataArgs['newBaseFeeBps'];
-  ncnFeeGroup: SetConfigFeesInstructionDataArgs['ncnFeeGroup'];
-  newNcnFeeBps: SetConfigFeesInstructionDataArgs['newNcnFeeBps'];
+  newBlockEngineFeeBps: AdminSetConfigFeesInstructionDataArgs['newBlockEngineFeeBps'];
+  baseFeeGroup: AdminSetConfigFeesInstructionDataArgs['baseFeeGroup'];
+  newBaseFeeWallet: AdminSetConfigFeesInstructionDataArgs['newBaseFeeWallet'];
+  newBaseFeeBps: AdminSetConfigFeesInstructionDataArgs['newBaseFeeBps'];
+  ncnFeeGroup: AdminSetConfigFeesInstructionDataArgs['ncnFeeGroup'];
+  newNcnFeeBps: AdminSetConfigFeesInstructionDataArgs['newNcnFeeBps'];
 };
 
-export function getSetConfigFeesInstruction<
+export function getAdminSetConfigFeesInstruction<
   TAccountRestakingConfig extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
@@ -158,7 +161,7 @@ export function getSetConfigFeesInstruction<
   TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: SetConfigFeesInput<
+  input: AdminSetConfigFeesInput<
     TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
@@ -166,7 +169,7 @@ export function getSetConfigFeesInstruction<
     TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): SetConfigFeesInstruction<
+): AdminSetConfigFeesInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
   TAccountConfig,
@@ -210,10 +213,10 @@ export function getSetConfigFeesInstruction<
       getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
-    data: getSetConfigFeesInstructionDataEncoder().encode(
-      args as SetConfigFeesInstructionDataArgs
+    data: getAdminSetConfigFeesInstructionDataEncoder().encode(
+      args as AdminSetConfigFeesInstructionDataArgs
     ),
-  } as SetConfigFeesInstruction<
+  } as AdminSetConfigFeesInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
     TAccountConfig,
@@ -225,7 +228,7 @@ export function getSetConfigFeesInstruction<
   return instruction;
 }
 
-export type ParsedSetConfigFeesInstruction<
+export type ParsedAdminSetConfigFeesInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -237,17 +240,17 @@ export type ParsedSetConfigFeesInstruction<
     ncnAdmin: TAccountMetas[3];
     restakingProgram: TAccountMetas[4];
   };
-  data: SetConfigFeesInstructionData;
+  data: AdminSetConfigFeesInstructionData;
 };
 
-export function parseSetConfigFeesInstruction<
+export function parseAdminSetConfigFeesInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedSetConfigFeesInstruction<TProgram, TAccountMetas> {
+): ParsedAdminSetConfigFeesInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -267,6 +270,8 @@ export function parseSetConfigFeesInstruction<
       ncnAdmin: getNextAccount(),
       restakingProgram: getNextAccount(),
     },
-    data: getSetConfigFeesInstructionDataDecoder().decode(instruction.data),
+    data: getAdminSetConfigFeesInstructionDataDecoder().decode(
+      instruction.data
+    ),
   };
 }

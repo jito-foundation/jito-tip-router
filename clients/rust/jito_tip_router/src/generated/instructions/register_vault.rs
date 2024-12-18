@@ -14,8 +14,6 @@ pub struct RegisterVault {
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub weight_table: solana_program::pubkey::Pubkey,
-
     pub vault: solana_program::pubkey::Pubkey,
 
     pub vault_ncn_ticket: solana_program::pubkey::Pubkey,
@@ -36,7 +34,7 @@ impl RegisterVault {
         &self,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_config,
             false,
@@ -47,10 +45,6 @@ impl RegisterVault {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.weight_table,
-            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.vault, false,
@@ -106,18 +100,16 @@ impl Default for RegisterVaultInstructionData {
 ///   0. `[]` restaking_config
 ///   1. `[writable]` vault_registry
 ///   2. `[]` ncn
-///   3. `[]` weight_table
-///   4. `[]` vault
-///   5. `[]` vault_ncn_ticket
-///   6. `[]` ncn_vault_ticket
-///   7. `[]` restaking_program_id
-///   8. `[]` vault_program_id
+///   3. `[]` vault
+///   4. `[]` vault_ncn_ticket
+///   5. `[]` ncn_vault_ticket
+///   6. `[]` restaking_program_id
+///   7. `[]` vault_program_id
 #[derive(Clone, Debug, Default)]
 pub struct RegisterVaultBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
     vault_registry: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    weight_table: Option<solana_program::pubkey::Pubkey>,
     vault: Option<solana_program::pubkey::Pubkey>,
     vault_ncn_ticket: Option<solana_program::pubkey::Pubkey>,
     ncn_vault_ticket: Option<solana_program::pubkey::Pubkey>,
@@ -146,11 +138,6 @@ impl RegisterVaultBuilder {
     #[inline(always)]
     pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
         self.ncn = Some(ncn);
-        self
-    }
-    #[inline(always)]
-    pub fn weight_table(&mut self, weight_table: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.weight_table = Some(weight_table);
         self
     }
     #[inline(always)]
@@ -214,7 +201,6 @@ impl RegisterVaultBuilder {
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
             vault_registry: self.vault_registry.expect("vault_registry is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            weight_table: self.weight_table.expect("weight_table is not set"),
             vault: self.vault.expect("vault is not set"),
             vault_ncn_ticket: self.vault_ncn_ticket.expect("vault_ncn_ticket is not set"),
             ncn_vault_ticket: self.ncn_vault_ticket.expect("ncn_vault_ticket is not set"),
@@ -235,8 +221,6 @@ pub struct RegisterVaultCpiAccounts<'a, 'b> {
     pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -260,8 +244,6 @@ pub struct RegisterVaultCpi<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub vault_ncn_ticket: &'b solana_program::account_info::AccountInfo<'a>,
@@ -283,7 +265,6 @@ impl<'a, 'b> RegisterVaultCpi<'a, 'b> {
             restaking_config: accounts.restaking_config,
             vault_registry: accounts.vault_registry,
             ncn: accounts.ncn,
-            weight_table: accounts.weight_table,
             vault: accounts.vault,
             vault_ncn_ticket: accounts.vault_ncn_ticket,
             ncn_vault_ticket: accounts.ncn_vault_ticket,
@@ -324,7 +305,7 @@ impl<'a, 'b> RegisterVaultCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_config.key,
             false,
@@ -335,10 +316,6 @@ impl<'a, 'b> RegisterVaultCpi<'a, 'b> {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.weight_table.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -375,12 +352,11 @@ impl<'a, 'b> RegisterVaultCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(9 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
         account_infos.push(self.vault_registry.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.weight_table.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.vault_ncn_ticket.clone());
         account_infos.push(self.ncn_vault_ticket.clone());
@@ -405,12 +381,11 @@ impl<'a, 'b> RegisterVaultCpi<'a, 'b> {
 ///   0. `[]` restaking_config
 ///   1. `[writable]` vault_registry
 ///   2. `[]` ncn
-///   3. `[]` weight_table
-///   4. `[]` vault
-///   5. `[]` vault_ncn_ticket
-///   6. `[]` ncn_vault_ticket
-///   7. `[]` restaking_program_id
-///   8. `[]` vault_program_id
+///   3. `[]` vault
+///   4. `[]` vault_ncn_ticket
+///   5. `[]` ncn_vault_ticket
+///   6. `[]` restaking_program_id
+///   7. `[]` vault_program_id
 #[derive(Clone, Debug)]
 pub struct RegisterVaultCpiBuilder<'a, 'b> {
     instruction: Box<RegisterVaultCpiBuilderInstruction<'a, 'b>>,
@@ -423,7 +398,6 @@ impl<'a, 'b> RegisterVaultCpiBuilder<'a, 'b> {
             restaking_config: None,
             vault_registry: None,
             ncn: None,
-            weight_table: None,
             vault: None,
             vault_ncn_ticket: None,
             ncn_vault_ticket: None,
@@ -452,14 +426,6 @@ impl<'a, 'b> RegisterVaultCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.ncn = Some(ncn);
-        self
-    }
-    #[inline(always)]
-    pub fn weight_table(
-        &mut self,
-        weight_table: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.weight_table = Some(weight_table);
         self
     }
     #[inline(always)]
@@ -555,11 +521,6 @@ impl<'a, 'b> RegisterVaultCpiBuilder<'a, 'b> {
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            weight_table: self
-                .instruction
-                .weight_table
-                .expect("weight_table is not set"),
-
             vault: self.instruction.vault.expect("vault is not set"),
 
             vault_ncn_ticket: self
@@ -595,7 +556,6 @@ struct RegisterVaultCpiBuilderInstruction<'a, 'b> {
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault_ncn_ticket: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_vault_ticket: Option<&'b solana_program::account_info::AccountInfo<'a>>,

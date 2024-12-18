@@ -101,7 +101,7 @@
       }
     },
     {
-      "name": "SetConfigFees",
+      "name": "AdminSetConfigFees",
       "accounts": [
         {
           "name": "restakingConfig",
@@ -283,11 +283,6 @@
           "isSigner": true
         },
         {
-          "name": "mint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
@@ -329,11 +324,6 @@
           "name": "switchboardFeed",
           "isMut": false,
           "isSigner": true
-        },
-        {
-          "name": "stMint",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -566,11 +556,6 @@
         },
         {
           "name": "ncn",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "weightTable",
           "isMut": false,
           "isSigner": false
         },
