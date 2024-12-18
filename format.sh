@@ -6,7 +6,7 @@ echo "Executing: cargo fmt --all"
 cargo fmt --all
 
 echo "Executing: cargo nextest run --all-features"
-cargo nextest run --all-features
+cargo build-sbf --sbf-out-dir integration_tests/tests/fixtures; SBF_OUT_DIR=integration_tests/tests/fixtures cargo nextest run --all-features
 
 echo "Executing: cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D clippy::integer_division -D clippy::arithmetic_side_effects -D clippy::style -D clippy::perf"
 cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D clippy::integer_division -D clippy::arithmetic_side_effects -D clippy::style -D clippy::perf

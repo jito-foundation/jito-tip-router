@@ -277,6 +277,7 @@ mod tests {
         let expected_total = size_of::<Pubkey>() // ncn
             + size_of::<PodU64>() // ncn_epoch
             + size_of::<PodU64>() // slot_created
+            + size_of::<PodU64>() // vault_count
             + 1 // bump
             + 128 // reserved
             + size_of::<[WeightEntry; MAX_ST_MINTS]>(); // weight table
