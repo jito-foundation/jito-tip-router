@@ -69,7 +69,6 @@ pub async fn cast_vote(
         .epoch(ncn_epoch)
         .instruction();
 
-    let blockhash = client.get_latest_blockhash().await?;
     let tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
     client
         .process_transaction(tx, &[payer, operator_admin])

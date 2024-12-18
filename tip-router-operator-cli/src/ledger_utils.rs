@@ -11,12 +11,9 @@ use solana_ledger::{
     blockstore_processor::{self, ProcessOptions},
 };
 use solana_runtime::{
-    accounts_background_service::AbsRequestSender,
-    bank::Bank,
-    snapshot_bank_utils,
-    snapshot_config::{SnapshotConfig, SnapshotUsage},
+    accounts_background_service::AbsRequestSender, bank::Bank, snapshot_config::SnapshotConfig,
 };
-use solana_sdk::{clock::Slot, genesis_config::GenesisConfig};
+use solana_sdk::clock::Slot;
 
 // TODO: Use Result and propagate errors more gracefully
 // TODO: Handle CLI flag to write snapshot to disk at desired slot

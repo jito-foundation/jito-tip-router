@@ -1,27 +1,13 @@
-use std::{
-    fs::File,
-    io::BufReader,
-    path::PathBuf,
-    str::FromStr,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{str::FromStr, time::Duration};
 
 use anyhow::Result;
 use ellipsis_client::EllipsisClient;
 use log::info;
-use meta_merkle_tree::{
-    generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
-};
-use solana_metrics::datapoint_info;
 use solana_rpc_client::rpc_client::RpcClient;
-use solana_sdk::{
-    pubkey::Pubkey,
-    signer::keypair::{read_keypair_file, Keypair},
-};
+use solana_sdk::{pubkey::Pubkey, signer::keypair::Keypair};
 
 use crate::{
-    get_merkle_root, stake_meta_generator,
+    get_merkle_root,
     tip_router::{cast_vote, get_ncn_config},
     Cli,
 };

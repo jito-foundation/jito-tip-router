@@ -17,7 +17,7 @@ pub struct Cli {
 
     #[arg(short, long)]
     pub ledger_path: PathBuf,
-    
+
     #[arg(short, long)]
     pub account_paths: Option<Vec<PathBuf>>,
 

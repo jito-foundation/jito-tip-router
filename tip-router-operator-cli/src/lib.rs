@@ -1,15 +1,13 @@
-pub mod tip_router;
 pub mod ledger_utils;
 pub mod stake_meta_generator;
+pub mod tip_router;
 pub use crate::cli::{Cli, Commands};
 pub mod cli;
 pub use crate::process_epoch::process_epoch;
 pub mod process_epoch;
 
-use crate::ledger_utils::get_bank_from_ledger;
 use anchor_lang::prelude::*;
-use anchor_lang::prelude::*;
-use jito_tip_distribution_sdk::{TipDistributionAccount, TIP_DISTRIBUTION_SEED};
+use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment::{
     CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
     TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
@@ -17,10 +15,9 @@ use jito_tip_payment::{
 };
 use log::info;
 use meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection;
-use meta_merkle_tree::generated_merkle_tree::MerkleRootGeneratorError;
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use solana_sdk::slot_history::Slot;
-use solana_sdk::{account::AccountSharedData, pubkey::Pubkey, stake_history::Epoch};
+use solana_sdk::{account::AccountSharedData, pubkey::Pubkey};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
@@ -31,6 +28,7 @@ pub enum MerkleRootError {
 }
 
 // TODO where did these come from?
+#[allow(dead_code)]
 pub struct TipPaymentPubkeys {
     config_pda: Pubkey,
     tip_pdas: Vec<Pubkey>,

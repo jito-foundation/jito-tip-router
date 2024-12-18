@@ -11,18 +11,14 @@ use {
     meta_merkle_tree::generated_merkle_tree::{
         Delegation, StakeMeta, StakeMetaCollection, TipDistributionMeta,
     },
-    solana_accounts_db::hardened_unpack::{
-        open_genesis_config, OpenGenesisConfigError, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
-    },
+    solana_accounts_db::hardened_unpack::OpenGenesisConfigError,
     solana_client::client_error::ClientError,
     solana_ledger::{
-        bank_forks_utils::{self, BankForksUtilsError},
-        blockstore::{Blockstore, BlockstoreError},
-        blockstore_options::{AccessType, BlockstoreOptions, LedgerColumnOptions},
-        blockstore_processor::{BlockstoreProcessorError, ProcessOptions},
+        bank_forks_utils::BankForksUtilsError, blockstore::BlockstoreError,
+        blockstore_processor::BlockstoreProcessorError,
     },
     solana_program::{stake_history::StakeHistory, sysvar},
-    solana_runtime::{bank::Bank, snapshot_config::SnapshotConfig, stakes::StakeAccount},
+    solana_runtime::{bank::Bank, stakes::StakeAccount},
     solana_sdk::{
         account::{from_account, ReadableAccount, WritableAccount},
         clock::Slot,
@@ -32,11 +28,9 @@ use {
     std::{
         collections::HashMap,
         fmt::{Debug, Display, Formatter},
-        fs::File,
-        io::{BufWriter, Write},
         mem::size_of,
         path::{Path, PathBuf},
-        sync::{atomic::AtomicBool, Arc},
+        sync::Arc,
     },
     thiserror::Error,
 };
@@ -84,7 +78,7 @@ pub fn generate_stake_meta(
     full_snapshots_path: PathBuf,
     desired_slot: &Slot,
     tip_distribution_program_id: &Pubkey,
-    out_path: &str,
+    _out_path: &str,
     tip_payment_program_id: &Pubkey,
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     info!("Creating bank from ledger path...");
@@ -104,19 +98,6 @@ pub fn generate_stake_meta(
     // write_to_json_file(&stake_meta_coll, out_path)?;
 
     Ok(stake_meta_coll)
-}
-
-fn write_to_json_file(
-    stake_meta_coll: &StakeMetaCollection,
-    out_path: &str,
-) -> Result<(), StakeMetaGeneratorError> {
-    let file = File::create(out_path)?;
-    let mut writer = BufWriter::new(file);
-    let json = serde_json::to_string_pretty(&stake_meta_coll).unwrap();
-    writer.write_all(json.as_bytes())?;
-    writer.flush()?;
-
-    Ok(())
 }
 
 fn tip_distributuon_account_from_tda_wrapper(
