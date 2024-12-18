@@ -22,13 +22,10 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type ReadonlySignerAccount,
-  type TransactionSigner,
   type WritableAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
@@ -55,8 +52,7 @@ export type SwitchboardSetWeightInstruction<
         ? WritableAccount<TAccountWeightTable>
         : TAccountWeightTable,
       TAccountSwitchboardFeed extends string
-        ? ReadonlySignerAccount<TAccountSwitchboardFeed> &
-            IAccountSignerMeta<TAccountSwitchboardFeed>
+        ? ReadonlyAccount<TAccountSwitchboardFeed>
         : TAccountSwitchboardFeed,
       ...TRemainingAccounts,
     ]
@@ -112,7 +108,7 @@ export type SwitchboardSetWeightInput<
 > = {
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
-  switchboardFeed: TransactionSigner<TAccountSwitchboardFeed>;
+  switchboardFeed: Address<TAccountSwitchboardFeed>;
   stMint: SwitchboardSetWeightInstructionDataArgs['stMint'];
   epoch: SwitchboardSetWeightInstructionDataArgs['epoch'];
 };

@@ -323,7 +323,7 @@
         {
           "name": "switchboardFeed",
           "isMut": false,
-          "isSigner": true
+          "isSigner": false
         }
       ],
       "args": [

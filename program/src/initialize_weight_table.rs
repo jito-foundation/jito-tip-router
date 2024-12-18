@@ -4,9 +4,7 @@ use jito_jsm_core::{
     loader::{load_signer, load_system_account, load_system_program},
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
-use jito_tip_router_core::{
-    constants::MAX_REALLOC_BYTES, vault_registry::VaultRegistry, weight_table::WeightTable,
-};
+use jito_tip_router_core::{vault_registry::VaultRegistry, weight_table::WeightTable};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,

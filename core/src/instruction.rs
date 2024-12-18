@@ -87,7 +87,7 @@ pub enum TipRouterInstruction {
     // Sets the weight table for a given epoch
     #[account(0, name = "ncn")]
     #[account(1, writable, name = "weight_table")]
-    #[account(2, signer, name = "switchboard_feed")]
+    #[account(2, name = "switchboard_feed")]
     SwitchboardSetWeight{
         st_mint: Pubkey,
         epoch: u64,

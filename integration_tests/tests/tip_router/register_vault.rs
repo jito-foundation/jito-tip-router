@@ -5,7 +5,7 @@ mod tests {
     use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
     use solana_sdk::{signature::Keypair, signer::Signer};
 
-    use crate::fixtures::{test_builder::TestBuilder, vault_client, TestResult};
+    use crate::fixtures::{test_builder::TestBuilder, TestResult};
 
     #[tokio::test]
     async fn test_register_vault_success() -> TestResult<()> {

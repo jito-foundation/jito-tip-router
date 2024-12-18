@@ -497,10 +497,10 @@ impl TestBuilder {
         for vault_root in test_ncn.vaults.iter() {
             let vault = vault_client.get_vault(&vault_root.vault_pubkey).await?;
 
-            let mint = vault.supported_mint;
+            let st_mint = vault.supported_mint;
 
             tip_router_client
-                .do_admin_set_weight(test_ncn.ncn_root.ncn_pubkey, epoch, mint, WEIGHT)
+                .do_admin_set_weight(test_ncn.ncn_root.ncn_pubkey, epoch, st_mint, WEIGHT)
                 .await?;
         }
 
@@ -515,24 +515,24 @@ impl TestBuilder {
         let mut tip_router_client = self.tip_router_client();
         let mut vault_client = self.vault_program_client();
 
-        const WEIGHT: u128 = 100;
-
         // Not sure if this is needed
         self.warp_slot_incremental(1000).await?;
+
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
 
         let clock = self.clock().await;
         let epoch = clock.epoch;
         tip_router_client
-            .do_full_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch)
+            .do_full_initialize_weight_table(ncn, epoch)
             .await?;
 
         for vault_root in test_ncn.vaults.iter() {
             let vault = vault_client.get_vault(&vault_root.vault_pubkey).await?;
 
-            let mint = vault.supported_mint;
+            let st_mint = vault.supported_mint;
 
             tip_router_client
-                .do_admin_set_weight(test_ncn.ncn_root.ncn_pubkey, epoch, mint, WEIGHT)
+                .do_switchboard_set_weight(ncn, epoch, st_mint)
                 .await?;
         }
 

@@ -39,7 +39,7 @@ impl SwitchboardSetWeight {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.switchboard_feed,
-            true,
+            false,
         ));
         accounts.extend_from_slice(remaining_accounts);
         let mut data = SwitchboardSetWeightInstructionData::new()
@@ -86,7 +86,7 @@ pub struct SwitchboardSetWeightInstructionArgs {
 ///
 ///   0. `[]` ncn
 ///   1. `[writable]` weight_table
-///   2. `[signer]` switchboard_feed
+///   2. `[]` switchboard_feed
 #[derive(Clone, Debug, Default)]
 pub struct SwitchboardSetWeightBuilder {
     ncn: Option<solana_program::pubkey::Pubkey>,
@@ -244,7 +244,7 @@ impl<'a, 'b> SwitchboardSetWeightCpi<'a, 'b> {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.switchboard_feed.key,
-            true,
+            false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_program::instruction::AccountMeta {
@@ -287,7 +287,7 @@ impl<'a, 'b> SwitchboardSetWeightCpi<'a, 'b> {
 ///
 ///   0. `[]` ncn
 ///   1. `[writable]` weight_table
-///   2. `[signer]` switchboard_feed
+///   2. `[]` switchboard_feed
 #[derive(Clone, Debug)]
 pub struct SwitchboardSetWeightCpiBuilder<'a, 'b> {
     instruction: Box<SwitchboardSetWeightCpiBuilderInstruction<'a, 'b>>,

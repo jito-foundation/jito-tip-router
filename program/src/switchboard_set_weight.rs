@@ -49,8 +49,12 @@ pub fn process_switchboard_set_weight(
             return Err(TipRouterError::SwitchboardNotRegistered.into());
         }
 
-        let feed = PullFeedAccountData::parse(switchboard_feed.data.borrow())
-            .map_err(|_| TipRouterError::BadSwitchboardFeed)?;
+        let data = switchboard_feed.data.borrow();
+        msg!("TEST TEST TEST");
+        msg!("{}", registered_switchboard_feed);
+        msg!("{}", data.len());
+        let feed =
+            PullFeedAccountData::parse(data).map_err(|_| TipRouterError::BadSwitchboardFeed)?;
         let price: Decimal = feed.value().ok_or(TipRouterError::BadSwitchboardValue)?;
 
         let current_slot = Clock::get()?.slot;
