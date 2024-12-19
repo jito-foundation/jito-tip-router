@@ -57,7 +57,7 @@ pub async fn cast_vote(
         .0;
 
     let ix = CastVoteBuilder::new()
-        .ncn_config(ncn_config)
+        .config(ncn_config)
         .ballot_box(ballot_box)
         .ncn(ncn)
         .epoch_snapshot(epoch_snapshot)
