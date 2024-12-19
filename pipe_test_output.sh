@@ -18,7 +18,7 @@ To use this script, pipe the output of the test command to it.
 
 Examples:
     cargo nextest run --all-features -E 'not test(bpf)' |& ./pipe_test_output.sh
-    cargo nextest run jito-tip-router-integration-tests::tests tip_router::meta_tests::tests::test_multiple_operators |& ./pipe_test_output.sh
+    jito-tip-router-integration-tests::tests tip_router::meta_tests::tests::test_all_test_ncn_functions |& ./pipe_test_output.sh
 EOF
 }
 

@@ -7,7 +7,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
-use crate::generated::types::WeightEntry;
+use crate::generated::types::{VaultEntry, WeightEntry};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -18,11 +18,14 @@ pub struct WeightTable {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub ncn: Pubkey,
-    pub ncn_epoch: u64,
+    pub epoch: u64,
     pub slot_created: u64,
+    pub vault_count: u64,
     pub bump: u8,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 128],
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub vault_registry: [VaultEntry; 64],
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub table: [WeightEntry; 64],
 }

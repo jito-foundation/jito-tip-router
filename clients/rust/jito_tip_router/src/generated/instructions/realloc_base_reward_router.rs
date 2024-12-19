@@ -8,7 +8,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
 pub struct ReallocBaseRewardRouter {
-    pub ncn_config: solana_program::pubkey::Pubkey,
+    pub config: solana_program::pubkey::Pubkey,
 
     pub base_reward_router: solana_program::pubkey::Pubkey,
 
@@ -34,7 +34,7 @@ impl ReallocBaseRewardRouter {
     ) -> solana_program::instruction::Instruction {
         let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_config,
+            self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -73,7 +73,7 @@ pub struct ReallocBaseRewardRouterInstructionData {
 
 impl ReallocBaseRewardRouterInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 25 }
+        Self { discriminator: 27 }
     }
 }
 
@@ -93,14 +93,14 @@ pub struct ReallocBaseRewardRouterInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
+///   0. `[]` config
 ///   1. `[writable]` base_reward_router
 ///   2. `[]` ncn
 ///   3. `[writable, signer]` payer
 ///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct ReallocBaseRewardRouterBuilder {
-    ncn_config: Option<solana_program::pubkey::Pubkey>,
+    config: Option<solana_program::pubkey::Pubkey>,
     base_reward_router: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     payer: Option<solana_program::pubkey::Pubkey>,
@@ -114,8 +114,8 @@ impl ReallocBaseRewardRouterBuilder {
         Self::default()
     }
     #[inline(always)]
-    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_config = Some(ncn_config);
+    pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.config = Some(config);
         self
     }
     #[inline(always)]
@@ -168,7 +168,7 @@ impl ReallocBaseRewardRouterBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = ReallocBaseRewardRouter {
-            ncn_config: self.ncn_config.expect("ncn_config is not set"),
+            config: self.config.expect("config is not set"),
             base_reward_router: self
                 .base_reward_router
                 .expect("base_reward_router is not set"),
@@ -188,7 +188,7 @@ impl ReallocBaseRewardRouterBuilder {
 
 /// `realloc_base_reward_router` CPI accounts.
 pub struct ReallocBaseRewardRouterCpiAccounts<'a, 'b> {
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -204,7 +204,7 @@ pub struct ReallocBaseRewardRouterCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -225,7 +225,7 @@ impl<'a, 'b> ReallocBaseRewardRouterCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            ncn_config: accounts.ncn_config,
+            config: accounts.config,
             base_reward_router: accounts.base_reward_router,
             ncn: accounts.ncn,
             payer: accounts.payer,
@@ -268,7 +268,7 @@ impl<'a, 'b> ReallocBaseRewardRouterCpi<'a, 'b> {
     ) -> solana_program::entrypoint::ProgramResult {
         let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_config.key,
+            *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -307,7 +307,7 @@ impl<'a, 'b> ReallocBaseRewardRouterCpi<'a, 'b> {
         };
         let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.ncn_config.clone());
+        account_infos.push(self.config.clone());
         account_infos.push(self.base_reward_router.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.payer.clone());
@@ -328,7 +328,7 @@ impl<'a, 'b> ReallocBaseRewardRouterCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
+///   0. `[]` config
 ///   1. `[writable]` base_reward_router
 ///   2. `[]` ncn
 ///   3. `[writable, signer]` payer
@@ -342,7 +342,7 @@ impl<'a, 'b> ReallocBaseRewardRouterCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(ReallocBaseRewardRouterCpiBuilderInstruction {
             __program: program,
-            ncn_config: None,
+            config: None,
             base_reward_router: None,
             ncn: None,
             payer: None,
@@ -353,11 +353,11 @@ impl<'a, 'b> ReallocBaseRewardRouterCpiBuilder<'a, 'b> {
         Self { instruction }
     }
     #[inline(always)]
-    pub fn ncn_config(
+    pub fn config(
         &mut self,
-        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+        config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_config = Some(ncn_config);
+        self.instruction.config = Some(config);
         self
     }
     #[inline(always)]
@@ -438,7 +438,7 @@ impl<'a, 'b> ReallocBaseRewardRouterCpiBuilder<'a, 'b> {
         let instruction = ReallocBaseRewardRouterCpi {
             __program: self.instruction.__program,
 
-            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
+            config: self.instruction.config.expect("config is not set"),
 
             base_reward_router: self
                 .instruction
@@ -465,7 +465,7 @@ impl<'a, 'b> ReallocBaseRewardRouterCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct ReallocBaseRewardRouterCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     base_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,

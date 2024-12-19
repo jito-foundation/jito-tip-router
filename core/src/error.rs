@@ -19,6 +19,8 @@ pub enum TipRouterError {
     CastToImpreciseNumberError,
     #[error("Cast to u64 error")]
     CastToU64Error,
+    #[error("Cast to u128 error")]
+    CastToU128Error,
 
     #[error("Incorrect weight table admin")]
     IncorrectWeightTableAdmin = 0x2200,
@@ -26,8 +28,20 @@ pub enum TipRouterError {
     DuplicateMintsInTable,
     #[error("There are no mints in the table")]
     NoMintsInTable,
+    #[error("Table not initialized")]
+    TableNotInitialized,
+    #[error("Registry not initialized")]
+    RegistryNotInitialized,
+    #[error("There are no vaults in the registry")]
+    NoVaultsInRegistry,
+    #[error("Vault not in weight table registry")]
+    VaultNotInRegistry,
+    #[error("Mint is already in the table")]
+    MintInTable,
     #[error("Too many mints for table")]
     TooManyMintsForTable,
+    #[error("Too many vaults for registry")]
+    TooManyVaultsForRegistry,
     #[error("Weight table already initialized")]
     WeightTableAlreadyInitialized,
     #[error("Cannnot create future weight tables")]
@@ -42,10 +56,10 @@ pub enum TipRouterError {
     ConfigMintsNotUpdated,
     #[error("NCN config vaults are at capacity")]
     ConfigMintListFull,
-    #[error("Tracked mints are at capacity")]
-    TrackedMintListFull,
-    #[error("Tracked mints are locked for the epoch")]
-    TrackedMintsLocked,
+    #[error("Vault Registry mints are at capacity")]
+    VaultRegistryListFull,
+    #[error("Vault registry are locked for the epoch")]
+    VaultRegistryVaultLocked,
     #[error("Vault index already in use by a different mint")]
     VaultIndexAlreadyInUse,
     #[error("Mint Entry not found")]
@@ -119,6 +133,18 @@ pub enum TipRouterError {
     FeeNotActive,
     #[error("No rewards to distribute")]
     NoRewards,
+    #[error("No Feed Weight not set")]
+    NoFeedWeightNotSet,
+    #[error("Switchboard not registered")]
+    SwitchboardNotRegistered,
+    #[error("Bad switchboard feed")]
+    BadSwitchboardFeed,
+    #[error("Bad switchboard value")]
+    BadSwitchboardValue,
+    #[error("Stale switchboard feed")]
+    StaleSwitchboardFeed,
+    #[error("Weight entry needs either a feed or a no feed weight")]
+    NoFeedWeightOrSwitchboardFeed,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

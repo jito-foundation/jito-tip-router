@@ -5,7 +5,7 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    constants::MAX_REALLOC_BYTES, tracked_mints::TrackedMints, weight_table::WeightTable,
+    constants::MAX_REALLOC_BYTES, vault_registry::VaultRegistry, weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -19,7 +19,7 @@ pub fn process_initialize_weight_table(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, tracked_mints, ncn, weight_table, payer, restaking_program, system_program] =
+    let [restaking_config, vault_registry, ncn, weight_table, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -30,7 +30,7 @@ pub fn process_initialize_weight_table(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    TrackedMints::load(program_id, ncn.key, tracked_mints, false)?;
+    VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
@@ -44,13 +44,13 @@ pub fn process_initialize_weight_table(
         ncn.vault_count()
     };
 
-    let tracked_mint_count = {
-        let tracked_mints_data = tracked_mints.data.borrow();
-        let tracked_mints = TrackedMints::try_from_slice_unchecked(&tracked_mints_data)?;
-        tracked_mints.mint_count()
+    let vault_registry_count = {
+        let vault_registry_data = vault_registry.data.borrow();
+        let vault_registry = VaultRegistry::try_from_slice_unchecked(&vault_registry_data)?;
+        vault_registry.vault_count()
     };
 
-    if vault_count != tracked_mint_count {
+    if vault_count != vault_registry_count {
         msg!("Vault count does not match supported mint count");
         return Err(ProgramError::InvalidAccountData);
     }

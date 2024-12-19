@@ -74,8 +74,9 @@ solana-stake-program = { package = "solana-stake-program", git = "https://github
 solana-vote = { package = "solana-vote", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
 solana-security-txt = "1.1.1"
 spl-associated-token-account = { version = "2.3.0", features = ["no-entrypoint"] }
-spl-token = { version = "4.0", features = ["no-entrypoint"] }
+spl-token = { version = "4.0.0", features = ["no-entrypoint"] }
 spl-token-2022 = "=1.0.0"
+switchboard-on-demand = "0.1.0"
 syn = "2.0.72"
 thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }

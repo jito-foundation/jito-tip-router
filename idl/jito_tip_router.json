@@ -3,7 +3,7 @@
   "name": "jito_tip_router",
   "instructions": [
     {
-      "name": "InitializeNCNConfig",
+      "name": "InitializeConfig",
       "accounts": [
         {
           "name": "restakingConfig",
@@ -11,7 +11,7 @@
           "isSigner": false
         },
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": true,
           "isSigner": false
         },
@@ -66,15 +66,15 @@
       }
     },
     {
-      "name": "InitializeTrackedMints",
+      "name": "InitializeVaultRegistry",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "trackedMints",
+          "name": "vaultRegistry",
           "isMut": true,
           "isSigner": false
         },
@@ -101,7 +101,7 @@
       }
     },
     {
-      "name": "SetConfigFees",
+      "name": "AdminSetConfigFees",
       "accounts": [
         {
           "name": "restakingConfig",
@@ -173,7 +173,7 @@
       }
     },
     {
-      "name": "SetNewAdmin",
+      "name": "AdminSetNewAdmin",
       "accounts": [
         {
           "name": "config",
@@ -223,7 +223,7 @@
           "isSigner": false
         },
         {
-          "name": "trackedMints",
+          "name": "vaultRegistry",
           "isMut": false,
           "isSigner": false
         },
@@ -265,7 +265,7 @@
       }
     },
     {
-      "name": "AdminUpdateWeightTable",
+      "name": "AdminSetWeight",
       "accounts": [
         {
           "name": "ncn",
@@ -283,11 +283,6 @@
           "isSigner": true
         },
         {
-          "name": "mint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
@@ -295,12 +290,16 @@
       ],
       "args": [
         {
-          "name": "ncnEpoch",
-          "type": "u64"
+          "name": "stMint",
+          "type": "publicKey"
         },
         {
           "name": "weight",
           "type": "u128"
+        },
+        {
+          "name": "epoch",
+          "type": "u64"
         }
       ],
       "discriminant": {
@@ -309,10 +308,44 @@
       }
     },
     {
+      "name": "SwitchboardSetWeight",
+      "accounts": [
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "weightTable",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "switchboardFeed",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "stMint",
+          "type": "publicKey"
+        },
+        {
+          "name": "epoch",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 6
+      }
+    },
+    {
       "name": "InitializeEpochSnapshot",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -323,11 +356,6 @@
         },
         {
           "name": "ncn",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "trackedMints",
           "isMut": false,
           "isSigner": false
         },
@@ -365,14 +393,14 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 6
+        "value": 7
       }
     },
     {
       "name": "InitializeOperatorSnapshot",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -430,24 +458,19 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 7
+        "value": 8
       }
     },
     {
       "name": "SnapshotVaultOperatorDelegation",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
         {
           "name": "restakingConfig",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "trackedMints",
           "isMut": false,
           "isSigner": false
         },
@@ -515,11 +538,11 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 8
+        "value": 9
       }
     },
     {
-      "name": "RegisterMint",
+      "name": "RegisterVault",
       "accounts": [
         {
           "name": "restakingConfig",
@@ -527,17 +550,12 @@
           "isSigner": false
         },
         {
-          "name": "trackedMints",
+          "name": "vaultRegistry",
           "isMut": true,
           "isSigner": false
         },
         {
           "name": "ncn",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "weightTable",
           "isMut": false,
           "isSigner": false
         },
@@ -570,7 +588,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 9
+        "value": 10
       }
     },
     {
@@ -615,7 +633,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 10
+        "value": 11
       }
     },
     {
@@ -669,7 +687,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 11
+        "value": 12
       }
     },
     {
@@ -714,7 +732,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 12
+        "value": 13
       }
     },
     {
@@ -763,7 +781,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 13
+        "value": 14
       }
     },
     {
@@ -775,7 +793,7 @@
           "isSigner": false
         },
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -812,7 +830,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 14
+        "value": 15
       }
     },
     {
@@ -824,7 +842,7 @@
           "isSigner": false
         },
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -866,7 +884,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 15
+        "value": 16
       }
     },
     {
@@ -878,7 +896,7 @@
           "isSigner": false
         },
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -915,7 +933,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 16
+        "value": 17
       }
     },
     {
@@ -927,7 +945,7 @@
           "isSigner": false
         },
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -964,11 +982,11 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 17
+        "value": 18
       }
     },
     {
-      "name": "SetTrackedMintNcnFeeGroup",
+      "name": "AdminRegisterStMint",
       "accounts": [
         {
           "name": "restakingConfig",
@@ -976,7 +994,7 @@
           "isSigner": false
         },
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -986,12 +1004,12 @@
           "isSigner": false
         },
         {
-          "name": "weightTable",
+          "name": "stMint",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "trackedMints",
+          "name": "vaultRegistry",
           "isMut": true,
           "isSigner": false
         },
@@ -1008,24 +1026,105 @@
       ],
       "args": [
         {
-          "name": "vaultIndex",
+          "name": "ncnFeeGroup",
+          "type": "u8"
+        },
+        {
+          "name": "rewardMultiplierBps",
           "type": "u64"
         },
         {
-          "name": "ncnFeeGroup",
-          "type": "u8"
+          "name": "switchboardFeed",
+          "type": {
+            "option": "publicKey"
+          }
+        },
+        {
+          "name": "noFeedWeight",
+          "type": {
+            "option": "u128"
+          }
         }
       ],
       "discriminant": {
         "type": "u8",
-        "value": 18
+        "value": 19
+      }
+    },
+    {
+      "name": "AdminSetStMint",
+      "accounts": [
+        {
+          "name": "restakingConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultRegistry",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "stMint",
+          "type": "publicKey"
+        },
+        {
+          "name": "ncnFeeGroup",
+          "type": {
+            "option": "u8"
+          }
+        },
+        {
+          "name": "rewardMultiplierBps",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "switchboardFeed",
+          "type": {
+            "option": "publicKey"
+          }
+        },
+        {
+          "name": "noFeedWeight",
+          "type": {
+            "option": "u128"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 20
       }
     },
     {
       "name": "InitializeBallotBox",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -1058,14 +1157,14 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 19
+        "value": 21
       }
     },
     {
       "name": "CastVote",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -1122,14 +1221,14 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 20
+        "value": 22
       }
     },
     {
       "name": "SetMerkleRoot",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": true,
           "isSigner": false
         },
@@ -1205,14 +1304,14 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 21
+        "value": 23
       }
     },
     {
-      "name": "SetTieBreaker",
+      "name": "AdminSetTieBreaker",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -1254,14 +1353,14 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 22
+        "value": 24
       }
     },
     {
       "name": "ReallocBallotBox",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -1294,14 +1393,14 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 23
+        "value": 25
       }
     },
     {
       "name": "ReallocOperatorSnapshot",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -1359,14 +1458,14 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 24
+        "value": 26
       }
     },
     {
       "name": "ReallocBaseRewardRouter",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -1399,14 +1498,14 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 25
+        "value": 27
       }
     },
     {
       "name": "ReallocWeightTable",
       "accounts": [
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -1421,7 +1520,7 @@
           "isSigner": false
         },
         {
-          "name": "trackedMints",
+          "name": "vaultRegistry",
           "isMut": false,
           "isSigner": false
         },
@@ -1444,7 +1543,42 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 26
+        "value": 28
+      }
+    },
+    {
+      "name": "ReallocVaultRegistry",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultRegistry",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 29
       }
     }
   ],
@@ -1939,7 +2073,7 @@
       }
     },
     {
-      "name": "TrackedMints",
+      "name": "VaultRegistry",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1965,7 +2099,18 @@
             "type": {
               "array": [
                 {
-                  "defined": "MintEntry"
+                  "defined": "StMintEntry"
+                },
+                64
+              ]
+            }
+          },
+          {
+            "name": "vaultList",
+            "type": {
+              "array": [
+                {
+                  "defined": "VaultEntry"
                 },
                 64
               ]
@@ -1984,13 +2129,19 @@
             "type": "publicKey"
           },
           {
-            "name": "ncnEpoch",
+            "name": "epoch",
             "type": {
               "defined": "PodU64"
             }
           },
           {
             "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "vaultCount",
             "type": {
               "defined": "PodU64"
             }
@@ -2005,6 +2156,17 @@
               "array": [
                 "u8",
                 128
+              ]
+            }
+          },
+          {
+            "name": "vaultRegistry",
+            "type": {
+              "array": [
+                {
+                  "defined": "VaultEntry"
+                },
+                64
               ]
             }
           },
@@ -2388,19 +2550,13 @@
       }
     },
     {
-      "name": "MintEntry",
+      "name": "StMintEntry",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "stMint",
             "type": "publicKey"
-          },
-          {
-            "name": "vaultIndex",
-            "type": {
-              "defined": "PodU64"
-            }
           },
           {
             "name": "ncnFeeGroup",
@@ -2415,11 +2571,58 @@
             }
           },
           {
+            "name": "switchboardFeed",
+            "type": "publicKey"
+          },
+          {
+            "name": "noFeedWeight",
+            "type": {
+              "defined": "PodU128"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                32
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "stMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "vaultIndex",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slotRegistered",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
               ]
             }
           }
@@ -2432,8 +2635,10 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "mint",
-            "type": "publicKey"
+            "name": "mintEntry",
+            "type": {
+              "defined": "StMintEntry"
+            }
           },
           {
             "name": "weight",
@@ -2522,6 +2727,11 @@
       "msg": "Cast to u64 error"
     },
     {
+      "code": 8456,
+      "name": "CastToU128Error",
+      "msg": "Cast to u128 error"
+    },
+    {
       "code": 8704,
       "name": "IncorrectWeightTableAdmin",
       "msg": "Incorrect weight table admin"
@@ -2538,233 +2748,293 @@
     },
     {
       "code": 8707,
+      "name": "TableNotInitialized",
+      "msg": "Table not initialized"
+    },
+    {
+      "code": 8708,
+      "name": "RegistryNotInitialized",
+      "msg": "Registry not initialized"
+    },
+    {
+      "code": 8709,
+      "name": "NoVaultsInRegistry",
+      "msg": "There are no vaults in the registry"
+    },
+    {
+      "code": 8710,
+      "name": "VaultNotInRegistry",
+      "msg": "Vault not in weight table registry"
+    },
+    {
+      "code": 8711,
+      "name": "MintInTable",
+      "msg": "Mint is already in the table"
+    },
+    {
+      "code": 8712,
       "name": "TooManyMintsForTable",
       "msg": "Too many mints for table"
     },
     {
-      "code": 8708,
+      "code": 8713,
+      "name": "TooManyVaultsForRegistry",
+      "msg": "Too many vaults for registry"
+    },
+    {
+      "code": 8714,
       "name": "WeightTableAlreadyInitialized",
       "msg": "Weight table already initialized"
     },
     {
-      "code": 8709,
+      "code": 8715,
       "name": "CannotCreateFutureWeightTables",
       "msg": "Cannnot create future weight tables"
     },
     {
-      "code": 8710,
+      "code": 8716,
       "name": "WeightMintsDoNotMatchLength",
       "msg": "Weight mints do not match - length"
     },
     {
-      "code": 8711,
+      "code": 8717,
       "name": "WeightMintsDoNotMatchMintHash",
       "msg": "Weight mints do not match - mint hash"
     },
     {
-      "code": 8712,
+      "code": 8718,
       "name": "InvalidMintForWeightTable",
       "msg": "Invalid mint for weight table"
     },
     {
-      "code": 8713,
+      "code": 8719,
       "name": "ConfigMintsNotUpdated",
       "msg": "Config supported mints do not match NCN Vault Count"
     },
     {
-      "code": 8714,
+      "code": 8720,
       "name": "ConfigMintListFull",
       "msg": "NCN config vaults are at capacity"
     },
     {
-      "code": 8715,
-      "name": "TrackedMintListFull",
-      "msg": "Tracked mints are at capacity"
+      "code": 8721,
+      "name": "VaultRegistryListFull",
+      "msg": "Vault Registry mints are at capacity"
     },
     {
-      "code": 8716,
-      "name": "TrackedMintsLocked",
-      "msg": "Tracked mints are locked for the epoch"
+      "code": 8722,
+      "name": "VaultRegistryVaultLocked",
+      "msg": "Vault registry are locked for the epoch"
     },
     {
-      "code": 8717,
+      "code": 8723,
       "name": "VaultIndexAlreadyInUse",
       "msg": "Vault index already in use by a different mint"
     },
     {
-      "code": 8718,
+      "code": 8724,
       "name": "MintEntryNotFound",
       "msg": "Mint Entry not found"
     },
     {
-      "code": 8719,
+      "code": 8725,
       "name": "FeeCapExceeded",
       "msg": "Fee cap exceeded"
     },
     {
-      "code": 8720,
+      "code": 8726,
       "name": "DefaultDaoWallet",
       "msg": "DAO wallet cannot be default"
     },
     {
-      "code": 8721,
+      "code": 8727,
       "name": "IncorrectNcnAdmin",
       "msg": "Incorrect NCN Admin"
     },
     {
-      "code": 8722,
+      "code": 8728,
       "name": "IncorrectNcn",
       "msg": "Incorrect NCN"
     },
     {
-      "code": 8723,
+      "code": 8729,
       "name": "IncorrectFeeAdmin",
       "msg": "Incorrect fee admin"
     },
     {
-      "code": 8724,
+      "code": 8730,
       "name": "WeightTableNotFinalized",
       "msg": "Weight table not finalized"
     },
     {
-      "code": 8725,
+      "code": 8731,
       "name": "WeightNotFound",
       "msg": "Weight not found"
     },
     {
-      "code": 8726,
+      "code": 8732,
       "name": "NoOperators",
       "msg": "No operators in ncn"
     },
     {
-      "code": 8727,
+      "code": 8733,
       "name": "VaultOperatorDelegationFinalized",
       "msg": "Vault operator delegation is already finalized - should not happen"
     },
     {
-      "code": 8728,
+      "code": 8734,
       "name": "OperatorFinalized",
       "msg": "Operator is already finalized - should not happen"
     },
     {
-      "code": 8729,
+      "code": 8735,
       "name": "TooManyVaultOperatorDelegations",
       "msg": "Too many vault operator delegations"
     },
     {
-      "code": 8730,
+      "code": 8736,
       "name": "DuplicateVaultOperatorDelegation",
       "msg": "Duplicate vault operator delegation"
     },
     {
-      "code": 8731,
+      "code": 8737,
       "name": "DuplicateVoteCast",
       "msg": "Duplicate Vote Cast"
     },
     {
-      "code": 8732,
+      "code": 8738,
       "name": "OperatorVotesFull",
       "msg": "Operator votes full"
     },
     {
-      "code": 8733,
+      "code": 8739,
       "name": "BallotTallyFull",
       "msg": "Merkle root tally full"
     },
     {
-      "code": 8734,
+      "code": 8740,
       "name": "BallotTallyNotFoundFull",
       "msg": "Ballot tally not found"
     },
     {
-      "code": 8735,
+      "code": 8741,
       "name": "ConsensusAlreadyReached",
       "msg": "Consensus already reached, cannot change vote"
     },
     {
-      "code": 8736,
+      "code": 8742,
       "name": "ConsensusNotReached",
       "msg": "Consensus not reached"
     },
     {
-      "code": 8737,
+      "code": 8743,
       "name": "EpochSnapshotNotFinalized",
       "msg": "Epoch snapshot not finalized"
     },
     {
-      "code": 8738,
+      "code": 8744,
       "name": "VotingNotValid",
       "msg": "Voting not valid, too many slots after consensus reached"
     },
     {
-      "code": 8739,
+      "code": 8745,
       "name": "TieBreakerAdminInvalid",
       "msg": "Tie breaker admin invalid"
     },
     {
-      "code": 8740,
+      "code": 8746,
       "name": "VotingNotFinalized",
       "msg": "Voting not finalized"
     },
     {
-      "code": 8741,
+      "code": 8747,
       "name": "TieBreakerNotInPriorVotes",
       "msg": "Tie breaking ballot must be one of the prior votes"
     },
     {
-      "code": 8742,
+      "code": 8748,
       "name": "InvalidMerkleProof",
       "msg": "Invalid merkle proof"
     },
     {
-      "code": 8743,
+      "code": 8749,
       "name": "OperatorAdminInvalid",
       "msg": "Operator admin needs to sign its vote"
     },
     {
-      "code": 8744,
+      "code": 8750,
       "name": "InvalidNcnFeeGroup",
       "msg": "Not a valid NCN fee group"
     },
     {
-      "code": 8745,
+      "code": 8751,
       "name": "InvalidBaseFeeGroup",
       "msg": "Not a valid base fee group"
     },
     {
-      "code": 8746,
+      "code": 8752,
       "name": "OperatorRewardListFull",
       "msg": "Operator reward list full"
     },
     {
-      "code": 8747,
+      "code": 8753,
       "name": "OperatorRewardNotFound",
       "msg": "Operator Reward not found"
     },
     {
-      "code": 8748,
+      "code": 8754,
       "name": "VaultRewardNotFound",
       "msg": "Vault Reward not found"
     },
     {
-      "code": 8749,
+      "code": 8755,
       "name": "DestinationMismatch",
       "msg": "Destination mismatch"
     },
     {
-      "code": 8750,
+      "code": 8756,
       "name": "NcnRewardRouteNotFound",
       "msg": "Ncn reward route not found"
     },
     {
-      "code": 8751,
+      "code": 8757,
       "name": "FeeNotActive",
       "msg": "Fee not active"
     },
     {
-      "code": 8752,
+      "code": 8758,
       "name": "NoRewards",
       "msg": "No rewards to distribute"
+    },
+    {
+      "code": 8759,
+      "name": "NoFeedWeightNotSet",
+      "msg": "No Feed Weight not set"
+    },
+    {
+      "code": 8760,
+      "name": "SwitchboardNotRegistered",
+      "msg": "Switchboard not registered"
+    },
+    {
+      "code": 8761,
+      "name": "BadSwitchboardFeed",
+      "msg": "Bad switchboard feed"
+    },
+    {
+      "code": 8762,
+      "name": "BadSwitchboardValue",
+      "msg": "Bad switchboard value"
+    },
+    {
+      "code": 8763,
+      "name": "StaleSwitchboardFeed",
+      "msg": "Stale switchboard feed"
+    },
+    {
+      "code": 8764,
+      "name": "NoFeedWeightOrSwitchboardFeed",
+      "msg": "Weight entry needs either a feed or a no feed weight"
     }
   ],
   "metadata": {

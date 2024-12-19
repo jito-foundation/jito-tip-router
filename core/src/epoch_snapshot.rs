@@ -11,9 +11,8 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    constants::MAX_VAULT_OPERATOR_DELEGATIONS, discriminators::Discriminators,
-    error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup, stake_weight::StakeWeights,
-    weight_table::WeightTable,
+    constants::MAX_VAULTS, discriminators::Discriminators, error::TipRouterError, fees::Fees,
+    ncn_fee_group::NcnFeeGroup, stake_weight::StakeWeights, weight_table::WeightTable,
 };
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
@@ -241,7 +240,7 @@ impl OperatorSnapshot {
         operator_fee_bps: u16,
         vault_operator_delegation_count: u64,
     ) -> Result<Self, TipRouterError> {
-        if vault_operator_delegation_count > MAX_VAULT_OPERATOR_DELEGATIONS as u64 {
+        if vault_operator_delegation_count > MAX_VAULTS as u64 {
             return Err(TipRouterError::TooManyVaultOperatorDelegations);
         }
 
@@ -261,8 +260,7 @@ impl OperatorSnapshot {
             valid_operator_vault_delegations: PodU64::from(0),
             stake_weights: StakeWeights::default(),
             reserved: [0; 256],
-            vault_operator_stake_weight: [VaultOperatorStakeWeight::default();
-                MAX_VAULT_OPERATOR_DELEGATIONS],
+            vault_operator_stake_weight: [VaultOperatorStakeWeight::default(); MAX_VAULTS],
         })
     }
 
@@ -332,7 +330,7 @@ impl OperatorSnapshot {
         operator_fee_bps: u16,
         vault_operator_delegation_count: u64,
     ) -> Result<(), TipRouterError> {
-        if vault_operator_delegation_count > MAX_VAULT_OPERATOR_DELEGATIONS as u64 {
+        if vault_operator_delegation_count > MAX_VAULTS as u64 {
             return Err(TipRouterError::TooManyVaultOperatorDelegations);
         }
         let slot_finalized = if !is_active { current_slot } else { 0 };
@@ -359,8 +357,7 @@ impl OperatorSnapshot {
         self.valid_operator_vault_delegations = PodU64::from(0);
         self.stake_weights = StakeWeights::default();
         self.reserved = [0; 256];
-        self.vault_operator_stake_weight =
-            [VaultOperatorStakeWeight::default(); MAX_VAULT_OPERATOR_DELEGATIONS];
+        self.vault_operator_stake_weight = [VaultOperatorStakeWeight::default(); MAX_VAULTS];
 
         Ok(())
     }
@@ -473,7 +470,7 @@ impl OperatorSnapshot {
         ncn_fee_group: NcnFeeGroup,
         stake_weights: &StakeWeights,
     ) -> Result<(), TipRouterError> {
-        if self.vault_operator_delegations_registered() > MAX_VAULT_OPERATOR_DELEGATIONS as u64 {
+        if self.vault_operator_delegations_registered() > MAX_VAULTS as u64 {
             return Err(TipRouterError::TooManyVaultOperatorDelegations);
         }
 
@@ -632,7 +629,7 @@ mod tests {
             + size_of::<PodU64>() // valid_operator_vault_delegations
             + size_of::<StakeWeights>() // stake_weight
             + 256 // reserved
-            + size_of::<VaultOperatorStakeWeight>() * MAX_VAULT_OPERATOR_DELEGATIONS; // vault_operator_stake_weight
+            + size_of::<VaultOperatorStakeWeight>() * MAX_VAULTS; // vault_operator_stake_weight
 
         assert_eq!(size_of::<OperatorSnapshot>(), expected_total);
     }

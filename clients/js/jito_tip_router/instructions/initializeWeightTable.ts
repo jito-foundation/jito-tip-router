@@ -41,7 +41,7 @@ export function getInitializeWeightTableDiscriminatorBytes() {
 export type InitializeWeightTableInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
-  TAccountTrackedMints extends string | IAccountMeta<string> = string,
+  TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
@@ -57,9 +57,9 @@ export type InitializeWeightTableInstruction<
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
-      TAccountTrackedMints extends string
-        ? ReadonlyAccount<TAccountTrackedMints>
-        : TAccountTrackedMints,
+      TAccountVaultRegistry extends string
+        ? ReadonlyAccount<TAccountVaultRegistry>
+        : TAccountVaultRegistry,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountWeightTable extends string
         ? WritableAccount<TAccountWeightTable>
@@ -119,7 +119,7 @@ export function getInitializeWeightTableInstructionDataCodec(): Codec<
 
 export type InitializeWeightTableInput<
   TAccountRestakingConfig extends string = string,
-  TAccountTrackedMints extends string = string,
+  TAccountVaultRegistry extends string = string,
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
   TAccountPayer extends string = string,
@@ -127,7 +127,7 @@ export type InitializeWeightTableInput<
   TAccountSystemProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
-  trackedMints: Address<TAccountTrackedMints>;
+  vaultRegistry: Address<TAccountVaultRegistry>;
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   payer: TransactionSigner<TAccountPayer>;
@@ -138,7 +138,7 @@ export type InitializeWeightTableInput<
 
 export function getInitializeWeightTableInstruction<
   TAccountRestakingConfig extends string,
-  TAccountTrackedMints extends string,
+  TAccountVaultRegistry extends string,
   TAccountNcn extends string,
   TAccountWeightTable extends string,
   TAccountPayer extends string,
@@ -148,7 +148,7 @@ export function getInitializeWeightTableInstruction<
 >(
   input: InitializeWeightTableInput<
     TAccountRestakingConfig,
-    TAccountTrackedMints,
+    TAccountVaultRegistry,
     TAccountNcn,
     TAccountWeightTable,
     TAccountPayer,
@@ -159,7 +159,7 @@ export function getInitializeWeightTableInstruction<
 ): InitializeWeightTableInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
-  TAccountTrackedMints,
+  TAccountVaultRegistry,
   TAccountNcn,
   TAccountWeightTable,
   TAccountPayer,
@@ -176,7 +176,7 @@ export function getInitializeWeightTableInstruction<
       value: input.restakingConfig ?? null,
       isWritable: false,
     },
-    trackedMints: { value: input.trackedMints ?? null, isWritable: false },
+    vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     weightTable: { value: input.weightTable ?? null, isWritable: true },
     payer: { value: input.payer ?? null, isWritable: true },
@@ -204,7 +204,7 @@ export function getInitializeWeightTableInstruction<
   const instruction = {
     accounts: [
       getAccountMeta(accounts.restakingConfig),
-      getAccountMeta(accounts.trackedMints),
+      getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.payer),
@@ -218,7 +218,7 @@ export function getInitializeWeightTableInstruction<
   } as InitializeWeightTableInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
-    TAccountTrackedMints,
+    TAccountVaultRegistry,
     TAccountNcn,
     TAccountWeightTable,
     TAccountPayer,
@@ -236,7 +236,7 @@ export type ParsedInitializeWeightTableInstruction<
   programAddress: Address<TProgram>;
   accounts: {
     restakingConfig: TAccountMetas[0];
-    trackedMints: TAccountMetas[1];
+    vaultRegistry: TAccountMetas[1];
     ncn: TAccountMetas[2];
     weightTable: TAccountMetas[3];
     payer: TAccountMetas[4];
@@ -268,7 +268,7 @@ export function parseInitializeWeightTableInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       restakingConfig: getNextAccount(),
-      trackedMints: getNextAccount(),
+      vaultRegistry: getNextAccount(),
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
       payer: getNextAccount(),
