@@ -39,9 +39,6 @@ pub fn process_initialize_vault_registry(
         program_id,
         &Rent::get()?,
         MAX_REALLOC_BYTES,
-        // 8_u64
-        //     .checked_add(std::mem::size_of::<VaultRegistry>() as u64)
-        //     .unwrap(),
         &vault_registry_seeds,
     )?;
 
