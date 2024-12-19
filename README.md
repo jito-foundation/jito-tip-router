@@ -3,10 +3,17 @@
 ## Testing Setup
 
 ### Prerequisites
-1. Set up test-ledger: `./tip-router-operator-cli/scripts/setup-test-ledger.sh `
+1. Set up test-ledger: `./tip-router-operator-cli/scripts/setup-test-ledger.sh`
+    * NOTE: This script fails on the edge version of Solana. Currently it's being ran 
+    with `1.18.26`. `sh -c "$(curl -sSfL https://release.anza.xyz/v1.18.26/install)"`
 
 2. Build the tip router program: `cargo build-sbf -- -p jito-tip-router-program`
+    * NOTE: Given the current state of Cargo.lock, you must use a version of cargo-build-sbf that 
+    has a rust toolchain higher than 1.74.0. For now, switch to the edge version to build this.
+    `sh -c "$(curl -sSfL https://release.anza.xyz/v2.2.0/install)"`
 
 3. Copy the program to fixtures: `cp target/deploy/jito_tip_router_program.so integration_tests/tests/fixtures`
 
-3. Run tests: `SBF_OUT_DIR=integration_tests/fixtures cargo test`
+4. Run tests: `SBF_OUT_DIR=integration_tests/fixtures cargo test`
+    * NOTE: If you are still on the edge version of Solana CLI probably best to switch back to
+     `1.18.26`

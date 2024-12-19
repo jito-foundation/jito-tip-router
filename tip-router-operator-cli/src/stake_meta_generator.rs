@@ -87,6 +87,8 @@ pub fn generate_stake_meta(
         account_paths,
         full_snapshots_path,
         desired_slot,
+        // TODO: use CLI arg to determine if it should take snapshot
+        false,
     );
 
     info!("Generating stake_meta_collection object...");

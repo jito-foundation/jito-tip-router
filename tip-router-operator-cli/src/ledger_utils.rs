@@ -3,6 +3,7 @@ use std::{
     sync::{atomic::AtomicBool, Arc},
 };
 
+use log::info;
 use solana_accounts_db::hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE};
 use solana_ledger::{
     bank_forks_utils::{self},
@@ -11,18 +12,20 @@ use solana_ledger::{
     blockstore_processor::{self, ProcessOptions},
 };
 use solana_runtime::{
-    accounts_background_service::AbsRequestSender, bank::Bank, snapshot_config::SnapshotConfig,
+    accounts_background_service::AbsRequestSender, bank::Bank,
+    snapshot_archive_info::SnapshotArchiveInfoGetter, snapshot_bank_utils,
+    snapshot_config::SnapshotConfig, snapshot_utils::SnapshotVersion,
 };
 use solana_sdk::clock::Slot;
 
 // TODO: Use Result and propagate errors more gracefully
-// TODO: Handle CLI flag to write snapshot to disk at desired slot
 /// Create the Bank for a desired slot for given file paths.
 pub fn get_bank_from_ledger(
     ledger_path: &Path,
     account_paths: Vec<PathBuf>,
     full_snapshots_path: PathBuf,
     desired_slot: &Slot,
+    take_snapshot: bool,
 ) -> Arc<Bank> {
     let genesis_config =
         open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE).unwrap();
@@ -109,6 +112,27 @@ pub fn get_bank_from_ledger(
     let bank_forks_read = bank_forks.read().unwrap();
     let working_bank: Arc<Bank> = bank_forks_read.working_bank();
 
+    if take_snapshot {
+        let full_snapshot_archive_info = snapshot_bank_utils::bank_to_full_snapshot_archive(
+            ledger_path,
+            &working_bank,
+            Some(SnapshotVersion::default()),
+            snapshot_config.full_snapshot_archives_dir,
+            snapshot_config.incremental_snapshot_archives_dir,
+            snapshot_config.archive_format,
+            snapshot_config.maximum_full_snapshot_archives_to_retain,
+            snapshot_config.maximum_incremental_snapshot_archives_to_retain,
+        )
+        .unwrap();
+
+        info!(
+            "Successfully created snapshot for slot {}, hash {}: {}",
+            working_bank.slot(),
+            working_bank.hash(),
+            full_snapshot_archive_info.path().display(),
+        );
+    }
+
     assert_eq!(
         working_bank.slot(),
         *desired_slot,
@@ -132,9 +156,17 @@ mod tests {
         let res = get_bank_from_ledger(
             &ledger_path,
             account_paths,
-            full_snapshots_path,
+            full_snapshots_path.clone(),
             &desired_slot,
+            true,
         );
         assert_eq!(res.slot(), desired_slot);
+        // Assert that the snapshot was created
+        let snapshot_path_str = format!("{}/snapshot-{}-{}.tar.zst", full_snapshots_path.to_str().unwrap(), desired_slot, res.get_accounts_hash().unwrap().0.to_string());
+        let snapshot_path = Path::new(&snapshot_path_str);
+        assert!(snapshot_path.exists());
+        // Delete the snapshot
+        std::fs::remove_file(snapshot_path).unwrap();
+        std::fs::remove_dir_all(ledger_path.as_path().join(format!("accounts/snapshot/{}", desired_slot))).unwrap();
     }
 }
