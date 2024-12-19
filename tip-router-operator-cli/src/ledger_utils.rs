@@ -162,11 +162,21 @@ mod tests {
         );
         assert_eq!(res.slot(), desired_slot);
         // Assert that the snapshot was created
-        let snapshot_path_str = format!("{}/snapshot-{}-{}.tar.zst", full_snapshots_path.to_str().unwrap(), desired_slot, res.get_accounts_hash().unwrap().0.to_string());
+        let snapshot_path_str = format!(
+            "{}/snapshot-{}-{}.tar.zst",
+            full_snapshots_path.to_str().unwrap(),
+            desired_slot,
+            res.get_accounts_hash().unwrap().0.to_string()
+        );
         let snapshot_path = Path::new(&snapshot_path_str);
         assert!(snapshot_path.exists());
         // Delete the snapshot
         std::fs::remove_file(snapshot_path).unwrap();
-        std::fs::remove_dir_all(ledger_path.as_path().join(format!("accounts/snapshot/{}", desired_slot))).unwrap();
+        std::fs::remove_dir_all(
+            ledger_path
+                .as_path()
+                .join(format!("accounts/snapshot/{}", desired_slot)),
+        )
+        .unwrap();
     }
 }
