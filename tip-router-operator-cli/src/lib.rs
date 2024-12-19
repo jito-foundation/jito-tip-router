@@ -28,7 +28,6 @@ pub enum MerkleRootError {
 }
 
 // TODO where did these come from?
-#[allow(dead_code)]
 pub struct TipPaymentPubkeys {
     config_pda: Pubkey,
     tip_pdas: Vec<Pubkey>,
