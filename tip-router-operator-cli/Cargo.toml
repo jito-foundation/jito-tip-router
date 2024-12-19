@@ -25,7 +25,6 @@ meta-merkle-tree = { workspace = true }
 solana-accounts-db = { workspace = true }
 solana-client = { workspace = true }
 solana-ledger = { workspace = true }
-solana-metrics = { workspace = true }
 solana-program = { workspace = true }
 solana-rpc-client = { workspace = true }
 solana-runtime = { workspace = true }
