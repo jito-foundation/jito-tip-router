@@ -3008,26 +3008,31 @@
     },
     {
       "code": 8759,
+      "name": "NoFeedWeightNotSet",
+      "msg": "No Feed Weight not set"
+    },
+    {
+      "code": 8760,
       "name": "SwitchboardNotRegistered",
       "msg": "Switchboard not registered"
     },
     {
-      "code": 8760,
+      "code": 8761,
       "name": "BadSwitchboardFeed",
       "msg": "Bad switchboard feed"
     },
     {
-      "code": 8761,
+      "code": 8762,
       "name": "BadSwitchboardValue",
       "msg": "Bad switchboard value"
     },
     {
-      "code": 8762,
+      "code": 8763,
       "name": "StaleSwitchboardFeed",
       "msg": "Stale switchboard feed"
     },
     {
-      "code": 8763,
+      "code": 8764,
       "name": "NoFeedWeightOrSwitchboardFeed",
       "msg": "Weight entry needs either a feed or a no feed weight"
     }

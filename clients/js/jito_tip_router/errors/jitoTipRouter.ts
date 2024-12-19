@@ -142,16 +142,18 @@ export const JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND = 0x2234; // 8756
 export const JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE = 0x2235; // 8757
 /** NoRewards: No rewards to distribute */
 export const JITO_TIP_ROUTER_ERROR__NO_REWARDS = 0x2236; // 8758
+/** NoFeedWeightNotSet: No Feed Weight not set */
+export const JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_NOT_SET = 0x2237; // 8759
 /** SwitchboardNotRegistered: Switchboard not registered */
-export const JITO_TIP_ROUTER_ERROR__SWITCHBOARD_NOT_REGISTERED = 0x2237; // 8759
+export const JITO_TIP_ROUTER_ERROR__SWITCHBOARD_NOT_REGISTERED = 0x2238; // 8760
 /** BadSwitchboardFeed: Bad switchboard feed */
-export const JITO_TIP_ROUTER_ERROR__BAD_SWITCHBOARD_FEED = 0x2238; // 8760
+export const JITO_TIP_ROUTER_ERROR__BAD_SWITCHBOARD_FEED = 0x2239; // 8761
 /** BadSwitchboardValue: Bad switchboard value */
-export const JITO_TIP_ROUTER_ERROR__BAD_SWITCHBOARD_VALUE = 0x2239; // 8761
+export const JITO_TIP_ROUTER_ERROR__BAD_SWITCHBOARD_VALUE = 0x223a; // 8762
 /** StaleSwitchboardFeed: Stale switchboard feed */
-export const JITO_TIP_ROUTER_ERROR__STALE_SWITCHBOARD_FEED = 0x223a; // 8762
+export const JITO_TIP_ROUTER_ERROR__STALE_SWITCHBOARD_FEED = 0x223b; // 8763
 /** NoFeedWeightOrSwitchboardFeed: Weight entry needs either a feed or a no feed weight */
-export const JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_OR_SWITCHBOARD_FEED = 0x223b; // 8763
+export const JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_OR_SWITCHBOARD_FEED = 0x223c; // 8764
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR
@@ -191,6 +193,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW
   | typeof JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR
+  | typeof JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_NOT_SET
   | typeof JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_OR_SWITCHBOARD_FEED
   | typeof JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__NO_OPERATORS
@@ -264,6 +267,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW]: `Modulo Overflow`,
     [JITO_TIP_ROUTER_ERROR__NCN_REWARD_ROUTE_NOT_FOUND]: `Ncn reward route not found`,
     [JITO_TIP_ROUTER_ERROR__NEW_PRECISE_NUMBER_ERROR]: `New precise number error`,
+    [JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_NOT_SET]: `No Feed Weight not set`,
     [JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_OR_SWITCHBOARD_FEED]: `Weight entry needs either a feed or a no feed weight`,
     [JITO_TIP_ROUTER_ERROR__NO_MINTS_IN_TABLE]: `There are no mints in the table`,
     [JITO_TIP_ROUTER_ERROR__NO_OPERATORS]: `No operators in ncn`,

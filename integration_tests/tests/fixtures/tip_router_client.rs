@@ -688,7 +688,6 @@ impl TipRouterClient {
         let (ncn_config, _, _) =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
 
-        //TODO: Check admin is correct
         let admin = self.payer.pubkey();
 
         self.admin_register_st_mint(

@@ -42,6 +42,12 @@ pub fn process_switchboard_set_weight(
     };
 
     let weight: u128 = if registered_switchboard_feed.eq(&Pubkey::default()) {
+        if no_feed_weight == 0 {
+            msg!("No feed weight is not set");
+            return Err(TipRouterError::NoFeedWeightNotSet.into());
+        }
+
+        msg!("No Feed Weight: {}", no_feed_weight);
         no_feed_weight
     } else {
         if registered_switchboard_feed.ne(switchboard_feed.key) {
@@ -73,7 +79,7 @@ pub fn process_switchboard_set_weight(
             .ok_or(TipRouterError::ArithmeticOverflow)?
             .round();
 
-        msg!("Weight: {}", weight);
+        msg!("Oracle Weight: {}", weight);
 
         weight.to_u128().ok_or(TipRouterError::CastToU128Error)?
     };

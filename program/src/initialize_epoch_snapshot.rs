@@ -45,7 +45,7 @@ pub fn process_initialize_epoch_snapshot(
     WeightTable::load(program_id, weight_table, ncn, ncn_epoch, false)?;
 
     // Weight table needs to be finalized before the snapshot can be taken
-    {
+    let vault_count = {
         let weight_table_data = weight_table.data.borrow();
         let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
 
@@ -53,7 +53,9 @@ pub fn process_initialize_epoch_snapshot(
             msg!("Weight table must be finalized before initializing epoch snapshot");
             return Err(TipRouterError::WeightTableNotFinalized.into());
         }
-    }
+
+        weight_table_account.vault_count()
+    };
 
     let (epoch_snapshot_pubkey, epoch_snapshot_bump, mut epoch_snapshot_seeds) =
         EpochSnapshot::find_program_address(program_id, ncn.key, ncn_epoch);
@@ -92,12 +94,6 @@ pub fn process_initialize_epoch_snapshot(
         let ncn_data = ncn.data.borrow();
         let ncn_account = Ncn::try_from_slice_unchecked(&ncn_data)?;
         ncn_account.operator_count()
-    };
-
-    let vault_count: u64 = {
-        let weight_table_data = weight_table.data.borrow();
-        let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
-        weight_table_account.vault_count()
     };
 
     if operator_count == 0 {

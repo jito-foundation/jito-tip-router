@@ -201,21 +201,24 @@ pub enum JitoTipRouterError {
     /// 8758 - No rewards to distribute
     #[error("No rewards to distribute")]
     NoRewards = 0x2236,
-    /// 8759 - Switchboard not registered
+    /// 8759 - No Feed Weight not set
+    #[error("No Feed Weight not set")]
+    NoFeedWeightNotSet = 0x2237,
+    /// 8760 - Switchboard not registered
     #[error("Switchboard not registered")]
-    SwitchboardNotRegistered = 0x2237,
-    /// 8760 - Bad switchboard feed
+    SwitchboardNotRegistered = 0x2238,
+    /// 8761 - Bad switchboard feed
     #[error("Bad switchboard feed")]
-    BadSwitchboardFeed = 0x2238,
-    /// 8761 - Bad switchboard value
+    BadSwitchboardFeed = 0x2239,
+    /// 8762 - Bad switchboard value
     #[error("Bad switchboard value")]
-    BadSwitchboardValue = 0x2239,
-    /// 8762 - Stale switchboard feed
+    BadSwitchboardValue = 0x223A,
+    /// 8763 - Stale switchboard feed
     #[error("Stale switchboard feed")]
-    StaleSwitchboardFeed = 0x223A,
-    /// 8763 - Weight entry needs either a feed or a no feed weight
+    StaleSwitchboardFeed = 0x223B,
+    /// 8764 - Weight entry needs either a feed or a no feed weight
     #[error("Weight entry needs either a feed or a no feed weight")]
-    NoFeedWeightOrSwitchboardFeed = 0x223B,
+    NoFeedWeightOrSwitchboardFeed = 0x223C,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {
