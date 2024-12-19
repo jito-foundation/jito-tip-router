@@ -8,7 +8,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
 pub struct SetMerkleRoot {
-    pub ncn_config: solana_program::pubkey::Pubkey,
+    pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
@@ -40,7 +40,7 @@ impl SetMerkleRoot {
     ) -> solana_program::instruction::Instruction {
         let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.ncn_config,
+            self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -90,7 +90,7 @@ pub struct SetMerkleRootInstructionData {
 
 impl SetMerkleRootInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 21 }
+        Self { discriminator: 23 }
     }
 }
 
@@ -114,7 +114,7 @@ pub struct SetMerkleRootInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[writable]` ncn_config
+///   0. `[writable]` config
 ///   1. `[]` ncn
 ///   2. `[]` ballot_box
 ///   3. `[]` vote_account
@@ -124,7 +124,7 @@ pub struct SetMerkleRootInstructionArgs {
 ///   7. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct SetMerkleRootBuilder {
-    ncn_config: Option<solana_program::pubkey::Pubkey>,
+    config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     ballot_box: Option<solana_program::pubkey::Pubkey>,
     vote_account: Option<solana_program::pubkey::Pubkey>,
@@ -145,8 +145,8 @@ impl SetMerkleRootBuilder {
         Self::default()
     }
     #[inline(always)]
-    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_config = Some(ncn_config);
+    pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.config = Some(config);
         self
     }
     #[inline(always)]
@@ -242,7 +242,7 @@ impl SetMerkleRootBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = SetMerkleRoot {
-            ncn_config: self.ncn_config.expect("ncn_config is not set"),
+            config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             ballot_box: self.ballot_box.expect("ballot_box is not set"),
             vote_account: self.vote_account.expect("vote_account is not set"),
@@ -279,7 +279,7 @@ impl SetMerkleRootBuilder {
 
 /// `set_merkle_root` CPI accounts.
 pub struct SetMerkleRootCpiAccounts<'a, 'b> {
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -301,7 +301,7 @@ pub struct SetMerkleRootCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -328,7 +328,7 @@ impl<'a, 'b> SetMerkleRootCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            ncn_config: accounts.ncn_config,
+            config: accounts.config,
             ncn: accounts.ncn,
             ballot_box: accounts.ballot_box,
             vote_account: accounts.vote_account,
@@ -374,7 +374,7 @@ impl<'a, 'b> SetMerkleRootCpi<'a, 'b> {
     ) -> solana_program::entrypoint::ProgramResult {
         let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.ncn_config.key,
+            *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -423,7 +423,7 @@ impl<'a, 'b> SetMerkleRootCpi<'a, 'b> {
         };
         let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.ncn_config.clone());
+        account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.ballot_box.clone());
         account_infos.push(self.vote_account.clone());
@@ -447,7 +447,7 @@ impl<'a, 'b> SetMerkleRootCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[writable]` ncn_config
+///   0. `[writable]` config
 ///   1. `[]` ncn
 ///   2. `[]` ballot_box
 ///   3. `[]` vote_account
@@ -464,7 +464,7 @@ impl<'a, 'b> SetMerkleRootCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(SetMerkleRootCpiBuilderInstruction {
             __program: program,
-            ncn_config: None,
+            config: None,
             ncn: None,
             ballot_box: None,
             vote_account: None,
@@ -482,11 +482,11 @@ impl<'a, 'b> SetMerkleRootCpiBuilder<'a, 'b> {
         Self { instruction }
     }
     #[inline(always)]
-    pub fn ncn_config(
+    pub fn config(
         &mut self,
-        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+        config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_config = Some(ncn_config);
+        self.instruction.config = Some(config);
         self
     }
     #[inline(always)]
@@ -630,7 +630,7 @@ impl<'a, 'b> SetMerkleRootCpiBuilder<'a, 'b> {
         let instruction = SetMerkleRootCpi {
             __program: self.instruction.__program,
 
-            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
+            config: self.instruction.config.expect("config is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
@@ -672,7 +672,7 @@ impl<'a, 'b> SetMerkleRootCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct SetMerkleRootCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vote_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,

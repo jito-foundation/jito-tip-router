@@ -12,5 +12,5 @@ export * from './epochSnapshot';
 export * from './ncnConfig';
 export * from './ncnRewardRouter';
 export * from './operatorSnapshot';
-export * from './trackedMints';
+export * from './vaultRegistry';
 export * from './weightTable';

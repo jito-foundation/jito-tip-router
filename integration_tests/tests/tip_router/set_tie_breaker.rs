@@ -47,7 +47,7 @@ mod tests {
         fixture.warp_slot_incremental(1000000).await?;
 
         tip_router_client
-            .do_set_tie_breaker(ncn, meta_merkle_root, epoch)
+            .do_admin_set_tie_breaker(ncn, meta_merkle_root, epoch)
             .await?;
 
         let ballot_box = tip_router_client.get_ballot_box(ncn, epoch).await?;

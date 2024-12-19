@@ -4,12 +4,12 @@ use shank::ShankType;
 use solana_program::pubkey::Pubkey;
 use spl_math::precise_number::PreciseNumber;
 
-use crate::error::TipRouterError;
+use crate::{error::TipRouterError, vault_registry::StMintEntry};
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct WeightEntry {
-    mint: Pubkey,
+    mint_entry: StMintEntry,
     weight: PodU128,
     slot_set: PodU64,
     slot_updated: PodU64,
@@ -19,7 +19,7 @@ pub struct WeightEntry {
 impl Default for WeightEntry {
     fn default() -> Self {
         Self {
-            mint: Pubkey::default(),
+            mint_entry: StMintEntry::default(),
             weight: PodU128::default(),
             slot_set: PodU64::default(),
             slot_updated: PodU64::default(),
@@ -29,14 +29,9 @@ impl Default for WeightEntry {
 }
 
 impl WeightEntry {
-    // Weights should have a decimal precision of 1e12
-    // Meaning something has the exchange rate of 1.5, it should be stored as 1.5 * 1e12
-    // This gives us 12 decimal places of precision
-    pub const DECIMAL_PRECISION: u128 = 1_000_000_000_000; // 1e12
-
-    pub fn new(mint: Pubkey) -> Self {
+    pub fn new(mint_entry: StMintEntry) -> Self {
         Self {
-            mint,
+            mint_entry,
             weight: PodU128::from(0),
             slot_set: PodU64::from(0),
             slot_updated: PodU64::from(0),
@@ -46,7 +41,7 @@ impl WeightEntry {
 
     // Empty entry, no mint
     pub fn is_empty(&self) -> bool {
-        self.mint.eq(&Pubkey::default())
+        self.mint_entry.is_empty()
     }
 
     pub fn is_set(&self) -> bool {
@@ -61,8 +56,12 @@ impl WeightEntry {
         self.slot_updated.into()
     }
 
-    pub const fn mint(&self) -> Pubkey {
-        self.mint
+    pub const fn mint_entry(&self) -> &StMintEntry {
+        &self.mint_entry
+    }
+
+    pub const fn st_mint(&self) -> Pubkey {
+        self.mint_entry.st_mint()
     }
 
     pub fn weight(&self) -> u128 {
@@ -90,13 +89,15 @@ mod tests {
     use solana_program::pubkey::Pubkey;
 
     use super::*;
+    use crate::ncn_fee_group::NcnFeeGroup;
 
     #[test]
     fn test_weight_entry_new() {
         let mint = Pubkey::new_unique();
-        let weight_entry = WeightEntry::new(mint);
+        let mint_entry = StMintEntry::new(mint, NcnFeeGroup::default(), 0, Pubkey::new_unique(), 0);
+        let weight_entry = WeightEntry::new(mint_entry);
 
-        assert_eq!(weight_entry.mint(), mint);
+        assert_eq!(weight_entry.st_mint(), mint);
         assert_eq!(weight_entry.weight(), 0);
         assert_eq!(weight_entry.slot_set(), 0);
         assert_eq!(weight_entry.slot_updated(), 0);

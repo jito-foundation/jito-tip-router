@@ -79,7 +79,7 @@ pub struct InitializeBaseRewardRouterInstructionData {
 
 impl InitializeBaseRewardRouterInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 10 }
+        Self { discriminator: 11 }
     }
 }
 

@@ -8,7 +8,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
 pub struct ReallocBallotBox {
-    pub ncn_config: solana_program::pubkey::Pubkey,
+    pub config: solana_program::pubkey::Pubkey,
 
     pub ballot_box: solana_program::pubkey::Pubkey,
 
@@ -34,7 +34,7 @@ impl ReallocBallotBox {
     ) -> solana_program::instruction::Instruction {
         let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_config,
+            self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -71,7 +71,7 @@ pub struct ReallocBallotBoxInstructionData {
 
 impl ReallocBallotBoxInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 23 }
+        Self { discriminator: 25 }
     }
 }
 
@@ -91,14 +91,14 @@ pub struct ReallocBallotBoxInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
+///   0. `[]` config
 ///   1. `[writable]` ballot_box
 ///   2. `[]` ncn
 ///   3. `[writable, signer]` payer
 ///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct ReallocBallotBoxBuilder {
-    ncn_config: Option<solana_program::pubkey::Pubkey>,
+    config: Option<solana_program::pubkey::Pubkey>,
     ballot_box: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     payer: Option<solana_program::pubkey::Pubkey>,
@@ -112,8 +112,8 @@ impl ReallocBallotBoxBuilder {
         Self::default()
     }
     #[inline(always)]
-    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_config = Some(ncn_config);
+    pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.config = Some(config);
         self
     }
     #[inline(always)]
@@ -163,7 +163,7 @@ impl ReallocBallotBoxBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = ReallocBallotBox {
-            ncn_config: self.ncn_config.expect("ncn_config is not set"),
+            config: self.config.expect("config is not set"),
             ballot_box: self.ballot_box.expect("ballot_box is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             payer: self.payer.expect("payer is not set"),
@@ -181,7 +181,7 @@ impl ReallocBallotBoxBuilder {
 
 /// `realloc_ballot_box` CPI accounts.
 pub struct ReallocBallotBoxCpiAccounts<'a, 'b> {
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -197,7 +197,7 @@ pub struct ReallocBallotBoxCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -218,7 +218,7 @@ impl<'a, 'b> ReallocBallotBoxCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            ncn_config: accounts.ncn_config,
+            config: accounts.config,
             ballot_box: accounts.ballot_box,
             ncn: accounts.ncn,
             payer: accounts.payer,
@@ -261,7 +261,7 @@ impl<'a, 'b> ReallocBallotBoxCpi<'a, 'b> {
     ) -> solana_program::entrypoint::ProgramResult {
         let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_config.key,
+            *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -298,7 +298,7 @@ impl<'a, 'b> ReallocBallotBoxCpi<'a, 'b> {
         };
         let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.ncn_config.clone());
+        account_infos.push(self.config.clone());
         account_infos.push(self.ballot_box.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.payer.clone());
@@ -319,7 +319,7 @@ impl<'a, 'b> ReallocBallotBoxCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
+///   0. `[]` config
 ///   1. `[writable]` ballot_box
 ///   2. `[]` ncn
 ///   3. `[writable, signer]` payer
@@ -333,7 +333,7 @@ impl<'a, 'b> ReallocBallotBoxCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(ReallocBallotBoxCpiBuilderInstruction {
             __program: program,
-            ncn_config: None,
+            config: None,
             ballot_box: None,
             ncn: None,
             payer: None,
@@ -344,11 +344,11 @@ impl<'a, 'b> ReallocBallotBoxCpiBuilder<'a, 'b> {
         Self { instruction }
     }
     #[inline(always)]
-    pub fn ncn_config(
+    pub fn config(
         &mut self,
-        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+        config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_config = Some(ncn_config);
+        self.instruction.config = Some(config);
         self
     }
     #[inline(always)]
@@ -429,7 +429,7 @@ impl<'a, 'b> ReallocBallotBoxCpiBuilder<'a, 'b> {
         let instruction = ReallocBallotBoxCpi {
             __program: self.instruction.__program,
 
-            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
+            config: self.instruction.config.expect("config is not set"),
 
             ballot_box: self.instruction.ballot_box.expect("ballot_box is not set"),
 
@@ -453,7 +453,7 @@ impl<'a, 'b> ReallocBallotBoxCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct ReallocBallotBoxCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,

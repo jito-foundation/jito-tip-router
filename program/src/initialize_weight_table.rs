@@ -5,7 +5,7 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    constants::MAX_REALLOC_BYTES, tracked_mints::TrackedMints, weight_table::WeightTable,
+    constants::MAX_REALLOC_BYTES, vault_registry::VaultRegistry, weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -30,7 +30,7 @@ pub fn process_initialize_weight_table(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    TrackedMints::load(program_id, ncn.key, tracked_mints, false)?;
+    VaultRegistry::load(program_id, ncn.key, tracked_mints, false)?;
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
@@ -46,8 +46,8 @@ pub fn process_initialize_weight_table(
 
     let tracked_mint_count = {
         let tracked_mints_data = tracked_mints.data.borrow();
-        let tracked_mints = TrackedMints::try_from_slice_unchecked(&tracked_mints_data)?;
-        tracked_mints.mint_count()
+        let tracked_mints = VaultRegistry::try_from_slice_unchecked(&tracked_mints_data)?;
+        tracked_mints.vault_count()
     };
 
     if vault_count != tracked_mint_count {
@@ -77,8 +77,34 @@ pub fn process_initialize_weight_table(
         program_id,
         &Rent::get()?,
         MAX_REALLOC_BYTES,
+        // 8_u64
+        //     .checked_add(std::mem::size_of::<WeightTable>() as u64)
+        //     .unwrap(),
         &weight_table_seeds,
     )?;
+
+    //TODO take out realloc?
+    // let (vault_count, mint_entries) = {
+    //     let tracked_mints_data = tracked_mints.data.borrow();
+    //     let tracked_mints = VaultRegistry::try_from_slice_unchecked(&tracked_mints_data)?;
+    //     (
+    //         tracked_mints.vault_count(),
+    //         tracked_mints.get_mint_entries(),
+    //     )
+    // };
+
+    // let mut weight_table_data = weight_table.try_borrow_mut_data()?;
+    // weight_table_data[0] = WeightTable::DISCRIMINATOR;
+    // let weight_table_account = WeightTable::try_from_slice_unchecked_mut(&mut weight_table_data)?;
+
+    // weight_table_account.initialize(
+    //     *ncn.key,
+    //     epoch,
+    //     Clock::get()?.slot,
+    //     vault_count,
+    //     weight_table_bump,
+    //     &mint_entries,
+    // )?;
 
     Ok(())
 }

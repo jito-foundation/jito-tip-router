@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const REALLOC_BASE_REWARD_ROUTER_DISCRIMINATOR = 25;
+export const REALLOC_BASE_REWARD_ROUTER_DISCRIMINATOR = 27;
 
 export function getReallocBaseRewardRouterDiscriminatorBytes() {
   return getU8Encoder().encode(REALLOC_BASE_REWARD_ROUTER_DISCRIMINATOR);
@@ -40,7 +40,7 @@ export function getReallocBaseRewardRouterDiscriminatorBytes() {
 
 export type ReallocBaseRewardRouterInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountNcnConfig extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
@@ -52,9 +52,9 @@ export type ReallocBaseRewardRouterInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountNcnConfig extends string
-        ? ReadonlyAccount<TAccountNcnConfig>
-        : TAccountNcnConfig,
+      TAccountConfig extends string
+        ? ReadonlyAccount<TAccountConfig>
+        : TAccountConfig,
       TAccountBaseRewardRouter extends string
         ? WritableAccount<TAccountBaseRewardRouter>
         : TAccountBaseRewardRouter,
@@ -110,13 +110,13 @@ export function getReallocBaseRewardRouterInstructionDataCodec(): Codec<
 }
 
 export type ReallocBaseRewardRouterInput<
-  TAccountNcnConfig extends string = string,
+  TAccountConfig extends string = string,
   TAccountBaseRewardRouter extends string = string,
   TAccountNcn extends string = string,
   TAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  ncnConfig: Address<TAccountNcnConfig>;
+  config: Address<TAccountConfig>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   ncn: Address<TAccountNcn>;
   payer: TransactionSigner<TAccountPayer>;
@@ -125,7 +125,7 @@ export type ReallocBaseRewardRouterInput<
 };
 
 export function getReallocBaseRewardRouterInstruction<
-  TAccountNcnConfig extends string,
+  TAccountConfig extends string,
   TAccountBaseRewardRouter extends string,
   TAccountNcn extends string,
   TAccountPayer extends string,
@@ -133,7 +133,7 @@ export function getReallocBaseRewardRouterInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: ReallocBaseRewardRouterInput<
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountBaseRewardRouter,
     TAccountNcn,
     TAccountPayer,
@@ -142,7 +142,7 @@ export function getReallocBaseRewardRouterInstruction<
   config?: { programAddress?: TProgramAddress }
 ): ReallocBaseRewardRouterInstruction<
   TProgramAddress,
-  TAccountNcnConfig,
+  TAccountConfig,
   TAccountBaseRewardRouter,
   TAccountNcn,
   TAccountPayer,
@@ -154,7 +154,7 @@ export function getReallocBaseRewardRouterInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
+    config: { value: input.config ?? null, isWritable: false },
     baseRewardRouter: {
       value: input.baseRewardRouter ?? null,
       isWritable: true,
@@ -180,7 +180,7 @@ export function getReallocBaseRewardRouterInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.ncnConfig),
+      getAccountMeta(accounts.config),
       getAccountMeta(accounts.baseRewardRouter),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.payer),
@@ -192,7 +192,7 @@ export function getReallocBaseRewardRouterInstruction<
     ),
   } as ReallocBaseRewardRouterInstruction<
     TProgramAddress,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountBaseRewardRouter,
     TAccountNcn,
     TAccountPayer,
@@ -208,7 +208,7 @@ export type ParsedReallocBaseRewardRouterInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    ncnConfig: TAccountMetas[0];
+    config: TAccountMetas[0];
     baseRewardRouter: TAccountMetas[1];
     ncn: TAccountMetas[2];
     payer: TAccountMetas[3];
@@ -238,7 +238,7 @@ export function parseReallocBaseRewardRouterInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      ncnConfig: getNextAccount(),
+      config: getNextAccount(),
       baseRewardRouter: getNextAccount(),
       ncn: getNextAccount(),
       payer: getNextAccount(),

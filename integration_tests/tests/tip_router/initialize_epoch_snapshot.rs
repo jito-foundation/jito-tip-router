@@ -26,7 +26,7 @@ mod tests {
         let weight = 100;
 
         tip_router_client
-            .do_admin_update_weight_table(test_ncn.ncn_root.ncn_pubkey, slot, mint, weight)
+            .do_admin_set_weight(test_ncn.ncn_root.ncn_pubkey, slot, mint, weight)
             .await?;
 
         tip_router_client

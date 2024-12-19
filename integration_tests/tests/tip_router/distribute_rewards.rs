@@ -17,6 +17,7 @@ mod tests {
     async fn test_route_and_distribute_base_rewards() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
+        let mut vault_client = fixture.vault_client();
 
         // Setup with 2 operators for interesting reward splits
         // 10% Operator fee
@@ -54,14 +55,29 @@ mod tests {
             )
             .await?;
 
-        // Set tracked mint NCN fee group
-        let epoch = fixture.clock().await.epoch;
+        // // Set tracked mint NCN fee group
+        // let epoch = fixture.clock().await.epoch;
+        // tip_router_client
+        //     .do_admin_set_st_mint(
+        //         test_ncn.ncn_root.ncn_pubkey,
+        //         1,
+        //         NcnFeeGroup::new(NcnFeeGroupType::JTO),
+        //         epoch,
+        //     )
+        //     .await?;
+        let vault = vault_client
+            .get_vault(&test_ncn.vaults[1].vault_pubkey)
+            .await?;
+        let st_mint = vault.supported_mint;
+
         tip_router_client
-            .do_set_tracked_mint_ncn_fee_group(
+            .do_admin_set_st_mint(
                 test_ncn.ncn_root.ncn_pubkey,
-                1,
-                NcnFeeGroup::new(NcnFeeGroupType::JTO),
-                epoch,
+                st_mint,
+                Some(NcnFeeGroup::jto()),
+                None,
+                None,
+                None,
             )
             .await?;
 

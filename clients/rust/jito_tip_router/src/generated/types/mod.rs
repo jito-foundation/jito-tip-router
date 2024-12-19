@@ -12,20 +12,21 @@ pub(crate) mod r#config_admin_role;
 pub(crate) mod r#fee;
 pub(crate) mod r#fee_config;
 pub(crate) mod r#fees;
-pub(crate) mod r#mint_entry;
 pub(crate) mod r#ncn_fee_group;
 pub(crate) mod r#ncn_fee_group_weight;
 pub(crate) mod r#ncn_reward_route;
 pub(crate) mod r#operator_vote;
+pub(crate) mod r#st_mint_entry;
 pub(crate) mod r#stake_weights;
+pub(crate) mod r#vault_entry;
 pub(crate) mod r#vault_operator_stake_weight;
 pub(crate) mod r#vault_reward_route;
 pub(crate) mod r#weight_entry;
 
 pub use self::{
     r#ballot::*, r#ballot_tally::*, r#base_fee_group::*, r#base_reward_router_rewards::*,
-    r#config_admin_role::*, r#fee::*, r#fee_config::*, r#fees::*, r#mint_entry::*,
-    r#ncn_fee_group::*, r#ncn_fee_group_weight::*, r#ncn_reward_route::*, r#operator_vote::*,
-    r#stake_weights::*, r#vault_operator_stake_weight::*, r#vault_reward_route::*,
-    r#weight_entry::*,
+    r#config_admin_role::*, r#fee::*, r#fee_config::*, r#fees::*, r#ncn_fee_group::*,
+    r#ncn_fee_group_weight::*, r#ncn_reward_route::*, r#operator_vote::*, r#st_mint_entry::*,
+    r#stake_weights::*, r#vault_entry::*, r#vault_operator_stake_weight::*,
+    r#vault_reward_route::*, r#weight_entry::*,
 };

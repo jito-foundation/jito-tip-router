@@ -4,6 +4,7 @@ use solana_program_test::BanksClientError;
 use solana_sdk::transaction::TransactionError;
 use thiserror::Error;
 
+pub mod generated_switchboard_accounts;
 pub mod restaking_client;
 pub mod test_builder;
 pub mod tip_distribution_client;

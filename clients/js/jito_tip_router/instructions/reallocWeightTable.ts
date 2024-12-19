@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const REALLOC_WEIGHT_TABLE_DISCRIMINATOR = 26;
+export const REALLOC_WEIGHT_TABLE_DISCRIMINATOR = 28;
 
 export function getReallocWeightTableDiscriminatorBytes() {
   return getU8Encoder().encode(REALLOC_WEIGHT_TABLE_DISCRIMINATOR);
@@ -40,10 +40,10 @@ export function getReallocWeightTableDiscriminatorBytes() {
 
 export type ReallocWeightTableInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountNcnConfig extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountTrackedMints extends string | IAccountMeta<string> = string,
+  TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
@@ -53,16 +53,16 @@ export type ReallocWeightTableInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountNcnConfig extends string
-        ? ReadonlyAccount<TAccountNcnConfig>
-        : TAccountNcnConfig,
+      TAccountConfig extends string
+        ? ReadonlyAccount<TAccountConfig>
+        : TAccountConfig,
       TAccountWeightTable extends string
         ? WritableAccount<TAccountWeightTable>
         : TAccountWeightTable,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountTrackedMints extends string
-        ? ReadonlyAccount<TAccountTrackedMints>
-        : TAccountTrackedMints,
+      TAccountVaultRegistry extends string
+        ? ReadonlyAccount<TAccountVaultRegistry>
+        : TAccountVaultRegistry,
       TAccountPayer extends string
         ? WritableSignerAccount<TAccountPayer> &
             IAccountSignerMeta<TAccountPayer>
@@ -109,46 +109,46 @@ export function getReallocWeightTableInstructionDataCodec(): Codec<
 }
 
 export type ReallocWeightTableInput<
-  TAccountNcnConfig extends string = string,
+  TAccountConfig extends string = string,
   TAccountWeightTable extends string = string,
   TAccountNcn extends string = string,
-  TAccountTrackedMints extends string = string,
+  TAccountVaultRegistry extends string = string,
   TAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  ncnConfig: Address<TAccountNcnConfig>;
+  config: Address<TAccountConfig>;
   weightTable: Address<TAccountWeightTable>;
   ncn: Address<TAccountNcn>;
-  trackedMints: Address<TAccountTrackedMints>;
+  vaultRegistry: Address<TAccountVaultRegistry>;
   payer: TransactionSigner<TAccountPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: ReallocWeightTableInstructionDataArgs['epoch'];
 };
 
 export function getReallocWeightTableInstruction<
-  TAccountNcnConfig extends string,
+  TAccountConfig extends string,
   TAccountWeightTable extends string,
   TAccountNcn extends string,
-  TAccountTrackedMints extends string,
+  TAccountVaultRegistry extends string,
   TAccountPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: ReallocWeightTableInput<
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountWeightTable,
     TAccountNcn,
-    TAccountTrackedMints,
+    TAccountVaultRegistry,
     TAccountPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): ReallocWeightTableInstruction<
   TProgramAddress,
-  TAccountNcnConfig,
+  TAccountConfig,
   TAccountWeightTable,
   TAccountNcn,
-  TAccountTrackedMints,
+  TAccountVaultRegistry,
   TAccountPayer,
   TAccountSystemProgram
 > {
@@ -158,10 +158,10 @@ export function getReallocWeightTableInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
+    config: { value: input.config ?? null, isWritable: false },
     weightTable: { value: input.weightTable ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    trackedMints: { value: input.trackedMints ?? null, isWritable: false },
+    vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: false },
     payer: { value: input.payer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
@@ -182,10 +182,10 @@ export function getReallocWeightTableInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.ncnConfig),
+      getAccountMeta(accounts.config),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.trackedMints),
+      getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.systemProgram),
     ],
@@ -195,10 +195,10 @@ export function getReallocWeightTableInstruction<
     ),
   } as ReallocWeightTableInstruction<
     TProgramAddress,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountWeightTable,
     TAccountNcn,
-    TAccountTrackedMints,
+    TAccountVaultRegistry,
     TAccountPayer,
     TAccountSystemProgram
   >;
@@ -212,10 +212,10 @@ export type ParsedReallocWeightTableInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    ncnConfig: TAccountMetas[0];
+    config: TAccountMetas[0];
     weightTable: TAccountMetas[1];
     ncn: TAccountMetas[2];
-    trackedMints: TAccountMetas[3];
+    vaultRegistry: TAccountMetas[3];
     payer: TAccountMetas[4];
     systemProgram: TAccountMetas[5];
   };
@@ -243,10 +243,10 @@ export function parseReallocWeightTableInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      ncnConfig: getNextAccount(),
+      config: getNextAccount(),
       weightTable: getNextAccount(),
       ncn: getNextAccount(),
-      trackedMints: getNextAccount(),
+      vaultRegistry: getNextAccount(),
       payer: getNextAccount(),
       systemProgram: getNextAccount(),
     },

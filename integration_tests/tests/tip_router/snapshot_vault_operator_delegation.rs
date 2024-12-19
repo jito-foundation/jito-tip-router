@@ -29,7 +29,7 @@ mod tests {
         let weight = 100;
 
         tip_router_client
-            .do_admin_update_weight_table(ncn, epoch, mint, weight)
+            .do_admin_set_weight(ncn, epoch, mint, weight)
             .await?;
 
         tip_router_client

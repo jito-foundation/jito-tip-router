@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_BALLOT_BOX_DISCRIMINATOR = 19;
+export const INITIALIZE_BALLOT_BOX_DISCRIMINATOR = 21;
 
 export function getInitializeBallotBoxDiscriminatorBytes() {
   return getU8Encoder().encode(INITIALIZE_BALLOT_BOX_DISCRIMINATOR);
@@ -40,7 +40,7 @@ export function getInitializeBallotBoxDiscriminatorBytes() {
 
 export type InitializeBallotBoxInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountNcnConfig extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
@@ -52,9 +52,9 @@ export type InitializeBallotBoxInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountNcnConfig extends string
-        ? ReadonlyAccount<TAccountNcnConfig>
-        : TAccountNcnConfig,
+      TAccountConfig extends string
+        ? ReadonlyAccount<TAccountConfig>
+        : TAccountConfig,
       TAccountBallotBox extends string
         ? WritableAccount<TAccountBallotBox>
         : TAccountBallotBox,
@@ -108,13 +108,13 @@ export function getInitializeBallotBoxInstructionDataCodec(): Codec<
 }
 
 export type InitializeBallotBoxInput<
-  TAccountNcnConfig extends string = string,
+  TAccountConfig extends string = string,
   TAccountBallotBox extends string = string,
   TAccountNcn extends string = string,
   TAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  ncnConfig: Address<TAccountNcnConfig>;
+  config: Address<TAccountConfig>;
   ballotBox: Address<TAccountBallotBox>;
   ncn: Address<TAccountNcn>;
   payer: TransactionSigner<TAccountPayer>;
@@ -123,7 +123,7 @@ export type InitializeBallotBoxInput<
 };
 
 export function getInitializeBallotBoxInstruction<
-  TAccountNcnConfig extends string,
+  TAccountConfig extends string,
   TAccountBallotBox extends string,
   TAccountNcn extends string,
   TAccountPayer extends string,
@@ -131,7 +131,7 @@ export function getInitializeBallotBoxInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeBallotBoxInput<
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
     TAccountPayer,
@@ -140,7 +140,7 @@ export function getInitializeBallotBoxInstruction<
   config?: { programAddress?: TProgramAddress }
 ): InitializeBallotBoxInstruction<
   TProgramAddress,
-  TAccountNcnConfig,
+  TAccountConfig,
   TAccountBallotBox,
   TAccountNcn,
   TAccountPayer,
@@ -152,7 +152,7 @@ export function getInitializeBallotBoxInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
+    config: { value: input.config ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     payer: { value: input.payer ?? null, isWritable: true },
@@ -175,7 +175,7 @@ export function getInitializeBallotBoxInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.ncnConfig),
+      getAccountMeta(accounts.config),
       getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.payer),
@@ -187,7 +187,7 @@ export function getInitializeBallotBoxInstruction<
     ),
   } as InitializeBallotBoxInstruction<
     TProgramAddress,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
     TAccountPayer,
@@ -203,7 +203,7 @@ export type ParsedInitializeBallotBoxInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    ncnConfig: TAccountMetas[0];
+    config: TAccountMetas[0];
     ballotBox: TAccountMetas[1];
     ncn: TAccountMetas[2];
     payer: TAccountMetas[3];
@@ -233,7 +233,7 @@ export function parseInitializeBallotBoxInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      ncnConfig: getNextAccount(),
+      config: getNextAccount(),
       ballotBox: getNextAccount(),
       ncn: getNextAccount(),
       payer: getNextAccount(),
