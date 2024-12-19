@@ -7,7 +7,6 @@ use jito_tip_router_core::{
     loaders::load_ncn_epoch,
     ncn_config::NcnConfig,
     stake_weight::StakeWeights,
-    tracked_mints::TrackedMints,
     weight_table::WeightTable,
 };
 use jito_vault_core::{
@@ -24,7 +23,7 @@ pub fn process_snapshot_vault_operator_delegation(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, restaking_config, tracked_mints, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
+    let [ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -69,7 +68,6 @@ pub fn process_snapshot_vault_operator_delegation(
     let current_slot = Clock::get()?.slot;
     let (_, ncn_epoch_length) = load_ncn_epoch(restaking_config, current_slot, None)?;
 
-    TrackedMints::load(program_id, ncn.key, tracked_mints, false)?;
     WeightTable::load(program_id, weight_table, ncn, epoch, false)?;
     EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, true)?;
     OperatorSnapshot::load(
@@ -110,32 +108,32 @@ pub fn process_snapshot_vault_operator_delegation(
         vault_ncn_okay && ncn_vault_okay && !delegation_dne
     };
 
-    let (ncn_fee_group, reward_multiplier_bps) = {
-        let tracked_mints_data = tracked_mints.data.borrow();
-        let tracked_mints_account = TrackedMints::try_from_slice_unchecked(&tracked_mints_data)?;
-        let mint_entry = tracked_mints_account.get_mint_entry(vault_index)?;
-
-        (
-            mint_entry.ncn_fee_group(),
-            mint_entry.reward_multiplier_bps(),
-        )
-    };
-
-    let total_stake_weight: u128 = if is_active {
-        let vault_operator_delegation_data = vault_operator_delegation.data.borrow();
-        let vault_operator_delegation_account =
-            VaultOperatorDelegation::try_from_slice_unchecked(&vault_operator_delegation_data)?;
-
+    let (ncn_fee_group, reward_multiplier_bps, total_stake_weight) = {
         let weight_table_data = weight_table.data.borrow();
         let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
+        let weight_entry = weight_table_account.get_weight_entry(&st_mint)?;
 
-        OperatorSnapshot::calculate_total_stake_weight(
-            vault_operator_delegation_account,
-            weight_table_account,
-            &st_mint,
-        )?
-    } else {
-        0u128
+        weight_table_account.check_registry_for_vault(vault_index)?;
+
+        let total_stake_weight: u128 = if is_active {
+            let vault_operator_delegation_data = vault_operator_delegation.data.borrow();
+            let vault_operator_delegation_account =
+                VaultOperatorDelegation::try_from_slice_unchecked(&vault_operator_delegation_data)?;
+
+            OperatorSnapshot::calculate_total_stake_weight(
+                vault_operator_delegation_account,
+                weight_table_account,
+                &st_mint,
+            )?
+        } else {
+            0u128
+        };
+
+        (
+            weight_entry.mint_entry().ncn_fee_group(),
+            weight_entry.mint_entry().reward_multiplier_bps(),
+            total_stake_weight,
+        )
     };
 
     // Increment vault operator delegation

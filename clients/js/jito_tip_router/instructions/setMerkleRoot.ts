@@ -36,7 +36,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const SET_MERKLE_ROOT_DISCRIMINATOR = 21;
+export const SET_MERKLE_ROOT_DISCRIMINATOR = 23;
 
 export function getSetMerkleRootDiscriminatorBytes() {
   return getU8Encoder().encode(SET_MERKLE_ROOT_DISCRIMINATOR);
@@ -44,7 +44,7 @@ export function getSetMerkleRootDiscriminatorBytes() {
 
 export type SetMerkleRootInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountNcnConfig extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountVoteAccount extends string | IAccountMeta<string> = string,
@@ -57,9 +57,9 @@ export type SetMerkleRootInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountNcnConfig extends string
-        ? WritableAccount<TAccountNcnConfig>
-        : TAccountNcnConfig,
+      TAccountConfig extends string
+        ? WritableAccount<TAccountConfig>
+        : TAccountConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountBallotBox extends string
         ? ReadonlyAccount<TAccountBallotBox>
@@ -136,7 +136,7 @@ export function getSetMerkleRootInstructionDataCodec(): Codec<
 }
 
 export type SetMerkleRootInput<
-  TAccountNcnConfig extends string = string,
+  TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountBallotBox extends string = string,
   TAccountVoteAccount extends string = string,
@@ -145,7 +145,7 @@ export type SetMerkleRootInput<
   TAccountTipDistributionProgram extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
-  ncnConfig: Address<TAccountNcnConfig>;
+  config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   ballotBox: Address<TAccountBallotBox>;
   voteAccount: Address<TAccountVoteAccount>;
@@ -161,7 +161,7 @@ export type SetMerkleRootInput<
 };
 
 export function getSetMerkleRootInstruction<
-  TAccountNcnConfig extends string,
+  TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountBallotBox extends string,
   TAccountVoteAccount extends string,
@@ -172,7 +172,7 @@ export function getSetMerkleRootInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: SetMerkleRootInput<
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountNcn,
     TAccountBallotBox,
     TAccountVoteAccount,
@@ -184,7 +184,7 @@ export function getSetMerkleRootInstruction<
   config?: { programAddress?: TProgramAddress }
 ): SetMerkleRootInstruction<
   TProgramAddress,
-  TAccountNcnConfig,
+  TAccountConfig,
   TAccountNcn,
   TAccountBallotBox,
   TAccountVoteAccount,
@@ -199,7 +199,7 @@ export function getSetMerkleRootInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: true },
+    config: { value: input.config ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: false },
     voteAccount: { value: input.voteAccount ?? null, isWritable: false },
@@ -231,7 +231,7 @@ export function getSetMerkleRootInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.ncnConfig),
+      getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.voteAccount),
@@ -246,7 +246,7 @@ export function getSetMerkleRootInstruction<
     ),
   } as SetMerkleRootInstruction<
     TProgramAddress,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountNcn,
     TAccountBallotBox,
     TAccountVoteAccount,
@@ -265,7 +265,7 @@ export type ParsedSetMerkleRootInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    ncnConfig: TAccountMetas[0];
+    config: TAccountMetas[0];
     ncn: TAccountMetas[1];
     ballotBox: TAccountMetas[2];
     voteAccount: TAccountMetas[3];
@@ -298,7 +298,7 @@ export function parseSetMerkleRootInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      ncnConfig: getNextAccount(),
+      config: getNextAccount(),
       ncn: getNextAccount(),
       ballotBox: getNextAccount(),
       voteAccount: getNextAccount(),

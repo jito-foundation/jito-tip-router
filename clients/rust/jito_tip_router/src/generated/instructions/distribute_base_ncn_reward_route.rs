@@ -10,7 +10,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 pub struct DistributeBaseNcnRewardRoute {
     pub restaking_config: solana_program::pubkey::Pubkey,
 
-    pub ncn_config: solana_program::pubkey::Pubkey,
+    pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
@@ -42,7 +42,7 @@ impl DistributeBaseNcnRewardRoute {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_config,
+            self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -86,7 +86,7 @@ pub struct DistributeBaseNcnRewardRouteInstructionData {
 
 impl DistributeBaseNcnRewardRouteInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 15 }
+        Self { discriminator: 16 }
     }
 }
 
@@ -108,7 +108,7 @@ pub struct DistributeBaseNcnRewardRouteInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[]` ncn_config
+///   1. `[]` config
 ///   2. `[]` ncn
 ///   3. `[]` operator
 ///   4. `[writable]` base_reward_router
@@ -117,7 +117,7 @@ pub struct DistributeBaseNcnRewardRouteInstructionArgs {
 #[derive(Clone, Debug, Default)]
 pub struct DistributeBaseNcnRewardRouteBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
-    ncn_config: Option<solana_program::pubkey::Pubkey>,
+    config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
     base_reward_router: Option<solana_program::pubkey::Pubkey>,
@@ -141,8 +141,8 @@ impl DistributeBaseNcnRewardRouteBuilder {
         self
     }
     #[inline(always)]
-    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_config = Some(ncn_config);
+    pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.config = Some(config);
         self
     }
     #[inline(always)]
@@ -211,7 +211,7 @@ impl DistributeBaseNcnRewardRouteBuilder {
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = DistributeBaseNcnRewardRoute {
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
-            ncn_config: self.ncn_config.expect("ncn_config is not set"),
+            config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             operator: self.operator.expect("operator is not set"),
             base_reward_router: self
@@ -240,7 +240,7 @@ impl DistributeBaseNcnRewardRouteBuilder {
 pub struct DistributeBaseNcnRewardRouteCpiAccounts<'a, 'b> {
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -260,7 +260,7 @@ pub struct DistributeBaseNcnRewardRouteCpi<'a, 'b> {
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -284,7 +284,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
         Self {
             __program: program,
             restaking_config: accounts.restaking_config,
-            ncn_config: accounts.ncn_config,
+            config: accounts.config,
             ncn: accounts.ncn,
             operator: accounts.operator,
             base_reward_router: accounts.base_reward_router,
@@ -332,7 +332,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_config.key,
+            *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -376,7 +376,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
         let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
-        account_infos.push(self.ncn_config.clone());
+        account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
         account_infos.push(self.base_reward_router.clone());
@@ -399,7 +399,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[]` ncn_config
+///   1. `[]` config
 ///   2. `[]` ncn
 ///   3. `[]` operator
 ///   4. `[writable]` base_reward_router
@@ -415,7 +415,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
         let instruction = Box::new(DistributeBaseNcnRewardRouteCpiBuilderInstruction {
             __program: program,
             restaking_config: None,
-            ncn_config: None,
+            config: None,
             ncn: None,
             operator: None,
             base_reward_router: None,
@@ -436,11 +436,11 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn ncn_config(
+    pub fn config(
         &mut self,
-        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+        config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_config = Some(ncn_config);
+        self.instruction.config = Some(config);
         self
     }
     #[inline(always)]
@@ -547,7 +547,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
                 .restaking_config
                 .expect("restaking_config is not set"),
 
-            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
+            config: self.instruction.config.expect("config is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
@@ -580,7 +580,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
 struct DistributeBaseNcnRewardRouteCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     base_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,

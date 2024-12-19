@@ -33,6 +33,9 @@ pub enum JitoTipRouterError {
     /// 8455 - Cast to u64 error
     #[error("Cast to u64 error")]
     CastToU64Error = 0x2107,
+    /// 8456 - Cast to u128 error
+    #[error("Cast to u128 error")]
+    CastToU128Error = 0x2108,
     /// 8704 - Incorrect weight table admin
     #[error("Incorrect weight table admin")]
     IncorrectWeightTableAdmin = 0x2200,
@@ -42,144 +45,180 @@ pub enum JitoTipRouterError {
     /// 8706 - There are no mints in the table
     #[error("There are no mints in the table")]
     NoMintsInTable = 0x2202,
-    /// 8707 - Too many mints for table
+    /// 8707 - Table not initialized
+    #[error("Table not initialized")]
+    TableNotInitialized = 0x2203,
+    /// 8708 - Registry not initialized
+    #[error("Registry not initialized")]
+    RegistryNotInitialized = 0x2204,
+    /// 8709 - There are no vaults in the registry
+    #[error("There are no vaults in the registry")]
+    NoVaultsInRegistry = 0x2205,
+    /// 8710 - Vault not in weight table registry
+    #[error("Vault not in weight table registry")]
+    VaultNotInRegistry = 0x2206,
+    /// 8711 - Mint is already in the table
+    #[error("Mint is already in the table")]
+    MintInTable = 0x2207,
+    /// 8712 - Too many mints for table
     #[error("Too many mints for table")]
-    TooManyMintsForTable = 0x2203,
-    /// 8708 - Weight table already initialized
+    TooManyMintsForTable = 0x2208,
+    /// 8713 - Too many vaults for registry
+    #[error("Too many vaults for registry")]
+    TooManyVaultsForRegistry = 0x2209,
+    /// 8714 - Weight table already initialized
     #[error("Weight table already initialized")]
-    WeightTableAlreadyInitialized = 0x2204,
-    /// 8709 - Cannnot create future weight tables
+    WeightTableAlreadyInitialized = 0x220A,
+    /// 8715 - Cannnot create future weight tables
     #[error("Cannnot create future weight tables")]
-    CannotCreateFutureWeightTables = 0x2205,
-    /// 8710 - Weight mints do not match - length
+    CannotCreateFutureWeightTables = 0x220B,
+    /// 8716 - Weight mints do not match - length
     #[error("Weight mints do not match - length")]
-    WeightMintsDoNotMatchLength = 0x2206,
-    /// 8711 - Weight mints do not match - mint hash
+    WeightMintsDoNotMatchLength = 0x220C,
+    /// 8717 - Weight mints do not match - mint hash
     #[error("Weight mints do not match - mint hash")]
-    WeightMintsDoNotMatchMintHash = 0x2207,
-    /// 8712 - Invalid mint for weight table
+    WeightMintsDoNotMatchMintHash = 0x220D,
+    /// 8718 - Invalid mint for weight table
     #[error("Invalid mint for weight table")]
-    InvalidMintForWeightTable = 0x2208,
-    /// 8713 - Config supported mints do not match NCN Vault Count
+    InvalidMintForWeightTable = 0x220E,
+    /// 8719 - Config supported mints do not match NCN Vault Count
     #[error("Config supported mints do not match NCN Vault Count")]
-    ConfigMintsNotUpdated = 0x2209,
-    /// 8714 - NCN config vaults are at capacity
+    ConfigMintsNotUpdated = 0x220F,
+    /// 8720 - NCN config vaults are at capacity
     #[error("NCN config vaults are at capacity")]
-    ConfigMintListFull = 0x220A,
-    /// 8715 - Tracked mints are at capacity
-    #[error("Tracked mints are at capacity")]
-    TrackedMintListFull = 0x220B,
-    /// 8716 - Tracked mints are locked for the epoch
-    #[error("Tracked mints are locked for the epoch")]
-    TrackedMintsLocked = 0x220C,
-    /// 8717 - Vault index already in use by a different mint
+    ConfigMintListFull = 0x2210,
+    /// 8721 - Vault Registry mints are at capacity
+    #[error("Vault Registry mints are at capacity")]
+    VaultRegistryListFull = 0x2211,
+    /// 8722 - Vault registry are locked for the epoch
+    #[error("Vault registry are locked for the epoch")]
+    VaultRegistryVaultLocked = 0x2212,
+    /// 8723 - Vault index already in use by a different mint
     #[error("Vault index already in use by a different mint")]
-    VaultIndexAlreadyInUse = 0x220D,
-    /// 8718 - Mint Entry not found
+    VaultIndexAlreadyInUse = 0x2213,
+    /// 8724 - Mint Entry not found
     #[error("Mint Entry not found")]
-    MintEntryNotFound = 0x220E,
-    /// 8719 - Fee cap exceeded
+    MintEntryNotFound = 0x2214,
+    /// 8725 - Fee cap exceeded
     #[error("Fee cap exceeded")]
-    FeeCapExceeded = 0x220F,
-    /// 8720 - DAO wallet cannot be default
+    FeeCapExceeded = 0x2215,
+    /// 8726 - DAO wallet cannot be default
     #[error("DAO wallet cannot be default")]
-    DefaultDaoWallet = 0x2210,
-    /// 8721 - Incorrect NCN Admin
+    DefaultDaoWallet = 0x2216,
+    /// 8727 - Incorrect NCN Admin
     #[error("Incorrect NCN Admin")]
-    IncorrectNcnAdmin = 0x2211,
-    /// 8722 - Incorrect NCN
+    IncorrectNcnAdmin = 0x2217,
+    /// 8728 - Incorrect NCN
     #[error("Incorrect NCN")]
-    IncorrectNcn = 0x2212,
-    /// 8723 - Incorrect fee admin
+    IncorrectNcn = 0x2218,
+    /// 8729 - Incorrect fee admin
     #[error("Incorrect fee admin")]
-    IncorrectFeeAdmin = 0x2213,
-    /// 8724 - Weight table not finalized
+    IncorrectFeeAdmin = 0x2219,
+    /// 8730 - Weight table not finalized
     #[error("Weight table not finalized")]
-    WeightTableNotFinalized = 0x2214,
-    /// 8725 - Weight not found
+    WeightTableNotFinalized = 0x221A,
+    /// 8731 - Weight not found
     #[error("Weight not found")]
-    WeightNotFound = 0x2215,
-    /// 8726 - No operators in ncn
+    WeightNotFound = 0x221B,
+    /// 8732 - No operators in ncn
     #[error("No operators in ncn")]
-    NoOperators = 0x2216,
-    /// 8727 - Vault operator delegation is already finalized - should not happen
+    NoOperators = 0x221C,
+    /// 8733 - Vault operator delegation is already finalized - should not happen
     #[error("Vault operator delegation is already finalized - should not happen")]
-    VaultOperatorDelegationFinalized = 0x2217,
-    /// 8728 - Operator is already finalized - should not happen
+    VaultOperatorDelegationFinalized = 0x221D,
+    /// 8734 - Operator is already finalized - should not happen
     #[error("Operator is already finalized - should not happen")]
-    OperatorFinalized = 0x2218,
-    /// 8729 - Too many vault operator delegations
+    OperatorFinalized = 0x221E,
+    /// 8735 - Too many vault operator delegations
     #[error("Too many vault operator delegations")]
-    TooManyVaultOperatorDelegations = 0x2219,
-    /// 8730 - Duplicate vault operator delegation
+    TooManyVaultOperatorDelegations = 0x221F,
+    /// 8736 - Duplicate vault operator delegation
     #[error("Duplicate vault operator delegation")]
-    DuplicateVaultOperatorDelegation = 0x221A,
-    /// 8731 - Duplicate Vote Cast
+    DuplicateVaultOperatorDelegation = 0x2220,
+    /// 8737 - Duplicate Vote Cast
     #[error("Duplicate Vote Cast")]
-    DuplicateVoteCast = 0x221B,
-    /// 8732 - Operator votes full
+    DuplicateVoteCast = 0x2221,
+    /// 8738 - Operator votes full
     #[error("Operator votes full")]
-    OperatorVotesFull = 0x221C,
-    /// 8733 - Merkle root tally full
+    OperatorVotesFull = 0x2222,
+    /// 8739 - Merkle root tally full
     #[error("Merkle root tally full")]
-    BallotTallyFull = 0x221D,
-    /// 8734 - Ballot tally not found
+    BallotTallyFull = 0x2223,
+    /// 8740 - Ballot tally not found
     #[error("Ballot tally not found")]
-    BallotTallyNotFoundFull = 0x221E,
-    /// 8735 - Consensus already reached, cannot change vote
+    BallotTallyNotFoundFull = 0x2224,
+    /// 8741 - Consensus already reached, cannot change vote
     #[error("Consensus already reached, cannot change vote")]
-    ConsensusAlreadyReached = 0x221F,
-    /// 8736 - Consensus not reached
+    ConsensusAlreadyReached = 0x2225,
+    /// 8742 - Consensus not reached
     #[error("Consensus not reached")]
-    ConsensusNotReached = 0x2220,
-    /// 8737 - Epoch snapshot not finalized
+    ConsensusNotReached = 0x2226,
+    /// 8743 - Epoch snapshot not finalized
     #[error("Epoch snapshot not finalized")]
-    EpochSnapshotNotFinalized = 0x2221,
-    /// 8738 - Voting not valid, too many slots after consensus reached
+    EpochSnapshotNotFinalized = 0x2227,
+    /// 8744 - Voting not valid, too many slots after consensus reached
     #[error("Voting not valid, too many slots after consensus reached")]
-    VotingNotValid = 0x2222,
-    /// 8739 - Tie breaker admin invalid
+    VotingNotValid = 0x2228,
+    /// 8745 - Tie breaker admin invalid
     #[error("Tie breaker admin invalid")]
-    TieBreakerAdminInvalid = 0x2223,
-    /// 8740 - Voting not finalized
+    TieBreakerAdminInvalid = 0x2229,
+    /// 8746 - Voting not finalized
     #[error("Voting not finalized")]
-    VotingNotFinalized = 0x2224,
-    /// 8741 - Tie breaking ballot must be one of the prior votes
+    VotingNotFinalized = 0x222A,
+    /// 8747 - Tie breaking ballot must be one of the prior votes
     #[error("Tie breaking ballot must be one of the prior votes")]
-    TieBreakerNotInPriorVotes = 0x2225,
-    /// 8742 - Invalid merkle proof
+    TieBreakerNotInPriorVotes = 0x222B,
+    /// 8748 - Invalid merkle proof
     #[error("Invalid merkle proof")]
-    InvalidMerkleProof = 0x2226,
-    /// 8743 - Operator admin needs to sign its vote
+    InvalidMerkleProof = 0x222C,
+    /// 8749 - Operator admin needs to sign its vote
     #[error("Operator admin needs to sign its vote")]
-    OperatorAdminInvalid = 0x2227,
-    /// 8744 - Not a valid NCN fee group
+    OperatorAdminInvalid = 0x222D,
+    /// 8750 - Not a valid NCN fee group
     #[error("Not a valid NCN fee group")]
-    InvalidNcnFeeGroup = 0x2228,
-    /// 8745 - Not a valid base fee group
+    InvalidNcnFeeGroup = 0x222E,
+    /// 8751 - Not a valid base fee group
     #[error("Not a valid base fee group")]
-    InvalidBaseFeeGroup = 0x2229,
-    /// 8746 - Operator reward list full
+    InvalidBaseFeeGroup = 0x222F,
+    /// 8752 - Operator reward list full
     #[error("Operator reward list full")]
-    OperatorRewardListFull = 0x222A,
-    /// 8747 - Operator Reward not found
+    OperatorRewardListFull = 0x2230,
+    /// 8753 - Operator Reward not found
     #[error("Operator Reward not found")]
-    OperatorRewardNotFound = 0x222B,
-    /// 8748 - Vault Reward not found
+    OperatorRewardNotFound = 0x2231,
+    /// 8754 - Vault Reward not found
     #[error("Vault Reward not found")]
-    VaultRewardNotFound = 0x222C,
-    /// 8749 - Destination mismatch
+    VaultRewardNotFound = 0x2232,
+    /// 8755 - Destination mismatch
     #[error("Destination mismatch")]
-    DestinationMismatch = 0x222D,
-    /// 8750 - Ncn reward route not found
+    DestinationMismatch = 0x2233,
+    /// 8756 - Ncn reward route not found
     #[error("Ncn reward route not found")]
-    NcnRewardRouteNotFound = 0x222E,
-    /// 8751 - Fee not active
+    NcnRewardRouteNotFound = 0x2234,
+    /// 8757 - Fee not active
     #[error("Fee not active")]
-    FeeNotActive = 0x222F,
-    /// 8752 - No rewards to distribute
+    FeeNotActive = 0x2235,
+    /// 8758 - No rewards to distribute
     #[error("No rewards to distribute")]
-    NoRewards = 0x2230,
+    NoRewards = 0x2236,
+    /// 8759 - No Feed Weight not set
+    #[error("No Feed Weight not set")]
+    NoFeedWeightNotSet = 0x2237,
+    /// 8760 - Switchboard not registered
+    #[error("Switchboard not registered")]
+    SwitchboardNotRegistered = 0x2238,
+    /// 8761 - Bad switchboard feed
+    #[error("Bad switchboard feed")]
+    BadSwitchboardFeed = 0x2239,
+    /// 8762 - Bad switchboard value
+    #[error("Bad switchboard value")]
+    BadSwitchboardValue = 0x223A,
+    /// 8763 - Stale switchboard feed
+    #[error("Stale switchboard feed")]
+    StaleSwitchboardFeed = 0x223B,
+    /// 8764 - Weight entry needs either a feed or a no feed weight
+    #[error("Weight entry needs either a feed or a no feed weight")]
+    NoFeedWeightOrSwitchboardFeed = 0x223C,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

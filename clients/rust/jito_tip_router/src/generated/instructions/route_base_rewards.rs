@@ -78,7 +78,7 @@ pub struct RouteBaseRewardsInstructionData {
 
 impl RouteBaseRewardsInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 12 }
+        Self { discriminator: 13 }
     }
 }
 
