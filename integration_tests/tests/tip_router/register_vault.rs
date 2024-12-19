@@ -83,10 +83,10 @@ mod tests {
             .await?;
 
         // Verify mint was registered by checking tracked mints
-        let tracked_mints = tip_router_client
+        let vault_registry = tip_router_client
             .get_vault_registry(ncn_root.ncn_pubkey)
             .await?;
-        assert_eq!(tracked_mints.vault_count(), 1);
+        assert_eq!(vault_registry.vault_count(), 1);
 
         Ok(())
     }
@@ -205,10 +205,10 @@ mod tests {
             .await?;
 
         // Verify mint was only registered once
-        let tracked_mints = tip_router_client
+        let vault_registry = tip_router_client
             .get_vault_registry(ncn_root.ncn_pubkey)
             .await?;
-        assert_eq!(tracked_mints.vault_count(), 1);
+        assert_eq!(vault_registry.vault_count(), 1);
 
         Ok(())
     }

@@ -24,9 +24,9 @@ pub fn process_initialize_vault_registry(
 
     NcnConfig::load(program_id, ncn_account.key, ncn_config, false)?;
 
-    let (vault_registry_pda, tracked_mints_bump, mut tracked_mints_seeds) =
+    let (vault_registry_pda, vault_registry_bump, mut vault_registry_seeds) =
         VaultRegistry::find_program_address(program_id, ncn_account.key);
-    tracked_mints_seeds.push(vec![tracked_mints_bump]);
+    vault_registry_seeds.push(vec![vault_registry_bump]);
 
     if vault_registry_pda != *vault_registry.key {
         return Err(ProgramError::InvalidSeeds);
@@ -42,7 +42,7 @@ pub fn process_initialize_vault_registry(
         // 8_u64
         //     .checked_add(std::mem::size_of::<VaultRegistry>() as u64)
         //     .unwrap(),
-        &tracked_mints_seeds,
+        &vault_registry_seeds,
     )?;
 
     Ok(())

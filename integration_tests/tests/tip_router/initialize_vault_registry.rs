@@ -7,7 +7,7 @@ mod tests {
     use crate::fixtures::{assert_ix_error, test_builder::TestBuilder, TestResult};
 
     #[tokio::test]
-    async fn test_initialize_tracked_mints_ok() -> TestResult<()> {
+    async fn test_initialize_vault_registry_ok() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
         let ncn_root = fixture.setup_ncn().await?;
@@ -19,17 +19,17 @@ mod tests {
             .do_full_initialize_vault_registry(ncn_root.ncn_pubkey)
             .await?;
 
-        let tracked_mints = tip_router_client
+        let vault_registry = tip_router_client
             .get_vault_registry(ncn_root.ncn_pubkey)
             .await?;
 
-        assert_eq!(tracked_mints.ncn, ncn_root.ncn_pubkey);
-        assert_eq!(tracked_mints.vault_count(), 0);
+        assert_eq!(vault_registry.ncn, ncn_root.ncn_pubkey);
+        assert_eq!(vault_registry.vault_count(), 0);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_initialize_tracked_mints_wrong_ncn_config_fails() -> TestResult<()> {
+    async fn test_initialize_vault_registry_wrong_ncn_config_fails() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
         let ncn_root = fixture.setup_ncn().await?;
@@ -39,13 +39,13 @@ mod tests {
 
         // Try to initialize with wrong NCN config
         let wrong_ncn_config = Keypair::new().pubkey();
-        let (tracked_mints_key, _, _) = VaultRegistry::find_program_address(
+        let (vault_registry_key, _, _) = VaultRegistry::find_program_address(
             &jito_tip_router_program::id(),
             &ncn_root.ncn_pubkey,
         );
 
         let transaction_error = tip_router_client
-            .initialize_vault_registry(&wrong_ncn_config, &tracked_mints_key, &ncn_root.ncn_pubkey)
+            .initialize_vault_registry(&wrong_ncn_config, &vault_registry_key, &ncn_root.ncn_pubkey)
             .await;
 
         assert_ix_error(transaction_error, InstructionError::InvalidAccountOwner);
@@ -53,7 +53,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_initialize_tracked_mints_wrong_ncn_fails() -> TestResult<()> {
+    async fn test_initialize_vault_registry_wrong_ncn_fails() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
         let ncn_root = fixture.setup_ncn().await?;
@@ -63,7 +63,7 @@ mod tests {
 
         // Try to initialize with wrong NCN
         let wrong_ncn = Keypair::new().pubkey();
-        let (tracked_mints_key, _, _) =
+        let (vault_registry_key, _, _) =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &wrong_ncn);
 
         let transaction_error = tip_router_client
@@ -73,7 +73,7 @@ mod tests {
                     &ncn_root.ncn_pubkey,
                 )
                 .0,
-                &tracked_mints_key,
+                &vault_registry_key,
                 &wrong_ncn,
             )
             .await;
@@ -83,7 +83,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_initialize_tracked_mints_double_init_fails() -> TestResult<()> {
+    async fn test_initialize_vault_registry_double_init_fails() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
         let ncn_root = fixture.setup_ncn().await?;

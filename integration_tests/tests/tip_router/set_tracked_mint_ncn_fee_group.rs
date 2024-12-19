@@ -67,10 +67,10 @@
 //             )
 //             .await?;
 
-//         let tracked_mints = tip_router_client
-//             .get_tracked_mints(ncn_root.ncn_pubkey)
+//         let vault_registry = tip_router_client
+//             .get_vault_registry(ncn_root.ncn_pubkey)
 //             .await?;
-//         assert_eq!(tracked_mints.vault_count(), 1);
+//         assert_eq!(vault_registry.vault_count(), 1);
 //         let epoch = fixture.clock().await.epoch;
 
 //         let new_ncn_fee_group = NcnFeeGroup::new(NcnFeeGroupType::Reserved7);
@@ -79,13 +79,13 @@
 //             .do_admin_set_st_mint(ncn_root.ncn_pubkey, 0, new_ncn_fee_group, epoch)
 //             .await?;
 
-//         let tracked_mints = tip_router_client
-//             .get_tracked_mints(ncn_root.ncn_pubkey)
+//         let vault_registry = tip_router_client
+//             .get_vault_registry(ncn_root.ncn_pubkey)
 //             .await?;
 
-//         assert_eq!(tracked_mints.vault_count(), 1);
+//         assert_eq!(vault_registry.vault_count(), 1);
 //         assert_eq!(
-//             tracked_mints.vault_list[0].ncn_fee_group(),
+//             vault_registry.vault_list[0].ncn_fee_group(),
 //             new_ncn_fee_group
 //         );
 
@@ -159,13 +159,13 @@
 //                 .do_admin_set_st_mint(ncn_root.ncn_pubkey, 0, new_ncn_fee_group, epoch)
 //                 .await?;
 
-//             let tracked_mints = tip_router_client
-//                 .get_tracked_mints(ncn_root.ncn_pubkey)
+//             let vault_registry = tip_router_client
+//                 .get_vault_registry(ncn_root.ncn_pubkey)
 //                 .await?;
 
-//             assert_eq!(tracked_mints.vault_count(), 1);
+//             assert_eq!(vault_registry.vault_count(), 1);
 //             assert_eq!(
-//                 tracked_mints.vault_list[0].ncn_fee_group(),
+//                 vault_registry.vault_list[0].ncn_fee_group(),
 //                 new_ncn_fee_group
 //             );
 //         }

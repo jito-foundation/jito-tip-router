@@ -21,9 +21,9 @@ pub fn process_realloc_vault_registry(
 
     NcnConfig::load(program_id, ncn_account.key, ncn_config, false)?;
 
-    let (vault_registry_pda, tracked_mints_bump, mut tracked_mints_seeds) =
+    let (vault_registry_pda, vault_registry_bump, mut vault_registry_seeds) =
         VaultRegistry::find_program_address(program_id, ncn_account.key);
-    tracked_mints_seeds.push(vec![tracked_mints_bump]);
+    vault_registry_seeds.push(vec![vault_registry_bump]);
 
     if vault_registry_pda != *vault_registry.key {
         return Err(ProgramError::InvalidSeeds);
@@ -43,11 +43,11 @@ pub fn process_realloc_vault_registry(
         && vault_registry.try_borrow_data()?[0] != VaultRegistry::DISCRIMINATOR;
 
     if should_initialize {
-        let mut tracked_mints_data = vault_registry.try_borrow_mut_data()?;
-        tracked_mints_data[0] = VaultRegistry::DISCRIMINATOR;
-        let tracked_mints_account =
-            VaultRegistry::try_from_slice_unchecked_mut(&mut tracked_mints_data)?;
-        tracked_mints_account.initialize(*ncn_account.key, tracked_mints_bump);
+        let mut vault_registry_data = vault_registry.try_borrow_mut_data()?;
+        vault_registry_data[0] = VaultRegistry::DISCRIMINATOR;
+        let vault_registry_account =
+            VaultRegistry::try_from_slice_unchecked_mut(&mut vault_registry_data)?;
+        vault_registry_account.initialize(*ncn_account.key, vault_registry_bump);
     }
 
     Ok(())

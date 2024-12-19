@@ -19,7 +19,7 @@ pub fn process_initialize_weight_table(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, tracked_mints, ncn, weight_table, payer, restaking_program, system_program] =
+    let [restaking_config, vault_registry, ncn, weight_table, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -30,7 +30,7 @@ pub fn process_initialize_weight_table(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    VaultRegistry::load(program_id, ncn.key, tracked_mints, false)?;
+    VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
@@ -44,13 +44,13 @@ pub fn process_initialize_weight_table(
         ncn.vault_count()
     };
 
-    let tracked_mint_count = {
-        let tracked_mints_data = tracked_mints.data.borrow();
-        let tracked_mints = VaultRegistry::try_from_slice_unchecked(&tracked_mints_data)?;
-        tracked_mints.vault_count()
+    let vault_registry_count = {
+        let vault_registry_data = vault_registry.data.borrow();
+        let vault_registry = VaultRegistry::try_from_slice_unchecked(&vault_registry_data)?;
+        vault_registry.vault_count()
     };
 
-    if vault_count != tracked_mint_count {
+    if vault_count != vault_registry_count {
         msg!("Vault count does not match supported mint count");
         return Err(ProgramError::InvalidAccountData);
     }
@@ -77,34 +77,8 @@ pub fn process_initialize_weight_table(
         program_id,
         &Rent::get()?,
         MAX_REALLOC_BYTES,
-        // 8_u64
-        //     .checked_add(std::mem::size_of::<WeightTable>() as u64)
-        //     .unwrap(),
         &weight_table_seeds,
     )?;
-
-    //TODO take out realloc?
-    // let (vault_count, mint_entries) = {
-    //     let tracked_mints_data = tracked_mints.data.borrow();
-    //     let tracked_mints = VaultRegistry::try_from_slice_unchecked(&tracked_mints_data)?;
-    //     (
-    //         tracked_mints.vault_count(),
-    //         tracked_mints.get_mint_entries(),
-    //     )
-    // };
-
-    // let mut weight_table_data = weight_table.try_borrow_mut_data()?;
-    // weight_table_data[0] = WeightTable::DISCRIMINATOR;
-    // let weight_table_account = WeightTable::try_from_slice_unchecked_mut(&mut weight_table_data)?;
-
-    // weight_table_account.initialize(
-    //     *ncn.key,
-    //     epoch,
-    //     Clock::get()?.slot,
-    //     vault_count,
-    //     weight_table_bump,
-    //     &mint_entries,
-    // )?;
 
     Ok(())
 }

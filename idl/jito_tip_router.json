@@ -2160,6 +2160,17 @@
             }
           },
           {
+            "name": "vaultRegistry",
+            "type": {
+              "array": [
+                {
+                  "defined": "VaultEntry"
+                },
+                64
+              ]
+            }
+          },
+          {
             "name": "table",
             "type": {
               "array": [
@@ -2574,7 +2585,7 @@
             "type": {
               "array": [
                 "u8",
-                32
+                128
               ]
             }
           }
@@ -2587,11 +2598,21 @@
         "kind": "struct",
         "fields": [
           {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
             "name": "stMint",
             "type": "publicKey"
           },
           {
             "name": "vaultIndex",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slotRegistered",
             "type": {
               "defined": "PodU64"
             }
@@ -2727,261 +2748,286 @@
     },
     {
       "code": 8707,
+      "name": "TableNotInitialized",
+      "msg": "Table not initialized"
+    },
+    {
+      "code": 8708,
+      "name": "RegistryNotInitialized",
+      "msg": "Registry not initialized"
+    },
+    {
+      "code": 8709,
+      "name": "NoVaultsInRegistry",
+      "msg": "There are no vaults in the registry"
+    },
+    {
+      "code": 8710,
+      "name": "VaultNotInRegistry",
+      "msg": "Vault not in weight table registry"
+    },
+    {
+      "code": 8711,
       "name": "MintInTable",
       "msg": "Mint is already in the table"
     },
     {
-      "code": 8708,
+      "code": 8712,
       "name": "TooManyMintsForTable",
       "msg": "Too many mints for table"
     },
     {
-      "code": 8709,
+      "code": 8713,
+      "name": "TooManyVaultsForRegistry",
+      "msg": "Too many vaults for registry"
+    },
+    {
+      "code": 8714,
       "name": "WeightTableAlreadyInitialized",
       "msg": "Weight table already initialized"
     },
     {
-      "code": 8710,
+      "code": 8715,
       "name": "CannotCreateFutureWeightTables",
       "msg": "Cannnot create future weight tables"
     },
     {
-      "code": 8711,
+      "code": 8716,
       "name": "WeightMintsDoNotMatchLength",
       "msg": "Weight mints do not match - length"
     },
     {
-      "code": 8712,
+      "code": 8717,
       "name": "WeightMintsDoNotMatchMintHash",
       "msg": "Weight mints do not match - mint hash"
     },
     {
-      "code": 8713,
+      "code": 8718,
       "name": "InvalidMintForWeightTable",
       "msg": "Invalid mint for weight table"
     },
     {
-      "code": 8714,
+      "code": 8719,
       "name": "ConfigMintsNotUpdated",
       "msg": "Config supported mints do not match NCN Vault Count"
     },
     {
-      "code": 8715,
+      "code": 8720,
       "name": "ConfigMintListFull",
       "msg": "NCN config vaults are at capacity"
     },
     {
-      "code": 8716,
-      "name": "TrackedMintListFull",
-      "msg": "Tracked mints are at capacity"
+      "code": 8721,
+      "name": "VaultRegistryListFull",
+      "msg": "Vault Registry mints are at capacity"
     },
     {
-      "code": 8717,
-      "name": "TrackedMintsLocked",
-      "msg": "Tracked mints are locked for the epoch"
+      "code": 8722,
+      "name": "VaultRegistryVaultLocked",
+      "msg": "Vault registry are locked for the epoch"
     },
     {
-      "code": 8718,
+      "code": 8723,
       "name": "VaultIndexAlreadyInUse",
       "msg": "Vault index already in use by a different mint"
     },
     {
-      "code": 8719,
+      "code": 8724,
       "name": "MintEntryNotFound",
       "msg": "Mint Entry not found"
     },
     {
-      "code": 8720,
+      "code": 8725,
       "name": "FeeCapExceeded",
       "msg": "Fee cap exceeded"
     },
     {
-      "code": 8721,
+      "code": 8726,
       "name": "DefaultDaoWallet",
       "msg": "DAO wallet cannot be default"
     },
     {
-      "code": 8722,
+      "code": 8727,
       "name": "IncorrectNcnAdmin",
       "msg": "Incorrect NCN Admin"
     },
     {
-      "code": 8723,
+      "code": 8728,
       "name": "IncorrectNcn",
       "msg": "Incorrect NCN"
     },
     {
-      "code": 8724,
+      "code": 8729,
       "name": "IncorrectFeeAdmin",
       "msg": "Incorrect fee admin"
     },
     {
-      "code": 8725,
+      "code": 8730,
       "name": "WeightTableNotFinalized",
       "msg": "Weight table not finalized"
     },
     {
-      "code": 8726,
+      "code": 8731,
       "name": "WeightNotFound",
       "msg": "Weight not found"
     },
     {
-      "code": 8727,
+      "code": 8732,
       "name": "NoOperators",
       "msg": "No operators in ncn"
     },
     {
-      "code": 8728,
+      "code": 8733,
       "name": "VaultOperatorDelegationFinalized",
       "msg": "Vault operator delegation is already finalized - should not happen"
     },
     {
-      "code": 8729,
+      "code": 8734,
       "name": "OperatorFinalized",
       "msg": "Operator is already finalized - should not happen"
     },
     {
-      "code": 8730,
+      "code": 8735,
       "name": "TooManyVaultOperatorDelegations",
       "msg": "Too many vault operator delegations"
     },
     {
-      "code": 8731,
+      "code": 8736,
       "name": "DuplicateVaultOperatorDelegation",
       "msg": "Duplicate vault operator delegation"
     },
     {
-      "code": 8732,
+      "code": 8737,
       "name": "DuplicateVoteCast",
       "msg": "Duplicate Vote Cast"
     },
     {
-      "code": 8733,
+      "code": 8738,
       "name": "OperatorVotesFull",
       "msg": "Operator votes full"
     },
     {
-      "code": 8734,
+      "code": 8739,
       "name": "BallotTallyFull",
       "msg": "Merkle root tally full"
     },
     {
-      "code": 8735,
+      "code": 8740,
       "name": "BallotTallyNotFoundFull",
       "msg": "Ballot tally not found"
     },
     {
-      "code": 8736,
+      "code": 8741,
       "name": "ConsensusAlreadyReached",
       "msg": "Consensus already reached, cannot change vote"
     },
     {
-      "code": 8737,
+      "code": 8742,
       "name": "ConsensusNotReached",
       "msg": "Consensus not reached"
     },
     {
-      "code": 8738,
+      "code": 8743,
       "name": "EpochSnapshotNotFinalized",
       "msg": "Epoch snapshot not finalized"
     },
     {
-      "code": 8739,
+      "code": 8744,
       "name": "VotingNotValid",
       "msg": "Voting not valid, too many slots after consensus reached"
     },
     {
-      "code": 8740,
+      "code": 8745,
       "name": "TieBreakerAdminInvalid",
       "msg": "Tie breaker admin invalid"
     },
     {
-      "code": 8741,
+      "code": 8746,
       "name": "VotingNotFinalized",
       "msg": "Voting not finalized"
     },
     {
-      "code": 8742,
+      "code": 8747,
       "name": "TieBreakerNotInPriorVotes",
       "msg": "Tie breaking ballot must be one of the prior votes"
     },
     {
-      "code": 8743,
+      "code": 8748,
       "name": "InvalidMerkleProof",
       "msg": "Invalid merkle proof"
     },
     {
-      "code": 8744,
+      "code": 8749,
       "name": "OperatorAdminInvalid",
       "msg": "Operator admin needs to sign its vote"
     },
     {
-      "code": 8745,
+      "code": 8750,
       "name": "InvalidNcnFeeGroup",
       "msg": "Not a valid NCN fee group"
     },
     {
-      "code": 8746,
+      "code": 8751,
       "name": "InvalidBaseFeeGroup",
       "msg": "Not a valid base fee group"
     },
     {
-      "code": 8747,
+      "code": 8752,
       "name": "OperatorRewardListFull",
       "msg": "Operator reward list full"
     },
     {
-      "code": 8748,
+      "code": 8753,
       "name": "OperatorRewardNotFound",
       "msg": "Operator Reward not found"
     },
     {
-      "code": 8749,
+      "code": 8754,
       "name": "VaultRewardNotFound",
       "msg": "Vault Reward not found"
     },
     {
-      "code": 8750,
+      "code": 8755,
       "name": "DestinationMismatch",
       "msg": "Destination mismatch"
     },
     {
-      "code": 8751,
+      "code": 8756,
       "name": "NcnRewardRouteNotFound",
       "msg": "Ncn reward route not found"
     },
     {
-      "code": 8752,
+      "code": 8757,
       "name": "FeeNotActive",
       "msg": "Fee not active"
     },
     {
-      "code": 8753,
+      "code": 8758,
       "name": "NoRewards",
       "msg": "No rewards to distribute"
     },
     {
-      "code": 8754,
+      "code": 8759,
       "name": "SwitchboardNotRegistered",
       "msg": "Switchboard not registered"
     },
     {
-      "code": 8755,
+      "code": 8760,
       "name": "BadSwitchboardFeed",
       "msg": "Bad switchboard feed"
     },
     {
-      "code": 8756,
+      "code": 8761,
       "name": "BadSwitchboardValue",
       "msg": "Bad switchboard value"
     },
     {
-      "code": 8757,
+      "code": 8762,
       "name": "StaleSwitchboardFeed",
       "msg": "Stale switchboard feed"
     },
     {
-      "code": 8758,
+      "code": 8763,
       "name": "NoFeedWeightOrSwitchboardFeed",
       "msg": "Weight entry needs either a feed or a no feed weight"
     }

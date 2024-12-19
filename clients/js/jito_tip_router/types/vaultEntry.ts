@@ -25,29 +25,37 @@ import {
 } from '@solana/web3.js';
 
 export type VaultEntry = {
+  vault: Address;
   stMint: Address;
   vaultIndex: bigint;
+  slotRegistered: bigint;
   reserved: Array<number>;
 };
 
 export type VaultEntryArgs = {
+  vault: Address;
   stMint: Address;
   vaultIndex: number | bigint;
+  slotRegistered: number | bigint;
   reserved: Array<number>;
 };
 
 export function getVaultEntryEncoder(): Encoder<VaultEntryArgs> {
   return getStructEncoder([
+    ['vault', getAddressEncoder()],
     ['stMint', getAddressEncoder()],
     ['vaultIndex', getU64Encoder()],
+    ['slotRegistered', getU64Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
   ]);
 }
 
 export function getVaultEntryDecoder(): Decoder<VaultEntry> {
   return getStructDecoder([
+    ['vault', getAddressDecoder()],
     ['stMint', getAddressDecoder()],
     ['vaultIndex', getU64Decoder()],
+    ['slotRegistered', getU64Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
   ]);
 }

@@ -108,32 +108,32 @@ pub fn process_snapshot_vault_operator_delegation(
         vault_ncn_okay && ncn_vault_okay && !delegation_dne
     };
 
-    let (ncn_fee_group, reward_multiplier_bps) = {
+    let (ncn_fee_group, reward_multiplier_bps, total_stake_weight) = {
         let weight_table_data = weight_table.data.borrow();
         let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
         let weight_entry = weight_table_account.get_weight_entry(&st_mint)?;
 
+        weight_table_account.check_registry_for_vault(vault_index)?;
+
+        let total_stake_weight: u128 = if is_active {
+            let vault_operator_delegation_data = vault_operator_delegation.data.borrow();
+            let vault_operator_delegation_account =
+                VaultOperatorDelegation::try_from_slice_unchecked(&vault_operator_delegation_data)?;
+
+            OperatorSnapshot::calculate_total_stake_weight(
+                vault_operator_delegation_account,
+                weight_table_account,
+                &st_mint,
+            )?
+        } else {
+            0u128
+        };
+
         (
             weight_entry.mint_entry().ncn_fee_group(),
             weight_entry.mint_entry().reward_multiplier_bps(),
+            total_stake_weight,
         )
-    };
-
-    let total_stake_weight: u128 = if is_active {
-        let vault_operator_delegation_data = vault_operator_delegation.data.borrow();
-        let vault_operator_delegation_account =
-            VaultOperatorDelegation::try_from_slice_unchecked(&vault_operator_delegation_data)?;
-
-        let weight_table_data = weight_table.data.borrow();
-        let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
-
-        OperatorSnapshot::calculate_total_stake_weight(
-            vault_operator_delegation_account,
-            weight_table_account,
-            &st_mint,
-        )?
-    } else {
-        0u128
     };
 
     // Increment vault operator delegation

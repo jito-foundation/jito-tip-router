@@ -28,10 +28,20 @@ pub enum TipRouterError {
     DuplicateMintsInTable,
     #[error("There are no mints in the table")]
     NoMintsInTable,
+    #[error("Table not initialized")]
+    TableNotInitialized,
+    #[error("Registry not initialized")]
+    RegistryNotInitialized,
+    #[error("There are no vaults in the registry")]
+    NoVaultsInRegistry,
+    #[error("Vault not in weight table registry")]
+    VaultNotInRegistry,
     #[error("Mint is already in the table")]
     MintInTable,
     #[error("Too many mints for table")]
     TooManyMintsForTable,
+    #[error("Too many vaults for registry")]
+    TooManyVaultsForRegistry,
     #[error("Weight table already initialized")]
     WeightTableAlreadyInitialized,
     #[error("Cannnot create future weight tables")]
@@ -46,10 +56,10 @@ pub enum TipRouterError {
     ConfigMintsNotUpdated,
     #[error("NCN config vaults are at capacity")]
     ConfigMintListFull,
-    #[error("Tracked mints are at capacity")]
-    TrackedMintListFull,
-    #[error("Tracked mints are locked for the epoch")]
-    TrackedMintsLocked,
+    #[error("Vault Registry mints are at capacity")]
+    VaultRegistryListFull,
+    #[error("Vault registry are locked for the epoch")]
+    VaultRegistryVaultLocked,
     #[error("Vault index already in use by a different mint")]
     VaultIndexAlreadyInUse,
     #[error("Mint Entry not found")]

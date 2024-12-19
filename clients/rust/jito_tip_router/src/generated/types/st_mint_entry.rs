@@ -25,5 +25,6 @@ pub struct StMintEntry {
     )]
     pub switchboard_feed: Pubkey,
     pub no_feed_weight: u128,
-    pub reserved: [u8; 32],
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub reserved: [u8; 128],
 }

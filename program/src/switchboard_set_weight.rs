@@ -81,7 +81,7 @@ pub fn process_switchboard_set_weight(
     let mut weight_table_data = weight_table.try_borrow_mut_data()?;
     let weight_table_account = WeightTable::try_from_slice_unchecked_mut(&mut weight_table_data)?;
 
-    weight_table_account.check_initialized()?;
+    weight_table_account.check_table_initialized()?;
     if weight_table_account.finalized() {
         msg!("Weight table is finalized");
         return Err(ProgramError::InvalidAccountData);

@@ -7,8 +7,11 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    constants::MAX_ST_MINTS, discriminators::Discriminators, error::TipRouterError,
-    vault_registry::StMintEntry, weight_entry::WeightEntry,
+    constants::{MAX_ST_MINTS, MAX_VAULTS},
+    discriminators::Discriminators,
+    error::TipRouterError,
+    vault_registry::{StMintEntry, VaultEntry},
+    weight_entry::WeightEntry,
 };
 
 // PDA'd ["WEIGHT_TABLE", NCN, NCN_EPOCH_SLOT]
@@ -34,6 +37,9 @@ pub struct WeightTable {
     /// Reserved space
     reserved: [u8; 128],
 
+    /// The Vault Registry
+    vault_registry: [VaultEntry; 64],
+
     /// The weight table
     table: [WeightEntry; 64],
 }
@@ -53,6 +59,7 @@ impl WeightTable {
             vault_count: PodU64::from(vault_count),
             bump,
             reserved: [0; 128],
+            vault_registry: [VaultEntry::default(); MAX_VAULTS],
             table: [WeightEntry::default(); MAX_ST_MINTS],
         }
     }
@@ -80,6 +87,7 @@ impl WeightTable {
         (pda, bump, seeds)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn initialize(
         &mut self,
         ncn: Pubkey,
@@ -87,6 +95,7 @@ impl WeightTable {
         slot_created: u64,
         vault_count: u64,
         bump: u8,
+        vault_entries: &[VaultEntry],
         mint_entries: &[StMintEntry],
     ) -> Result<(), TipRouterError> {
         // Initializes field by field to avoid overflowing stack
@@ -96,13 +105,38 @@ impl WeightTable {
         self.vault_count = PodU64::from(vault_count);
         self.bump = bump;
         self.reserved = [0; 128];
+        self.vault_registry = [VaultEntry::default(); MAX_VAULTS];
         self.table = [WeightEntry::default(); MAX_ST_MINTS];
+        self.set_vault_entries(vault_entries)?;
         self.set_mint_entries(mint_entries)?;
         Ok(())
     }
 
+    fn set_vault_entries(&mut self, vault_entries: &[VaultEntry]) -> Result<(), TipRouterError> {
+        if self.vault_registry_initialized() {
+            return Err(TipRouterError::WeightTableAlreadyInitialized);
+        }
+
+        // Check for empty vector
+        if vault_entries.is_empty() {
+            return Err(TipRouterError::NoVaultsInRegistry);
+        }
+
+        // Check if vector exceeds maximum allowed entries
+        if vault_entries.len() > MAX_VAULTS {
+            return Err(TipRouterError::TooManyVaultsForRegistry);
+        }
+
+        // Copy the entire slice into vault_registry
+        self.vault_registry[..vault_entries.len()].copy_from_slice(vault_entries);
+
+        self.check_registry_initialized()?;
+
+        Ok(())
+    }
+
     fn set_mint_entries(&mut self, mint_entries: &[StMintEntry]) -> Result<(), TipRouterError> {
-        if self.initialized() {
+        if self.table_initialized() {
             return Err(TipRouterError::WeightTableAlreadyInitialized);
         }
 
@@ -123,7 +157,7 @@ impl WeightTable {
             },
         );
 
-        self.check_initialized()?;
+        self.check_table_initialized()?;
 
         Ok(())
     }
@@ -196,17 +230,54 @@ impl WeightTable {
         self.vault_count.into()
     }
 
-    pub fn initialized(&self) -> bool {
+    pub fn vault_entry_count(&self) -> usize {
+        self.vault_registry
+            .iter()
+            .filter(|entry| !entry.is_empty())
+            .count()
+    }
+
+    pub fn vault_registry_initialized(&self) -> bool {
+        self.vault_count() == self.vault_entry_count() as u64
+    }
+
+    pub fn table_initialized(&self) -> bool {
         self.mint_count() > 0
     }
 
     pub fn finalized(&self) -> bool {
-        self.initialized() && self.mint_count() == self.weight_count()
+        self.vault_registry_initialized()
+            && self.table_initialized()
+            && self.mint_count() == self.weight_count()
     }
 
-    pub fn check_initialized(&self) -> Result<(), TipRouterError> {
-        if !self.initialized() {
-            return Err(TipRouterError::NoMintsInTable);
+    pub fn check_table_initialized(&self) -> Result<(), TipRouterError> {
+        if !self.table_initialized() {
+            msg!("Weight table not initialized");
+            return Err(TipRouterError::TableNotInitialized);
+        }
+        Ok(())
+    }
+
+    pub fn check_registry_initialized(&self) -> Result<(), TipRouterError> {
+        if !self.vault_registry_initialized() {
+            msg!(
+                "Vault registry not initialized {}/{}",
+                self.vault_count(),
+                self.vault_entry_count()
+            );
+            return Err(TipRouterError::RegistryNotInitialized);
+        }
+        Ok(())
+    }
+
+    pub fn check_registry_for_vault(&self, vault_index: u64) -> Result<(), TipRouterError> {
+        if !self
+            .vault_registry
+            .iter()
+            .any(|entry| entry.vault_index().eq(&vault_index))
+        {
+            return Err(TipRouterError::VaultNotInRegistry);
         }
         Ok(())
     }
@@ -274,6 +345,7 @@ mod tests {
             + size_of::<PodU64>() // vault_count
             + 1 // bump
             + 128 // reserved
+            + size_of::<[VaultEntry; MAX_VAULTS]>() // vault registry
             + size_of::<[WeightEntry; MAX_ST_MINTS]>(); // weight table
 
         assert_eq!(size_of::<WeightTable>(), expected_total);

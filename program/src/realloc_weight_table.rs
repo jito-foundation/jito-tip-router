@@ -48,11 +48,12 @@ pub fn process_realloc_weight_table(
         && weight_table.try_borrow_data()?[0] != WeightTable::DISCRIMINATOR;
 
     if should_initialize {
-        let (vault_count, mint_entries) = {
+        let (vault_count, vault_entries, mint_entries) = {
             let vault_registry_data = vault_registry.data.borrow();
             let vault_registry = VaultRegistry::try_from_slice_unchecked(&vault_registry_data)?;
             (
                 vault_registry.vault_count(),
+                vault_registry.get_vault_entries(),
                 vault_registry.get_mint_entries(),
             )
         };
@@ -68,6 +69,7 @@ pub fn process_realloc_weight_table(
             Clock::get()?.slot,
             vault_count,
             weight_table_bump,
+            &vault_entries,
             &mint_entries,
         )?;
     }
