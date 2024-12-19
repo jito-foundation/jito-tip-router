@@ -26,6 +26,7 @@ async fn main() -> Result<()> {
             ncn_address,
             tip_distribution_program_id,
             tip_payment_program_id,
+            enable_snapshots,
         } => {
             info!("Starting epoch monitor...");
 
@@ -47,6 +48,7 @@ async fn main() -> Result<()> {
                     tip_distribution_program_id,
                     tip_payment_program_id,
                     ncn_address,
+                    *enable_snapshots,
                     &cli,
                 )
                 .await

@@ -42,5 +42,8 @@ pub enum Commands {
 
         #[arg(long)]
         tip_payment_program_id: Pubkey,
+
+        #[arg(long, default_value = "false")]
+        enable_snapshots: bool,
     },
 }

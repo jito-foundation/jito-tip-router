@@ -51,6 +51,7 @@ pub async fn process_epoch(
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     ncn_address: &Pubkey,
+    snapshots_enabled: bool,
     cli_args: &Cli,
 ) -> Result<()> {
     info!("Processing epoch {:?}", previous_epoch);
@@ -86,6 +87,7 @@ pub async fn process_epoch(
         "", // TODO out_path is not used, unsure what should be put here. Maybe `snapshot_output_dir` from cli args?
         tip_payment_program_id,
         fees,
+        snapshots_enabled,
     )
     .unwrap();
 

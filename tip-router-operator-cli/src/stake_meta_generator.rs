@@ -80,6 +80,7 @@ pub fn generate_stake_meta(
     tip_distribution_program_id: &Pubkey,
     _out_path: &str,
     tip_payment_program_id: &Pubkey,
+    snapshots_enabled: bool,
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     info!("Creating bank from ledger path...");
     let bank = get_bank_from_ledger(
@@ -87,17 +88,12 @@ pub fn generate_stake_meta(
         account_paths,
         full_snapshots_path,
         desired_slot,
-        // TODO: use CLI arg to determine if it should take snapshot
-        false,
+        snapshots_enabled,
     );
 
     info!("Generating stake_meta_collection object...");
     let stake_meta_coll =
         generate_stake_meta_collection(&bank, tip_distribution_program_id, tip_payment_program_id)?;
-
-    // TODO: Put this behind a CLI flag
-    // info!("Writing stake_meta_collection to JSON {}...", out_path);
-    // write_to_json_file(&stake_meta_coll, out_path)?;
 
     Ok(stake_meta_coll)
 }

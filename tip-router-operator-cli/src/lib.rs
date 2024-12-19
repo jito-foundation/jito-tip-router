@@ -75,6 +75,7 @@ pub fn get_merkle_root(
     out_path: &str,
     tip_payment_program_id: &Pubkey,
     protocol_fee_bps: u64,
+    snapshots_enabled: bool,
 ) -> std::result::Result<MetaMerkleTree, MerkleRootError> {
     // Get stake meta collection
     let stake_meta_collection = stake_meta_generator::generate_stake_meta(
@@ -85,6 +86,7 @@ pub fn get_merkle_root(
         tip_distribution_program_id,
         out_path,
         tip_payment_program_id,
+        snapshots_enabled,
     )
     .map_err(|_| MerkleRootError::StakeMetaGeneratorError("Failed to generate stake meta"))?;
 
