@@ -16,4 +16,6 @@ pub struct VaultEntry {
     )]
     pub st_mint: Pubkey,
     pub vault_index: u64,
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub reserved: [u8; 128],
 }

@@ -35,6 +35,7 @@ import {
   type ParsedReallocBallotBoxInstruction,
   type ParsedReallocBaseRewardRouterInstruction,
   type ParsedReallocOperatorSnapshotInstruction,
+  type ParsedReallocVaultRegistryInstruction,
   type ParsedReallocWeightTableInstruction,
   type ParsedRegisterVaultInstruction,
   type ParsedRouteBaseRewardsInstruction,
@@ -88,6 +89,7 @@ export enum JitoTipRouterInstruction {
   ReallocOperatorSnapshot,
   ReallocBaseRewardRouter,
   ReallocWeightTable,
+  ReallocVaultRegistry,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -180,6 +182,9 @@ export function identifyJitoTipRouterInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(28), 0)) {
     return JitoTipRouterInstruction.ReallocWeightTable;
+  }
+  if (containsBytes(data, getU8Encoder().encode(29), 0)) {
+    return JitoTipRouterInstruction.ReallocVaultRegistry;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -275,4 +280,7 @@ export type ParsedJitoTipRouterInstruction<
     } & ParsedReallocBaseRewardRouterInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.ReallocWeightTable;
-    } & ParsedReallocWeightTableInstruction<TProgram>);
+    } & ParsedReallocWeightTableInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ReallocVaultRegistry;
+    } & ParsedReallocVaultRegistryInstruction<TProgram>);

@@ -86,6 +86,7 @@ impl Default for StMintEntry {
 pub struct VaultEntry {
     st_mint: Pubkey,
     vault_index: PodU64,
+    reserved: [u8; 128],
 }
 
 impl VaultEntry {
@@ -93,6 +94,7 @@ impl VaultEntry {
         Self {
             st_mint: mint,
             vault_index: PodU64::from(vault_index),
+            reserved: [0; 128],
         }
     }
 
@@ -117,7 +119,7 @@ pub struct VaultRegistry {
     pub ncn: Pubkey,
     pub bump: u8,
     pub reserved: [u8; 127],
-    pub st_mint_list: [StMintEntry; 32],
+    pub st_mint_list: [StMintEntry; 64],
     pub vault_list: [VaultEntry; 64],
 }
 

@@ -72,7 +72,7 @@ export function getWeightTableEncoder(): Encoder<WeightTableArgs> {
     ['vaultCount', getU64Encoder()],
     ['bump', getU8Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
-    ['table', getArrayEncoder(getWeightEntryEncoder(), { size: 32 })],
+    ['table', getArrayEncoder(getWeightEntryEncoder(), { size: 64 })],
   ]);
 }
 
@@ -85,7 +85,7 @@ export function getWeightTableDecoder(): Decoder<WeightTable> {
     ['vaultCount', getU64Decoder()],
     ['bump', getU8Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
-    ['table', getArrayDecoder(getWeightEntryDecoder(), { size: 32 })],
+    ['table', getArrayDecoder(getWeightEntryDecoder(), { size: 64 })],
   ]);
 }
 

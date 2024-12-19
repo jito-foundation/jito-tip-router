@@ -10,24 +10,37 @@ import {
   combineCodec,
   getAddressDecoder,
   getAddressEncoder,
+  getArrayDecoder,
+  getArrayEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
   getU64Encoder,
+  getU8Decoder,
+  getU8Encoder,
   type Address,
   type Codec,
   type Decoder,
   type Encoder,
 } from '@solana/web3.js';
 
-export type VaultEntry = { stMint: Address; vaultIndex: bigint };
+export type VaultEntry = {
+  stMint: Address;
+  vaultIndex: bigint;
+  reserved: Array<number>;
+};
 
-export type VaultEntryArgs = { stMint: Address; vaultIndex: number | bigint };
+export type VaultEntryArgs = {
+  stMint: Address;
+  vaultIndex: number | bigint;
+  reserved: Array<number>;
+};
 
 export function getVaultEntryEncoder(): Encoder<VaultEntryArgs> {
   return getStructEncoder([
     ['stMint', getAddressEncoder()],
     ['vaultIndex', getU64Encoder()],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
   ]);
 }
 
@@ -35,6 +48,7 @@ export function getVaultEntryDecoder(): Decoder<VaultEntry> {
   return getStructDecoder([
     ['stMint', getAddressDecoder()],
     ['vaultIndex', getU64Decoder()],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
   ]);
 }
 

@@ -13,9 +13,9 @@ use jito_tip_router_client::{
         InitializeEpochSnapshotBuilder, InitializeNcnRewardRouterBuilder,
         InitializeOperatorSnapshotBuilder, InitializeVaultRegistryBuilder,
         InitializeWeightTableBuilder, ReallocBallotBoxBuilder, ReallocBaseRewardRouterBuilder,
-        ReallocOperatorSnapshotBuilder, ReallocWeightTableBuilder, RegisterVaultBuilder,
-        RouteBaseRewardsBuilder, RouteNcnRewardsBuilder, SetMerkleRootBuilder,
-        SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
+        ReallocOperatorSnapshotBuilder, ReallocVaultRegistryBuilder, ReallocWeightTableBuilder,
+        RegisterVaultBuilder, RouteBaseRewardsBuilder, RouteNcnRewardsBuilder,
+        SetMerkleRootBuilder, SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
     },
     types::ConfigAdminRole,
 };
@@ -98,7 +98,7 @@ impl TipRouterClient {
     pub async fn setup_tip_router(&mut self, ncn_root: &NcnRoot) -> TestResult<()> {
         self.do_initialize_config(ncn_root.ncn_pubkey, &ncn_root.ncn_admin)
             .await?;
-        self.do_initialize_vault_registry(ncn_root.ncn_pubkey)
+        self.do_full_initialize_vault_registry(ncn_root.ncn_pubkey)
             .await?;
         Ok(())
     }
@@ -121,14 +121,14 @@ impl TipRouterClient {
     }
 
     pub async fn get_vault_registry(&mut self, ncn_pubkey: Pubkey) -> TestResult<VaultRegistry> {
-        let tracked_mints_pda =
+        let vault_registry_pda =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn_pubkey).0;
-        let tracked_mints = self
+        let vault_registry = self
             .banks_client
-            .get_account(tracked_mints_pda)
+            .get_account(vault_registry_pda)
             .await?
             .unwrap();
-        Ok(*VaultRegistry::try_from_slice_unchecked(tracked_mints.data.as_slice()).unwrap())
+        Ok(*VaultRegistry::try_from_slice_unchecked(vault_registry.data.as_slice()).unwrap())
     }
 
     #[allow(dead_code)]
@@ -539,12 +539,19 @@ impl TipRouterClient {
         .await
     }
 
+    pub async fn do_full_initialize_vault_registry(&mut self, ncn: Pubkey) -> TestResult<()> {
+        self.do_initialize_vault_registry(ncn).await?;
+        let num_reallocs = (WeightTable::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
+        self.do_realloc_vault_registry(ncn, num_reallocs).await?;
+        Ok(())
+    }
+
     pub async fn do_initialize_vault_registry(&mut self, ncn: Pubkey) -> TestResult<()> {
         let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
-        let tracked_mints =
+        let vault_registry =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
-        self.initialize_vault_registry(&ncn_config, &tracked_mints, &ncn)
+        self.initialize_vault_registry(&ncn_config, &vault_registry, &ncn)
             .await
     }
 
@@ -572,6 +579,45 @@ impl TipRouterClient {
         .await
     }
 
+    pub async fn do_realloc_vault_registry(
+        &mut self,
+        ncn: Pubkey,
+        num_reallocations: u64,
+    ) -> TestResult<()> {
+        let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+        let vault_registry =
+            VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+        self.realloc_vault_registry(&ncn, &ncn_config, &vault_registry, num_reallocations)
+            .await
+    }
+
+    pub async fn realloc_vault_registry(
+        &mut self,
+        ncn: &Pubkey,
+        config: &Pubkey,
+        vault_registry: &Pubkey,
+        num_reallocations: u64,
+    ) -> TestResult<()> {
+        let ix = ReallocVaultRegistryBuilder::new()
+            .ncn(*ncn)
+            .payer(self.payer.pubkey())
+            .config(*config)
+            .vault_registry(*vault_registry)
+            .system_program(system_program::id())
+            .instruction();
+
+        let ixs = vec![ix; num_reallocations as usize];
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &ixs,
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
     pub async fn do_register_vault(
         &mut self,
         ncn: Pubkey,
@@ -581,12 +627,12 @@ impl TipRouterClient {
     ) -> TestResult<()> {
         let restaking_config_address =
             Config::find_program_address(&jito_restaking_program::id()).0;
-        let tracked_mints =
+        let vault_registry =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         self.register_vault(
             restaking_config_address,
-            tracked_mints,
+            vault_registry,
             ncn,
             vault,
             vault_ncn_ticket,
@@ -1935,14 +1981,14 @@ impl TipRouterClient {
         let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-        let tracked_mints =
+        let vault_registry =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         self.realloc_weight_table(
             ncn_config,
             weight_table,
             ncn,
-            tracked_mints,
+            vault_registry,
             epoch,
             num_reallocations,
         )

@@ -4,7 +4,7 @@ use spl_math::precise_number::PreciseNumber;
 use crate::error::TipRouterError;
 
 pub const MAX_FEE_BPS: u64 = 10_000;
-pub const MAX_ST_MINTS: usize = 32;
+pub const MAX_ST_MINTS: usize = 64;
 pub const MAX_VAULT_OPERATOR_DELEGATIONS: usize = 64;
 pub const MAX_OPERATORS: usize = 256;
 const PRECISE_CONSENSUS_NUMERATOR: u128 = 2;

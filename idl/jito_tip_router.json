@@ -1545,6 +1545,41 @@
         "type": "u8",
         "value": 28
       }
+    },
+    {
+      "name": "ReallocVaultRegistry",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultRegistry",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 29
+      }
     }
   ],
   "accounts": [
@@ -2066,7 +2101,7 @@
                 {
                   "defined": "StMintEntry"
                 },
-                32
+                64
               ]
             }
           },
@@ -2131,7 +2166,7 @@
                 {
                   "defined": "WeightEntry"
                 },
-                32
+                64
               ]
             }
           }
@@ -2559,6 +2594,15 @@
             "name": "vaultIndex",
             "type": {
               "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
             }
           }
         ]

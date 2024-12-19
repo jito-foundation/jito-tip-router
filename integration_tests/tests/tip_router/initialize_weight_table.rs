@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use jito_bytemuck::Discriminator;
-    use jito_tip_router_core::weight_table::WeightTable;
+    use jito_tip_router_core::{constants::MAX_REALLOC_BYTES, weight_table::WeightTable};
 
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
 
@@ -24,17 +24,16 @@ mod tests {
 
         let address =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-        // TODO take out realloc?
-        // let raw_account = fixture.get_account(&address).await?.unwrap();
-        // assert_eq!(raw_account.data.len(), MAX_REALLOC_BYTES as usize);
-        // assert_eq!(raw_account.owner, jito_tip_router_program::id());
-        // assert_eq!(raw_account.data[0], 0);
+        let raw_account = fixture.get_account(&address).await?.unwrap();
+        assert_eq!(raw_account.data.len(), MAX_REALLOC_BYTES as usize);
+        assert_eq!(raw_account.owner, jito_tip_router_program::id());
+        assert_eq!(raw_account.data[0], 0);
 
-        // let num_reallocs = (WeightTable::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
+        let num_reallocs = (WeightTable::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
 
-        // tip_router_client
-        //     .do_realloc_weight_table(ncn, epoch, num_reallocs)
-        //     .await?;
+        tip_router_client
+            .do_realloc_weight_table(ncn, epoch, num_reallocs)
+            .await?;
 
         let raw_account = fixture.get_account(&address).await?.unwrap();
         assert_eq!(raw_account.data.len(), { WeightTable::SIZE });

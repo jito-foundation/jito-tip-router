@@ -8,6 +8,8 @@
 # (JTO/SOL) https://ondemand.switchboard.xyz/solana/mainnet/feed/5S7ErPSkFmyXuq2aE3rZ6ofwVyZpwzUt6w7m6kqekvMe
 # (JITOSOL/SOL) https://ondemand.switchboard.xyz/solana/mainnet/feed/4Z1SLH9g4ikNBV8uP2ZctEouqjYmVqB2Tz5SZxKYBN7z
 
+# Feeds need to be cranked at least once in history to work in tests
+
 #------------------------------------------------------------------------------
 # Configuration
 #------------------------------------------------------------------------------

@@ -16,7 +16,7 @@ mod tests {
             .await?;
 
         tip_router_client
-            .do_initialize_vault_registry(ncn_root.ncn_pubkey)
+            .do_full_initialize_vault_registry(ncn_root.ncn_pubkey)
             .await?;
 
         let tracked_mints = tip_router_client
@@ -92,14 +92,14 @@ mod tests {
             .await?;
 
         tip_router_client
-            .do_initialize_vault_registry(ncn_root.ncn_pubkey)
+            .do_full_initialize_vault_registry(ncn_root.ncn_pubkey)
             .await?;
 
         fixture.warp_slot_incremental(1).await?;
 
         // Second initialization should fail
         let transaction_error = tip_router_client
-            .do_initialize_vault_registry(ncn_root.ncn_pubkey)
+            .do_full_initialize_vault_registry(ncn_root.ncn_pubkey)
             .await;
 
         assert_ix_error(transaction_error, InstructionError::InvalidAccountOwner);

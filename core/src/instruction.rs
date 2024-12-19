@@ -373,4 +373,12 @@ pub enum TipRouterInstruction {
     ReallocWeightTable {
         epoch: u64,
     },
+
+    /// Resizes the weight table account
+    #[account(0, name = "config")]
+    #[account(1, writable, name = "vault_registry")]
+    #[account(2, name = "ncn")]
+    #[account(3, writable, signer, name = "payer")]
+    #[account(4, name = "system_program")]
+    ReallocVaultRegistry,
 }

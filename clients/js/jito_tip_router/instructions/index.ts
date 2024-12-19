@@ -28,6 +28,7 @@ export * from './initializeWeightTable';
 export * from './reallocBallotBox';
 export * from './reallocBaseRewardRouter';
 export * from './reallocOperatorSnapshot';
+export * from './reallocVaultRegistry';
 export * from './reallocWeightTable';
 export * from './registerVault';
 export * from './routeBaseRewards';

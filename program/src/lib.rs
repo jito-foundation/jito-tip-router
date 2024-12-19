@@ -20,6 +20,7 @@ mod initialize_weight_table;
 mod realloc_ballot_box;
 mod realloc_base_reward_router;
 mod realloc_operator_snapshot;
+mod realloc_vault_registry;
 mod realloc_weight_table;
 mod register_vault;
 mod route_base_rewards;
@@ -60,6 +61,7 @@ use crate::{
     realloc_ballot_box::process_realloc_ballot_box,
     realloc_base_reward_router::process_realloc_base_reward_router,
     realloc_operator_snapshot::process_realloc_operator_snapshot,
+    realloc_vault_registry::process_realloc_vault_registry,
     realloc_weight_table::process_realloc_weight_table, register_vault::process_register_vault,
     route_base_rewards::process_route_base_rewards, route_ncn_rewards::process_route_ncn_rewards,
     set_merkle_root::process_set_merkle_root,
@@ -315,6 +317,10 @@ pub fn process_instruction(
         TipRouterInstruction::ReallocWeightTable { epoch } => {
             msg!("Instruction: ReallocWeightTable");
             process_realloc_weight_table(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::ReallocVaultRegistry => {
+            msg!("Instruction: ReallocVaultRegistry");
+            process_realloc_vault_registry(program_id, accounts)
         }
     }
 }

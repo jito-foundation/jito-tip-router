@@ -17,14 +17,14 @@ pub fn process_realloc_weight_table(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, weight_table, ncn, tracked_mints, payer, system_program] = accounts else {
+    let [ncn_config, weight_table, ncn, vault_registry, payer, system_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     load_system_program(system_program)?;
     load_signer(payer, false)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    VaultRegistry::load(program_id, ncn.key, tracked_mints, false)?;
+    VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
 
     let (weight_table_pda, weight_table_bump, _) =
         WeightTable::find_program_address(program_id, ncn.key, epoch);
@@ -49,11 +49,11 @@ pub fn process_realloc_weight_table(
 
     if should_initialize {
         let (vault_count, mint_entries) = {
-            let tracked_mints_data = tracked_mints.data.borrow();
-            let tracked_mints = VaultRegistry::try_from_slice_unchecked(&tracked_mints_data)?;
+            let vault_registry_data = vault_registry.data.borrow();
+            let vault_registry = VaultRegistry::try_from_slice_unchecked(&vault_registry_data)?;
             (
-                tracked_mints.vault_count(),
-                tracked_mints.get_mint_entries(),
+                vault_registry.vault_count(),
+                vault_registry.get_mint_entries(),
             )
         };
 

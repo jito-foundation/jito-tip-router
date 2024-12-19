@@ -21,7 +21,8 @@ pub struct VaultRegistry {
     pub bump: u8,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 127],
-    pub st_mint_list: [StMintEntry; 32],
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub st_mint_list: [StMintEntry; 64],
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub vault_list: [VaultEntry; 64],
 }
