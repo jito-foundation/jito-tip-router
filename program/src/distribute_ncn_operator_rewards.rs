@@ -16,7 +16,7 @@ pub fn process_distribute_ncn_operator_rewards(
     ncn_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn, operator, ncn_reward_router, restaking_program] =
+    let [restaking_config, ncn_config, ncn, operator, ncn_reward_router, ncn_reward_receiver, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -55,14 +55,29 @@ pub fn process_distribute_ncn_operator_rewards(
 
     // Send rewards
     if rewards > 0 {
-        **operator.lamports.borrow_mut() = operator
-            .lamports()
-            .checked_add(rewards)
-            .ok_or(TipRouterError::ArithmeticOverflow)?;
-        **ncn_reward_router.lamports.borrow_mut() = ncn_reward_router
-            .lamports()
-            .checked_sub(rewards)
-            .ok_or(TipRouterError::ArithmeticOverflow)?;
+        let (_, ncn_reward_receiver_bump, mut ncn_reward_receiver_seeds) =
+            NcnRewardRouter::find_program_address(
+                program_id,
+                ncn_fee_group,
+                operator.key,
+                ncn.key,
+                epoch,
+            );
+        ncn_reward_receiver_seeds.push(vec![ncn_reward_receiver_bump]);
+
+        solana_program::program::invoke_signed(
+            &solana_program::system_instruction::transfer(
+                ncn_reward_receiver.key,
+                operator.key,
+                rewards,
+            ),
+            &[ncn_reward_receiver.clone(), operator.clone()],
+            &[ncn_reward_receiver_seeds
+                .iter()
+                .map(|s| s.as_slice())
+                .collect::<Vec<&[u8]>>()
+                .as_slice()],
+        )?;
     }
 
     Ok(())

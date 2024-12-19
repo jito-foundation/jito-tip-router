@@ -16,7 +16,7 @@ pub fn process_route_ncn_rewards(
     ncn_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn, operator, operator_snapshot, ncn_reward_router, restaking_program] =
+    let [restaking_config, ncn, operator, operator_snapshot, ncn_reward_router, ncn_reward_receiver, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -55,13 +55,13 @@ pub fn process_route_ncn_rewards(
     let operator_snapshot_account =
         OperatorSnapshot::try_from_slice_unchecked(&operator_snapshot_data)?;
 
-    let account_balance = **ncn_reward_router.try_borrow_lamports()?;
+    let account_balance = **ncn_reward_receiver.try_borrow_lamports()?;
 
     let mut ncn_reward_router_data = ncn_reward_router.try_borrow_mut_data()?;
     let ncn_reward_router_account =
         NcnRewardRouter::try_from_slice_unchecked_mut(&mut ncn_reward_router_data)?;
 
-    let rent_cost = ncn_reward_router_account.rent_cost(&Rent::get()?)?;
+    let rent_cost = Rent::get()?.minimum_balance(0);
 
     ncn_reward_router_account.route_incoming_rewards(rent_cost, account_balance)?;
 

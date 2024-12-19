@@ -1,3 +1,4 @@
+#![feature(const_trait_impl)]
 use std::{
     borrow::BorrowMut,
     fmt::{Debug, Formatter},
@@ -6,11 +7,15 @@ use std::{
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
 use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
-    base_fee_group::BaseFeeGroup, base_reward_router::BaseRewardRouter, ncn_fee_group::NcnFeeGroup,
+    base_fee_group::BaseFeeGroup,
+    base_reward_router::BaseRewardRouter,
+    constants::{JITO_SOL_MINT, JITO_SOL_POOL_ADDRESS},
+    ncn_fee_group::NcnFeeGroup,
 };
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
-    clock::Clock, native_token::sol_to_lamports, pubkey::Pubkey, system_instruction::transfer,
+    clock::Clock, native_token::sol_to_lamports, program_pack::Pack, pubkey::Pubkey,
+    system_instruction::transfer,
 };
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
@@ -18,14 +23,17 @@ use solana_sdk::{
     commitment_config::CommitmentLevel,
     epoch_schedule::EpochSchedule,
     native_token::{lamports_to_sol, LAMPORTS_PER_SOL},
+    program_option,
+    rent::Rent,
     signature::{Keypair, Signer},
     system_instruction,
     transaction::Transaction,
 };
+use spl_stake_pool::find_withdraw_authority_program_address;
 
 use super::{
-    restaking_client::NcnRoot, tip_distribution_client::TipDistributionClient,
-    tip_router_client::TipRouterClient,
+    restaking_client::NcnRoot, stake_pool_client::StakePoolClient,
+    tip_distribution_client::TipDistributionClient, tip_router_client::TipRouterClient,
 };
 use crate::fixtures::{
     restaking_client::{OperatorRoot, RestakingProgramClient},
@@ -54,6 +62,7 @@ pub struct TestNcnNode {
 
 pub struct TestBuilder {
     context: ProgramTestContext,
+    stake_pool_keypair: Keypair,
 }
 
 impl Debug for TestBuilder {
@@ -72,6 +81,28 @@ pub const fn system_account(lamports: u64) -> Account {
     }
 }
 
+pub fn token_mint_account(withdraw_authority: &Pubkey) -> Account {
+    let account = spl_token::state::Mint {
+        mint_authority: solana_sdk::program_option::COption::Some(*withdraw_authority),
+        supply: 0,
+        decimals: 9,
+        is_initialized: true,
+        freeze_authority: solana_sdk::program_option::COption::None,
+    };
+
+    let mut data = [0; 82];
+
+    spl_token::state::Mint::pack(account, &mut data).unwrap();
+
+    Account {
+        lamports: 1000000000,
+        owner: spl_token::id(),
+        executable: false,
+        rent_epoch: 0,
+        data: data.to_vec(),
+    }
+}
+
 impl TestBuilder {
     pub async fn new() -> Self {
         let run_as_bpf = std::env::vars().any(|(key, _)| key.eq("SBF_OUT_DIR"));
@@ -84,6 +115,7 @@ impl TestBuilder {
             );
             program_test.add_program("jito_vault_program", jito_vault_program::id(), None);
             program_test.add_program("jito_restaking_program", jito_restaking_program::id(), None);
+            program_test.add_program("spl_stake_pool", spl_stake_pool::id(), None);
 
             // Tests that invoke this program should be in the "bpf" module so we can run them separately with the bpf vm.
             // Anchor programs do not expose a compatible entrypoint for solana_program_test::processor!
@@ -106,32 +138,30 @@ impl TestBuilder {
                 jito_restaking_program::id(),
                 processor!(jito_restaking_program::process_instruction),
             );
-
+            program_test.add_program(
+                "spl_stake_pool",
+                spl_stake_pool::id(),
+                processor!(spl_stake_pool::processor::Processor::process),
+            );
             program_test
         };
 
-        // Pre-fund payer with 1M SOL
-        let whale = Keypair::new();
-        program_test.add_account(whale.pubkey(), system_account(1_000_000 * LAMPORTS_PER_SOL));
-        let mut context = program_test.start_with_context().await;
-        let transaction = Transaction::new_signed_with_payer(
-            &[system_instruction::transfer(
-                &whale.pubkey(),
-                &context.payer.pubkey(),
-                999_999 * LAMPORTS_PER_SOL,
-            )],
-            Some(&whale.pubkey()),
-            &[&whale],
-            context.last_blockhash,
+        let stake_pool_keypair = Keypair::new();
+        let jitosol_mint_authority = find_withdraw_authority_program_address(
+            &spl_stake_pool::id(),
+            &stake_pool_keypair.pubkey(),
         );
+        println!(
+            "withdraw_authority from test builder, bump: {:?}",
+            jitosol_mint_authority
+        );
+        // TODO we can do this with regular instructions it turns out, in the future. So we can have different stake pools per test
+        program_test.add_account(JITO_SOL_MINT, token_mint_account(&jitosol_mint_authority.0));
 
-        context
-            .banks_client
-            .process_transaction(transaction)
-            .await
-            .expect("failed to pre-fund payer");
-
-        Self { context }
+        Self {
+            context: program_test.start_with_context().await,
+            stake_pool_keypair,
+        }
     }
 
     pub async fn get_balance(&mut self, pubkey: &Pubkey) -> Result<u64, BanksClientError> {
@@ -170,6 +200,10 @@ impl TestBuilder {
         self.context.banks_client.get_sysvar().await.unwrap()
     }
 
+    pub async fn rent(&mut self) -> Rent {
+        self.context.banks_client.get_rent().await.unwrap()
+    }
+
     pub fn tip_router_client(&self) -> TipRouterClient {
         TipRouterClient::new(
             self.context.banks_client.clone(),
@@ -202,6 +236,14 @@ impl TestBuilder {
         TipDistributionClient::new(
             self.context.banks_client.clone(),
             self.context.payer.insecure_clone(),
+        )
+    }
+
+    pub fn stake_pool_client(&self) -> StakePoolClient {
+        StakePoolClient::new(
+            self.context.banks_client.clone(),
+            self.context.payer.insecure_clone(),
+            self.stake_pool_keypair.insecure_clone(),
         )
     }
 
@@ -648,9 +690,11 @@ impl TestBuilder {
         rewards: u64,
     ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
+        let mut stake_pool_client = self.stake_pool_client();
 
         let ncn = test_ncn.ncn_root.ncn_pubkey;
         let epoch = self.clock().await.epoch;
+        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
 
         let (base_reward_router, _, _) =
             BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
@@ -676,7 +720,7 @@ impl TestBuilder {
             }
 
             tip_router_client
-                .do_distribute_base_rewards(*group, ncn, epoch)
+                .do_distribute_base_rewards(*group, ncn, epoch, &pool_root)
                 .await?;
         }
 

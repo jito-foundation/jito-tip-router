@@ -175,7 +175,8 @@ pub enum TipRouterInstruction {
     #[account(2, name = "epoch_snapshot")]
     #[account(3, name = "ballot_box")]
     #[account(4, writable, name = "base_reward_router")]
-    #[account(5, name = "restaking_program")]
+    #[account(5, writable, name = "base_reward_receiver")]
+    #[account(6, name = "restaking_program")]
     RouteBaseRewards{
         epoch: u64,
     },
@@ -186,7 +187,8 @@ pub enum TipRouterInstruction {
     #[account(2, name = "operator")]
     #[account(3, name = "operator_snapshot")]
     #[account(4, writable, name = "ncn_reward_router")]
-    #[account(5, name = "restaking_program")]
+    #[account(5, writable, name = "ncn_reward_receiver")]
+    #[account(6, name = "restaking_program")]
     RouteNcnRewards{
         ncn_fee_group: u8,
         epoch: u64,
@@ -197,8 +199,20 @@ pub enum TipRouterInstruction {
     #[account(1, name = "ncn_config")]
     #[account(2, name = "ncn")]
     #[account(3, writable, name = "base_reward_router")]
-    #[account(4, writable, name = "base_fee_wallet")]
-    #[account(5, name = "restaking_program")]
+    #[account(4, writable, name = "base_reward_receiver")]
+    #[account(5, name = "base_fee_wallet")]
+    #[account(6, writable, name = "base_fee_wallet_ata")]
+    #[account(7, name = "restaking_program")]
+    // Additional accounts for stake pool deposit
+    #[account(8, name = "stake_pool_program")]
+    #[account(9, writable, name = "stake_pool")]
+    #[account(10, name = "stake_pool_withdraw_authority")]
+    #[account(11, writable, name = "reserve_stake")]
+    #[account(12, writable, name = "manager_fee_account")]
+    #[account(13, writable, name = "referrer_pool_tokens_account")]
+    #[account(14, writable, name = "pool_mint")]
+    #[account(15, name = "token_program")]
+    #[account(16, name = "system_program")]
     DistributeBaseRewards{
         base_fee_group: u8,
         epoch: u64,
@@ -210,8 +224,11 @@ pub enum TipRouterInstruction {
     #[account(2, name = "ncn")]
     #[account(3, name = "operator")]
     #[account(4, writable, name = "base_reward_router")]
-    #[account(5, writable, name = "ncn_reward_router")]
-    #[account(6, name = "restaking_program")]
+    #[account(5, writable, name = "base_reward_receiver")]
+    #[account(6, writable, name = "ncn_reward_router")]
+    #[account(7, writable, name = "ncn_reward_receiver")]
+    #[account(8, name = "restaking_program")]
+    #[account(9, name = "system_program")]
     DistributeBaseNcnRewardRoute{
         ncn_fee_group: u8,
         epoch: u64,
@@ -223,7 +240,9 @@ pub enum TipRouterInstruction {
     #[account(2, name = "ncn")]
     #[account(3, writable, name = "operator")]
     #[account(4, writable, name = "ncn_reward_router")]
-    #[account(5, name = "restaking_program")]
+    #[account(5, writable, name = "ncn_reward_receiver")]
+    #[account(6, name = "restaking_program")]
+    #[account(7, name = "system_program")]
     DistributeNcnOperatorRewards{
         ncn_fee_group: u8,
         epoch: u64,
@@ -236,6 +255,8 @@ pub enum TipRouterInstruction {
     #[account(3, name = "operator")]
     #[account(4, writable, name = "vault")]
     #[account(5, writable, name = "ncn_reward_router")]
+    #[account(6, writable, name = "ncn_reward_receiver")]
+    #[account(7, name = "system_program")]
     DistributeNcnVaultRewards{
         ncn_fee_group: u8,
         epoch: u64,

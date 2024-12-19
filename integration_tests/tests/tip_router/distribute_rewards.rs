@@ -3,8 +3,10 @@ mod tests {
 
     use jito_tip_router_core::{
         base_fee_group::BaseFeeGroup,
-        base_reward_router::BaseRewardRouter,
+        base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
         ncn_fee_group::{NcnFeeGroup, NcnFeeGroupType},
+        ncn_reward_router::NcnRewardReceiver,
+        sol_router::SolRouter,
     };
     use solana_sdk::{
         clock::DEFAULT_SLOTS_PER_EPOCH, native_token::lamports_to_sol, signature::Keypair,
@@ -17,6 +19,10 @@ mod tests {
     async fn test_route_and_distribute_base_rewards() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
+        let mut stake_pool_client = fixture.stake_pool_client();
+        //
+        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
+        //
 
         // Setup with 2 operators for interesting reward splits
         // 10% Operator fee
@@ -110,12 +116,34 @@ mod tests {
         // Route in 3_000 lamports
         let (base_reward_router, _, _) =
             BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+        let (base_reward_receiver, _, _) =
+            BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+
+        let (sol_router, _, _) = SolRouter::find_program_address(&jito_tip_router_program::id());
+        let rent = fixture.rent().await;
+        let minimum_system_account_rent = rent.minimum_balance(0);
 
         // Send rewards to base reward router
         let sol_rewards = lamports_to_sol(3_000);
+
+        let payer_balance = fixture
+            .get_balance(&tip_router_client.payer.pubkey())
+            .await?;
+        println!("payer_balance: {:?}", payer_balance);
         // send rewards to the base reward router
         tip_router_client
-            .airdrop(&base_reward_router, sol_rewards)
+            .airdrop_lamports(&sol_router, 3000 + minimum_system_account_rent)
+            .await?;
+        tip_router_client
+            .airdrop_lamports(&base_reward_receiver, 3000 + minimum_system_account_rent)
+            .await?;
+        let payer_balance = fixture
+            .get_balance(&tip_router_client.payer.pubkey())
+            .await?;
+        println!("payer_balance: {:?}", payer_balance);
+
+        tip_router_client
+            .airdrop_lamports(&base_reward_router, 3000 + minimum_system_account_rent)
             .await?;
 
         // Route rewards
@@ -156,16 +184,33 @@ mod tests {
         };
         assert_eq!(operator_2_rewards, 150);
 
+        stake_pool_client
+            .update_stake_pool_balance(&pool_root)
+            .await?;
+
+        println!("distributing base rewards");
         // Distribute base rewards (DAO fee)
         tip_router_client
-            .do_distribute_base_rewards(BaseFeeGroup::default(), ncn, epoch)
+            .do_distribute_base_rewards(BaseFeeGroup::default(), ncn, epoch, &pool_root)
             .await?;
+
+        println!("distributing base ncn rewards");
 
         // Distribute base NCN rewards (operator rewards)
         for operator_root in test_ncn.operators.iter() {
             let operator = operator_root.operator_pubkey;
 
             for group in NcnFeeGroup::all_groups().iter() {
+                let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+                    &jito_tip_router_program::id(),
+                    *group,
+                    &operator,
+                    &ncn,
+                    epoch,
+                );
+                tip_router_client
+                    .airdrop_lamports(&ncn_reward_receiver, minimum_system_account_rent)
+                    .await?;
                 tip_router_client
                     .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)
                     .await?;

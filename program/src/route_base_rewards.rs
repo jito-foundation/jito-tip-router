@@ -14,7 +14,7 @@ pub fn process_route_base_rewards(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn, epoch_snapshot, ballot_box, base_reward_router, restaking_program] =
+    let [restaking_config, ncn, epoch_snapshot, ballot_box, base_reward_router, base_reward_receiver, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -38,15 +38,15 @@ pub fn process_route_base_rewards(
     let ballot_box_data = ballot_box.try_borrow_data()?;
     let ballot_box_account = BallotBox::try_from_slice_unchecked(&ballot_box_data)?;
 
-    let base_reward_router_balance = **base_reward_router.try_borrow_lamports()?;
+    let base_reward_receiver_balance = **base_reward_receiver.try_borrow_lamports()?;
 
     let mut base_reward_router_data = base_reward_router.try_borrow_mut_data()?;
     let base_reward_router_account =
         BaseRewardRouter::try_from_slice_unchecked_mut(&mut base_reward_router_data)?;
 
-    let rent_cost = base_reward_router_account.rent_cost(&Rent::get()?)?;
+    let rent_cost = Rent::get()?.minimum_balance(0);
 
-    base_reward_router_account.route_incoming_rewards(rent_cost, base_reward_router_balance)?;
+    base_reward_router_account.route_incoming_rewards(rent_cost, base_reward_receiver_balance)?;
 
     base_reward_router_account.route_reward_pool(epoch_snapshot_account.fees())?;
 

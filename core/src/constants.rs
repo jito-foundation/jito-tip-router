@@ -1,4 +1,4 @@
-use solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
+use solana_program::{entrypoint::MAX_PERMITTED_DATA_INCREASE, pubkey, pubkey::Pubkey};
 use spl_math::precise_number::PreciseNumber;
 
 use crate::error::TipRouterError;
@@ -20,3 +20,6 @@ pub fn precise_consensus() -> Result<PreciseNumber, TipRouterError> {
 
 pub const DEFAULT_CONSENSUS_REACHED_SLOT: u64 = u64::MAX;
 pub const MAX_REALLOC_BYTES: u64 = MAX_PERMITTED_DATA_INCREASE as u64; // TODO just use this?
+
+pub const JITO_SOL_MINT: Pubkey = pubkey!("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn");
+pub const JITO_SOL_POOL_ADDRESS: Pubkey = pubkey!("Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb");
