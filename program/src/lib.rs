@@ -5,6 +5,7 @@ mod admin_set_st_mint;
 mod admin_set_tie_breaker;
 mod admin_set_weight;
 mod cast_vote;
+mod claim_with_payer;
 mod distribute_base_ncn_reward_route;
 mod distribute_base_rewards;
 mod distribute_ncn_operator_rewards;
@@ -46,6 +47,7 @@ use crate::{
     admin_set_st_mint::process_admin_set_st_mint,
     admin_set_tie_breaker::process_admin_set_tie_breaker,
     admin_set_weight::process_admin_set_weight, cast_vote::process_cast_vote,
+    claim_with_payer::process_claim_with_payer,
     distribute_base_ncn_reward_route::process_distribute_base_ncn_reward_route,
     distribute_base_rewards::process_distribute_base_rewards,
     distribute_ncn_operator_rewards::process_distribute_ncn_operator_rewards,
@@ -302,6 +304,15 @@ pub fn process_instruction(
             msg!("Instruction: AdminSetTieBreaker");
             process_admin_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
         }
+        TipRouterInstruction::ClaimWithPayer {
+            proof,
+            amount,
+            bump,
+        } => {
+            msg!("Instruction: ClaimWithPayer");
+            process_claim_with_payer(program_id, accounts, proof, amount, bump)
+        }
+
         TipRouterInstruction::ReallocBallotBox { epoch } => {
             msg!("Instruction: ReallocBallotBox");
             process_realloc_ballot_box(program_id, accounts, epoch)

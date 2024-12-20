@@ -67,7 +67,7 @@ pub struct ReallocVaultRegistryInstructionData {
 
 impl ReallocVaultRegistryInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 29 }
+        Self { discriminator: 30 }
     }
 }
 

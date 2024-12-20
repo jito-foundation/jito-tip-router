@@ -20,6 +20,7 @@ import {
   type ParsedAdminSetTieBreakerInstruction,
   type ParsedAdminSetWeightInstruction,
   type ParsedCastVoteInstruction,
+  type ParsedClaimWithPayerInstruction,
   type ParsedDistributeBaseNcnRewardRouteInstruction,
   type ParsedDistributeBaseRewardsInstruction,
   type ParsedDistributeNcnOperatorRewardsInstruction,
@@ -85,6 +86,7 @@ export enum JitoTipRouterInstruction {
   CastVote,
   SetMerkleRoot,
   AdminSetTieBreaker,
+  ClaimWithPayer,
   ReallocBallotBox,
   ReallocOperatorSnapshot,
   ReallocBaseRewardRouter,
@@ -172,18 +174,21 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.AdminSetTieBreaker;
   }
   if (containsBytes(data, getU8Encoder().encode(25), 0)) {
-    return JitoTipRouterInstruction.ReallocBallotBox;
+    return JitoTipRouterInstruction.ClaimWithPayer;
   }
   if (containsBytes(data, getU8Encoder().encode(26), 0)) {
-    return JitoTipRouterInstruction.ReallocOperatorSnapshot;
+    return JitoTipRouterInstruction.ReallocBallotBox;
   }
   if (containsBytes(data, getU8Encoder().encode(27), 0)) {
-    return JitoTipRouterInstruction.ReallocBaseRewardRouter;
+    return JitoTipRouterInstruction.ReallocOperatorSnapshot;
   }
   if (containsBytes(data, getU8Encoder().encode(28), 0)) {
-    return JitoTipRouterInstruction.ReallocWeightTable;
+    return JitoTipRouterInstruction.ReallocBaseRewardRouter;
   }
   if (containsBytes(data, getU8Encoder().encode(29), 0)) {
+    return JitoTipRouterInstruction.ReallocWeightTable;
+  }
+  if (containsBytes(data, getU8Encoder().encode(30), 0)) {
     return JitoTipRouterInstruction.ReallocVaultRegistry;
   }
   throw new Error(
@@ -269,6 +274,9 @@ export type ParsedJitoTipRouterInstruction<
   | ({
       instructionType: JitoTipRouterInstruction.AdminSetTieBreaker;
     } & ParsedAdminSetTieBreakerInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ClaimWithPayer;
+    } & ParsedClaimWithPayerInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.ReallocBallotBox;
     } & ParsedReallocBallotBoxInstruction<TProgram>)

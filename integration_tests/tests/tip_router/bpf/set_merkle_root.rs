@@ -5,6 +5,7 @@ mod set_merkle_root {
     };
     use jito_tip_router_core::{
         ballot_box::{Ballot, BallotBox},
+        claim_status_payer::ClaimStatusPayer,
         error::TipRouterError,
         ncn_config::NcnConfig,
     };
@@ -26,7 +27,7 @@ mod set_merkle_root {
     };
 
     struct GeneratedMerkleTreeCollectionFixture {
-        _test_generated_merkle_tree: GeneratedMerkleTree,
+        pub test_generated_merkle_tree: GeneratedMerkleTree,
         collection: GeneratedMerkleTreeCollection,
     }
 
@@ -135,14 +136,14 @@ mod set_merkle_root {
             .unwrap();
 
         Ok(GeneratedMerkleTreeCollectionFixture {
-            _test_generated_merkle_tree: test_generated_merkle_tree.clone(),
+            test_generated_merkle_tree: test_generated_merkle_tree.clone(),
             collection,
         })
     }
 
     struct MetaMerkleTreeFixture {
         // Contains the individual validator's merkle trees, with the TreeNode idata needed to invoke the set_merkle_root instruction (root, max_num_nodes, max_total_claim)
-        _generated_merkle_tree_fixture: GeneratedMerkleTreeCollectionFixture,
+        pub generated_merkle_tree_fixture: GeneratedMerkleTreeCollectionFixture,
         // Contains meta merkle tree with the root that all validators vote on, and proofs needed to verify the input data
         pub meta_merkle_tree: MetaMerkleTree,
     }
@@ -164,7 +165,7 @@ mod set_merkle_root {
         )?;
 
         Ok(MetaMerkleTreeFixture {
-            _generated_merkle_tree_fixture: generated_merkle_tree_fixture,
+            generated_merkle_tree_fixture,
             meta_merkle_tree,
         })
     }
@@ -189,6 +190,14 @@ mod set_merkle_root {
 
         tip_distribution_client
             .do_initialize_tip_distribution_account(ncn_config_address, vote_keypair, epoch, 100)
+            .await?;
+        let (tip_distribution_account, _) = derive_tip_distribution_account_address(
+            &jito_tip_distribution::ID,
+            &vote_account,
+            epoch,
+        );
+        tip_router_client
+            .airdrop(&tip_distribution_account, 10.0)
             .await?;
 
         let meta_merkle_tree_fixture =
@@ -279,6 +288,50 @@ mod set_merkle_root {
         assert_eq!(merkle_root.root, node.validator_merkle_root);
         assert_eq!(merkle_root.max_num_nodes, node.max_num_nodes);
         assert_eq!(merkle_root.max_total_claim, node.max_total_claim);
+
+        //// Test claiming for a node ////
+        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+            &jito_tip_router_program::id(),
+            &jito_tip_distribution::ID,
+        );
+        tip_router_client.airdrop(&claim_status_payer, 10.0).await?;
+
+        let tip_distribution_account = meta_merkle_tree_fixture
+            .generated_merkle_tree_fixture
+            .test_generated_merkle_tree
+            .tip_distribution_account;
+
+        let target_claimant_node = meta_merkle_tree_fixture
+            .generated_merkle_tree_fixture
+            .test_generated_merkle_tree
+            .tree_nodes[0]
+            .clone();
+
+        let target_claimant = target_claimant_node.claimant;
+        let target_claimant_node_proof = target_claimant_node.proof.clone().unwrap();
+        let target_claimant_node_amount = target_claimant_node.amount;
+
+        // Run passthrough claim
+        tip_router_client
+            .do_claim_with_payer(
+                target_claimant,
+                tip_distribution_account,
+                target_claimant_node_proof.clone(),
+                target_claimant_node_amount,
+            )
+            .await?;
+
+        let claim_status_account = tip_distribution_client
+            .get_claim_status_account(target_claimant, tip_distribution_account)
+            .await?;
+
+        let clock = fixture.clock().await;
+        let slot = clock.slot;
+
+        assert!(claim_status_account.is_claimed);
+        assert_eq!(claim_status_account.claimant, target_claimant);
+        assert_eq!(claim_status_account.amount, target_claimant_node_amount);
+        assert_eq!(claim_status_account.slot_claimed_at, slot);
 
         Ok(())
     }

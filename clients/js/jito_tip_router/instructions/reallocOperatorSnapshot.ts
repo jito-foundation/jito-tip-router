@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const REALLOC_OPERATOR_SNAPSHOT_DISCRIMINATOR = 26;
+export const REALLOC_OPERATOR_SNAPSHOT_DISCRIMINATOR = 27;
 
 export function getReallocOperatorSnapshotDiscriminatorBytes() {
   return getU8Encoder().encode(REALLOC_OPERATOR_SNAPSHOT_DISCRIMINATOR);

@@ -7,7 +7,7 @@ use jito_tip_router_client::{
     instructions::{
         AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
         AdminSetStMintBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder, CastVoteBuilder,
-        DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
+        ClaimWithPayerBuilder, DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
         DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
         InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder, InitializeConfigBuilder,
         InitializeEpochSnapshotBuilder, InitializeNcnRewardRouterBuilder,
@@ -23,6 +23,7 @@ use jito_tip_router_core::{
     ballot_box::BallotBox,
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
+    claim_status_payer::ClaimStatusPayer,
     constants::{JITO_SOL_MINT, MAX_REALLOC_BYTES},
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     error::TipRouterError,
@@ -2125,6 +2126,79 @@ impl TipRouterClient {
         let blockhash = self.banks_client.get_latest_blockhash().await?;
         self.process_transaction(&Transaction::new_signed_with_payer(
             &ixs,
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_claim_with_payer(
+        &mut self,
+        claimant: Pubkey,
+        tip_distribution_account: Pubkey,
+        proof: Vec<[u8; 32]>,
+        amount: u64,
+    ) -> TestResult<()> {
+        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+            &jito_tip_router_program::id(),
+            &jito_tip_distribution::ID,
+        );
+
+        let tip_distribution_program_id = jito_tip_distribution::ID;
+        let tip_distribution_config =
+            jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program_id)
+                .0;
+
+        let (claim_status, claim_status_bump) =
+            jito_tip_distribution_sdk::derive_claim_status_account_address(
+                &tip_distribution_program_id,
+                &claimant,
+                &tip_distribution_account,
+            );
+
+        self.claim_with_payer(
+            claim_status_payer,
+            tip_distribution_program_id,
+            tip_distribution_config,
+            tip_distribution_account,
+            claim_status,
+            claimant,
+            proof,
+            amount,
+            claim_status_bump,
+        )
+        .await
+    }
+
+    pub async fn claim_with_payer(
+        &mut self,
+        claim_status_payer: Pubkey,
+        tip_distribution_program: Pubkey,
+        tip_distribution_config: Pubkey,
+        tip_distribution_account: Pubkey,
+        claim_status: Pubkey,
+        claimant: Pubkey,
+        proof: Vec<[u8; 32]>,
+        amount: u64,
+        bump: u8,
+    ) -> TestResult<()> {
+        let ix = ClaimWithPayerBuilder::new()
+            .claim_status_payer(claim_status_payer)
+            .tip_distribution_program(tip_distribution_program)
+            .config(tip_distribution_config)
+            .tip_distribution_account(tip_distribution_account)
+            .claim_status(claim_status)
+            .claimant(claimant)
+            .system_program(system_program::id())
+            .proof(proof)
+            .amount(amount)
+            .bump(bump)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
             Some(&self.payer.pubkey()),
             &[&self.payer],
             blockhash,

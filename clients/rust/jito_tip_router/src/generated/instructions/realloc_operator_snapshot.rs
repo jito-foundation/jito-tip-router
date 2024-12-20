@@ -103,7 +103,7 @@ pub struct ReallocOperatorSnapshotInstructionData {
 
 impl ReallocOperatorSnapshotInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 26 }
+        Self { discriminator: 27 }
     }
 }
 
