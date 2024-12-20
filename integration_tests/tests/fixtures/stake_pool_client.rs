@@ -1,24 +1,21 @@
-use anchor_lang::AccountDeserialize;
+#![allow(deprecated)] // using deprecated borsh to align with mainnet stake pool version
 use borsh::BorshDeserialize;
 use jito_tip_router_core::constants::JITO_SOL_MINT;
 use solana_program::{
     borsh0_10::{get_instance_packed_len, get_packed_len},
     pubkey::Pubkey,
     stake,
-    system_instruction::transfer,
 };
-use solana_program_test::{BanksClient, BanksClientError, ProgramTestBanksClientExt};
+use solana_program_test::{BanksClient, BanksClientError};
 use solana_sdk::{
     commitment_config::CommitmentLevel,
-    native_token::{sol_to_lamports, LAMPORTS_PER_SOL},
-    program_pack::Pack,
     signature::{Keypair, Signer},
     system_instruction,
     transaction::Transaction,
 };
 use spl_associated_token_account::get_associated_token_address;
 use spl_stake_pool::{
-    find_stake_program_address, find_withdraw_authority_program_address, instruction,
+    find_withdraw_authority_program_address, instruction,
     state::{Fee, StakePool, ValidatorList},
 };
 
@@ -138,7 +135,7 @@ impl StakePoolClient {
         let manager_fee_account = get_associated_token_address(&manager.pubkey(), &pool_mint);
         let referrer_pool_tokens_account = Keypair::new();
 
-        let (withdraw_authority) =
+        let withdraw_authority =
             find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool.pubkey());
         println!(
             "withdraw_authority from initialize stake pool, bump: {:?}",

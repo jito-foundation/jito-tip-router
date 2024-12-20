@@ -6,10 +6,14 @@ use jito_jsm_core::{
     loader::{load_signer, load_system_account, load_system_program},
 };
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
-use jito_tip_router_core::{ncn_fee_group::NcnFeeGroup, ncn_reward_router::NcnRewardRouter};
+use jito_tip_router_core::{
+    ncn_fee_group::NcnFeeGroup,
+    ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
+};
 use solana_program::{
-    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg, program::invoke,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction::transfer,
+    sysvar::Sysvar,
 };
 
 /// Can be backfilled for previous epochs
@@ -19,7 +23,7 @@ pub fn process_initialize_ncn_reward_router(
     ncn_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn, operator, ncn_reward_router, payer, restaking_program, system_program] =
+    let [restaking_config, ncn, operator, ncn_reward_router, ncn_reward_receiver, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -33,6 +37,15 @@ pub fn process_initialize_ncn_reward_router(
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
+    NcnRewardReceiver::load(
+        program_id,
+        ncn_reward_receiver,
+        ncn_fee_group.try_into()?,
+        operator.key,
+        ncn.key,
+        epoch,
+        true,
+    )?;
 
     load_system_account(ncn_reward_router, true)?;
     load_system_program(system_program)?;
@@ -88,6 +101,19 @@ pub fn process_initialize_ncn_reward_router(
         ncn_reward_router_bump,
         current_slot,
     );
+
+    let min_system_account_rent = Rent::get()?.minimum_balance(0);
+
+    msg!(
+        "Transferring rent of {} lamports to ncn reward receiver {}",
+        min_system_account_rent,
+        ncn_reward_receiver.key
+    );
+
+    invoke(
+        &transfer(payer.key, ncn_reward_receiver.key, min_system_account_rent),
+        &[payer.clone(), ncn_reward_receiver.clone()],
+    )?;
 
     Ok(())
 }

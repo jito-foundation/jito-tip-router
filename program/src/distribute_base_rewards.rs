@@ -5,9 +5,7 @@ use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     constants::JITO_SOL_MINT,
-    error::TipRouterError,
     ncn_config::NcnConfig,
-    sol_router::SolRouter,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
@@ -55,7 +53,7 @@ pub fn process_distribute_base_rewards(
 
     if rewards > 0 {
         let (_, base_reward_receiver_bump, mut base_reward_receiver_seeds) =
-            BaseRewardReceiver::find_program_address(program_id, &ncn.key, epoch);
+            BaseRewardReceiver::find_program_address(program_id, ncn.key, epoch);
         base_reward_receiver_seeds.push(vec![base_reward_receiver_bump]);
 
         // Create deposit_sol instruction

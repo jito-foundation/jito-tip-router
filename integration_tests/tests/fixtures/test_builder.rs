@@ -1,4 +1,3 @@
-#![feature(const_trait_impl)]
 use std::{
     borrow::BorrowMut,
     fmt::{Debug, Formatter},
@@ -7,10 +6,8 @@ use std::{
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
 use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
-    base_fee_group::BaseFeeGroup,
-    base_reward_router::BaseRewardRouter,
-    constants::{JITO_SOL_MINT, JITO_SOL_POOL_ADDRESS},
-    ncn_fee_group::NcnFeeGroup,
+    base_fee_group::BaseFeeGroup, base_reward_router::BaseRewardReceiver, constants::JITO_SOL_MINT,
+    ncn_fee_group::NcnFeeGroup, ncn_reward_router::NcnRewardReceiver,
 };
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
@@ -22,18 +19,18 @@ use solana_sdk::{
     account::Account,
     commitment_config::CommitmentLevel,
     epoch_schedule::EpochSchedule,
-    native_token::{lamports_to_sol, LAMPORTS_PER_SOL},
-    program_option,
+    native_token::lamports_to_sol,
     rent::Rent,
     signature::{Keypair, Signer},
-    system_instruction,
     transaction::Transaction,
 };
 use spl_stake_pool::find_withdraw_authority_program_address;
 
 use super::{
-    restaking_client::NcnRoot, stake_pool_client::StakePoolClient,
-    tip_distribution_client::TipDistributionClient, tip_router_client::TipRouterClient,
+    restaking_client::NcnRoot,
+    stake_pool_client::{PoolRoot, StakePoolClient},
+    tip_distribution_client::TipDistributionClient,
+    tip_router_client::TipRouterClient,
 };
 use crate::fixtures::{
     restaking_client::{OperatorRoot, RestakingProgramClient},
@@ -68,16 +65,6 @@ pub struct TestBuilder {
 impl Debug for TestBuilder {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "TestBuilder",)
-    }
-}
-
-pub const fn system_account(lamports: u64) -> Account {
-    Account {
-        lamports,
-        owner: solana_program::system_program::ID,
-        executable: false,
-        rent_epoch: 0,
-        data: vec![],
     }
 }
 
@@ -166,6 +153,17 @@ impl TestBuilder {
 
     pub async fn get_balance(&mut self, pubkey: &Pubkey) -> Result<u64, BanksClientError> {
         self.context.banks_client.get_balance(*pubkey).await
+    }
+
+    pub async fn get_associated_token_account(
+        &mut self,
+        wallet: &Pubkey,
+        mint: &Pubkey,
+    ) -> Result<Option<spl_token::state::Account>, BanksClientError> {
+        let ata = spl_associated_token_account::get_associated_token_address(wallet, mint);
+        self.get_account(&ata).await.map(|opt_acct| {
+            opt_acct.map(|acct| spl_token::state::Account::unpack(&acct.data).unwrap())
+        })
     }
 
     pub async fn get_account(
@@ -688,22 +686,21 @@ impl TestBuilder {
         &mut self,
         test_ncn: &TestNcn,
         rewards: u64,
+        pool_root: &PoolRoot,
     ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
-        let mut stake_pool_client = self.stake_pool_client();
 
         let ncn = test_ncn.ncn_root.ncn_pubkey;
         let epoch = self.clock().await.epoch;
-        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
 
-        let (base_reward_router, _, _) =
-            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+        let base_reward_receiver =
+            BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let sol_rewards = lamports_to_sol(rewards);
 
         // send rewards to the base reward router
         tip_router_client
-            .airdrop(&base_reward_router, sol_rewards)
+            .airdrop(&base_reward_receiver, sol_rewards)
             .await?;
 
         // route rewards
@@ -720,7 +717,7 @@ impl TestBuilder {
             }
 
             tip_router_client
-                .do_distribute_base_rewards(*group, ncn, epoch, &pool_root)
+                .do_distribute_base_rewards(*group, ncn, epoch, pool_root)
                 .await?;
         }
 
@@ -738,6 +735,18 @@ impl TestBuilder {
                         continue;
                     }
 
+                    let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+                        &jito_tip_router_program::id(),
+                        *group,
+                        &operator,
+                        &ncn,
+                        epoch,
+                    );
+                    let sol_rewards = lamports_to_sol(rewards);
+                    tip_router_client
+                        .airdrop(&ncn_reward_receiver, sol_rewards)
+                        .await?;
+
                     tip_router_client
                         .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)
                         .await?;
@@ -752,6 +761,7 @@ impl TestBuilder {
     pub async fn route_in_ncn_rewards_for_test_ncn(
         &mut self,
         test_ncn: &TestNcn,
+        pool_root: &PoolRoot,
     ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
 
@@ -774,7 +784,7 @@ impl TestBuilder {
 
                 if operator_rewards > 0 {
                     tip_router_client
-                        .do_distribute_ncn_operator_rewards(*group, operator, ncn, epoch)
+                        .do_distribute_ncn_operator_rewards(*group, operator, ncn, epoch, pool_root)
                         .await?;
                 }
 
@@ -789,7 +799,7 @@ impl TestBuilder {
                         if vault_rewards > 0 {
                             tip_router_client
                                 .do_distribute_ncn_vault_rewards(
-                                    *group, vault, operator, ncn, epoch,
+                                    *group, vault, operator, ncn, epoch, pool_root,
                                 )
                                 .await?;
                         }
@@ -802,11 +812,22 @@ impl TestBuilder {
     }
 
     // Intermission 4 - route rewards
-    pub async fn reward_test_ncn(&mut self, test_ncn: &TestNcn, rewards: u64) -> TestResult<()> {
+    pub async fn reward_test_ncn(
+        &mut self,
+        test_ncn: &TestNcn,
+        rewards: u64,
+        pool_root: &PoolRoot,
+    ) -> TestResult<()> {
+        let mut stake_pool_client = self.stake_pool_client();
         self.add_routers_for_tests_ncn(test_ncn).await?;
-        self.route_in_base_rewards_for_test_ncn(test_ncn, rewards)
+        stake_pool_client
+            .update_stake_pool_balance(pool_root)
             .await?;
-        self.route_in_ncn_rewards_for_test_ncn(test_ncn).await?;
+        self.route_in_base_rewards_for_test_ncn(test_ncn, rewards, pool_root)
+            .await?;
+
+        self.route_in_ncn_rewards_for_test_ncn(test_ncn, pool_root)
+            .await?;
 
         Ok(())
     }

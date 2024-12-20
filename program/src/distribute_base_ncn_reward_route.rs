@@ -2,7 +2,6 @@ use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
-    error::TipRouterError,
     ncn_config::NcnConfig,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::NcnRewardRouter,
@@ -61,7 +60,7 @@ pub fn process_distribute_base_ncn_reward_route(
     // Send rewards
     if rewards > 0 {
         let (_, base_reward_receiver_bump, mut base_reward_receiver_seeds) =
-            BaseRewardReceiver::find_program_address(program_id, &ncn.key, epoch);
+            BaseRewardReceiver::find_program_address(program_id, ncn.key, epoch);
         base_reward_receiver_seeds.push(vec![base_reward_receiver_bump]);
 
         solana_program::program::invoke_signed(

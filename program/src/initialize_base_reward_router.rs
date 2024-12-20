@@ -3,10 +3,14 @@ use jito_jsm_core::{
     loader::{load_signer, load_system_account, load_system_program},
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
-use jito_tip_router_core::{base_reward_router::BaseRewardRouter, constants::MAX_REALLOC_BYTES};
+use jito_tip_router_core::{
+    base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
+    constants::MAX_REALLOC_BYTES,
+};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction::transfer,
+    sysvar::Sysvar,
 };
 
 /// Can be backfilled for previous epochs
@@ -15,7 +19,7 @@ pub fn process_initialize_base_reward_router(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn, base_reward_router, payer, restaking_program, system_program] =
+    let [restaking_config, ncn, base_reward_router, base_reward_receiver, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -28,6 +32,7 @@ pub fn process_initialize_base_reward_router(
 
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
+    BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
 
     load_system_account(base_reward_router, true)?;
     load_system_program(system_program)?;
@@ -56,6 +61,23 @@ pub fn process_initialize_base_reward_router(
         &Rent::get()?,
         MAX_REALLOC_BYTES,
         &base_reward_router_seeds,
+    )?;
+
+    let min_system_account_rent = Rent::get()?.minimum_balance(0);
+
+    msg!(
+        "Transferring rent of {} lamports to base reward receiver {}",
+        min_system_account_rent,
+        base_reward_receiver.key
+    );
+
+    invoke(
+        &transfer(payer.key, base_reward_receiver.key, min_system_account_rent),
+        &[
+            payer.clone(),
+            base_reward_receiver.clone(),
+            system_program.clone(),
+        ],
     )?;
 
     Ok(())

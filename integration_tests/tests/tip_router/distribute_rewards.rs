@@ -3,15 +3,11 @@ mod tests {
 
     use jito_tip_router_core::{
         base_fee_group::BaseFeeGroup,
-        base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
+        base_reward_router::BaseRewardReceiver,
+        constants::JITO_SOL_MINT,
         ncn_fee_group::{NcnFeeGroup, NcnFeeGroupType},
-        ncn_reward_router::NcnRewardReceiver,
-        sol_router::SolRouter,
     };
-    use solana_sdk::{
-        clock::DEFAULT_SLOTS_PER_EPOCH, native_token::lamports_to_sol, signature::Keypair,
-        signer::Signer,
-    };
+    use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, signature::Keypair, signer::Signer};
 
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
 
@@ -88,62 +84,43 @@ mod tests {
         let ncn_config = tip_router_client.get_ncn_config(ncn).await?;
         let epoch = fixture.clock().await.epoch;
 
-        let dao_initial_balance = fixture
-            .get_balance(
+        let dao_initial_lst_balance = fixture
+            .get_associated_token_account(
                 &ncn_config
                     .fee_config
                     .base_fee_wallet(BaseFeeGroup::default())
                     .unwrap(),
+                &JITO_SOL_MINT,
             )
-            .await?;
+            .await?
+            .map_or(0, |account| account.amount);
 
         let operator_1_initial_balance = fixture
-            .get_balance(&test_ncn.operators[0].operator_pubkey)
-            .await?;
+            .get_associated_token_account(&test_ncn.operators[0].operator_pubkey, &JITO_SOL_MINT)
+            .await?
+            .map_or(0, |account| account.amount);
 
         let operator_2_initial_balance = fixture
-            .get_balance(&test_ncn.operators[1].operator_pubkey)
-            .await?;
+            .get_associated_token_account(&test_ncn.operators[1].operator_pubkey, &JITO_SOL_MINT)
+            .await?
+            .map_or(0, |account| account.amount);
 
         let vault_1_initial_balance = fixture
-            .get_balance(&test_ncn.vaults[0].vault_pubkey)
-            .await?;
+            .get_associated_token_account(&test_ncn.vaults[0].vault_pubkey, &JITO_SOL_MINT)
+            .await?
+            .map_or(0, |account| account.amount);
 
         let vault_2_initial_balance = fixture
-            .get_balance(&test_ncn.vaults[1].vault_pubkey)
-            .await?;
+            .get_associated_token_account(&test_ncn.vaults[1].vault_pubkey, &JITO_SOL_MINT)
+            .await?
+            .map_or(0, |account| account.amount);
 
-        // Route in 3_000 lamports
-        let (base_reward_router, _, _) =
-            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+        // Route in 3_000 lamports to the base reward receiver
         let (base_reward_receiver, _, _) =
             BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
-        let (sol_router, _, _) = SolRouter::find_program_address(&jito_tip_router_program::id());
-        let rent = fixture.rent().await;
-        let minimum_system_account_rent = rent.minimum_balance(0);
-
-        // Send rewards to base reward router
-        let sol_rewards = lamports_to_sol(3_000);
-
-        let payer_balance = fixture
-            .get_balance(&tip_router_client.payer.pubkey())
-            .await?;
-        println!("payer_balance: {:?}", payer_balance);
-        // send rewards to the base reward router
         tip_router_client
-            .airdrop_lamports(&sol_router, 3000 + minimum_system_account_rent)
-            .await?;
-        tip_router_client
-            .airdrop_lamports(&base_reward_receiver, 3000 + minimum_system_account_rent)
-            .await?;
-        let payer_balance = fixture
-            .get_balance(&tip_router_client.payer.pubkey())
-            .await?;
-        println!("payer_balance: {:?}", payer_balance);
-
-        tip_router_client
-            .airdrop_lamports(&base_reward_router, 3000 + minimum_system_account_rent)
+            .airdrop_lamports(&base_reward_receiver, 3000)
             .await?;
 
         // Route rewards
@@ -188,29 +165,16 @@ mod tests {
             .update_stake_pool_balance(&pool_root)
             .await?;
 
-        println!("distributing base rewards");
         // Distribute base rewards (DAO fee)
         tip_router_client
             .do_distribute_base_rewards(BaseFeeGroup::default(), ncn, epoch, &pool_root)
             .await?;
-
-        println!("distributing base ncn rewards");
 
         // Distribute base NCN rewards (operator rewards)
         for operator_root in test_ncn.operators.iter() {
             let operator = operator_root.operator_pubkey;
 
             for group in NcnFeeGroup::all_groups().iter() {
-                let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
-                    &jito_tip_router_program::id(),
-                    *group,
-                    &operator,
-                    &ncn,
-                    epoch,
-                );
-                tip_router_client
-                    .airdrop_lamports(&ncn_reward_receiver, minimum_system_account_rent)
-                    .await?;
                 tip_router_client
                     .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)
                     .await?;
@@ -218,14 +182,16 @@ mod tests {
         }
 
         // Get final balances
-        let dao_final_balance = fixture
-            .get_balance(
+        let dao_final_lst_balance = fixture
+            .get_associated_token_account(
                 &ncn_config
                     .fee_config
                     .base_fee_wallet(BaseFeeGroup::default())
                     .unwrap(),
+                &JITO_SOL_MINT,
             )
-            .await?;
+            .await?
+            .map_or(0, |account| account.amount);
 
         let operator_total_rewards = {
             let mut operator_total_rewards = Vec::new();
@@ -241,7 +207,9 @@ mod tests {
 
                     // Distribute to operators
                     tip_router_client
-                        .do_distribute_ncn_operator_rewards(*group, operator, ncn, epoch)
+                        .do_distribute_ncn_operator_rewards(
+                            *group, operator, ncn, epoch, &pool_root,
+                        )
                         .await?;
 
                     // Distribute to vaults
@@ -260,7 +228,7 @@ mod tests {
 
                             tip_router_client
                                 .do_distribute_ncn_vault_rewards(
-                                    *group, vault, operator, ncn, epoch,
+                                    *group, vault, operator, ncn, epoch, &pool_root,
                                 )
                                 .await?;
                         }
@@ -285,7 +253,9 @@ mod tests {
         // LST = 15 -> 150
         // JTO = 15 -> 150
 
-        let dao_reward = dao_final_balance - dao_initial_balance;
+        ///// TODO check balances of stake pool token rather than lamports in these accounts ////
+
+        let dao_reward = dao_final_lst_balance - dao_initial_lst_balance;
         assert_eq!(dao_reward, 2_700);
 
         // NCN Reward Routes
@@ -294,31 +264,35 @@ mod tests {
 
         // Operator 1 Rewards
         let operator_1_final_balance = fixture
-            .get_balance(&test_ncn.operators[0].operator_pubkey)
-            .await?;
+            .get_associated_token_account(&test_ncn.operators[0].operator_pubkey, &JITO_SOL_MINT)
+            .await?
+            .map_or(0, |account| account.amount);
         let operator_1_reward = operator_1_final_balance - operator_1_initial_balance;
         assert_eq!(operator_1_reward, 14);
 
         // Operator 2 Rewards
         let operator_2_final_balance = fixture
-            .get_balance(&test_ncn.operators[1].operator_pubkey)
-            .await?;
+            .get_associated_token_account(&test_ncn.operators[1].operator_pubkey, &JITO_SOL_MINT)
+            .await?
+            .map_or(0, |account| account.amount);
         let operator_2_reward = operator_2_final_balance - operator_2_initial_balance;
         assert_eq!(operator_2_reward, 14);
 
         // Vault 1 Rewards
         let vault_1_final_balance = fixture
-            .get_balance(&test_ncn.vaults[0].vault_pubkey)
-            .await?;
+            .get_associated_token_account(&test_ncn.vaults[0].vault_pubkey, &JITO_SOL_MINT)
+            .await?
+            .map_or(0, |account| account.amount);
         let vault_1_reward = vault_1_final_balance - vault_1_initial_balance;
         assert_eq!(vault_1_reward, 136);
 
         // Vault 2 Rewards
         let vault_2_final_balance = fixture
-            .get_balance(&test_ncn.vaults[1].vault_pubkey)
-            .await?;
-        let vault_1_reward = vault_2_final_balance - vault_2_initial_balance;
-        assert_eq!(vault_1_reward, 136);
+            .get_associated_token_account(&test_ncn.vaults[1].vault_pubkey, &JITO_SOL_MINT)
+            .await?
+            .map_or(0, |account| account.amount);
+        let vault_2_reward = vault_2_final_balance - vault_2_initial_balance;
+        assert_eq!(vault_2_reward, 136);
 
         Ok(())
     }
