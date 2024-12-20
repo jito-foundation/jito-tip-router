@@ -19,7 +19,7 @@ pub fn process_distribute_base_rewards(
     base_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn, base_reward_router, base_reward_receiver, base_fee_wallet, base_fee_wallet_ata, restaking_program, _stake_pool_program, stake_pool, stake_pool_withdraw_authority, reserve_stake, manager_fee_account, referrer_pool_tokens_account, pool_mint, token_program, system_program] =
+    let [restaking_config, ncn_config, ncn, base_reward_router, base_reward_receiver, base_fee_wallet, base_fee_wallet_ata, restaking_program, stake_pool_program, stake_pool, stake_pool_withdraw_authority, reserve_stake, manager_fee_account, referrer_pool_tokens_account, pool_mint, token_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -33,12 +33,14 @@ pub fn process_distribute_base_rewards(
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-
-    // TODO double check
-    load_associated_token_account(base_fee_wallet_ata, base_fee_wallet.key, &JITO_SOL_MINT)?;
-    // TODO check stake pool program
-
     BaseRewardRouter::load(program_id, ncn.key, epoch, base_reward_router, true)?;
+    BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
+    load_associated_token_account(base_fee_wallet_ata, base_fee_wallet.key, &JITO_SOL_MINT)?;
+
+    if stake_pool_program.key.ne(&spl_stake_pool::id()) {
+        msg!("Incorrect stake pool program ID");
+        return Err(ProgramError::InvalidAccountData);
+    }
 
     let group = BaseFeeGroup::try_from(base_fee_group)?;
 
@@ -56,9 +58,8 @@ pub fn process_distribute_base_rewards(
             BaseRewardReceiver::find_program_address(program_id, ncn.key, epoch);
         base_reward_receiver_seeds.push(vec![base_reward_receiver_bump]);
 
-        // Create deposit_sol instruction
         let deposit_ix = deposit_sol(
-            &spl_stake_pool::id(),
+            stake_pool_program.key,
             stake_pool.key,
             stake_pool_withdraw_authority.key,
             reserve_stake.key,

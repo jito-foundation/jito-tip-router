@@ -58,7 +58,7 @@ use crate::fixtures::{TestError, TestResult};
 
 pub struct TipRouterClient {
     banks_client: BanksClient,
-    pub payer: Keypair,
+    payer: Keypair,
 }
 
 impl TipRouterClient {
@@ -1723,7 +1723,6 @@ impl TipRouterClient {
         let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
-        // Find reward router and receiver
         let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
             &jito_tip_router_program::id(),
             ncn_fee_group,

@@ -245,6 +245,7 @@ pub enum TipRouterInstruction {
     #[account(5, writable, name = "ncn_reward_router")]
     #[account(6, writable, name = "ncn_reward_receiver")]
     #[account(7, name = "restaking_program")]
+    // Additional accounts for stake pool deposit
     #[account(8, name = "stake_pool_program")]
     #[account(9, writable, name = "stake_pool")]
     #[account(10, name = "stake_pool_withdraw_authority")]
@@ -268,6 +269,7 @@ pub enum TipRouterInstruction {
     #[account(5, writable, name = "vault_ata")]
     #[account(6, writable, name = "ncn_reward_router")]
     #[account(7, writable, name = "ncn_reward_receiver")]
+    // Additional accounts for stake pool deposit
     #[account(8, name = "stake_pool_program")]
     #[account(9, writable, name = "stake_pool")]
     #[account(10, name = "stake_pool_withdraw_authority")]

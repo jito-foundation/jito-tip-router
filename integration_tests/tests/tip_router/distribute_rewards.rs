@@ -16,9 +16,7 @@ mod tests {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
         let mut stake_pool_client = fixture.stake_pool_client();
-        //
         let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
-        //
 
         // Setup with 2 operators for interesting reward splits
         // 10% Operator fee
@@ -252,8 +250,6 @@ mod tests {
         // DAO = 270 -> 2700
         // LST = 15 -> 150
         // JTO = 15 -> 150
-
-        ///// TODO check balances of stake pool token rather than lamports in these accounts ////
 
         let dao_reward = dao_final_lst_balance - dao_initial_lst_balance;
         assert_eq!(dao_reward, 2_700);

@@ -1,8 +1,9 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
-    epoch_snapshot::OperatorSnapshot, ncn_fee_group::NcnFeeGroup,
-    ncn_reward_router::NcnRewardRouter,
+    epoch_snapshot::OperatorSnapshot,
+    ncn_fee_group::NcnFeeGroup,
+    ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -30,6 +31,15 @@ pub fn process_route_ncn_rewards(
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
+    NcnRewardReceiver::load(
+        program_id,
+        ncn_reward_receiver,
+        ncn_fee_group.try_into()?,
+        operator.key,
+        ncn.key,
+        epoch,
+        true,
+    )?;
 
     let ncn_fee_group = NcnFeeGroup::try_from(ncn_fee_group)?;
 

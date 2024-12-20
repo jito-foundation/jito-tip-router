@@ -1,6 +1,8 @@
 use jito_bytemuck::AccountDeserialize;
+use jito_jsm_core::loader::load_associated_token_account;
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
+    constants::JITO_SOL_MINT,
     ncn_config::NcnConfig,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
@@ -45,6 +47,21 @@ pub fn process_distribute_ncn_operator_rewards(
         ncn_reward_router,
         true,
     )?;
+    NcnRewardReceiver::load(
+        program_id,
+        ncn_reward_receiver,
+        ncn_fee_group,
+        operator.key,
+        ncn.key,
+        epoch,
+        true,
+    )?;
+    load_associated_token_account(operator_ata, operator.key, &JITO_SOL_MINT)?;
+
+    if stake_pool_program.key.ne(&spl_stake_pool::id()) {
+        msg!("Incorrect stake pool program ID");
+        return Err(ProgramError::InvalidAccountData);
+    }
 
     // Get rewards and update state
     let rewards = {
@@ -66,7 +83,6 @@ pub fn process_distribute_ncn_operator_rewards(
             );
         ncn_reward_receiver_seeds.push(vec![ncn_reward_receiver_bump]);
 
-        // Create deposit_sol instruction
         let deposit_ix = deposit_sol(
             stake_pool_program.key,
             stake_pool.key,

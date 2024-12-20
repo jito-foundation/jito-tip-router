@@ -66,25 +66,6 @@ impl StakePoolClient {
         Ok(())
     }
 
-    // pub async fn airdrop(&mut self, to: &Pubkey, sol: f64) -> TestResult<()> {
-    //     let blockhash = self.banks_client.get_latest_blockhash().await?;
-    //     let lamports = sol_to_lamports(sol);
-
-    //     let tx = Transaction::new_signed_with_payer(
-    //         &[system_instruction::transfer(
-    //             &self.payer.pubkey(),
-    //             to,
-    //             lamports,
-    //         )],
-    //         Some(&self.payer.pubkey()),
-    //         &[&self.payer],
-    //         blockhash,
-    //     );
-
-    //     self.process_transaction(&tx).await?;
-    //     Ok(())
-    // }
-
     pub async fn do_initialize_stake_pool(&mut self) -> TestResult<PoolRoot> {
         let fee = Fee {
             numerator: 0,
@@ -136,12 +117,7 @@ impl StakePoolClient {
         let referrer_pool_tokens_account = Keypair::new();
 
         let withdraw_authority =
-            find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool.pubkey());
-        println!(
-            "withdraw_authority from initialize stake pool, bump: {:?}",
-            withdraw_authority
-        );
-        let withdraw_authority = withdraw_authority.0;
+            find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool.pubkey()).0;
 
         let reserve_stake_ix = vec![
             system_instruction::create_account(
@@ -160,26 +136,6 @@ impl StakePoolClient {
                 &stake::state::Lockup::default(),
             ),
         ];
-
-        // let mint_ix = vec![
-        //     system_instruction::create_account(
-        //         &self.payer.pubkey(),
-        //         &pool_mint.pubkey(),
-        //         self.banks_client
-        //             .get_rent()
-        //             .await?
-        //             .minimum_balance(spl_token::state::Mint::LEN),
-        //         spl_token::state::Mint::LEN as u64,
-        //         &spl_token::id(),
-        //     ),
-        //     spl_token::instruction::initialize_mint(
-        //         &spl_token::id(),
-        //         &pool_mint.pubkey(),
-        //         &withdraw_authority,
-        //         None,
-        //         spl_token::native_mint::DECIMALS,
-        //     )?,
-        // ];
 
         let manager_fee_account_ix =
             spl_associated_token_account::instruction::create_associated_token_account_idempotent(
@@ -346,9 +302,6 @@ impl StakePoolClient {
         ))
         .await
     }
-
-    // TODO stake pool update validator list balance (can probably avoid)
-    // And updatestakepoolbalance
 
     pub async fn get_stake_pool(&mut self, address: &Pubkey) -> TestResult<StakePool> {
         let account =

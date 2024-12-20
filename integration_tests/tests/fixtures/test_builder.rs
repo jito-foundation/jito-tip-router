@@ -133,16 +133,13 @@ impl TestBuilder {
             program_test
         };
 
+        // Stake pool keypair is needed to create the pool, and JitoSOL mint authority is based on this keypair
         let stake_pool_keypair = Keypair::new();
         let jitosol_mint_authority = find_withdraw_authority_program_address(
             &spl_stake_pool::id(),
             &stake_pool_keypair.pubkey(),
         );
-        println!(
-            "withdraw_authority from test builder, bump: {:?}",
-            jitosol_mint_authority
-        );
-        // TODO we can do this with regular instructions it turns out, in the future. So we can have different stake pools per test
+        // Needed to create JitoSOL mint since we don't have access to the original keypair in the tests
         program_test.add_account(JITO_SOL_MINT, token_mint_account(&jitosol_mint_authority.0));
 
         Self {
@@ -819,13 +816,15 @@ impl TestBuilder {
         pool_root: &PoolRoot,
     ) -> TestResult<()> {
         let mut stake_pool_client = self.stake_pool_client();
+
         self.add_routers_for_tests_ncn(test_ncn).await?;
+
         stake_pool_client
             .update_stake_pool_balance(pool_root)
             .await?;
+
         self.route_in_base_rewards_for_test_ncn(test_ncn, rewards, pool_root)
             .await?;
-
         self.route_in_ncn_rewards_for_test_ncn(test_ncn, pool_root)
             .await?;
 
