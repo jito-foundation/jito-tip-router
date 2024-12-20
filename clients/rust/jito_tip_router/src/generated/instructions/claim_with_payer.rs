@@ -85,7 +85,7 @@ pub struct ClaimWithPayerInstructionData {
 
 impl ClaimWithPayerInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 23 }
+        Self { discriminator: 25 }
     }
 }
 

@@ -37,7 +37,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const CAST_VOTE_DISCRIMINATOR = 20;
+export const CAST_VOTE_DISCRIMINATOR = 22;
 
 export function getCastVoteDiscriminatorBytes() {
   return getU8Encoder().encode(CAST_VOTE_DISCRIMINATOR);
@@ -45,7 +45,7 @@ export function getCastVoteDiscriminatorBytes() {
 
 export type CastVoteInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountNcnConfig extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountEpochSnapshot extends string | IAccountMeta<string> = string,
@@ -58,9 +58,9 @@ export type CastVoteInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountNcnConfig extends string
-        ? ReadonlyAccount<TAccountNcnConfig>
-        : TAccountNcnConfig,
+      TAccountConfig extends string
+        ? ReadonlyAccount<TAccountConfig>
+        : TAccountConfig,
       TAccountBallotBox extends string
         ? WritableAccount<TAccountBallotBox>
         : TAccountBallotBox,
@@ -126,7 +126,7 @@ export function getCastVoteInstructionDataCodec(): Codec<
 }
 
 export type CastVoteInput<
-  TAccountNcnConfig extends string = string,
+  TAccountConfig extends string = string,
   TAccountBallotBox extends string = string,
   TAccountNcn extends string = string,
   TAccountEpochSnapshot extends string = string,
@@ -135,7 +135,7 @@ export type CastVoteInput<
   TAccountOperatorAdmin extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
-  ncnConfig: Address<TAccountNcnConfig>;
+  config: Address<TAccountConfig>;
   ballotBox: Address<TAccountBallotBox>;
   ncn: Address<TAccountNcn>;
   epochSnapshot: Address<TAccountEpochSnapshot>;
@@ -148,7 +148,7 @@ export type CastVoteInput<
 };
 
 export function getCastVoteInstruction<
-  TAccountNcnConfig extends string,
+  TAccountConfig extends string,
   TAccountBallotBox extends string,
   TAccountNcn extends string,
   TAccountEpochSnapshot extends string,
@@ -159,7 +159,7 @@ export function getCastVoteInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: CastVoteInput<
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
     TAccountEpochSnapshot,
@@ -171,7 +171,7 @@ export function getCastVoteInstruction<
   config?: { programAddress?: TProgramAddress }
 ): CastVoteInstruction<
   TProgramAddress,
-  TAccountNcnConfig,
+  TAccountConfig,
   TAccountBallotBox,
   TAccountNcn,
   TAccountEpochSnapshot,
@@ -186,7 +186,7 @@ export function getCastVoteInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
+    config: { value: input.config ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     epochSnapshot: { value: input.epochSnapshot ?? null, isWritable: false },
@@ -212,7 +212,7 @@ export function getCastVoteInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.ncnConfig),
+      getAccountMeta(accounts.config),
       getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.epochSnapshot),
@@ -227,7 +227,7 @@ export function getCastVoteInstruction<
     ),
   } as CastVoteInstruction<
     TProgramAddress,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
     TAccountEpochSnapshot,
@@ -246,7 +246,7 @@ export type ParsedCastVoteInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    ncnConfig: TAccountMetas[0];
+    config: TAccountMetas[0];
     ballotBox: TAccountMetas[1];
     ncn: TAccountMetas[2];
     epochSnapshot: TAccountMetas[3];
@@ -279,7 +279,7 @@ export function parseCastVoteInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      ncnConfig: getNextAccount(),
+      config: getNextAccount(),
       ballotBox: getNextAccount(),
       ncn: getNextAccount(),
       epochSnapshot: getNextAccount(),

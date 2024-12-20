@@ -6,7 +6,7 @@ use jito_jsm_core::{
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
     epoch_snapshot::EpochSnapshot, error::TipRouterError, fees, ncn_config::NcnConfig,
-    tracked_mints::TrackedMints, weight_table::WeightTable,
+    weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -19,7 +19,7 @@ pub fn process_initialize_epoch_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, restaking_config, ncn, tracked_mints, weight_table, epoch_snapshot, payer, restaking_program, system_program] =
+    let [ncn_config, restaking_config, ncn, weight_table, epoch_snapshot, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -33,7 +33,6 @@ pub fn process_initialize_epoch_snapshot(
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
-    TrackedMints::load(program_id, ncn.key, tracked_mints, false)?;
 
     load_system_account(epoch_snapshot, true)?;
     load_system_program(system_program)?;
@@ -46,7 +45,7 @@ pub fn process_initialize_epoch_snapshot(
     WeightTable::load(program_id, weight_table, ncn, ncn_epoch, false)?;
 
     // Weight table needs to be finalized before the snapshot can be taken
-    {
+    let vault_count = {
         let weight_table_data = weight_table.data.borrow();
         let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
 
@@ -54,7 +53,9 @@ pub fn process_initialize_epoch_snapshot(
             msg!("Weight table must be finalized before initializing epoch snapshot");
             return Err(TipRouterError::WeightTableNotFinalized.into());
         }
-    }
+
+        weight_table_account.vault_count()
+    };
 
     let (epoch_snapshot_pubkey, epoch_snapshot_bump, mut epoch_snapshot_seeds) =
         EpochSnapshot::find_program_address(program_id, ncn.key, ncn_epoch);
@@ -93,12 +94,6 @@ pub fn process_initialize_epoch_snapshot(
         let ncn_data = ncn.data.borrow();
         let ncn_account = Ncn::try_from_slice_unchecked(&ncn_data)?;
         ncn_account.operator_count()
-    };
-
-    let vault_count: u64 = {
-        let tracked_mints_data = tracked_mints.data.borrow();
-        let tracked_mints_account = TrackedMints::try_from_slice_unchecked(&tracked_mints_data)?;
-        tracked_mints_account.mint_count()
     };
 
     if operator_count == 0 {

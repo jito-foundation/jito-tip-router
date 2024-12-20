@@ -10,7 +10,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 pub struct DistributeNcnVaultRewards {
     pub restaking_config: solana_program::pubkey::Pubkey,
 
-    pub ncn_config: solana_program::pubkey::Pubkey,
+    pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
@@ -40,7 +40,7 @@ impl DistributeNcnVaultRewards {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_config,
+            self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -79,7 +79,7 @@ pub struct DistributeNcnVaultRewardsInstructionData {
 
 impl DistributeNcnVaultRewardsInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 17 }
+        Self { discriminator: 18 }
     }
 }
 
@@ -101,7 +101,7 @@ pub struct DistributeNcnVaultRewardsInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[]` ncn_config
+///   1. `[]` config
 ///   2. `[]` ncn
 ///   3. `[]` operator
 ///   4. `[writable]` vault
@@ -109,7 +109,7 @@ pub struct DistributeNcnVaultRewardsInstructionArgs {
 #[derive(Clone, Debug, Default)]
 pub struct DistributeNcnVaultRewardsBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
-    ncn_config: Option<solana_program::pubkey::Pubkey>,
+    config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
     vault: Option<solana_program::pubkey::Pubkey>,
@@ -132,8 +132,8 @@ impl DistributeNcnVaultRewardsBuilder {
         self
     }
     #[inline(always)]
-    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_config = Some(ncn_config);
+    pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.config = Some(config);
         self
     }
     #[inline(always)]
@@ -191,7 +191,7 @@ impl DistributeNcnVaultRewardsBuilder {
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = DistributeNcnVaultRewards {
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
-            ncn_config: self.ncn_config.expect("ncn_config is not set"),
+            config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             operator: self.operator.expect("operator is not set"),
             vault: self.vault.expect("vault is not set"),
@@ -215,7 +215,7 @@ impl DistributeNcnVaultRewardsBuilder {
 pub struct DistributeNcnVaultRewardsCpiAccounts<'a, 'b> {
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -233,7 +233,7 @@ pub struct DistributeNcnVaultRewardsCpi<'a, 'b> {
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -255,7 +255,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
         Self {
             __program: program,
             restaking_config: accounts.restaking_config,
-            ncn_config: accounts.ncn_config,
+            config: accounts.config,
             ncn: accounts.ncn,
             operator: accounts.operator,
             vault: accounts.vault,
@@ -302,7 +302,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_config.key,
+            *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -342,7 +342,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
         let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
-        account_infos.push(self.ncn_config.clone());
+        account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
         account_infos.push(self.vault.clone());
@@ -364,7 +364,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[]` restaking_config
-///   1. `[]` ncn_config
+///   1. `[]` config
 ///   2. `[]` ncn
 ///   3. `[]` operator
 ///   4. `[writable]` vault
@@ -379,7 +379,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
         let instruction = Box::new(DistributeNcnVaultRewardsCpiBuilderInstruction {
             __program: program,
             restaking_config: None,
-            ncn_config: None,
+            config: None,
             ncn: None,
             operator: None,
             vault: None,
@@ -399,11 +399,11 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn ncn_config(
+    pub fn config(
         &mut self,
-        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+        config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_config = Some(ncn_config);
+        self.instruction.config = Some(config);
         self
     }
     #[inline(always)]
@@ -499,7 +499,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
                 .restaking_config
                 .expect("restaking_config is not set"),
 
-            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
+            config: self.instruction.config.expect("config is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
@@ -524,7 +524,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
 struct DistributeNcnVaultRewardsCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,

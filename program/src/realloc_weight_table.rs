@@ -4,7 +4,7 @@ use jito_jsm_core::{
     realloc,
 };
 use jito_tip_router_core::{
-    ncn_config::NcnConfig, tracked_mints::TrackedMints, utils::get_new_size,
+    ncn_config::NcnConfig, utils::get_new_size, vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
 use solana_program::{
@@ -17,14 +17,14 @@ pub fn process_realloc_weight_table(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, weight_table, ncn, tracked_mints, payer, system_program] = accounts else {
+    let [ncn_config, weight_table, ncn, vault_registry, payer, system_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     load_system_program(system_program)?;
     load_signer(payer, false)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    TrackedMints::load(program_id, ncn.key, tracked_mints, false)?;
+    VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
 
     let (weight_table_pda, weight_table_bump, _) =
         WeightTable::find_program_address(program_id, ncn.key, epoch);
@@ -48,10 +48,14 @@ pub fn process_realloc_weight_table(
         && weight_table.try_borrow_data()?[0] != WeightTable::DISCRIMINATOR;
 
     if should_initialize {
-        let unique_mints = {
-            let tracked_mints_data = tracked_mints.data.borrow();
-            let tracked_mints = TrackedMints::try_from_slice_unchecked(&tracked_mints_data)?;
-            tracked_mints.get_unique_mints()
+        let (vault_count, vault_entries, mint_entries) = {
+            let vault_registry_data = vault_registry.data.borrow();
+            let vault_registry = VaultRegistry::try_from_slice_unchecked(&vault_registry_data)?;
+            (
+                vault_registry.vault_count(),
+                vault_registry.get_vault_entries(),
+                vault_registry.get_mint_entries(),
+            )
         };
 
         let mut weight_table_data = weight_table.try_borrow_mut_data()?;
@@ -63,8 +67,10 @@ pub fn process_realloc_weight_table(
             *ncn.key,
             epoch,
             Clock::get()?.slot,
+            vault_count,
             weight_table_bump,
-            &unique_mints,
+            &vault_entries,
+            &mint_entries,
         )?;
     }
 

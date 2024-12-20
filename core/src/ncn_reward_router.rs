@@ -10,8 +10,8 @@ use solana_program::{
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    constants::MAX_VAULT_OPERATOR_DELEGATIONS, discriminators::Discriminators,
-    epoch_snapshot::OperatorSnapshot, error::TipRouterError, ncn_fee_group::NcnFeeGroup,
+    constants::MAX_VAULTS, discriminators::Discriminators, epoch_snapshot::OperatorSnapshot,
+    error::TipRouterError, ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -70,7 +70,7 @@ impl NcnRewardRouter {
             rewards_processed: PodU64::from(0),
             operator_rewards: PodU64::from(0),
             reserved: [0; 128],
-            vault_reward_routes: [VaultRewardRoute::default(); MAX_VAULT_OPERATOR_DELEGATIONS],
+            vault_reward_routes: [VaultRewardRoute::default(); MAX_VAULTS],
         }
     }
 
@@ -568,7 +568,7 @@ mod tests {
             + size_of::<PodU64>() // rewards_processed
             + size_of::<PodU64>() // operator_rewards
             + 128 // reserved
-            + size_of::<VaultRewardRoute>() * MAX_VAULT_OPERATOR_DELEGATIONS; // vault_reward_routes
+            + size_of::<VaultRewardRoute>() * MAX_VAULTS; // vault_reward_routes
 
         assert_eq!(size_of::<NcnRewardRouter>(), expected_total);
     }
