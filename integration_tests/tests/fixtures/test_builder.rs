@@ -161,10 +161,6 @@ impl TestBuilder {
         }
     }
 
-    pub async fn get_balance(&mut self, pubkey: &Pubkey) -> Result<u64, BanksClientError> {
-        self.context.banks_client.get_balance(*pubkey).await
-    }
-
     pub async fn get_associated_token_account(
         &mut self,
         wallet: &Pubkey,
@@ -206,10 +202,6 @@ impl TestBuilder {
 
     pub async fn epoch_schedule(&mut self) -> EpochSchedule {
         self.context.banks_client.get_sysvar().await.unwrap()
-    }
-
-    pub async fn rent(&mut self) -> Rent {
-        self.context.banks_client.get_rent().await.unwrap()
     }
 
     pub fn tip_router_client(&self) -> TipRouterClient {

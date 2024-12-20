@@ -216,71 +216,6 @@ impl StakePoolClient {
         })
     }
 
-    pub async fn deposit_sol(
-        &mut self,
-        stake_pool: &Pubkey,
-        stake_pool_withdraw_authority: &Pubkey,
-        reserve_stake_account: &Pubkey,
-        pool_tokens_to: &Pubkey,
-        manager_fee_account: &Pubkey,
-        referrer_pool_tokens_account: &Pubkey,
-        pool_mint: &Pubkey,
-        lamports_in: u64,
-    ) -> TestResult<()> {
-        let ix = instruction::deposit_sol(
-            &spl_stake_pool::id(),
-            stake_pool,
-            stake_pool_withdraw_authority,
-            reserve_stake_account,
-            &self.payer.pubkey(),
-            pool_tokens_to,
-            manager_fee_account,
-            referrer_pool_tokens_account,
-            pool_mint,
-            &spl_token::id(),
-            lamports_in,
-        );
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
-            &[ix],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        ))
-        .await
-    }
-
-    pub async fn update_validator_list_balance(
-        &mut self,
-        pool_root: &PoolRoot,
-        validator_list: &ValidatorList,
-        validator_vote_accounts: &[Pubkey],
-        start_index: u32,
-        no_merge: bool,
-    ) -> TestResult<()> {
-        let ix = instruction::update_validator_list_balance(
-            &spl_stake_pool::id(),
-            &pool_root.pool_address,
-            &pool_root.withdraw_authority,
-            &pool_root.validator_list,
-            &pool_root.reserve_stake,
-            validator_list,
-            validator_vote_accounts,
-            start_index,
-            no_merge,
-        );
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
-            &[ix],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        ))
-        .await
-    }
-
     pub async fn update_stake_pool_balance(&mut self, pool_root: &PoolRoot) -> TestResult<()> {
         let ix = instruction::update_stake_pool_balance(
             &spl_stake_pool::id(),
@@ -301,17 +236,5 @@ impl StakePoolClient {
             blockhash,
         ))
         .await
-    }
-
-    pub async fn get_stake_pool(&mut self, address: &Pubkey) -> TestResult<StakePool> {
-        let account =
-            self.banks_client
-                .get_account(*address)
-                .await?
-                .ok_or(TestError::BanksClientError(BanksClientError::ClientError(
-                    "Stake pool account not found",
-                )))?;
-        let stake_pool = StakePool::try_from_slice(&account.data)?;
-        Ok(stake_pool)
     }
 }
