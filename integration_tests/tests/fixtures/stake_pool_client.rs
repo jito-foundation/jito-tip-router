@@ -1,12 +1,11 @@
 #![allow(deprecated)] // using deprecated borsh to align with mainnet stake pool version
-use borsh::BorshDeserialize;
 use jito_tip_router_core::constants::JITO_SOL_MINT;
 use solana_program::{
     borsh0_10::{get_instance_packed_len, get_packed_len},
     pubkey::Pubkey,
     stake,
 };
-use solana_program_test::{BanksClient, BanksClientError};
+use solana_program_test::BanksClient;
 use solana_sdk::{
     commitment_config::CommitmentLevel,
     signature::{Keypair, Signer},
@@ -19,7 +18,6 @@ use spl_stake_pool::{
     state::{Fee, StakePool, ValidatorList},
 };
 
-use super::TestError;
 use crate::fixtures::TestResult;
 
 // Constants

@@ -23,7 +23,6 @@ use solana_sdk::{
     commitment_config::CommitmentLevel,
     epoch_schedule::EpochSchedule,
     native_token::lamports_to_sol,
-    rent::Rent,
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
