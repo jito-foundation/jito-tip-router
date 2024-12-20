@@ -44,6 +44,17 @@ pub fn process_distribute_base_rewards(
 
     let group = BaseFeeGroup::try_from(base_fee_group)?;
 
+    {
+        let ncn_config_data = ncn_config.try_borrow_data()?;
+        let ncn_config_account = NcnConfig::try_from_slice_unchecked(&ncn_config_data)?;
+        let fee_wallet = ncn_config_account.fee_config.base_fee_wallet(group)?;
+
+        if fee_wallet.ne(base_fee_wallet.key) {
+            msg!("Incorrect base fee wallet");
+            return Err(ProgramError::InvalidAccountData);
+        }
+    }
+
     // Get rewards and update state
     let rewards = {
         let mut base_reward_router_data = base_reward_router.try_borrow_mut_data()?;
