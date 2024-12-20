@@ -1,8 +1,8 @@
 #[repr(u8)]
 pub enum Discriminators {
     // Configs
-    NCNConfig = 0x01,
-    TrackedMints = 0x02,
+    NcnConfig = 0x01,
+    VaultRegistry = 0x02,
     // Snapshots
     WeightTable = 0x10,
     EpochSnapshot = 0x11,

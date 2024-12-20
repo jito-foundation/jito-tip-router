@@ -8,13 +8,13 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
 pub struct ReallocWeightTable {
-    pub ncn_config: solana_program::pubkey::Pubkey,
+    pub config: solana_program::pubkey::Pubkey,
 
     pub weight_table: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub tracked_mints: solana_program::pubkey::Pubkey,
+    pub vault_registry: solana_program::pubkey::Pubkey,
 
     pub payer: solana_program::pubkey::Pubkey,
 
@@ -36,7 +36,7 @@ impl ReallocWeightTable {
     ) -> solana_program::instruction::Instruction {
         let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_config,
+            self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -47,7 +47,7 @@ impl ReallocWeightTable {
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.tracked_mints,
+            self.vault_registry,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -79,7 +79,7 @@ pub struct ReallocWeightTableInstructionData {
 
 impl ReallocWeightTableInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 26 }
+        Self { discriminator: 28 }
     }
 }
 
@@ -99,18 +99,18 @@ pub struct ReallocWeightTableInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
+///   0. `[]` config
 ///   1. `[writable]` weight_table
 ///   2. `[]` ncn
-///   3. `[]` tracked_mints
+///   3. `[]` vault_registry
 ///   4. `[writable, signer]` payer
 ///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct ReallocWeightTableBuilder {
-    ncn_config: Option<solana_program::pubkey::Pubkey>,
+    config: Option<solana_program::pubkey::Pubkey>,
     weight_table: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    tracked_mints: Option<solana_program::pubkey::Pubkey>,
+    vault_registry: Option<solana_program::pubkey::Pubkey>,
     payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     epoch: Option<u64>,
@@ -122,8 +122,8 @@ impl ReallocWeightTableBuilder {
         Self::default()
     }
     #[inline(always)]
-    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_config = Some(ncn_config);
+    pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.config = Some(config);
         self
     }
     #[inline(always)]
@@ -137,8 +137,8 @@ impl ReallocWeightTableBuilder {
         self
     }
     #[inline(always)]
-    pub fn tracked_mints(&mut self, tracked_mints: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.tracked_mints = Some(tracked_mints);
+    pub fn vault_registry(&mut self, vault_registry: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.vault_registry = Some(vault_registry);
         self
     }
     #[inline(always)]
@@ -178,10 +178,10 @@ impl ReallocWeightTableBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = ReallocWeightTable {
-            ncn_config: self.ncn_config.expect("ncn_config is not set"),
+            config: self.config.expect("config is not set"),
             weight_table: self.weight_table.expect("weight_table is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            tracked_mints: self.tracked_mints.expect("tracked_mints is not set"),
+            vault_registry: self.vault_registry.expect("vault_registry is not set"),
             payer: self.payer.expect("payer is not set"),
             system_program: self
                 .system_program
@@ -197,13 +197,13 @@ impl ReallocWeightTableBuilder {
 
 /// `realloc_weight_table` CPI accounts.
 pub struct ReallocWeightTableCpiAccounts<'a, 'b> {
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub payer: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -215,13 +215,13 @@ pub struct ReallocWeightTableCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub payer: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -238,10 +238,10 @@ impl<'a, 'b> ReallocWeightTableCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            ncn_config: accounts.ncn_config,
+            config: accounts.config,
             weight_table: accounts.weight_table,
             ncn: accounts.ncn,
-            tracked_mints: accounts.tracked_mints,
+            vault_registry: accounts.vault_registry,
             payer: accounts.payer,
             system_program: accounts.system_program,
             __args: args,
@@ -282,7 +282,7 @@ impl<'a, 'b> ReallocWeightTableCpi<'a, 'b> {
     ) -> solana_program::entrypoint::ProgramResult {
         let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_config.key,
+            *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -294,7 +294,7 @@ impl<'a, 'b> ReallocWeightTableCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.tracked_mints.key,
+            *self.vault_registry.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -325,10 +325,10 @@ impl<'a, 'b> ReallocWeightTableCpi<'a, 'b> {
         };
         let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.ncn_config.clone());
+        account_infos.push(self.config.clone());
         account_infos.push(self.weight_table.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.tracked_mints.clone());
+        account_infos.push(self.vault_registry.clone());
         account_infos.push(self.payer.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
@@ -347,10 +347,10 @@ impl<'a, 'b> ReallocWeightTableCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
+///   0. `[]` config
 ///   1. `[writable]` weight_table
 ///   2. `[]` ncn
-///   3. `[]` tracked_mints
+///   3. `[]` vault_registry
 ///   4. `[writable, signer]` payer
 ///   5. `[]` system_program
 #[derive(Clone, Debug)]
@@ -362,10 +362,10 @@ impl<'a, 'b> ReallocWeightTableCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(ReallocWeightTableCpiBuilderInstruction {
             __program: program,
-            ncn_config: None,
+            config: None,
             weight_table: None,
             ncn: None,
-            tracked_mints: None,
+            vault_registry: None,
             payer: None,
             system_program: None,
             epoch: None,
@@ -374,11 +374,11 @@ impl<'a, 'b> ReallocWeightTableCpiBuilder<'a, 'b> {
         Self { instruction }
     }
     #[inline(always)]
-    pub fn ncn_config(
+    pub fn config(
         &mut self,
-        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+        config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_config = Some(ncn_config);
+        self.instruction.config = Some(config);
         self
     }
     #[inline(always)]
@@ -395,11 +395,11 @@ impl<'a, 'b> ReallocWeightTableCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn tracked_mints(
+    pub fn vault_registry(
         &mut self,
-        tracked_mints: &'b solana_program::account_info::AccountInfo<'a>,
+        vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.tracked_mints = Some(tracked_mints);
+        self.instruction.vault_registry = Some(vault_registry);
         self
     }
     #[inline(always)]
@@ -467,7 +467,7 @@ impl<'a, 'b> ReallocWeightTableCpiBuilder<'a, 'b> {
         let instruction = ReallocWeightTableCpi {
             __program: self.instruction.__program,
 
-            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
+            config: self.instruction.config.expect("config is not set"),
 
             weight_table: self
                 .instruction
@@ -476,10 +476,10 @@ impl<'a, 'b> ReallocWeightTableCpiBuilder<'a, 'b> {
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            tracked_mints: self
+            vault_registry: self
                 .instruction
-                .tracked_mints
-                .expect("tracked_mints is not set"),
+                .vault_registry
+                .expect("vault_registry is not set"),
 
             payer: self.instruction.payer.expect("payer is not set"),
 
@@ -499,10 +499,10 @@ impl<'a, 'b> ReallocWeightTableCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct ReallocWeightTableCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    tracked_mints: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch: Option<u64>,

@@ -6,8 +6,11 @@ use std::{
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
 use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
-    base_fee_group::BaseFeeGroup, base_reward_router::BaseRewardReceiver, constants::JITO_SOL_MINT,
-    ncn_fee_group::NcnFeeGroup, ncn_reward_router::NcnRewardReceiver,
+    base_fee_group::BaseFeeGroup,
+    base_reward_router::BaseRewardReceiver,
+    constants::{JITO_SOL_MINT, JTO_SOL_FEED},
+    ncn_fee_group::NcnFeeGroup,
+    ncn_reward_router::NcnRewardReceiver,
 };
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
@@ -27,6 +30,7 @@ use solana_sdk::{
 use spl_stake_pool::find_withdraw_authority_program_address;
 
 use super::{
+    generated_switchboard_accounts::get_switchboard_accounts,
     restaking_client::NcnRoot,
     stake_pool_client::{PoolRoot, StakePoolClient},
     tip_distribution_client::TipDistributionClient,
@@ -132,6 +136,15 @@ impl TestBuilder {
             );
             program_test
         };
+
+        // Add switchboard account
+        {
+            let switchboard_accounts = get_switchboard_accounts();
+
+            for (address, account) in switchboard_accounts.iter() {
+                program_test.add_account(*address, account.clone());
+            }
+        }
 
         // Stake pool keypair is needed to create the pool, and JitoSOL mint authority is based on this keypair
         let stake_pool_keypair = Keypair::new();
@@ -440,7 +453,7 @@ impl TestBuilder {
     }
 
     // 5. Setup Tracked Mints
-    pub async fn add_tracked_mints_to_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+    pub async fn add_vault_registry_to_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
         let mut restaking_client = self.restaking_program_client();
         let mut vault_client = self.vault_program_client();
@@ -469,6 +482,8 @@ impl TestBuilder {
                 .do_full_vault_update(&vault, &operators)
                 .await?;
 
+            let st_mint = vault_client.get_vault(&vault).await?.supported_mint;
+
             let vault_ncn_ticket =
                 VaultNcnTicket::find_program_address(&jito_vault_program::id(), &vault, &ncn).0;
 
@@ -476,7 +491,18 @@ impl TestBuilder {
                 NcnVaultTicket::find_program_address(&jito_restaking_program::id(), &ncn, &vault).0;
 
             tip_router_client
-                .do_register_mint(ncn, vault, vault_ncn_ticket, ncn_vault_ticket)
+                .do_admin_register_st_mint(
+                    ncn,
+                    st_mint,
+                    NcnFeeGroup::lst(),
+                    10_000,
+                    Some(JTO_SOL_FEED),
+                    None,
+                )
+                .await?;
+
+            tip_router_client
+                .do_register_vault(ncn, vault, vault_ncn_ticket, ncn_vault_ticket)
                 .await?;
         }
 
@@ -496,13 +522,13 @@ impl TestBuilder {
         self.add_vaults_to_test_ncn(&mut test_ncn, vault_count)
             .await?;
         self.add_delegation_in_test_ncn(&test_ncn, 100).await?;
-        self.add_tracked_mints_to_test_ncn(&test_ncn).await?;
+        self.add_vault_registry_to_test_ncn(&test_ncn).await?;
 
         Ok(test_ncn)
     }
 
-    // 6. Set weights
-    pub async fn add_weights_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+    // 6a. Admin Set weights
+    pub async fn add_admin_weights_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
         let mut vault_client = self.vault_program_client();
 
@@ -520,10 +546,42 @@ impl TestBuilder {
         for vault_root in test_ncn.vaults.iter() {
             let vault = vault_client.get_vault(&vault_root.vault_pubkey).await?;
 
-            let mint = vault.supported_mint;
+            let st_mint = vault.supported_mint;
 
             tip_router_client
-                .do_admin_update_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch, mint, WEIGHT)
+                .do_admin_set_weight(test_ncn.ncn_root.ncn_pubkey, epoch, st_mint, WEIGHT)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    // 6b. Switchboard Set weights
+    pub async fn add_switchboard_weights_for_test_ncn(
+        &mut self,
+        test_ncn: &TestNcn,
+    ) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+        let mut vault_client = self.vault_program_client();
+
+        // Not sure if this is needed
+        self.warp_slot_incremental(1000).await?;
+
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+
+        let clock = self.clock().await;
+        let epoch = clock.epoch;
+        tip_router_client
+            .do_full_initialize_weight_table(ncn, epoch)
+            .await?;
+
+        for vault_root in test_ncn.vaults.iter() {
+            let vault = vault_client.get_vault(&vault_root.vault_pubkey).await?;
+
+            let st_mint = vault.supported_mint;
+
+            tip_router_client
+                .do_switchboard_set_weight(ncn, epoch, st_mint)
                 .await?;
         }
 
@@ -594,7 +652,7 @@ impl TestBuilder {
 
     // Intermission 2 - all snapshots are taken
     pub async fn snapshot_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
-        self.add_weights_for_test_ncn(test_ncn).await?;
+        self.add_admin_weights_for_test_ncn(test_ncn).await?;
         self.add_epoch_snapshot_to_test_ncn(test_ncn).await?;
         self.add_operator_snapshots_to_test_ncn(test_ncn).await?;
         self.add_vault_operator_delegation_snapshots_to_test_ncn(test_ncn)

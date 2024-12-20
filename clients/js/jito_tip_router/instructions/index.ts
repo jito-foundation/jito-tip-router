@@ -6,7 +6,12 @@
  * @see https://github.com/kinobi-so/kinobi
  */
 
-export * from './adminUpdateWeightTable';
+export * from './adminRegisterStMint';
+export * from './adminSetConfigFees';
+export * from './adminSetNewAdmin';
+export * from './adminSetStMint';
+export * from './adminSetTieBreaker';
+export * from './adminSetWeight';
 export * from './castVote';
 export * from './distributeBaseNcnRewardRoute';
 export * from './distributeBaseRewards';
@@ -14,22 +19,20 @@ export * from './distributeNcnOperatorRewards';
 export * from './distributeNcnVaultRewards';
 export * from './initializeBallotBox';
 export * from './initializeBaseRewardRouter';
+export * from './initializeConfig';
 export * from './initializeEpochSnapshot';
-export * from './initializeNCNConfig';
 export * from './initializeNcnRewardRouter';
 export * from './initializeOperatorSnapshot';
-export * from './initializeTrackedMints';
+export * from './initializeVaultRegistry';
 export * from './initializeWeightTable';
 export * from './reallocBallotBox';
 export * from './reallocBaseRewardRouter';
 export * from './reallocOperatorSnapshot';
+export * from './reallocVaultRegistry';
 export * from './reallocWeightTable';
-export * from './registerMint';
+export * from './registerVault';
 export * from './routeBaseRewards';
 export * from './routeNcnRewards';
-export * from './setConfigFees';
 export * from './setMerkleRoot';
-export * from './setNewAdmin';
-export * from './setTieBreaker';
-export * from './setTrackedMintNcnFeeGroup';
 export * from './snapshotVaultOperatorDelegation';
+export * from './switchboardSetWeight';

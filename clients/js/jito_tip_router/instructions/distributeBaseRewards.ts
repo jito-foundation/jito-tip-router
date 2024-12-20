@@ -29,7 +29,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const DISTRIBUTE_BASE_REWARDS_DISCRIMINATOR = 14;
+export const DISTRIBUTE_BASE_REWARDS_DISCRIMINATOR = 15;
 
 export function getDistributeBaseRewardsDiscriminatorBytes() {
   return getU8Encoder().encode(DISTRIBUTE_BASE_REWARDS_DISCRIMINATOR);
@@ -38,7 +38,7 @@ export function getDistributeBaseRewardsDiscriminatorBytes() {
 export type DistributeBaseRewardsInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
-  TAccountNcnConfig extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
   TAccountBaseRewardReceiver extends string | IAccountMeta<string> = string,
@@ -70,9 +70,9 @@ export type DistributeBaseRewardsInstruction<
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
-      TAccountNcnConfig extends string
-        ? ReadonlyAccount<TAccountNcnConfig>
-        : TAccountNcnConfig,
+      TAccountConfig extends string
+        ? ReadonlyAccount<TAccountConfig>
+        : TAccountConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountBaseRewardRouter extends string
         ? WritableAccount<TAccountBaseRewardRouter>
@@ -165,7 +165,7 @@ export function getDistributeBaseRewardsInstructionDataCodec(): Codec<
 
 export type DistributeBaseRewardsInput<
   TAccountRestakingConfig extends string = string,
-  TAccountNcnConfig extends string = string,
+  TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountBaseRewardRouter extends string = string,
   TAccountBaseRewardReceiver extends string = string,
@@ -183,7 +183,7 @@ export type DistributeBaseRewardsInput<
   TAccountSystemProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
-  ncnConfig: Address<TAccountNcnConfig>;
+  config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   baseRewardReceiver: Address<TAccountBaseRewardReceiver>;
@@ -205,7 +205,7 @@ export type DistributeBaseRewardsInput<
 
 export function getDistributeBaseRewardsInstruction<
   TAccountRestakingConfig extends string,
-  TAccountNcnConfig extends string,
+  TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountBaseRewardRouter extends string,
   TAccountBaseRewardReceiver extends string,
@@ -225,7 +225,7 @@ export function getDistributeBaseRewardsInstruction<
 >(
   input: DistributeBaseRewardsInput<
     TAccountRestakingConfig,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountNcn,
     TAccountBaseRewardRouter,
     TAccountBaseRewardReceiver,
@@ -246,7 +246,7 @@ export function getDistributeBaseRewardsInstruction<
 ): DistributeBaseRewardsInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
-  TAccountNcnConfig,
+  TAccountConfig,
   TAccountNcn,
   TAccountBaseRewardRouter,
   TAccountBaseRewardReceiver,
@@ -273,7 +273,7 @@ export function getDistributeBaseRewardsInstruction<
       value: input.restakingConfig ?? null,
       isWritable: false,
     },
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
+    config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     baseRewardRouter: {
       value: input.baseRewardRouter ?? null,
@@ -336,7 +336,7 @@ export function getDistributeBaseRewardsInstruction<
   const instruction = {
     accounts: [
       getAccountMeta(accounts.restakingConfig),
-      getAccountMeta(accounts.ncnConfig),
+      getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.baseRewardRouter),
       getAccountMeta(accounts.baseRewardReceiver),
@@ -360,7 +360,7 @@ export function getDistributeBaseRewardsInstruction<
   } as DistributeBaseRewardsInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountNcn,
     TAccountBaseRewardRouter,
     TAccountBaseRewardReceiver,
@@ -388,7 +388,7 @@ export type ParsedDistributeBaseRewardsInstruction<
   programAddress: Address<TProgram>;
   accounts: {
     restakingConfig: TAccountMetas[0];
-    ncnConfig: TAccountMetas[1];
+    config: TAccountMetas[1];
     ncn: TAccountMetas[2];
     baseRewardRouter: TAccountMetas[3];
     baseRewardReceiver: TAccountMetas[4];
@@ -430,7 +430,7 @@ export function parseDistributeBaseRewardsInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       restakingConfig: getNextAccount(),
-      ncnConfig: getNextAccount(),
+      config: getNextAccount(),
       ncn: getNextAccount(),
       baseRewardRouter: getNextAccount(),
       baseRewardReceiver: getNextAccount(),
