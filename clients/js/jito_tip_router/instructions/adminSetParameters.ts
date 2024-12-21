@@ -8,10 +8,10 @@
 
 import {
   combineCodec,
+  getOptionDecoder,
+  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
-  getU16Decoder,
-  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -26,6 +26,8 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyAccount,
   type ReadonlySignerAccount,
   type TransactionSigner,
@@ -34,24 +36,19 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_CONFIG_DISCRIMINATOR = 0;
+export const ADMIN_SET_PARAMETERS_DISCRIMINATOR = 31;
 
-export function getInitializeConfigDiscriminatorBytes() {
-  return getU8Encoder().encode(INITIALIZE_CONFIG_DISCRIMINATOR);
+export function getAdminSetParametersDiscriminatorBytes() {
+  return getU8Encoder().encode(ADMIN_SET_PARAMETERS_DISCRIMINATOR);
 }
 
-export type InitializeConfigInstruction<
+export type AdminSetParametersInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountFeeWallet extends string | IAccountMeta<string> = string,
   TAccountNcnAdmin extends string | IAccountMeta<string> = string,
-  TAccountTieBreakerAdmin extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
-  TAccountSystemProgram extends
-    | string
-    | IAccountMeta<string> = '11111111111111111111111111111111',
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -64,135 +61,96 @@ export type InitializeConfigInstruction<
         ? WritableAccount<TAccountConfig>
         : TAccountConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountFeeWallet extends string
-        ? ReadonlyAccount<TAccountFeeWallet>
-        : TAccountFeeWallet,
       TAccountNcnAdmin extends string
         ? ReadonlySignerAccount<TAccountNcnAdmin> &
             IAccountSignerMeta<TAccountNcnAdmin>
         : TAccountNcnAdmin,
-      TAccountTieBreakerAdmin extends string
-        ? ReadonlyAccount<TAccountTieBreakerAdmin>
-        : TAccountTieBreakerAdmin,
       TAccountRestakingProgram extends string
         ? ReadonlyAccount<TAccountRestakingProgram>
         : TAccountRestakingProgram,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >;
 
-export type InitializeConfigInstructionData = {
+export type AdminSetParametersInstructionData = {
   discriminator: number;
-  blockEngineFeeBps: number;
-  daoFeeBps: number;
-  defaultNcnFeeBps: number;
-  epochsBeforeStall: bigint;
-  validSlotsAfterConsensus: bigint;
+  epochsBeforeStall: Option<bigint>;
+  validSlotsAfterConsensus: Option<bigint>;
 };
 
-export type InitializeConfigInstructionDataArgs = {
-  blockEngineFeeBps: number;
-  daoFeeBps: number;
-  defaultNcnFeeBps: number;
-  epochsBeforeStall: number | bigint;
-  validSlotsAfterConsensus: number | bigint;
+export type AdminSetParametersInstructionDataArgs = {
+  epochsBeforeStall: OptionOrNullable<number | bigint>;
+  validSlotsAfterConsensus: OptionOrNullable<number | bigint>;
 };
 
-export function getInitializeConfigInstructionDataEncoder(): Encoder<InitializeConfigInstructionDataArgs> {
+export function getAdminSetParametersInstructionDataEncoder(): Encoder<AdminSetParametersInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['blockEngineFeeBps', getU16Encoder()],
-      ['daoFeeBps', getU16Encoder()],
-      ['defaultNcnFeeBps', getU16Encoder()],
-      ['epochsBeforeStall', getU64Encoder()],
-      ['validSlotsAfterConsensus', getU64Encoder()],
+      ['epochsBeforeStall', getOptionEncoder(getU64Encoder())],
+      ['validSlotsAfterConsensus', getOptionEncoder(getU64Encoder())],
     ]),
-    (value) => ({ ...value, discriminator: INITIALIZE_CONFIG_DISCRIMINATOR })
+    (value) => ({ ...value, discriminator: ADMIN_SET_PARAMETERS_DISCRIMINATOR })
   );
 }
 
-export function getInitializeConfigInstructionDataDecoder(): Decoder<InitializeConfigInstructionData> {
+export function getAdminSetParametersInstructionDataDecoder(): Decoder<AdminSetParametersInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['blockEngineFeeBps', getU16Decoder()],
-    ['daoFeeBps', getU16Decoder()],
-    ['defaultNcnFeeBps', getU16Decoder()],
-    ['epochsBeforeStall', getU64Decoder()],
-    ['validSlotsAfterConsensus', getU64Decoder()],
+    ['epochsBeforeStall', getOptionDecoder(getU64Decoder())],
+    ['validSlotsAfterConsensus', getOptionDecoder(getU64Decoder())],
   ]);
 }
 
-export function getInitializeConfigInstructionDataCodec(): Codec<
-  InitializeConfigInstructionDataArgs,
-  InitializeConfigInstructionData
+export function getAdminSetParametersInstructionDataCodec(): Codec<
+  AdminSetParametersInstructionDataArgs,
+  AdminSetParametersInstructionData
 > {
   return combineCodec(
-    getInitializeConfigInstructionDataEncoder(),
-    getInitializeConfigInstructionDataDecoder()
+    getAdminSetParametersInstructionDataEncoder(),
+    getAdminSetParametersInstructionDataDecoder()
   );
 }
 
-export type InitializeConfigInput<
+export type AdminSetParametersInput<
   TAccountRestakingConfig extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
-  TAccountFeeWallet extends string = string,
   TAccountNcnAdmin extends string = string,
-  TAccountTieBreakerAdmin extends string = string,
   TAccountRestakingProgram extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
-  feeWallet: Address<TAccountFeeWallet>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
-  tieBreakerAdmin: Address<TAccountTieBreakerAdmin>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  systemProgram?: Address<TAccountSystemProgram>;
-  blockEngineFeeBps: InitializeConfigInstructionDataArgs['blockEngineFeeBps'];
-  daoFeeBps: InitializeConfigInstructionDataArgs['daoFeeBps'];
-  defaultNcnFeeBps: InitializeConfigInstructionDataArgs['defaultNcnFeeBps'];
-  epochsBeforeStall: InitializeConfigInstructionDataArgs['epochsBeforeStall'];
-  validSlotsAfterConsensus: InitializeConfigInstructionDataArgs['validSlotsAfterConsensus'];
+  epochsBeforeStall: AdminSetParametersInstructionDataArgs['epochsBeforeStall'];
+  validSlotsAfterConsensus: AdminSetParametersInstructionDataArgs['validSlotsAfterConsensus'];
 };
 
-export function getInitializeConfigInstruction<
+export function getAdminSetParametersInstruction<
   TAccountRestakingConfig extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
-  TAccountFeeWallet extends string,
   TAccountNcnAdmin extends string,
-  TAccountTieBreakerAdmin extends string,
   TAccountRestakingProgram extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: InitializeConfigInput<
+  input: AdminSetParametersInput<
     TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
-    TAccountFeeWallet,
     TAccountNcnAdmin,
-    TAccountTieBreakerAdmin,
-    TAccountRestakingProgram,
-    TAccountSystemProgram
+    TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): InitializeConfigInstruction<
+): AdminSetParametersInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
   TAccountConfig,
   TAccountNcn,
-  TAccountFeeWallet,
   TAccountNcnAdmin,
-  TAccountTieBreakerAdmin,
-  TAccountRestakingProgram,
-  TAccountSystemProgram
+  TAccountRestakingProgram
 > {
   // Program address.
   const programAddress =
@@ -206,17 +164,11 @@ export function getInitializeConfigInstruction<
     },
     config: { value: input.config ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    feeWallet: { value: input.feeWallet ?? null, isWritable: false },
     ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
-    tieBreakerAdmin: {
-      value: input.tieBreakerAdmin ?? null,
-      isWritable: false,
-    },
     restakingProgram: {
       value: input.restakingProgram ?? null,
       isWritable: false,
     },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -226,44 +178,32 @@ export function getInitializeConfigInstruction<
   // Original args.
   const args = { ...input };
 
-  // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
-  }
-
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
       getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.feeWallet),
       getAccountMeta(accounts.ncnAdmin),
-      getAccountMeta(accounts.tieBreakerAdmin),
       getAccountMeta(accounts.restakingProgram),
-      getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
-    data: getInitializeConfigInstructionDataEncoder().encode(
-      args as InitializeConfigInstructionDataArgs
+    data: getAdminSetParametersInstructionDataEncoder().encode(
+      args as AdminSetParametersInstructionDataArgs
     ),
-  } as InitializeConfigInstruction<
+  } as AdminSetParametersInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
-    TAccountFeeWallet,
     TAccountNcnAdmin,
-    TAccountTieBreakerAdmin,
-    TAccountRestakingProgram,
-    TAccountSystemProgram
+    TAccountRestakingProgram
   >;
 
   return instruction;
 }
 
-export type ParsedInitializeConfigInstruction<
+export type ParsedAdminSetParametersInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -272,24 +212,21 @@ export type ParsedInitializeConfigInstruction<
     restakingConfig: TAccountMetas[0];
     config: TAccountMetas[1];
     ncn: TAccountMetas[2];
-    feeWallet: TAccountMetas[3];
-    ncnAdmin: TAccountMetas[4];
-    tieBreakerAdmin: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
-    systemProgram: TAccountMetas[7];
+    ncnAdmin: TAccountMetas[3];
+    restakingProgram: TAccountMetas[4];
   };
-  data: InitializeConfigInstructionData;
+  data: AdminSetParametersInstructionData;
 };
 
-export function parseInitializeConfigInstruction<
+export function parseAdminSetParametersInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedInitializeConfigInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+): ParsedAdminSetParametersInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -305,12 +242,11 @@ export function parseInitializeConfigInstruction<
       restakingConfig: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
-      feeWallet: getNextAccount(),
       ncnAdmin: getNextAccount(),
-      tieBreakerAdmin: getNextAccount(),
       restakingProgram: getNextAccount(),
-      systemProgram: getNextAccount(),
     },
-    data: getInitializeConfigInstructionDataDecoder().decode(instruction.data),
+    data: getAdminSetParametersInstructionDataDecoder().decode(
+      instruction.data
+    ),
   };
 }

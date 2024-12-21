@@ -17,8 +17,8 @@ pub enum TipRouterInstruction {
     #[account(0, name = "restaking_config")]
     #[account(1, writable, name = "config")]
     #[account(2, name = "ncn")]
-    #[account(3, signer, name = "ncn_admin")]
-    #[account(4, name = "fee_wallet")]
+    #[account(3, name = "fee_wallet")]
+    #[account(4, signer, name = "ncn_admin")]
     #[account(5, name = "tie_breaker_admin")]
     #[account(6, name = "restaking_program")]
     #[account(7, name = "system_program")]
@@ -26,6 +26,8 @@ pub enum TipRouterInstruction {
         block_engine_fee_bps: u16,
         dao_fee_bps: u16,
         default_ncn_fee_bps: u16,
+        epochs_before_stall: u64,
+        valid_slots_after_consensus: u64,
     },
 
     /// Initializes the tracked mints account for an NCN
@@ -438,4 +440,15 @@ pub enum TipRouterInstruction {
     #[account(3, writable, signer, name = "payer")]
     #[account(4, name = "system_program")]
     ReallocVaultRegistry,
+
+    /// Updates NCN parameters
+    #[account(0, name = "restaking_config")]
+    #[account(1, writable, name = "config")]
+    #[account(2, name = "ncn")]
+    #[account(3, signer, name = "ncn_admin")]
+    #[account(4, name = "restaking_program")]
+    AdminSetParameters {
+        epochs_before_stall: Option<u64>,
+        valid_slots_after_consensus: Option<u64>,
+    },
 }

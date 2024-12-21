@@ -27,7 +27,8 @@ pub struct NcnConfig {
 
     /// Bump seed for the PDA
     pub bump: u8,
-    // /// Reserved space
+
+    /// Reserved space
     reserved: [u8; 127],
 }
 
@@ -43,15 +44,18 @@ impl NcnConfig {
         tie_breaker_admin: Pubkey,
         fee_admin: Pubkey,
         fee_config: &FeeConfig,
+        valid_slots_after_consensus: u64,
+        epochs_before_stall: u64,
+        bump: u8,
     ) -> Self {
         Self {
             ncn,
             tie_breaker_admin,
             fee_admin,
-            valid_slots_after_consensus: PodU64::from(0), // TODO set this
-            epochs_before_stall: PodU64::from(0),         // TODO set this
+            valid_slots_after_consensus: PodU64::from(valid_slots_after_consensus),
+            epochs_before_stall: PodU64::from(epochs_before_stall),
             fee_config: *fee_config,
-            bump: 0,
+            bump,
             reserved: [0; 127],
         }
     }

@@ -6,8 +6,9 @@ use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, jito_ti
 use jito_tip_router_client::{
     instructions::{
         AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
-        AdminSetStMintBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder, CastVoteBuilder,
-        ClaimWithPayerBuilder, DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
+        AdminSetParametersBuilder, AdminSetStMintBuilder, AdminSetTieBreakerBuilder,
+        AdminSetWeightBuilder, CastVoteBuilder, ClaimWithPayerBuilder,
+        DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
         DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
         InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder, InitializeConfigBuilder,
         InitializeEpochSnapshotBuilder, InitializeNcnRewardRouterBuilder,
@@ -269,6 +270,8 @@ impl TipRouterClient {
             0,
             0,
             0,
+            3,
+            10000,
         )
         .await
     }
@@ -282,6 +285,8 @@ impl TipRouterClient {
         block_engine_fee_bps: u16,
         dao_fee_bps: u16,
         default_ncn_fee_bps: u16,
+        epochs_before_stall: u64,
+        valid_slots_after_consensus: u64,
     ) -> TestResult<()> {
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
         let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
@@ -297,6 +302,8 @@ impl TipRouterClient {
             .dao_fee_bps(dao_fee_bps)
             .default_ncn_fee_bps(default_ncn_fee_bps)
             .block_engine_fee_bps(block_engine_fee_bps)
+            .epochs_before_stall(epochs_before_stall)
+            .valid_slots_after_consensus(valid_slots_after_consensus)
             .instruction();
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;
@@ -2201,6 +2208,41 @@ impl TipRouterClient {
             &[ix],
             Some(&self.payer.pubkey()),
             &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_set_parameters(
+        &mut self,
+        epochs_before_stall: Option<u64>,
+        valid_slots_after_consensus: Option<u64>,
+        ncn_root: &NcnRoot,
+    ) -> TestResult<()> {
+        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
+        let config_pda =
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_root.ncn_pubkey).0;
+
+        let mut ix = AdminSetParametersBuilder::new();
+        ix.restaking_config(restaking_config)
+            .config(config_pda)
+            .ncn(ncn_root.ncn_pubkey)
+            .ncn_admin(ncn_root.ncn_admin.pubkey())
+            .restaking_program(jito_restaking_program::id());
+
+        if let Some(epochs) = epochs_before_stall {
+            ix.epochs_before_stall(epochs);
+        }
+
+        if let Some(slots) = valid_slots_after_consensus {
+            ix.valid_slots_after_consensus(slots);
+        }
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix.instruction()],
+            Some(&ncn_root.ncn_admin.pubkey()),
+            &[&ncn_root.ncn_admin],
             blockhash,
         ))
         .await

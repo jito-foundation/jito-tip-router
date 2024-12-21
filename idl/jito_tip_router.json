@@ -21,14 +21,14 @@
           "isSigner": false
         },
         {
-          "name": "ncnAdmin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "feeWallet",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "ncnAdmin",
+          "isMut": false,
+          "isSigner": true
         },
         {
           "name": "tieBreakerAdmin",
@@ -58,6 +58,14 @@
         {
           "name": "defaultNcnFeeBps",
           "type": "u16"
+        },
+        {
+          "name": "epochsBeforeStall",
+          "type": "u64"
+        },
+        {
+          "name": "validSlotsAfterConsensus",
+          "type": "u64"
         }
       ],
       "discriminant": {
@@ -1845,6 +1853,54 @@
         "type": "u8",
         "value": 30
       }
+    },
+    {
+      "name": "AdminSetParameters",
+      "accounts": [
+        {
+          "name": "restakingConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncnAdmin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "epochsBeforeStall",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "validSlotsAfterConsensus",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 31
+      }
     }
   ],
   "accounts": [
@@ -3300,6 +3356,16 @@
       "code": 8764,
       "name": "NoFeedWeightOrSwitchboardFeed",
       "msg": "Weight entry needs either a feed or a no feed weight"
+    },
+    {
+      "code": 8765,
+      "name": "InvalidEpochsBeforeStall",
+      "msg": "Invalid epochs before stall"
+    },
+    {
+      "code": 8766,
+      "name": "InvalidSlotsAfterConsensus",
+      "msg": "Invalid slots after consensus"
     }
   ],
   "metadata": {

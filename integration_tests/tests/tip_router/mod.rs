@@ -1,3 +1,4 @@
+mod admin_set_parameters;
 mod admin_set_st_mint;
 mod admin_update_weight_table;
 mod bpf;

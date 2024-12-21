@@ -5,7 +5,13 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
-    constants::MAX_FEE_BPS, error::TipRouterError, fees::FeeConfig, ncn_config::NcnConfig,
+    constants::{
+        MAX_EPOCHS_BEFORE_STALL, MAX_FEE_BPS, MAX_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_BEFORE_STALL,
+        MIN_SLOTS_AFTER_CONSENSUS,
+    },
+    error::TipRouterError,
+    fees::FeeConfig,
+    ncn_config::NcnConfig,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
@@ -18,6 +24,8 @@ pub fn process_initialize_ncn_config(
     block_engine_fee_bps: u16,
     dao_fee_bps: u16,
     default_ncn_fee_bps: u16,
+    epochs_before_stall: u64,
+    valid_slots_after_consensus: u64,
 ) -> ProgramResult {
     let [restaking_config, ncn_config, ncn_account, dao_fee_wallet, ncn_admin, tie_breaker_admin, restaking_program, system_program] =
         accounts
@@ -69,6 +77,16 @@ pub fn process_initialize_ncn_config(
         return Err(TipRouterError::FeeCapExceeded.into());
     }
 
+    if !(MIN_EPOCHS_BEFORE_STALL..=MAX_EPOCHS_BEFORE_STALL).contains(&epochs_before_stall) {
+        return Err(TipRouterError::InvalidEpochsBeforeStall.into());
+    }
+
+    if !(MIN_SLOTS_AFTER_CONSENSUS..=MAX_SLOTS_AFTER_CONSENSUS)
+        .contains(&valid_slots_after_consensus)
+    {
+        return Err(TipRouterError::InvalidSlotsAfterConsensus.into());
+    }
+
     create_account(
         ncn_admin,
         ncn_config,
@@ -98,8 +116,10 @@ pub fn process_initialize_ncn_config(
         *tie_breaker_admin.key,
         *ncn_admin.key,
         &fee_config,
+        valid_slots_after_consensus,
+        epochs_before_stall,
+        config_bump,
     );
-    config.bump = config_bump;
 
     config.fee_config.check_fees_okay(epoch)?;
 

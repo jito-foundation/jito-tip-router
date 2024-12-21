@@ -7,6 +7,7 @@
 pub(crate) mod r#admin_register_st_mint;
 pub(crate) mod r#admin_set_config_fees;
 pub(crate) mod r#admin_set_new_admin;
+pub(crate) mod r#admin_set_parameters;
 pub(crate) mod r#admin_set_st_mint;
 pub(crate) mod r#admin_set_tie_breaker;
 pub(crate) mod r#admin_set_weight;
@@ -38,8 +39,9 @@ pub(crate) mod r#switchboard_set_weight;
 
 pub use self::{
     r#admin_register_st_mint::*, r#admin_set_config_fees::*, r#admin_set_new_admin::*,
-    r#admin_set_st_mint::*, r#admin_set_tie_breaker::*, r#admin_set_weight::*, r#cast_vote::*,
-    r#claim_with_payer::*, r#distribute_base_ncn_reward_route::*, r#distribute_base_rewards::*,
+    r#admin_set_parameters::*, r#admin_set_st_mint::*, r#admin_set_tie_breaker::*,
+    r#admin_set_weight::*, r#cast_vote::*, r#claim_with_payer::*,
+    r#distribute_base_ncn_reward_route::*, r#distribute_base_rewards::*,
     r#distribute_ncn_operator_rewards::*, r#distribute_ncn_vault_rewards::*,
     r#initialize_ballot_box::*, r#initialize_base_reward_router::*, r#initialize_config::*,
     r#initialize_epoch_snapshot::*, r#initialize_ncn_reward_router::*,

@@ -1,6 +1,7 @@
 mod admin_register_st_mint;
 mod admin_set_config_fees;
 mod admin_set_new_admin;
+mod admin_set_parameters;
 mod admin_set_st_mint;
 mod admin_set_tie_breaker;
 mod admin_set_weight;
@@ -44,6 +45,7 @@ use solana_security_txt::security_txt;
 use crate::{
     admin_register_st_mint::process_admin_register_st_mint,
     admin_set_config_fees::process_admin_set_config_fees,
+    admin_set_parameters::process_admin_set_parameters,
     admin_set_st_mint::process_admin_set_st_mint,
     admin_set_tie_breaker::process_admin_set_tie_breaker,
     admin_set_weight::process_admin_set_weight, cast_vote::process_cast_vote,
@@ -107,6 +109,8 @@ pub fn process_instruction(
             block_engine_fee_bps,
             dao_fee_bps,
             default_ncn_fee_bps,
+            epochs_before_stall,
+            valid_slots_after_consensus,
         } => {
             msg!("Instruction: InitializeConfig");
             process_initialize_ncn_config(
@@ -115,6 +119,8 @@ pub fn process_instruction(
                 block_engine_fee_bps,
                 dao_fee_bps,
                 default_ncn_fee_bps,
+                epochs_before_stall,
+                valid_slots_after_consensus,
             )
         }
         TipRouterInstruction::InitializeVaultRegistry => {
@@ -332,6 +338,18 @@ pub fn process_instruction(
         TipRouterInstruction::ReallocVaultRegistry => {
             msg!("Instruction: ReallocVaultRegistry");
             process_realloc_vault_registry(program_id, accounts)
+        }
+        TipRouterInstruction::AdminSetParameters {
+            epochs_before_stall,
+            valid_slots_after_consensus,
+        } => {
+            msg!("Instruction: AdminSetParameters");
+            process_admin_set_parameters(
+                program_id,
+                accounts,
+                epochs_before_stall,
+                valid_slots_after_consensus,
+            )
         }
     }
 }
