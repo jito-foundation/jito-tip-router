@@ -1,4 +1,4 @@
-use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
+use jito_bytemuck::{types::PodU64, AccountDeserialize};
 use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::{config::Config, ncn::Ncn};
 use jito_tip_router_core::{
@@ -31,16 +31,15 @@ pub fn process_admin_set_parameters(
     Ncn::load(restaking_program.key, ncn_account, false)?;
     Config::load(restaking_program.key, restaking_config, false)?;
 
-    let ncn_data = ncn_account.data.borrow();
-    let ncn = Ncn::try_from_slice_unchecked(&ncn_data)?;
-    if ncn.admin != *ncn_admin.key {
-        return Err(TipRouterError::IncorrectNcnAdmin.into());
+    {
+        let ncn_data = ncn_account.data.borrow();
+        let ncn = Ncn::try_from_slice_unchecked(&ncn_data)?;
+        if ncn.admin != *ncn_admin.key {
+            return Err(TipRouterError::IncorrectNcnAdmin.into());
+        }
     }
 
     let mut config_data = config.try_borrow_mut_data()?;
-    if config_data[0] != NcnConfig::DISCRIMINATOR {
-        return Err(ProgramError::InvalidAccountData);
-    }
     let config = NcnConfig::try_from_slice_unchecked_mut(&mut config_data)?;
 
     if config.ncn != *ncn_account.key {
@@ -51,16 +50,16 @@ pub fn process_admin_set_parameters(
         if !(MIN_EPOCHS_BEFORE_STALL..=MAX_EPOCHS_BEFORE_STALL).contains(&epochs) {
             return Err(TipRouterError::InvalidEpochsBeforeStall.into());
         }
-        config.epochs_before_stall = PodU64::from(epochs);
         msg!("Updated epochs_before_stall to {}", epochs);
+        config.epochs_before_stall = PodU64::from(epochs);
     }
 
     if let Some(slots) = valid_slots_after_consensus {
         if !(MIN_SLOTS_AFTER_CONSENSUS..=MAX_SLOTS_AFTER_CONSENSUS).contains(&slots) {
             return Err(TipRouterError::InvalidSlotsAfterConsensus.into());
         }
-        config.valid_slots_after_consensus = PodU64::from(slots);
         msg!("Updated valid_slots_after_consensus to {}", slots);
+        config.valid_slots_after_consensus = PodU64::from(slots);
     }
 
     Ok(())
