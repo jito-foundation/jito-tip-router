@@ -14,6 +14,7 @@ use solana_program::{
 pub fn process_route_base_rewards(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
+    max_iterations: u16,
     epoch: u64,
 ) -> ProgramResult {
     let [restaking_config, ncn, epoch_snapshot, ballot_box, base_reward_router, base_reward_receiver, restaking_program] =
@@ -49,11 +50,14 @@ pub fn process_route_base_rewards(
 
     let rent_cost = Rent::get()?.minimum_balance(0);
 
-    base_reward_router_account.route_incoming_rewards(rent_cost, base_reward_receiver_balance)?;
+    if !base_reward_router_account.still_routing() {
+        base_reward_router_account
+            .route_incoming_rewards(rent_cost, base_reward_receiver_balance)?;
 
-    base_reward_router_account.route_reward_pool(epoch_snapshot_account.fees())?;
+        base_reward_router_account.route_reward_pool(epoch_snapshot_account.fees())?;
+    }
 
-    base_reward_router_account.route_ncn_fee_group_rewards(ballot_box_account)?;
+    base_reward_router_account.route_ncn_fee_group_rewards(ballot_box_account, max_iterations)?;
 
     Ok(())
 }

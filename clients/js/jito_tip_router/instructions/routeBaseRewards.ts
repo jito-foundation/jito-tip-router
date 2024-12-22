@@ -10,6 +10,8 @@ import {
   combineCodec,
   getStructDecoder,
   getStructEncoder,
+  getU16Decoder,
+  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -74,15 +76,20 @@ export type RouteBaseRewardsInstruction<
 
 export type RouteBaseRewardsInstructionData = {
   discriminator: number;
+  maxIterations: number;
   epoch: bigint;
 };
 
-export type RouteBaseRewardsInstructionDataArgs = { epoch: number | bigint };
+export type RouteBaseRewardsInstructionDataArgs = {
+  maxIterations: number;
+  epoch: number | bigint;
+};
 
 export function getRouteBaseRewardsInstructionDataEncoder(): Encoder<RouteBaseRewardsInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
+      ['maxIterations', getU16Encoder()],
       ['epoch', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: ROUTE_BASE_REWARDS_DISCRIMINATOR })
@@ -92,6 +99,7 @@ export function getRouteBaseRewardsInstructionDataEncoder(): Encoder<RouteBaseRe
 export function getRouteBaseRewardsInstructionDataDecoder(): Decoder<RouteBaseRewardsInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
+    ['maxIterations', getU16Decoder()],
     ['epoch', getU64Decoder()],
   ]);
 }
@@ -122,6 +130,7 @@ export type RouteBaseRewardsInput<
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   baseRewardReceiver: Address<TAccountBaseRewardReceiver>;
   restakingProgram: Address<TAccountRestakingProgram>;
+  maxIterations: RouteBaseRewardsInstructionDataArgs['maxIterations'];
   epoch: RouteBaseRewardsInstructionDataArgs['epoch'];
 };
 

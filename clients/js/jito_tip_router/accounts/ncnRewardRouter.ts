@@ -19,6 +19,8 @@ import {
   getArrayEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU16Decoder,
+  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -58,6 +60,8 @@ export type NcnRewardRouter = {
   rewardsProcessed: bigint;
   operatorRewards: bigint;
   reserved: Array<number>;
+  lastRewardsToProcess: bigint;
+  lastVaultOperatorDelegationIndex: number;
   vaultRewardRoutes: Array<VaultRewardRoute>;
 };
 
@@ -74,6 +78,8 @@ export type NcnRewardRouterArgs = {
   rewardsProcessed: number | bigint;
   operatorRewards: number | bigint;
   reserved: Array<number>;
+  lastRewardsToProcess: number | bigint;
+  lastVaultOperatorDelegationIndex: number;
   vaultRewardRoutes: Array<VaultRewardRouteArgs>;
 };
 
@@ -91,6 +97,8 @@ export function getNcnRewardRouterEncoder(): Encoder<NcnRewardRouterArgs> {
     ['rewardsProcessed', getU64Encoder()],
     ['operatorRewards', getU64Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['lastRewardsToProcess', getU64Encoder()],
+    ['lastVaultOperatorDelegationIndex', getU16Encoder()],
     [
       'vaultRewardRoutes',
       getArrayEncoder(getVaultRewardRouteEncoder(), { size: 64 }),
@@ -112,6 +120,8 @@ export function getNcnRewardRouterDecoder(): Decoder<NcnRewardRouter> {
     ['rewardsProcessed', getU64Decoder()],
     ['operatorRewards', getU64Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['lastRewardsToProcess', getU64Decoder()],
+    ['lastVaultOperatorDelegationIndex', getU16Decoder()],
     [
       'vaultRewardRoutes',
       getArrayDecoder(getVaultRewardRouteDecoder(), { size: 64 }),

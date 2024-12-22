@@ -219,6 +219,9 @@ pub enum JitoTipRouterError {
     /// 8764 - Weight entry needs either a feed or a no feed weight
     #[error("Weight entry needs either a feed or a no feed weight")]
     NoFeedWeightOrSwitchboardFeed = 0x223C,
+    /// 8765 - Router still routing
+    #[error("Router still routing")]
+    RouterStillRouting = 0x223D,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

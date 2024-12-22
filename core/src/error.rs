@@ -145,6 +145,8 @@ pub enum TipRouterError {
     StaleSwitchboardFeed,
     #[error("Weight entry needs either a feed or a no feed weight")]
     NoFeedWeightOrSwitchboardFeed,
+    #[error("Router still routing")]
+    RouterStillRouting,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

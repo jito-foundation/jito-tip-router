@@ -97,6 +97,7 @@ impl Default for RouteBaseRewardsInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RouteBaseRewardsInstructionArgs {
+    pub max_iterations: u16,
     pub epoch: u64,
 }
 
@@ -120,6 +121,7 @@ pub struct RouteBaseRewardsBuilder {
     base_reward_router: Option<solana_program::pubkey::Pubkey>,
     base_reward_receiver: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
+    max_iterations: Option<u16>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -176,6 +178,11 @@ impl RouteBaseRewardsBuilder {
         self
     }
     #[inline(always)]
+    pub fn max_iterations(&mut self, max_iterations: u16) -> &mut Self {
+        self.max_iterations = Some(max_iterations);
+        self
+    }
+    #[inline(always)]
     pub fn epoch(&mut self, epoch: u64) -> &mut Self {
         self.epoch = Some(epoch);
         self
@@ -216,6 +223,10 @@ impl RouteBaseRewardsBuilder {
                 .expect("restaking_program is not set"),
         };
         let args = RouteBaseRewardsInstructionArgs {
+            max_iterations: self
+                .max_iterations
+                .clone()
+                .expect("max_iterations is not set"),
             epoch: self.epoch.clone().expect("epoch is not set"),
         };
 
@@ -406,6 +417,7 @@ impl<'a, 'b> RouteBaseRewardsCpiBuilder<'a, 'b> {
             base_reward_router: None,
             base_reward_receiver: None,
             restaking_program: None,
+            max_iterations: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
         });
@@ -465,6 +477,11 @@ impl<'a, 'b> RouteBaseRewardsCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
+    pub fn max_iterations(&mut self, max_iterations: u16) -> &mut Self {
+        self.instruction.max_iterations = Some(max_iterations);
+        self
+    }
+    #[inline(always)]
     pub fn epoch(&mut self, epoch: u64) -> &mut Self {
         self.instruction.epoch = Some(epoch);
         self
@@ -511,6 +528,11 @@ impl<'a, 'b> RouteBaseRewardsCpiBuilder<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
         let args = RouteBaseRewardsInstructionArgs {
+            max_iterations: self
+                .instruction
+                .max_iterations
+                .clone()
+                .expect("max_iterations is not set"),
             epoch: self.instruction.epoch.clone().expect("epoch is not set"),
         };
         let instruction = RouteBaseRewardsCpi {
@@ -563,6 +585,7 @@ struct RouteBaseRewardsCpiBuilderInstruction<'a, 'b> {
     base_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     base_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    max_iterations: Option<u16>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

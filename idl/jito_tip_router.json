@@ -741,6 +741,10 @@
       ],
       "args": [
         {
+          "name": "maxIterations",
+          "type": "u16"
+        },
+        {
           "name": "epoch",
           "type": "u64"
         }
@@ -793,6 +797,10 @@
         {
           "name": "ncnFeeGroup",
           "type": "u8"
+        },
+        {
+          "name": "maxIterations",
+          "type": "u16"
         },
         {
           "name": "epoch",
@@ -1984,6 +1992,16 @@
             }
           },
           {
+            "name": "lastNcnGroupIndex",
+            "type": "u8"
+          },
+          {
+            "name": "lastVoteIndex",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
             "name": "baseFeeGroupRewards",
             "type": {
               "array": [
@@ -2321,6 +2339,18 @@
                 "u8",
                 128
               ]
+            }
+          },
+          {
+            "name": "lastRewardsToProcess",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "lastVaultOperatorDelegationIndex",
+            "type": {
+              "defined": "PodU16"
             }
           },
           {
@@ -3300,6 +3330,11 @@
       "code": 8764,
       "name": "NoFeedWeightOrSwitchboardFeed",
       "msg": "Weight entry needs either a feed or a no feed weight"
+    },
+    {
+      "code": 8765,
+      "name": "RouterStillRouting",
+      "msg": "Router still routing"
     }
   ],
   "metadata": {

@@ -26,6 +26,8 @@ pub struct BaseRewardRouter {
     pub rewards_processed: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 128],
+    pub last_ncn_group_index: u8,
+    pub last_vote_index: u16,
     pub base_fee_group_rewards: [BaseRewardRouterRewards; 8],
     pub ncn_fee_group_rewards: [BaseRewardRouterRewards; 8],
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]

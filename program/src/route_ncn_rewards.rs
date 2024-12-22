@@ -15,6 +15,7 @@ pub fn process_route_ncn_rewards(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     ncn_fee_group: u8,
+    max_iterations: u16,
     epoch: u64,
 ) -> ProgramResult {
     let [restaking_config, ncn, operator, operator_snapshot, ncn_reward_router, ncn_reward_receiver, restaking_program] =
@@ -73,9 +74,12 @@ pub fn process_route_ncn_rewards(
 
     let rent_cost = Rent::get()?.minimum_balance(0);
 
-    ncn_reward_router_account.route_incoming_rewards(rent_cost, account_balance)?;
+    if !ncn_reward_router_account.still_routing() {
+        ncn_reward_router_account.route_incoming_rewards(rent_cost, account_balance)?;
+        ncn_reward_router_account.route_operator_rewards(operator_snapshot_account)?;
+    }
 
-    ncn_reward_router_account.route_reward_pool(operator_snapshot_account)?;
+    ncn_reward_router_account.route_reward_pool(operator_snapshot_account, max_iterations)?;
 
     Ok(())
 }

@@ -3,6 +3,7 @@ use jito_jsm_core::loader::load_system_program;
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
+    error::TipRouterError,
     ncn_config::NcnConfig,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
@@ -65,6 +66,11 @@ pub fn process_distribute_base_ncn_reward_route(
         let mut epoch_reward_router_data = base_reward_router.try_borrow_mut_data()?;
         let base_reward_router_account =
             BaseRewardRouter::try_from_slice_unchecked_mut(&mut epoch_reward_router_data)?;
+
+        if base_reward_router_account.still_routing() {
+            msg!("Rewards still routing");
+            return Err(TipRouterError::RouterStillRouting.into());
+        }
 
         base_reward_router_account
             .distribute_ncn_fee_group_reward_route(ncn_fee_group, operator.key)?

@@ -1,7 +1,10 @@
 use core::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
-use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
+use jito_bytemuck::{
+    types::{PodU16, PodU64},
+    AccountDeserialize, Discriminator,
+};
 use jito_vault_core::MAX_BPS;
 use shank::{ShankAccount, ShankType};
 use solana_program::{
@@ -40,6 +43,9 @@ pub struct NcnRewardRouter {
 
     reserved: [u8; 128],
 
+    last_rewards_to_process: PodU64,
+    last_vault_operator_delegation_index: PodU16,
+
     vault_reward_routes: [VaultRewardRoute; 64],
 }
 
@@ -49,6 +55,10 @@ impl Discriminator for NcnRewardRouter {
 
 impl NcnRewardRouter {
     pub const SIZE: usize = 8 + size_of::<Self>();
+
+    pub const NO_LAST_REWARDS_TO_PROCESS: u64 = u64::MAX;
+    pub const NO_LAST_VAULT_OPERATION_DELEGATION_INDEX: u16 = u16::MAX;
+    pub const MAX_ROUTE_NCN_ITERATIONS: u16 = 30;
 
     pub fn new(
         ncn_fee_group: NcnFeeGroup,
@@ -70,6 +80,10 @@ impl NcnRewardRouter {
             rewards_processed: PodU64::from(0),
             operator_rewards: PodU64::from(0),
             reserved: [0; 128],
+            last_rewards_to_process: PodU64::from(Self::NO_LAST_REWARDS_TO_PROCESS),
+            last_vault_operator_delegation_index: PodU16::from(
+                Self::NO_LAST_VAULT_OPERATION_DELEGATION_INDEX,
+            ),
             vault_reward_routes: [VaultRewardRoute::default(); MAX_VAULTS],
         }
     }
@@ -170,6 +184,48 @@ impl NcnRewardRouter {
         &self.vault_reward_routes
     }
 
+    // ----------------- ROUTE STATE TRACKING --------------
+    pub fn last_rewards_to_process(&self) -> u64 {
+        self.last_rewards_to_process.into()
+    }
+
+    pub fn last_vault_operator_delegation_index(&self) -> u16 {
+        self.last_vault_operator_delegation_index.into()
+    }
+
+    pub fn resume_routing_state(&mut self, rewards_to_process: u64) -> (u64, usize) {
+        if !self.still_routing() {
+            return (rewards_to_process, 0);
+        }
+
+        (
+            self.last_rewards_to_process(),
+            self.last_vault_operator_delegation_index() as usize,
+        )
+    }
+
+    pub fn save_routing_state(
+        &mut self,
+        rewards_to_process: u64,
+        vault_operator_delegation_index: usize,
+    ) {
+        self.last_rewards_to_process = PodU64::from(rewards_to_process);
+        self.last_vault_operator_delegation_index =
+            PodU16::from(vault_operator_delegation_index as u16);
+    }
+
+    pub fn finish_routing_state(&mut self) {
+        self.last_rewards_to_process = PodU64::from(Self::NO_LAST_REWARDS_TO_PROCESS);
+        self.last_vault_operator_delegation_index =
+            PodU16::from(Self::NO_LAST_VAULT_OPERATION_DELEGATION_INDEX);
+    }
+
+    pub fn still_routing(&self) -> bool {
+        self.last_rewards_to_process() != Self::NO_LAST_REWARDS_TO_PROCESS
+            || self.last_vault_operator_delegation_index()
+                != Self::NO_LAST_VAULT_OPERATION_DELEGATION_INDEX
+    }
+
     // ------------------------ ROUTING ------------------------
     pub fn route_incoming_rewards(
         &mut self,
@@ -191,7 +247,7 @@ impl NcnRewardRouter {
         Ok(())
     }
 
-    pub fn route_reward_pool(
+    pub fn route_operator_rewards(
         &mut self,
         operator_snapshot: &OperatorSnapshot,
     ) -> Result<(), TipRouterError> {
@@ -207,14 +263,50 @@ impl NcnRewardRouter {
             self.route_to_operator_rewards(operator_rewards)?;
         }
 
-        // Vault Rewards
+        Ok(())
+    }
+
+    pub fn route_reward_pool(
+        &mut self,
+        operator_snapshot: &OperatorSnapshot,
+        max_iterations: u16,
+    ) -> Result<(), TipRouterError> {
         {
             let operator_stake_weight = operator_snapshot.stake_weights();
             let vault_ncn_fee_group = self.ncn_fee_group();
             let rewards_to_process: u64 = self.reward_pool();
 
-            for vault_operator_delegation in operator_snapshot.vault_operator_stake_weight().iter()
+            let (rewards_to_process, starting_vault_operator_delegation_index) =
+                self.resume_routing_state(rewards_to_process);
+
+            let mut iterations: u16 = 0;
+
+            for vault_operator_delegation_index in starting_vault_operator_delegation_index
+                ..operator_snapshot.vault_operator_stake_weight().len()
             {
+                let vault_operator_delegation = operator_snapshot.vault_operator_stake_weight()
+                    [vault_operator_delegation_index];
+
+                // Update iteration state
+                {
+                    iterations = iterations
+                        .checked_add(1)
+                        .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+                    if iterations >= max_iterations {
+                        msg!(
+                            "Reached max iterations, saving state and exiting {}/{}",
+                            rewards_to_process,
+                            vault_operator_delegation_index
+                        );
+                        self.save_routing_state(
+                            rewards_to_process,
+                            vault_operator_delegation_index,
+                        );
+                        return Ok(());
+                    }
+                }
+
                 let vault = vault_operator_delegation.vault();
 
                 let vault_reward_stake_weight = vault_operator_delegation
@@ -233,6 +325,8 @@ impl NcnRewardRouter {
                 self.route_from_reward_pool(vault_reward)?;
                 self.route_to_vault_reward_route(vault, vault_reward)?;
             }
+
+            self.finish_routing_state();
         }
 
         // Operator gets any remainder
@@ -589,6 +683,14 @@ impl VaultRewardRoute {
 
     pub fn rewards(&self) -> u64 {
         self.rewards.into()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.vault.eq(&Pubkey::default())
+    }
+
+    pub fn has_rewards(&self) -> bool {
+        self.rewards() > 0
     }
 
     fn set_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {

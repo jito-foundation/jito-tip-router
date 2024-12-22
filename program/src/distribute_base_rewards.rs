@@ -5,6 +5,7 @@ use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     constants::JITO_SOL_MINT,
+    error::TipRouterError,
     ncn_config::NcnConfig,
 };
 use solana_program::{
@@ -60,6 +61,11 @@ pub fn process_distribute_base_rewards(
         let mut base_reward_router_data = base_reward_router.try_borrow_mut_data()?;
         let base_reward_router_account =
             BaseRewardRouter::try_from_slice_unchecked_mut(&mut base_reward_router_data)?;
+
+        if base_reward_router_account.still_routing() {
+            msg!("Rewards still routing");
+            return Err(TipRouterError::RouterStillRouting.into());
+        }
 
         base_reward_router_account.distribute_base_fee_group_rewards(group)?
     };

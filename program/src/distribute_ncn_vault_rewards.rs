@@ -3,6 +3,7 @@ use jito_jsm_core::loader::load_associated_token_account;
 use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     constants::JITO_SOL_MINT,
+    error::TipRouterError,
     ncn_config::NcnConfig,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
@@ -68,6 +69,11 @@ pub fn process_distribute_ncn_vault_rewards(
         let mut ncn_reward_router_data = ncn_reward_router.try_borrow_mut_data()?;
         let ncn_reward_router_account =
             NcnRewardRouter::try_from_slice_unchecked_mut(&mut ncn_reward_router_data)?;
+
+        if ncn_reward_router_account.still_routing() {
+            msg!("Rewards still routing");
+            return Err(TipRouterError::RouterStillRouting.into());
+        }
 
         ncn_reward_router_account.distribute_vault_reward_route(vault.key)?
     };

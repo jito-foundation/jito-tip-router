@@ -152,16 +152,20 @@ pub fn process_instruction(
             msg!("Instruction: SnapshotVaultOperatorDelegation");
             process_snapshot_vault_operator_delegation(program_id, accounts, epoch)
         }
-        TipRouterInstruction::RouteBaseRewards { epoch } => {
+        TipRouterInstruction::RouteBaseRewards {
+            max_iterations,
+            epoch,
+        } => {
             msg!("Instruction: RouteBaseRewards");
-            process_route_base_rewards(program_id, accounts, epoch)
+            process_route_base_rewards(program_id, accounts, max_iterations, epoch)
         }
         TipRouterInstruction::RouteNcnRewards {
             ncn_fee_group,
+            max_iterations,
             epoch,
         } => {
             msg!("Instruction: RouteNcnRewards");
-            process_route_ncn_rewards(program_id, accounts, ncn_fee_group, epoch)
+            process_route_ncn_rewards(program_id, accounts, ncn_fee_group, max_iterations, epoch)
         }
         TipRouterInstruction::DistributeBaseRewards {
             base_fee_group,

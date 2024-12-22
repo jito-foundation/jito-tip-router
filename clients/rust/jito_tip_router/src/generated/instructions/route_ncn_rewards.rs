@@ -98,6 +98,7 @@ impl Default for RouteNcnRewardsInstructionData {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RouteNcnRewardsInstructionArgs {
     pub ncn_fee_group: u8,
+    pub max_iterations: u16,
     pub epoch: u64,
 }
 
@@ -122,6 +123,7 @@ pub struct RouteNcnRewardsBuilder {
     ncn_reward_receiver: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
     ncn_fee_group: Option<u8>,
+    max_iterations: Option<u16>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -186,6 +188,11 @@ impl RouteNcnRewardsBuilder {
         self
     }
     #[inline(always)]
+    pub fn max_iterations(&mut self, max_iterations: u16) -> &mut Self {
+        self.max_iterations = Some(max_iterations);
+        self
+    }
+    #[inline(always)]
     pub fn epoch(&mut self, epoch: u64) -> &mut Self {
         self.epoch = Some(epoch);
         self
@@ -232,6 +239,10 @@ impl RouteNcnRewardsBuilder {
                 .ncn_fee_group
                 .clone()
                 .expect("ncn_fee_group is not set"),
+            max_iterations: self
+                .max_iterations
+                .clone()
+                .expect("max_iterations is not set"),
             epoch: self.epoch.clone().expect("epoch is not set"),
         };
 
@@ -423,6 +434,7 @@ impl<'a, 'b> RouteNcnRewardsCpiBuilder<'a, 'b> {
             ncn_reward_receiver: None,
             restaking_program: None,
             ncn_fee_group: None,
+            max_iterations: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
         });
@@ -487,6 +499,11 @@ impl<'a, 'b> RouteNcnRewardsCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
+    pub fn max_iterations(&mut self, max_iterations: u16) -> &mut Self {
+        self.instruction.max_iterations = Some(max_iterations);
+        self
+    }
+    #[inline(always)]
     pub fn epoch(&mut self, epoch: u64) -> &mut Self {
         self.instruction.epoch = Some(epoch);
         self
@@ -538,6 +555,11 @@ impl<'a, 'b> RouteNcnRewardsCpiBuilder<'a, 'b> {
                 .ncn_fee_group
                 .clone()
                 .expect("ncn_fee_group is not set"),
+            max_iterations: self
+                .instruction
+                .max_iterations
+                .clone()
+                .expect("max_iterations is not set"),
             epoch: self.instruction.epoch.clone().expect("epoch is not set"),
         };
         let instruction = RouteNcnRewardsCpi {
@@ -591,6 +613,7 @@ struct RouteNcnRewardsCpiBuilderInstruction<'a, 'b> {
     ncn_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_fee_group: Option<u8>,
+    max_iterations: Option<u16>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

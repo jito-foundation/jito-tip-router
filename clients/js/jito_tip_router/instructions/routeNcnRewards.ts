@@ -10,6 +10,8 @@ import {
   combineCodec,
   getStructDecoder,
   getStructEncoder,
+  getU16Decoder,
+  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -75,11 +77,13 @@ export type RouteNcnRewardsInstruction<
 export type RouteNcnRewardsInstructionData = {
   discriminator: number;
   ncnFeeGroup: number;
+  maxIterations: number;
   epoch: bigint;
 };
 
 export type RouteNcnRewardsInstructionDataArgs = {
   ncnFeeGroup: number;
+  maxIterations: number;
   epoch: number | bigint;
 };
 
@@ -88,6 +92,7 @@ export function getRouteNcnRewardsInstructionDataEncoder(): Encoder<RouteNcnRewa
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['ncnFeeGroup', getU8Encoder()],
+      ['maxIterations', getU16Encoder()],
       ['epoch', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: ROUTE_NCN_REWARDS_DISCRIMINATOR })
@@ -98,6 +103,7 @@ export function getRouteNcnRewardsInstructionDataDecoder(): Decoder<RouteNcnRewa
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['ncnFeeGroup', getU8Decoder()],
+    ['maxIterations', getU16Decoder()],
     ['epoch', getU64Decoder()],
   ]);
 }
@@ -129,6 +135,7 @@ export type RouteNcnRewardsInput<
   ncnRewardReceiver: Address<TAccountNcnRewardReceiver>;
   restakingProgram: Address<TAccountRestakingProgram>;
   ncnFeeGroup: RouteNcnRewardsInstructionDataArgs['ncnFeeGroup'];
+  maxIterations: RouteNcnRewardsInstructionDataArgs['maxIterations'];
   epoch: RouteNcnRewardsInstructionDataArgs['epoch'];
 };
 

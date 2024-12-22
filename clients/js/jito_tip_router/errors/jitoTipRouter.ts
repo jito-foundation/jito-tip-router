@@ -154,6 +154,8 @@ export const JITO_TIP_ROUTER_ERROR__BAD_SWITCHBOARD_VALUE = 0x223a; // 8762
 export const JITO_TIP_ROUTER_ERROR__STALE_SWITCHBOARD_FEED = 0x223b; // 8763
 /** NoFeedWeightOrSwitchboardFeed: Weight entry needs either a feed or a no feed weight */
 export const JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_OR_SWITCHBOARD_FEED = 0x223c; // 8764
+/** RouterStillRouting: Router still routing */
+export const JITO_TIP_ROUTER_ERROR__ROUTER_STILL_ROUTING = 0x223d; // 8765
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR
@@ -205,6 +207,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL
   | typeof JITO_TIP_ROUTER_ERROR__REGISTRY_NOT_INITIALIZED
+  | typeof JITO_TIP_ROUTER_ERROR__ROUTER_STILL_ROUTING
   | typeof JITO_TIP_ROUTER_ERROR__STALE_SWITCHBOARD_FEED
   | typeof JITO_TIP_ROUTER_ERROR__SWITCHBOARD_NOT_REGISTERED
   | typeof JITO_TIP_ROUTER_ERROR__TABLE_NOT_INITIALIZED
@@ -279,6 +282,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND]: `Operator Reward not found`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL]: `Operator votes full`,
     [JITO_TIP_ROUTER_ERROR__REGISTRY_NOT_INITIALIZED]: `Registry not initialized`,
+    [JITO_TIP_ROUTER_ERROR__ROUTER_STILL_ROUTING]: `Router still routing`,
     [JITO_TIP_ROUTER_ERROR__STALE_SWITCHBOARD_FEED]: `Stale switchboard feed`,
     [JITO_TIP_ROUTER_ERROR__SWITCHBOARD_NOT_REGISTERED]: `Switchboard not registered`,
     [JITO_TIP_ROUTER_ERROR__TABLE_NOT_INITIALIZED]: `Table not initialized`,

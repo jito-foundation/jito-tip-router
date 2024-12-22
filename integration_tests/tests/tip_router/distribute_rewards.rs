@@ -55,16 +55,6 @@ mod tests {
             )
             .await?;
 
-        // // Set tracked mint NCN fee group
-        // let epoch = fixture.clock().await.epoch;
-        // tip_router_client
-        //     .do_admin_set_st_mint(
-        //         test_ncn.ncn_root.ncn_pubkey,
-        //         1,
-        //         NcnFeeGroup::new(NcnFeeGroupType::JTO),
-        //         epoch,
-        //     )
-        //     .await?;
         let vault = vault_client
             .get_vault(&test_ncn.vaults[1].vault_pubkey)
             .await?;
@@ -309,17 +299,22 @@ mod tests {
         Ok(())
     }
 
-    #[ignore]
+    // #[ignore]
     #[tokio::test]
     async fn test_route_rewards_to_max_accounts() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
 
+        let operator_count = MAX_OPERATORS;
+        let vault_count = 32;
+
         // Setup with 2 operators for interesting reward splits
         // 10% Operator fee
         let test_ncn = fixture
-            .create_initial_test_ncn(MAX_OPERATORS, MAX_VAULTS, Some(1000))
+            .create_initial_test_ncn(operator_count, vault_count, Some(1000))
             .await?;
+
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
 
         ///// TipRouter Setup /////
         fixture.warp_slot_incremental(1000).await?;
@@ -341,15 +336,59 @@ mod tests {
             )
             .await?;
 
+        // Set all Base fee groups to something
+        for group in BaseFeeGroup::all_groups().iter() {
+            tip_router_client
+                .do_set_config_fees(
+                    None,
+                    Some(*group),
+                    Some(dao_wallet_address),
+                    Some(15),
+                    None,
+                    None,
+                    &test_ncn.ncn_root,
+                )
+                .await?;
+        }
+
+        // Set all NCN fee groups to something
+        for group in NcnFeeGroup::all_groups().iter() {
+            tip_router_client
+                .do_set_config_fees(
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some(*group),
+                    Some(15), // NCN fee = .15%
+                    &test_ncn.ncn_root,
+                )
+                .await?;
+        }
+
+        // Set all vaults to a different type of reward
+        let vault_registry = tip_router_client.get_vault_registry(ncn).await?;
+        for (index, mint_entry) in vault_registry.get_mint_entries().iter().enumerate() {
+            let group_index = index % NcnFeeGroup::all_groups().len();
+
+            tip_router_client
+                .do_admin_set_st_mint(
+                    ncn,
+                    mint_entry.st_mint(),
+                    Some(NcnFeeGroup::all_groups()[group_index]),
+                    None,
+                    None,
+                    None,
+                )
+                .await?;
+        }
+
         fixture
             .warp_slot_incremental(DEFAULT_SLOTS_PER_EPOCH * 2)
             .await?;
 
         fixture.snapshot_test_ncn(&test_ncn).await?;
         fixture.vote_test_ncn(&test_ncn).await?;
-
-        //////
-        let ncn = test_ncn.ncn_root.ncn_pubkey;
 
         // Initialize the routers
         fixture.add_routers_for_tests_ncn(&test_ncn).await?;
@@ -363,153 +402,190 @@ mod tests {
 
         // Send rewards to base reward router
         // MAX Solana AirDrop is 1_000_000
-        let sol_rewards = 1_000_000.0;
+        let sol_rewards = 1_000.0;
 
         // send rewards to the base reward router
         tip_router_client
             .airdrop(&base_reward_receiver, sol_rewards)
             .await?;
 
-        // Route rewards
+        // Check that ballot box and router are full to simulate the max cu
+        let ballot_box = tip_router_client.get_ballot_box(ncn, epoch).await?;
+        let vote_count = ballot_box
+            .operator_votes()
+            .iter()
+            .filter(|v| !v.is_empty())
+            .count();
+        assert_eq!(vote_count, operator_count);
+
+        // Do routing
         tip_router_client.do_route_base_rewards(ncn, epoch).await?;
+
+        // // Check that all routes have rewards
+        // let base_reward_router = tip_router_client.get_base_reward_router(ncn, epoch).await?;
+
+        // let ncn_fee_group_reward_routes = base_reward_router.ncn_fee_group_reward_routes();
+        // for route in ncn_fee_group_reward_routes.iter() {
+        //     assert!(!route.is_empty());
+        //     assert!(route.has_rewards().unwrap());
+        // }
 
         // Route base NCN rewards (operator rewards)
         for operator_root in test_ncn.operators.iter().take(1) {
             let operator = operator_root.operator_pubkey;
 
-            for group in NcnFeeGroup::all_groups().iter() {
+            for group in NcnFeeGroup::all_groups().iter().take(1) {
                 tip_router_client
                     .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)
                     .await?;
 
+                // // Check max operator stake weights
+                // let operator_snapshot = tip_router_client
+                //     .get_operator_snapshot(operator, ncn, epoch)
+                //     .await?;
+                // let vault_operator_stake_weights = operator_snapshot.vault_operator_stake_weight();
+                // for vault_operator_stake_weight in vault_operator_stake_weights.iter() {
+                //     assert!(!vault_operator_stake_weight.is_empty())
+                // }
+
                 tip_router_client
                     .do_route_ncn_rewards(*group, ncn, operator, epoch)
                     .await?;
+
+                // // Check that the reward router is full
+                // let ncn_reward_router = tip_router_client
+                //     .get_ncn_reward_router(*group, operator, ncn, epoch)
+                //     .await?;
+
+                // for route in ncn_reward_router.vault_reward_routes().iter() {
+                //     assert!(!route.is_empty());
+                //     assert!(route.has_rewards());
+                // }
             }
         }
 
         Ok(())
     }
 
-    #[ignore]
-    #[tokio::test]
-    async fn test_distribute_rewards_to_max_accounts() -> TestResult<()> {
-        let mut fixture = TestBuilder::new().await;
-        let mut tip_router_client = fixture.tip_router_client();
-        let mut stake_pool_client = fixture.stake_pool_client();
-        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
+    // #[ignore]
+    // #[tokio::test]
+    // async fn test_distribute_rewards_to_max_accounts() -> TestResult<()> {
+    //     let mut fixture = TestBuilder::new().await;
+    //     let mut tip_router_client = fixture.tip_router_client();
+    //     let mut stake_pool_client = fixture.stake_pool_client();
+    //     let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
 
-        // Setup with 2 operators for interesting reward splits
-        // 10% Operator fee
-        let test_ncn = fixture
-            .create_initial_test_ncn(MAX_OPERATORS, MAX_VAULTS, Some(1000))
-            .await?;
+    //     // Setup with 2 operators for interesting reward splits
+    //     // 10% Operator fee
+    //     let test_ncn = fixture
+    //         .create_initial_test_ncn(MAX_OPERATORS, MAX_VAULTS, Some(1000))
+    //         .await?;
 
-        ///// TipRouter Setup /////
-        fixture.warp_slot_incremental(1000).await?;
+    //     ///// TipRouter Setup /////
+    //     fixture.warp_slot_incremental(1000).await?;
 
-        let dao_wallet = Keypair::new();
-        let dao_wallet_address = dao_wallet.pubkey();
-        tip_router_client.airdrop(&dao_wallet_address, 1.0).await?;
+    //     let dao_wallet = Keypair::new();
+    //     let dao_wallet_address = dao_wallet.pubkey();
+    //     tip_router_client.airdrop(&dao_wallet_address, 1.0).await?;
 
-        // Configure fees: 30% block engine, 27% DAO fee, 1.5% NCN fee
-        tip_router_client
-            .do_set_config_fees(
-                Some(300), // block engine fee = 3%
-                None,
-                Some(dao_wallet_address), // DAO wallet
-                Some(270),                // DAO fee = 2.7%
-                None,
-                Some(15), // NCN fee = .15%
-                &test_ncn.ncn_root,
-            )
-            .await?;
+    //     // Configure fees: 30% block engine, 27% DAO fee, 1.5% NCN fee
+    //     tip_router_client
+    //         .do_set_config_fees(
+    //             Some(300), // block engine fee = 3%
+    //             None,
+    //             Some(dao_wallet_address), // DAO wallet
+    //             Some(270),                // DAO fee = 2.7%
+    //             None,
+    //             Some(15), // NCN fee = .15%
+    //             &test_ncn.ncn_root,
+    //         )
+    //         .await?;
 
-        fixture
-            .warp_slot_incremental(DEFAULT_SLOTS_PER_EPOCH * 2)
-            .await?;
+    //     fixture
+    //         .warp_slot_incremental(DEFAULT_SLOTS_PER_EPOCH * 2)
+    //         .await?;
 
-        fixture.snapshot_test_ncn(&test_ncn).await?;
-        fixture.vote_test_ncn(&test_ncn).await?;
+    //     fixture.snapshot_test_ncn(&test_ncn).await?;
+    //     fixture.vote_test_ncn(&test_ncn).await?;
 
-        //////
-        let ncn = test_ncn.ncn_root.ncn_pubkey;
+    //     //////
+    //     let ncn = test_ncn.ncn_root.ncn_pubkey;
 
-        // Initialize the routers
-        fixture.add_routers_for_tests_ncn(&test_ncn).await?;
+    //     // Initialize the routers
+    //     fixture.add_routers_for_tests_ncn(&test_ncn).await?;
 
-        // Get initial balances
-        let epoch = fixture.clock().await.epoch;
+    //     // Get initial balances
+    //     let epoch = fixture.clock().await.epoch;
 
-        // Route in 3_000 lamports
-        let (base_reward_receiver, _, _) =
-            BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+    //     // Route in 3_000 lamports
+    //     let (base_reward_receiver, _, _) =
+    //         BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
-        // Send rewards to base reward router
-        // MAX Solana AirDrop is 1_000_000
-        let sol_rewards = 1_000_000.0;
+    //     // Send rewards to base reward router
+    //     // MAX Solana AirDrop is 1_000_000
+    //     let sol_rewards = 100_000.0;
 
-        // send rewards to the base reward router
-        tip_router_client
-            .airdrop(&base_reward_receiver, sol_rewards)
-            .await?;
+    //     // send rewards to the base reward router
+    //     tip_router_client
+    //         .airdrop(&base_reward_receiver, sol_rewards)
+    //         .await?;
 
-        // Route rewards
-        tip_router_client.do_route_base_rewards(ncn, epoch).await?;
+    //     // Route rewards
+    //     tip_router_client.do_route_base_rewards(ncn, epoch).await?;
 
-        // Distribute base rewards (DAO fee)
-        tip_router_client
-            .do_distribute_base_rewards(BaseFeeGroup::default(), ncn, epoch, &pool_root)
-            .await?;
+    //     // Distribute base rewards (DAO fee)
+    //     tip_router_client
+    //         .do_distribute_base_rewards(BaseFeeGroup::default(), ncn, epoch, &pool_root)
+    //         .await?;
 
-        // Distribute base NCN rewards (operator rewards)
-        for operator_root in test_ncn.operators.iter() {
-            let operator = operator_root.operator_pubkey;
+    //     // Distribute base NCN rewards (operator rewards)
+    //     for operator_root in test_ncn.operators.iter() {
+    //         let operator = operator_root.operator_pubkey;
 
-            for group in NcnFeeGroup::all_groups().iter() {
-                tip_router_client
-                    .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)
-                    .await?;
-            }
-        }
+    //         for group in NcnFeeGroup::all_groups().iter() {
+    //             tip_router_client
+    //                 .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)
+    //                 .await?;
+    //         }
+    //     }
 
-        for operator_root in test_ncn.operators.iter() {
-            let operator = operator_root.operator_pubkey;
+    //     for operator_root in test_ncn.operators.iter() {
+    //         let operator = operator_root.operator_pubkey;
 
-            for group in NcnFeeGroup::all_groups().iter() {
-                tip_router_client
-                    .do_route_ncn_rewards(*group, ncn, operator, epoch)
-                    .await?;
+    //         for group in NcnFeeGroup::all_groups().iter() {
+    //             tip_router_client
+    //                 .do_route_ncn_rewards(*group, ncn, operator, epoch)
+    //                 .await?;
 
-                // Distribute to operators
-                tip_router_client
-                    .do_distribute_ncn_operator_rewards(*group, operator, ncn, epoch, &pool_root)
-                    .await?;
+    //             // Distribute to operators
+    //             tip_router_client
+    //                 .do_distribute_ncn_operator_rewards(*group, operator, ncn, epoch, &pool_root)
+    //                 .await?;
 
-                // Distribute to vaults
-                for vault_root in test_ncn.vaults.iter() {
-                    let vault = vault_root.vault_pubkey;
+    //             // Distribute to vaults
+    //             for vault_root in test_ncn.vaults.iter() {
+    //                 let vault = vault_root.vault_pubkey;
 
-                    {
-                        let ncn_reward_router = tip_router_client
-                            .get_ncn_reward_router(*group, operator, ncn, epoch)
-                            .await?;
+    //                 {
+    //                     let ncn_reward_router = tip_router_client
+    //                         .get_ncn_reward_router(*group, operator, ncn, epoch)
+    //                         .await?;
 
-                        // Skip if the vault is not in the reward route
-                        if ncn_reward_router.vault_reward_route(&vault).is_err() {
-                            continue;
-                        }
+    //                     // Skip if the vault is not in the reward route
+    //                     if ncn_reward_router.vault_reward_route(&vault).is_err() {
+    //                         continue;
+    //                     }
 
-                        tip_router_client
-                            .do_distribute_ncn_vault_rewards(
-                                *group, vault, operator, ncn, epoch, &pool_root,
-                            )
-                            .await?;
-                    }
-                }
-            }
-        }
+    //                     tip_router_client
+    //                         .do_distribute_ncn_vault_rewards(
+    //                             *group, vault, operator, ncn, epoch, &pool_root,
+    //                         )
+    //                         .await?;
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }

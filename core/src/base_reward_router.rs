@@ -1,7 +1,10 @@
 use core::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
-use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
+use jito_bytemuck::{
+    types::{PodU16, PodU64},
+    AccountDeserialize, Discriminator,
+};
 use shank::{ShankAccount, ShankType};
 use solana_program::{
     account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
@@ -33,6 +36,10 @@ pub struct BaseRewardRouter {
 
     reserved: [u8; 128],
 
+    // route state tracking
+    last_ncn_group_index: u8,
+    last_vote_index: PodU16,
+
     base_fee_group_rewards: [BaseRewardRouterRewards; 8],
     ncn_fee_group_rewards: [BaseRewardRouterRewards; 8],
 
@@ -46,6 +53,10 @@ impl Discriminator for BaseRewardRouter {
 impl BaseRewardRouter {
     pub const SIZE: usize = 8 + size_of::<Self>();
 
+    pub const NO_LAST_NCN_GROUP_INDEX: u8 = u8::MAX;
+    pub const NO_LAST_VOTE_INDEX: u16 = u16::MAX;
+    pub const MAX_ROUTE_BASE_ITERATIONS: u16 = 30;
+
     pub fn new(ncn: Pubkey, ncn_epoch: u64, bump: u8, slot_created: u64) -> Self {
         Self {
             ncn,
@@ -56,6 +67,8 @@ impl BaseRewardRouter {
             reward_pool: PodU64::from(0),
             rewards_processed: PodU64::from(0),
             reserved: [0; 128],
+            last_ncn_group_index: Self::NO_LAST_NCN_GROUP_INDEX,
+            last_vote_index: PodU16::from(Self::NO_LAST_VOTE_INDEX),
             base_fee_group_rewards: [BaseRewardRouterRewards::default();
                 NcnFeeGroup::FEE_GROUP_COUNT],
             ncn_fee_group_rewards: [BaseRewardRouterRewards::default();
@@ -79,6 +92,8 @@ impl BaseRewardRouter {
         self.ncn_fee_group_rewards =
             [BaseRewardRouterRewards::default(); NcnFeeGroup::FEE_GROUP_COUNT];
         self.ncn_fee_group_reward_routes = [NcnRewardRoute::default(); MAX_OPERATORS];
+
+        self.finish_routing_state();
     }
 
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
@@ -135,6 +150,41 @@ impl BaseRewardRouter {
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
+    }
+
+    // ----------------- ROUTE STATE TRACKING --------------
+    pub const fn last_ncn_group_index(&self) -> u8 {
+        self.last_ncn_group_index
+    }
+
+    pub fn last_vote_index(&self) -> u16 {
+        self.last_vote_index.into()
+    }
+
+    pub fn resume_routing_state(&mut self) -> (usize, usize) {
+        if !self.still_routing() {
+            return (0, 0);
+        }
+
+        (
+            self.last_ncn_group_index() as usize,
+            self.last_vote_index() as usize,
+        )
+    }
+
+    pub fn save_routing_state(&mut self, ncn_group_index: usize, vote_index: usize) {
+        self.last_ncn_group_index = ncn_group_index as u8;
+        self.last_vote_index = PodU16::from(vote_index as u16);
+    }
+
+    pub fn finish_routing_state(&mut self) {
+        self.last_ncn_group_index = Self::NO_LAST_NCN_GROUP_INDEX;
+        self.last_vote_index = PodU16::from(Self::NO_LAST_VOTE_INDEX);
+    }
+
+    pub fn still_routing(&self) -> bool {
+        self.last_ncn_group_index() != Self::NO_LAST_NCN_GROUP_INDEX
+            || self.last_vote_index() != Self::NO_LAST_VOTE_INDEX
     }
 
     // ----------------- ROUTE REWARDS ---------------------
@@ -199,21 +249,49 @@ impl BaseRewardRouter {
     pub fn route_ncn_fee_group_rewards(
         &mut self,
         ballot_box: &BallotBox,
+        max_iterations: u16,
     ) -> Result<(), TipRouterError> {
         let winning_ballot = ballot_box.get_winning_ballot_tally()?;
         let winning_stake_weight = winning_ballot.stake_weights();
 
-        for group in NcnFeeGroup::all_groups().iter() {
-            let rewards_to_process = self.ncn_fee_group_rewards(*group)?;
+        let (starting_group_index, starting_vote_index) = self.resume_routing_state();
+        let mut iterations: u16 = 0;
 
-            for votes in ballot_box.operator_votes().iter() {
+        for group_index in starting_group_index..NcnFeeGroup::FEE_GROUP_COUNT {
+            let group = NcnFeeGroup::all_groups()[group_index];
+            let rewards_to_process = self.ncn_fee_group_rewards(group)?;
+
+            if rewards_to_process == 0 {
+                continue;
+            }
+
+            for vote_index in starting_vote_index..ballot_box.operator_votes().len() {
+                let votes = ballot_box.operator_votes()[vote_index];
+
                 if votes.ballot_index() == winning_ballot.index() {
+                    // Update iteration state
+                    {
+                        iterations = iterations
+                            .checked_add(1)
+                            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+                        if iterations >= max_iterations {
+                            msg!(
+                                "Reached max iterations, saving state and exiting {}/{}",
+                                group_index,
+                                vote_index
+                            );
+                            self.save_routing_state(group_index, vote_index);
+                            return Ok(());
+                        }
+                    }
+
                     let operator = votes.operator();
 
                     let winning_reward_stake_weight =
-                        winning_stake_weight.ncn_fee_group_stake_weight(*group)?;
+                        winning_stake_weight.ncn_fee_group_stake_weight(group)?;
                     let ncn_route_reward_stake_weight =
-                        votes.stake_weights().ncn_fee_group_stake_weight(*group)?;
+                        votes.stake_weights().ncn_fee_group_stake_weight(group)?;
 
                     let ncn_fee_group_route_reward = Self::calculate_ncn_fee_group_route_reward(
                         ncn_route_reward_stake_weight,
@@ -221,15 +299,18 @@ impl BaseRewardRouter {
                         rewards_to_process,
                     )?;
 
-                    self.route_from_ncn_fee_group_rewards(*group, ncn_fee_group_route_reward)?;
+                    self.route_from_ncn_fee_group_rewards(group, ncn_fee_group_route_reward)?;
                     self.route_to_ncn_fee_group_reward_route(
-                        *group,
+                        group,
                         operator,
                         ncn_fee_group_route_reward,
                     )?;
                 }
             }
         }
+
+        msg!("Finished routing NCN fee group rewards");
+        self.finish_routing_state();
 
         Ok(())
     }
@@ -531,6 +612,10 @@ impl BaseRewardRouter {
         Err(TipRouterError::NcnRewardRouteNotFound)
     }
 
+    pub const fn ncn_fee_group_reward_routes(&self) -> &[NcnRewardRoute; 256] {
+        &self.ncn_fee_group_reward_routes
+    }
+
     pub fn route_to_ncn_fee_group_reward_route(
         &mut self,
         ncn_fee_group: NcnFeeGroup,
@@ -618,6 +703,20 @@ impl NcnRewardRoute {
     pub fn rewards(&self, ncn_fee_group: NcnFeeGroup) -> Result<u64, TipRouterError> {
         let group_index = ncn_fee_group.group_index()?;
         Ok(self.ncn_fee_group_rewards[group_index].rewards())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.operator.eq(&Pubkey::default())
+    }
+
+    pub fn has_rewards(&self) -> Result<bool, TipRouterError> {
+        for ncn_fee_group in NcnFeeGroup::all_groups().iter() {
+            if self.rewards(*ncn_fee_group)? > 0 {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 
     fn set_rewards(
