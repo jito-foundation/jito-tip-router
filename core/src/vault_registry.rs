@@ -327,7 +327,7 @@ impl VaultRegistry {
             .collect()
     }
 
-    pub fn get_vault_entries(&self) -> &[VaultEntry; MAX_VAULTS] {
+    pub const fn get_vault_entries(&self) -> &[VaultEntry; MAX_VAULTS] {
         &self.vault_list
     }
 

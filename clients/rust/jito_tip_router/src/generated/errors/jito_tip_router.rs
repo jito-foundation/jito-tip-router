@@ -222,6 +222,12 @@ pub enum JitoTipRouterError {
     /// 8765 - Router still routing
     #[error("Router still routing")]
     RouterStillRouting = 0x223D,
+    /// 8766 - Invalid epochs before stall
+    #[error("Invalid epochs before stall")]
+    InvalidEpochsBeforeStall = 0x223E,
+    /// 8767 - Invalid slots after consensus
+    #[error("Invalid slots after consensus")]
+    InvalidSlotsAfterConsensus = 0x223F,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

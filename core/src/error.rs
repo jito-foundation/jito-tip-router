@@ -147,6 +147,10 @@ pub enum TipRouterError {
     NoFeedWeightOrSwitchboardFeed,
     #[error("Router still routing")]
     RouterStillRouting,
+    #[error("Invalid epochs before stall")]
+    InvalidEpochsBeforeStall,
+    #[error("Invalid slots after consensus")]
+    InvalidSlotsAfterConsensus,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

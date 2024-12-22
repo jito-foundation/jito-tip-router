@@ -9,6 +9,7 @@
 export * from './adminRegisterStMint';
 export * from './adminSetConfigFees';
 export * from './adminSetNewAdmin';
+export * from './adminSetParameters';
 export * from './adminSetStMint';
 export * from './adminSetTieBreaker';
 export * from './adminSetWeight';

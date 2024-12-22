@@ -16,6 +16,7 @@ import {
   type ParsedAdminRegisterStMintInstruction,
   type ParsedAdminSetConfigFeesInstruction,
   type ParsedAdminSetNewAdminInstruction,
+  type ParsedAdminSetParametersInstruction,
   type ParsedAdminSetStMintInstruction,
   type ParsedAdminSetTieBreakerInstruction,
   type ParsedAdminSetWeightInstruction,
@@ -92,6 +93,7 @@ export enum JitoTipRouterInstruction {
   ReallocBaseRewardRouter,
   ReallocWeightTable,
   ReallocVaultRegistry,
+  AdminSetParameters,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -190,6 +192,9 @@ export function identifyJitoTipRouterInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(30), 0)) {
     return JitoTipRouterInstruction.ReallocVaultRegistry;
+  }
+  if (containsBytes(data, getU8Encoder().encode(31), 0)) {
+    return JitoTipRouterInstruction.AdminSetParameters;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -291,4 +296,7 @@ export type ParsedJitoTipRouterInstruction<
     } & ParsedReallocWeightTableInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.ReallocVaultRegistry;
-    } & ParsedReallocVaultRegistryInstruction<TProgram>);
+    } & ParsedReallocVaultRegistryInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.AdminSetParameters;
+    } & ParsedAdminSetParametersInstruction<TProgram>);
