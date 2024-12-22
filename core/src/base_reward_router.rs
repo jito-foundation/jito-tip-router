@@ -842,6 +842,8 @@ mod tests {
             + size_of::<PodU64>() // reward_pool
             + size_of::<PodU64>() // rewards_processed
             + 128 // reserved
+            + 1 // last_ncn_group_index
+            + size_of::<PodU16>() // last_vote_index
             + size_of::<BaseRewardRouterRewards>() * NcnFeeGroup::FEE_GROUP_COUNT // base_fee_group_rewards
             + size_of::<BaseRewardRouterRewards>() * NcnFeeGroup::FEE_GROUP_COUNT // ncn_fee_group_rewards
             + size_of::<NcnRewardRoute>() * MAX_OPERATORS; // ncn_fee_group_reward_routes

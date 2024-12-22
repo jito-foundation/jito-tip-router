@@ -14,7 +14,7 @@ cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D 
 echo "Executing: cargo b && ./target/debug/jito-tip-router-shank-cli && yarn install && yarn generate-clients && cargo b"
 cargo b && ./target/debug/jito-tip-router-shank-cli && yarn install && yarn generate-clients && cargo b
 
-echo "Executing: cargo-build-sbf"
+echo "Executing: cargo-build-sbf"å
 cargo-build-sbf
 
 

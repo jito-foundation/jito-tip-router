@@ -740,6 +740,8 @@ mod tests {
             + size_of::<PodU64>() // rewards_processed
             + size_of::<PodU64>() // operator_rewards
             + 128 // reserved
+            + size_of::<PodU64>() // last_rewards_to_process
+            + size_of::<PodU16>() // last_vault_operator_delegation_index
             + size_of::<VaultRewardRoute>() * MAX_VAULTS; // vault_reward_routes
 
         assert_eq!(size_of::<NcnRewardRouter>(), expected_total);

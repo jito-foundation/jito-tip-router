@@ -37,7 +37,7 @@ use jito_vault_core::{
     vault_ncn_ticket::VaultNcnTicket, vault_operator_delegation::VaultOperatorDelegation,
 };
 use solana_program::{
-    instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
+    hash::Hash, instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
     system_instruction::transfer,
 };
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
@@ -77,6 +77,16 @@ impl TipRouterClient {
             )
             .await?;
         Ok(())
+    }
+
+    pub async fn get_best_latest_blockhash(&mut self) -> TestResult<Hash> {
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        let new_blockhash = self
+            .banks_client
+            .get_new_latest_blockhash(&blockhash)
+            .await?;
+
+        Ok(new_blockhash)
     }
 
     pub async fn airdrop(&mut self, to: &Pubkey, sol: f64) -> TestResult<()> {
@@ -1568,7 +1578,7 @@ impl TipRouterClient {
             .epoch(epoch)
             .instruction();
 
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        let blockhash = self.get_best_latest_blockhash().await?;
         let tx = &Transaction::new_signed_with_payer(
             &[
                 ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
@@ -1681,7 +1691,7 @@ impl TipRouterClient {
             .epoch(epoch)
             .instruction();
 
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        let blockhash = self.get_best_latest_blockhash().await?;
         self.process_transaction(&Transaction::new_signed_with_payer(
             &[
                 // TODO: should make this instruction much more efficient
