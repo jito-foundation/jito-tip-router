@@ -158,8 +158,14 @@ pub fn generate_stake_meta_collection(
     let bb_commission_pct: u64 = config.block_builder_commission_pct;
     let tip_receiver: Pubkey = config.tip_receiver;
 
-    // includes the block builder fee
+    // the last leader in an epoch may not crank the tip program before the epoch is over, which
+    // would result in MEV rewards for epoch N not being cranked until epoch N + 1. This means that
+    // the account balance in the snapshot could be incorrect.
+    // We assume that the rewards sitting in the tip program PDAs are cranked out by the time all of
+    // the rewards are claimed.
     let tip_accounts = derive_tip_payment_pubkeys(tip_payment_program_id);
+    
+    // includes the block builder fee
     let excess_tip_balances: u64 = tip_accounts
         .tip_pdas
         .iter()
@@ -275,6 +281,7 @@ pub fn generate_stake_meta_collection(
         slot: bank.slot(),
     })
 }
+
 /// Given an [EpochStakes] object, return delegations grouped by voter_pubkey (validator delegated to).
 fn group_delegations_by_voter_pubkey(
     delegations: &im::HashMap<Pubkey, StakeAccount>,

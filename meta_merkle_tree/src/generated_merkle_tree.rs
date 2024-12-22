@@ -54,6 +54,8 @@ pub struct GeneratedMerkleTree {
 impl GeneratedMerkleTreeCollection {
     pub fn new_from_stake_meta_collection(
         stake_meta_coll: StakeMetaCollection,
+        ncn_address: &Pubkey,
+        epoch: u64,
         protocol_fee_bps: u64,
     ) -> Result<Self, MerkleRootGeneratorError> {
         let generated_merkle_trees = stake_meta_coll
@@ -65,6 +67,8 @@ impl GeneratedMerkleTreeCollection {
                 let mut tree_nodes = match TreeNode::vec_from_stake_meta(
                     &stake_meta,
                     protocol_fee_bps,
+                    ncn_address,
+                    epoch,
                     &stake_meta_coll.tip_distribution_program_id, // Pass the program ID
                 ) {
                     Err(e) => return Some(Err(e)),
@@ -135,6 +139,8 @@ impl TreeNode {
     fn vec_from_stake_meta(
         stake_meta: &StakeMeta,
         protocol_fee_bps: u64,
+        ncn_address: &Pubkey,
+        epoch: u64,
         tip_distribution_program_id: &Pubkey,
     ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
         if let Some(tip_distribution_meta) = stake_meta.maybe_tip_distribution_meta.as_ref() {
@@ -160,23 +166,31 @@ impl TreeNode {
                 .and_then(|v| v.checked_sub(validator_amount))
                 .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
 
-            let (protocol_fee_recipient, _) = Pubkey::find_program_address(
-                &[b"protocol_fee", &(0u64).to_le_bytes()],
+            // Must match the seeds from `core::BaseRewardReceiver`. Cannot
+            // use `BaseRewardReceiver::find_program_address` as it would cause
+            // circular dependecies.
+            let base_reward_receiver = Pubkey::find_program_address(
+                &[
+                    b"base_reward_receiver",
+                    &ncn_address.to_bytes(),
+                    &epoch.to_le_bytes(),
+                ],
                 tip_distribution_program_id,
-            );
+            )
+            .0;
 
             let (protocol_claim_status_pubkey, protocol_claim_status_bump) =
                 Pubkey::find_program_address(
                     &[
                         CLAIM_STATUS_SEED,
-                        &protocol_fee_recipient.to_bytes(),
+                        &base_reward_receiver.to_bytes(),
                         &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
                     ],
-                    &TIP_DISTRIBUTION_ID,
+                    tip_distribution_program_id,
                 );
 
             let mut tree_nodes = vec![TreeNode {
-                claimant: protocol_fee_recipient,
+                claimant: base_reward_receiver,
                 claim_status_pubkey: protocol_claim_status_pubkey,
                 claim_status_bump: protocol_claim_status_bump,
                 staker_pubkey: Pubkey::default(),
@@ -192,7 +206,7 @@ impl TreeNode {
                         &stake_meta.validator_node_pubkey.to_bytes(),
                         &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
                     ],
-                    &TIP_DISTRIBUTION_ID,
+                    tip_distribution_program_id,
                 );
 
             tree_nodes.push(TreeNode {
@@ -466,6 +480,8 @@ mod tests {
         let validator_vote_account_1 = Pubkey::new_unique();
         let validator_id_0 = Pubkey::new_unique();
         let validator_id_1 = Pubkey::new_unique();
+        let ncn_address = Pubkey::new_unique();
+        let epoch = 0u64;
 
         let stake_meta_collection = StakeMetaCollection {
             stake_metas: vec![
@@ -530,6 +546,8 @@ mod tests {
 
         let merkle_tree_collection = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
             stake_meta_collection.clone(),
+            &ncn_address,
+            epoch,
             300,
         )
         .unwrap();
@@ -546,7 +564,11 @@ mod tests {
         );
 
         let protocol_fee_recipient = Pubkey::find_program_address(
-            &[b"protocol_fee", &(0u64).to_le_bytes()],
+            &[
+                b"base_reward_receiver",
+                &ncn_address.to_bytes(),
+                &epoch.to_le_bytes(),
+            ],
             &stake_meta_collection.tip_distribution_program_id,
         )
         .0;

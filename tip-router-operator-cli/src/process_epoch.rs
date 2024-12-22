@@ -11,7 +11,7 @@ use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::{pubkey::Pubkey, signer::keypair::Keypair};
 
 use crate::{
-    get_merkle_root,
+    get_meta_merkle_root,
     tip_router::{cast_vote, get_ncn_config},
     Cli,
 };
@@ -69,10 +69,7 @@ pub async fn process_epoch(
 
     // Get the protocol fees
     let ncn_config = get_ncn_config(client, ncn_address).await.unwrap();
-    let fees = ncn_config
-        .fee_config
-        .total_fees_bps(previous_epoch)
-        .unwrap();
+    let fees = ncn_config.fee_config.total_fees_bps(previous_epoch)?;
 
     let account_paths = match account_paths {
         Some(paths) => paths,
@@ -84,7 +81,7 @@ pub async fn process_epoch(
     };
 
     // Generate merkle root from ledger
-    let meta_merkle_tree = match get_merkle_root(
+    let meta_merkle_tree = match get_meta_merkle_root(
         cli_args.ledger_path.as_path(),
         account_paths,
         full_snapshots_path,
@@ -92,6 +89,8 @@ pub async fn process_epoch(
         tip_distribution_program_id,
         "", // TODO out_path is not used, unsure what should be put here. Maybe `snapshot_output_dir` from cli args?
         tip_payment_program_id,
+        ncn_address,
+        previous_epoch,
         fees,
         snapshots_enabled,
     ) {

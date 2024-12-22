@@ -25,7 +25,7 @@ pub async fn cast_vote(
     operator: Pubkey,
     operator_admin: &Keypair,
     meta_merkle_root: [u8; 32],
-    ncn_epoch: u64,
+    epoch: u64,
 ) -> EllipsisClientResult<Signature> {
     let ncn_config = jito_tip_router_core::ncn_config::NcnConfig::find_program_address(
         &jito_tip_router_program::id(),
@@ -36,14 +36,14 @@ pub async fn cast_vote(
     let ballot_box = jito_tip_router_core::ballot_box::BallotBox::find_program_address(
         &jito_tip_router_program::id(),
         &ncn,
-        ncn_epoch,
+        epoch,
     )
     .0;
 
     let epoch_snapshot = jito_tip_router_core::epoch_snapshot::EpochSnapshot::find_program_address(
         &jito_tip_router_program::id(),
         &ncn,
-        ncn_epoch,
+        epoch,
     )
     .0;
 
@@ -52,7 +52,7 @@ pub async fn cast_vote(
             &jito_tip_router_program::id(),
             &operator,
             &ncn,
-            ncn_epoch,
+            epoch,
         )
         .0;
 
@@ -66,7 +66,7 @@ pub async fn cast_vote(
         .operator_admin(operator_admin.pubkey())
         .restaking_program(jito_restaking_program::id())
         .meta_merkle_root(meta_merkle_root)
-        .epoch(ncn_epoch)
+        .epoch(epoch)
         .instruction();
 
     let tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));

@@ -22,13 +22,13 @@ async fn main() -> Result<()> {
     )?;
 
     match &cli.command {
-        Commands::Monitor {
+        Commands::Run {
             ncn_address,
             tip_distribution_program_id,
             tip_payment_program_id,
             enable_snapshots,
         } => {
-            info!("Starting epoch monitor...");
+            info!("Running Tip Router...");
 
             loop {
                 // Wait for epoch change

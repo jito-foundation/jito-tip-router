@@ -20,7 +20,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use tempfile::TempDir;
-use tip_router_operator_cli::{get_merkle_root, TipAccountConfig};
+use tip_router_operator_cli::{get_meta_merkle_root, TipAccountConfig};
 
 #[allow(dead_code)]
 struct TestContext {
@@ -40,11 +40,7 @@ impl TestContext {
         let output_dir = temp_dir.path().join("output");
         fs::create_dir_all(&output_dir)?;
 
-        let mut program_test = ProgramTest::default();
-
-        // Add programs to test environment
-        program_test.add_program("jito_tip_distribution", TIP_DISTRIBUTION_ID, None);
-        program_test.add_program("jito_tip_payment", TIP_PAYMENT_ID, None);
+        let program_test = ProgramTest::default();
 
         let mut context = program_test.start_with_context().await;
 
@@ -187,7 +183,7 @@ impl TestContext {
 }
 
 #[tokio::test]
-async fn test_up_to_cast_vote() {
+async fn test_meta_merkle_creation_from_ledger() {
     // 1. Setup - create necessary variables/arguments
     let ledger_path = Path::new("tests/fixtures/test-ledger");
     let account_paths = vec![
@@ -199,10 +195,12 @@ async fn test_up_to_cast_vote() {
     let tip_distribution_program_id = &TIP_DISTRIBUTION_ID;
     let out_path = "tests/fixtures/output.json";
     let tip_payment_program_id = &TIP_PAYMENT_ID;
+    let ncn_address = Pubkey::new_unique();
+    let epoch = 0u64;
     const PROTOCOL_FEE_BPS: u64 = 300;
 
     // 2. Call the function
-    let meta_merkle_tree = get_merkle_root(
+    let meta_merkle_tree = get_meta_merkle_root(
         ledger_path,
         account_paths,
         full_snapshots_path,
@@ -210,7 +208,10 @@ async fn test_up_to_cast_vote() {
         tip_distribution_program_id,
         out_path,
         tip_payment_program_id,
+        &ncn_address,
+        epoch,
         PROTOCOL_FEE_BPS,
+        false,
     )
     .unwrap();
 
@@ -255,6 +256,8 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
     const PROTOCOL_FEE_BPS: u64 = 300;
     const VALIDATOR_FEE_BPS: u16 = 1000;
     const TOTAL_TIPS: u64 = 1_000_000;
+    let ncn_address = Pubkey::new_unique();
+    let epoch = 0u64;
 
     let mut test_context = TestContext::new()
         .await
@@ -298,6 +301,8 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
     // Then use it in generate_merkle_root
     let merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
         stake_meta_collection.clone(),
+        &ncn_address,
+        epoch,
         PROTOCOL_FEE_BPS,
     )?;
 
@@ -305,14 +310,18 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
 
     assert_eq!(
         generated_tree.merkle_root.to_string(),
-        "H2QevVyboCTYi3x5NtS57k73m1ohMt6Rpfb5we4zDXKH"
+        "9TtRHiWFi3x6FFX6CNDrmJQkftQbZVBgKJbmG2Cd1EMo"
     );
 
     let nodes = &generated_tree.tree_nodes;
 
     // Get the protocol fee recipient PDA - use the same derivation as in the implementation
     let (protocol_fee_recipient, _) = Pubkey::find_program_address(
-        &[b"protocol_fee", &(0u64).to_le_bytes()],
+        &[
+            b"base_reward_receiver",
+            &ncn_address.to_bytes(),
+            &epoch.to_le_bytes(),
+        ],
         &TIP_DISTRIBUTION_ID,
     );
 
