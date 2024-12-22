@@ -29,9 +29,9 @@ impl Default for WeightEntry {
 }
 
 impl WeightEntry {
-    pub fn new(mint_entry: StMintEntry) -> Self {
+    pub fn new(mint_entry: &StMintEntry) -> Self {
         Self {
-            mint_entry,
+            mint_entry: *mint_entry,
             weight: PodU128::from(0),
             slot_set: PodU64::from(0),
             slot_updated: PodU64::from(0),
@@ -95,7 +95,7 @@ mod tests {
     fn test_weight_entry_new() {
         let mint = Pubkey::new_unique();
         let mint_entry = StMintEntry::new(mint, NcnFeeGroup::default(), 0, Pubkey::new_unique(), 0);
-        let weight_entry = WeightEntry::new(mint_entry);
+        let weight_entry = WeightEntry::new(&mint_entry);
 
         assert_eq!(weight_entry.st_mint(), mint);
         assert_eq!(weight_entry.weight(), 0);

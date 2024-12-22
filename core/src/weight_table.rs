@@ -95,8 +95,8 @@ impl WeightTable {
         slot_created: u64,
         vault_count: u64,
         bump: u8,
-        vault_entries: &[VaultEntry],
-        mint_entries: &[StMintEntry],
+        vault_entries: &[VaultEntry; MAX_VAULTS],
+        mint_entries: &[StMintEntry; MAX_ST_MINTS],
     ) -> Result<(), TipRouterError> {
         // Initializes field by field to avoid overflowing stack
         self.ncn = ncn;
@@ -112,50 +112,42 @@ impl WeightTable {
         Ok(())
     }
 
-    fn set_vault_entries(&mut self, vault_entries: &[VaultEntry]) -> Result<(), TipRouterError> {
+    fn set_vault_entries(
+        &mut self,
+        vault_entries: &[VaultEntry; MAX_VAULTS],
+    ) -> Result<(), TipRouterError> {
         if self.vault_registry_initialized() {
             return Err(TipRouterError::WeightTableAlreadyInitialized);
         }
 
-        // Check for empty vector
-        if vault_entries.is_empty() {
-            return Err(TipRouterError::NoVaultsInRegistry);
-        }
-
-        // Check if vector exceeds maximum allowed entries
-        if vault_entries.len() > MAX_VAULTS {
-            return Err(TipRouterError::TooManyVaultsForRegistry);
-        }
-
         // Copy the entire slice into vault_registry
-        self.vault_registry[..vault_entries.len()].copy_from_slice(vault_entries);
+        for (i, entry) in vault_entries.iter().enumerate() {
+            self.vault_registry[i] = *entry;
+        }
 
         self.check_registry_initialized()?;
 
         Ok(())
     }
 
-    fn set_mint_entries(&mut self, mint_entries: &[StMintEntry]) -> Result<(), TipRouterError> {
+    fn set_mint_entries(
+        &mut self,
+        mint_entries: &[StMintEntry; MAX_ST_MINTS],
+    ) -> Result<(), TipRouterError> {
         if self.table_initialized() {
             return Err(TipRouterError::WeightTableAlreadyInitialized);
         }
 
-        // Check for empty vector
-        if mint_entries.is_empty() {
-            return Err(TipRouterError::NoMintsInTable);
-        }
-
-        // Check if vector exceeds maximum allowed entries
-        if mint_entries.len() > MAX_ST_MINTS {
-            return Err(TipRouterError::TooManyMintsForTable);
-        }
-
         // Set table using iterator
-        self.table.iter_mut().zip(mint_entries.iter()).for_each(
-            |(weight_table_entry, &mint_entry)| {
-                *weight_table_entry = WeightEntry::new(mint_entry);
-            },
-        );
+        for (i, entry) in mint_entries.iter().enumerate() {
+            self.table[i] = WeightEntry::new(entry)
+        }
+
+        // self.table.iter_mut().zip(mint_entries.iter()).for_each(
+        //     |(weight_table_entry, &mint_entry)| {
+        //         *weight_table_entry = WeightEntry::new(mint_entry);
+        //     },
+        // );
 
         self.check_table_initialized()?;
 
@@ -323,18 +315,20 @@ mod tests {
     use super::*;
     use crate::ncn_fee_group::NcnFeeGroup;
 
-    fn get_test_mint_entries(count: usize) -> Vec<StMintEntry> {
-        (0..count)
-            .map(|_| {
-                StMintEntry::new(
-                    Pubkey::new_unique(),
-                    NcnFeeGroup::default(),
-                    0,
-                    Pubkey::default(),
-                    0,
-                )
-            })
-            .collect()
+    fn get_test_mint_entries(count: usize) -> [StMintEntry; 64] {
+        let mut mints = [StMintEntry::default(); MAX_ST_MINTS];
+
+        for i in 0..count {
+            mints[i] = StMintEntry::new(
+                Pubkey::new_unique(),
+                NcnFeeGroup::default(),
+                0,
+                Pubkey::new_unique(),
+                0,
+            );
+        }
+
+        mints
     }
 
     #[test]
@@ -358,19 +352,9 @@ mod tests {
         assert_eq!(table.mint_count(), 0);
 
         let mints = get_test_mint_entries(2);
+
         table.set_mint_entries(&mints).unwrap();
         assert_eq!(table.mint_count(), 2);
-    }
-
-    #[test]
-    fn test_initialize_table_too_many() {
-        let ncn = Pubkey::new_unique();
-        let mut table = WeightTable::new(ncn, 0, 0, 0, 0);
-        let many_mints = get_test_mint_entries(MAX_ST_MINTS + 1);
-        assert_eq!(
-            table.set_mint_entries(&many_mints),
-            Err(TipRouterError::TooManyMintsForTable)
-        );
     }
 
     #[test]

@@ -319,7 +319,7 @@ impl VaultRegistry {
         Ok(())
     }
 
-    pub fn get_vault_entries(&self) -> Vec<VaultEntry> {
+    pub fn get_valid_vault_entries(&self) -> Vec<VaultEntry> {
         self.vault_list
             .iter()
             .filter(|m| !m.is_empty())
@@ -327,16 +327,24 @@ impl VaultRegistry {
             .collect()
     }
 
+    pub fn get_vault_entries(&self) -> &[VaultEntry; MAX_VAULTS] {
+        &self.vault_list
+    }
+
     pub fn vault_count(&self) -> u64 {
         self.vault_list.iter().filter(|m| !m.is_empty()).count() as u64
     }
 
-    pub fn get_mint_entries(&self) -> Vec<StMintEntry> {
+    pub fn get_valid_mint_entries(&self) -> Vec<StMintEntry> {
         self.st_mint_list
             .iter()
             .filter(|m| !m.is_empty())
             .copied()
             .collect()
+    }
+
+    pub const fn get_mint_entries(&self) -> &[StMintEntry; MAX_ST_MINTS] {
+        &self.st_mint_list
     }
 
     pub fn get_mint_entry(&self, st_mint: &Pubkey) -> Result<StMintEntry, ProgramError> {

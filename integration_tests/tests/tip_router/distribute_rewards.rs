@@ -4,7 +4,7 @@ mod tests {
     use jito_tip_router_core::{
         base_fee_group::BaseFeeGroup,
         base_reward_router::BaseRewardReceiver,
-        constants::{JITO_SOL_MINT, MAX_OPERATORS},
+        constants::{JITO_SOL_MINT, MAX_OPERATORS, MAX_VAULTS},
         ncn_fee_group::{NcnFeeGroup, NcnFeeGroupType},
     };
     use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, signature::Keypair, signer::Signer};
@@ -305,10 +305,8 @@ mod tests {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
 
-        //TODO find out why MAX_VAULTS is not working
-        //TOOD test with MAX_OPERATORS and MAX_VAULTS
         let operator_count = MAX_OPERATORS;
-        let vault_count = 32;
+        let vault_count = MAX_VAULTS;
 
         // Setup with 2 operators for interesting reward splits
         // 10% Operator fee
@@ -370,7 +368,7 @@ mod tests {
 
         // Set all vaults to a different type of reward
         let vault_registry = tip_router_client.get_vault_registry(ncn).await?;
-        for (index, mint_entry) in vault_registry.get_mint_entries().iter().enumerate() {
+        for (index, mint_entry) in vault_registry.get_valid_mint_entries().iter().enumerate() {
             let group_index = index % NcnFeeGroup::all_groups().len();
 
             tip_router_client
@@ -423,32 +421,32 @@ mod tests {
         // Do routing
         tip_router_client.do_route_base_rewards(ncn, epoch).await?;
 
-        // // Check that all routes have rewards
-        // let base_reward_router = tip_router_client.get_base_reward_router(ncn, epoch).await?;
+        // Check that all routes have rewards
+        let base_reward_router = tip_router_client.get_base_reward_router(ncn, epoch).await?;
 
-        // let ncn_fee_group_reward_routes = base_reward_router.ncn_fee_group_reward_routes();
-        // for route in ncn_fee_group_reward_routes.iter() {
-        //     assert!(!route.is_empty());
-        //     assert!(route.has_rewards().unwrap());
-        // }
+        let ncn_fee_group_reward_routes = base_reward_router.ncn_fee_group_reward_routes();
+        for route in ncn_fee_group_reward_routes.iter() {
+            assert!(!route.is_empty());
+            assert!(route.has_rewards().unwrap());
+        }
 
         // Route base NCN rewards (operator rewards)
-        for operator_root in test_ncn.operators.iter().take(1) {
+        for operator_root in test_ncn.operators.iter() {
             let operator = operator_root.operator_pubkey;
 
-            for group in NcnFeeGroup::all_groups().iter().take(1) {
+            for group in NcnFeeGroup::all_groups().iter() {
                 tip_router_client
                     .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)
                     .await?;
 
-                // // Check max operator stake weights
-                // let operator_snapshot = tip_router_client
-                //     .get_operator_snapshot(operator, ncn, epoch)
-                //     .await?;
-                // let vault_operator_stake_weights = operator_snapshot.vault_operator_stake_weight();
-                // for vault_operator_stake_weight in vault_operator_stake_weights.iter() {
-                //     assert!(!vault_operator_stake_weight.is_empty())
-                // }
+                // Check max operator stake weights
+                let operator_snapshot = tip_router_client
+                    .get_operator_snapshot(operator, ncn, epoch)
+                    .await?;
+                let vault_operator_stake_weights = operator_snapshot.vault_operator_stake_weight();
+                for vault_operator_stake_weight in vault_operator_stake_weights.iter() {
+                    assert!(!vault_operator_stake_weight.is_empty())
+                }
 
                 tip_router_client
                     .do_route_ncn_rewards(*group, ncn, operator, epoch)
