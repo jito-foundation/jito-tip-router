@@ -12,6 +12,8 @@ import {
   getStructEncoder,
   getU16Decoder,
   getU16Encoder,
+  getU64Decoder,
+  getU64Encoder,
   getU8Decoder,
   getU8Encoder,
   transformEncoder,
@@ -43,8 +45,8 @@ export type InitializeConfigInstruction<
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountNcnAdmin extends string | IAccountMeta<string> = string,
   TAccountFeeWallet extends string | IAccountMeta<string> = string,
+  TAccountNcnAdmin extends string | IAccountMeta<string> = string,
   TAccountTieBreakerAdmin extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
@@ -62,13 +64,13 @@ export type InitializeConfigInstruction<
         ? WritableAccount<TAccountConfig>
         : TAccountConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
+      TAccountFeeWallet extends string
+        ? ReadonlyAccount<TAccountFeeWallet>
+        : TAccountFeeWallet,
       TAccountNcnAdmin extends string
         ? ReadonlySignerAccount<TAccountNcnAdmin> &
             IAccountSignerMeta<TAccountNcnAdmin>
         : TAccountNcnAdmin,
-      TAccountFeeWallet extends string
-        ? ReadonlyAccount<TAccountFeeWallet>
-        : TAccountFeeWallet,
       TAccountTieBreakerAdmin extends string
         ? ReadonlyAccount<TAccountTieBreakerAdmin>
         : TAccountTieBreakerAdmin,
@@ -87,12 +89,16 @@ export type InitializeConfigInstructionData = {
   blockEngineFeeBps: number;
   daoFeeBps: number;
   defaultNcnFeeBps: number;
+  epochsBeforeStall: bigint;
+  validSlotsAfterConsensus: bigint;
 };
 
 export type InitializeConfigInstructionDataArgs = {
   blockEngineFeeBps: number;
   daoFeeBps: number;
   defaultNcnFeeBps: number;
+  epochsBeforeStall: number | bigint;
+  validSlotsAfterConsensus: number | bigint;
 };
 
 export function getInitializeConfigInstructionDataEncoder(): Encoder<InitializeConfigInstructionDataArgs> {
@@ -102,6 +108,8 @@ export function getInitializeConfigInstructionDataEncoder(): Encoder<InitializeC
       ['blockEngineFeeBps', getU16Encoder()],
       ['daoFeeBps', getU16Encoder()],
       ['defaultNcnFeeBps', getU16Encoder()],
+      ['epochsBeforeStall', getU64Encoder()],
+      ['validSlotsAfterConsensus', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_CONFIG_DISCRIMINATOR })
   );
@@ -113,6 +121,8 @@ export function getInitializeConfigInstructionDataDecoder(): Decoder<InitializeC
     ['blockEngineFeeBps', getU16Decoder()],
     ['daoFeeBps', getU16Decoder()],
     ['defaultNcnFeeBps', getU16Decoder()],
+    ['epochsBeforeStall', getU64Decoder()],
+    ['validSlotsAfterConsensus', getU64Decoder()],
   ]);
 }
 
@@ -130,8 +140,8 @@ export type InitializeConfigInput<
   TAccountRestakingConfig extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
-  TAccountNcnAdmin extends string = string,
   TAccountFeeWallet extends string = string,
+  TAccountNcnAdmin extends string = string,
   TAccountTieBreakerAdmin extends string = string,
   TAccountRestakingProgram extends string = string,
   TAccountSystemProgram extends string = string,
@@ -139,22 +149,24 @@ export type InitializeConfigInput<
   restakingConfig: Address<TAccountRestakingConfig>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
-  ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
   feeWallet: Address<TAccountFeeWallet>;
+  ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
   tieBreakerAdmin: Address<TAccountTieBreakerAdmin>;
   restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   blockEngineFeeBps: InitializeConfigInstructionDataArgs['blockEngineFeeBps'];
   daoFeeBps: InitializeConfigInstructionDataArgs['daoFeeBps'];
   defaultNcnFeeBps: InitializeConfigInstructionDataArgs['defaultNcnFeeBps'];
+  epochsBeforeStall: InitializeConfigInstructionDataArgs['epochsBeforeStall'];
+  validSlotsAfterConsensus: InitializeConfigInstructionDataArgs['validSlotsAfterConsensus'];
 };
 
 export function getInitializeConfigInstruction<
   TAccountRestakingConfig extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
-  TAccountNcnAdmin extends string,
   TAccountFeeWallet extends string,
+  TAccountNcnAdmin extends string,
   TAccountTieBreakerAdmin extends string,
   TAccountRestakingProgram extends string,
   TAccountSystemProgram extends string,
@@ -164,8 +176,8 @@ export function getInitializeConfigInstruction<
     TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
-    TAccountNcnAdmin,
     TAccountFeeWallet,
+    TAccountNcnAdmin,
     TAccountTieBreakerAdmin,
     TAccountRestakingProgram,
     TAccountSystemProgram
@@ -176,8 +188,8 @@ export function getInitializeConfigInstruction<
   TAccountRestakingConfig,
   TAccountConfig,
   TAccountNcn,
-  TAccountNcnAdmin,
   TAccountFeeWallet,
+  TAccountNcnAdmin,
   TAccountTieBreakerAdmin,
   TAccountRestakingProgram,
   TAccountSystemProgram
@@ -194,8 +206,8 @@ export function getInitializeConfigInstruction<
     },
     config: { value: input.config ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
     feeWallet: { value: input.feeWallet ?? null, isWritable: false },
+    ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
     tieBreakerAdmin: {
       value: input.tieBreakerAdmin ?? null,
       isWritable: false,
@@ -226,8 +238,8 @@ export function getInitializeConfigInstruction<
       getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.ncnAdmin),
       getAccountMeta(accounts.feeWallet),
+      getAccountMeta(accounts.ncnAdmin),
       getAccountMeta(accounts.tieBreakerAdmin),
       getAccountMeta(accounts.restakingProgram),
       getAccountMeta(accounts.systemProgram),
@@ -241,8 +253,8 @@ export function getInitializeConfigInstruction<
     TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
-    TAccountNcnAdmin,
     TAccountFeeWallet,
+    TAccountNcnAdmin,
     TAccountTieBreakerAdmin,
     TAccountRestakingProgram,
     TAccountSystemProgram
@@ -260,8 +272,8 @@ export type ParsedInitializeConfigInstruction<
     restakingConfig: TAccountMetas[0];
     config: TAccountMetas[1];
     ncn: TAccountMetas[2];
-    ncnAdmin: TAccountMetas[3];
-    feeWallet: TAccountMetas[4];
+    feeWallet: TAccountMetas[3];
+    ncnAdmin: TAccountMetas[4];
     tieBreakerAdmin: TAccountMetas[5];
     restakingProgram: TAccountMetas[6];
     systemProgram: TAccountMetas[7];
@@ -293,8 +305,8 @@ export function parseInitializeConfigInstruction<
       restakingConfig: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
-      ncnAdmin: getNextAccount(),
       feeWallet: getNextAccount(),
+      ncnAdmin: getNextAccount(),
       tieBreakerAdmin: getNextAccount(),
       restakingProgram: getNextAccount(),
       systemProgram: getNextAccount(),

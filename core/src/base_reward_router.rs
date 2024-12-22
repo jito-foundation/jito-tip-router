@@ -660,6 +660,60 @@ impl NcnRewardRoute {
     }
 }
 
+/// Uninitiatilized, no-data account used to hold SOL for routing rewards to BaseRewardRouter
+/// Must be empty and uninitialized to be used as a payer or `transfer` instructions fail
+pub struct BaseRewardReceiver {}
+
+impl BaseRewardReceiver {
+    pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
+        vec![
+            b"base_reward_receiver".to_vec(),
+            ncn.to_bytes().to_vec(),
+            ncn_epoch.to_le_bytes().to_vec(),
+        ]
+    }
+
+    pub fn find_program_address(
+        program_id: &Pubkey,
+        ncn: &Pubkey,
+        ncn_epoch: u64,
+    ) -> (Pubkey, u8, Vec<Vec<u8>>) {
+        let seeds = Self::seeds(ncn, ncn_epoch);
+        let (address, bump) = Pubkey::find_program_address(
+            &seeds.iter().map(|s| s.as_slice()).collect::<Vec<_>>(),
+            program_id,
+        );
+        (address, bump, seeds)
+    }
+
+    pub fn load(
+        program_id: &Pubkey,
+        account: &AccountInfo,
+        ncn: &Pubkey,
+        ncn_epoch: u64,
+        expect_writable: bool,
+    ) -> Result<(), ProgramError> {
+        if account.owner.ne(&solana_program::system_program::ID) {
+            msg!("BaseRewardRouterReceiver account has an invalid owner");
+            return Err(ProgramError::InvalidAccountOwner);
+        }
+
+        if expect_writable && !account.is_writable {
+            msg!("BaseRewardRouterReceiver account is not writable");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        if account
+            .key
+            .ne(&Self::find_program_address(program_id, ncn, ncn_epoch).0)
+        {
+            msg!("BaseRewardRouterReceiver account is not at the correct PDA");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        Ok(())
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct BaseRewardRouterRewards {

@@ -21,14 +21,14 @@
           "isSigner": false
         },
         {
-          "name": "ncnAdmin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "feeWallet",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "ncnAdmin",
+          "isMut": false,
+          "isSigner": true
         },
         {
           "name": "tieBreakerAdmin",
@@ -58,6 +58,14 @@
         {
           "name": "defaultNcnFeeBps",
           "type": "u16"
+        },
+        {
+          "name": "epochsBeforeStall",
+          "type": "u64"
+        },
+        {
+          "name": "validSlotsAfterConsensus",
+          "type": "u64"
         }
       ],
       "discriminant": {
@@ -610,6 +618,11 @@
           "isSigner": false
         },
         {
+          "name": "baseRewardReceiver",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "payer",
           "isMut": true,
           "isSigner": true
@@ -656,6 +669,11 @@
         },
         {
           "name": "ncnRewardRouter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncnRewardReceiver",
           "isMut": true,
           "isSigner": false
         },
@@ -719,6 +737,11 @@
           "isSigner": false
         },
         {
+          "name": "baseRewardReceiver",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
@@ -760,6 +783,11 @@
         },
         {
           "name": "ncnRewardRouter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncnRewardReceiver",
           "isMut": true,
           "isSigner": false
         },
@@ -808,12 +836,67 @@
           "isSigner": false
         },
         {
+          "name": "baseRewardReceiver",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "baseFeeWallet",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "baseFeeWalletAta",
           "isMut": true,
           "isSigner": false
         },
         {
           "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakePoolProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakePool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakePoolWithdrawAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "reserveStake",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "managerFeeAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "referrerPoolTokensAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "poolMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -862,12 +945,27 @@
           "isSigner": false
         },
         {
+          "name": "baseRewardReceiver",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "ncnRewardRouter",
           "isMut": true,
           "isSigner": false
         },
         {
+          "name": "ncnRewardReceiver",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -911,12 +1009,67 @@
           "isSigner": false
         },
         {
+          "name": "operatorAta",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "ncnRewardRouter",
           "isMut": true,
           "isSigner": false
         },
         {
+          "name": "ncnRewardReceiver",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakePoolProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakePool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakePoolWithdrawAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "reserveStake",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "managerFeeAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "referrerPoolTokensAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "poolMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -965,8 +1118,63 @@
           "isSigner": false
         },
         {
+          "name": "vaultAta",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "ncnRewardRouter",
           "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncnRewardReceiver",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakePoolProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakePool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakePoolWithdrawAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "reserveStake",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "managerFeeAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "referrerPoolTokensAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "poolMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
           "isSigner": false
         }
       ],
@@ -1357,6 +1565,71 @@
       }
     },
     {
+      "name": "ClaimWithPayer",
+      "accounts": [
+        {
+          "name": "claimStatusPayer",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "claimStatus",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "claimant",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 25
+      }
+    },
+    {
       "name": "ReallocBallotBox",
       "accounts": [
         {
@@ -1393,7 +1666,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 25
+        "value": 26
       }
     },
     {
@@ -1458,7 +1731,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 26
+        "value": 27
       }
     },
     {
@@ -1498,7 +1771,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 27
+        "value": 28
       }
     },
     {
@@ -1543,7 +1816,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 28
+        "value": 29
       }
     },
     {
@@ -1578,7 +1851,55 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 29
+        "value": 30
+      }
+    },
+    {
+      "name": "AdminSetParameters",
+      "accounts": [
+        {
+          "name": "restakingConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncnAdmin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "epochsBeforeStall",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "validSlotsAfterConsensus",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 31
       }
     }
   ],
@@ -3035,6 +3356,16 @@
       "code": 8764,
       "name": "NoFeedWeightOrSwitchboardFeed",
       "msg": "Weight entry needs either a feed or a no feed weight"
+    },
+    {
+      "code": 8765,
+      "name": "InvalidEpochsBeforeStall",
+      "msg": "Invalid epochs before stall"
+    },
+    {
+      "code": 8766,
+      "name": "InvalidSlotsAfterConsensus",
+      "msg": "Invalid slots after consensus"
     }
   ],
   "metadata": {

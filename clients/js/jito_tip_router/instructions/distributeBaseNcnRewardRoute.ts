@@ -42,8 +42,13 @@ export type DistributeBaseNcnRewardRouteInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
   TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
+  TAccountBaseRewardReceiver extends string | IAccountMeta<string> = string,
   TAccountNcnRewardRouter extends string | IAccountMeta<string> = string,
+  TAccountNcnRewardReceiver extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
+  TAccountSystemProgram extends
+    | string
+    | IAccountMeta<string> = '11111111111111111111111111111111',
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -62,12 +67,21 @@ export type DistributeBaseNcnRewardRouteInstruction<
       TAccountBaseRewardRouter extends string
         ? WritableAccount<TAccountBaseRewardRouter>
         : TAccountBaseRewardRouter,
+      TAccountBaseRewardReceiver extends string
+        ? WritableAccount<TAccountBaseRewardReceiver>
+        : TAccountBaseRewardReceiver,
       TAccountNcnRewardRouter extends string
         ? WritableAccount<TAccountNcnRewardRouter>
         : TAccountNcnRewardRouter,
+      TAccountNcnRewardReceiver extends string
+        ? WritableAccount<TAccountNcnRewardReceiver>
+        : TAccountNcnRewardReceiver,
       TAccountRestakingProgram extends string
         ? ReadonlyAccount<TAccountRestakingProgram>
         : TAccountRestakingProgram,
+      TAccountSystemProgram extends string
+        ? ReadonlyAccount<TAccountSystemProgram>
+        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -121,16 +135,22 @@ export type DistributeBaseNcnRewardRouteInput<
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
   TAccountBaseRewardRouter extends string = string,
+  TAccountBaseRewardReceiver extends string = string,
   TAccountNcnRewardRouter extends string = string,
+  TAccountNcnRewardReceiver extends string = string,
   TAccountRestakingProgram extends string = string,
+  TAccountSystemProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
+  baseRewardReceiver: Address<TAccountBaseRewardReceiver>;
   ncnRewardRouter: Address<TAccountNcnRewardRouter>;
+  ncnRewardReceiver: Address<TAccountNcnRewardReceiver>;
   restakingProgram: Address<TAccountRestakingProgram>;
+  systemProgram?: Address<TAccountSystemProgram>;
   ncnFeeGroup: DistributeBaseNcnRewardRouteInstructionDataArgs['ncnFeeGroup'];
   epoch: DistributeBaseNcnRewardRouteInstructionDataArgs['epoch'];
 };
@@ -141,8 +161,11 @@ export function getDistributeBaseNcnRewardRouteInstruction<
   TAccountNcn extends string,
   TAccountOperator extends string,
   TAccountBaseRewardRouter extends string,
+  TAccountBaseRewardReceiver extends string,
   TAccountNcnRewardRouter extends string,
+  TAccountNcnRewardReceiver extends string,
   TAccountRestakingProgram extends string,
+  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: DistributeBaseNcnRewardRouteInput<
@@ -151,8 +174,11 @@ export function getDistributeBaseNcnRewardRouteInstruction<
     TAccountNcn,
     TAccountOperator,
     TAccountBaseRewardRouter,
+    TAccountBaseRewardReceiver,
     TAccountNcnRewardRouter,
-    TAccountRestakingProgram
+    TAccountNcnRewardReceiver,
+    TAccountRestakingProgram,
+    TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): DistributeBaseNcnRewardRouteInstruction<
@@ -162,8 +188,11 @@ export function getDistributeBaseNcnRewardRouteInstruction<
   TAccountNcn,
   TAccountOperator,
   TAccountBaseRewardRouter,
+  TAccountBaseRewardReceiver,
   TAccountNcnRewardRouter,
-  TAccountRestakingProgram
+  TAccountNcnRewardReceiver,
+  TAccountRestakingProgram,
+  TAccountSystemProgram
 > {
   // Program address.
   const programAddress =
@@ -182,11 +211,20 @@ export function getDistributeBaseNcnRewardRouteInstruction<
       value: input.baseRewardRouter ?? null,
       isWritable: true,
     },
+    baseRewardReceiver: {
+      value: input.baseRewardReceiver ?? null,
+      isWritable: true,
+    },
     ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
+    ncnRewardReceiver: {
+      value: input.ncnRewardReceiver ?? null,
+      isWritable: true,
+    },
     restakingProgram: {
       value: input.restakingProgram ?? null,
       isWritable: false,
     },
+    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -196,6 +234,12 @@ export function getDistributeBaseNcnRewardRouteInstruction<
   // Original args.
   const args = { ...input };
 
+  // Resolve default values.
+  if (!accounts.systemProgram.value) {
+    accounts.systemProgram.value =
+      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
+  }
+
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
@@ -204,8 +248,11 @@ export function getDistributeBaseNcnRewardRouteInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
       getAccountMeta(accounts.baseRewardRouter),
+      getAccountMeta(accounts.baseRewardReceiver),
       getAccountMeta(accounts.ncnRewardRouter),
+      getAccountMeta(accounts.ncnRewardReceiver),
       getAccountMeta(accounts.restakingProgram),
+      getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
     data: getDistributeBaseNcnRewardRouteInstructionDataEncoder().encode(
@@ -218,8 +265,11 @@ export function getDistributeBaseNcnRewardRouteInstruction<
     TAccountNcn,
     TAccountOperator,
     TAccountBaseRewardRouter,
+    TAccountBaseRewardReceiver,
     TAccountNcnRewardRouter,
-    TAccountRestakingProgram
+    TAccountNcnRewardReceiver,
+    TAccountRestakingProgram,
+    TAccountSystemProgram
   >;
 
   return instruction;
@@ -236,8 +286,11 @@ export type ParsedDistributeBaseNcnRewardRouteInstruction<
     ncn: TAccountMetas[2];
     operator: TAccountMetas[3];
     baseRewardRouter: TAccountMetas[4];
-    ncnRewardRouter: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
+    baseRewardReceiver: TAccountMetas[5];
+    ncnRewardRouter: TAccountMetas[6];
+    ncnRewardReceiver: TAccountMetas[7];
+    restakingProgram: TAccountMetas[8];
+    systemProgram: TAccountMetas[9];
   };
   data: DistributeBaseNcnRewardRouteInstructionData;
 };
@@ -250,7 +303,7 @@ export function parseDistributeBaseNcnRewardRouteInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedDistributeBaseNcnRewardRouteInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 10) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -268,8 +321,11 @@ export function parseDistributeBaseNcnRewardRouteInstruction<
       ncn: getNextAccount(),
       operator: getNextAccount(),
       baseRewardRouter: getNextAccount(),
+      baseRewardReceiver: getNextAccount(),
       ncnRewardRouter: getNextAccount(),
+      ncnRewardReceiver: getNextAccount(),
       restakingProgram: getNextAccount(),
+      systemProgram: getNextAccount(),
     },
     data: getDistributeBaseNcnRewardRouteInstructionDataDecoder().decode(
       instruction.data

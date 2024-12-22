@@ -154,6 +154,10 @@ export const JITO_TIP_ROUTER_ERROR__BAD_SWITCHBOARD_VALUE = 0x223a; // 8762
 export const JITO_TIP_ROUTER_ERROR__STALE_SWITCHBOARD_FEED = 0x223b; // 8763
 /** NoFeedWeightOrSwitchboardFeed: Weight entry needs either a feed or a no feed weight */
 export const JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_OR_SWITCHBOARD_FEED = 0x223c; // 8764
+/** InvalidEpochsBeforeStall: Invalid epochs before stall */
+export const JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL = 0x223d; // 8765
+/** InvalidSlotsAfterConsensus: Invalid slots after consensus */
+export const JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS = 0x223e; // 8766
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR
@@ -185,9 +189,11 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS
   | typeof JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__MINT_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW
@@ -259,9 +265,11 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN]: `Incorrect NCN Admin`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN]: `Incorrect weight table admin`,
     [JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP]: `Not a valid base fee group`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL]: `Invalid epochs before stall`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF]: `Invalid merkle proof`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE]: `Invalid mint for weight table`,
     [JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP]: `Not a valid NCN fee group`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS]: `Invalid slots after consensus`,
     [JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND]: `Mint Entry not found`,
     [JITO_TIP_ROUTER_ERROR__MINT_IN_TABLE]: `Mint is already in the table`,
     [JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW]: `Modulo Overflow`,

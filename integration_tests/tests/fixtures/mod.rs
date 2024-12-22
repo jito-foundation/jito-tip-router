@@ -6,6 +6,7 @@ use thiserror::Error;
 
 pub mod generated_switchboard_accounts;
 pub mod restaking_client;
+pub mod stake_pool_client;
 pub mod test_builder;
 pub mod tip_distribution_client;
 pub mod tip_router_client;

@@ -18,9 +18,15 @@ pub struct DistributeBaseNcnRewardRoute {
 
     pub base_reward_router: solana_program::pubkey::Pubkey,
 
+    pub base_reward_receiver: solana_program::pubkey::Pubkey,
+
     pub ncn_reward_router: solana_program::pubkey::Pubkey,
 
+    pub ncn_reward_receiver: solana_program::pubkey::Pubkey,
+
     pub restaking_program: solana_program::pubkey::Pubkey,
+
+    pub system_program: solana_program::pubkey::Pubkey,
 }
 
 impl DistributeBaseNcnRewardRoute {
@@ -36,7 +42,7 @@ impl DistributeBaseNcnRewardRoute {
         args: DistributeBaseNcnRewardRouteInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_config,
             false,
@@ -57,11 +63,23 @@ impl DistributeBaseNcnRewardRoute {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
+            self.base_reward_receiver,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
             self.ncn_reward_router,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.ncn_reward_receiver,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.restaking_program,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.system_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -112,8 +130,11 @@ pub struct DistributeBaseNcnRewardRouteInstructionArgs {
 ///   2. `[]` ncn
 ///   3. `[]` operator
 ///   4. `[writable]` base_reward_router
-///   5. `[writable]` ncn_reward_router
-///   6. `[]` restaking_program
+///   5. `[writable]` base_reward_receiver
+///   6. `[writable]` ncn_reward_router
+///   7. `[writable]` ncn_reward_receiver
+///   8. `[]` restaking_program
+///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct DistributeBaseNcnRewardRouteBuilder {
     restaking_config: Option<solana_program::pubkey::Pubkey>,
@@ -121,8 +142,11 @@ pub struct DistributeBaseNcnRewardRouteBuilder {
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
     base_reward_router: Option<solana_program::pubkey::Pubkey>,
+    base_reward_receiver: Option<solana_program::pubkey::Pubkey>,
     ncn_reward_router: Option<solana_program::pubkey::Pubkey>,
+    ncn_reward_receiver: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
+    system_program: Option<solana_program::pubkey::Pubkey>,
     ncn_fee_group: Option<u8>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -164,6 +188,14 @@ impl DistributeBaseNcnRewardRouteBuilder {
         self
     }
     #[inline(always)]
+    pub fn base_reward_receiver(
+        &mut self,
+        base_reward_receiver: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.base_reward_receiver = Some(base_reward_receiver);
+        self
+    }
+    #[inline(always)]
     pub fn ncn_reward_router(
         &mut self,
         ncn_reward_router: solana_program::pubkey::Pubkey,
@@ -172,11 +204,25 @@ impl DistributeBaseNcnRewardRouteBuilder {
         self
     }
     #[inline(always)]
+    pub fn ncn_reward_receiver(
+        &mut self,
+        ncn_reward_receiver: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.ncn_reward_receiver = Some(ncn_reward_receiver);
+        self
+    }
+    #[inline(always)]
     pub fn restaking_program(
         &mut self,
         restaking_program: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
         self.restaking_program = Some(restaking_program);
+        self
+    }
+    /// `[optional account, default to '11111111111111111111111111111111']`
+    #[inline(always)]
+    pub fn system_program(&mut self, system_program: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.system_program = Some(system_program);
         self
     }
     #[inline(always)]
@@ -217,12 +263,21 @@ impl DistributeBaseNcnRewardRouteBuilder {
             base_reward_router: self
                 .base_reward_router
                 .expect("base_reward_router is not set"),
+            base_reward_receiver: self
+                .base_reward_receiver
+                .expect("base_reward_receiver is not set"),
             ncn_reward_router: self
                 .ncn_reward_router
                 .expect("ncn_reward_router is not set"),
+            ncn_reward_receiver: self
+                .ncn_reward_receiver
+                .expect("ncn_reward_receiver is not set"),
             restaking_program: self
                 .restaking_program
                 .expect("restaking_program is not set"),
+            system_program: self
+                .system_program
+                .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
         };
         let args = DistributeBaseNcnRewardRouteInstructionArgs {
             ncn_fee_group: self
@@ -248,9 +303,15 @@ pub struct DistributeBaseNcnRewardRouteCpiAccounts<'a, 'b> {
 
     pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub base_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub ncn_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `distribute_base_ncn_reward_route` CPI instruction.
@@ -268,9 +329,15 @@ pub struct DistributeBaseNcnRewardRouteCpi<'a, 'b> {
 
     pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub base_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub ncn_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: DistributeBaseNcnRewardRouteInstructionArgs,
 }
@@ -288,8 +355,11 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
             ncn: accounts.ncn,
             operator: accounts.operator,
             base_reward_router: accounts.base_reward_router,
+            base_reward_receiver: accounts.base_reward_receiver,
             ncn_reward_router: accounts.ncn_reward_router,
+            ncn_reward_receiver: accounts.ncn_reward_receiver,
             restaking_program: accounts.restaking_program,
+            system_program: accounts.system_program,
             __args: args,
         }
     }
@@ -326,7 +396,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_config.key,
             false,
@@ -348,11 +418,23 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.base_reward_receiver.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
             *self.ncn_reward_router.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.ncn_reward_receiver.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.restaking_program.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.system_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -373,15 +455,18 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(10 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.restaking_config.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
         account_infos.push(self.base_reward_router.clone());
+        account_infos.push(self.base_reward_receiver.clone());
         account_infos.push(self.ncn_reward_router.clone());
+        account_infos.push(self.ncn_reward_receiver.clone());
         account_infos.push(self.restaking_program.clone());
+        account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -403,8 +488,11 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
 ///   2. `[]` ncn
 ///   3. `[]` operator
 ///   4. `[writable]` base_reward_router
-///   5. `[writable]` ncn_reward_router
-///   6. `[]` restaking_program
+///   5. `[writable]` base_reward_receiver
+///   6. `[writable]` ncn_reward_router
+///   7. `[writable]` ncn_reward_receiver
+///   8. `[]` restaking_program
+///   9. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
     instruction: Box<DistributeBaseNcnRewardRouteCpiBuilderInstruction<'a, 'b>>,
@@ -419,8 +507,11 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
             ncn: None,
             operator: None,
             base_reward_router: None,
+            base_reward_receiver: None,
             ncn_reward_router: None,
+            ncn_reward_receiver: None,
             restaking_program: None,
+            system_program: None,
             ncn_fee_group: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
@@ -465,6 +556,14 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
+    pub fn base_reward_receiver(
+        &mut self,
+        base_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.base_reward_receiver = Some(base_reward_receiver);
+        self
+    }
+    #[inline(always)]
     pub fn ncn_reward_router(
         &mut self,
         ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
@@ -473,11 +572,27 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
+    pub fn ncn_reward_receiver(
+        &mut self,
+        ncn_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.ncn_reward_receiver = Some(ncn_reward_receiver);
+        self
+    }
+    #[inline(always)]
     pub fn restaking_program(
         &mut self,
         restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.restaking_program = Some(restaking_program);
+        self
+    }
+    #[inline(always)]
+    pub fn system_program(
+        &mut self,
+        system_program: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.system_program = Some(system_program);
         self
     }
     #[inline(always)]
@@ -558,15 +673,30 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
                 .base_reward_router
                 .expect("base_reward_router is not set"),
 
+            base_reward_receiver: self
+                .instruction
+                .base_reward_receiver
+                .expect("base_reward_receiver is not set"),
+
             ncn_reward_router: self
                 .instruction
                 .ncn_reward_router
                 .expect("ncn_reward_router is not set"),
 
+            ncn_reward_receiver: self
+                .instruction
+                .ncn_reward_receiver
+                .expect("ncn_reward_receiver is not set"),
+
             restaking_program: self
                 .instruction
                 .restaking_program
                 .expect("restaking_program is not set"),
+
+            system_program: self
+                .instruction
+                .system_program
+                .expect("system_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -584,8 +714,11 @@ struct DistributeBaseNcnRewardRouteCpiBuilderInstruction<'a, 'b> {
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     base_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    base_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_fee_group: Option<u8>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

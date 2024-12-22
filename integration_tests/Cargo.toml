@@ -31,6 +31,7 @@ solana-program-test = { workspace = true }
 solana-sdk = { workspace = true }
 solana-security-txt = { workspace = true }
 spl-associated-token-account = { workspace = true }
+spl-stake-pool = { workspace = true }
 spl-token = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }

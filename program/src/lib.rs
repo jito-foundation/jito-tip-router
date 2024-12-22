@@ -1,10 +1,12 @@
 mod admin_register_st_mint;
 mod admin_set_config_fees;
 mod admin_set_new_admin;
+mod admin_set_parameters;
 mod admin_set_st_mint;
 mod admin_set_tie_breaker;
 mod admin_set_weight;
 mod cast_vote;
+mod claim_with_payer;
 mod distribute_base_ncn_reward_route;
 mod distribute_base_rewards;
 mod distribute_ncn_operator_rewards;
@@ -43,9 +45,11 @@ use solana_security_txt::security_txt;
 use crate::{
     admin_register_st_mint::process_admin_register_st_mint,
     admin_set_config_fees::process_admin_set_config_fees,
+    admin_set_parameters::process_admin_set_parameters,
     admin_set_st_mint::process_admin_set_st_mint,
     admin_set_tie_breaker::process_admin_set_tie_breaker,
     admin_set_weight::process_admin_set_weight, cast_vote::process_cast_vote,
+    claim_with_payer::process_claim_with_payer,
     distribute_base_ncn_reward_route::process_distribute_base_ncn_reward_route,
     distribute_base_rewards::process_distribute_base_rewards,
     distribute_ncn_operator_rewards::process_distribute_ncn_operator_rewards,
@@ -105,6 +109,8 @@ pub fn process_instruction(
             block_engine_fee_bps,
             dao_fee_bps,
             default_ncn_fee_bps,
+            epochs_before_stall,
+            valid_slots_after_consensus,
         } => {
             msg!("Instruction: InitializeConfig");
             process_initialize_ncn_config(
@@ -113,6 +119,8 @@ pub fn process_instruction(
                 block_engine_fee_bps,
                 dao_fee_bps,
                 default_ncn_fee_bps,
+                epochs_before_stall,
+                valid_slots_after_consensus,
             )
         }
         TipRouterInstruction::InitializeVaultRegistry => {
@@ -302,6 +310,15 @@ pub fn process_instruction(
             msg!("Instruction: AdminSetTieBreaker");
             process_admin_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
         }
+        TipRouterInstruction::ClaimWithPayer {
+            proof,
+            amount,
+            bump,
+        } => {
+            msg!("Instruction: ClaimWithPayer");
+            process_claim_with_payer(program_id, accounts, proof, amount, bump)
+        }
+
         TipRouterInstruction::ReallocBallotBox { epoch } => {
             msg!("Instruction: ReallocBallotBox");
             process_realloc_ballot_box(program_id, accounts, epoch)
@@ -321,6 +338,18 @@ pub fn process_instruction(
         TipRouterInstruction::ReallocVaultRegistry => {
             msg!("Instruction: ReallocVaultRegistry");
             process_realloc_vault_registry(program_id, accounts)
+        }
+        TipRouterInstruction::AdminSetParameters {
+            epochs_before_stall,
+            valid_slots_after_consensus,
+        } => {
+            msg!("Instruction: AdminSetParameters");
+            process_admin_set_parameters(
+                program_id,
+                accounts,
+                epochs_before_stall,
+                valid_slots_after_consensus,
+            )
         }
     }
 }

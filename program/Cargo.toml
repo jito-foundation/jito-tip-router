@@ -43,6 +43,7 @@ shank = { workspace = true }
 solana-program = { workspace = true }
 solana-security-txt = { workspace = true }
 spl-associated-token-account = { workspace = true }
+spl-stake-pool = { workspace = true }
 spl-token = { workspace = true }
 switchboard-on-demand = { workspace = true }
 thiserror = { workspace = true }

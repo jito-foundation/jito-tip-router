@@ -3159,7 +3159,7 @@ dependencies = [
  "shank",
  "solana-program 1.18.26",
  "spl-associated-token-account",
- "spl-math",
+ "spl-math 0.3.0",
  "spl-token 4.0.0",
  "thiserror",
 ]
@@ -3191,6 +3191,7 @@ dependencies = [
  "solana-sdk",
  "solana-security-txt",
  "spl-associated-token-account",
+ "spl-stake-pool",
  "spl-token 4.0.0",
  "thiserror",
  "tokio",
@@ -3219,6 +3220,7 @@ dependencies = [
  "solana-program 1.18.26",
  "solana-security-txt",
  "spl-associated-token-account",
+ "spl-stake-pool",
  "spl-token 4.0.0",
  "switchboard-on-demand",
  "thiserror",
@@ -3673,7 +3675,7 @@ dependencies = [
  "solana-program 1.18.26",
  "solana-sdk",
  "spl-associated-token-account",
- "spl-math",
+ "spl-math 0.3.0",
  "spl-token 4.0.0",
  "thiserror",
 ]
@@ -7998,6 +8000,20 @@ dependencies = [
 
 [[package]]
 name = "spl-math"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "102d87a7608c793497fa3e85e9d0e24a33be06a94fb029b2cd30d794295f8110"
+dependencies = [
+ "borsh 0.10.4",
+ "num-derive 0.3.3",
+ "num-traits",
+ "solana-program 1.18.26",
+ "thiserror",
+ "uint 0.9.5",
+]
+
+[[package]]
+name = "spl-math"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5cc5a6cc7a4f0cf7813ce44153bba73280909f697d7f6baf7b9f223a255e7887"
@@ -8007,7 +8023,7 @@ dependencies = [
  "num-traits",
  "solana-program 2.0.4",
  "thiserror",
- "uint",
+ "uint 0.10.0",
 ]
 
 [[package]]
@@ -8096,6 +8112,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "spl-stake-pool"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48f973333ac37c47dac368cc13088ebebaa7d67e50a7f56a2a83f090bc32c2cb"
+dependencies = [
+ "arrayref",
+ "bincode",
+ "borsh 0.10.4",
+ "bytemuck",
+ "num-derive 0.4.2",
+ "num-traits",
+ "num_enum 0.7.3",
+ "serde",
+ "serde_derive",
+ "solana-program 1.18.26",
+ "solana-security-txt",
+ "spl-math 0.2.0",
+ "spl-pod 0.1.0",
+ "spl-token-2022 0.9.0",
+ "thiserror",
+]
+
+[[package]]
+name = "spl-tlv-account-resolution"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "062e148d3eab7b165582757453632ffeef490c02c86a48bfdb4988f63eefb3b9"
+dependencies = [
+ "bytemuck",
+ "solana-program 1.18.26",
+ "spl-discriminator 0.1.0",
+ "spl-pod 0.1.0",
+ "spl-program-error 0.3.0",
+ "spl-type-length-value 0.3.0",
+]
+
+[[package]]
 name = "spl-tlv-account-resolution"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8150,6 +8203,28 @@ dependencies = [
  "num-traits",
  "num_enum 0.6.1",
  "solana-program 1.18.26",
+ "thiserror",
+]
+
+[[package]]
+name = "spl-token-2022"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4abf34a65ba420584a0c35f3903f8d727d1f13ababbdc3f714c6b065a686e86"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "num-derive 0.4.2",
+ "num-traits",
+ "num_enum 0.7.3",
+ "solana-program 1.18.26",
+ "solana-zk-token-sdk 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "spl-memo",
+ "spl-pod 0.1.0",
+ "spl-token 4.0.0",
+ "spl-token-metadata-interface 0.2.0",
+ "spl-transfer-hook-interface 0.3.0",
+ "spl-type-length-value 0.3.0",
  "thiserror",
 ]
 
@@ -8253,6 +8328,22 @@ dependencies = [
  "spl-pod 0.2.5",
  "spl-program-error 0.4.4",
  "spl-type-length-value 0.4.6",
+]
+
+[[package]]
+name = "spl-transfer-hook-interface"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "051d31803f873cabe71aec3c1b849f35248beae5d19a347d93a5c9cccc5d5a9b"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "solana-program 1.18.26",
+ "spl-discriminator 0.1.0",
+ "spl-pod 0.1.0",
+ "spl-program-error 0.3.0",
+ "spl-tlv-account-resolution 0.4.0",
+ "spl-type-length-value 0.3.0",
 ]
 
 [[package]]
@@ -9203,6 +9294,18 @@ name = "typenum"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
+
+[[package]]
+name = "uint"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76f64bba2c53b04fcab63c01a7d7427eadc821e3bc48c34dc9ba29c501164b52"
+dependencies = [
+ "byteorder",
+ "crunchy",
+ "hex",
+ "static_assertions",
+]
 
 [[package]]
 name = "uint"

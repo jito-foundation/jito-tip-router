@@ -42,7 +42,26 @@ export type DistributeNcnVaultRewardsInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
   TAccountVault extends string | IAccountMeta<string> = string,
+  TAccountVaultAta extends string | IAccountMeta<string> = string,
   TAccountNcnRewardRouter extends string | IAccountMeta<string> = string,
+  TAccountNcnRewardReceiver extends string | IAccountMeta<string> = string,
+  TAccountStakePoolProgram extends string | IAccountMeta<string> = string,
+  TAccountStakePool extends string | IAccountMeta<string> = string,
+  TAccountStakePoolWithdrawAuthority extends
+    | string
+    | IAccountMeta<string> = string,
+  TAccountReserveStake extends string | IAccountMeta<string> = string,
+  TAccountManagerFeeAccount extends string | IAccountMeta<string> = string,
+  TAccountReferrerPoolTokensAccount extends
+    | string
+    | IAccountMeta<string> = string,
+  TAccountPoolMint extends string | IAccountMeta<string> = string,
+  TAccountTokenProgram extends
+    | string
+    | IAccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+  TAccountSystemProgram extends
+    | string
+    | IAccountMeta<string> = '11111111111111111111111111111111',
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -61,9 +80,42 @@ export type DistributeNcnVaultRewardsInstruction<
       TAccountVault extends string
         ? WritableAccount<TAccountVault>
         : TAccountVault,
+      TAccountVaultAta extends string
+        ? WritableAccount<TAccountVaultAta>
+        : TAccountVaultAta,
       TAccountNcnRewardRouter extends string
         ? WritableAccount<TAccountNcnRewardRouter>
         : TAccountNcnRewardRouter,
+      TAccountNcnRewardReceiver extends string
+        ? WritableAccount<TAccountNcnRewardReceiver>
+        : TAccountNcnRewardReceiver,
+      TAccountStakePoolProgram extends string
+        ? ReadonlyAccount<TAccountStakePoolProgram>
+        : TAccountStakePoolProgram,
+      TAccountStakePool extends string
+        ? WritableAccount<TAccountStakePool>
+        : TAccountStakePool,
+      TAccountStakePoolWithdrawAuthority extends string
+        ? ReadonlyAccount<TAccountStakePoolWithdrawAuthority>
+        : TAccountStakePoolWithdrawAuthority,
+      TAccountReserveStake extends string
+        ? WritableAccount<TAccountReserveStake>
+        : TAccountReserveStake,
+      TAccountManagerFeeAccount extends string
+        ? WritableAccount<TAccountManagerFeeAccount>
+        : TAccountManagerFeeAccount,
+      TAccountReferrerPoolTokensAccount extends string
+        ? WritableAccount<TAccountReferrerPoolTokensAccount>
+        : TAccountReferrerPoolTokensAccount,
+      TAccountPoolMint extends string
+        ? WritableAccount<TAccountPoolMint>
+        : TAccountPoolMint,
+      TAccountTokenProgram extends string
+        ? ReadonlyAccount<TAccountTokenProgram>
+        : TAccountTokenProgram,
+      TAccountSystemProgram extends string
+        ? ReadonlyAccount<TAccountSystemProgram>
+        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -117,14 +169,36 @@ export type DistributeNcnVaultRewardsInput<
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
   TAccountVault extends string = string,
+  TAccountVaultAta extends string = string,
   TAccountNcnRewardRouter extends string = string,
+  TAccountNcnRewardReceiver extends string = string,
+  TAccountStakePoolProgram extends string = string,
+  TAccountStakePool extends string = string,
+  TAccountStakePoolWithdrawAuthority extends string = string,
+  TAccountReserveStake extends string = string,
+  TAccountManagerFeeAccount extends string = string,
+  TAccountReferrerPoolTokensAccount extends string = string,
+  TAccountPoolMint extends string = string,
+  TAccountTokenProgram extends string = string,
+  TAccountSystemProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
   vault: Address<TAccountVault>;
+  vaultAta: Address<TAccountVaultAta>;
   ncnRewardRouter: Address<TAccountNcnRewardRouter>;
+  ncnRewardReceiver: Address<TAccountNcnRewardReceiver>;
+  stakePoolProgram: Address<TAccountStakePoolProgram>;
+  stakePool: Address<TAccountStakePool>;
+  stakePoolWithdrawAuthority: Address<TAccountStakePoolWithdrawAuthority>;
+  reserveStake: Address<TAccountReserveStake>;
+  managerFeeAccount: Address<TAccountManagerFeeAccount>;
+  referrerPoolTokensAccount: Address<TAccountReferrerPoolTokensAccount>;
+  poolMint: Address<TAccountPoolMint>;
+  tokenProgram?: Address<TAccountTokenProgram>;
+  systemProgram?: Address<TAccountSystemProgram>;
   ncnFeeGroup: DistributeNcnVaultRewardsInstructionDataArgs['ncnFeeGroup'];
   epoch: DistributeNcnVaultRewardsInstructionDataArgs['epoch'];
 };
@@ -135,7 +209,18 @@ export function getDistributeNcnVaultRewardsInstruction<
   TAccountNcn extends string,
   TAccountOperator extends string,
   TAccountVault extends string,
+  TAccountVaultAta extends string,
   TAccountNcnRewardRouter extends string,
+  TAccountNcnRewardReceiver extends string,
+  TAccountStakePoolProgram extends string,
+  TAccountStakePool extends string,
+  TAccountStakePoolWithdrawAuthority extends string,
+  TAccountReserveStake extends string,
+  TAccountManagerFeeAccount extends string,
+  TAccountReferrerPoolTokensAccount extends string,
+  TAccountPoolMint extends string,
+  TAccountTokenProgram extends string,
+  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: DistributeNcnVaultRewardsInput<
@@ -144,7 +229,18 @@ export function getDistributeNcnVaultRewardsInstruction<
     TAccountNcn,
     TAccountOperator,
     TAccountVault,
-    TAccountNcnRewardRouter
+    TAccountVaultAta,
+    TAccountNcnRewardRouter,
+    TAccountNcnRewardReceiver,
+    TAccountStakePoolProgram,
+    TAccountStakePool,
+    TAccountStakePoolWithdrawAuthority,
+    TAccountReserveStake,
+    TAccountManagerFeeAccount,
+    TAccountReferrerPoolTokensAccount,
+    TAccountPoolMint,
+    TAccountTokenProgram,
+    TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): DistributeNcnVaultRewardsInstruction<
@@ -154,7 +250,18 @@ export function getDistributeNcnVaultRewardsInstruction<
   TAccountNcn,
   TAccountOperator,
   TAccountVault,
-  TAccountNcnRewardRouter
+  TAccountVaultAta,
+  TAccountNcnRewardRouter,
+  TAccountNcnRewardReceiver,
+  TAccountStakePoolProgram,
+  TAccountStakePool,
+  TAccountStakePoolWithdrawAuthority,
+  TAccountReserveStake,
+  TAccountManagerFeeAccount,
+  TAccountReferrerPoolTokensAccount,
+  TAccountPoolMint,
+  TAccountTokenProgram,
+  TAccountSystemProgram
 > {
   // Program address.
   const programAddress =
@@ -170,7 +277,33 @@ export function getDistributeNcnVaultRewardsInstruction<
     ncn: { value: input.ncn ?? null, isWritable: false },
     operator: { value: input.operator ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: true },
+    vaultAta: { value: input.vaultAta ?? null, isWritable: true },
     ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
+    ncnRewardReceiver: {
+      value: input.ncnRewardReceiver ?? null,
+      isWritable: true,
+    },
+    stakePoolProgram: {
+      value: input.stakePoolProgram ?? null,
+      isWritable: false,
+    },
+    stakePool: { value: input.stakePool ?? null, isWritable: true },
+    stakePoolWithdrawAuthority: {
+      value: input.stakePoolWithdrawAuthority ?? null,
+      isWritable: false,
+    },
+    reserveStake: { value: input.reserveStake ?? null, isWritable: true },
+    managerFeeAccount: {
+      value: input.managerFeeAccount ?? null,
+      isWritable: true,
+    },
+    referrerPoolTokensAccount: {
+      value: input.referrerPoolTokensAccount ?? null,
+      isWritable: true,
+    },
+    poolMint: { value: input.poolMint ?? null, isWritable: true },
+    tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
+    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -180,6 +313,16 @@ export function getDistributeNcnVaultRewardsInstruction<
   // Original args.
   const args = { ...input };
 
+  // Resolve default values.
+  if (!accounts.tokenProgram.value) {
+    accounts.tokenProgram.value =
+      'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
+  }
+  if (!accounts.systemProgram.value) {
+    accounts.systemProgram.value =
+      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
+  }
+
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
@@ -188,7 +331,18 @@ export function getDistributeNcnVaultRewardsInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
       getAccountMeta(accounts.vault),
+      getAccountMeta(accounts.vaultAta),
       getAccountMeta(accounts.ncnRewardRouter),
+      getAccountMeta(accounts.ncnRewardReceiver),
+      getAccountMeta(accounts.stakePoolProgram),
+      getAccountMeta(accounts.stakePool),
+      getAccountMeta(accounts.stakePoolWithdrawAuthority),
+      getAccountMeta(accounts.reserveStake),
+      getAccountMeta(accounts.managerFeeAccount),
+      getAccountMeta(accounts.referrerPoolTokensAccount),
+      getAccountMeta(accounts.poolMint),
+      getAccountMeta(accounts.tokenProgram),
+      getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
     data: getDistributeNcnVaultRewardsInstructionDataEncoder().encode(
@@ -201,7 +355,18 @@ export function getDistributeNcnVaultRewardsInstruction<
     TAccountNcn,
     TAccountOperator,
     TAccountVault,
-    TAccountNcnRewardRouter
+    TAccountVaultAta,
+    TAccountNcnRewardRouter,
+    TAccountNcnRewardReceiver,
+    TAccountStakePoolProgram,
+    TAccountStakePool,
+    TAccountStakePoolWithdrawAuthority,
+    TAccountReserveStake,
+    TAccountManagerFeeAccount,
+    TAccountReferrerPoolTokensAccount,
+    TAccountPoolMint,
+    TAccountTokenProgram,
+    TAccountSystemProgram
   >;
 
   return instruction;
@@ -218,7 +383,18 @@ export type ParsedDistributeNcnVaultRewardsInstruction<
     ncn: TAccountMetas[2];
     operator: TAccountMetas[3];
     vault: TAccountMetas[4];
-    ncnRewardRouter: TAccountMetas[5];
+    vaultAta: TAccountMetas[5];
+    ncnRewardRouter: TAccountMetas[6];
+    ncnRewardReceiver: TAccountMetas[7];
+    stakePoolProgram: TAccountMetas[8];
+    stakePool: TAccountMetas[9];
+    stakePoolWithdrawAuthority: TAccountMetas[10];
+    reserveStake: TAccountMetas[11];
+    managerFeeAccount: TAccountMetas[12];
+    referrerPoolTokensAccount: TAccountMetas[13];
+    poolMint: TAccountMetas[14];
+    tokenProgram: TAccountMetas[15];
+    systemProgram: TAccountMetas[16];
   };
   data: DistributeNcnVaultRewardsInstructionData;
 };
@@ -231,7 +407,7 @@ export function parseDistributeNcnVaultRewardsInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedDistributeNcnVaultRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 17) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -249,7 +425,18 @@ export function parseDistributeNcnVaultRewardsInstruction<
       ncn: getNextAccount(),
       operator: getNextAccount(),
       vault: getNextAccount(),
+      vaultAta: getNextAccount(),
       ncnRewardRouter: getNextAccount(),
+      ncnRewardReceiver: getNextAccount(),
+      stakePoolProgram: getNextAccount(),
+      stakePool: getNextAccount(),
+      stakePoolWithdrawAuthority: getNextAccount(),
+      reserveStake: getNextAccount(),
+      managerFeeAccount: getNextAccount(),
+      referrerPoolTokensAccount: getNextAccount(),
+      poolMint: getNextAccount(),
+      tokenProgram: getNextAccount(),
+      systemProgram: getNextAccount(),
     },
     data: getDistributeNcnVaultRewardsInstructionDataDecoder().decode(
       instruction.data

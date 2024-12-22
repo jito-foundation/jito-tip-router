@@ -8,6 +8,8 @@
 
 import {
   combineCodec,
+  getOptionDecoder,
+  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -20,29 +22,32 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
+  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
+  type TransactionSigner,
   type WritableAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ROUTE_NCN_REWARDS_DISCRIMINATOR = 14;
+export const ADMIN_SET_PARAMETERS_DISCRIMINATOR = 31;
 
-export function getRouteNcnRewardsDiscriminatorBytes() {
-  return getU8Encoder().encode(ROUTE_NCN_REWARDS_DISCRIMINATOR);
+export function getAdminSetParametersDiscriminatorBytes() {
+  return getU8Encoder().encode(ADMIN_SET_PARAMETERS_DISCRIMINATOR);
 }
 
-export type RouteNcnRewardsInstruction<
+export type AdminSetParametersInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountOperator extends string | IAccountMeta<string> = string,
-  TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
-  TAccountNcnRewardRouter extends string | IAccountMeta<string> = string,
-  TAccountNcnRewardReceiver extends string | IAccountMeta<string> = string,
+  TAccountNcnAdmin extends string | IAccountMeta<string> = string,
   TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
@@ -52,19 +57,14 @@ export type RouteNcnRewardsInstruction<
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
+      TAccountConfig extends string
+        ? WritableAccount<TAccountConfig>
+        : TAccountConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountOperator extends string
-        ? ReadonlyAccount<TAccountOperator>
-        : TAccountOperator,
-      TAccountOperatorSnapshot extends string
-        ? ReadonlyAccount<TAccountOperatorSnapshot>
-        : TAccountOperatorSnapshot,
-      TAccountNcnRewardRouter extends string
-        ? WritableAccount<TAccountNcnRewardRouter>
-        : TAccountNcnRewardRouter,
-      TAccountNcnRewardReceiver extends string
-        ? WritableAccount<TAccountNcnRewardReceiver>
-        : TAccountNcnRewardReceiver,
+      TAccountNcnAdmin extends string
+        ? ReadonlySignerAccount<TAccountNcnAdmin> &
+            IAccountSignerMeta<TAccountNcnAdmin>
+        : TAccountNcnAdmin,
       TAccountRestakingProgram extends string
         ? ReadonlyAccount<TAccountRestakingProgram>
         : TAccountRestakingProgram,
@@ -72,94 +72,84 @@ export type RouteNcnRewardsInstruction<
     ]
   >;
 
-export type RouteNcnRewardsInstructionData = {
+export type AdminSetParametersInstructionData = {
   discriminator: number;
-  ncnFeeGroup: number;
-  epoch: bigint;
+  epochsBeforeStall: Option<bigint>;
+  validSlotsAfterConsensus: Option<bigint>;
 };
 
-export type RouteNcnRewardsInstructionDataArgs = {
-  ncnFeeGroup: number;
-  epoch: number | bigint;
+export type AdminSetParametersInstructionDataArgs = {
+  epochsBeforeStall: OptionOrNullable<number | bigint>;
+  validSlotsAfterConsensus: OptionOrNullable<number | bigint>;
 };
 
-export function getRouteNcnRewardsInstructionDataEncoder(): Encoder<RouteNcnRewardsInstructionDataArgs> {
+export function getAdminSetParametersInstructionDataEncoder(): Encoder<AdminSetParametersInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['ncnFeeGroup', getU8Encoder()],
-      ['epoch', getU64Encoder()],
+      ['epochsBeforeStall', getOptionEncoder(getU64Encoder())],
+      ['validSlotsAfterConsensus', getOptionEncoder(getU64Encoder())],
     ]),
-    (value) => ({ ...value, discriminator: ROUTE_NCN_REWARDS_DISCRIMINATOR })
+    (value) => ({ ...value, discriminator: ADMIN_SET_PARAMETERS_DISCRIMINATOR })
   );
 }
 
-export function getRouteNcnRewardsInstructionDataDecoder(): Decoder<RouteNcnRewardsInstructionData> {
+export function getAdminSetParametersInstructionDataDecoder(): Decoder<AdminSetParametersInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['ncnFeeGroup', getU8Decoder()],
-    ['epoch', getU64Decoder()],
+    ['epochsBeforeStall', getOptionDecoder(getU64Decoder())],
+    ['validSlotsAfterConsensus', getOptionDecoder(getU64Decoder())],
   ]);
 }
 
-export function getRouteNcnRewardsInstructionDataCodec(): Codec<
-  RouteNcnRewardsInstructionDataArgs,
-  RouteNcnRewardsInstructionData
+export function getAdminSetParametersInstructionDataCodec(): Codec<
+  AdminSetParametersInstructionDataArgs,
+  AdminSetParametersInstructionData
 > {
   return combineCodec(
-    getRouteNcnRewardsInstructionDataEncoder(),
-    getRouteNcnRewardsInstructionDataDecoder()
+    getAdminSetParametersInstructionDataEncoder(),
+    getAdminSetParametersInstructionDataDecoder()
   );
 }
 
-export type RouteNcnRewardsInput<
+export type AdminSetParametersInput<
   TAccountRestakingConfig extends string = string,
+  TAccountConfig extends string = string,
   TAccountNcn extends string = string,
-  TAccountOperator extends string = string,
-  TAccountOperatorSnapshot extends string = string,
-  TAccountNcnRewardRouter extends string = string,
-  TAccountNcnRewardReceiver extends string = string,
+  TAccountNcnAdmin extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
   restakingConfig: Address<TAccountRestakingConfig>;
+  config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
-  operator: Address<TAccountOperator>;
-  operatorSnapshot: Address<TAccountOperatorSnapshot>;
-  ncnRewardRouter: Address<TAccountNcnRewardRouter>;
-  ncnRewardReceiver: Address<TAccountNcnRewardReceiver>;
+  ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
   restakingProgram: Address<TAccountRestakingProgram>;
-  ncnFeeGroup: RouteNcnRewardsInstructionDataArgs['ncnFeeGroup'];
-  epoch: RouteNcnRewardsInstructionDataArgs['epoch'];
+  epochsBeforeStall: AdminSetParametersInstructionDataArgs['epochsBeforeStall'];
+  validSlotsAfterConsensus: AdminSetParametersInstructionDataArgs['validSlotsAfterConsensus'];
 };
 
-export function getRouteNcnRewardsInstruction<
+export function getAdminSetParametersInstruction<
   TAccountRestakingConfig extends string,
+  TAccountConfig extends string,
   TAccountNcn extends string,
-  TAccountOperator extends string,
-  TAccountOperatorSnapshot extends string,
-  TAccountNcnRewardRouter extends string,
-  TAccountNcnRewardReceiver extends string,
+  TAccountNcnAdmin extends string,
   TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: RouteNcnRewardsInput<
+  input: AdminSetParametersInput<
     TAccountRestakingConfig,
+    TAccountConfig,
     TAccountNcn,
-    TAccountOperator,
-    TAccountOperatorSnapshot,
-    TAccountNcnRewardRouter,
-    TAccountNcnRewardReceiver,
+    TAccountNcnAdmin,
     TAccountRestakingProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): RouteNcnRewardsInstruction<
+): AdminSetParametersInstruction<
   TProgramAddress,
   TAccountRestakingConfig,
+  TAccountConfig,
   TAccountNcn,
-  TAccountOperator,
-  TAccountOperatorSnapshot,
-  TAccountNcnRewardRouter,
-  TAccountNcnRewardReceiver,
+  TAccountNcnAdmin,
   TAccountRestakingProgram
 > {
   // Program address.
@@ -172,17 +162,9 @@ export function getRouteNcnRewardsInstruction<
       value: input.restakingConfig ?? null,
       isWritable: false,
     },
+    config: { value: input.config ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    operator: { value: input.operator ?? null, isWritable: false },
-    operatorSnapshot: {
-      value: input.operatorSnapshot ?? null,
-      isWritable: false,
-    },
-    ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
-    ncnRewardReceiver: {
-      value: input.ncnRewardReceiver ?? null,
-      isWritable: true,
-    },
+    ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
     restakingProgram: {
       value: input.restakingProgram ?? null,
       isWritable: false,
@@ -200,57 +182,51 @@ export function getRouteNcnRewardsInstruction<
   const instruction = {
     accounts: [
       getAccountMeta(accounts.restakingConfig),
+      getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.operator),
-      getAccountMeta(accounts.operatorSnapshot),
-      getAccountMeta(accounts.ncnRewardRouter),
-      getAccountMeta(accounts.ncnRewardReceiver),
+      getAccountMeta(accounts.ncnAdmin),
       getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
-    data: getRouteNcnRewardsInstructionDataEncoder().encode(
-      args as RouteNcnRewardsInstructionDataArgs
+    data: getAdminSetParametersInstructionDataEncoder().encode(
+      args as AdminSetParametersInstructionDataArgs
     ),
-  } as RouteNcnRewardsInstruction<
+  } as AdminSetParametersInstruction<
     TProgramAddress,
     TAccountRestakingConfig,
+    TAccountConfig,
     TAccountNcn,
-    TAccountOperator,
-    TAccountOperatorSnapshot,
-    TAccountNcnRewardRouter,
-    TAccountNcnRewardReceiver,
+    TAccountNcnAdmin,
     TAccountRestakingProgram
   >;
 
   return instruction;
 }
 
-export type ParsedRouteNcnRewardsInstruction<
+export type ParsedAdminSetParametersInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
     restakingConfig: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    operator: TAccountMetas[2];
-    operatorSnapshot: TAccountMetas[3];
-    ncnRewardRouter: TAccountMetas[4];
-    ncnRewardReceiver: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
+    config: TAccountMetas[1];
+    ncn: TAccountMetas[2];
+    ncnAdmin: TAccountMetas[3];
+    restakingProgram: TAccountMetas[4];
   };
-  data: RouteNcnRewardsInstructionData;
+  data: AdminSetParametersInstructionData;
 };
 
-export function parseRouteNcnRewardsInstruction<
+export function parseAdminSetParametersInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedRouteNcnRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+): ParsedAdminSetParametersInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -264,13 +240,13 @@ export function parseRouteNcnRewardsInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       restakingConfig: getNextAccount(),
+      config: getNextAccount(),
       ncn: getNextAccount(),
-      operator: getNextAccount(),
-      operatorSnapshot: getNextAccount(),
-      ncnRewardRouter: getNextAccount(),
-      ncnRewardReceiver: getNextAccount(),
+      ncnAdmin: getNextAccount(),
       restakingProgram: getNextAccount(),
     },
-    data: getRouteNcnRewardsInstructionDataDecoder().decode(instruction.data),
+    data: getAdminSetParametersInstructionDataDecoder().decode(
+      instruction.data
+    ),
   };
 }
