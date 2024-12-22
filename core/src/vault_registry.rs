@@ -304,7 +304,7 @@ impl VaultRegistry {
         current_slot: u64,
     ) -> Result<(), ProgramError> {
         // Check if (mint, vault_index) is already in the list
-        if self.vault_list.iter().any(|m| m.vault.eq(&vault)) {
+        if self.vault_list.iter().any(|m| m.vault.eq(vault)) {
             return Ok(());
         }
 

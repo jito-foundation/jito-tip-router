@@ -562,7 +562,7 @@ impl NcnRewardRouter {
         self.increment_rewards_processed(rewards)?;
 
         for vault_reward in self.vault_reward_routes.iter_mut() {
-            if vault_reward.vault().eq(&vault) {
+            if vault_reward.vault().eq(vault) {
                 vault_reward.increment_rewards(rewards)?;
                 return Ok(());
             }
