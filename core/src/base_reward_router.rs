@@ -57,9 +57,9 @@ impl BaseRewardRouter {
     pub const NO_LAST_VOTE_INDEX: u16 = u16::MAX;
     pub const MAX_ROUTE_BASE_ITERATIONS: u16 = 30;
 
-    pub fn new(ncn: Pubkey, ncn_epoch: u64, bump: u8, slot_created: u64) -> Self {
+    pub fn new(ncn: &Pubkey, ncn_epoch: u64, bump: u8, slot_created: u64) -> Self {
         Self {
-            ncn,
+            ncn: *ncn,
             ncn_epoch: PodU64::from(ncn_epoch),
             bump,
             slot_created: PodU64::from(slot_created),
@@ -77,9 +77,9 @@ impl BaseRewardRouter {
         }
     }
 
-    pub fn initialize(&mut self, ncn: Pubkey, ncn_epoch: u64, bump: u8, current_slot: u64) {
+    pub fn initialize(&mut self, ncn: &Pubkey, ncn_epoch: u64, bump: u8, current_slot: u64) {
         // Initializes field by field to avoid overflowing stack
-        self.ncn = ncn;
+        self.ncn = *ncn;
         self.ncn_epoch = PodU64::from(ncn_epoch);
         self.bump = bump;
         self.slot_created = PodU64::from(current_slot);
@@ -612,7 +612,7 @@ impl BaseRewardRouter {
         Err(TipRouterError::NcnRewardRouteNotFound)
     }
 
-    pub const fn ncn_fee_group_reward_routes(&self) -> &[NcnRewardRoute; 256] {
+    pub const fn ncn_fee_group_reward_routes(&self) -> &[NcnRewardRoute; MAX_OPERATORS] {
         &self.ncn_fee_group_reward_routes
     }
 
@@ -854,10 +854,10 @@ mod tests {
     #[test]
     fn test_route_incoming_rewards() {
         let mut router = BaseRewardRouter::new(
-            Pubkey::new_unique(), // ncn
-            1,                    // ncn_epoch
-            1,                    // bump
-            100,                  // slot_created
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
         );
 
         // Initial state checks
@@ -898,10 +898,10 @@ mod tests {
         const INCOMING_REWARDS: u64 = 1000;
 
         let mut router = BaseRewardRouter::new(
-            Pubkey::new_unique(), // ncn
-            1,                    // ncn_epoch
-            1,                    // bump
-            100,                  // slot_created
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
         );
 
         // Groups
@@ -930,10 +930,10 @@ mod tests {
         const INCOMING_REWARDS: u64 = 1600;
 
         let mut router = BaseRewardRouter::new(
-            Pubkey::new_unique(), // ncn
-            1,                    // ncn_epoch
-            1,                    // bump
-            100,                  // slot_created
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
         );
 
         // Fees

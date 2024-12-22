@@ -47,7 +47,7 @@ pub fn process_realloc_vault_registry(
         vault_registry_data[0] = VaultRegistry::DISCRIMINATOR;
         let vault_registry_account =
             VaultRegistry::try_from_slice_unchecked_mut(&mut vault_registry_data)?;
-        vault_registry_account.initialize(*ncn_account.key, vault_registry_bump);
+        vault_registry_account.initialize(ncn_account.key, vault_registry_bump);
     }
 
     Ok(())

@@ -94,8 +94,8 @@ pub fn process_initialize_ncn_reward_router(
 
     *ncn_reward_router_account = NcnRewardRouter::new(
         ncn_fee_group,
-        *operator.key,
-        *ncn.key,
+        operator.key,
+        ncn.key,
         epoch,
         ncn_reward_router_bump,
         current_slot,

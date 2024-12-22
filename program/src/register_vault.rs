@@ -71,8 +71,8 @@ pub fn process_register_vault(program_id: &Pubkey, accounts: &[AccountInfo]) -> 
     }
 
     vault_registry.register_vault(
-        *vault.key,
-        vault_account.supported_mint,
+        vault.key,
+        &vault_account.supported_mint,
         vault_account.vault_index(),
         slot,
     )?;

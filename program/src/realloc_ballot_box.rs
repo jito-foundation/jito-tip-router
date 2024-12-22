@@ -51,7 +51,7 @@ pub fn process_realloc_ballot_box(
         let mut ballot_box_data = ballot_box.try_borrow_mut_data()?;
         ballot_box_data[0] = BallotBox::DISCRIMINATOR;
         let ballot_box_account = BallotBox::try_from_slice_unchecked_mut(&mut ballot_box_data)?;
-        ballot_box_account.initialize(*ncn.key, epoch, ballot_box_bump, Clock::get()?.slot);
+        ballot_box_account.initialize(ncn.key, epoch, ballot_box_bump, Clock::get()?.slot);
     }
 
     Ok(())

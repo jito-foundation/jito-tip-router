@@ -45,7 +45,7 @@ mod tests {
 
         let weight_table = tip_router_client.get_weight_table(ncn, epoch).await?;
 
-        assert_eq!(weight_table.ncn(), ncn);
+        assert_eq!(*weight_table.ncn(), ncn);
         assert_eq!(weight_table.ncn_epoch(), epoch);
 
         Ok(())
@@ -88,7 +88,7 @@ mod tests {
 
         let weight_table = tip_router_client.get_weight_table(ncn, epoch).await?;
 
-        assert_eq!(weight_table.ncn(), ncn);
+        assert_eq!(*weight_table.ncn(), ncn);
         assert_eq!(weight_table.ncn_epoch(), epoch);
 
         Ok(())

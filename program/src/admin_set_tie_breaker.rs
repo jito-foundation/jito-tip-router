@@ -12,7 +12,7 @@ use solana_program::{
 pub fn process_admin_set_tie_breaker(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    meta_merkle_root: [u8; 32],
+    meta_merkle_root: &[u8; 32],
     epoch: u64,
 ) -> ProgramResult {
     let [ncn_config, ballot_box, ncn, tie_breaker_admin, restaking_program] = accounts else {

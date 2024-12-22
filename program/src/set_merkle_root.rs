@@ -50,9 +50,9 @@ pub fn process_set_merkle_root(
     }
 
     ballot_box.verify_merkle_root(
-        tip_distribution_address,
+        &tip_distribution_address,
         proof,
-        merkle_root,
+        &merkle_root,
         max_total_claim,
         max_num_nodes,
     )?;

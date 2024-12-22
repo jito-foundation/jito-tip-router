@@ -28,17 +28,17 @@ pub struct StMintEntry {
 
 impl StMintEntry {
     pub fn new(
-        st_mint: Pubkey,
+        st_mint: &Pubkey,
         ncn_fee_group: NcnFeeGroup,
         reward_multiplier_bps: u64,
-        switchboard_feed: Pubkey,
+        switchboard_feed: &Pubkey,
         no_feed_weight: u128,
     ) -> Self {
         Self {
-            st_mint,
+            st_mint: *st_mint,
             ncn_fee_group,
             reward_multiplier_bps: PodU64::from(reward_multiplier_bps),
-            switchboard_feed,
+            switchboard_feed: *switchboard_feed,
             no_feed_weight: PodU128::from(no_feed_weight),
             reserved: [0; 128],
         }
@@ -48,8 +48,8 @@ impl StMintEntry {
         self.no_feed_weight.into()
     }
 
-    pub const fn st_mint(&self) -> Pubkey {
-        self.st_mint
+    pub const fn st_mint(&self) -> &Pubkey {
+        &self.st_mint
     }
 
     pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
@@ -60,8 +60,8 @@ impl StMintEntry {
         self.reward_multiplier_bps.into()
     }
 
-    pub const fn switchboard_feed(&self) -> Pubkey {
-        self.switchboard_feed
+    pub const fn switchboard_feed(&self) -> &Pubkey {
+        &self.switchboard_feed
     }
 
     pub fn is_empty(&self) -> bool {
@@ -72,10 +72,10 @@ impl StMintEntry {
 impl Default for StMintEntry {
     fn default() -> Self {
         Self::new(
-            Pubkey::default(),
+            &Pubkey::default(),
             NcnFeeGroup::default(),
             0,
-            Pubkey::default(),
+            &Pubkey::default(),
             0,
         )
     }
@@ -92,18 +92,18 @@ pub struct VaultEntry {
 }
 
 impl VaultEntry {
-    pub fn new(vault: Pubkey, st_mint: Pubkey, vault_index: u64, slot_registered: u64) -> Self {
+    pub fn new(vault: &Pubkey, st_mint: &Pubkey, vault_index: u64, slot_registered: u64) -> Self {
         Self {
-            vault,
-            st_mint,
+            vault: *vault,
+            st_mint: *st_mint,
             vault_index: PodU64::from(vault_index),
             slot_registered: PodU64::from(slot_registered),
             reserved: [0; 128],
         }
     }
 
-    pub const fn vault(&self) -> Pubkey {
-        self.vault
+    pub const fn vault(&self) -> &Pubkey {
+        &self.vault
     }
 
     pub fn vault_index(&self) -> u64 {
@@ -122,7 +122,7 @@ impl VaultEntry {
 
 impl Default for VaultEntry {
     fn default() -> Self {
-        Self::new(Pubkey::default(), Pubkey::default(), u64::MAX, u64::MAX)
+        Self::new(&Pubkey::default(), &Pubkey::default(), u64::MAX, u64::MAX)
     }
 }
 
@@ -143,9 +143,9 @@ impl Discriminator for VaultRegistry {
 impl VaultRegistry {
     pub const SIZE: usize = 8 + size_of::<Self>();
 
-    pub fn new(ncn: Pubkey, bump: u8) -> Self {
+    pub fn new(ncn: &Pubkey, bump: u8) -> Self {
         Self {
-            ncn,
+            ncn: *ncn,
             bump,
             reserved: [0; 127],
             st_mint_list: [StMintEntry::default(); MAX_ST_MINTS],
@@ -153,9 +153,9 @@ impl VaultRegistry {
         }
     }
 
-    pub fn initialize(&mut self, ncn: Pubkey, bump: u8) {
+    pub fn initialize(&mut self, ncn: &Pubkey, bump: u8) {
         // Initializes field by field to avoid overflowing stack
-        self.ncn = ncn;
+        self.ncn = *ncn;
         self.bump = bump;
         self.reserved = [0; 127];
         self.st_mint_list = [StMintEntry::default(); MAX_ST_MINTS];
@@ -233,7 +233,7 @@ impl VaultRegistry {
         st_mint: &Pubkey,
         ncn_fee_group: NcnFeeGroup,
         reward_multiplier_bps: u64,
-        switchboard_feed: Pubkey,
+        switchboard_feed: &Pubkey,
         no_feed_weight: u128,
     ) -> Result<(), ProgramError> {
         // Check if mint is already in the list
@@ -249,7 +249,7 @@ impl VaultRegistry {
             .ok_or(TipRouterError::VaultRegistryListFull)?;
 
         *mint_entry = StMintEntry::new(
-            *st_mint,
+            st_mint,
             ncn_fee_group,
             reward_multiplier_bps,
             switchboard_feed,
@@ -298,8 +298,8 @@ impl VaultRegistry {
 
     pub fn register_vault(
         &mut self,
-        vault: Pubkey,
-        st_mint: Pubkey,
+        vault: &Pubkey,
+        st_mint: &Pubkey,
         vault_index: u64,
         current_slot: u64,
     ) -> Result<(), ProgramError> {
@@ -374,7 +374,7 @@ mod tests {
 
         assert_eq!(size_of::<VaultRegistry>(), expected_total);
 
-        let vault_registry = VaultRegistry::new(Pubkey::default(), 0);
+        let vault_registry = VaultRegistry::new(&Pubkey::default(), 0);
         assert_eq!(vault_registry.vault_list.len(), MAX_VAULTS);
     }
 
@@ -413,12 +413,12 @@ mod tests {
 
     #[test]
     fn test_mint_count() {
-        let mut vault_registry = VaultRegistry::new(Pubkey::default(), 0);
+        let mut vault_registry = VaultRegistry::new(&Pubkey::default(), 0);
         assert_eq!(vault_registry.vault_count(), 0);
 
         for i in 0..3 {
             vault_registry
-                .register_vault(Pubkey::new_unique(), Pubkey::new_unique(), i, 0)
+                .register_vault(&Pubkey::new_unique(), &Pubkey::new_unique(), i, 0)
                 .unwrap();
         }
         assert_eq!(vault_registry.vault_count(), 3);
@@ -426,19 +426,24 @@ mod tests {
 
     #[test]
     fn test_no_duplicate_mints() {
-        let mut vault_registry = VaultRegistry::new(Pubkey::default(), 0);
+        let mut vault_registry = VaultRegistry::new(&Pubkey::default(), 0);
 
         let mint1 = Pubkey::new_unique();
         let mint2 = Pubkey::new_unique();
         vault_registry
-            .register_st_mint(&mint1, NcnFeeGroup::jto(), 0, Pubkey::new_unique(), 0)
+            .register_st_mint(&mint1, NcnFeeGroup::jto(), 0, &Pubkey::new_unique(), 0)
             .unwrap();
         vault_registry
-            .register_st_mint(&mint2, NcnFeeGroup::jto(), 0, Pubkey::new_unique(), 0)
+            .register_st_mint(&mint2, NcnFeeGroup::jto(), 0, &Pubkey::new_unique(), 0)
             .unwrap();
 
-        let result =
-            vault_registry.register_st_mint(&mint1, NcnFeeGroup::jto(), 0, Pubkey::new_unique(), 0);
+        let result = vault_registry.register_st_mint(
+            &mint1,
+            NcnFeeGroup::jto(),
+            0,
+            &Pubkey::new_unique(),
+            0,
+        );
 
         assert!(result.is_err());
     }

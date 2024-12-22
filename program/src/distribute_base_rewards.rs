@@ -5,7 +5,7 @@ use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as NcnConfig,
-    constants::JITO_SOL_MINT,
+    constants::JITOSOL_MINT,
     error::TipRouterError,
 };
 use solana_program::{
@@ -35,7 +35,7 @@ pub fn process_distribute_base_rewards(
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     BaseRewardRouter::load(program_id, ncn.key, epoch, base_reward_router, true)?;
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
-    load_associated_token_account(base_fee_wallet_ata, base_fee_wallet.key, &JITO_SOL_MINT)?;
+    load_associated_token_account(base_fee_wallet_ata, base_fee_wallet.key, &JITOSOL_MINT)?;
 
     if stake_pool_program.key.ne(&spl_stake_pool::id()) {
         msg!("Incorrect stake pool program ID");

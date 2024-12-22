@@ -57,7 +57,7 @@ pub fn process_admin_register_st_mint(
         st_mint.key,
         ncn_fee_group,
         reward_multiplier_bps,
-        switchboard_feed,
+        &switchboard_feed,
         no_feed_weight,
     )?;
 

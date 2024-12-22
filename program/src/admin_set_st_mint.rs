@@ -10,7 +10,7 @@ use solana_program::{
 pub fn process_admin_set_st_mint(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    st_mint: Pubkey,
+    st_mint: &Pubkey,
     ncn_fee_group: Option<u8>,
     reward_multiplier_bps: Option<u64>,
     switchboard_feed: Option<Pubkey>,
@@ -41,7 +41,7 @@ pub fn process_admin_set_st_mint(
         VaultRegistry::try_from_slice_unchecked_mut(&mut vault_registry_data)?;
 
     vault_registry_account.set_st_mint(
-        &st_mint,
+        st_mint,
         ncn_fee_group,
         reward_multiplier_bps,
         switchboard_feed,

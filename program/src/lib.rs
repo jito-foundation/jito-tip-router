@@ -149,7 +149,7 @@ pub fn process_instruction(
         }
         TipRouterInstruction::SwitchboardSetWeight { epoch, st_mint } => {
             msg!("Instruction: SwitchboardSetWeight");
-            process_switchboard_set_weight(program_id, accounts, st_mint, epoch)
+            process_switchboard_set_weight(program_id, accounts, &st_mint, epoch)
         }
         TipRouterInstruction::InitializeEpochSnapshot { epoch } => {
             msg!("Instruction: InitializeEpochSnapshot");
@@ -184,7 +184,7 @@ pub fn process_instruction(
             epoch,
         } => {
             msg!("Instruction: CastVote");
-            process_cast_vote(program_id, accounts, meta_merkle_root, epoch)
+            process_cast_vote(program_id, accounts, &meta_merkle_root, epoch)
         }
         TipRouterInstruction::SetMerkleRoot {
             proof,
@@ -319,7 +319,7 @@ pub fn process_instruction(
             epoch,
         } => {
             msg!("Instruction: AdminSetTieBreaker");
-            process_admin_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
+            process_admin_set_tie_breaker(program_id, accounts, &meta_merkle_root, epoch)
         }
         TipRouterInstruction::AdminSetWeight {
             st_mint,
@@ -327,7 +327,7 @@ pub fn process_instruction(
             epoch,
         } => {
             msg!("Instruction: AdminSetWeight");
-            process_admin_set_weight(program_id, accounts, st_mint, epoch, weight)
+            process_admin_set_weight(program_id, accounts, &st_mint, epoch, weight)
         }
         TipRouterInstruction::AdminRegisterStMint {
             ncn_fee_group,
@@ -356,7 +356,7 @@ pub fn process_instruction(
             process_admin_set_st_mint(
                 program_id,
                 accounts,
-                st_mint,
+                &st_mint,
                 ncn_fee_group,
                 reward_multiplier_bps,
                 switchboard_feed,

@@ -146,7 +146,7 @@ pub fn process_snapshot_vault_operator_delegation(
 
     operator_snapshot_account.increment_vault_operator_delegation_registration(
         current_slot,
-        *vault.key,
+        vault.key,
         vault_index,
         ncn_fee_group,
         &stake_weights,

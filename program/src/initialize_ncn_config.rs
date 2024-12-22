@@ -92,7 +92,7 @@ pub fn process_initialize_ncn_config(
     let config = Config::try_from_slice_unchecked_mut(&mut config_data)?;
 
     let fee_config = FeeConfig::new(
-        *dao_fee_wallet.key,
+        dao_fee_wallet.key,
         block_engine_fee_bps,
         dao_fee_bps,
         default_ncn_fee_bps,
@@ -100,9 +100,9 @@ pub fn process_initialize_ncn_config(
     )?;
 
     *config = Config::new(
-        *ncn_account.key,
-        *tie_breaker_admin.key,
-        *ncn_admin.key,
+        ncn_account.key,
+        tie_breaker_admin.key,
+        ncn_admin.key,
         &fee_config,
         valid_slots_after_consensus,
         epochs_before_stall,

@@ -47,18 +47,18 @@ impl Config {
     pub const SIZE: usize = 8 + size_of::<Self>();
 
     pub fn new(
-        ncn: Pubkey,
-        tie_breaker_admin: Pubkey,
-        fee_admin: Pubkey,
+        ncn: &Pubkey,
+        tie_breaker_admin: &Pubkey,
+        fee_admin: &Pubkey,
         fee_config: &FeeConfig,
         valid_slots_after_consensus: u64,
         epochs_before_stall: u64,
         bump: u8,
     ) -> Self {
         Self {
-            ncn,
-            tie_breaker_admin,
-            fee_admin,
+            ncn: *ncn,
+            tie_breaker_admin: *tie_breaker_admin,
+            fee_admin: *fee_admin,
             valid_slots_after_consensus: PodU64::from(valid_slots_after_consensus),
             epochs_before_stall: PodU64::from(epochs_before_stall),
             fee_config: *fee_config,

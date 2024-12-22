@@ -107,11 +107,11 @@ pub fn process_initialize_epoch_snapshot(
         EpochSnapshot::try_from_slice_unchecked_mut(&mut epoch_snapshot_data)?;
 
     *epoch_snapshot_account = EpochSnapshot::new(
-        *ncn.key,
+        ncn.key,
         ncn_epoch,
         epoch_snapshot_bump,
         current_slot,
-        ncn_fees,
+        &ncn_fees,
         operator_count,
         vault_count,
     );

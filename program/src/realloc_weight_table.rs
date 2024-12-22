@@ -61,7 +61,7 @@ pub fn process_realloc_weight_table(
             WeightTable::try_from_slice_unchecked_mut(&mut weight_table_data)?;
 
         weight_table_account.initialize(
-            *ncn.key,
+            ncn.key,
             epoch,
             Clock::get()?.slot,
             vault_count,

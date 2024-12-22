@@ -37,7 +37,7 @@ mod tests {
 
         let ballot_box = tip_router_client.get_ballot_box(ncn, epoch).await?;
 
-        assert!(ballot_box.has_ballot(&Ballot::new(meta_merkle_root)));
+        assert!(ballot_box.has_ballot(&Ballot::new(&meta_merkle_root)));
         assert_eq!(ballot_box.slot_consensus_reached(), slot);
         assert!(ballot_box.is_consensus_reached());
 

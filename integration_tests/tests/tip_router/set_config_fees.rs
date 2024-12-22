@@ -50,7 +50,7 @@ mod tests {
         );
 
         assert_eq!(
-            ncn_config
+            *ncn_config
                 .fee_config
                 .base_fee_wallet(base_fee_group)
                 .unwrap(),
@@ -145,7 +145,7 @@ mod tests {
 
         for group in BaseFeeGroup::all_groups().iter() {
             assert_eq!(
-                ncn_config.fee_config.base_fee_wallet(*group).unwrap(),
+                *ncn_config.fee_config.base_fee_wallet(*group).unwrap(),
                 new_base_fee_wallet
             );
 

@@ -62,16 +62,16 @@ impl NcnRewardRouter {
 
     pub fn new(
         ncn_fee_group: NcnFeeGroup,
-        operator: Pubkey,
-        ncn: Pubkey,
+        operator: &Pubkey,
+        ncn: &Pubkey,
         ncn_epoch: u64,
         bump: u8,
         slot_created: u64,
     ) -> Self {
         Self {
             ncn_fee_group,
-            operator,
-            ncn,
+            operator: *operator,
+            ncn: *ncn,
             ncn_epoch: PodU64::from(ncn_epoch),
             bump,
             slot_created: PodU64::from(slot_created),
@@ -164,12 +164,12 @@ impl NcnRewardRouter {
         self.ncn_fee_group
     }
 
-    pub const fn operator(&self) -> Pubkey {
-        self.operator
+    pub const fn operator(&self) -> &Pubkey {
+        &self.operator
     }
 
-    pub const fn ncn(&self) -> Pubkey {
-        self.ncn
+    pub const fn ncn(&self) -> &Pubkey {
+        &self.ncn
     }
 
     pub fn ncn_epoch(&self) -> u64 {
@@ -552,7 +552,7 @@ impl NcnRewardRouter {
 
     pub fn route_to_vault_reward_route(
         &mut self,
-        vault: Pubkey,
+        vault: &Pubkey,
         rewards: u64,
     ) -> Result<(), TipRouterError> {
         if rewards == 0 {
@@ -670,9 +670,9 @@ pub struct VaultRewardRoute {
 }
 
 impl VaultRewardRoute {
-    pub fn new(vault: Pubkey, rewards: u64) -> Result<Self, TipRouterError> {
+    pub fn new(vault: &Pubkey, rewards: u64) -> Result<Self, TipRouterError> {
         Ok(Self {
-            vault,
+            vault: *vault,
             rewards: PodU64::from(rewards),
         })
     }
@@ -751,11 +751,11 @@ mod tests {
     fn test_route_incoming_rewards() {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
-            Pubkey::new_unique(), // ncn
-            Pubkey::new_unique(), // ncn
-            1,                    // ncn_epoch
-            1,                    // bump
-            100,                  // slot_created
+            &Pubkey::new_unique(), // ncn
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
         );
 
         // Initial state checks

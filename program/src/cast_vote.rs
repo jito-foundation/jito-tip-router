@@ -15,7 +15,7 @@ use solana_program::{
 pub fn process_cast_vote(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    meta_merkle_root: [u8; 32],
+    meta_merkle_root: &[u8; 32],
     epoch: u64,
 ) -> ProgramResult {
     let [ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator, operator_admin, restaking_program] =
@@ -81,8 +81,8 @@ pub fn process_cast_vote(
     let ballot = Ballot::new(meta_merkle_root);
 
     ballot_box.cast_vote(
-        *operator.key,
-        ballot,
+        operator.key,
+        &ballot,
         &operator_stake_weights,
         slot,
         valid_slots_after_consensus,

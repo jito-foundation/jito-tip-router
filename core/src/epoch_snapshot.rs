@@ -54,21 +54,21 @@ impl EpochSnapshot {
     pub const SIZE: usize = 8 + size_of::<Self>();
 
     pub fn new(
-        ncn: Pubkey,
+        ncn: &Pubkey,
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
-        fees: Fees,
+        fees: &Fees,
         operator_count: u64,
         vault_count: u64,
     ) -> Self {
         Self {
-            ncn,
+            ncn: *ncn,
             ncn_epoch: PodU64::from(ncn_epoch),
             slot_created: PodU64::from(current_slot),
             slot_finalized: PodU64::from(0),
             bump,
-            fees,
+            fees: *fees,
             operator_count: PodU64::from(operator_count),
             vault_count: PodU64::from(vault_count),
             operators_registered: PodU64::from(0),
@@ -229,8 +229,8 @@ impl OperatorSnapshot {
 
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        operator: Pubkey,
-        ncn: Pubkey,
+        operator: &Pubkey,
+        ncn: &Pubkey,
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
@@ -245,8 +245,8 @@ impl OperatorSnapshot {
         }
 
         Ok(Self {
-            operator,
-            ncn,
+            operator: *operator,
+            ncn: *ncn,
             ncn_epoch: PodU64::from(ncn_epoch),
             bump,
             slot_created: PodU64::from(current_slot),
@@ -266,8 +266,8 @@ impl OperatorSnapshot {
 
     #[allow(clippy::too_many_arguments)]
     pub fn new_active(
-        operator: Pubkey,
-        ncn: Pubkey,
+        operator: &Pubkey,
+        ncn: &Pubkey,
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
@@ -291,8 +291,8 @@ impl OperatorSnapshot {
     }
 
     pub fn new_inactive(
-        operator: Pubkey,
-        ncn: Pubkey,
+        operator: &Pubkey,
+        ncn: &Pubkey,
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
@@ -319,8 +319,8 @@ impl OperatorSnapshot {
     #[allow(clippy::too_many_arguments)]
     pub fn initialize(
         &mut self,
-        operator: Pubkey,
-        ncn: Pubkey,
+        operator: &Pubkey,
+        ncn: &Pubkey,
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
@@ -342,8 +342,8 @@ impl OperatorSnapshot {
         };
 
         // Initializes field by field to avoid overflowing stack
-        self.operator = operator;
-        self.ncn = ncn;
+        self.operator = *operator;
+        self.ncn = *ncn;
         self.ncn_epoch = PodU64::from(ncn_epoch);
         self.bump = bump;
         self.slot_created = PodU64::from(current_slot);
@@ -421,12 +421,12 @@ impl OperatorSnapshot {
         Ok(())
     }
 
-    pub const fn operator(&self) -> Pubkey {
-        self.operator
+    pub const fn operator(&self) -> &Pubkey {
+        &self.operator
     }
 
-    pub const fn ncn(&self) -> Pubkey {
-        self.ncn
+    pub const fn ncn(&self) -> &Pubkey {
+        &self.ncn
     }
 
     pub fn operator_fee_bps(&self) -> u16 {
@@ -465,7 +465,7 @@ impl OperatorSnapshot {
 
     pub fn insert_vault_operator_stake_weight(
         &mut self,
-        vault: Pubkey,
+        vault: &Pubkey,
         vault_index: u64,
         ncn_fee_group: NcnFeeGroup,
         stake_weights: &StakeWeights,
@@ -487,7 +487,7 @@ impl OperatorSnapshot {
     pub fn increment_vault_operator_delegation_registration(
         &mut self,
         current_slot: u64,
-        vault: Pubkey,
+        vault: &Pubkey,
         vault_index: u64,
         ncn_fee_group: NcnFeeGroup,
         stake_weights: &StakeWeights,
@@ -571,13 +571,13 @@ impl Default for VaultOperatorStakeWeight {
 
 impl VaultOperatorStakeWeight {
     pub fn new(
-        vault: Pubkey,
+        vault: &Pubkey,
         vault_index: u64,
         ncn_fee_group: NcnFeeGroup,
         stake_weight: &StakeWeights,
     ) -> Self {
         Self {
-            vault,
+            vault: *vault,
             vault_index: PodU64::from(vault_index),
             ncn_fee_group,
             stake_weight: *stake_weight,
@@ -597,8 +597,8 @@ impl VaultOperatorStakeWeight {
         &self.stake_weight
     }
 
-    pub const fn vault(&self) -> Pubkey {
-        self.vault
+    pub const fn vault(&self) -> &Pubkey {
+        &self.vault
     }
 
     pub const fn ncn_fee_group(&self) -> NcnFeeGroup {

@@ -38,8 +38,8 @@ mod tests {
             .await?;
 
         // Verify initial state
-        assert_eq!(ncn_reward_router.ncn(), ncn);
-        assert_eq!(ncn_reward_router.operator(), operator);
+        assert_eq!(*ncn_reward_router.ncn(), ncn);
+        assert_eq!(*ncn_reward_router.operator(), operator);
         assert_eq!(ncn_reward_router.ncn_epoch(), epoch);
         assert_eq!(ncn_reward_router.slot_created(), slot);
         assert_eq!(ncn_reward_router.reward_pool(), 0);

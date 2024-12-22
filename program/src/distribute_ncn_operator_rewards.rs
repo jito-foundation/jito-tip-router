@@ -3,7 +3,7 @@ use jito_jsm_core::loader::load_associated_token_account;
 use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     config::Config as NcnConfig,
-    constants::JITO_SOL_MINT,
+    constants::JITOSOL_MINT,
     error::TipRouterError,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
@@ -56,7 +56,7 @@ pub fn process_distribute_ncn_operator_rewards(
         epoch,
         true,
     )?;
-    load_associated_token_account(operator_ata, operator.key, &JITO_SOL_MINT)?;
+    load_associated_token_account(operator_ata, operator.key, &JITOSOL_MINT)?;
 
     if stake_pool_program.key.ne(&spl_stake_pool::id()) {
         msg!("Incorrect stake pool program ID");

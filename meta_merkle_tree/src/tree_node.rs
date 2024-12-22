@@ -23,15 +23,15 @@ pub struct TreeNode {
 
 impl TreeNode {
     pub const fn new(
-        tip_distribution_account: Pubkey,
-        validator_merkle_root: [u8; 32],
+        tip_distribution_account: &Pubkey,
+        validator_merkle_root: &[u8; 32],
         max_total_claim: u64,
         max_num_nodes: u64,
     ) -> Self {
         Self {
-            tip_distribution_account,
+            tip_distribution_account: *tip_distribution_account,
             proof: None,
-            validator_merkle_root,
+            validator_merkle_root: *validator_merkle_root,
             max_total_claim,
             max_num_nodes,
         }

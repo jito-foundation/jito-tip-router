@@ -31,7 +31,7 @@ pub const MAX_REALLOC_BYTES: u64 = MAX_PERMITTED_DATA_INCREASE as u64; // TODO j
 pub const WEIGHT_PRECISION: u128 = 1_000_000_000;
 pub const SWITCHBOARD_MAX_STALE_SLOTS: u64 = 100;
 pub const JTO_SOL_FEED: Pubkey = pubkey!("5S7ErPSkFmyXuq2aE3rZ6ofwVyZpwzUt6w7m6kqekvMe");
-pub const JTOSOL_SOL_FEED: Pubkey = pubkey!("4Z1SLH9g4ikNBV8uP2ZctEouqjYmVqB2Tz5SZxKYBN7z");
+pub const JITOSOL_SOL_FEED: Pubkey = pubkey!("4Z1SLH9g4ikNBV8uP2ZctEouqjYmVqB2Tz5SZxKYBN7z");
 
-pub const JITO_SOL_MINT: Pubkey = pubkey!("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn");
-pub const JITO_SOL_POOL_ADDRESS: Pubkey = pubkey!("Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb");
+pub const JITOSOL_MINT: Pubkey = pubkey!("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn");
+pub const JITOSOL_POOL_ADDRESS: Pubkey = pubkey!("Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb");

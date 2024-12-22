@@ -52,7 +52,7 @@ pub fn process_realloc_base_reward_router(
             BaseRewardRouter::try_from_slice_unchecked_mut(&mut base_reward_router_data)?;
 
         base_reward_router_account.initialize(
-            *ncn.key,
+            ncn.key,
             epoch,
             base_reward_router_bump,
             Clock::get()?.slot,

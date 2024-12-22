@@ -11,7 +11,7 @@ use solana_program::{
 pub fn process_admin_set_weight(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    st_mint: Pubkey,
+    st_mint: &Pubkey,
     epoch: u64,
     weight: u128,
 ) -> ProgramResult {
@@ -48,7 +48,7 @@ pub fn process_admin_set_weight(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    weight_table_account.set_weight(&st_mint, weight, Clock::get()?.slot)?;
+    weight_table_account.set_weight(st_mint, weight, Clock::get()?.slot)?;
 
     Ok(())
 }

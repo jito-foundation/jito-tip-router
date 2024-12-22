@@ -116,8 +116,8 @@ pub fn process_realloc_operator_snapshot(
             OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
 
         operator_snapshot_account.initialize(
-            *operator.key,
-            *ncn.key,
+            operator.key,
+            ncn.key,
             epoch,
             operator_snapshot_bump,
             current_slot,

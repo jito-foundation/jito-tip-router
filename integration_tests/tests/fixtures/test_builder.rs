@@ -8,7 +8,7 @@ use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::BaseRewardReceiver,
-    constants::{JITO_SOL_MINT, JTO_SOL_FEED},
+    constants::{JITOSOL_MINT, JTO_SOL_FEED},
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::NcnRewardReceiver,
 };
@@ -152,7 +152,7 @@ impl TestBuilder {
             &stake_pool_keypair.pubkey(),
         );
         // Needed to create JitoSOL mint since we don't have access to the original keypair in the tests
-        program_test.add_account(JITO_SOL_MINT, token_mint_account(&jitosol_mint_authority.0));
+        program_test.add_account(JITOSOL_MINT, token_mint_account(&jitosol_mint_authority.0));
 
         Self {
             context: program_test.start_with_context().await,

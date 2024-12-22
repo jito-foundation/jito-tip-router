@@ -4,7 +4,7 @@ mod tests {
     use jito_tip_router_core::{
         base_fee_group::BaseFeeGroup,
         base_reward_router::BaseRewardReceiver,
-        constants::{JITO_SOL_MINT, MAX_OPERATORS, MAX_VAULTS},
+        constants::{JITOSOL_MINT, MAX_OPERATORS, MAX_VAULTS},
         ncn_fee_group::{NcnFeeGroup, NcnFeeGroupType},
     };
     use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, signature::Keypair, signer::Signer};
@@ -94,28 +94,28 @@ mod tests {
                     .fee_config
                     .base_fee_wallet(BaseFeeGroup::default())
                     .unwrap(),
-                &JITO_SOL_MINT,
+                &JITOSOL_MINT,
             )
             .await?
             .map_or(0, |account| account.amount);
 
         let operator_1_initial_balance = fixture
-            .get_associated_token_account(&test_ncn.operators[0].operator_pubkey, &JITO_SOL_MINT)
+            .get_associated_token_account(&test_ncn.operators[0].operator_pubkey, &JITOSOL_MINT)
             .await?
             .map_or(0, |account| account.amount);
 
         let operator_2_initial_balance = fixture
-            .get_associated_token_account(&test_ncn.operators[1].operator_pubkey, &JITO_SOL_MINT)
+            .get_associated_token_account(&test_ncn.operators[1].operator_pubkey, &JITOSOL_MINT)
             .await?
             .map_or(0, |account| account.amount);
 
         let vault_1_initial_balance = fixture
-            .get_associated_token_account(&test_ncn.vaults[0].vault_pubkey, &JITO_SOL_MINT)
+            .get_associated_token_account(&test_ncn.vaults[0].vault_pubkey, &JITOSOL_MINT)
             .await?
             .map_or(0, |account| account.amount);
 
         let vault_2_initial_balance = fixture
-            .get_associated_token_account(&test_ncn.vaults[1].vault_pubkey, &JITO_SOL_MINT)
+            .get_associated_token_account(&test_ncn.vaults[1].vault_pubkey, &JITOSOL_MINT)
             .await?
             .map_or(0, |account| account.amount);
 
@@ -192,7 +192,7 @@ mod tests {
                     .fee_config
                     .base_fee_wallet(BaseFeeGroup::default())
                     .unwrap(),
-                &JITO_SOL_MINT,
+                &JITOSOL_MINT,
             )
             .await?
             .map_or(0, |account| account.amount);
@@ -266,7 +266,7 @@ mod tests {
 
         // Operator 1 Rewards
         let operator_1_final_balance = fixture
-            .get_associated_token_account(&test_ncn.operators[0].operator_pubkey, &JITO_SOL_MINT)
+            .get_associated_token_account(&test_ncn.operators[0].operator_pubkey, &JITOSOL_MINT)
             .await?
             .map_or(0, |account| account.amount);
         let operator_1_reward = operator_1_final_balance - operator_1_initial_balance;
@@ -274,7 +274,7 @@ mod tests {
 
         // Operator 2 Rewards
         let operator_2_final_balance = fixture
-            .get_associated_token_account(&test_ncn.operators[1].operator_pubkey, &JITO_SOL_MINT)
+            .get_associated_token_account(&test_ncn.operators[1].operator_pubkey, &JITOSOL_MINT)
             .await?
             .map_or(0, |account| account.amount);
         let operator_2_reward = operator_2_final_balance - operator_2_initial_balance;
@@ -282,7 +282,7 @@ mod tests {
 
         // Vault 1 Rewards
         let vault_1_final_balance = fixture
-            .get_associated_token_account(&test_ncn.vaults[0].vault_pubkey, &JITO_SOL_MINT)
+            .get_associated_token_account(&test_ncn.vaults[0].vault_pubkey, &JITOSOL_MINT)
             .await?
             .map_or(0, |account| account.amount);
         let vault_1_reward = vault_1_final_balance - vault_1_initial_balance;
@@ -290,7 +290,7 @@ mod tests {
 
         // Vault 2 Rewards
         let vault_2_final_balance = fixture
-            .get_associated_token_account(&test_ncn.vaults[1].vault_pubkey, &JITO_SOL_MINT)
+            .get_associated_token_account(&test_ncn.vaults[1].vault_pubkey, &JITOSOL_MINT)
             .await?
             .map_or(0, |account| account.amount);
         let vault_2_reward = vault_2_final_balance - vault_2_initial_balance;
@@ -377,7 +377,7 @@ mod tests {
             tip_router_client
                 .do_admin_set_st_mint(
                     ncn,
-                    mint_entry.st_mint(),
+                    *mint_entry.st_mint(),
                     Some(NcnFeeGroup::all_groups()[group_index]),
                     None,
                     None,

@@ -26,7 +26,7 @@ use jito_tip_router_core::{
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     claim_status_payer::ClaimStatusPayer,
     config::Config as NcnConfig,
-    constants::{JITO_SOL_MINT, MAX_REALLOC_BYTES},
+    constants::{JITOSOL_MINT, MAX_REALLOC_BYTES},
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     error::TipRouterError,
     ncn_fee_group::NcnFeeGroup,
@@ -538,7 +538,7 @@ impl TipRouterClient {
         let mint_entry = vault_registry.get_mint_entry(&st_mint)?;
         let switchboard_feed = mint_entry.switchboard_feed();
 
-        self.switchboard_set_weight(ncn, epoch, st_mint, switchboard_feed)
+        self.switchboard_set_weight(ncn, epoch, st_mint, *switchboard_feed)
             .await
     }
 
@@ -1683,11 +1683,11 @@ impl TipRouterClient {
             .fee_config
             .base_fee_wallet(base_fee_group)
             .unwrap();
-        let base_fee_wallet_ata = get_associated_token_address(&base_fee_wallet, &JITO_SOL_MINT);
+        let base_fee_wallet_ata = get_associated_token_address(&base_fee_wallet, &JITOSOL_MINT);
         let create_base_fee_wallet_ata_ix = create_associated_token_account_idempotent(
             &self.payer.pubkey(),
             &base_fee_wallet,
-            &JITO_SOL_MINT,
+            &JITOSOL_MINT,
             &spl_token::id(),
         );
         let (base_reward_receiver, _, _) =
@@ -1706,7 +1706,7 @@ impl TipRouterClient {
             .ncn(ncn)
             .base_reward_router(base_reward_router)
             .base_reward_receiver(base_reward_receiver)
-            .base_fee_wallet(base_fee_wallet)
+            .base_fee_wallet(*base_fee_wallet)
             .base_fee_wallet_ata(base_fee_wallet_ata)
             .restaking_program(jito_restaking_program::id())
             .stake_pool_program(spl_stake_pool::id())
@@ -1715,7 +1715,7 @@ impl TipRouterClient {
             .reserve_stake(reserve_stake)
             .manager_fee_account(manager_fee_account)
             .referrer_pool_tokens_account(referrer_pool_tokens_account)
-            .pool_mint(JITO_SOL_MINT)
+            .pool_mint(JITOSOL_MINT)
             .token_program(spl_token::id())
             .system_program(system_program::id())
             .base_fee_group(base_fee_group.group)
@@ -1848,11 +1848,11 @@ impl TipRouterClient {
         let manager_fee_account = pool_root.manager_fee_account;
         let referrer_pool_tokens_account = pool_root.referrer_pool_tokens_account;
 
-        let operator_ata = get_associated_token_address(&operator, &JITO_SOL_MINT);
+        let operator_ata = get_associated_token_address(&operator, &JITOSOL_MINT);
         let operator_ata_ix = create_associated_token_account_idempotent(
             &self.payer.pubkey(),
             &operator,
-            &JITO_SOL_MINT,
+            &JITOSOL_MINT,
             &spl_token::id(),
         );
 
@@ -1870,7 +1870,7 @@ impl TipRouterClient {
             .reserve_stake(reserve_stake)
             .manager_fee_account(manager_fee_account)
             .referrer_pool_tokens_account(referrer_pool_tokens_account)
-            .pool_mint(JITO_SOL_MINT)
+            .pool_mint(JITOSOL_MINT)
             .token_program(spl_token::id())
             .system_program(system_program::id())
             .ncn_fee_group(ncn_fee_group.group)
@@ -1921,12 +1921,12 @@ impl TipRouterClient {
         let manager_fee_account = pool_root.manager_fee_account;
         let referrer_pool_tokens_account = pool_root.referrer_pool_tokens_account;
 
-        let vault_ata = get_associated_token_address(&vault, &JITO_SOL_MINT);
+        let vault_ata = get_associated_token_address(&vault, &JITOSOL_MINT);
 
         let vault_ata_ix = create_associated_token_account_idempotent(
             &self.payer.pubkey(),
             &vault,
-            &JITO_SOL_MINT,
+            &JITOSOL_MINT,
             &spl_token::id(),
         );
 
@@ -1944,7 +1944,7 @@ impl TipRouterClient {
             .reserve_stake(reserve_stake)
             .manager_fee_account(manager_fee_account)
             .referrer_pool_tokens_account(referrer_pool_tokens_account)
-            .pool_mint(JITO_SOL_MINT)
+            .pool_mint(JITOSOL_MINT)
             .token_program(spl_token::id())
             .system_program(system_program::id())
             .ncn_fee_group(ncn_fee_group.group)
