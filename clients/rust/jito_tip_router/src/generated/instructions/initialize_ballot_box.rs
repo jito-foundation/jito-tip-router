@@ -73,7 +73,7 @@ pub struct InitializeBallotBoxInstructionData {
 
 impl InitializeBallotBoxInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 21 }
+        Self { discriminator: 11 }
     }
 }
 

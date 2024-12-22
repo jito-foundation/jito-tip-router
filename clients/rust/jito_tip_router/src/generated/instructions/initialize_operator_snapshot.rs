@@ -10,8 +10,6 @@ use borsh::{BorshDeserialize, BorshSerialize};
 pub struct InitializeOperatorSnapshot {
     pub config: solana_program::pubkey::Pubkey,
 
-    pub restaking_config: solana_program::pubkey::Pubkey,
-
     pub ncn: solana_program::pubkey::Pubkey,
 
     pub operator: solana_program::pubkey::Pubkey,
@@ -42,13 +40,9 @@ impl InitializeOperatorSnapshot {
         args: InitializeOperatorSnapshotInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.config,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -124,19 +118,17 @@ pub struct InitializeOperatorSnapshotInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[]` config
-///   1. `[]` restaking_config
-///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[]` ncn_operator_state
-///   5. `[writable]` epoch_snapshot
-///   6. `[writable]` operator_snapshot
-///   7. `[writable, signer]` payer
-///   8. `[]` restaking_program
-///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   1. `[]` ncn
+///   2. `[]` operator
+///   3. `[]` ncn_operator_state
+///   4. `[writable]` epoch_snapshot
+///   5. `[writable]` operator_snapshot
+///   6. `[writable, signer]` payer
+///   7. `[]` restaking_program
+///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeOperatorSnapshotBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
-    restaking_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
     ncn_operator_state: Option<solana_program::pubkey::Pubkey>,
@@ -156,14 +148,6 @@ impl InitializeOperatorSnapshotBuilder {
     #[inline(always)]
     pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
         self.config = Some(config);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_config = Some(restaking_config);
         self
     }
     #[inline(always)]
@@ -243,7 +227,6 @@ impl InitializeOperatorSnapshotBuilder {
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = InitializeOperatorSnapshot {
             config: self.config.expect("config is not set"),
-            restaking_config: self.restaking_config.expect("restaking_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             operator: self.operator.expect("operator is not set"),
             ncn_operator_state: self
@@ -273,8 +256,6 @@ impl InitializeOperatorSnapshotBuilder {
 pub struct InitializeOperatorSnapshotCpiAccounts<'a, 'b> {
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub operator: &'b solana_program::account_info::AccountInfo<'a>,
@@ -298,8 +279,6 @@ pub struct InitializeOperatorSnapshotCpi<'a, 'b> {
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -329,7 +308,6 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
         Self {
             __program: program,
             config: accounts.config,
-            restaking_config: accounts.restaking_config,
             ncn: accounts.ncn,
             operator: accounts.operator,
             ncn_operator_state: accounts.ncn_operator_state,
@@ -374,13 +352,9 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.config.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -433,10 +407,9 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(10 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(9 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.config.clone());
-        account_infos.push(self.restaking_config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
         account_infos.push(self.ncn_operator_state.clone());
@@ -462,15 +435,14 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[]` config
-///   1. `[]` restaking_config
-///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[]` ncn_operator_state
-///   5. `[writable]` epoch_snapshot
-///   6. `[writable]` operator_snapshot
-///   7. `[writable, signer]` payer
-///   8. `[]` restaking_program
-///   9. `[]` system_program
+///   1. `[]` ncn
+///   2. `[]` operator
+///   3. `[]` ncn_operator_state
+///   4. `[writable]` epoch_snapshot
+///   5. `[writable]` operator_snapshot
+///   6. `[writable, signer]` payer
+///   7. `[]` restaking_program
+///   8. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
     instruction: Box<InitializeOperatorSnapshotCpiBuilderInstruction<'a, 'b>>,
@@ -481,7 +453,6 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
         let instruction = Box::new(InitializeOperatorSnapshotCpiBuilderInstruction {
             __program: program,
             config: None,
-            restaking_config: None,
             ncn: None,
             operator: None,
             ncn_operator_state: None,
@@ -501,14 +472,6 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
         config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.config = Some(config);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_config = Some(restaking_config);
         self
     }
     #[inline(always)]
@@ -623,11 +586,6 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
 
             config: self.instruction.config.expect("config is not set"),
 
-            restaking_config: self
-                .instruction
-                .restaking_config
-                .expect("restaking_config is not set"),
-
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
             operator: self.instruction.operator.expect("operator is not set"),
@@ -671,7 +629,6 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
 struct InitializeOperatorSnapshotCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_operator_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,

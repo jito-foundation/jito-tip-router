@@ -1,5 +1,5 @@
 use jito_bytemuck::AccountDeserialize;
-use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
+use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     epoch_snapshot::OperatorSnapshot,
     ncn_fee_group::NcnFeeGroup,
@@ -18,7 +18,7 @@ pub fn process_route_ncn_rewards(
     max_iterations: u16,
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn, operator, operator_snapshot, ncn_reward_router, ncn_reward_receiver, restaking_program] =
+    let [ncn, operator, operator_snapshot, ncn_reward_router, ncn_reward_receiver, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -29,7 +29,6 @@ pub fn process_route_ncn_rewards(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
     NcnRewardReceiver::load(

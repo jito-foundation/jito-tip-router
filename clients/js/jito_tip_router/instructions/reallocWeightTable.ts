@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const REALLOC_WEIGHT_TABLE_DISCRIMINATOR = 29;
+export const REALLOC_WEIGHT_TABLE_DISCRIMINATOR = 5;
 
 export function getReallocWeightTableDiscriminatorBytes() {
   return getU8Encoder().encode(REALLOC_WEIGHT_TABLE_DISCRIMINATOR);

@@ -3,9 +3,9 @@ use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     ballot_box::{Ballot, BallotBox},
+    config::Config as NcnConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     error::TipRouterError,
-    ncn_config::NcnConfig,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,

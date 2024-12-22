@@ -8,8 +8,6 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
 pub struct InitializeWeightTable {
-    pub restaking_config: solana_program::pubkey::Pubkey,
-
     pub vault_registry: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
@@ -36,11 +34,7 @@ impl InitializeWeightTable {
         args: InitializeWeightTableInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_config,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.vault_registry,
             false,
@@ -105,16 +99,14 @@ pub struct InitializeWeightTableInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` vault_registry
-///   2. `[]` ncn
-///   3. `[writable]` weight_table
-///   4. `[writable, signer]` payer
-///   5. `[]` restaking_program
-///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   0. `[]` vault_registry
+///   1. `[]` ncn
+///   2. `[writable]` weight_table
+///   3. `[writable, signer]` payer
+///   4. `[]` restaking_program
+///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeWeightTableBuilder {
-    restaking_config: Option<solana_program::pubkey::Pubkey>,
     vault_registry: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     weight_table: Option<solana_program::pubkey::Pubkey>,
@@ -128,14 +120,6 @@ pub struct InitializeWeightTableBuilder {
 impl InitializeWeightTableBuilder {
     pub fn new() -> Self {
         Self::default()
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_config = Some(restaking_config);
-        self
     }
     #[inline(always)]
     pub fn vault_registry(&mut self, vault_registry: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -197,7 +181,6 @@ impl InitializeWeightTableBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = InitializeWeightTable {
-            restaking_config: self.restaking_config.expect("restaking_config is not set"),
             vault_registry: self.vault_registry.expect("vault_registry is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             weight_table: self.weight_table.expect("weight_table is not set"),
@@ -219,8 +202,6 @@ impl InitializeWeightTableBuilder {
 
 /// `initialize_weight_table` CPI accounts.
 pub struct InitializeWeightTableCpiAccounts<'a, 'b> {
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
@@ -238,8 +219,6 @@ pub struct InitializeWeightTableCpiAccounts<'a, 'b> {
 pub struct InitializeWeightTableCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -264,7 +243,6 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            restaking_config: accounts.restaking_config,
             vault_registry: accounts.vault_registry,
             ncn: accounts.ncn,
             weight_table: accounts.weight_table,
@@ -307,11 +285,7 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_config.key,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.vault_registry.key,
             false,
@@ -354,9 +328,8 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.restaking_config.clone());
         account_infos.push(self.vault_registry.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.weight_table.clone());
@@ -379,13 +352,12 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` vault_registry
-///   2. `[]` ncn
-///   3. `[writable]` weight_table
-///   4. `[writable, signer]` payer
-///   5. `[]` restaking_program
-///   6. `[]` system_program
+///   0. `[]` vault_registry
+///   1. `[]` ncn
+///   2. `[writable]` weight_table
+///   3. `[writable, signer]` payer
+///   4. `[]` restaking_program
+///   5. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeWeightTableCpiBuilder<'a, 'b> {
     instruction: Box<InitializeWeightTableCpiBuilderInstruction<'a, 'b>>,
@@ -395,7 +367,6 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(InitializeWeightTableCpiBuilderInstruction {
             __program: program,
-            restaking_config: None,
             vault_registry: None,
             ncn: None,
             weight_table: None,
@@ -406,14 +377,6 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_config = Some(restaking_config);
-        self
     }
     #[inline(always)]
     pub fn vault_registry(
@@ -509,11 +472,6 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
         let instruction = InitializeWeightTableCpi {
             __program: self.instruction.__program,
 
-            restaking_config: self
-                .instruction
-                .restaking_config
-                .expect("restaking_config is not set"),
-
             vault_registry: self
                 .instruction
                 .vault_registry
@@ -549,7 +507,6 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct InitializeWeightTableCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,

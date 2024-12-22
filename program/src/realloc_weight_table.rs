@@ -4,7 +4,7 @@ use jito_jsm_core::{
     realloc,
 };
 use jito_tip_router_core::{
-    ncn_config::NcnConfig, utils::get_new_size, vault_registry::VaultRegistry,
+    config::Config as NcnConfig, utils::get_new_size, vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
 use solana_program::{

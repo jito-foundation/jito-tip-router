@@ -1,6 +1,6 @@
 mod tests {
     use jito_tip_router_client::types::ConfigAdminRole;
-    use jito_tip_router_core::{error::TipRouterError, ncn_config::NcnConfig};
+    use jito_tip_router_core::{config::Config as NcnConfig, error::TipRouterError};
     use solana_program::pubkey::Pubkey;
     use solana_sdk::{instruction::InstructionError, signature::Keypair};
 

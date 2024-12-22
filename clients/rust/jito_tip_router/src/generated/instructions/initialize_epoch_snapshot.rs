@@ -10,8 +10,6 @@ use borsh::{BorshDeserialize, BorshSerialize};
 pub struct InitializeEpochSnapshot {
     pub config: solana_program::pubkey::Pubkey,
 
-    pub restaking_config: solana_program::pubkey::Pubkey,
-
     pub ncn: solana_program::pubkey::Pubkey,
 
     pub weight_table: solana_program::pubkey::Pubkey,
@@ -38,13 +36,9 @@ impl InitializeEpochSnapshot {
         args: InitializeEpochSnapshotInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.config,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -112,17 +106,15 @@ pub struct InitializeEpochSnapshotInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[]` config
-///   1. `[]` restaking_config
-///   2. `[]` ncn
-///   3. `[]` weight_table
-///   4. `[writable]` epoch_snapshot
-///   5. `[writable, signer]` payer
-///   6. `[]` restaking_program
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   1. `[]` ncn
+///   2. `[]` weight_table
+///   3. `[writable]` epoch_snapshot
+///   4. `[writable, signer]` payer
+///   5. `[]` restaking_program
+///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeEpochSnapshotBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
-    restaking_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     weight_table: Option<solana_program::pubkey::Pubkey>,
     epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
@@ -140,14 +132,6 @@ impl InitializeEpochSnapshotBuilder {
     #[inline(always)]
     pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
         self.config = Some(config);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_config = Some(restaking_config);
         self
     }
     #[inline(always)]
@@ -211,7 +195,6 @@ impl InitializeEpochSnapshotBuilder {
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = InitializeEpochSnapshot {
             config: self.config.expect("config is not set"),
-            restaking_config: self.restaking_config.expect("restaking_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             weight_table: self.weight_table.expect("weight_table is not set"),
             epoch_snapshot: self.epoch_snapshot.expect("epoch_snapshot is not set"),
@@ -235,8 +218,6 @@ impl InitializeEpochSnapshotBuilder {
 pub struct InitializeEpochSnapshotCpiAccounts<'a, 'b> {
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
@@ -256,8 +237,6 @@ pub struct InitializeEpochSnapshotCpi<'a, 'b> {
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -283,7 +262,6 @@ impl<'a, 'b> InitializeEpochSnapshotCpi<'a, 'b> {
         Self {
             __program: program,
             config: accounts.config,
-            restaking_config: accounts.restaking_config,
             ncn: accounts.ncn,
             weight_table: accounts.weight_table,
             epoch_snapshot: accounts.epoch_snapshot,
@@ -326,13 +304,9 @@ impl<'a, 'b> InitializeEpochSnapshotCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.config.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -377,10 +351,9 @@ impl<'a, 'b> InitializeEpochSnapshotCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.config.clone());
-        account_infos.push(self.restaking_config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.weight_table.clone());
         account_infos.push(self.epoch_snapshot.clone());
@@ -404,13 +377,12 @@ impl<'a, 'b> InitializeEpochSnapshotCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[]` config
-///   1. `[]` restaking_config
-///   2. `[]` ncn
-///   3. `[]` weight_table
-///   4. `[writable]` epoch_snapshot
-///   5. `[writable, signer]` payer
-///   6. `[]` restaking_program
-///   7. `[]` system_program
+///   1. `[]` ncn
+///   2. `[]` weight_table
+///   3. `[writable]` epoch_snapshot
+///   4. `[writable, signer]` payer
+///   5. `[]` restaking_program
+///   6. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeEpochSnapshotCpiBuilder<'a, 'b> {
     instruction: Box<InitializeEpochSnapshotCpiBuilderInstruction<'a, 'b>>,
@@ -421,7 +393,6 @@ impl<'a, 'b> InitializeEpochSnapshotCpiBuilder<'a, 'b> {
         let instruction = Box::new(InitializeEpochSnapshotCpiBuilderInstruction {
             __program: program,
             config: None,
-            restaking_config: None,
             ncn: None,
             weight_table: None,
             epoch_snapshot: None,
@@ -439,14 +410,6 @@ impl<'a, 'b> InitializeEpochSnapshotCpiBuilder<'a, 'b> {
         config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.config = Some(config);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_config = Some(restaking_config);
         self
     }
     #[inline(always)]
@@ -545,11 +508,6 @@ impl<'a, 'b> InitializeEpochSnapshotCpiBuilder<'a, 'b> {
 
             config: self.instruction.config.expect("config is not set"),
 
-            restaking_config: self
-                .instruction
-                .restaking_config
-                .expect("restaking_config is not set"),
-
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
             weight_table: self
@@ -586,7 +544,6 @@ impl<'a, 'b> InitializeEpochSnapshotCpiBuilder<'a, 'b> {
 struct InitializeEpochSnapshotCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,

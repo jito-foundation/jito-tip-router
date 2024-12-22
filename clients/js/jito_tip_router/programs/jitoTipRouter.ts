@@ -53,9 +53,9 @@ export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
 export enum JitoTipRouterAccount {
   BallotBox,
   BaseRewardRouter,
+  Config,
   EpochSnapshot,
   OperatorSnapshot,
-  NcnConfig,
   NcnRewardRouter,
   VaultRegistry,
   WeightTable,
@@ -64,16 +64,21 @@ export enum JitoTipRouterAccount {
 export enum JitoTipRouterInstruction {
   InitializeConfig,
   InitializeVaultRegistry,
-  AdminSetConfigFees,
-  AdminSetNewAdmin,
+  ReallocVaultRegistry,
+  RegisterVault,
   InitializeWeightTable,
-  AdminSetWeight,
+  ReallocWeightTable,
   SwitchboardSetWeight,
   InitializeEpochSnapshot,
   InitializeOperatorSnapshot,
+  ReallocOperatorSnapshot,
   SnapshotVaultOperatorDelegation,
-  RegisterVault,
+  InitializeBallotBox,
+  ReallocBallotBox,
+  CastVote,
+  SetMerkleRoot,
   InitializeBaseRewardRouter,
+  ReallocBaseRewardRouter,
   InitializeNcnRewardRouter,
   RouteBaseRewards,
   RouteNcnRewards,
@@ -81,19 +86,14 @@ export enum JitoTipRouterInstruction {
   DistributeBaseNcnRewardRoute,
   DistributeNcnOperatorRewards,
   DistributeNcnVaultRewards,
+  ClaimWithPayer,
+  AdminSetParameters,
+  AdminSetConfigFees,
+  AdminSetNewAdmin,
+  AdminSetTieBreaker,
+  AdminSetWeight,
   AdminRegisterStMint,
   AdminSetStMint,
-  InitializeBallotBox,
-  CastVote,
-  SetMerkleRoot,
-  AdminSetTieBreaker,
-  ClaimWithPayer,
-  ReallocBallotBox,
-  ReallocOperatorSnapshot,
-  ReallocBaseRewardRouter,
-  ReallocWeightTable,
-  ReallocVaultRegistry,
-  AdminSetParameters,
 }
 
 export function identifyJitoTipRouterInstruction(
@@ -107,16 +107,16 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.InitializeVaultRegistry;
   }
   if (containsBytes(data, getU8Encoder().encode(2), 0)) {
-    return JitoTipRouterInstruction.AdminSetConfigFees;
+    return JitoTipRouterInstruction.ReallocVaultRegistry;
   }
   if (containsBytes(data, getU8Encoder().encode(3), 0)) {
-    return JitoTipRouterInstruction.AdminSetNewAdmin;
+    return JitoTipRouterInstruction.RegisterVault;
   }
   if (containsBytes(data, getU8Encoder().encode(4), 0)) {
     return JitoTipRouterInstruction.InitializeWeightTable;
   }
   if (containsBytes(data, getU8Encoder().encode(5), 0)) {
-    return JitoTipRouterInstruction.AdminSetWeight;
+    return JitoTipRouterInstruction.ReallocWeightTable;
   }
   if (containsBytes(data, getU8Encoder().encode(6), 0)) {
     return JitoTipRouterInstruction.SwitchboardSetWeight;
@@ -128,73 +128,73 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.InitializeOperatorSnapshot;
   }
   if (containsBytes(data, getU8Encoder().encode(9), 0)) {
-    return JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
-  }
-  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
-    return JitoTipRouterInstruction.RegisterVault;
-  }
-  if (containsBytes(data, getU8Encoder().encode(11), 0)) {
-    return JitoTipRouterInstruction.InitializeBaseRewardRouter;
-  }
-  if (containsBytes(data, getU8Encoder().encode(12), 0)) {
-    return JitoTipRouterInstruction.InitializeNcnRewardRouter;
-  }
-  if (containsBytes(data, getU8Encoder().encode(13), 0)) {
-    return JitoTipRouterInstruction.RouteBaseRewards;
-  }
-  if (containsBytes(data, getU8Encoder().encode(14), 0)) {
-    return JitoTipRouterInstruction.RouteNcnRewards;
-  }
-  if (containsBytes(data, getU8Encoder().encode(15), 0)) {
-    return JitoTipRouterInstruction.DistributeBaseRewards;
-  }
-  if (containsBytes(data, getU8Encoder().encode(16), 0)) {
-    return JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
-  }
-  if (containsBytes(data, getU8Encoder().encode(17), 0)) {
-    return JitoTipRouterInstruction.DistributeNcnOperatorRewards;
-  }
-  if (containsBytes(data, getU8Encoder().encode(18), 0)) {
-    return JitoTipRouterInstruction.DistributeNcnVaultRewards;
-  }
-  if (containsBytes(data, getU8Encoder().encode(19), 0)) {
-    return JitoTipRouterInstruction.AdminRegisterStMint;
-  }
-  if (containsBytes(data, getU8Encoder().encode(20), 0)) {
-    return JitoTipRouterInstruction.AdminSetStMint;
-  }
-  if (containsBytes(data, getU8Encoder().encode(21), 0)) {
-    return JitoTipRouterInstruction.InitializeBallotBox;
-  }
-  if (containsBytes(data, getU8Encoder().encode(22), 0)) {
-    return JitoTipRouterInstruction.CastVote;
-  }
-  if (containsBytes(data, getU8Encoder().encode(23), 0)) {
-    return JitoTipRouterInstruction.SetMerkleRoot;
-  }
-  if (containsBytes(data, getU8Encoder().encode(24), 0)) {
-    return JitoTipRouterInstruction.AdminSetTieBreaker;
-  }
-  if (containsBytes(data, getU8Encoder().encode(25), 0)) {
-    return JitoTipRouterInstruction.ClaimWithPayer;
-  }
-  if (containsBytes(data, getU8Encoder().encode(26), 0)) {
-    return JitoTipRouterInstruction.ReallocBallotBox;
-  }
-  if (containsBytes(data, getU8Encoder().encode(27), 0)) {
     return JitoTipRouterInstruction.ReallocOperatorSnapshot;
   }
-  if (containsBytes(data, getU8Encoder().encode(28), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
+    return JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
+  }
+  if (containsBytes(data, getU8Encoder().encode(11), 0)) {
+    return JitoTipRouterInstruction.InitializeBallotBox;
+  }
+  if (containsBytes(data, getU8Encoder().encode(12), 0)) {
+    return JitoTipRouterInstruction.ReallocBallotBox;
+  }
+  if (containsBytes(data, getU8Encoder().encode(13), 0)) {
+    return JitoTipRouterInstruction.CastVote;
+  }
+  if (containsBytes(data, getU8Encoder().encode(14), 0)) {
+    return JitoTipRouterInstruction.SetMerkleRoot;
+  }
+  if (containsBytes(data, getU8Encoder().encode(15), 0)) {
+    return JitoTipRouterInstruction.InitializeBaseRewardRouter;
+  }
+  if (containsBytes(data, getU8Encoder().encode(16), 0)) {
     return JitoTipRouterInstruction.ReallocBaseRewardRouter;
   }
+  if (containsBytes(data, getU8Encoder().encode(17), 0)) {
+    return JitoTipRouterInstruction.InitializeNcnRewardRouter;
+  }
+  if (containsBytes(data, getU8Encoder().encode(18), 0)) {
+    return JitoTipRouterInstruction.RouteBaseRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(19), 0)) {
+    return JitoTipRouterInstruction.RouteNcnRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(20), 0)) {
+    return JitoTipRouterInstruction.DistributeBaseRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(21), 0)) {
+    return JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
+  }
+  if (containsBytes(data, getU8Encoder().encode(22), 0)) {
+    return JitoTipRouterInstruction.DistributeNcnOperatorRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(23), 0)) {
+    return JitoTipRouterInstruction.DistributeNcnVaultRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(24), 0)) {
+    return JitoTipRouterInstruction.ClaimWithPayer;
+  }
+  if (containsBytes(data, getU8Encoder().encode(25), 0)) {
+    return JitoTipRouterInstruction.AdminSetParameters;
+  }
+  if (containsBytes(data, getU8Encoder().encode(26), 0)) {
+    return JitoTipRouterInstruction.AdminSetConfigFees;
+  }
+  if (containsBytes(data, getU8Encoder().encode(27), 0)) {
+    return JitoTipRouterInstruction.AdminSetNewAdmin;
+  }
+  if (containsBytes(data, getU8Encoder().encode(28), 0)) {
+    return JitoTipRouterInstruction.AdminSetTieBreaker;
+  }
   if (containsBytes(data, getU8Encoder().encode(29), 0)) {
-    return JitoTipRouterInstruction.ReallocWeightTable;
+    return JitoTipRouterInstruction.AdminSetWeight;
   }
   if (containsBytes(data, getU8Encoder().encode(30), 0)) {
-    return JitoTipRouterInstruction.ReallocVaultRegistry;
+    return JitoTipRouterInstruction.AdminRegisterStMint;
   }
   if (containsBytes(data, getU8Encoder().encode(31), 0)) {
-    return JitoTipRouterInstruction.AdminSetParameters;
+    return JitoTipRouterInstruction.AdminSetStMint;
   }
   throw new Error(
     'The provided instruction could not be identified as a jitoTipRouter instruction.'
@@ -211,17 +211,17 @@ export type ParsedJitoTipRouterInstruction<
       instructionType: JitoTipRouterInstruction.InitializeVaultRegistry;
     } & ParsedInitializeVaultRegistryInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.AdminSetConfigFees;
-    } & ParsedAdminSetConfigFeesInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.ReallocVaultRegistry;
+    } & ParsedReallocVaultRegistryInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.AdminSetNewAdmin;
-    } & ParsedAdminSetNewAdminInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.RegisterVault;
+    } & ParsedRegisterVaultInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.InitializeWeightTable;
     } & ParsedInitializeWeightTableInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.AdminSetWeight;
-    } & ParsedAdminSetWeightInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.ReallocWeightTable;
+    } & ParsedReallocWeightTableInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.SwitchboardSetWeight;
     } & ParsedSwitchboardSetWeightInstruction<TProgram>)
@@ -232,14 +232,29 @@ export type ParsedJitoTipRouterInstruction<
       instructionType: JitoTipRouterInstruction.InitializeOperatorSnapshot;
     } & ParsedInitializeOperatorSnapshotInstruction<TProgram>)
   | ({
+      instructionType: JitoTipRouterInstruction.ReallocOperatorSnapshot;
+    } & ParsedReallocOperatorSnapshotInstruction<TProgram>)
+  | ({
       instructionType: JitoTipRouterInstruction.SnapshotVaultOperatorDelegation;
     } & ParsedSnapshotVaultOperatorDelegationInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.RegisterVault;
-    } & ParsedRegisterVaultInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.InitializeBallotBox;
+    } & ParsedInitializeBallotBoxInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ReallocBallotBox;
+    } & ParsedReallocBallotBoxInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.CastVote;
+    } & ParsedCastVoteInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.SetMerkleRoot;
+    } & ParsedSetMerkleRootInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.InitializeBaseRewardRouter;
     } & ParsedInitializeBaseRewardRouterInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ReallocBaseRewardRouter;
+    } & ParsedReallocBaseRewardRouterInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.InitializeNcnRewardRouter;
     } & ParsedInitializeNcnRewardRouterInstruction<TProgram>)
@@ -262,41 +277,26 @@ export type ParsedJitoTipRouterInstruction<
       instructionType: JitoTipRouterInstruction.DistributeNcnVaultRewards;
     } & ParsedDistributeNcnVaultRewardsInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.AdminRegisterStMint;
-    } & ParsedAdminRegisterStMintInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.ClaimWithPayer;
+    } & ParsedClaimWithPayerInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.AdminSetStMint;
-    } & ParsedAdminSetStMintInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.AdminSetParameters;
+    } & ParsedAdminSetParametersInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.InitializeBallotBox;
-    } & ParsedInitializeBallotBoxInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.AdminSetConfigFees;
+    } & ParsedAdminSetConfigFeesInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.CastVote;
-    } & ParsedCastVoteInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.SetMerkleRoot;
-    } & ParsedSetMerkleRootInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.AdminSetNewAdmin;
+    } & ParsedAdminSetNewAdminInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.AdminSetTieBreaker;
     } & ParsedAdminSetTieBreakerInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.ClaimWithPayer;
-    } & ParsedClaimWithPayerInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.AdminSetWeight;
+    } & ParsedAdminSetWeightInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.ReallocBallotBox;
-    } & ParsedReallocBallotBoxInstruction<TProgram>)
+      instructionType: JitoTipRouterInstruction.AdminRegisterStMint;
+    } & ParsedAdminRegisterStMintInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.ReallocOperatorSnapshot;
-    } & ParsedReallocOperatorSnapshotInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.ReallocBaseRewardRouter;
-    } & ParsedReallocBaseRewardRouterInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.ReallocWeightTable;
-    } & ParsedReallocWeightTableInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.ReallocVaultRegistry;
-    } & ParsedReallocVaultRegistryInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.AdminSetParameters;
-    } & ParsedAdminSetParametersInstruction<TProgram>);
+      instructionType: JitoTipRouterInstruction.AdminSetStMint;
+    } & ParsedAdminSetStMintInstruction<TProgram>);

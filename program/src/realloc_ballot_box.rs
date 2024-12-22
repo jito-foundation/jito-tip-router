@@ -3,7 +3,9 @@ use jito_jsm_core::{
     loader::{load_signer, load_system_program},
     realloc,
 };
-use jito_tip_router_core::{ballot_box::BallotBox, ncn_config::NcnConfig, utils::get_new_size};
+use jito_tip_router_core::{
+    ballot_box::BallotBox, config::Config as NcnConfig, utils::get_new_size,
+};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,

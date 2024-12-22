@@ -4,7 +4,7 @@ use jito_jsm_core::{
     realloc,
 };
 use jito_tip_router_core::{
-    base_reward_router::BaseRewardRouter, ncn_config::NcnConfig, utils::get_new_size,
+    base_reward_router::BaseRewardRouter, config::Config as NcnConfig, utils::get_new_size,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,

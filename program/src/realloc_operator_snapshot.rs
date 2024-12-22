@@ -7,9 +7,9 @@ use jito_restaking_core::{
     config::Config, ncn::Ncn, ncn_operator_state::NcnOperatorState, operator::Operator,
 };
 use jito_tip_router_core::{
+    config::Config as NcnConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     loaders::load_ncn_epoch,
-    ncn_config::NcnConfig,
     stake_weight::StakeWeights,
     utils::get_new_size,
 };

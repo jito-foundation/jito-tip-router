@@ -36,7 +36,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const CLAIM_WITH_PAYER_DISCRIMINATOR = 25;
+export const CLAIM_WITH_PAYER_DISCRIMINATOR = 24;
 
 export function getClaimWithPayerDiscriminatorBytes() {
   return getU8Encoder().encode(CLAIM_WITH_PAYER_DISCRIMINATOR);

@@ -40,7 +40,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ADMIN_SET_ST_MINT_DISCRIMINATOR = 20;
+export const ADMIN_SET_ST_MINT_DISCRIMINATOR = 31;
 
 export function getAdminSetStMintDiscriminatorBytes() {
   return getU8Encoder().encode(ADMIN_SET_ST_MINT_DISCRIMINATOR);
@@ -48,7 +48,6 @@ export function getAdminSetStMintDiscriminatorBytes() {
 
 export type AdminSetStMintInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountVaultRegistry extends string | IAccountMeta<string> = string,
@@ -59,9 +58,6 @@ export type AdminSetStMintInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountRestakingConfig extends string
-        ? ReadonlyAccount<TAccountRestakingConfig>
-        : TAccountRestakingConfig,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
@@ -133,14 +129,12 @@ export function getAdminSetStMintInstructionDataCodec(): Codec<
 }
 
 export type AdminSetStMintInput<
-  TAccountRestakingConfig extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountVaultRegistry extends string = string,
   TAccountAdmin extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
-  restakingConfig: Address<TAccountRestakingConfig>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   vaultRegistry: Address<TAccountVaultRegistry>;
@@ -154,7 +148,6 @@ export type AdminSetStMintInput<
 };
 
 export function getAdminSetStMintInstruction<
-  TAccountRestakingConfig extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountVaultRegistry extends string,
@@ -163,7 +156,6 @@ export function getAdminSetStMintInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: AdminSetStMintInput<
-    TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
     TAccountVaultRegistry,
@@ -173,7 +165,6 @@ export function getAdminSetStMintInstruction<
   config?: { programAddress?: TProgramAddress }
 ): AdminSetStMintInstruction<
   TProgramAddress,
-  TAccountRestakingConfig,
   TAccountConfig,
   TAccountNcn,
   TAccountVaultRegistry,
@@ -186,10 +177,6 @@ export function getAdminSetStMintInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    restakingConfig: {
-      value: input.restakingConfig ?? null,
-      isWritable: false,
-    },
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: true },
@@ -210,7 +197,6 @@ export function getAdminSetStMintInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.vaultRegistry),
@@ -223,7 +209,6 @@ export function getAdminSetStMintInstruction<
     ),
   } as AdminSetStMintInstruction<
     TProgramAddress,
-    TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
     TAccountVaultRegistry,
@@ -240,12 +225,11 @@ export type ParsedAdminSetStMintInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    restakingConfig: TAccountMetas[0];
-    config: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    vaultRegistry: TAccountMetas[3];
-    admin: TAccountMetas[4];
-    restakingProgram: TAccountMetas[5];
+    config: TAccountMetas[0];
+    ncn: TAccountMetas[1];
+    vaultRegistry: TAccountMetas[2];
+    admin: TAccountMetas[3];
+    restakingProgram: TAccountMetas[4];
   };
   data: AdminSetStMintInstructionData;
 };
@@ -258,7 +242,7 @@ export function parseAdminSetStMintInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminSetStMintInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -271,7 +255,6 @@ export function parseAdminSetStMintInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      restakingConfig: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
       vaultRegistry: getNextAccount(),

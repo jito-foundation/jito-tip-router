@@ -41,7 +41,6 @@ export function getInitializeOperatorSnapshotDiscriminatorBytes() {
 export type InitializeOperatorSnapshotInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountConfig extends string | IAccountMeta<string> = string,
-  TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
   TAccountNcnOperatorState extends string | IAccountMeta<string> = string,
@@ -60,9 +59,6 @@ export type InitializeOperatorSnapshotInstruction<
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
-      TAccountRestakingConfig extends string
-        ? ReadonlyAccount<TAccountRestakingConfig>
-        : TAccountRestakingConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountOperator extends string
         ? ReadonlyAccount<TAccountOperator>
@@ -131,7 +127,6 @@ export function getInitializeOperatorSnapshotInstructionDataCodec(): Codec<
 
 export type InitializeOperatorSnapshotInput<
   TAccountConfig extends string = string,
-  TAccountRestakingConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
   TAccountNcnOperatorState extends string = string,
@@ -142,7 +137,6 @@ export type InitializeOperatorSnapshotInput<
   TAccountSystemProgram extends string = string,
 > = {
   config: Address<TAccountConfig>;
-  restakingConfig: Address<TAccountRestakingConfig>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
   ncnOperatorState: Address<TAccountNcnOperatorState>;
@@ -156,7 +150,6 @@ export type InitializeOperatorSnapshotInput<
 
 export function getInitializeOperatorSnapshotInstruction<
   TAccountConfig extends string,
-  TAccountRestakingConfig extends string,
   TAccountNcn extends string,
   TAccountOperator extends string,
   TAccountNcnOperatorState extends string,
@@ -169,7 +162,6 @@ export function getInitializeOperatorSnapshotInstruction<
 >(
   input: InitializeOperatorSnapshotInput<
     TAccountConfig,
-    TAccountRestakingConfig,
     TAccountNcn,
     TAccountOperator,
     TAccountNcnOperatorState,
@@ -183,7 +175,6 @@ export function getInitializeOperatorSnapshotInstruction<
 ): InitializeOperatorSnapshotInstruction<
   TProgramAddress,
   TAccountConfig,
-  TAccountRestakingConfig,
   TAccountNcn,
   TAccountOperator,
   TAccountNcnOperatorState,
@@ -200,10 +191,6 @@ export function getInitializeOperatorSnapshotInstruction<
   // Original accounts.
   const originalAccounts = {
     config: { value: input.config ?? null, isWritable: false },
-    restakingConfig: {
-      value: input.restakingConfig ?? null,
-      isWritable: false,
-    },
     ncn: { value: input.ncn ?? null, isWritable: false },
     operator: { value: input.operator ?? null, isWritable: false },
     ncnOperatorState: {
@@ -240,7 +227,6 @@ export function getInitializeOperatorSnapshotInstruction<
   const instruction = {
     accounts: [
       getAccountMeta(accounts.config),
-      getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
       getAccountMeta(accounts.ncnOperatorState),
@@ -257,7 +243,6 @@ export function getInitializeOperatorSnapshotInstruction<
   } as InitializeOperatorSnapshotInstruction<
     TProgramAddress,
     TAccountConfig,
-    TAccountRestakingConfig,
     TAccountNcn,
     TAccountOperator,
     TAccountNcnOperatorState,
@@ -278,15 +263,14 @@ export type ParsedInitializeOperatorSnapshotInstruction<
   programAddress: Address<TProgram>;
   accounts: {
     config: TAccountMetas[0];
-    restakingConfig: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    operator: TAccountMetas[3];
-    ncnOperatorState: TAccountMetas[4];
-    epochSnapshot: TAccountMetas[5];
-    operatorSnapshot: TAccountMetas[6];
-    payer: TAccountMetas[7];
-    restakingProgram: TAccountMetas[8];
-    systemProgram: TAccountMetas[9];
+    ncn: TAccountMetas[1];
+    operator: TAccountMetas[2];
+    ncnOperatorState: TAccountMetas[3];
+    epochSnapshot: TAccountMetas[4];
+    operatorSnapshot: TAccountMetas[5];
+    payer: TAccountMetas[6];
+    restakingProgram: TAccountMetas[7];
+    systemProgram: TAccountMetas[8];
   };
   data: InitializeOperatorSnapshotInstructionData;
 };
@@ -299,7 +283,7 @@ export function parseInitializeOperatorSnapshotInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeOperatorSnapshotInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 10) {
+  if (instruction.accounts.length < 9) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -313,7 +297,6 @@ export function parseInitializeOperatorSnapshotInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       config: getNextAccount(),
-      restakingConfig: getNextAccount(),
       ncn: getNextAccount(),
       operator: getNextAccount(),
       ncnOperatorState: getNextAccount(),

@@ -1,7 +1,7 @@
 use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::{loader::load_system_program, realloc};
 use jito_tip_router_core::{
-    ncn_config::NcnConfig, utils::get_new_size, vault_registry::VaultRegistry,
+    config::Config as NcnConfig, utils::get_new_size, vault_registry::VaultRegistry,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,

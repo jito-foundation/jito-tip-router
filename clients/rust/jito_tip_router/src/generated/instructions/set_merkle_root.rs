@@ -90,7 +90,7 @@ pub struct SetMerkleRootInstructionData {
 
 impl SetMerkleRootInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 23 }
+        Self { discriminator: 14 }
     }
 }
 

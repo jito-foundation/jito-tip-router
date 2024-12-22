@@ -1,5 +1,5 @@
 use jito_bytemuck::AccountDeserialize;
-use jito_restaking_core::{config::Config, ncn::Ncn};
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     ballot_box::BallotBox,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
@@ -17,7 +17,7 @@ pub fn process_route_base_rewards(
     max_iterations: u16,
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn, epoch_snapshot, ballot_box, base_reward_router, base_reward_receiver, restaking_program] =
+    let [ncn, epoch_snapshot, ballot_box, base_reward_router, base_reward_receiver, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -28,7 +28,6 @@ pub fn process_route_base_rewards(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
     EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;

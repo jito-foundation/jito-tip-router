@@ -2,7 +2,8 @@ use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    error::TipRouterError, instruction::ConfigAdminRole, ncn_config::NcnConfig,
+    config::{Config as NcnConfig, ConfigAdminRole},
+    error::TipRouterError,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,

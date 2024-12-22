@@ -6,8 +6,8 @@ mod set_merkle_root {
     use jito_tip_router_core::{
         ballot_box::{Ballot, BallotBox},
         claim_status_payer::ClaimStatusPayer,
+        config::Config as NcnConfig,
         error::TipRouterError,
-        ncn_config::NcnConfig,
     };
     use meta_merkle_tree::{
         generated_merkle_tree::{

@@ -25,10 +25,10 @@ use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     claim_status_payer::ClaimStatusPayer,
+    config::Config as NcnConfig,
     constants::{JITO_SOL_MINT, MAX_REALLOC_BYTES},
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     error::TipRouterError,
-    ncn_config::NcnConfig,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
     vault_registry::VaultRegistry,
@@ -298,11 +298,9 @@ impl TipRouterClient {
         epochs_before_stall: u64,
         valid_slots_after_consensus: u64,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
         let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         let ix = InitializeConfigBuilder::new()
-            .restaking_config(restaking_config)
             .config(ncn_config)
             .ncn(ncn)
             .ncn_admin(ncn_admin.pubkey())
@@ -363,12 +361,9 @@ impl TipRouterClient {
         new_ncn_fee_bps: Option<u16>,
         ncn_root: &NcnRoot,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
-
         let ix = {
             let mut builder = AdminSetConfigFeesBuilder::new();
             builder
-                .restaking_config(restaking_config)
                 .config(config_pda)
                 .ncn(ncn_root.ncn_pubkey)
                 .ncn_admin(ncn_root.ncn_admin.pubkey())
@@ -467,14 +462,12 @@ impl TipRouterClient {
     }
 
     pub async fn initialize_weight_table(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
         let vault_registry =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let ix = InitializeWeightTableBuilder::new()
-            .restaking_config(restaking_config)
             .vault_registry(vault_registry)
             .ncn(ncn)
             .weight_table(weight_table)
@@ -718,8 +711,6 @@ impl TipRouterClient {
         switchboard_feed: Option<Pubkey>,
         no_feed_weight: Option<u128>,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
-
         let vault_registry =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
@@ -730,7 +721,6 @@ impl TipRouterClient {
 
         self.admin_register_st_mint(
             ncn,
-            restaking_config,
             ncn_config,
             vault_registry,
             admin,
@@ -746,7 +736,6 @@ impl TipRouterClient {
     pub async fn admin_register_st_mint(
         &mut self,
         ncn: Pubkey,
-        restaking_config: Pubkey,
         ncn_config: Pubkey,
         vault_registry: Pubkey,
         admin: Pubkey,
@@ -759,7 +748,6 @@ impl TipRouterClient {
         let ix = {
             let mut builder = AdminRegisterStMintBuilder::new();
             builder
-                .restaking_config(restaking_config)
                 .config(ncn_config)
                 .ncn(ncn)
                 .vault_registry(vault_registry)
@@ -799,20 +787,16 @@ impl TipRouterClient {
         switchboard_feed: Option<Pubkey>,
         no_feed_weight: Option<u128>,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
-
         let vault_registry =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         let (ncn_config, _, _) =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
 
-        //TODO: Check admin is correct
         let admin = self.payer.pubkey();
 
         self.admin_set_st_mint(
             ncn,
-            restaking_config,
             ncn_config,
             vault_registry,
             admin,
@@ -828,7 +812,6 @@ impl TipRouterClient {
     pub async fn admin_set_st_mint(
         &mut self,
         ncn: Pubkey,
-        restaking_config: Pubkey,
         ncn_config: Pubkey,
         vault_registry: Pubkey,
         admin: Pubkey,
@@ -841,7 +824,6 @@ impl TipRouterClient {
         let ix = {
             let mut builder = AdminSetStMintBuilder::new();
             builder
-                .restaking_config(restaking_config)
                 .config(ncn_config)
                 .ncn(ncn)
                 .vault_registry(vault_registry)
@@ -887,7 +869,6 @@ impl TipRouterClient {
     }
 
     pub async fn initialize_epoch_snapshot(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
         let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
@@ -896,7 +877,6 @@ impl TipRouterClient {
 
         let ix = InitializeEpochSnapshotBuilder::new()
             .config(config_pda)
-            .restaking_config(restaking_config)
             .ncn(ncn)
             .weight_table(weight_table)
             .epoch_snapshot(epoch_snapshot)
@@ -947,7 +927,6 @@ impl TipRouterClient {
         ncn: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
         let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let ncn_operator_state =
             NcnOperatorState::find_program_address(&jito_restaking_program::id(), &ncn, &operator)
@@ -964,7 +943,6 @@ impl TipRouterClient {
 
         let ix = InitializeOperatorSnapshotBuilder::new()
             .config(config_pda)
-            .restaking_config(restaking_config)
             .ncn(ncn)
             .operator(operator)
             .ncn_operator_state(ncn_operator_state)
@@ -1405,34 +1383,24 @@ impl TipRouterClient {
         ncn: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
-
         let (base_reward_router, _, _) =
             BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
         let (base_reward_receiver, _, _) =
             BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
-        self.initialize_base_reward_router(
-            restaking_config,
-            ncn,
-            base_reward_router,
-            base_reward_receiver,
-            epoch,
-        )
-        .await
+        self.initialize_base_reward_router(ncn, base_reward_router, base_reward_receiver, epoch)
+            .await
     }
 
     pub async fn initialize_base_reward_router(
         &mut self,
-        restaking_config: Pubkey,
         ncn: Pubkey,
         base_reward_router: Pubkey,
         base_reward_receiver: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
         let ix = InitializeBaseRewardRouterBuilder::new()
-            .restaking_config(restaking_config)
             .ncn(ncn)
             .base_reward_router(base_reward_router)
             .base_reward_receiver(base_reward_receiver)
@@ -1459,8 +1427,6 @@ impl TipRouterClient {
         operator: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
-
         let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
             &jito_tip_router_program::id(),
             ncn_fee_group,
@@ -1481,7 +1447,6 @@ impl TipRouterClient {
             ncn_fee_group,
             ncn,
             operator,
-            restaking_config,
             ncn_reward_router,
             ncn_reward_receiver,
             epoch,
@@ -1494,13 +1459,11 @@ impl TipRouterClient {
         ncn_fee_group: NcnFeeGroup,
         ncn: Pubkey,
         operator: Pubkey,
-        restaking_config: Pubkey,
         ncn_reward_router: Pubkey,
         ncn_reward_receiver: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
         let ix = InitializeNcnRewardRouterBuilder::new()
-            .restaking_config(restaking_config)
             .ncn(ncn)
             .operator(operator)
             .ncn_reward_router(ncn_reward_router)
@@ -1523,8 +1486,6 @@ impl TipRouterClient {
     }
 
     pub async fn do_route_base_rewards(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
-
         let (epoch_snapshot, _, _) =
             EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
@@ -1544,7 +1505,6 @@ impl TipRouterClient {
         while still_routing {
             self.route_base_rewards(
                 ncn,
-                restaking_config,
                 epoch_snapshot,
                 ballot_box,
                 base_reward_router,
@@ -1565,7 +1525,6 @@ impl TipRouterClient {
     pub async fn route_base_rewards(
         &mut self,
         ncn: Pubkey,
-        restaking_config: Pubkey,
         epoch_snapshot: Pubkey,
         ballot_box: Pubkey,
         base_reward_router: Pubkey,
@@ -1574,7 +1533,6 @@ impl TipRouterClient {
         epoch: u64,
     ) -> TestResult<()> {
         let ix = RouteBaseRewardsBuilder::new()
-            .restaking_config(restaking_config)
             .ncn(ncn)
             .epoch_snapshot(epoch_snapshot)
             .ballot_box(ballot_box)
@@ -1621,8 +1579,6 @@ impl TipRouterClient {
         operator: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
-
         let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
             &jito_tip_router_program::id(),
             &operator,
@@ -1654,7 +1610,6 @@ impl TipRouterClient {
                 ncn_fee_group,
                 ncn,
                 operator,
-                restaking_config,
                 operator_snapshot,
                 ncn_reward_router,
                 ncn_reward_receiver,
@@ -1678,7 +1633,6 @@ impl TipRouterClient {
         ncn_fee_group: NcnFeeGroup,
         ncn: Pubkey,
         operator: Pubkey,
-        restaking_config: Pubkey,
         operator_snapshot: Pubkey,
         ncn_reward_router: Pubkey,
         ncn_reward_receiver: Pubkey,
@@ -1686,7 +1640,6 @@ impl TipRouterClient {
         epoch: u64,
     ) -> TestResult<()> {
         let ix = RouteNcnRewardsBuilder::new()
-            .restaking_config(restaking_config)
             .ncn(ncn)
             .operator(operator)
             .operator_snapshot(operator_snapshot)
@@ -1719,8 +1672,6 @@ impl TipRouterClient {
         epoch: u64,
         pool_root: &PoolRoot,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
-
         let (ncn_config, _, _) =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
 
@@ -1751,7 +1702,6 @@ impl TipRouterClient {
         let referrer_pool_tokens_account = pool_root.referrer_pool_tokens_account;
 
         let ix = DistributeBaseRewardsBuilder::new()
-            .restaking_config(restaking_config)
             .config(ncn_config)
             .ncn(ncn)
             .base_reward_router(base_reward_router)
@@ -1791,8 +1741,6 @@ impl TipRouterClient {
         ncn: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
-
         let (ncn_config, _, _) =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
 
@@ -1820,7 +1768,6 @@ impl TipRouterClient {
             ncn_fee_group,
             operator,
             ncn,
-            restaking_config,
             ncn_config,
             base_reward_router,
             base_reward_receiver,
@@ -1836,7 +1783,6 @@ impl TipRouterClient {
         ncn_fee_group: NcnFeeGroup,
         operator: Pubkey,
         ncn: Pubkey,
-        restaking_config: Pubkey,
         ncn_config: Pubkey,
         base_reward_router: Pubkey,
         base_reward_receiver: Pubkey,
@@ -1845,7 +1791,6 @@ impl TipRouterClient {
         epoch: u64,
     ) -> TestResult<()> {
         let ix = DistributeBaseNcnRewardRouteBuilder::new()
-            .restaking_config(restaking_config)
             .config(ncn_config)
             .ncn(ncn)
             .operator(operator)
@@ -1877,7 +1822,6 @@ impl TipRouterClient {
         epoch: u64,
         pool_root: &PoolRoot,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
         let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
         let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
@@ -1913,7 +1857,6 @@ impl TipRouterClient {
         );
 
         let ix = DistributeNcnOperatorRewardsBuilder::new()
-            .restaking_config(restaking_config)
             .config(ncn_config)
             .ncn(ncn)
             .operator(operator)
@@ -1954,7 +1897,6 @@ impl TipRouterClient {
         pool_root: &PoolRoot,
     ) -> TestResult<()> {
         let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
             &jito_tip_router_program::id(),
@@ -1989,7 +1931,6 @@ impl TipRouterClient {
         );
 
         let ix = DistributeNcnVaultRewardsBuilder::new()
-            .restaking_config(restaking_config)
             .config(ncn_config)
             .ncn(ncn)
             .operator(operator)
@@ -2069,7 +2010,7 @@ impl TipRouterClient {
         num_reallocations: u64,
     ) -> Result<(), TestError> {
         let ix = ReallocOperatorSnapshotBuilder::new()
-            .config(ncn_config)
+            .ncn_config(ncn_config)
             .restaking_config(restaking_config)
             .ncn(ncn)
             .operator(operator)
@@ -2276,13 +2217,11 @@ impl TipRouterClient {
         valid_slots_after_consensus: Option<u64>,
         ncn_root: &NcnRoot,
     ) -> TestResult<()> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
         let config_pda =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_root.ncn_pubkey).0;
 
         let mut ix = AdminSetParametersBuilder::new();
-        ix.restaking_config(restaking_config)
-            .config(config_pda)
+        ix.config(config_pda)
             .ncn(ncn_root.ncn_pubkey)
             .ncn_admin(ncn_root.ncn_admin.pubkey())
             .restaking_program(jito_restaking_program::id());

@@ -30,7 +30,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const REALLOC_VAULT_REGISTRY_DISCRIMINATOR = 30;
+export const REALLOC_VAULT_REGISTRY_DISCRIMINATOR = 2;
 
 export function getReallocVaultRegistryDiscriminatorBytes() {
   return getU8Encoder().encode(REALLOC_VAULT_REGISTRY_DISCRIMINATOR);
