@@ -309,7 +309,8 @@ mod tests {
 
         let operator_count = MAX_OPERATORS;
         let vault_count = MAX_VAULTS;
-        let should_distribute = false;
+        let should_distribute = true;
+        let sol_rewards = 100.0;
 
         // Setup with 2 operators for interesting reward splits
         // 10% Operator fee
@@ -402,9 +403,6 @@ mod tests {
         // Route in 3_000 lamports
         let (base_reward_receiver, _, _) =
             BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-        // Send rewards to base reward router
-        let sol_rewards = 100.0;
 
         // send rewards to the base reward router
         tip_router_client
