@@ -10,6 +10,14 @@ pub const CONFIG_SEED: &[u8] = b"CONFIG_ACCOUNT";
 pub const CLAIM_STATUS_SEED: &[u8] = b"CLAIM_STATUS";
 pub const TIP_DISTRIBUTION_SEED: &[u8] = b"TIP_DISTRIBUTION_ACCOUNT";
 
+pub const HEADER_SIZE: usize = 8;
+pub const TIP_DISTRIBUTION_SIZE: usize =
+    HEADER_SIZE + std::mem::size_of::<jito_tip_distribution::accounts::TipDistributionAccount>();
+pub const CLAIM_STATUS_SIZE: usize =
+    HEADER_SIZE + std::mem::size_of::<jito_tip_distribution::accounts::ClaimStatus>();
+pub const CONFIG_SIZE: usize =
+    HEADER_SIZE + std::mem::size_of::<jito_tip_distribution::accounts::Config>();
+
 pub fn derive_tip_distribution_account_address(
     tip_distribution_program_id: &Pubkey,
     vote_pubkey: &Pubkey,

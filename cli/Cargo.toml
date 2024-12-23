@@ -23,10 +23,8 @@ jito-vault-client = { workspace = true }
 jito-vault-core = { workspace = true }
 log = { workspace = true }
 solana-account-decoder = { workspace = true }
-solana-cli-config = { workspace = true }
 solana-program = { workspace = true }
 solana-rpc-client = { workspace = true }
-solana-rpc-client-api = { workspace = true }
 solana-sdk = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-token = { workspace = true }
