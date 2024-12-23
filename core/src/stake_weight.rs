@@ -7,7 +7,9 @@ use crate::{error::TipRouterError, ncn_fee_group::NcnFeeGroup};
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct StakeWeights {
+    /// The total stake weight - used for voting
     stake_weight: PodU128,
+    /// The components that make up the total stake weight - used for rewards
     ncn_fee_group_stake_weights: [NcnFeeGroupWeight; 8],
 }
 
@@ -103,6 +105,7 @@ impl StakeWeights {
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct NcnFeeGroupWeight {
+    /// The weight
     weight: PodU128,
 }
 

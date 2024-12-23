@@ -1925,7 +1925,7 @@
             "type": "publicKey"
           },
           {
-            "name": "ncnEpoch",
+            "name": "epoch",
             "type": {
               "defined": "PodU64"
             }
@@ -2074,7 +2074,7 @@
             "type": "publicKey"
           },
           {
-            "name": "ncnEpoch",
+            "name": "epoch",
             "type": {
               "defined": "PodU64"
             }
@@ -2269,7 +2269,7 @@
             "type": "publicKey"
           },
           {
-            "name": "ncnEpoch",
+            "name": "epoch",
             "type": {
               "defined": "PodU64"
             }
@@ -2463,7 +2463,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "merkleRoot",
+            "name": "metaMerkleRoot",
             "type": {
               "array": [
                 "u8",
@@ -2472,7 +2472,7 @@
             }
           },
           {
-            "name": "isValid",
+            "name": "isInitialized",
             "type": {
               "defined": "PodBool"
             }
@@ -2906,7 +2906,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "mintEntry",
+            "name": "stMintEntry",
             "type": {
               "defined": "StMintEntry"
             }

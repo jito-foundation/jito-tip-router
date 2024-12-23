@@ -11,7 +11,7 @@ use crate::generated::types::StMintEntry;
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WeightEntry {
-    pub mint_entry: StMintEntry,
+    pub st_mint_entry: StMintEntry,
     pub weight: u128,
     pub slot_set: u64,
     pub slot_updated: u64,

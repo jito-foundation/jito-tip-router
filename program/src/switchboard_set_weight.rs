@@ -36,8 +36,8 @@ pub fn process_switchboard_set_weight(
         let weight_entry = weight_table_account.get_weight_entry(st_mint)?;
 
         (
-            *weight_entry.mint_entry().switchboard_feed(),
-            weight_entry.mint_entry().no_feed_weight(),
+            *weight_entry.st_mint_entry().switchboard_feed(),
+            weight_entry.st_mint_entry().no_feed_weight(),
         )
     };
 

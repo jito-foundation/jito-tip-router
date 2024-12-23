@@ -19,22 +19,18 @@ pub enum ConfigAdminRole {
 pub struct Config {
     /// The Restaking program's NCN admin is the signer to create and update this account
     pub ncn: Pubkey,
-
+    /// The admin to update the tie breaker - who can decide the meta merkle root when consensus is reached
     pub tie_breaker_admin: Pubkey,
-
+    /// The admin to update the fee config
     pub fee_admin: Pubkey,
-
     /// Number of slots after consensus reached where voting is still valid
     pub valid_slots_after_consensus: PodU64,
-
     /// Number of epochs before voting is considered stalled
     pub epochs_before_stall: PodU64,
-
+    /// The fee config
     pub fee_config: FeeConfig,
-
     /// Bump seed for the PDA
     pub bump: u8,
-
     /// Reserved space
     reserved: [u8; 127],
 }

@@ -19,29 +19,28 @@ use crate::{
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct EpochSnapshot {
-    /// The NCN on-chain program is the signer to create and update this account,
-    /// this pushes the responsibility of managing the account to the NCN program.
+    /// The NCN this snapshot is for
     ncn: Pubkey,
-
-    /// The NCN epoch for which the Epoch snapshot is valid
-    ncn_epoch: PodU64,
-
+    /// The epoch this snapshot is for
+    epoch: PodU64,
     /// Bump seed for the PDA
     bump: u8,
-
     /// Slot Epoch snapshot was created
     slot_created: PodU64,
+    /// Slot Epoch snapshot was finalized
     slot_finalized: PodU64,
-
+    /// Snapshot of the Fees for the epoch
     fees: Fees,
-
+    /// Number of operators in the epoch
     operator_count: PodU64,
+    /// Number of vaults in the epoch
     vault_count: PodU64,
+    /// Keeps track of the number of completed operator registration through `snapshot_vault_operator_delegation` and `initialize_operator_snapshot`
     operators_registered: PodU64,
+    /// Keeps track of the number of valid operator vault delegations
     valid_operator_vault_delegations: PodU64,
-
+    /// Tallies the total stake weights for all vault operator delegations
     stake_weights: StakeWeights,
-
     /// Reserved space
     reserved: [u8; 128],
 }
@@ -64,7 +63,7 @@ impl EpochSnapshot {
     ) -> Self {
         Self {
             ncn: *ncn,
-            ncn_epoch: PodU64::from(ncn_epoch),
+            epoch: PodU64::from(ncn_epoch),
             slot_created: PodU64::from(current_slot),
             slot_finalized: PodU64::from(0),
             bump,

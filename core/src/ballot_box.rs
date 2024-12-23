@@ -22,16 +22,19 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
 #[repr(C)]
 pub struct Ballot {
-    merkle_root: [u8; 32],
-    is_valid: PodBool,
+    /// The merkle root of the meta merkle tree
+    meta_merkle_root: [u8; 32],
+    /// Whether the ballot is initialized
+    is_initialized: PodBool,
+    /// Reserved space
     reserved: [u8; 63],
 }
 
 impl Default for Ballot {
     fn default() -> Self {
         Self {
-            merkle_root: [0; 32],
-            is_valid: PodBool::from(false),
+            meta_merkle_root: [0; 32],
+            is_initialized: PodBool::from(false),
             reserved: [0; 63],
         }
     }
@@ -39,21 +42,21 @@ impl Default for Ballot {
 
 impl std::fmt::Display for Ballot {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.merkle_root)
+        write!(f, "{:?}", self.meta_merkle_root)
     }
 }
 
 impl Ballot {
     pub fn new(merkle_root: &[u8; 32]) -> Self {
         let mut ballot = Self {
-            merkle_root: *merkle_root,
-            is_valid: PodBool::from(false),
+            meta_merkle_root: *merkle_root,
+            is_initialized: PodBool::from(false),
             reserved: [0; 63],
         };
 
-        for byte in ballot.merkle_root.iter() {
+        for byte in ballot.meta_merkle_root.iter() {
             if *byte != 0 {
-                ballot.is_valid = PodBool::from(true);
+                ballot.is_initialized = PodBool::from(true);
                 break;
             }
         }
@@ -62,20 +65,24 @@ impl Ballot {
     }
 
     pub const fn root(&self) -> [u8; 32] {
-        self.merkle_root
+        self.meta_merkle_root
     }
 
-    pub fn is_valid(&self) -> bool {
-        self.is_valid.into()
+    pub fn is_initialized(&self) -> bool {
+        self.is_initialized.into()
     }
 }
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
 #[repr(C)]
 pub struct BallotTally {
+    /// Index of the tally within the ballot_tallies
     index: PodU16,
+    /// The ballot being tallied
     ballot: Ballot,
+    /// Breakdown of all of the stake weights that contribute to the vote
     stake_weights: StakeWeights,
+    /// The number of votes for this ballot
     tally: PodU64,
     // reserved: [u8; 64],
 }
@@ -120,7 +127,7 @@ impl BallotTally {
     }
 
     pub fn is_valid(&self) -> bool {
-        self.ballot.is_valid()
+        self.ballot.is_initialized()
     }
 
     pub fn increment_tally(&mut self, stake_weights: &StakeWeights) -> Result<(), TipRouterError> {
@@ -138,10 +145,15 @@ impl BallotTally {
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
 #[repr(C)]
 pub struct OperatorVote {
+    /// The operator that cast the vote
     operator: Pubkey,
+    /// The slot the operator voted
     slot_voted: PodU64,
+    /// The stake weights of the operator
     stake_weights: StakeWeights,
+    /// The index of the ballot in the ballot_tallies
     ballot_index: PodU16,
+    /// Reserved space
     reserved: [u8; 64],
 }
 
@@ -198,28 +210,32 @@ impl OperatorVote {
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct BallotBox {
+    /// The NCN account this ballot box is for
     ncn: Pubkey,
-
+    /// The epoch this ballot box is for
     epoch: PodU64,
-
+    /// Bump seed for the PDA
     bump: u8,
-
+    /// Slot when this ballot box was created
     slot_created: PodU64,
+    /// Slot when consensus was reached
     slot_consensus_reached: PodU64,
-
+    /// Reserved space
     reserved: [u8; 128],
-
+    /// Number of operators that have voted
     operators_voted: PodU64,
+    /// Number of unique ballots
     unique_ballots: PodU64,
-
+    /// The ballot that got at least 66% of votes
     winning_ballot: Ballot,
-
+    /// Operator votes
     operator_votes: [OperatorVote; 256],
+    /// Mapping of ballots votes to stake weight
     ballot_tallies: [BallotTally; 256],
 }
 
 impl Discriminator for BallotBox {
-    const DISCRIMINATOR: u8 = Discriminators::EpochSnapshot as u8;
+    const DISCRIMINATOR: u8 = Discriminators::BallotBox as u8;
 }
 
 impl BallotBox {
@@ -334,16 +350,16 @@ impl BallotBox {
 
     pub fn is_consensus_reached(&self) -> bool {
         self.slot_consensus_reached() != DEFAULT_CONSENSUS_REACHED_SLOT
-            || self.winning_ballot.is_valid()
+            || self.winning_ballot.is_initialized()
     }
 
     pub fn tie_breaker_set(&self) -> bool {
         self.slot_consensus_reached() == DEFAULT_CONSENSUS_REACHED_SLOT
-            && self.winning_ballot.is_valid()
+            && self.winning_ballot.is_initialized()
     }
 
     pub fn get_winning_ballot(&self) -> Result<&Ballot, TipRouterError> {
-        if !self.winning_ballot.is_valid() {
+        if !self.winning_ballot.is_initialized() {
             Err(TipRouterError::ConsensusNotReached)
         } else {
             Ok(&self.winning_ballot)
@@ -351,7 +367,7 @@ impl BallotBox {
     }
 
     pub fn get_winning_ballot_tally(&self) -> Result<&BallotTally, TipRouterError> {
-        if !self.winning_ballot.is_valid() {
+        if !self.winning_ballot.is_initialized() {
             Err(TipRouterError::ConsensusNotReached)
         } else {
             let winning_ballot_tally = self
@@ -365,7 +381,7 @@ impl BallotBox {
     }
 
     pub fn has_winning_ballot(&self) -> bool {
-        self.winning_ballot.is_valid()
+        self.winning_ballot.is_initialized()
     }
 
     pub const fn operator_votes(&self) -> &[OperatorVote; MAX_OPERATORS] {
@@ -485,7 +501,7 @@ impl BallotBox {
         let consensus_reached =
             ballot_percentage_of_total.greater_than_or_equal(&target_precise_percentage);
 
-        if consensus_reached && !self.winning_ballot.is_valid() {
+        if consensus_reached && !self.winning_ballot.is_initialized() {
             self.slot_consensus_reached = PodU64::from(current_slot);
             let winning_ballot = *max_tally.ballot();
 

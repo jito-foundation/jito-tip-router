@@ -14,32 +14,23 @@ use crate::{
     weight_entry::WeightEntry,
 };
 
-// PDA'd ["WEIGHT_TABLE", NCN, NCN_EPOCH_SLOT]
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct WeightTable {
-    /// The NCN on-chain program is the signer to create and update this account,
-    /// this pushes the responsibility of managing the account to the NCN program.
+    /// The NCN the account is associated with
     ncn: Pubkey,
-
-    /// The epoch for which the weight table is valid
+    /// The epoch the account is associated with
     epoch: PodU64,
-
     /// Slot weight table was created
     slot_created: PodU64,
-
     /// Number of vaults in tracked mints at the time of creation
     vault_count: PodU64,
-
     /// Bump seed for the PDA
     bump: u8,
-
     /// Reserved space
     reserved: [u8; 128],
-
-    /// The Vault Registry
+    /// A snapshot of the Vault Registry
     vault_registry: [VaultEntry; 64],
-
     /// The weight table
     table: [WeightEntry; 64],
 }

@@ -9,17 +9,22 @@ use crate::{error::TipRouterError, vault_registry::StMintEntry};
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct WeightEntry {
-    mint_entry: StMintEntry,
+    /// Info about the ST mint
+    st_mint_entry: StMintEntry,
+    /// The weight of the ST mint
     weight: PodU128,
+    /// The slot the weight was set
     slot_set: PodU64,
+    /// The slot the weight was last updated
     slot_updated: PodU64,
+    /// Reserved space
     reserved: [u8; 128],
 }
 
 impl Default for WeightEntry {
     fn default() -> Self {
         Self {
-            mint_entry: StMintEntry::default(),
+            st_mint_entry: StMintEntry::default(),
             weight: PodU128::default(),
             slot_set: PodU64::default(),
             slot_updated: PodU64::default(),
@@ -31,7 +36,7 @@ impl Default for WeightEntry {
 impl WeightEntry {
     pub fn new(mint_entry: &StMintEntry) -> Self {
         Self {
-            mint_entry: *mint_entry,
+            st_mint_entry: *mint_entry,
             weight: PodU128::from(0),
             slot_set: PodU64::from(0),
             slot_updated: PodU64::from(0),
@@ -41,7 +46,7 @@ impl WeightEntry {
 
     // Empty entry, no mint
     pub fn is_empty(&self) -> bool {
-        self.mint_entry.is_empty()
+        self.st_mint_entry.is_empty()
     }
 
     pub fn is_set(&self) -> bool {
@@ -56,12 +61,12 @@ impl WeightEntry {
         self.slot_updated.into()
     }
 
-    pub const fn mint_entry(&self) -> &StMintEntry {
-        &self.mint_entry
+    pub const fn st_mint_entry(&self) -> &StMintEntry {
+        &self.st_mint_entry
     }
 
     pub const fn st_mint(&self) -> &Pubkey {
-        self.mint_entry.st_mint()
+        self.st_mint_entry.st_mint()
     }
 
     pub fn weight(&self) -> u128 {

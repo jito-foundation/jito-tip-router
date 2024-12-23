@@ -50,7 +50,7 @@ import {
 export type BaseRewardRouter = {
   discriminator: bigint;
   ncn: Address;
-  ncnEpoch: bigint;
+  epoch: bigint;
   bump: number;
   slotCreated: bigint;
   totalRewards: bigint;
@@ -67,7 +67,7 @@ export type BaseRewardRouter = {
 export type BaseRewardRouterArgs = {
   discriminator: number | bigint;
   ncn: Address;
-  ncnEpoch: number | bigint;
+  epoch: number | bigint;
   bump: number;
   slotCreated: number | bigint;
   totalRewards: number | bigint;
@@ -85,7 +85,7 @@ export function getBaseRewardRouterEncoder(): Encoder<BaseRewardRouterArgs> {
   return getStructEncoder([
     ['discriminator', getU64Encoder()],
     ['ncn', getAddressEncoder()],
-    ['ncnEpoch', getU64Encoder()],
+    ['epoch', getU64Encoder()],
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
     ['totalRewards', getU64Encoder()],
@@ -113,7 +113,7 @@ export function getBaseRewardRouterDecoder(): Decoder<BaseRewardRouter> {
   return getStructDecoder([
     ['discriminator', getU64Decoder()],
     ['ncn', getAddressDecoder()],
-    ['ncnEpoch', getU64Decoder()],
+    ['epoch', getU64Decoder()],
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
     ['totalRewards', getU64Decoder()],

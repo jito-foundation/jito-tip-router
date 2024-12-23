@@ -21,31 +21,34 @@ use crate::{
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct NcnRewardRouter {
+    /// The NcnFeeGroup this router is associated with
     ncn_fee_group: NcnFeeGroup,
-
+    /// The operator the router is associated with
     operator: Pubkey,
-
+    /// The NCN the router is associated with
     ncn: Pubkey,
-
-    ncn_epoch: PodU64,
-
+    /// The epoch the router is associated with
+    epoch: PodU64,
+    /// The bump seed for the PDA
     bump: u8,
-
+    /// The slot the router was created
     slot_created: PodU64,
-
+    /// The total rewards that have been routed ( in lamports )
     total_rewards: PodU64,
-
+    /// The rewards in the reward pool ( in lamports )
     reward_pool: PodU64,
-
+    /// The rewards that have been processed ( in lamports )
     rewards_processed: PodU64,
-
+    /// Rewards to go to the operator ( in lamports )
     operator_rewards: PodU64,
-
+    /// Reserved space
     reserved: [u8; 128],
-
+    // Routing state - so we can recover from a partial routing
+    /// The last rewards to process
     last_rewards_to_process: PodU64,
+    /// The last vault operator delegation index
     last_vault_operator_delegation_index: PodU16,
-
+    /// Routes to vaults
     vault_reward_routes: [VaultRewardRoute; 64],
 }
 
@@ -72,7 +75,7 @@ impl NcnRewardRouter {
             ncn_fee_group,
             operator: *operator,
             ncn: *ncn,
-            ncn_epoch: PodU64::from(ncn_epoch),
+            epoch: PodU64::from(ncn_epoch),
             bump,
             slot_created: PodU64::from(slot_created),
             total_rewards: PodU64::from(0),
@@ -173,7 +176,7 @@ impl NcnRewardRouter {
     }
 
     pub fn ncn_epoch(&self) -> u64 {
-        self.ncn_epoch.into()
+        self.epoch.into()
     }
 
     pub fn slot_created(&self) -> u64 {
@@ -665,7 +668,9 @@ impl NcnRewardReceiver {
 #[derive(Default, Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct VaultRewardRoute {
+    /// The vault the rewards are routed to
     vault: Pubkey,
+    /// The amount of rewards ( in lamports )
     rewards: PodU64,
 }
 

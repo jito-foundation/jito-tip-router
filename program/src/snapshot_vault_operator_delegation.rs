@@ -130,8 +130,8 @@ pub fn process_snapshot_vault_operator_delegation(
         };
 
         (
-            weight_entry.mint_entry().ncn_fee_group(),
-            weight_entry.mint_entry().reward_multiplier_bps(),
+            weight_entry.st_mint_entry().ncn_fee_group(),
+            weight_entry.st_mint_entry().reward_multiplier_bps(),
             total_stake_weight,
         )
     };

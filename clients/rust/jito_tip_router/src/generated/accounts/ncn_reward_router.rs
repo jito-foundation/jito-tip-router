@@ -24,7 +24,7 @@ pub struct NcnRewardRouter {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub ncn: Pubkey,
-    pub ncn_epoch: u64,
+    pub epoch: u64,
     pub bump: u8,
     pub slot_created: u64,
     pub total_rewards: u64,

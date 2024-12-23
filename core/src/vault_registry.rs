@@ -18,11 +18,18 @@ use crate::{
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct StMintEntry {
+    /// The supported token ( ST ) mint
     st_mint: Pubkey,
+    /// The fee group for the mint
     ncn_fee_group: NcnFeeGroup,
+    /// The reward multiplier in basis points
     reward_multiplier_bps: PodU64,
+    // Either a switchboard feed or a no feed weight must be set
+    /// The switchboard feed for the mint
     switchboard_feed: Pubkey,
+    /// The weight when no feed is available
     no_feed_weight: PodU128,
+    /// Reserved space
     reserved: [u8; 128],
 }
 
@@ -84,10 +91,15 @@ impl Default for StMintEntry {
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct VaultEntry {
+    /// The vault account
     vault: Pubkey,
+    /// The supported token ( ST ) mint of the vault
     st_mint: Pubkey,
+    /// The index of the vault in respect to the NCN account
     vault_index: PodU64,
+    /// The slot the vault was registered
     slot_registered: PodU64,
+    /// Reserved space
     reserved: [u8; 128],
 }
 
@@ -129,10 +141,15 @@ impl Default for VaultEntry {
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct VaultRegistry {
+    /// The NCN the vault registry is associated with
     pub ncn: Pubkey,
+    /// The bump seed for the PDA
     pub bump: u8,
+    /// Reserved space
     pub reserved: [u8; 127],
+    /// The list of supported token ( ST ) mints
     pub st_mint_list: [StMintEntry; 64],
+    /// The list of vaults
     pub vault_list: [VaultEntry; 64],
 }
 

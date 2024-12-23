@@ -20,29 +20,34 @@ use crate::{
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct BaseRewardRouter {
+    /// NCN the account is associated with
     ncn: Pubkey,
-
-    ncn_epoch: PodU64,
-
+    /// The epoch the account is associated with
+    epoch: PodU64,
+    /// Bump seed for the PDA
     bump: u8,
-
+    /// Slot the account was created
     slot_created: PodU64,
-
+    /// Total rewards routed ( in lamports )
     total_rewards: PodU64,
-
+    /// Amount of rewards in the reward pool ( in lamports )
     reward_pool: PodU64,
-
+    /// Amount of rewards processed ( in lamports )
     rewards_processed: PodU64,
-
+    /// Reserved space
     reserved: [u8; 128],
 
-    // route state tracking
+    // route state tracking - to recover from unfinished routing
+    /// Last NCN fee group index
     last_ncn_group_index: u8,
+    /// Last vote index
     last_vote_index: PodU16,
 
+    /// Base Fee Group Rewards
     base_fee_group_rewards: [BaseRewardRouterRewards; 8],
+    /// NCN Fee Group Rewards
     ncn_fee_group_rewards: [BaseRewardRouterRewards; 8],
-
+    /// NCN Fee Group Reward Routes
     ncn_fee_group_reward_routes: [NcnRewardRoute; 256],
 }
 
@@ -60,7 +65,7 @@ impl BaseRewardRouter {
     pub fn new(ncn: &Pubkey, ncn_epoch: u64, bump: u8, slot_created: u64) -> Self {
         Self {
             ncn: *ncn,
-            ncn_epoch: PodU64::from(ncn_epoch),
+            epoch: PodU64::from(ncn_epoch),
             bump,
             slot_created: PodU64::from(slot_created),
             total_rewards: PodU64::from(0),
@@ -80,7 +85,7 @@ impl BaseRewardRouter {
     pub fn initialize(&mut self, ncn: &Pubkey, ncn_epoch: u64, bump: u8, current_slot: u64) {
         // Initializes field by field to avoid overflowing stack
         self.ncn = *ncn;
-        self.ncn_epoch = PodU64::from(ncn_epoch);
+        self.epoch = PodU64::from(ncn_epoch);
         self.bump = bump;
         self.slot_created = PodU64::from(current_slot);
         self.total_rewards = PodU64::from(0);
@@ -423,7 +428,7 @@ impl BaseRewardRouter {
     }
 
     pub fn ncn_epoch(&self) -> u64 {
-        self.ncn_epoch.into()
+        self.epoch.into()
     }
 
     pub fn slot_created(&self) -> u64 {

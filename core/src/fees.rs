@@ -14,15 +14,17 @@ use crate::{
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct FeeConfig {
-    /// Carbon Copy
+    /// The block engine fee - this is a carbon copy from the tip payment program used for some calculations
     block_engine_fee_bps: PodU16,
-
-    // Wallets
+    /// Base fee wallets - one for each base fee group
     base_fee_wallets: [Pubkey; 8],
-
+    /// Reserved space
     reserved: [u8; 128],
 
+    // Two fees so that we can update one and use the other, on the epoch boundary we switch
+    /// Fee 1
     fee_1: Fees,
+    /// Fee 2
     fee_2: Fees,
 }
 
