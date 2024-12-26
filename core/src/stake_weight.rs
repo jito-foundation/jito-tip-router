@@ -101,7 +101,7 @@ impl StakeWeights {
         Ok(())
     }
 
-    pub fn decrement(&mut self, other: &StakeWeights) -> Result<(), TipRouterError> {
+    pub fn decrement(&mut self, other: &Self) -> Result<(), TipRouterError> {
         self.stake_weight = PodU128::from(
             self.stake_weight()
                 .checked_sub(other.stake_weight())
