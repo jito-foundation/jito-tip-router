@@ -447,12 +447,13 @@ impl BallotBox {
             return Err(TipRouterError::VotingNotValid);
         }
 
-        let new_ballot_index = self.increment_or_create_ballot_tally(ballot, stake_weights)?;
-        let is_consensus_reached = self.is_consensus_reached();
+        let ballot_index = self.increment_or_create_ballot_tally(ballot, stake_weights)?;
+
+        let consensus_reached = self.is_consensus_reached();
 
         for vote in self.operator_votes.iter_mut() {
             if vote.operator().eq(operator) {
-                if is_consensus_reached {
+                if consensus_reached {
                     return Err(TipRouterError::ConsensusAlreadyReached);
                 }
 
@@ -462,12 +463,17 @@ impl BallotBox {
                     prev_tally.decrement_tally(vote.stake_weights())?;
                 }
 
-                *vote = OperatorVote::new(new_ballot_index, operator, current_slot, stake_weights);
+                let operator_vote =
+                    OperatorVote::new(ballot_index, operator, current_slot, stake_weights);
+                *vote = operator_vote;
                 return Ok(());
             }
 
             if vote.is_empty() {
-                *vote = OperatorVote::new(new_ballot_index, operator, current_slot, stake_weights);
+                let operator_vote =
+                    OperatorVote::new(ballot_index, operator, current_slot, stake_weights);
+                *vote = operator_vote;
+
                 self.operators_voted = PodU64::from(
                     self.operators_voted()
                         .checked_add(1)
