@@ -100,6 +100,16 @@ impl StakeWeights {
 
         Ok(())
     }
+
+    pub fn decrement(&mut self, other: &StakeWeights) -> Result<(), TipRouterError> {
+        self.stake_weight = PodU128::from(
+            self.stake_weight()
+                .checked_sub(other.stake_weight())
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]

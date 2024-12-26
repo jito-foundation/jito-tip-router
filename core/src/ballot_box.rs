@@ -140,6 +140,17 @@ impl BallotTally {
 
         Ok(())
     }
+
+    pub fn decrement_tally(&mut self, stake_weights: &StakeWeights) -> Result<(), TipRouterError> {
+        self.stake_weights.decrement(stake_weights)?;
+        self.tally = PodU64::from(
+            self.tally()
+                .checked_sub(1)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
@@ -436,33 +447,32 @@ impl BallotBox {
             return Err(TipRouterError::VotingNotValid);
         }
 
-        let ballot_index = self.increment_or_create_ballot_tally(ballot, stake_weights)?;
-
-        let consensus_reached = self.is_consensus_reached();
+        let new_ballot_index = self.increment_or_create_ballot_tally(ballot, stake_weights)?;
+        let is_consensus_reached = self.is_consensus_reached();
 
         for vote in self.operator_votes.iter_mut() {
             if vote.operator().eq(operator) {
-                if consensus_reached {
+                if is_consensus_reached {
                     return Err(TipRouterError::ConsensusAlreadyReached);
                 }
 
-                let operator_vote =
-                    OperatorVote::new(ballot_index, operator, current_slot, stake_weights);
-                *vote = operator_vote;
+                // If the operator has already voted, we need to decrement their vote from the previous ballot
+                let prev_ballot_index = vote.ballot_index();
+                if let Some(prev_tally) = self.ballot_tallies.get_mut(prev_ballot_index as usize) {
+                    prev_tally.decrement_tally(vote.stake_weights())?;
+                }
+
+                *vote = OperatorVote::new(new_ballot_index, operator, current_slot, stake_weights);
                 return Ok(());
             }
 
             if vote.is_empty() {
-                let operator_vote =
-                    OperatorVote::new(ballot_index, operator, current_slot, stake_weights);
-                *vote = operator_vote;
-
+                *vote = OperatorVote::new(new_ballot_index, operator, current_slot, stake_weights);
                 self.operators_voted = PodU64::from(
                     self.operators_voted()
                         .checked_add(1)
                         .ok_or(TipRouterError::ArithmeticOverflow)?,
                 );
-
                 return Ok(());
             }
         }
