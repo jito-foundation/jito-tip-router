@@ -967,7 +967,7 @@ mod tests {
         let stake_weights = StakeWeights::new(1000);
         let valid_slots_after_consensus = 10;
         let mut ballot_box = BallotBox::new(&ncn, epoch, 0, current_slot);
-        
+
         // Initial ballot
         let ballot1 = Ballot::new(&[1; 32]);
         ballot_box
