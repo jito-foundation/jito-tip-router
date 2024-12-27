@@ -934,4 +934,78 @@ mod tests {
 
         assert_eq!(fee_config.updatable_fees(u64::MAX).activation_epoch(), 11);
     }
+
+    #[test]
+    fn test_base_fee_bps() {
+        const BLOCK_ENGINE_FEE: u16 = 100;
+        const INITIAL_DAO_FEE: u16 = 200;
+        const DEFAULT_NCN_FEE: u16 = 300;
+        const STARTING_EPOCH: u64 = 10;
+        const NEW_BASE_FEE: u16 = 500;
+
+        let dao_fee_wallet = Pubkey::new_unique();
+
+        // Initialize fee config
+        let mut fee_config = FeeConfig::new(
+            &dao_fee_wallet,
+            BLOCK_ENGINE_FEE,
+            INITIAL_DAO_FEE,
+            DEFAULT_NCN_FEE,
+            STARTING_EPOCH,
+        )
+        .unwrap();
+
+        // Test initial base fee for default group
+        let default_group = BaseFeeGroup::default();
+        assert_eq!(
+            fee_config
+                .base_fee_bps(default_group, STARTING_EPOCH)
+                .unwrap(),
+            INITIAL_DAO_FEE
+        );
+
+        // Test initial base fee for non-default group (should be 0)
+        let other_group = BaseFeeGroup { group: 1 };
+        assert_eq!(
+            fee_config
+                .base_fee_bps(other_group, STARTING_EPOCH)
+                .unwrap(),
+            0
+        );
+
+        // Schedule a fee update for next epoch
+        fee_config
+            .update_fee_config(
+                None,                // no change to block engine fee
+                Some(default_group), // update default group
+                None,                // no change to wallet
+                Some(NEW_BASE_FEE),  // new base fee
+                None,                // no change to NCN group
+                None,                // no change to NCN fee
+                STARTING_EPOCH,
+            )
+            .unwrap();
+
+        // Test that current epoch still has old fee
+        assert_eq!(
+            fee_config
+                .base_fee_bps(default_group, STARTING_EPOCH)
+                .unwrap(),
+            INITIAL_DAO_FEE
+        );
+
+        // Test that next epoch has new fee
+        assert_eq!(
+            fee_config
+                .base_fee_bps(default_group, STARTING_EPOCH + 1)
+                .unwrap(),
+            NEW_BASE_FEE
+        );
+
+        // Test that invalid group index returns error
+        let invalid_group = BaseFeeGroup { group: 8 }; // Only 8 groups (0-7) are valid
+        assert!(fee_config
+            .base_fee_bps(invalid_group, STARTING_EPOCH)
+            .is_err());
+    }
 }
