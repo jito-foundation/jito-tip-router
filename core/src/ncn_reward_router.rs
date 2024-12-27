@@ -729,6 +729,68 @@ mod tests {
     use solana_program::pubkey::Pubkey;
 
     use super::*;
+    use crate::{ncn_fee_group, stake_weight::StakeWeights};
+
+    const TEST_EPOCH: u64 = 1;
+    const TEST_CURRENT_SLOT: u64 = 100;
+
+    pub fn get_test_operator_snapshot(
+        operator_fee_bps: u16,
+        vault_operator_delegation_count: u64,
+    ) -> OperatorSnapshot {
+        let operator = Pubkey::new_unique();
+        let ncn = Pubkey::new_unique();
+        let ncn_epoch = TEST_EPOCH;
+        let bump = 1;
+        let current_slot = TEST_CURRENT_SLOT;
+        let is_active = true;
+        let ncn_operator_index = 0;
+        let operator_index = 0;
+
+        OperatorSnapshot::new(
+            &operator,
+            &ncn,
+            ncn_epoch,
+            bump,
+            current_slot,
+            is_active,
+            ncn_operator_index,
+            operator_index,
+            operator_fee_bps,
+            vault_operator_delegation_count,
+        )
+        .unwrap()
+    }
+
+    pub fn register_test_vault_operator_delegation(
+        operator_snapshot: &mut OperatorSnapshot,
+        stake_weight: u128,
+        reward_multiplier_bps: u64,
+    ) {
+        let current_slot = TEST_CURRENT_SLOT;
+        let vault = Pubkey::new_unique();
+        let ncn_fee_group = ncn_fee_group::NcnFeeGroup::default();
+        let stake_weights =
+            StakeWeights::snapshot(ncn_fee_group, stake_weight, reward_multiplier_bps).unwrap();
+
+        let mut vault_index: u64 = 0;
+        for index in 0..MAX_VAULTS {
+            if !operator_snapshot.contains_vault_index(index as u64) {
+                vault_index = index as u64;
+                break;
+            }
+        }
+
+        operator_snapshot
+            .increment_vault_operator_delegation_registration(
+                current_slot,
+                &vault,
+                vault_index,
+                ncn_fee_group,
+                &stake_weights,
+            )
+            .unwrap()
+    }
 
     #[test]
     fn test_len() {
@@ -758,9 +820,9 @@ mod tests {
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
             &Pubkey::new_unique(), // ncn
-            1,                     // ncn_epoch
+            TEST_EPOCH,            // ncn_epoch
             1,                     // bump
-            100,                   // slot_created
+            TEST_CURRENT_SLOT,     // slot_created
         );
 
         // Initial state checks
@@ -794,5 +856,423 @@ mod tests {
         assert_eq!(router.total_rewards(), 1500);
         assert_eq!(router.reward_pool(), 1500);
         assert_eq!(router.rewards_processed(), 0);
+    }
+
+    #[test]
+    fn test_route_operator_rewards() {
+        const INCOMING_REWARDS: u64 = 1000;
+
+        let mut router = NcnRewardRouter::new(
+            NcnFeeGroup::default(),
+            &Pubkey::new_unique(), // ncn
+            &Pubkey::new_unique(), // ncn
+            TEST_EPOCH,            // ncn_epoch
+            1,                     // bump
+            TEST_CURRENT_SLOT,     // slot_created
+        );
+
+        // Initial state checks
+        assert_eq!(router.total_rewards(), 0);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test routing 1000 lamports
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        // Verify rewards were routed correctly
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+        assert_eq!(router.rewards_processed(), 0);
+
+        let operator_snapshot = {
+            let operator_fee_bps = 1000; // 10%
+            let vault_operator_delegation_count = 10;
+            let mut operator_snapshot =
+                get_test_operator_snapshot(operator_fee_bps, vault_operator_delegation_count);
+
+            for _ in 0..vault_operator_delegation_count {
+                register_test_vault_operator_delegation(&mut operator_snapshot, 1000, 1000);
+            }
+
+            operator_snapshot
+        };
+
+        // Test routing operator rewards
+        router.route_operator_rewards(&operator_snapshot).unwrap();
+        assert_eq!(router.operator_rewards(), INCOMING_REWARDS / 10);
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS / 10 * 9);
+        assert_eq!(router.rewards_processed(), INCOMING_REWARDS / 10);
+    }
+
+    #[test]
+    fn test_route_all_operator_rewards() {
+        const INCOMING_REWARDS: u64 = 1000;
+
+        let mut router = NcnRewardRouter::new(
+            NcnFeeGroup::default(),
+            &Pubkey::new_unique(), // ncn
+            &Pubkey::new_unique(), // ncn
+            TEST_EPOCH,            // ncn_epoch
+            1,                     // bump
+            TEST_CURRENT_SLOT,     // slot_created
+        );
+
+        // Initial state checks
+        assert_eq!(router.total_rewards(), 0);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test routing 1000 lamports
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        // Verify rewards were routed correctly
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+        assert_eq!(router.rewards_processed(), 0);
+
+        let operator_snapshot = {
+            let operator_fee_bps = 10_000; // 100%
+            let vault_operator_delegation_count = 10;
+            let mut operator_snapshot =
+                get_test_operator_snapshot(operator_fee_bps, vault_operator_delegation_count);
+
+            for _ in 0..vault_operator_delegation_count {
+                register_test_vault_operator_delegation(&mut operator_snapshot, 1000, 1000);
+            }
+
+            operator_snapshot
+        };
+
+        // Test routing operator rewards
+        router.route_operator_rewards(&operator_snapshot).unwrap();
+        assert_eq!(router.operator_rewards(), INCOMING_REWARDS);
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), INCOMING_REWARDS);
+    }
+
+    #[test]
+    fn test_route_vaults() {
+        const INCOMING_REWARDS: u64 = 1000;
+
+        let mut router = NcnRewardRouter::new(
+            NcnFeeGroup::default(),
+            &Pubkey::new_unique(), // ncn
+            &Pubkey::new_unique(), // ncn
+            TEST_EPOCH,            // ncn_epoch
+            1,                     // bump
+            TEST_CURRENT_SLOT,     // slot_created
+        );
+
+        // Initial state checks
+        assert_eq!(router.total_rewards(), 0);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test routing 1000 lamports
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        // Verify rewards were routed correctly
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+        assert_eq!(router.rewards_processed(), 0);
+
+        let operator_snapshot = {
+            let operator_fee_bps = 0; // 0%
+            let vault_operator_delegation_count = 10;
+            let mut operator_snapshot =
+                get_test_operator_snapshot(operator_fee_bps, vault_operator_delegation_count);
+
+            for _ in 0..vault_operator_delegation_count {
+                register_test_vault_operator_delegation(&mut operator_snapshot, 1000, 1000);
+            }
+
+            operator_snapshot
+        };
+
+        // Test routing operator rewards
+        router.route_operator_rewards(&operator_snapshot).unwrap();
+        assert_eq!(router.operator_rewards(), 0);
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+        assert_eq!(router.rewards_processed(), 0);
+
+        router.route_reward_pool(&operator_snapshot, 1000).unwrap();
+        for route in router
+            .vault_reward_routes()
+            .iter()
+            .filter(|route| !route.is_empty())
+        {
+            assert_eq!(route.rewards(), 100);
+        }
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), INCOMING_REWARDS);
+    }
+
+    #[test]
+    fn test_max_iterations() {
+        const INCOMING_REWARDS: u64 = 1000;
+
+        let mut router = NcnRewardRouter::new(
+            NcnFeeGroup::default(),
+            &Pubkey::new_unique(), // ncn
+            &Pubkey::new_unique(), // ncn
+            TEST_EPOCH,            // ncn_epoch
+            1,                     // bump
+            TEST_CURRENT_SLOT,     // slot_created
+        );
+
+        // Initial state checks
+        assert_eq!(router.total_rewards(), 0);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test routing 1000 lamports
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        // Verify rewards were routed correctly
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+        assert_eq!(router.rewards_processed(), 0);
+
+        let operator_snapshot = {
+            let operator_fee_bps = 0; // 0%
+            let vault_operator_delegation_count = 10;
+            let mut operator_snapshot =
+                get_test_operator_snapshot(operator_fee_bps, vault_operator_delegation_count);
+
+            for _ in 0..vault_operator_delegation_count {
+                register_test_vault_operator_delegation(&mut operator_snapshot, 1000, 1000);
+            }
+
+            operator_snapshot
+        };
+
+        // Test routing operator rewards
+        router.route_operator_rewards(&operator_snapshot).unwrap();
+        assert_eq!(router.operator_rewards(), 0);
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+        assert_eq!(router.rewards_processed(), 0);
+
+        router.route_reward_pool(&operator_snapshot, 5).unwrap();
+
+        assert_eq!(router.still_routing(), true);
+
+        router.route_reward_pool(&operator_snapshot, 1000).unwrap();
+
+        assert_eq!(router.still_routing(), false);
+
+        for route in router
+            .vault_reward_routes()
+            .iter()
+            .filter(|route| !route.is_empty())
+        {
+            assert_eq!(route.rewards(), 100);
+        }
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), INCOMING_REWARDS);
+    }
+
+    #[test]
+    fn test_reward_multiplier() {
+        const INCOMING_REWARDS: u64 = 1000;
+
+        let mut router = NcnRewardRouter::new(
+            NcnFeeGroup::default(),
+            &Pubkey::new_unique(), // ncn
+            &Pubkey::new_unique(), // ncn
+            TEST_EPOCH,            // ncn_epoch
+            1,                     // bump
+            TEST_CURRENT_SLOT,     // slot_created
+        );
+
+        // Initial state checks
+        assert_eq!(router.total_rewards(), 0);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test routing 1000 lamports
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        // Verify rewards were routed correctly
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+        assert_eq!(router.rewards_processed(), 0);
+
+        let operator_snapshot = {
+            let operator_fee_bps = 0; // 0%
+            let vault_operator_delegation_count = 9;
+            let mut operator_snapshot =
+                get_test_operator_snapshot(operator_fee_bps, vault_operator_delegation_count);
+
+            for index in 0..vault_operator_delegation_count {
+                if index == 0 {
+                    register_test_vault_operator_delegation(&mut operator_snapshot, 1000, 2000);
+                } else {
+                    register_test_vault_operator_delegation(&mut operator_snapshot, 1000, 1000);
+                }
+            }
+
+            operator_snapshot
+        };
+
+        // Test routing operator rewards
+        router.route_operator_rewards(&operator_snapshot).unwrap();
+        assert_eq!(router.operator_rewards(), 0);
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+        assert_eq!(router.rewards_processed(), 0);
+
+        router.route_reward_pool(&operator_snapshot, 1000).unwrap();
+        for (index, route) in router
+            .vault_reward_routes()
+            .iter()
+            .filter(|route| !route.is_empty())
+            .enumerate()
+        {
+            if index == 0 {
+                assert_eq!(route.rewards(), 200);
+            } else {
+                assert_eq!(route.rewards(), 100);
+            }
+        }
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), INCOMING_REWARDS);
+    }
+
+    #[test]
+    fn test_route_max_vaults() {
+        const INCOMING_REWARDS: u64 = MAX_VAULTS as u64 * 1000;
+
+        let mut router = NcnRewardRouter::new(
+            NcnFeeGroup::default(),
+            &Pubkey::new_unique(), // ncn
+            &Pubkey::new_unique(), // ncn
+            TEST_EPOCH,            // ncn_epoch
+            1,                     // bump
+            TEST_CURRENT_SLOT,     // slot_created
+        );
+
+        // Initial state checks
+        assert_eq!(router.total_rewards(), 0);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test routing 1000 lamports
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        // Verify rewards were routed correctly
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+        assert_eq!(router.rewards_processed(), 0);
+
+        let operator_snapshot = {
+            let operator_fee_bps = 0; // 0%
+            let vault_operator_delegation_count = MAX_VAULTS as u64;
+            let mut operator_snapshot =
+                get_test_operator_snapshot(operator_fee_bps, vault_operator_delegation_count);
+
+            for _ in 0..vault_operator_delegation_count {
+                register_test_vault_operator_delegation(&mut operator_snapshot, 1000, 1000);
+            }
+
+            operator_snapshot
+        };
+
+        // Test routing operator rewards
+        router.route_operator_rewards(&operator_snapshot).unwrap();
+        assert_eq!(router.operator_rewards(), 0);
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+        assert_eq!(router.rewards_processed(), 0);
+
+        router.route_reward_pool(&operator_snapshot, 1000).unwrap();
+        for route in router
+            .vault_reward_routes()
+            .iter()
+            .filter(|route| !route.is_empty())
+        {
+            assert_eq!(route.rewards(), 1000);
+        }
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), INCOMING_REWARDS);
+    }
+
+    #[test]
+    fn test_route_max_vaults_with_operator() {
+        // 64_000 / 0.9 ~= 71_111
+        let incoming_rewards: u64 = ((MAX_VAULTS * 1000) as f64 / 0.9).round() as u64;
+
+        let mut router = NcnRewardRouter::new(
+            NcnFeeGroup::default(),
+            &Pubkey::new_unique(), // ncn
+            &Pubkey::new_unique(), // ncn
+            TEST_EPOCH,            // ncn_epoch
+            1,                     // bump
+            TEST_CURRENT_SLOT,     // slot_created
+        );
+
+        // Initial state checks
+        assert_eq!(router.total_rewards(), 0);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test routing 1000 lamports
+        router.route_incoming_rewards(0, incoming_rewards).unwrap();
+
+        // Verify rewards were routed correctly
+        assert_eq!(router.total_rewards(), incoming_rewards);
+        assert_eq!(router.reward_pool(), incoming_rewards);
+        assert_eq!(router.rewards_processed(), 0);
+
+        let operator_snapshot = {
+            let operator_fee_bps = 1000; // 0%
+            let vault_operator_delegation_count = MAX_VAULTS as u64;
+            let mut operator_snapshot =
+                get_test_operator_snapshot(operator_fee_bps, vault_operator_delegation_count);
+
+            for _ in 0..vault_operator_delegation_count {
+                register_test_vault_operator_delegation(&mut operator_snapshot, 1000, 1000);
+            }
+
+            operator_snapshot
+        };
+
+        // Test routing operator rewards
+        router.route_operator_rewards(&operator_snapshot).unwrap();
+        assert_eq!(router.operator_rewards(), 7111);
+
+        assert_eq!(router.total_rewards(), incoming_rewards);
+        assert_eq!(router.reward_pool(), 64000);
+        assert_eq!(router.rewards_processed(), 7111);
+
+        router.route_reward_pool(&operator_snapshot, 1000).unwrap();
+        for route in router
+            .vault_reward_routes()
+            .iter()
+            .filter(|route| !route.is_empty())
+        {
+            assert_eq!(route.rewards(), 1000);
+        }
+
+        assert_eq!(router.total_rewards(), incoming_rewards);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), incoming_rewards);
     }
 }
