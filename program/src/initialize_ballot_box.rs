@@ -23,7 +23,7 @@ pub fn process_initialize_ballot_box(
     load_system_account(ballot_box, true)?;
     load_system_program(system_program)?;
 
-    load_signer(payer, false)?;
+    load_signer(payer, true)?;
 
     NcnConfig::load(program_id, ncn_account.key, ncn_config, false)?;
 

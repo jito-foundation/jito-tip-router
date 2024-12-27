@@ -24,7 +24,7 @@ pub fn process_admin_set_parameters(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    load_signer(ncn_admin, true)?;
+    load_signer(ncn_admin, false)?;
 
     // Load and verify accounts
     Config::load(program_id, ncn_account.key, config, true)?;

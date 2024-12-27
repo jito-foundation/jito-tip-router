@@ -15,7 +15,7 @@ pub enum TipRouterInstruction {
     #[account(0, writable, name = "config")]
     #[account(1, name = "ncn")]
     #[account(2, name = "fee_wallet")]
-    #[account(3, signer, name = "ncn_admin")]
+    #[account(3, signer, writable, name = "ncn_admin")]
     #[account(4, name = "tie_breaker_admin")]
     #[account(5, name = "restaking_program")]
     #[account(6, name = "system_program")]
@@ -440,7 +440,7 @@ pub enum TipRouterInstruction {
     #[account(0, name = "config")]
     #[account(1, name = "ncn")]
     #[account(2, writable, name = "vault_registry")]
-    #[account(3, signer, writable, name = "admin")]
+    #[account(3, signer, name = "admin")]
     #[account(4, name = "restaking_program")]
     AdminSetStMint{
         st_mint: Pubkey,

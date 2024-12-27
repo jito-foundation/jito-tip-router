@@ -33,9 +33,9 @@ import {
   type Option,
   type OptionOrNullable,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
   type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -66,7 +66,7 @@ export type AdminSetStMintInstruction<
         ? WritableAccount<TAccountVaultRegistry>
         : TAccountVaultRegistry,
       TAccountAdmin extends string
-        ? WritableSignerAccount<TAccountAdmin> &
+        ? ReadonlySignerAccount<TAccountAdmin> &
             IAccountSignerMeta<TAccountAdmin>
         : TAccountAdmin,
       TAccountRestakingProgram extends string
@@ -180,7 +180,7 @@ export function getAdminSetStMintInstruction<
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: true },
-    admin: { value: input.admin ?? null, isWritable: true },
+    admin: { value: input.admin ?? null, isWritable: false },
     restakingProgram: {
       value: input.restakingProgram ?? null,
       isWritable: false,

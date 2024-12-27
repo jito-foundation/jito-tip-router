@@ -1,5 +1,8 @@
 use jito_bytemuck::{AccountDeserialize, Discriminator};
-use jito_jsm_core::{loader::load_system_program, realloc};
+use jito_jsm_core::{
+    loader::{load_signer, load_system_program},
+    realloc,
+};
 use jito_tip_router_core::{
     config::Config as NcnConfig, utils::get_new_size, vault_registry::VaultRegistry,
 };
@@ -18,6 +21,7 @@ pub fn process_realloc_vault_registry(
 
     // Verify accounts
     load_system_program(system_program)?;
+    load_signer(payer, true)?;
 
     NcnConfig::load(program_id, ncn_account.key, ncn_config, false)?;
 
