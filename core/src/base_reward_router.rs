@@ -917,6 +917,115 @@ mod tests {
     }
 
     #[test]
+    fn test_load() {
+        let program_id = Pubkey::new_unique();
+        let ncn = Pubkey::new_unique();
+        let epoch = 1;
+        let mut lamports = 0;
+
+        let (address, _, _) = BaseRewardRouter::find_program_address(&program_id, &ncn, epoch);
+        let mut data = [0u8; BaseRewardRouter::SIZE];
+
+        // Set discriminator
+        data[0] = BaseRewardRouter::DISCRIMINATOR;
+
+        // Test 1: Valid case - should succeed
+        let account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = BaseRewardRouter::load(&program_id, &ncn, epoch, &account, false);
+        assert!(result.is_ok());
+
+        // Test 2: Invalid owner
+        let wrong_program_id = Pubkey::new_unique();
+        let account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut data,
+            &wrong_program_id,
+            false,
+            0,
+        );
+
+        let result = BaseRewardRouter::load(&program_id, &ncn, epoch, &account, false);
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
+
+        // Test 3: Empty data
+        let mut empty_data = [0u8; 0];
+        let account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut empty_data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = BaseRewardRouter::load(&program_id, &ncn, epoch, &account, false);
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+        // Test 4: Not writable when expected to be
+        let account = AccountInfo::new(
+            &address,
+            false,
+            false, // not writable
+            &mut lamports,
+            &mut data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = BaseRewardRouter::load(&program_id, &ncn, epoch, &account, true);
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+        // Test 5: Invalid discriminator
+        let mut bad_discriminator_data = [0u8; BaseRewardRouter::SIZE];
+        bad_discriminator_data[0] = BaseRewardRouter::DISCRIMINATOR + 1; // wrong discriminator
+        let account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut bad_discriminator_data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = BaseRewardRouter::load(&program_id, &ncn, epoch, &account, false);
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+        // Test 6: Wrong PDA address
+        let wrong_address = Pubkey::new_unique();
+        let account = AccountInfo::new(
+            &wrong_address,
+            false,
+            false,
+            &mut lamports,
+            &mut data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = BaseRewardRouter::load(&program_id, &ncn, epoch, &account, false);
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+    }
+
+    #[test]
     fn test_len() {
         use std::mem::size_of;
 
@@ -936,6 +1045,120 @@ mod tests {
             + size_of::<NcnRewardRoute>() * MAX_OPERATORS; // ncn_fee_group_reward_routes
 
         assert_eq!(size_of::<BaseRewardRouter>(), expected_total);
+    }
+
+    #[test]
+    fn test_operator() {
+        // Test case 1: Default operator (zero pubkey)
+        let default_route = NcnRewardRoute::default();
+        assert_eq!(*default_route.operator(), Pubkey::default());
+
+        // Test case 2: Custom operator
+        let custom_pubkey = Pubkey::new_unique();
+        let custom_route =
+            NcnRewardRoute::new(&custom_pubkey, NcnFeeGroup::default(), 100).unwrap();
+        assert_eq!(*custom_route.operator(), custom_pubkey);
+    }
+
+    #[test]
+    fn test_increment_rewards_processed_zero() {
+        // Create a new router
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(),
+            1,   // epoch
+            1,   // bump
+            100, // slot_created
+        );
+
+        // Get initial rewards processed value
+        let initial_rewards = router.rewards_processed();
+
+        // Try to increment by 0
+        let result = router.increment_rewards_processed(0);
+
+        // Verify operation succeeded
+        assert!(result.is_ok());
+
+        // Verify rewards_processed hasn't changed
+        assert_eq!(router.rewards_processed(), initial_rewards);
+    }
+
+    #[test]
+    fn test_distribute_ncn_fee_group_reward_route_not_found() {
+        // Create a new router
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(),
+            1,   // epoch
+            1,   // bump
+            100, // slot_created
+        );
+
+        // Try to distribute rewards for a non-existent operator
+        let non_existent_operator = Pubkey::new_unique();
+        let result = router
+            .distribute_ncn_fee_group_reward_route(NcnFeeGroup::default(), &non_existent_operator);
+
+        // Verify we get the expected error
+        assert_eq!(result.unwrap_err(), TipRouterError::OperatorRewardNotFound);
+    }
+
+    #[test]
+    fn test_route_to_reward_pool_zero() {
+        // Create a new router
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(),
+            1,   // epoch
+            1,   // bump
+            100, // slot_created
+        );
+
+        // Record initial values
+        let initial_total_rewards = router.total_rewards();
+        let initial_reward_pool = router.reward_pool();
+
+        // Try to route 0 rewards
+        let result = router.route_to_reward_pool(0);
+
+        // Verify operation succeeded
+        assert!(result.is_ok());
+
+        // Verify state hasn't changed
+        assert_eq!(router.total_rewards(), initial_total_rewards);
+        assert_eq!(router.reward_pool(), initial_reward_pool);
+    }
+
+    #[test]
+    fn test_has_rewards() {
+        // Test case 1: No rewards in any group
+        let empty_route = NcnRewardRoute::default();
+        assert!(!empty_route.has_rewards().unwrap());
+
+        // Test case 2: Rewards in first group only
+        let single_group_route =
+            NcnRewardRoute::new(&Pubkey::new_unique(), NcnFeeGroup::default(), 100).unwrap();
+        assert!(single_group_route.has_rewards().unwrap());
+
+        // Test case 3: Rewards in multiple groups
+        let mut multi_group_route = NcnRewardRoute::default();
+        for group in NcnFeeGroup::all_groups().iter().take(3) {
+            multi_group_route.set_rewards(*group, 50).unwrap();
+        }
+        assert!(multi_group_route.has_rewards().unwrap());
+
+        // Test case 4: Zero rewards in all groups
+        let mut zero_rewards_route = NcnRewardRoute::default();
+        for group in NcnFeeGroup::all_groups().iter() {
+            zero_rewards_route.set_rewards(*group, 0).unwrap();
+        }
+        assert!(!zero_rewards_route.has_rewards().unwrap());
+
+        // Test case 5: Mix of zero and non-zero rewards
+        let mut mixed_rewards_route = NcnRewardRoute::default();
+        for (i, group) in NcnFeeGroup::all_groups().iter().enumerate() {
+            let amount = if i % 2 == 0 { 100 } else { 0 };
+            mixed_rewards_route.set_rewards(*group, amount).unwrap();
+        }
+        assert!(mixed_rewards_route.has_rewards().unwrap());
     }
 
     #[test]
@@ -1439,5 +1662,84 @@ mod tests {
 
             assert_eq!(rewards, 1000);
         }
+    }
+
+    #[test]
+    fn test_ncn_epoch() {
+        // Create router with a specific epoch
+        let test_epoch = 12345;
+        let router = BaseRewardRouter::new(
+            &Pubkey::new_unique(),
+            test_epoch,
+            1,   // bump
+            100, // slot_created
+        );
+
+        // Verify the epoch is correctly returned
+        assert_eq!(router.ncn_epoch(), test_epoch);
+
+        // Test with a different epoch value
+        let router = BaseRewardRouter::new(
+            &Pubkey::new_unique(),
+            u64::MAX, // test max value
+            1,
+            100,
+        );
+        assert_eq!(router.ncn_epoch(), u64::MAX);
+    }
+
+    #[test]
+    fn test_rent_cost() {
+        let router = BaseRewardRouter::new(
+            &Pubkey::new_unique(),
+            1,   // epoch
+            1,   // bump
+            100, // slot_created
+        );
+
+        // Create test Rent configuration
+        let rent = Rent {
+            lamports_per_byte_year: 1000,
+            exemption_threshold: 2.0,
+            burn_percent: 50,
+        };
+
+        // Calculate expected size
+        let expected_size = 8_u64 + size_of::<BaseRewardRouter>() as u64;
+
+        // Get rent cost
+        let rent_cost = router.rent_cost(&rent).unwrap();
+
+        // Verify rent cost matches expected calculation
+        assert_eq!(rent_cost, rent.minimum_balance(expected_size as usize));
+
+        // Verify size calculation is correct
+        assert_eq!(BaseRewardRouter::SIZE as u64, expected_size);
+    }
+
+    #[test]
+    fn test_rent_cost_size_calculation() {
+        let router = BaseRewardRouter::new(&Pubkey::new_unique(), 1, 1, 100);
+
+        // Create test Rent
+        let rent = Rent {
+            lamports_per_byte_year: 1000,
+            exemption_threshold: 2.0,
+            burn_percent: 50,
+        };
+
+        // Get actual size from SIZE constant
+        let actual_size = BaseRewardRouter::SIZE;
+
+        // Calculate component parts
+        let account_prefix_size = 8_usize;
+        let data_size = size_of::<BaseRewardRouter>();
+
+        // Verify our size components add up correctly
+        assert_eq!(actual_size, account_prefix_size + data_size);
+
+        // Verify rent calculation uses correct size
+        let rent_cost = router.rent_cost(&rent).unwrap();
+        assert_eq!(rent_cost, rent.minimum_balance(actual_size));
     }
 }

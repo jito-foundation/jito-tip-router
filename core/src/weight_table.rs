@@ -230,7 +230,6 @@ impl WeightTable {
 
     pub fn check_table_initialized(&self) -> Result<(), TipRouterError> {
         if !self.table_initialized() {
-            msg!("Weight table not initialized");
             return Err(TipRouterError::TableNotInitialized);
         }
         Ok(())
@@ -238,17 +237,16 @@ impl WeightTable {
 
     pub fn check_registry_initialized(&self) -> Result<(), TipRouterError> {
         if !self.vault_registry_initialized() {
-            msg!(
-                "Vault registry not initialized {}/{}",
-                self.vault_count(),
-                self.vault_entry_count()
-            );
             return Err(TipRouterError::RegistryNotInitialized);
         }
         Ok(())
     }
 
     pub fn check_registry_for_vault(&self, vault_index: u64) -> Result<(), TipRouterError> {
+        if vault_index == VaultEntry::EMPTY_VAULT_INDEX {
+            return Err(TipRouterError::VaultNotInRegistry);
+        }
+
         if !self
             .vault_registry
             .iter()
@@ -328,6 +326,221 @@ mod tests {
             + size_of::<[WeightEntry; MAX_ST_MINTS]>(); // weight table
 
         assert_eq!(size_of::<WeightTable>(), expected_total);
+    }
+
+    #[test]
+    fn test_load() {
+        let program_id = Pubkey::new_unique();
+        let ncn = Pubkey::new_unique();
+        let ncn_epoch = 1;
+
+        let (address, _, _) = WeightTable::find_program_address(&program_id, &ncn, ncn_epoch);
+        let mut data = [0u8; WeightTable::SIZE];
+
+        // Set discriminator
+        data[0] = WeightTable::DISCRIMINATOR;
+
+        // Create NCN account info
+        let mut ncn_lamports = 0;
+        let ncn_account = AccountInfo::new(
+            &ncn,
+            false,
+            false,
+            &mut ncn_lamports,
+            &mut [],
+            &program_id,
+            false,
+            0,
+        );
+
+        // Test 1: Valid case - should succeed
+        let mut lamports = 0;
+        let weight_table_account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = WeightTable::load(
+            &program_id,
+            &weight_table_account,
+            &ncn_account,
+            ncn_epoch,
+            false,
+        );
+        assert!(result.is_ok());
+
+        // Test 2: Invalid owner
+        let wrong_program_id = Pubkey::new_unique();
+        let weight_table_account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut data,
+            &wrong_program_id,
+            false,
+            0,
+        );
+
+        let result = WeightTable::load(
+            &program_id,
+            &weight_table_account,
+            &ncn_account,
+            ncn_epoch,
+            false,
+        );
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
+
+        // Test 3: Empty data
+        let mut empty_data = [0u8; 0];
+        let weight_table_account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut empty_data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = WeightTable::load(
+            &program_id,
+            &weight_table_account,
+            &ncn_account,
+            ncn_epoch,
+            false,
+        );
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+        // Test 4: Not writable when expected to be
+        let weight_table_account = AccountInfo::new(
+            &address,
+            false,
+            false, // not writable
+            &mut lamports,
+            &mut data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = WeightTable::load(
+            &program_id,
+            &weight_table_account,
+            &ncn_account,
+            ncn_epoch,
+            true,
+        );
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+        // Test 5: Invalid discriminator
+        let mut bad_discriminator_data = [0u8; WeightTable::SIZE];
+        bad_discriminator_data[0] = WeightTable::DISCRIMINATOR + 1; // wrong discriminator
+        let weight_table_account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut bad_discriminator_data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = WeightTable::load(
+            &program_id,
+            &weight_table_account,
+            &ncn_account,
+            ncn_epoch,
+            false,
+        );
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+        // Test 6: Wrong PDA address
+        let wrong_address = Pubkey::new_unique();
+        let weight_table_account = AccountInfo::new(
+            &wrong_address,
+            false,
+            false,
+            &mut lamports,
+            &mut data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = WeightTable::load(
+            &program_id,
+            &weight_table_account,
+            &ncn_account,
+            ncn_epoch,
+            false,
+        );
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+    }
+
+    #[test]
+    fn test_check_registry_for_vault() {
+        let ncn = Pubkey::new_unique();
+        let mut table = WeightTable::new(&ncn, 0, 0, 3, 0); // vault_count = 3
+
+        // Create vault registry entries
+        let mut vault_registry = [VaultEntry::default(); MAX_VAULTS];
+
+        // Add three vault entries with different indexes
+        vault_registry[0] = VaultEntry::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            1,   // vault_index
+            100, // slot_registered
+        );
+        vault_registry[1] = VaultEntry::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            5,   // vault_index
+            100, // slot_registered
+        );
+        vault_registry[2] = VaultEntry::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            10,  // vault_index
+            100, // slot_registered
+        );
+
+        // Initialize the table with vault entries
+        table.set_vault_entries(&vault_registry).unwrap();
+
+        // Test 1: Check existing vault indices should succeed
+        assert!(table.check_registry_for_vault(1).is_ok());
+        assert!(table.check_registry_for_vault(5).is_ok());
+        assert!(table.check_registry_for_vault(10).is_ok());
+
+        // Test 2: Check non-existent vault indices should fail
+        assert_eq!(
+            table.check_registry_for_vault(2),
+            Err(TipRouterError::VaultNotInRegistry)
+        );
+        assert_eq!(
+            table.check_registry_for_vault(0),
+            Err(TipRouterError::VaultNotInRegistry)
+        );
+        assert_eq!(
+            table.check_registry_for_vault(11),
+            Err(TipRouterError::VaultNotInRegistry)
+        );
+
+        // Test 3: Check edge case values
+        assert_eq!(
+            table.check_registry_for_vault(u64::MAX),
+            Err(TipRouterError::VaultNotInRegistry)
+        );
     }
 
     #[test]

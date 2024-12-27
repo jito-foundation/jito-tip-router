@@ -815,6 +815,171 @@ mod tests {
     }
 
     #[test]
+    fn test_load() {
+        let program_id = Pubkey::new_unique();
+        let ncn_fee_group = NcnFeeGroup::default();
+        let operator = Pubkey::new_unique();
+        let ncn = Pubkey::new_unique();
+        let epoch = 1;
+        let mut lamports = 0;
+
+        let (address, _, _) = NcnRewardRouter::find_program_address(
+            &program_id,
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            epoch,
+        );
+        let mut data = [0u8; NcnRewardRouter::SIZE];
+
+        // Set discriminator
+        data[0] = NcnRewardRouter::DISCRIMINATOR;
+
+        // Test 1: Valid case - should succeed
+        let account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = NcnRewardRouter::load(
+            &program_id,
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            epoch,
+            &account,
+            false,
+        );
+        assert!(result.is_ok());
+
+        // Test 2: Invalid owner
+        let wrong_program_id = Pubkey::new_unique();
+        let account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut data,
+            &wrong_program_id,
+            false,
+            0,
+        );
+
+        let result = NcnRewardRouter::load(
+            &program_id,
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            epoch,
+            &account,
+            false,
+        );
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
+
+        // Test 3: Empty data
+        let mut empty_data = [0u8; 0];
+        let account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut empty_data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = NcnRewardRouter::load(
+            &program_id,
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            epoch,
+            &account,
+            false,
+        );
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+        // Test 4: Not writable when expected to be
+        let account = AccountInfo::new(
+            &address,
+            false,
+            false, // not writable
+            &mut lamports,
+            &mut data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = NcnRewardRouter::load(
+            &program_id,
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            epoch,
+            &account,
+            true,
+        );
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+        // Test 5: Invalid discriminator
+        let mut bad_discriminator_data = [0u8; NcnRewardRouter::SIZE];
+        bad_discriminator_data[0] = NcnRewardRouter::DISCRIMINATOR + 1; // wrong discriminator
+        let account = AccountInfo::new(
+            &address,
+            false,
+            false,
+            &mut lamports,
+            &mut bad_discriminator_data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = NcnRewardRouter::load(
+            &program_id,
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            epoch,
+            &account,
+            false,
+        );
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+        // Test 6: Wrong PDA address
+        let wrong_address = Pubkey::new_unique();
+        let account = AccountInfo::new(
+            &wrong_address,
+            false,
+            false,
+            &mut lamports,
+            &mut data,
+            &program_id,
+            false,
+            0,
+        );
+
+        let result = NcnRewardRouter::load(
+            &program_id,
+            ncn_fee_group,
+            &operator,
+            &ncn,
+            epoch,
+            &account,
+            false,
+        );
+        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+    }
+
+    #[test]
     fn test_route_incoming_rewards() {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),

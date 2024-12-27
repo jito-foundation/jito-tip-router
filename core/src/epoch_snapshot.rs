@@ -108,6 +108,7 @@ impl EpochSnapshot {
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         if epoch_snapshot.owner.ne(program_id) {
+            msg!("Epoch Snapshot account has an invalid owner");
             return Err(ProgramError::InvalidAccountOwner);
         }
         if epoch_snapshot.data_is_empty() {
@@ -126,6 +127,7 @@ impl EpochSnapshot {
             .key
             .ne(&Self::find_program_address(program_id, ncn, ncn_epoch).0)
         {
+            msg!("Epoch Snapshot account is not at the correct PDA");
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
@@ -264,58 +266,6 @@ impl OperatorSnapshot {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn new_active(
-        operator: &Pubkey,
-        ncn: &Pubkey,
-        ncn_epoch: u64,
-        bump: u8,
-        current_slot: u64,
-        ncn_operator_index: u64,
-        operator_index: u64,
-        operator_fee_bps: u16,
-        vault_count: u64,
-    ) -> Result<Self, TipRouterError> {
-        Self::new(
-            operator,
-            ncn,
-            ncn_epoch,
-            bump,
-            current_slot,
-            true,
-            ncn_operator_index,
-            operator_index,
-            operator_fee_bps,
-            vault_count,
-        )
-    }
-
-    pub fn new_inactive(
-        operator: &Pubkey,
-        ncn: &Pubkey,
-        ncn_epoch: u64,
-        bump: u8,
-        current_slot: u64,
-        ncn_operator_index: u64,
-        operator_index: u64,
-    ) -> Result<Self, TipRouterError> {
-        let mut snapshot = Self::new(
-            operator,
-            ncn,
-            ncn_epoch,
-            bump,
-            current_slot,
-            false,
-            ncn_operator_index,
-            operator_index,
-            0,
-            0,
-        )?;
-
-        snapshot.slot_finalized = PodU64::from(current_slot);
-        Ok(snapshot)
-    }
-
-    #[allow(clippy::too_many_arguments)]
     pub fn initialize(
         &mut self,
         operator: &Pubkey,
@@ -333,8 +283,8 @@ impl OperatorSnapshot {
             return Err(TipRouterError::TooManyVaultOperatorDelegations);
         }
         let slot_finalized = if !is_active { current_slot } else { 0 };
-        let operator_fee_bps_val = if is_active { operator_fee_bps } else { 0 };
-        let vault_operator_delegation_count_val = if is_active {
+        let operator_fee_bps = if is_active { operator_fee_bps } else { 0 };
+        let vault_operator_delegation_count = if is_active {
             vault_operator_delegation_count
         } else {
             0
@@ -350,8 +300,8 @@ impl OperatorSnapshot {
         self.is_active = PodBool::from(is_active);
         self.ncn_operator_index = PodU64::from(ncn_operator_index);
         self.operator_index = PodU64::from(operator_index);
-        self.operator_fee_bps = PodU16::from(operator_fee_bps_val);
-        self.vault_operator_delegation_count = PodU64::from(vault_operator_delegation_count_val);
+        self.operator_fee_bps = PodU16::from(operator_fee_bps);
+        self.vault_operator_delegation_count = PodU64::from(vault_operator_delegation_count);
         self.vault_operator_delegations_registered = PodU64::from(0);
         self.valid_operator_vault_delegations = PodU64::from(0);
         self.stake_weights = StakeWeights::default();
@@ -420,16 +370,24 @@ impl OperatorSnapshot {
         Ok(())
     }
 
+    pub fn slot_finalized(&self) -> u64 {
+        self.slot_finalized.into()
+    }
+
+    pub fn operator_fee_bps(&self) -> u16 {
+        self.operator_fee_bps.into()
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.is_active.into()
+    }
+
     pub const fn operator(&self) -> &Pubkey {
         &self.operator
     }
 
     pub const fn ncn(&self) -> &Pubkey {
         &self.ncn
-    }
-
-    pub fn operator_fee_bps(&self) -> u16 {
-        self.operator_fee_bps.into()
     }
 
     pub fn vault_operator_delegation_count(&self) -> u64 {
@@ -469,7 +427,12 @@ impl OperatorSnapshot {
         ncn_fee_group: NcnFeeGroup,
         stake_weights: &StakeWeights,
     ) -> Result<(), TipRouterError> {
-        if self.vault_operator_delegations_registered() > MAX_VAULTS as u64 {
+        if self
+            .vault_operator_delegations_registered()
+            .checked_add(1)
+            .ok_or(TipRouterError::ArithmeticOverflow)?
+            > MAX_VAULTS as u64
+        {
             return Err(TipRouterError::TooManyVaultOperatorDelegations);
         }
 
@@ -609,6 +572,237 @@ impl VaultOperatorStakeWeight {
 mod tests {
     use super::*;
 
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_epoch_snapshot_load() {
+            let program_id = Pubkey::new_unique();
+            let ncn = Pubkey::new_unique();
+            let epoch = 1;
+            let mut lamports = 0;
+
+            let (address, _, _) = EpochSnapshot::find_program_address(&program_id, &ncn, epoch);
+            let mut data = [0u8; EpochSnapshot::SIZE];
+
+            // Set discriminator
+            data[0] = EpochSnapshot::DISCRIMINATOR;
+
+            // Test 1: Valid case - should succeed
+            let account = AccountInfo::new(
+                &address,
+                false,
+                false,
+                &mut lamports,
+                &mut data,
+                &program_id,
+                false,
+                0,
+            );
+
+            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, false);
+            assert!(result.is_ok());
+
+            // Test 2: Invalid owner
+            let wrong_program_id = Pubkey::new_unique();
+            let account = AccountInfo::new(
+                &address,
+                false,
+                false,
+                &mut lamports,
+                &mut data,
+                &wrong_program_id,
+                false,
+                0,
+            );
+
+            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, false);
+            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
+
+            // Test 3: Empty data
+            let mut empty_data = [0u8; 0];
+            let account = AccountInfo::new(
+                &address,
+                false,
+                false,
+                &mut lamports,
+                &mut empty_data,
+                &program_id,
+                false,
+                0,
+            );
+
+            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, false);
+            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+            // Test 4: Not writable when expected
+            let account = AccountInfo::new(
+                &address,
+                false,
+                false, // not writable
+                &mut lamports,
+                &mut data,
+                &program_id,
+                false,
+                0,
+            );
+
+            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, true);
+            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+            // Test 5: Invalid discriminator
+            let mut bad_discriminator_data = [0u8; EpochSnapshot::SIZE];
+            bad_discriminator_data[0] = EpochSnapshot::DISCRIMINATOR + 1; // wrong discriminator
+            let account = AccountInfo::new(
+                &address,
+                false,
+                false,
+                &mut lamports,
+                &mut bad_discriminator_data,
+                &program_id,
+                false,
+                0,
+            );
+
+            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, false);
+            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+            // Test 6: Wrong PDA address
+            let wrong_address = Pubkey::new_unique();
+            let account = AccountInfo::new(
+                &wrong_address,
+                false,
+                false,
+                &mut lamports,
+                &mut data,
+                &program_id,
+                false,
+                0,
+            );
+
+            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, false);
+            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+        }
+
+        #[test]
+        fn test_operator_snapshot_load() {
+            let program_id = Pubkey::new_unique();
+            let operator = Pubkey::new_unique();
+            let ncn = Pubkey::new_unique();
+            let epoch = 1;
+            let mut lamports = 0;
+
+            let (address, _, _) =
+                OperatorSnapshot::find_program_address(&program_id, &operator, &ncn, epoch);
+            let mut data = [0u8; OperatorSnapshot::SIZE];
+
+            // Set discriminator
+            data[0] = OperatorSnapshot::DISCRIMINATOR;
+
+            // Test 1: Valid case - should succeed
+            let account = AccountInfo::new(
+                &address,
+                false,
+                false,
+                &mut lamports,
+                &mut data,
+                &program_id,
+                false,
+                0,
+            );
+
+            let result =
+                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, false);
+            assert!(result.is_ok());
+
+            // Test 2: Invalid owner
+            let wrong_program_id = Pubkey::new_unique();
+            let account = AccountInfo::new(
+                &address,
+                false,
+                false,
+                &mut lamports,
+                &mut data,
+                &wrong_program_id,
+                false,
+                0,
+            );
+
+            let result =
+                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, false);
+            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
+
+            // Test 3: Empty data
+            let mut empty_data = [0u8; 0];
+            let account = AccountInfo::new(
+                &address,
+                false,
+                false,
+                &mut lamports,
+                &mut empty_data,
+                &program_id,
+                false,
+                0,
+            );
+
+            let result =
+                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, false);
+            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+            // Test 4: Not writable when expected
+            let account = AccountInfo::new(
+                &address,
+                false,
+                false, // not writable
+                &mut lamports,
+                &mut data,
+                &program_id,
+                false,
+                0,
+            );
+
+            let result =
+                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, true);
+            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+            // Test 5: Invalid discriminator
+            let mut bad_discriminator_data = [0u8; OperatorSnapshot::SIZE];
+            bad_discriminator_data[0] = OperatorSnapshot::DISCRIMINATOR + 1; // wrong discriminator
+            let account = AccountInfo::new(
+                &address,
+                false,
+                false,
+                &mut lamports,
+                &mut bad_discriminator_data,
+                &program_id,
+                false,
+                0,
+            );
+
+            let result =
+                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, false);
+            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+
+            // Test 6: Wrong PDA address
+            let wrong_address = Pubkey::new_unique();
+            let account = AccountInfo::new(
+                &wrong_address,
+                false,
+                false,
+                &mut lamports,
+                &mut data,
+                &program_id,
+                false,
+                0,
+            );
+
+            let result =
+                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, false);
+            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
+        }
+    }
+
     #[test]
     fn test_operator_snapshot_size() {
         use std::mem::size_of;
@@ -631,5 +825,325 @@ mod tests {
             + size_of::<VaultOperatorStakeWeight>() * MAX_VAULTS; // vault_operator_stake_weight
 
         assert_eq!(size_of::<OperatorSnapshot>(), expected_total);
+    }
+
+    #[test]
+    fn test_vault_operator_stake_weight_ncn_fee_group() {
+        // Test with default
+        let default_weight = VaultOperatorStakeWeight::default();
+        assert_eq!(default_weight.ncn_fee_group(), NcnFeeGroup::default());
+
+        // Test with custom value
+        let custom_weight = VaultOperatorStakeWeight::new(
+            &Pubkey::new_unique(),
+            1,
+            NcnFeeGroup::default(),
+            &StakeWeights::default(),
+        );
+        assert_eq!(custom_weight.ncn_fee_group(), NcnFeeGroup::default());
+    }
+
+    #[test]
+    fn test_vault_operator_stake_weight_is_empty() {
+        // Test default (should be empty)
+        let default_weight = VaultOperatorStakeWeight::default();
+        assert!(default_weight.is_empty());
+
+        // Test non-empty case
+        let non_empty_weight = VaultOperatorStakeWeight::new(
+            &Pubkey::new_unique(),
+            1,
+            NcnFeeGroup::default(),
+            &StakeWeights::default(),
+        );
+        assert!(!non_empty_weight.is_empty());
+    }
+
+    #[test]
+    fn test_increment_vault_operator_delegation_registration_finalized() {
+        let mut snapshot = OperatorSnapshot::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            1,
+            1,
+            100,
+            true,
+            0,
+            0,
+            100,
+            1, // Set vault_operator_delegation_count to 1
+        )
+        .unwrap();
+
+        // Register one delegation to reach finalized state
+        snapshot.vault_operator_delegations_registered = PodU64::from(1);
+
+        // Attempt to increment when finalized
+        let result = snapshot.increment_vault_operator_delegation_registration(
+            200, // current_slot
+            &Pubkey::new_unique(),
+            1,
+            NcnFeeGroup::default(),
+            &StakeWeights::default(),
+        );
+
+        // Verify we get the expected error
+        assert_eq!(
+            result.unwrap_err(),
+            TipRouterError::VaultOperatorDelegationFinalized
+        );
+    }
+
+    #[test]
+    fn test_initialize_too_many_vault_operator_delegations() {
+        // Create an operator snapshot
+        let mut snapshot = OperatorSnapshot::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            1,
+            1,
+            100,
+            true,
+            0,
+            0,
+            100,
+            1, // Set vault_operator_delegation_count to 1
+        )
+        .unwrap();
+
+        // Try to initialize with vault_operator_delegation_count > MAX_VAULTS
+        let result = snapshot.initialize(
+            &Pubkey::new_unique(),   // operator
+            &Pubkey::new_unique(),   // ncn
+            1,                       // ncn_epoch
+            1,                       // bump
+            100,                     // current_slot
+            true,                    // is_active
+            0,                       // ncn_operator_index
+            0,                       // operator_index
+            100,                     // operator_fee_bps
+            (MAX_VAULTS as u64) + 1, // vault_operator_delegation_count > MAX_VAULTS
+        );
+
+        // Verify we get the expected error
+        assert_eq!(
+            result.unwrap_err(),
+            TipRouterError::TooManyVaultOperatorDelegations
+        );
+    }
+
+    #[test]
+    fn test_insert_vault_operator_stake_weight_too_many_delegations() {
+        // Create an operator snapshot
+        let mut snapshot = OperatorSnapshot::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            1,
+            1,
+            100,
+            true,
+            0,
+            0,
+            100,
+            1,
+        )
+        .unwrap();
+
+        // Set the registered delegations to MAX_VAULTS
+        snapshot.vault_operator_delegations_registered = PodU64::from(MAX_VAULTS as u64);
+
+        // Try to insert another vault operator stake weight
+        let result = snapshot.insert_vault_operator_stake_weight(
+            &Pubkey::new_unique(),
+            1,
+            NcnFeeGroup::default(),
+            &StakeWeights::default(),
+        );
+
+        // Verify we get the expected error
+        assert_eq!(
+            result.unwrap_err(),
+            TipRouterError::TooManyVaultOperatorDelegations
+        );
+    }
+
+    #[test]
+    fn test_insert_vault_operator_stake_weight_duplicate_delegation() {
+        // Create an operator snapshot
+        let mut snapshot = OperatorSnapshot::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            1,
+            1,
+            100,
+            true,
+            0,
+            0,
+            100,
+            2, // Allow for 2 delegations
+        )
+        .unwrap();
+
+        let vault_index = 42;
+
+        // Insert first vault operator stake weight
+        snapshot
+            .insert_vault_operator_stake_weight(
+                &Pubkey::new_unique(),
+                vault_index, // Use specific index
+                NcnFeeGroup::default(),
+                &StakeWeights::default(),
+            )
+            .unwrap();
+
+        // Increment the registered count as would happen in normal operation
+        snapshot.vault_operator_delegations_registered = PodU64::from(1);
+
+        // Try to insert another vault operator stake weight with the same index
+        let result = snapshot.insert_vault_operator_stake_weight(
+            &Pubkey::new_unique(),
+            vault_index, // Use same index as before
+            NcnFeeGroup::default(),
+            &StakeWeights::default(),
+        );
+
+        // Verify we get the expected error
+        assert_eq!(
+            result.unwrap_err(),
+            TipRouterError::DuplicateVaultOperatorDelegation
+        );
+    }
+
+    #[test]
+    fn test_operator_snapshot_new_too_many_delegations() {
+        // Try to create a new OperatorSnapshot with vault_operator_delegation_count > MAX_VAULTS
+        let result = OperatorSnapshot::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            1,                       // ncn_epoch
+            1,                       // bump
+            100,                     // current_slot
+            true,                    // is_active
+            0,                       // ncn_operator_index
+            0,                       // operator_index
+            100,                     // operator_fee_bps
+            (MAX_VAULTS as u64) + 1, // vault_operator_delegation_count exceeds MAX_VAULTS
+        );
+
+        // Verify we get the expected error
+        assert_eq!(
+            result.unwrap_err(),
+            TipRouterError::TooManyVaultOperatorDelegations
+        );
+    }
+
+    #[test]
+    fn test_increment_operator_registration_finalized() {
+        let fees = Fees::new(1000, 1000, 1).unwrap();
+        // Create an epoch snapshot
+        let mut snapshot = EpochSnapshot::new(
+            &Pubkey::new_unique(),
+            1,   // ncn_epoch
+            1,   // bump
+            100, // current_slot
+            &fees,
+            1, // operator_count - set to 1
+            1, // vault_count
+        );
+
+        // Set operators_registered equal to operator_count to make it finalized
+        snapshot.operators_registered = PodU64::from(1);
+
+        // Try to increment operator registration when already finalized
+        let result = snapshot.increment_operator_registration(
+            200, // current_slot
+            1,   // vault_operator_delegations
+            &StakeWeights::default(),
+        );
+
+        // Verify we get the expected error
+        assert_eq!(result.unwrap_err(), TipRouterError::OperatorFinalized);
+    }
+
+    #[test]
+    fn test_operator_snapshot_initialize_active_inactive() {
+        let current_slot = 100;
+        let operator_fee_bps = 150;
+        let vault_operator_delegation_count = 3;
+
+        // Create two operator snapshots - one for active and one for inactive
+        let mut active_snapshot = OperatorSnapshot::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            1,
+            1,
+            current_slot,
+            true,
+            0,
+            0,
+            100,
+            1,
+        )
+        .unwrap();
+
+        let mut inactive_snapshot = OperatorSnapshot::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            1,
+            1,
+            current_slot,
+            false,
+            0,
+            0,
+            100,
+            1,
+        )
+        .unwrap();
+
+        // Initialize active snapshot
+        active_snapshot
+            .initialize(
+                &Pubkey::new_unique(),
+                &Pubkey::new_unique(),
+                1,
+                1,
+                current_slot,
+                true, // is_active
+                0,
+                0,
+                operator_fee_bps,
+                vault_operator_delegation_count,
+            )
+            .unwrap();
+
+        // Initialize inactive snapshot
+        inactive_snapshot
+            .initialize(
+                &Pubkey::new_unique(),
+                &Pubkey::new_unique(),
+                1,
+                1,
+                current_slot,
+                false, // not active
+                0,
+                0,
+                operator_fee_bps,
+                vault_operator_delegation_count,
+            )
+            .unwrap();
+
+        // Test active snapshot values
+        assert_eq!(active_snapshot.slot_finalized(), 0); // slot_finalized should be 0
+        assert_eq!(active_snapshot.operator_fee_bps(), operator_fee_bps); // should keep original fee
+        assert_eq!(
+            active_snapshot.vault_operator_delegation_count(),
+            vault_operator_delegation_count
+        ); // should keep original count
+
+        // Test inactive snapshot values
+        assert_eq!(inactive_snapshot.slot_finalized(), current_slot); // slot_finalized should be current_slot
+        assert_eq!(inactive_snapshot.operator_fee_bps(), 0); // fee should be zeroed
+        assert_eq!(inactive_snapshot.vault_operator_delegation_count(), 0);
+        // count should be zeroed
     }
 }
