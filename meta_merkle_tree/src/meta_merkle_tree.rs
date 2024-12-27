@@ -25,6 +25,7 @@ use crate::{
 pub const LEAF_PREFIX: &[u8] = &[0];
 
 /// Merkle Tree which will be used to set the merkle root for each tip distribution account.
+///
 /// Contains all the information necessary to verify claims against the Merkle Tree.
 /// Wrapper around solana MerkleTree
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,15 +82,6 @@ impl MetaMerkleTree {
             .collect();
         Self::new(tree_nodes)
     }
-
-    // TODO if we need to load this from a file (for operator?)
-    /// Load a merkle tree from a csv path
-    // pub fn new_from_csv(path: &PathBuf) -> Result<Self> {
-    //     let csv_entries = CsvEntry::new_from_file(path)?;
-    //     let tree_nodes: Vec<TreeNode> = csv_entries.into_iter().map(TreeNode::from).collect();
-    //     let tree = Self::new(tree_nodes)?;
-    //     Ok(tree)
-    // }
 
     /// Load a serialized merkle tree from file path
     pub fn new_from_file(path: &PathBuf) -> Result<Self> {
@@ -175,7 +167,7 @@ impl MetaMerkleTree {
 
         assert_eq!(
             mk.get_root()
-                .ok_or(MerkleValidationError("invalid merkle proof".to_string()))?
+                .ok_or_else(|| MerkleValidationError("invalid merkle proof".to_string()))?
                 .to_bytes(),
             root
         );

@@ -164,7 +164,7 @@ pub fn generate_stake_meta_collection(
     // We assume that the rewards sitting in the tip program PDAs are cranked out by the time all of
     // the rewards are claimed.
     let tip_accounts = derive_tip_payment_pubkeys(tip_payment_program_id);
-    
+
     // includes the block builder fee
     let excess_tip_balances: u64 = tip_accounts
         .tip_pdas

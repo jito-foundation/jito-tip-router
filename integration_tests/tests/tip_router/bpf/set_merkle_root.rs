@@ -318,6 +318,8 @@ mod set_merkle_root {
         let target_claimant_node_proof = target_claimant_node.proof.clone().unwrap();
         let target_claimant_node_amount = target_claimant_node.amount;
 
+        tip_router_client.airdrop(&target_claimant, 1.0).await?;
+
         // Run passthrough claim
         tip_router_client
             .do_claim_with_payer(

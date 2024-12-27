@@ -6,6 +6,8 @@ pub mod cli;
 pub use crate::process_epoch::process_epoch;
 pub mod process_epoch;
 
+use std::path::{Path, PathBuf};
+
 use anchor_lang::prelude::*;
 use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{
@@ -14,11 +16,10 @@ use jito_tip_payment_sdk::{
     TIP_ACCOUNT_SEED_7,
 };
 use log::info;
-use meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection;
-use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
-use solana_sdk::slot_history::Slot;
-use solana_sdk::{account::AccountSharedData, pubkey::Pubkey};
-use std::path::{Path, PathBuf};
+use meta_merkle_tree::{
+    generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
+};
+use solana_sdk::{account::AccountSharedData, pubkey::Pubkey, slot_history::Slot};
 
 #[derive(Debug)]
 pub enum MerkleRootError {
@@ -29,7 +30,7 @@ pub enum MerkleRootError {
 
 // TODO where did these come from?
 pub struct TipPaymentPubkeys {
-    config_pda: Pubkey,
+    _config_pda: Pubkey,
     tip_pdas: Vec<Pubkey>,
 }
 
@@ -52,7 +53,7 @@ fn derive_tip_payment_pubkeys(program_id: &Pubkey) -> TipPaymentPubkeys {
     let tip_pda_7 = Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_7], program_id).0;
 
     TipPaymentPubkeys {
-        config_pda,
+        _config_pda: config_pda,
         tip_pdas: vec![
             tip_pda_0, tip_pda_1, tip_pda_2, tip_pda_3, tip_pda_4, tip_pda_5, tip_pda_6, tip_pda_7,
         ],

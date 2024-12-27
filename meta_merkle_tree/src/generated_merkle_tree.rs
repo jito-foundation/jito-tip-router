@@ -189,7 +189,7 @@ impl TreeNode {
                     tip_distribution_program_id,
                 );
 
-            let mut tree_nodes = vec![TreeNode {
+            let mut tree_nodes = vec![Self {
                 claimant: base_reward_receiver,
                 claim_status_pubkey: protocol_claim_status_pubkey,
                 claim_status_bump: protocol_claim_status_bump,
@@ -209,7 +209,7 @@ impl TreeNode {
                     tip_distribution_program_id,
                 );
 
-            tree_nodes.push(TreeNode {
+            tree_nodes.push(Self {
                 claimant: stake_meta.validator_node_pubkey,
                 claim_status_pubkey: validator_claim_status_pubkey,
                 claim_status_bump: validator_claim_status_bump,

@@ -112,7 +112,7 @@ echo "tda_account_args ${tda_account_args[@]}"
 VALIDATOR_PID=
 setup_test_validator() {
   solana-test-validator \
-   --bpf-program SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy $SBF_PROGRAM_DIR/stake_pool.so \
+   --bpf-program SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy $SBF_PROGRAM_DIR/spl_stake_pool.so \
    --bpf-program 4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7 $SBF_PROGRAM_DIR/jito_tip_distribution.so \
    --bpf-program T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt $SBF_PROGRAM_DIR/jito_tip_payment.so \
    --account-dir $FIXTURES_DIR/accounts \
