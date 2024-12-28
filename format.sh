@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/zsh
 echo "Executing: cargo sort --workspace"
 cargo sort --workspace
 
