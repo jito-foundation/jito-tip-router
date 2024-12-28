@@ -26,9 +26,4 @@ pub enum ConfigActions {
 
     /// Get the config
     Get { ncn: Pubkey },
-    // Set the config admin
-    // SetAdmin {
-    //     /// The new admin's pubkey
-    //     new_admin: Pubkey,
-    // },
 }

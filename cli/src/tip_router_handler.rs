@@ -61,9 +61,6 @@ impl TipRouterCliHandler {
             TipRouterCommands::Config {
                 action: ConfigActions::Get { ncn },
             } => self.get_config(ncn).await,
-            // TipRouterCommands::Config {
-            //     action: ConfigActions::SetAdmin { new_admin },
-            // } => self.set_config_admin(new_admin).await,
         }
     }
 
