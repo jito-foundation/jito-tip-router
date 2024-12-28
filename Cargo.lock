@@ -2657,6 +2657,8 @@ dependencies = [
  "jito-bytemuck",
  "jito-restaking-client",
  "jito-restaking-core",
+ "jito-tip-router-client",
+ "jito-tip-router-core",
  "jito-vault-client",
  "jito-vault-core",
  "log",
