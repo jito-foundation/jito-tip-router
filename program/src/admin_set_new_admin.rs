@@ -1,4 +1,4 @@
-use jito_bytemuck::{AccountDeserialize, Discriminator};
+use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
@@ -25,9 +25,6 @@ pub fn process_admin_set_new_admin(
     Ncn::load(restaking_program.key, ncn_account, false)?;
 
     let mut config_data = config.try_borrow_mut_data()?;
-    if config_data[0] != NcnConfig::DISCRIMINATOR {
-        return Err(ProgramError::InvalidAccountData);
-    }
     let config = NcnConfig::try_from_slice_unchecked_mut(&mut config_data)?;
 
     // Verify NCN and Admin
