@@ -23,7 +23,7 @@ pub fn process_realloc_ballot_box(
     };
 
     load_system_program(system_program)?;
-    load_signer(payer, false)?;
+    load_signer(payer, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
 
     let (ballot_box_pda, ballot_box_bump, _) =

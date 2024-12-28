@@ -45,7 +45,7 @@ impl AdminSetStMint {
             self.vault_registry,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.admin, true,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -99,7 +99,7 @@ pub struct AdminSetStMintInstructionArgs {
 ///   0. `[]` config
 ///   1. `[]` ncn
 ///   2. `[writable]` vault_registry
-///   3. `[writable, signer]` admin
+///   3. `[signer]` admin
 ///   4. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct AdminSetStMintBuilder {
@@ -311,7 +311,7 @@ impl<'a, 'b> AdminSetStMintCpi<'a, 'b> {
             *self.vault_registry.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.admin.key,
             true,
         ));
@@ -361,7 +361,7 @@ impl<'a, 'b> AdminSetStMintCpi<'a, 'b> {
 ///   0. `[]` config
 ///   1. `[]` ncn
 ///   2. `[writable]` vault_registry
-///   3. `[writable, signer]` admin
+///   3. `[signer]` admin
 ///   4. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct AdminSetStMintCpiBuilder<'a, 'b> {

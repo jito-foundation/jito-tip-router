@@ -22,7 +22,7 @@ pub fn process_realloc_weight_table(
     };
 
     load_system_program(system_program)?;
-    load_signer(payer, false)?;
+    load_signer(payer, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
 

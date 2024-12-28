@@ -27,9 +27,9 @@ import {
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type ReadonlySignerAccount,
   type TransactionSigner,
   type WritableAccount,
+  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -64,7 +64,7 @@ export type InitializeConfigInstruction<
         ? ReadonlyAccount<TAccountFeeWallet>
         : TAccountFeeWallet,
       TAccountNcnAdmin extends string
-        ? ReadonlySignerAccount<TAccountNcnAdmin> &
+        ? WritableSignerAccount<TAccountNcnAdmin> &
             IAccountSignerMeta<TAccountNcnAdmin>
         : TAccountNcnAdmin,
       TAccountTieBreakerAdmin extends string
@@ -194,7 +194,7 @@ export function getInitializeConfigInstruction<
     config: { value: input.config ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     feeWallet: { value: input.feeWallet ?? null, isWritable: false },
-    ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
+    ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: true },
     tieBreakerAdmin: {
       value: input.tieBreakerAdmin ?? null,
       isWritable: false,

@@ -35,7 +35,7 @@ pub fn process_initialize_ncn_config(
 
     load_system_account(config, true)?;
     load_system_program(system_program)?;
-    load_signer(ncn_admin, false)?;
+    load_signer(ncn_admin, true)?;
 
     Ncn::load(restaking_program.key, ncn_account, false)?;
 

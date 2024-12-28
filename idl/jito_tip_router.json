@@ -22,7 +22,7 @@
         },
         {
           "name": "ncnAdmin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -1786,7 +1786,7 @@
         },
         {
           "name": "admin",
-          "isMut": true,
+          "isMut": false,
           "isSigner": true
         },
         {

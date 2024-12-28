@@ -1,6 +1,6 @@
 use jito_jsm_core::{
     create_account,
-    loader::{load_system_account, load_system_program},
+    loader::{load_signer, load_system_account, load_system_program},
 };
 use jito_tip_router_core::{
     config::Config as NcnConfig, constants::MAX_REALLOC_BYTES, vault_registry::VaultRegistry,
@@ -21,6 +21,7 @@ pub fn process_initialize_vault_registry(
     // Verify accounts
     load_system_account(vault_registry, true)?;
     load_system_program(system_program)?;
+    load_signer(payer, true)?;
 
     NcnConfig::load(program_id, ncn_account.key, ncn_config, false)?;
 

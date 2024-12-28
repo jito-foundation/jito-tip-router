@@ -48,7 +48,7 @@ pub fn process_realloc_operator_snapshot(
     EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, true)?;
 
     load_system_program(system_program)?;
-    load_signer(payer, false)?;
+    load_signer(payer, true)?;
 
     let (operator_snapshot_pda, operator_snapshot_bump, _) =
         OperatorSnapshot::find_program_address(program_id, operator.key, ncn.key, epoch);

@@ -48,7 +48,7 @@ impl InitializeConfig {
             self.fee_wallet,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        accounts.push(solana_program::instruction::AccountMeta::new(
             self.ncn_admin,
             true,
         ));
@@ -111,7 +111,7 @@ pub struct InitializeConfigInstructionArgs {
 ///   0. `[writable]` config
 ///   1. `[]` ncn
 ///   2. `[]` fee_wallet
-///   3. `[signer]` ncn_admin
+///   3. `[writable, signer]` ncn_admin
 ///   4. `[]` tie_breaker_admin
 ///   5. `[]` restaking_program
 ///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
@@ -365,7 +365,7 @@ impl<'a, 'b> InitializeConfigCpi<'a, 'b> {
             *self.fee_wallet.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        accounts.push(solana_program::instruction::AccountMeta::new(
             *self.ncn_admin.key,
             true,
         ));
@@ -425,7 +425,7 @@ impl<'a, 'b> InitializeConfigCpi<'a, 'b> {
 ///   0. `[writable]` config
 ///   1. `[]` ncn
 ///   2. `[]` fee_wallet
-///   3. `[signer]` ncn_admin
+///   3. `[writable, signer]` ncn_admin
 ///   4. `[]` tie_breaker_admin
 ///   5. `[]` restaking_program
 ///   6. `[]` system_program
