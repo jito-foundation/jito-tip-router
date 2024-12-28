@@ -80,27 +80,22 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
         JITO_RESTAKING_ID
     };
 
-    let vault_program_id = if let Some(vault_program_id) = &args.vault_program_id {
+    let _vault_program_id = if let Some(vault_program_id) = &args.vault_program_id {
         Pubkey::from_str(vault_program_id)?
     } else {
         JITO_VAULT_ID
     };
 
-    let tip_router_program_id = if let Some(vault_program_id) = &args.vault_program_id {
-        Pubkey::from_str(vault_program_id)?
+    let tip_router_program_id = if let Some(tip_router_program_id) = &args.tip_router_program_id {
+        Pubkey::from_str(tip_router_program_id)?
     } else {
         JITO_TIP_ROUTER_ID
     };
 
     let action = args.action.expect("Action not found");
-    TipRouterCliHandler::new(
-        cli_config,
-        restaking_program_id,
-        vault_program_id,
-        tip_router_program_id,
-    )
-    .handle(action)
-    .await?;
+    TipRouterCliHandler::new(cli_config, restaking_program_id, tip_router_program_id)
+        .handle(action)
+        .await?;
 
     Ok(())
 }

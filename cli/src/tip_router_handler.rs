@@ -15,8 +15,6 @@ pub struct TipRouterCliHandler {
 
     restaking_program_id: Pubkey,
 
-    vault_program_id: Pubkey,
-
     tip_router_program_id: Pubkey,
 }
 
@@ -24,13 +22,11 @@ impl TipRouterCliHandler {
     pub const fn new(
         cli_config: CliConfig,
         restaking_program_id: Pubkey,
-        vault_program_id: Pubkey,
         tip_router_program_id: Pubkey,
     ) -> Self {
         Self {
             cli_config,
             restaking_program_id,
-            vault_program_id,
             tip_router_program_id,
         }
     }
@@ -106,14 +102,12 @@ impl TipRouterCliHandler {
             .block_engine_fee_bps(block_engine_fee_bps)
             .epochs_before_stall(epochs_before_stall)
             .valid_slots_after_consensus(valid_slots_after_consensus);
+        let mut init_ix = ix_builder.instruction();
+        init_ix.program_id = self.tip_router_program_id;
 
         let blockhash = rpc_client.get_latest_blockhash().await?;
-        let tx = Transaction::new_signed_with_payer(
-            &[ix_builder.instruction()],
-            Some(&ncn_admin),
-            &[keypair],
-            blockhash,
-        );
+        let tx =
+            Transaction::new_signed_with_payer(&[init_ix], Some(&ncn_admin), &[keypair], blockhash);
 
         info!(
             "Initializing Jito Tip Router config parameters: {:?}",
@@ -132,7 +126,7 @@ impl TipRouterCliHandler {
         let rpc_client = self.get_rpc_client();
 
         let config_address = jito_tip_router_core::config::Config::find_program_address(
-            &self.restaking_program_id,
+            &self.tip_router_program_id,
             &ncn,
         )
         .0;

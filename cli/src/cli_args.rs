@@ -26,7 +26,7 @@ pub struct Cli {
     pub vault_program_id: Option<String>,
 
     #[arg(long, global = true, help = "Jito Tip Router program ID")]
-    pub jito_tip_router_program: Option<String>,
+    pub tip_router_program_id: Option<String>,
 
     #[arg(long, global = true, help = "Keypair")]
     pub keypair: Option<String>,
