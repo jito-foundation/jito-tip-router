@@ -2679,6 +2679,7 @@ dependencies = [
  "anchor-lang",
  "borsh 0.10.4",
  "bytemuck",
+ "clap 4.5.23",
  "num-derive 0.4.2",
  "num-traits",
  "serde",
