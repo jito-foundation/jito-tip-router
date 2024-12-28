@@ -26,7 +26,6 @@ pub fn process_admin_register_st_mint(
     Ncn::load(restaking_program.key, ncn, false)?;
 
     load_token_mint(st_mint)?;
-
     load_signer(admin, false)?;
 
     {
