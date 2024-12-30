@@ -85,8 +85,20 @@ jobs:
           crate: cargo-sort
       - run: cargo sort --workspace --check
       - run: cargo fmt --all --check
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - run: |
-          cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D clippy::integer_division -D clippy::arithmetic_side_effects -D clippy::style -D clippy::perf
+          cargo clippy \
+            --all-features \
+            --workspace \
+            -- \
+            -D warnings \
+            -D clippy::all \
+            -D clippy::nursery \
+            -D clippy::integer_division \
+            -D clippy::arithmetic_side_effects \
+            -D clippy::style \
+            -D clippy::perf
 
   build:
     name: build
