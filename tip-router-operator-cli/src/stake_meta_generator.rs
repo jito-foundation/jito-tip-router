@@ -71,6 +71,7 @@ impl Display for StakeMetaGeneratorError {
 
 /// Creates a bank from the paths at the desired slot and generates the StakeMetaCollection for
 /// that slot. Optionally writing the result as JSON file to disk.
+#[allow(clippy::too_many_arguments)]
 pub fn generate_stake_meta(
     ledger_path: &Path,
     account_paths: Vec<PathBuf>,
@@ -119,6 +120,7 @@ fn tip_distributuon_account_from_tda_wrapper(
 }
 
 /// Creates a collection of [StakeMeta]'s from the given bank.
+#[allow(clippy::significant_drop_tightening)]
 pub fn generate_stake_meta_collection(
     bank: &Arc<Bank>,
     tip_distribution_program_id: &Pubkey,
@@ -198,33 +200,33 @@ pub fn generate_stake_meta_collection(
                 bank.epoch(),
             )
             .0;
-            let tda = if let Some(mut account_data) = bank.get_account(&tip_distribution_pubkey) {
-                // TDAs may be funded with lamports and therefore exist in the bank, but would fail the deserialization step
-                // if the buffer is yet to be allocated thru the init call to the program.
-                if let Ok(tip_distribution_account) =
-                    TipDistributionAccount::try_deserialize(&mut account_data.data())
-                {
-                    // this snapshot might have tips that weren't claimed by the time the epoch is over
-                    // assume that it will eventually be cranked and credit the excess to this account
-                    if tip_distribution_pubkey == tip_receiver {
-                        account_data.set_lamports(
-                            account_data
-                                .lamports()
-                                .checked_add(tip_receiver_fee)
-                                .expect("tip overflow"),
-                        );
-                    }
-                    Some(TipDistributionAccountWrapper {
-                        tip_distribution_account,
-                        account_data,
-                        tip_distribution_pubkey,
-                    })
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
+            let tda = bank.get_account(&tip_distribution_pubkey).map_or_else(
+                || None,
+                |mut account_data| {
+                    // TDAs may be funded with lamports and therefore exist in the bank, but would fail the deserialization step
+                    // if the buffer is yet to be allocated thru the init call to the program.
+                    TipDistributionAccount::try_deserialize(&mut account_data.data()).map_or_else(
+                        |_| None,
+                        |tip_distribution_account| {
+                            // this snapshot might have tips that weren't claimed by the time the epoch is over
+                            // assume that it will eventually be cranked and credit the excess to this account
+                            if tip_distribution_pubkey == tip_receiver {
+                                account_data.set_lamports(
+                                    account_data
+                                        .lamports()
+                                        .checked_add(tip_receiver_fee)
+                                        .expect("tip overflow"),
+                                );
+                            }
+                            Some(TipDistributionAccountWrapper {
+                                tip_distribution_account,
+                                account_data,
+                                tip_distribution_pubkey,
+                            })
+                        },
+                    )
+                },
+            );
             Ok(((*vote_pubkey, vote_account), tda))
         })
         .collect::<Result<_, StakeMetaGeneratorError>>()?;

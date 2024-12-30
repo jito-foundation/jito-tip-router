@@ -67,6 +67,7 @@ pub struct TipDistributionAccountWrapper {
     pub tip_distribution_pubkey: Pubkey,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn get_meta_merkle_root(
     ledger_path: &Path,
     account_paths: Vec<PathBuf>,

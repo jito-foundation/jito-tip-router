@@ -40,13 +40,16 @@ pub async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<(u64
         return Ok((0, 0));
     }
 
-    let epoch_start_slot = current_slot - slot_index;
+    let epoch_start_slot = current_slot
+        .checked_sub(slot_index)
+        .ok_or_else(|| anyhow::anyhow!("epoch_start_slot subtraction overflow"))?;
     let previous_epoch_final_slot = epoch_start_slot.saturating_sub(1);
     let previous_epoch = epoch_info.epoch.saturating_sub(1);
 
     Ok((previous_epoch, previous_epoch_final_slot))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn process_epoch(
     client: &EllipsisClient,
     previous_epoch_slot: u64,
@@ -73,14 +76,8 @@ pub async fn process_epoch(
         .fee_config
         .adjusted_total_fees_bps(previous_epoch)?;
 
-    let account_paths = match account_paths {
-        Some(paths) => paths,
-        None => vec![ledger_path.clone()],
-    };
-    let full_snapshots_path = match full_snapshots_path {
-        Some(path) => path,
-        None => ledger_path,
-    };
+    let account_paths = account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
+    let full_snapshots_path = full_snapshots_path.map_or(ledger_path, |path| path);
 
     // Generate merkle root from ledger
     let meta_merkle_tree = match get_meta_merkle_root(

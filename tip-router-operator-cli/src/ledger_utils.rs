@@ -79,8 +79,10 @@ pub fn get_bank_from_ledger(
         ..SnapshotConfig::new_load_only()
     };
 
-    let mut process_options = ProcessOptions::default();
-    process_options.halt_at_slot = Some(desired_slot.to_owned());
+    let process_options = ProcessOptions {
+        halt_at_slot: Some(desired_slot.to_owned()),
+        ..Default::default()
+    };
     let exit = Arc::new(AtomicBool::new(false));
     let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
         bank_forks_utils::load_bank_forks(
@@ -109,8 +111,7 @@ pub fn get_bank_from_ledger(
     )
     .unwrap();
 
-    let bank_forks_read = bank_forks.read().unwrap();
-    let working_bank: Arc<Bank> = bank_forks_read.working_bank();
+    let working_bank = bank_forks.read().unwrap().working_bank();
 
     if take_snapshot {
         let full_snapshot_archive_info = snapshot_bank_utils::bank_to_full_snapshot_archive(
