@@ -140,6 +140,17 @@ impl BallotTally {
 
         Ok(())
     }
+
+    pub fn decrement_tally(&mut self, stake_weights: &StakeWeights) -> Result<(), TipRouterError> {
+        self.stake_weights.decrement(stake_weights)?;
+        self.tally = PodU64::from(
+            self.tally()
+                .checked_sub(1)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
@@ -446,6 +457,12 @@ impl BallotBox {
                     return Err(TipRouterError::ConsensusAlreadyReached);
                 }
 
+                // If the operator has already voted, we need to decrement their vote from the previous ballot
+                let prev_ballot_index = vote.ballot_index();
+                if let Some(prev_tally) = self.ballot_tallies.get_mut(prev_ballot_index as usize) {
+                    prev_tally.decrement_tally(vote.stake_weights())?;
+                }
+
                 let operator_vote =
                     OperatorVote::new(ballot_index, operator, current_slot, stake_weights);
                 *vote = operator_vote;
@@ -462,7 +479,6 @@ impl BallotBox {
                         .checked_add(1)
                         .ok_or(TipRouterError::ArithmeticOverflow)?,
                 );
-
                 return Ok(());
             }
         }
@@ -1168,5 +1184,72 @@ mod tests {
             ballot_box.set_tie_breaker_ballot(&ballot1.root(), current_epoch, epochs_before_stall),
             Err(TipRouterError::ConsensusAlreadyReached)
         );
+    }
+
+    #[test]
+    fn test_cast_vote_stake_weight_accounting() {
+        let ncn = Pubkey::new_unique();
+        let operator = Pubkey::new_unique();
+        let current_slot = 100;
+        let epoch = 1;
+        let stake_weights = StakeWeights::new(1000);
+        let valid_slots_after_consensus = 10;
+        let mut ballot_box = BallotBox::new(&ncn, epoch, 0, current_slot);
+
+        // Initial ballot
+        let ballot1 = Ballot::new(&[1; 32]);
+        ballot_box
+            .cast_vote(
+                &operator,
+                &ballot1,
+                &stake_weights,
+                current_slot,
+                valid_slots_after_consensus,
+            )
+            .unwrap();
+
+        // Verify initial stake weight
+        let initial_tally = ballot_box
+            .ballot_tallies
+            .iter()
+            .find(|t| t.ballot().eq(&ballot1))
+            .unwrap();
+        assert_eq!(
+            initial_tally.stake_weights().stake_weight(),
+            stake_weights.stake_weight()
+        );
+
+        // Change vote to new ballot
+        let ballot2 = Ballot::new(&[2; 32]);
+        ballot_box
+            .cast_vote(
+                &operator,
+                &ballot2,
+                &stake_weights,
+                current_slot + 1,
+                valid_slots_after_consensus,
+            )
+            .unwrap();
+
+        // Verify stake weight moved from ballot1 to ballot2
+        let old_tally = ballot_box
+            .ballot_tallies
+            .iter()
+            .find(|t| t.ballot().eq(&ballot1))
+            .unwrap();
+        assert_eq!(old_tally.stake_weights().stake_weight(), 0);
+
+        let new_tally = ballot_box
+            .ballot_tallies
+            .iter()
+            .find(|t| t.ballot().eq(&ballot2))
+            .unwrap();
+        assert_eq!(
+            new_tally.stake_weights().stake_weight(),
+            stake_weights.stake_weight()
+        );
+
+        // Verify total operators voted hasn't changed
+        assert_eq!(ballot_box.operators_voted(), 1);
     }
 }
