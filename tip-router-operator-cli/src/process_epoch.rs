@@ -69,7 +69,9 @@ pub async fn process_epoch(
 
     // Get the protocol fees
     let ncn_config = get_ncn_config(client, ncn_address).await.unwrap();
-    let fees = ncn_config.fee_config.total_fees_bps(previous_epoch)?;
+    let adjusted_total_fees = ncn_config
+        .fee_config
+        .adjusted_total_fees_bps(previous_epoch)?;
 
     let account_paths = match account_paths {
         Some(paths) => paths,
@@ -91,7 +93,7 @@ pub async fn process_epoch(
         tip_payment_program_id,
         ncn_address,
         previous_epoch,
-        fees,
+        adjusted_total_fees,
         snapshots_enabled,
     ) {
         Ok(tree) => {

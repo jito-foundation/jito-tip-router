@@ -93,7 +93,7 @@ pub fn get_bank_from_ledger(
             None,
             None, // Maybe support this later, though
             None,
-            exit.clone(),
+            exit,
             false,
         )
         .unwrap();
@@ -151,7 +151,7 @@ mod tests {
     fn test_get_bank_from_ledger_success() {
         let ledger_path = PathBuf::from("./tests/fixtures/test-ledger");
         let account_paths = vec![ledger_path.join("accounts/run")];
-        let full_snapshots_path = PathBuf::from(ledger_path.clone());
+        let full_snapshots_path = ledger_path.clone();
         let desired_slot = 144;
         let res = get_bank_from_ledger(
             &ledger_path,
@@ -166,7 +166,7 @@ mod tests {
             "{}/snapshot-{}-{}.tar.zst",
             full_snapshots_path.to_str().unwrap(),
             desired_slot,
-            res.get_accounts_hash().unwrap().0.to_string()
+            res.get_accounts_hash().unwrap().0
         );
         let snapshot_path = Path::new(&snapshot_path_str);
         assert!(snapshot_path.exists());
