@@ -102,7 +102,7 @@ impl BaseRewardRouter {
             [BaseRewardRouterRewards::default(); NcnFeeGroup::FEE_GROUP_COUNT];
         self.ncn_fee_group_reward_routes = [NcnRewardRoute::default(); MAX_OPERATORS];
 
-        self.finish_routing_state();
+        self.reset_routing_state();
     }
 
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
@@ -197,7 +197,7 @@ impl BaseRewardRouter {
         self.last_rewards_to_process = PodU64::from(rewards_to_process);
     }
 
-    pub fn finish_routing_state(&mut self) {
+    pub fn reset_routing_state(&mut self) {
         self.last_ncn_group_index = Self::NO_LAST_NCN_GROUP_INDEX;
         self.last_vote_index = PodU16::from(Self::NO_LAST_VOTE_INDEX);
         self.last_rewards_to_process = PodU64::from(Self::NO_LAST_REWARDS_TO_PROCESS);
@@ -340,7 +340,7 @@ impl BaseRewardRouter {
         }
 
         msg!("Finished routing NCN fee group rewards");
-        self.finish_routing_state();
+        self.reset_routing_state();
 
         Ok(())
     }

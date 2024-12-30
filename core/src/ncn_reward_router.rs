@@ -217,7 +217,7 @@ impl NcnRewardRouter {
             PodU16::from(vault_operator_delegation_index as u16);
     }
 
-    pub fn finish_routing_state(&mut self) {
+    pub fn reset_routing_state(&mut self) {
         self.last_rewards_to_process = PodU64::from(Self::NO_LAST_REWARDS_TO_PROCESS);
         self.last_vault_operator_delegation_index =
             PodU16::from(Self::NO_LAST_VAULT_OPERATION_DELEGATION_INDEX);
@@ -329,7 +329,7 @@ impl NcnRewardRouter {
                 self.route_to_vault_reward_route(vault, vault_reward)?;
             }
 
-            self.finish_routing_state();
+            self.reset_routing_state();
         }
 
         // Operator gets any remainder
