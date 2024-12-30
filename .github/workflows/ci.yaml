@@ -85,8 +85,6 @@ jobs:
           crate: cargo-sort
       - run: cargo sort --workspace --check
       - run: cargo fmt --all --check
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - run: |
           cargo clippy \
             --all-features \
