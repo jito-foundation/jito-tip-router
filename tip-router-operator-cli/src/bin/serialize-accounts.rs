@@ -1,7 +1,6 @@
 use std::{fs::File, io::Write, str::FromStr};
 
 use anchor_lang::prelude::*;
-
 use clap::Parser;
 use jito_tip_distribution_sdk::{
     derive_tip_distribution_account_address, TipDistributionAccount, TIP_DISTRIBUTION_SIZE,
