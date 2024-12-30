@@ -1,3 +1,5 @@
+use std::{fs::File, io::Write, str::FromStr};
+
 use anchor_lang::prelude::*;
 use base64;
 use clap::Parser;
@@ -7,9 +9,7 @@ use jito_tip_distribution_sdk::{
 use log::info;
 use serde_json::json;
 use solana_program::pubkey::Pubkey;
-use std::fs::File;
-use std::io::Write;
-use std::str::FromStr;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
