@@ -1,9 +1,8 @@
-use jito_bytemuck::{AccountDeserialize, Discriminator};
+use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::load_signer;
-use jito_restaking_core::{config::Config, ncn::Ncn};
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    base_fee_group::BaseFeeGroup, error::TipRouterError, ncn_config::NcnConfig,
-    ncn_fee_group::NcnFeeGroup,
+    base_fee_group::BaseFeeGroup, config::Config, error::TipRouterError, ncn_fee_group::NcnFeeGroup,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
@@ -21,34 +20,19 @@ pub fn process_admin_set_config_fees(
     ncn_fee_group: Option<u8>,
     new_ncn_fee_bps: Option<u16>,
 ) -> ProgramResult {
-    let [restaking_config, config, ncn_account, fee_admin, restaking_program] = accounts else {
+    let [config, ncn_account, fee_admin, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     load_signer(fee_admin, true)?;
 
-    NcnConfig::load(program_id, ncn_account.key, config, true)?;
+    Config::load(program_id, ncn_account.key, config, true)?;
     Ncn::load(restaking_program.key, ncn_account, false)?;
-    Config::load(restaking_program.key, restaking_config, false)?;
 
-    let ncn_epoch_length = {
-        let config_data = restaking_config.data.borrow();
-        let config = Config::try_from_slice_unchecked(&config_data)?;
-        config.epoch_length()
-    };
-
-    let epoch = {
-        let current_slot = Clock::get()?.slot;
-        current_slot
-            .checked_div(ncn_epoch_length)
-            .ok_or(TipRouterError::DenominatorIsZero)?
-    };
+    let epoch = Clock::get()?.epoch;
 
     let mut config_data = config.try_borrow_mut_data()?;
-    if config_data[0] != Config::DISCRIMINATOR {
-        return Err(ProgramError::InvalidAccountData);
-    }
-    let config = NcnConfig::try_from_slice_unchecked_mut(&mut config_data)?;
+    let config = Config::try_from_slice_unchecked_mut(&mut config_data)?;
 
     // Verify NCN and Admin
     if config.ncn != *ncn_account.key {

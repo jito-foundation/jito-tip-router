@@ -1,8 +1,8 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::{load_signer, load_token_mint};
-use jito_restaking_core::{config::Config, ncn::Ncn};
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    ncn_config::NcnConfig, ncn_fee_group::NcnFeeGroup, vault_registry::VaultRegistry,
+    config::Config, ncn_fee_group::NcnFeeGroup, vault_registry::VaultRegistry,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -17,15 +17,12 @@ pub fn process_admin_register_st_mint(
     switchboard_feed: Option<Pubkey>,
     no_feed_weight: Option<u128>,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn, st_mint, vault_registry, admin, restaking_program] =
-        accounts
-    else {
+    let [config, ncn, st_mint, vault_registry, admin, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
+    Config::load(program_id, ncn.key, config, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, true)?;
-    Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
     load_token_mint(st_mint)?;
@@ -60,7 +57,7 @@ pub fn process_admin_register_st_mint(
         st_mint.key,
         ncn_fee_group,
         reward_multiplier_bps,
-        switchboard_feed,
+        &switchboard_feed,
         no_feed_weight,
     )?;
 

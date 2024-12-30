@@ -55,8 +55,8 @@ mod tests {
             .await?;
 
         // Verify initial state
-        assert_eq!(operator_snapshot.operator(), operator);
-        assert_eq!(operator_snapshot.ncn(), ncn);
+        assert_eq!(*operator_snapshot.operator(), operator);
+        assert_eq!(*operator_snapshot.ncn(), ncn);
 
         Ok(())
     }

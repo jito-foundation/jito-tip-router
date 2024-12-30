@@ -27,8 +27,8 @@ import {
 } from '@solana/web3.js';
 
 export type Ballot = {
-  merkleRoot: ReadonlyUint8Array;
-  isValid: number;
+  metaMerkleRoot: ReadonlyUint8Array;
+  isInitialized: number;
   reserved: Array<number>;
 };
 
@@ -36,16 +36,16 @@ export type BallotArgs = Ballot;
 
 export function getBallotEncoder(): Encoder<BallotArgs> {
   return getStructEncoder([
-    ['merkleRoot', fixEncoderSize(getBytesEncoder(), 32)],
-    ['isValid', getBoolEncoder()],
+    ['metaMerkleRoot', fixEncoderSize(getBytesEncoder(), 32)],
+    ['isInitialized', getBoolEncoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 63 })],
   ]);
 }
 
 export function getBallotDecoder(): Decoder<Ballot> {
   return getStructDecoder([
-    ['merkleRoot', fixDecoderSize(getBytesDecoder(), 32)],
-    ['isValid', getBoolDecoder()],
+    ['metaMerkleRoot', fixDecoderSize(getBytesDecoder(), 32)],
+    ['isInitialized', getBoolDecoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 63 })],
   ]);
 }

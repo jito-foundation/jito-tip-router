@@ -3,9 +3,9 @@ use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
 };
-use jito_restaking_core::{config::Config, ncn::Ncn};
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    epoch_snapshot::EpochSnapshot, error::TipRouterError, fees, ncn_config::NcnConfig,
+    config::Config, epoch_snapshot::EpochSnapshot, error::TipRouterError, fees,
     weight_table::WeightTable,
 };
 use solana_program::{
@@ -19,7 +19,7 @@ pub fn process_initialize_epoch_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, restaking_config, ncn, weight_table, epoch_snapshot, payer, restaking_program, system_program] =
+    let [config, ncn, weight_table, epoch_snapshot, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -30,8 +30,7 @@ pub fn process_initialize_epoch_snapshot(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    Config::load(restaking_program.key, restaking_config, false)?;
+    Config::load(program_id, ncn.key, config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
     load_system_account(epoch_snapshot, true)?;
@@ -85,8 +84,8 @@ pub fn process_initialize_epoch_snapshot(
     )?;
 
     let ncn_fees: fees::Fees = {
-        let ncn_config_data = ncn_config.data.borrow();
-        let ncn_config_account = NcnConfig::try_from_slice_unchecked(&ncn_config_data)?;
+        let ncn_config_data = config.data.borrow();
+        let ncn_config_account = Config::try_from_slice_unchecked(&ncn_config_data)?;
         *ncn_config_account.fee_config.current_fees(ncn_epoch)
     };
 
@@ -108,11 +107,11 @@ pub fn process_initialize_epoch_snapshot(
         EpochSnapshot::try_from_slice_unchecked_mut(&mut epoch_snapshot_data)?;
 
     *epoch_snapshot_account = EpochSnapshot::new(
-        *ncn.key,
+        ncn.key,
         ncn_epoch,
         epoch_snapshot_bump,
         current_slot,
-        ncn_fees,
+        &ncn_fees,
         operator_count,
         vault_count,
     );

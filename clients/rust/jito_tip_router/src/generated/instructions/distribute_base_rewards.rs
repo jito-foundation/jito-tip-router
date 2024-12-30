@@ -8,8 +8,6 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
 pub struct DistributeBaseRewards {
-    pub restaking_config: solana_program::pubkey::Pubkey,
-
     pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
@@ -56,11 +54,7 @@ impl DistributeBaseRewards {
         args: DistributeBaseRewardsInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(17 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_config,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.config,
             false,
@@ -146,7 +140,7 @@ pub struct DistributeBaseRewardsInstructionData {
 
 impl DistributeBaseRewardsInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 15 }
+        Self { discriminator: 20 }
     }
 }
 
@@ -167,26 +161,24 @@ pub struct DistributeBaseRewardsInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` config
-///   2. `[]` ncn
-///   3. `[writable]` base_reward_router
-///   4. `[writable]` base_reward_receiver
-///   5. `[]` base_fee_wallet
-///   6. `[writable]` base_fee_wallet_ata
-///   7. `[]` restaking_program
-///   8. `[]` stake_pool_program
-///   9. `[writable]` stake_pool
-///   10. `[]` stake_pool_withdraw_authority
-///   11. `[writable]` reserve_stake
-///   12. `[writable]` manager_fee_account
-///   13. `[writable]` referrer_pool_tokens_account
-///   14. `[writable]` pool_mint
-///   15. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   16. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   0. `[]` config
+///   1. `[]` ncn
+///   2. `[writable]` base_reward_router
+///   3. `[writable]` base_reward_receiver
+///   4. `[]` base_fee_wallet
+///   5. `[writable]` base_fee_wallet_ata
+///   6. `[]` restaking_program
+///   7. `[]` stake_pool_program
+///   8. `[writable]` stake_pool
+///   9. `[]` stake_pool_withdraw_authority
+///   10. `[writable]` reserve_stake
+///   11. `[writable]` manager_fee_account
+///   12. `[writable]` referrer_pool_tokens_account
+///   13. `[writable]` pool_mint
+///   14. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+///   15. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct DistributeBaseRewardsBuilder {
-    restaking_config: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     base_reward_router: Option<solana_program::pubkey::Pubkey>,
@@ -211,14 +203,6 @@ pub struct DistributeBaseRewardsBuilder {
 impl DistributeBaseRewardsBuilder {
     pub fn new() -> Self {
         Self::default()
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_config = Some(restaking_config);
-        self
     }
     #[inline(always)]
     pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -360,7 +344,6 @@ impl DistributeBaseRewardsBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = DistributeBaseRewards {
-            restaking_config: self.restaking_config.expect("restaking_config is not set"),
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             base_reward_router: self
@@ -412,8 +395,6 @@ impl DistributeBaseRewardsBuilder {
 
 /// `distribute_base_rewards` CPI accounts.
 pub struct DistributeBaseRewardsCpiAccounts<'a, 'b> {
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
@@ -451,8 +432,6 @@ pub struct DistributeBaseRewardsCpiAccounts<'a, 'b> {
 pub struct DistributeBaseRewardsCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -497,7 +476,6 @@ impl<'a, 'b> DistributeBaseRewardsCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            restaking_config: accounts.restaking_config,
             config: accounts.config,
             ncn: accounts.ncn,
             base_reward_router: accounts.base_reward_router,
@@ -550,11 +528,7 @@ impl<'a, 'b> DistributeBaseRewardsCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(17 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_config.key,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.config.key,
             false,
@@ -637,9 +611,8 @@ impl<'a, 'b> DistributeBaseRewardsCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(17 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(16 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.restaking_config.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.base_reward_router.clone());
@@ -672,23 +645,22 @@ impl<'a, 'b> DistributeBaseRewardsCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` config
-///   2. `[]` ncn
-///   3. `[writable]` base_reward_router
-///   4. `[writable]` base_reward_receiver
-///   5. `[]` base_fee_wallet
-///   6. `[writable]` base_fee_wallet_ata
-///   7. `[]` restaking_program
-///   8. `[]` stake_pool_program
-///   9. `[writable]` stake_pool
-///   10. `[]` stake_pool_withdraw_authority
-///   11. `[writable]` reserve_stake
-///   12. `[writable]` manager_fee_account
-///   13. `[writable]` referrer_pool_tokens_account
-///   14. `[writable]` pool_mint
-///   15. `[]` token_program
-///   16. `[]` system_program
+///   0. `[]` config
+///   1. `[]` ncn
+///   2. `[writable]` base_reward_router
+///   3. `[writable]` base_reward_receiver
+///   4. `[]` base_fee_wallet
+///   5. `[writable]` base_fee_wallet_ata
+///   6. `[]` restaking_program
+///   7. `[]` stake_pool_program
+///   8. `[writable]` stake_pool
+///   9. `[]` stake_pool_withdraw_authority
+///   10. `[writable]` reserve_stake
+///   11. `[writable]` manager_fee_account
+///   12. `[writable]` referrer_pool_tokens_account
+///   13. `[writable]` pool_mint
+///   14. `[]` token_program
+///   15. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct DistributeBaseRewardsCpiBuilder<'a, 'b> {
     instruction: Box<DistributeBaseRewardsCpiBuilderInstruction<'a, 'b>>,
@@ -698,7 +670,6 @@ impl<'a, 'b> DistributeBaseRewardsCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(DistributeBaseRewardsCpiBuilderInstruction {
             __program: program,
-            restaking_config: None,
             config: None,
             ncn: None,
             base_reward_router: None,
@@ -720,14 +691,6 @@ impl<'a, 'b> DistributeBaseRewardsCpiBuilder<'a, 'b> {
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_config = Some(restaking_config);
-        self
     }
     #[inline(always)]
     pub fn config(
@@ -916,11 +879,6 @@ impl<'a, 'b> DistributeBaseRewardsCpiBuilder<'a, 'b> {
         let instruction = DistributeBaseRewardsCpi {
             __program: self.instruction.__program,
 
-            restaking_config: self
-                .instruction
-                .restaking_config
-                .expect("restaking_config is not set"),
-
             config: self.instruction.config.expect("config is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
@@ -1000,7 +958,6 @@ impl<'a, 'b> DistributeBaseRewardsCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct DistributeBaseRewardsCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     base_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,

@@ -19,6 +19,8 @@ import {
   getArrayEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU16Decoder,
+  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -50,7 +52,7 @@ export type NcnRewardRouter = {
   ncnFeeGroup: NcnFeeGroup;
   operator: Address;
   ncn: Address;
-  ncnEpoch: bigint;
+  epoch: bigint;
   bump: number;
   slotCreated: bigint;
   totalRewards: bigint;
@@ -58,6 +60,8 @@ export type NcnRewardRouter = {
   rewardsProcessed: bigint;
   operatorRewards: bigint;
   reserved: Array<number>;
+  lastRewardsToProcess: bigint;
+  lastVaultOperatorDelegationIndex: number;
   vaultRewardRoutes: Array<VaultRewardRoute>;
 };
 
@@ -66,7 +70,7 @@ export type NcnRewardRouterArgs = {
   ncnFeeGroup: NcnFeeGroupArgs;
   operator: Address;
   ncn: Address;
-  ncnEpoch: number | bigint;
+  epoch: number | bigint;
   bump: number;
   slotCreated: number | bigint;
   totalRewards: number | bigint;
@@ -74,6 +78,8 @@ export type NcnRewardRouterArgs = {
   rewardsProcessed: number | bigint;
   operatorRewards: number | bigint;
   reserved: Array<number>;
+  lastRewardsToProcess: number | bigint;
+  lastVaultOperatorDelegationIndex: number;
   vaultRewardRoutes: Array<VaultRewardRouteArgs>;
 };
 
@@ -83,7 +89,7 @@ export function getNcnRewardRouterEncoder(): Encoder<NcnRewardRouterArgs> {
     ['ncnFeeGroup', getNcnFeeGroupEncoder()],
     ['operator', getAddressEncoder()],
     ['ncn', getAddressEncoder()],
-    ['ncnEpoch', getU64Encoder()],
+    ['epoch', getU64Encoder()],
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
     ['totalRewards', getU64Encoder()],
@@ -91,6 +97,8 @@ export function getNcnRewardRouterEncoder(): Encoder<NcnRewardRouterArgs> {
     ['rewardsProcessed', getU64Encoder()],
     ['operatorRewards', getU64Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['lastRewardsToProcess', getU64Encoder()],
+    ['lastVaultOperatorDelegationIndex', getU16Encoder()],
     [
       'vaultRewardRoutes',
       getArrayEncoder(getVaultRewardRouteEncoder(), { size: 64 }),
@@ -104,7 +112,7 @@ export function getNcnRewardRouterDecoder(): Decoder<NcnRewardRouter> {
     ['ncnFeeGroup', getNcnFeeGroupDecoder()],
     ['operator', getAddressDecoder()],
     ['ncn', getAddressDecoder()],
-    ['ncnEpoch', getU64Decoder()],
+    ['epoch', getU64Decoder()],
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
     ['totalRewards', getU64Decoder()],
@@ -112,6 +120,8 @@ export function getNcnRewardRouterDecoder(): Decoder<NcnRewardRouter> {
     ['rewardsProcessed', getU64Decoder()],
     ['operatorRewards', getU64Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['lastRewardsToProcess', getU64Decoder()],
+    ['lastVaultOperatorDelegationIndex', getU16Decoder()],
     [
       'vaultRewardRoutes',
       getArrayDecoder(getVaultRewardRouteDecoder(), { size: 64 }),

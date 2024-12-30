@@ -8,8 +8,6 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
 pub struct RouteNcnRewards {
-    pub restaking_config: solana_program::pubkey::Pubkey,
-
     pub ncn: solana_program::pubkey::Pubkey,
 
     pub operator: solana_program::pubkey::Pubkey,
@@ -36,11 +34,7 @@ impl RouteNcnRewards {
         args: RouteNcnRewardsInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_config,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
         ));
@@ -84,7 +78,7 @@ pub struct RouteNcnRewardsInstructionData {
 
 impl RouteNcnRewardsInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 14 }
+        Self { discriminator: 19 }
     }
 }
 
@@ -98,6 +92,7 @@ impl Default for RouteNcnRewardsInstructionData {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RouteNcnRewardsInstructionArgs {
     pub ncn_fee_group: u8,
+    pub max_iterations: u16,
     pub epoch: u64,
 }
 
@@ -105,16 +100,14 @@ pub struct RouteNcnRewardsInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` ncn
-///   2. `[]` operator
-///   3. `[]` operator_snapshot
-///   4. `[writable]` ncn_reward_router
-///   5. `[writable]` ncn_reward_receiver
-///   6. `[]` restaking_program
+///   0. `[]` ncn
+///   1. `[]` operator
+///   2. `[]` operator_snapshot
+///   3. `[writable]` ncn_reward_router
+///   4. `[writable]` ncn_reward_receiver
+///   5. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct RouteNcnRewardsBuilder {
-    restaking_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
     operator_snapshot: Option<solana_program::pubkey::Pubkey>,
@@ -122,6 +115,7 @@ pub struct RouteNcnRewardsBuilder {
     ncn_reward_receiver: Option<solana_program::pubkey::Pubkey>,
     restaking_program: Option<solana_program::pubkey::Pubkey>,
     ncn_fee_group: Option<u8>,
+    max_iterations: Option<u16>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -129,14 +123,6 @@ pub struct RouteNcnRewardsBuilder {
 impl RouteNcnRewardsBuilder {
     pub fn new() -> Self {
         Self::default()
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_config = Some(restaking_config);
-        self
     }
     #[inline(always)]
     pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -186,6 +172,11 @@ impl RouteNcnRewardsBuilder {
         self
     }
     #[inline(always)]
+    pub fn max_iterations(&mut self, max_iterations: u16) -> &mut Self {
+        self.max_iterations = Some(max_iterations);
+        self
+    }
+    #[inline(always)]
     pub fn epoch(&mut self, epoch: u64) -> &mut Self {
         self.epoch = Some(epoch);
         self
@@ -211,7 +202,6 @@ impl RouteNcnRewardsBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = RouteNcnRewards {
-            restaking_config: self.restaking_config.expect("restaking_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             operator: self.operator.expect("operator is not set"),
             operator_snapshot: self
@@ -232,6 +222,10 @@ impl RouteNcnRewardsBuilder {
                 .ncn_fee_group
                 .clone()
                 .expect("ncn_fee_group is not set"),
+            max_iterations: self
+                .max_iterations
+                .clone()
+                .expect("max_iterations is not set"),
             epoch: self.epoch.clone().expect("epoch is not set"),
         };
 
@@ -241,8 +235,6 @@ impl RouteNcnRewardsBuilder {
 
 /// `route_ncn_rewards` CPI accounts.
 pub struct RouteNcnRewardsCpiAccounts<'a, 'b> {
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub operator: &'b solana_program::account_info::AccountInfo<'a>,
@@ -260,8 +252,6 @@ pub struct RouteNcnRewardsCpiAccounts<'a, 'b> {
 pub struct RouteNcnRewardsCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -286,7 +276,6 @@ impl<'a, 'b> RouteNcnRewardsCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            restaking_config: accounts.restaking_config,
             ncn: accounts.ncn,
             operator: accounts.operator,
             operator_snapshot: accounts.operator_snapshot,
@@ -329,11 +318,7 @@ impl<'a, 'b> RouteNcnRewardsCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_config.key,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn.key,
             false,
@@ -374,9 +359,8 @@ impl<'a, 'b> RouteNcnRewardsCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.restaking_config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
         account_infos.push(self.operator_snapshot.clone());
@@ -399,13 +383,12 @@ impl<'a, 'b> RouteNcnRewardsCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` ncn
-///   2. `[]` operator
-///   3. `[]` operator_snapshot
-///   4. `[writable]` ncn_reward_router
-///   5. `[writable]` ncn_reward_receiver
-///   6. `[]` restaking_program
+///   0. `[]` ncn
+///   1. `[]` operator
+///   2. `[]` operator_snapshot
+///   3. `[writable]` ncn_reward_router
+///   4. `[writable]` ncn_reward_receiver
+///   5. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct RouteNcnRewardsCpiBuilder<'a, 'b> {
     instruction: Box<RouteNcnRewardsCpiBuilderInstruction<'a, 'b>>,
@@ -415,7 +398,6 @@ impl<'a, 'b> RouteNcnRewardsCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(RouteNcnRewardsCpiBuilderInstruction {
             __program: program,
-            restaking_config: None,
             ncn: None,
             operator: None,
             operator_snapshot: None,
@@ -423,18 +405,11 @@ impl<'a, 'b> RouteNcnRewardsCpiBuilder<'a, 'b> {
             ncn_reward_receiver: None,
             restaking_program: None,
             ncn_fee_group: None,
+            max_iterations: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_config = Some(restaking_config);
-        self
     }
     #[inline(always)]
     pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
@@ -484,6 +459,11 @@ impl<'a, 'b> RouteNcnRewardsCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
         self.instruction.ncn_fee_group = Some(ncn_fee_group);
+        self
+    }
+    #[inline(always)]
+    pub fn max_iterations(&mut self, max_iterations: u16) -> &mut Self {
+        self.instruction.max_iterations = Some(max_iterations);
         self
     }
     #[inline(always)]
@@ -538,15 +518,15 @@ impl<'a, 'b> RouteNcnRewardsCpiBuilder<'a, 'b> {
                 .ncn_fee_group
                 .clone()
                 .expect("ncn_fee_group is not set"),
+            max_iterations: self
+                .instruction
+                .max_iterations
+                .clone()
+                .expect("max_iterations is not set"),
             epoch: self.instruction.epoch.clone().expect("epoch is not set"),
         };
         let instruction = RouteNcnRewardsCpi {
             __program: self.instruction.__program,
-
-            restaking_config: self
-                .instruction
-                .restaking_config
-                .expect("restaking_config is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
@@ -583,7 +563,6 @@ impl<'a, 'b> RouteNcnRewardsCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct RouteNcnRewardsCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
@@ -591,6 +570,7 @@ struct RouteNcnRewardsCpiBuilderInstruction<'a, 'b> {
     ncn_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_fee_group: Option<u8>,
+    max_iterations: Option<u16>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

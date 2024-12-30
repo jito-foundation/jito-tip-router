@@ -42,7 +42,6 @@ export function getInitializeConfigDiscriminatorBytes() {
 
 export type InitializeConfigInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountFeeWallet extends string | IAccountMeta<string> = string,
@@ -57,9 +56,6 @@ export type InitializeConfigInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountRestakingConfig extends string
-        ? ReadonlyAccount<TAccountRestakingConfig>
-        : TAccountRestakingConfig,
       TAccountConfig extends string
         ? WritableAccount<TAccountConfig>
         : TAccountConfig,
@@ -137,7 +133,6 @@ export function getInitializeConfigInstructionDataCodec(): Codec<
 }
 
 export type InitializeConfigInput<
-  TAccountRestakingConfig extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountFeeWallet extends string = string,
@@ -146,7 +141,6 @@ export type InitializeConfigInput<
   TAccountRestakingProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  restakingConfig: Address<TAccountRestakingConfig>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   feeWallet: Address<TAccountFeeWallet>;
@@ -162,7 +156,6 @@ export type InitializeConfigInput<
 };
 
 export function getInitializeConfigInstruction<
-  TAccountRestakingConfig extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountFeeWallet extends string,
@@ -173,7 +166,6 @@ export function getInitializeConfigInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeConfigInput<
-    TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
     TAccountFeeWallet,
@@ -185,7 +177,6 @@ export function getInitializeConfigInstruction<
   config?: { programAddress?: TProgramAddress }
 ): InitializeConfigInstruction<
   TProgramAddress,
-  TAccountRestakingConfig,
   TAccountConfig,
   TAccountNcn,
   TAccountFeeWallet,
@@ -200,10 +191,6 @@ export function getInitializeConfigInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    restakingConfig: {
-      value: input.restakingConfig ?? null,
-      isWritable: false,
-    },
     config: { value: input.config ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     feeWallet: { value: input.feeWallet ?? null, isWritable: false },
@@ -235,7 +222,6 @@ export function getInitializeConfigInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.feeWallet),
@@ -250,7 +236,6 @@ export function getInitializeConfigInstruction<
     ),
   } as InitializeConfigInstruction<
     TProgramAddress,
-    TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
     TAccountFeeWallet,
@@ -269,14 +254,13 @@ export type ParsedInitializeConfigInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    restakingConfig: TAccountMetas[0];
-    config: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    feeWallet: TAccountMetas[3];
-    ncnAdmin: TAccountMetas[4];
-    tieBreakerAdmin: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
-    systemProgram: TAccountMetas[7];
+    config: TAccountMetas[0];
+    ncn: TAccountMetas[1];
+    feeWallet: TAccountMetas[2];
+    ncnAdmin: TAccountMetas[3];
+    tieBreakerAdmin: TAccountMetas[4];
+    restakingProgram: TAccountMetas[5];
+    systemProgram: TAccountMetas[6];
   };
   data: InitializeConfigInstructionData;
 };
@@ -289,7 +273,7 @@ export function parseInitializeConfigInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeConfigInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -302,7 +286,6 @@ export function parseInitializeConfigInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      restakingConfig: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
       feeWallet: getNextAccount(),

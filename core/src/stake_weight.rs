@@ -7,7 +7,9 @@ use crate::{error::TipRouterError, ncn_fee_group::NcnFeeGroup};
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct StakeWeights {
+    /// The total stake weight - used for voting
     stake_weight: PodU128,
+    /// The components that make up the total stake weight - used for rewards
     ncn_fee_group_stake_weights: [NcnFeeGroupWeight; 8],
 }
 
@@ -98,11 +100,50 @@ impl StakeWeights {
 
         Ok(())
     }
+
+    pub fn decrement(&mut self, other: &Self) -> Result<(), TipRouterError> {
+        self.decrement_stake_weight(other.stake_weight())?;
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            self.decrement_ncn_fee_group_stake_weight(
+                *group,
+                other.ncn_fee_group_stake_weight(*group)?,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    fn decrement_stake_weight(&mut self, stake_weight: u128) -> Result<(), TipRouterError> {
+        self.stake_weight = PodU128::from(
+            self.stake_weight()
+                .checked_sub(stake_weight)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+
+        Ok(())
+    }
+
+    fn decrement_ncn_fee_group_stake_weight(
+        &mut self,
+        ncn_fee_group: NcnFeeGroup,
+        stake_weight: u128,
+    ) -> Result<(), TipRouterError> {
+        let group_index = ncn_fee_group.group_index()?;
+
+        self.ncn_fee_group_stake_weights[group_index].weight = PodU128::from(
+            self.ncn_fee_group_stake_weight(ncn_fee_group)?
+                .checked_sub(stake_weight)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        );
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct NcnFeeGroupWeight {
+    /// The weight
     weight: PodU128,
 }
 

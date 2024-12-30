@@ -1,7 +1,9 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::ncn::Ncn;
-use jito_tip_router_core::{ballot_box::BallotBox, error::TipRouterError, ncn_config::NcnConfig};
+use jito_tip_router_core::{
+    ballot_box::BallotBox, config::Config as NcnConfig, error::TipRouterError,
+};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
@@ -10,7 +12,7 @@ use solana_program::{
 pub fn process_admin_set_tie_breaker(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    meta_merkle_root: [u8; 32],
+    meta_merkle_root: &[u8; 32],
     epoch: u64,
 ) -> ProgramResult {
     let [ncn_config, ballot_box, ncn, tie_breaker_admin, restaking_program] = accounts else {

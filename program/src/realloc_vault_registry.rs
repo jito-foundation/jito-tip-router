@@ -1,7 +1,7 @@
 use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::{loader::load_system_program, realloc};
 use jito_tip_router_core::{
-    ncn_config::NcnConfig, utils::get_new_size, vault_registry::VaultRegistry,
+    config::Config as NcnConfig, utils::get_new_size, vault_registry::VaultRegistry,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -47,7 +47,7 @@ pub fn process_realloc_vault_registry(
         vault_registry_data[0] = VaultRegistry::DISCRIMINATOR;
         let vault_registry_account =
             VaultRegistry::try_from_slice_unchecked_mut(&mut vault_registry_data)?;
-        vault_registry_account.initialize(*ncn_account.key, vault_registry_bump);
+        vault_registry_account.initialize(ncn_account.key, vault_registry_bump);
     }
 
     Ok(())

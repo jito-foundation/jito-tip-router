@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const REALLOC_OPERATOR_SNAPSHOT_DISCRIMINATOR = 27;
+export const REALLOC_OPERATOR_SNAPSHOT_DISCRIMINATOR = 9;
 
 export function getReallocOperatorSnapshotDiscriminatorBytes() {
   return getU8Encoder().encode(REALLOC_OPERATOR_SNAPSHOT_DISCRIMINATOR);
@@ -40,7 +40,7 @@ export function getReallocOperatorSnapshotDiscriminatorBytes() {
 
 export type ReallocOperatorSnapshotInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountConfig extends string | IAccountMeta<string> = string,
+  TAccountNcnConfig extends string | IAccountMeta<string> = string,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
@@ -57,9 +57,9 @@ export type ReallocOperatorSnapshotInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountConfig extends string
-        ? ReadonlyAccount<TAccountConfig>
-        : TAccountConfig,
+      TAccountNcnConfig extends string
+        ? ReadonlyAccount<TAccountNcnConfig>
+        : TAccountNcnConfig,
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
@@ -130,7 +130,7 @@ export function getReallocOperatorSnapshotInstructionDataCodec(): Codec<
 }
 
 export type ReallocOperatorSnapshotInput<
-  TAccountConfig extends string = string,
+  TAccountNcnConfig extends string = string,
   TAccountRestakingConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
@@ -141,7 +141,7 @@ export type ReallocOperatorSnapshotInput<
   TAccountRestakingProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  config: Address<TAccountConfig>;
+  ncnConfig: Address<TAccountNcnConfig>;
   restakingConfig: Address<TAccountRestakingConfig>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
@@ -155,7 +155,7 @@ export type ReallocOperatorSnapshotInput<
 };
 
 export function getReallocOperatorSnapshotInstruction<
-  TAccountConfig extends string,
+  TAccountNcnConfig extends string,
   TAccountRestakingConfig extends string,
   TAccountNcn extends string,
   TAccountOperator extends string,
@@ -168,7 +168,7 @@ export function getReallocOperatorSnapshotInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: ReallocOperatorSnapshotInput<
-    TAccountConfig,
+    TAccountNcnConfig,
     TAccountRestakingConfig,
     TAccountNcn,
     TAccountOperator,
@@ -182,7 +182,7 @@ export function getReallocOperatorSnapshotInstruction<
   config?: { programAddress?: TProgramAddress }
 ): ReallocOperatorSnapshotInstruction<
   TProgramAddress,
-  TAccountConfig,
+  TAccountNcnConfig,
   TAccountRestakingConfig,
   TAccountNcn,
   TAccountOperator,
@@ -199,7 +199,7 @@ export function getReallocOperatorSnapshotInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    config: { value: input.config ?? null, isWritable: false },
+    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
     restakingConfig: {
       value: input.restakingConfig ?? null,
       isWritable: false,
@@ -239,7 +239,7 @@ export function getReallocOperatorSnapshotInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.config),
+      getAccountMeta(accounts.ncnConfig),
       getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
@@ -256,7 +256,7 @@ export function getReallocOperatorSnapshotInstruction<
     ),
   } as ReallocOperatorSnapshotInstruction<
     TProgramAddress,
-    TAccountConfig,
+    TAccountNcnConfig,
     TAccountRestakingConfig,
     TAccountNcn,
     TAccountOperator,
@@ -277,7 +277,7 @@ export type ParsedReallocOperatorSnapshotInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    config: TAccountMetas[0];
+    ncnConfig: TAccountMetas[0];
     restakingConfig: TAccountMetas[1];
     ncn: TAccountMetas[2];
     operator: TAccountMetas[3];
@@ -312,7 +312,7 @@ export function parseReallocOperatorSnapshotInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      config: getNextAccount(),
+      ncnConfig: getNextAccount(),
       restakingConfig: getNextAccount(),
       ncn: getNextAccount(),
       operator: getNextAccount(),

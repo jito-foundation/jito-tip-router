@@ -1,5 +1,5 @@
 #![allow(deprecated)] // using deprecated borsh to align with mainnet stake pool version
-use jito_tip_router_core::constants::JITO_SOL_MINT;
+use jito_tip_router_core::constants::JITOSOL_MINT;
 use solana_program::{
     borsh0_10::{get_instance_packed_len, get_packed_len},
     pubkey::Pubkey,
@@ -109,7 +109,7 @@ impl StakePoolClient {
     ) -> TestResult<PoolRoot> {
         let stake_pool = self.stake_pool_keypair.insecure_clone();
         let validator_list = Keypair::new();
-        let pool_mint = JITO_SOL_MINT;
+        let pool_mint = JITOSOL_MINT;
         let reserve_stake = Keypair::new();
         let manager_fee_account = get_associated_token_address(&manager.pubkey(), &pool_mint);
         let referrer_pool_tokens_account = Keypair::new();

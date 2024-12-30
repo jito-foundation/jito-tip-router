@@ -18,7 +18,7 @@ use switchboard_on_demand::{
 pub fn process_switchboard_set_weight(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    st_mint: Pubkey,
+    st_mint: &Pubkey,
     epoch: u64,
 ) -> ProgramResult {
     let [ncn, weight_table, switchboard_feed] = accounts else {
@@ -33,11 +33,11 @@ pub fn process_switchboard_set_weight(
         let weight_table_data = weight_table.data.borrow();
         let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
 
-        let weight_entry = weight_table_account.get_weight_entry(&st_mint)?;
+        let weight_entry = weight_table_account.get_weight_entry(st_mint)?;
 
         (
-            weight_entry.mint_entry().switchboard_feed(),
-            weight_entry.mint_entry().no_feed_weight(),
+            *weight_entry.st_mint_entry().switchboard_feed(),
+            weight_entry.st_mint_entry().no_feed_weight(),
         )
     };
 
@@ -93,7 +93,7 @@ pub fn process_switchboard_set_weight(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    weight_table_account.set_weight(&st_mint, weight, Clock::get()?.slot)?;
+    weight_table_account.set_weight(st_mint, weight, Clock::get()?.slot)?;
 
     Ok(())
 }

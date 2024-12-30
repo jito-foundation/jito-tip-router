@@ -9,8 +9,6 @@ use solana_program::pubkey::Pubkey;
 
 /// Accounts.
 pub struct AdminSetConfigFees {
-    pub restaking_config: solana_program::pubkey::Pubkey,
-
     pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
@@ -33,11 +31,7 @@ impl AdminSetConfigFees {
         args: AdminSetConfigFeesInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_config,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.config,
             false,
@@ -75,7 +69,7 @@ pub struct AdminSetConfigFeesInstructionData {
 
 impl AdminSetConfigFeesInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 2 }
+        Self { discriminator: 26 }
     }
 }
 
@@ -100,14 +94,12 @@ pub struct AdminSetConfigFeesInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[writable]` config
-///   2. `[]` ncn
-///   3. `[signer]` ncn_admin
-///   4. `[]` restaking_program
+///   0. `[writable]` config
+///   1. `[]` ncn
+///   2. `[signer]` ncn_admin
+///   3. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct AdminSetConfigFeesBuilder {
-    restaking_config: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     ncn_admin: Option<solana_program::pubkey::Pubkey>,
@@ -124,14 +116,6 @@ pub struct AdminSetConfigFeesBuilder {
 impl AdminSetConfigFeesBuilder {
     pub fn new() -> Self {
         Self::default()
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_config = Some(restaking_config);
-        self
     }
     #[inline(always)]
     pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -213,7 +197,6 @@ impl AdminSetConfigFeesBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = AdminSetConfigFees {
-            restaking_config: self.restaking_config.expect("restaking_config is not set"),
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             ncn_admin: self.ncn_admin.expect("ncn_admin is not set"),
@@ -236,8 +219,6 @@ impl AdminSetConfigFeesBuilder {
 
 /// `admin_set_config_fees` CPI accounts.
 pub struct AdminSetConfigFeesCpiAccounts<'a, 'b> {
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
@@ -251,8 +232,6 @@ pub struct AdminSetConfigFeesCpiAccounts<'a, 'b> {
 pub struct AdminSetConfigFeesCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -273,7 +252,6 @@ impl<'a, 'b> AdminSetConfigFeesCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            restaking_config: accounts.restaking_config,
             config: accounts.config,
             ncn: accounts.ncn,
             ncn_admin: accounts.ncn_admin,
@@ -314,11 +292,7 @@ impl<'a, 'b> AdminSetConfigFeesCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_config.key,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.config.key,
             false,
@@ -353,9 +327,8 @@ impl<'a, 'b> AdminSetConfigFeesCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(4 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.restaking_config.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.ncn_admin.clone());
@@ -376,11 +349,10 @@ impl<'a, 'b> AdminSetConfigFeesCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[writable]` config
-///   2. `[]` ncn
-///   3. `[signer]` ncn_admin
-///   4. `[]` restaking_program
+///   0. `[writable]` config
+///   1. `[]` ncn
+///   2. `[signer]` ncn_admin
+///   3. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct AdminSetConfigFeesCpiBuilder<'a, 'b> {
     instruction: Box<AdminSetConfigFeesCpiBuilderInstruction<'a, 'b>>,
@@ -390,7 +362,6 @@ impl<'a, 'b> AdminSetConfigFeesCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(AdminSetConfigFeesCpiBuilderInstruction {
             __program: program,
-            restaking_config: None,
             config: None,
             ncn: None,
             ncn_admin: None,
@@ -404,14 +375,6 @@ impl<'a, 'b> AdminSetConfigFeesCpiBuilder<'a, 'b> {
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_config = Some(restaking_config);
-        self
     }
     #[inline(always)]
     pub fn config(
@@ -530,11 +493,6 @@ impl<'a, 'b> AdminSetConfigFeesCpiBuilder<'a, 'b> {
         let instruction = AdminSetConfigFeesCpi {
             __program: self.instruction.__program,
 
-            restaking_config: self
-                .instruction
-                .restaking_config
-                .expect("restaking_config is not set"),
-
             config: self.instruction.config.expect("config is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
@@ -557,7 +515,6 @@ impl<'a, 'b> AdminSetConfigFeesCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct AdminSetConfigFeesCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,

@@ -48,7 +48,7 @@ import {
 export type EpochSnapshot = {
   discriminator: bigint;
   ncn: Address;
-  ncnEpoch: bigint;
+  epoch: bigint;
   bump: number;
   slotCreated: bigint;
   slotFinalized: bigint;
@@ -64,7 +64,7 @@ export type EpochSnapshot = {
 export type EpochSnapshotArgs = {
   discriminator: number | bigint;
   ncn: Address;
-  ncnEpoch: number | bigint;
+  epoch: number | bigint;
   bump: number;
   slotCreated: number | bigint;
   slotFinalized: number | bigint;
@@ -81,7 +81,7 @@ export function getEpochSnapshotEncoder(): Encoder<EpochSnapshotArgs> {
   return getStructEncoder([
     ['discriminator', getU64Encoder()],
     ['ncn', getAddressEncoder()],
-    ['ncnEpoch', getU64Encoder()],
+    ['epoch', getU64Encoder()],
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
     ['slotFinalized', getU64Encoder()],
@@ -99,7 +99,7 @@ export function getEpochSnapshotDecoder(): Decoder<EpochSnapshot> {
   return getStructDecoder([
     ['discriminator', getU64Decoder()],
     ['ncn', getAddressDecoder()],
-    ['ncnEpoch', getU64Decoder()],
+    ['epoch', getU64Decoder()],
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
     ['slotFinalized', getU64Decoder()],

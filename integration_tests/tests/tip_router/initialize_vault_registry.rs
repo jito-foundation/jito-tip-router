@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use jito_tip_router_core::{ncn_config::NcnConfig, vault_registry::VaultRegistry};
+    use jito_tip_router_core::{config::Config as NcnConfig, vault_registry::VaultRegistry};
     use solana_program::instruction::InstructionError;
     use solana_sdk::{signature::Keypair, signer::Signer};
 

@@ -18,7 +18,7 @@ pub struct BaseRewardRouter {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub ncn: Pubkey,
-    pub ncn_epoch: u64,
+    pub epoch: u64,
     pub bump: u8,
     pub slot_created: u64,
     pub total_rewards: u64,
@@ -26,6 +26,9 @@ pub struct BaseRewardRouter {
     pub rewards_processed: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 128],
+    pub last_ncn_group_index: u8,
+    pub last_vote_index: u16,
+    pub last_rewards_to_process: u64,
     pub base_fee_group_rewards: [BaseRewardRouterRewards; 8],
     pub ncn_fee_group_rewards: [BaseRewardRouterRewards; 8],
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]

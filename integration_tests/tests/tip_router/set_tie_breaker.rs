@@ -36,7 +36,7 @@ mod tests {
             .await?;
 
         let ballot_box = tip_router_client.get_ballot_box(ncn, epoch).await?;
-        assert!(ballot_box.has_ballot(&Ballot::new(meta_merkle_root)));
+        assert!(ballot_box.has_ballot(&Ballot::new(&meta_merkle_root)));
         assert_eq!(
             ballot_box.slot_consensus_reached(),
             DEFAULT_CONSENSUS_REACHED_SLOT
@@ -52,10 +52,10 @@ mod tests {
 
         let ballot_box = tip_router_client.get_ballot_box(ncn, epoch).await?;
 
-        let ballot = Ballot::new(meta_merkle_root);
+        let ballot = Ballot::new(&meta_merkle_root);
         assert!(ballot_box.has_ballot(&ballot));
         assert_eq!(
-            ballot_box.get_winning_ballot_tally().unwrap().ballot(),
+            *ballot_box.get_winning_ballot_tally().unwrap().ballot(),
             ballot
         );
         // No official consensus reached so no slot set

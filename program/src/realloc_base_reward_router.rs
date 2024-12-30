@@ -4,7 +4,7 @@ use jito_jsm_core::{
     realloc,
 };
 use jito_tip_router_core::{
-    base_reward_router::BaseRewardRouter, ncn_config::NcnConfig, utils::get_new_size,
+    base_reward_router::BaseRewardRouter, config::Config as NcnConfig, utils::get_new_size,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -52,7 +52,7 @@ pub fn process_realloc_base_reward_router(
             BaseRewardRouter::try_from_slice_unchecked_mut(&mut base_reward_router_data)?;
 
         base_reward_router_account.initialize(
-            *ncn.key,
+            ncn.key,
             epoch,
             base_reward_router_bump,
             Clock::get()?.slot,

@@ -3,7 +3,7 @@ use jito_jsm_core::{
     loader::{load_system_account, load_system_program},
 };
 use jito_tip_router_core::{
-    constants::MAX_REALLOC_BYTES, ncn_config::NcnConfig, vault_registry::VaultRegistry,
+    config::Config as NcnConfig, constants::MAX_REALLOC_BYTES, vault_registry::VaultRegistry,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,

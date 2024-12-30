@@ -2,13 +2,11 @@ use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
 };
-use jito_restaking_core::{
-    config::Config, ncn::Ncn, ncn_operator_state::NcnOperatorState, operator::Operator,
-};
+use jito_restaking_core::{ncn::Ncn, ncn_operator_state::NcnOperatorState, operator::Operator};
 use jito_tip_router_core::{
+    config::Config,
     constants::MAX_REALLOC_BYTES,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
-    ncn_config::NcnConfig,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -21,7 +19,7 @@ pub fn process_initialize_operator_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, restaking_config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, payer, restaking_program, system_program] =
+    let [config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -32,8 +30,7 @@ pub fn process_initialize_operator_snapshot(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    Config::load(restaking_program.key, restaking_config, false)?;
+    Config::load(program_id, ncn.key, config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
     NcnOperatorState::load(

@@ -74,7 +74,7 @@ pub struct AdminSetTieBreakerInstructionData {
 
 impl AdminSetTieBreakerInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 24 }
+        Self { discriminator: 28 }
     }
 }
 

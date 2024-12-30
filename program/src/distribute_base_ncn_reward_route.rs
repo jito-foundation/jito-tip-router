@@ -1,9 +1,10 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::load_system_program;
-use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
+use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
-    ncn_config::NcnConfig,
+    config::Config as NcnConfig,
+    error::TipRouterError,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
 };
@@ -19,7 +20,7 @@ pub fn process_distribute_base_ncn_reward_route(
     ncn_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn, operator, base_reward_router, base_reward_receiver, ncn_reward_router, ncn_reward_receiver, restaking_program, system_program] =
+    let [ncn_config, ncn, operator, base_reward_router, base_reward_receiver, ncn_reward_router, ncn_reward_receiver, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -30,7 +31,6 @@ pub fn process_distribute_base_ncn_reward_route(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
 
@@ -65,6 +65,11 @@ pub fn process_distribute_base_ncn_reward_route(
         let mut epoch_reward_router_data = base_reward_router.try_borrow_mut_data()?;
         let base_reward_router_account =
             BaseRewardRouter::try_from_slice_unchecked_mut(&mut epoch_reward_router_data)?;
+
+        if base_reward_router_account.still_routing() {
+            msg!("Rewards still routing");
+            return Err(TipRouterError::RouterStillRouting.into());
+        }
 
         base_reward_router_account
             .distribute_ncn_fee_group_reward_route(ncn_fee_group, operator.key)?

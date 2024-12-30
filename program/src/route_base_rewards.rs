@@ -1,5 +1,5 @@
 use jito_bytemuck::AccountDeserialize;
-use jito_restaking_core::{config::Config, ncn::Ncn};
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     ballot_box::BallotBox,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
@@ -14,9 +14,10 @@ use solana_program::{
 pub fn process_route_base_rewards(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
+    max_iterations: u16,
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn, epoch_snapshot, ballot_box, base_reward_router, base_reward_receiver, restaking_program] =
+    let [ncn, epoch_snapshot, ballot_box, base_reward_router, base_reward_receiver, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -27,7 +28,6 @@ pub fn process_route_base_rewards(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
     EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;
@@ -49,11 +49,14 @@ pub fn process_route_base_rewards(
 
     let rent_cost = Rent::get()?.minimum_balance(0);
 
-    base_reward_router_account.route_incoming_rewards(rent_cost, base_reward_receiver_balance)?;
+    if !base_reward_router_account.still_routing() {
+        base_reward_router_account
+            .route_incoming_rewards(rent_cost, base_reward_receiver_balance)?;
 
-    base_reward_router_account.route_reward_pool(epoch_snapshot_account.fees())?;
+        base_reward_router_account.route_reward_pool(epoch_snapshot_account.fees())?;
+    }
 
-    base_reward_router_account.route_ncn_fee_group_rewards(ballot_box_account)?;
+    base_reward_router_account.route_ncn_fee_group_rewards(ballot_box_account, max_iterations)?;
 
     Ok(())
 }

@@ -10,6 +10,8 @@ import {
   combineCodec,
   getStructDecoder,
   getStructEncoder,
+  getU16Decoder,
+  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -29,7 +31,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ROUTE_NCN_REWARDS_DISCRIMINATOR = 14;
+export const ROUTE_NCN_REWARDS_DISCRIMINATOR = 19;
 
 export function getRouteNcnRewardsDiscriminatorBytes() {
   return getU8Encoder().encode(ROUTE_NCN_REWARDS_DISCRIMINATOR);
@@ -37,7 +39,6 @@ export function getRouteNcnRewardsDiscriminatorBytes() {
 
 export type RouteNcnRewardsInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
   TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
@@ -49,9 +50,6 @@ export type RouteNcnRewardsInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountRestakingConfig extends string
-        ? ReadonlyAccount<TAccountRestakingConfig>
-        : TAccountRestakingConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountOperator extends string
         ? ReadonlyAccount<TAccountOperator>
@@ -75,11 +73,13 @@ export type RouteNcnRewardsInstruction<
 export type RouteNcnRewardsInstructionData = {
   discriminator: number;
   ncnFeeGroup: number;
+  maxIterations: number;
   epoch: bigint;
 };
 
 export type RouteNcnRewardsInstructionDataArgs = {
   ncnFeeGroup: number;
+  maxIterations: number;
   epoch: number | bigint;
 };
 
@@ -88,6 +88,7 @@ export function getRouteNcnRewardsInstructionDataEncoder(): Encoder<RouteNcnRewa
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['ncnFeeGroup', getU8Encoder()],
+      ['maxIterations', getU16Encoder()],
       ['epoch', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: ROUTE_NCN_REWARDS_DISCRIMINATOR })
@@ -98,6 +99,7 @@ export function getRouteNcnRewardsInstructionDataDecoder(): Decoder<RouteNcnRewa
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['ncnFeeGroup', getU8Decoder()],
+    ['maxIterations', getU16Decoder()],
     ['epoch', getU64Decoder()],
   ]);
 }
@@ -113,7 +115,6 @@ export function getRouteNcnRewardsInstructionDataCodec(): Codec<
 }
 
 export type RouteNcnRewardsInput<
-  TAccountRestakingConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
   TAccountOperatorSnapshot extends string = string,
@@ -121,7 +122,6 @@ export type RouteNcnRewardsInput<
   TAccountNcnRewardReceiver extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
-  restakingConfig: Address<TAccountRestakingConfig>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
   operatorSnapshot: Address<TAccountOperatorSnapshot>;
@@ -129,11 +129,11 @@ export type RouteNcnRewardsInput<
   ncnRewardReceiver: Address<TAccountNcnRewardReceiver>;
   restakingProgram: Address<TAccountRestakingProgram>;
   ncnFeeGroup: RouteNcnRewardsInstructionDataArgs['ncnFeeGroup'];
+  maxIterations: RouteNcnRewardsInstructionDataArgs['maxIterations'];
   epoch: RouteNcnRewardsInstructionDataArgs['epoch'];
 };
 
 export function getRouteNcnRewardsInstruction<
-  TAccountRestakingConfig extends string,
   TAccountNcn extends string,
   TAccountOperator extends string,
   TAccountOperatorSnapshot extends string,
@@ -143,7 +143,6 @@ export function getRouteNcnRewardsInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: RouteNcnRewardsInput<
-    TAccountRestakingConfig,
     TAccountNcn,
     TAccountOperator,
     TAccountOperatorSnapshot,
@@ -154,7 +153,6 @@ export function getRouteNcnRewardsInstruction<
   config?: { programAddress?: TProgramAddress }
 ): RouteNcnRewardsInstruction<
   TProgramAddress,
-  TAccountRestakingConfig,
   TAccountNcn,
   TAccountOperator,
   TAccountOperatorSnapshot,
@@ -168,10 +166,6 @@ export function getRouteNcnRewardsInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    restakingConfig: {
-      value: input.restakingConfig ?? null,
-      isWritable: false,
-    },
     ncn: { value: input.ncn ?? null, isWritable: false },
     operator: { value: input.operator ?? null, isWritable: false },
     operatorSnapshot: {
@@ -199,7 +193,6 @@ export function getRouteNcnRewardsInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
       getAccountMeta(accounts.operatorSnapshot),
@@ -213,7 +206,6 @@ export function getRouteNcnRewardsInstruction<
     ),
   } as RouteNcnRewardsInstruction<
     TProgramAddress,
-    TAccountRestakingConfig,
     TAccountNcn,
     TAccountOperator,
     TAccountOperatorSnapshot,
@@ -231,13 +223,12 @@ export type ParsedRouteNcnRewardsInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    restakingConfig: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    operator: TAccountMetas[2];
-    operatorSnapshot: TAccountMetas[3];
-    ncnRewardRouter: TAccountMetas[4];
-    ncnRewardReceiver: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
+    ncn: TAccountMetas[0];
+    operator: TAccountMetas[1];
+    operatorSnapshot: TAccountMetas[2];
+    ncnRewardRouter: TAccountMetas[3];
+    ncnRewardReceiver: TAccountMetas[4];
+    restakingProgram: TAccountMetas[5];
   };
   data: RouteNcnRewardsInstructionData;
 };
@@ -250,7 +241,7 @@ export function parseRouteNcnRewardsInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedRouteNcnRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -263,7 +254,6 @@ export function parseRouteNcnRewardsInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      restakingConfig: getNextAccount(),
       ncn: getNextAccount(),
       operator: getNextAccount(),
       operatorSnapshot: getNextAccount(),

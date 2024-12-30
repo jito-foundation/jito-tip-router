@@ -1,13 +1,13 @@
 use jito_bytemuck::{types::PodU64, AccountDeserialize};
 use jito_jsm_core::loader::load_signer;
-use jito_restaking_core::{config::Config, ncn::Ncn};
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
+    config::Config,
     constants::{
         MAX_EPOCHS_BEFORE_STALL, MAX_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_BEFORE_STALL,
         MIN_SLOTS_AFTER_CONSENSUS,
     },
     error::TipRouterError,
-    ncn_config::NcnConfig,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -20,16 +20,15 @@ pub fn process_admin_set_parameters(
     epochs_before_stall: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
 ) -> ProgramResult {
-    let [restaking_config, config, ncn_account, ncn_admin, restaking_program] = accounts else {
+    let [config, ncn_account, ncn_admin, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     load_signer(ncn_admin, true)?;
 
     // Load and verify accounts
-    NcnConfig::load(program_id, ncn_account.key, config, true)?;
+    Config::load(program_id, ncn_account.key, config, true)?;
     Ncn::load(restaking_program.key, ncn_account, false)?;
-    Config::load(restaking_program.key, restaking_config, false)?;
 
     {
         let ncn_data = ncn_account.data.borrow();
@@ -40,7 +39,7 @@ pub fn process_admin_set_parameters(
     }
 
     let mut config_data = config.try_borrow_mut_data()?;
-    let config = NcnConfig::try_from_slice_unchecked_mut(&mut config_data)?;
+    let config = Config::try_from_slice_unchecked_mut(&mut config_data)?;
 
     if config.ncn != *ncn_account.key {
         return Err(TipRouterError::IncorrectNcn.into());

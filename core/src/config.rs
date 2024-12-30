@@ -1,5 +1,6 @@
 use std::mem::size_of;
 
+use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
@@ -7,51 +8,53 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 
 use crate::{discriminators::Discriminators, fees::FeeConfig};
 
+#[derive(Debug, BorshSerialize, BorshDeserialize)]
+pub enum ConfigAdminRole {
+    FeeAdmin,
+    TieBreakerAdmin,
+}
+
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
-pub struct NcnConfig {
+pub struct Config {
     /// The Restaking program's NCN admin is the signer to create and update this account
     pub ncn: Pubkey,
-
+    /// The admin to update the tie breaker - who can decide the meta merkle root when consensus is reached
     pub tie_breaker_admin: Pubkey,
-
+    /// The admin to update the fee config
     pub fee_admin: Pubkey,
-
     /// Number of slots after consensus reached where voting is still valid
     pub valid_slots_after_consensus: PodU64,
-
     /// Number of epochs before voting is considered stalled
     pub epochs_before_stall: PodU64,
-
+    /// The fee config
     pub fee_config: FeeConfig,
-
     /// Bump seed for the PDA
     pub bump: u8,
-
     /// Reserved space
     reserved: [u8; 127],
 }
 
-impl Discriminator for NcnConfig {
-    const DISCRIMINATOR: u8 = Discriminators::NcnConfig as u8;
+impl Discriminator for Config {
+    const DISCRIMINATOR: u8 = Discriminators::Config as u8;
 }
 
-impl NcnConfig {
+impl Config {
     pub const SIZE: usize = 8 + size_of::<Self>();
 
     pub fn new(
-        ncn: Pubkey,
-        tie_breaker_admin: Pubkey,
-        fee_admin: Pubkey,
+        ncn: &Pubkey,
+        tie_breaker_admin: &Pubkey,
+        fee_admin: &Pubkey,
         fee_config: &FeeConfig,
         valid_slots_after_consensus: u64,
         epochs_before_stall: u64,
         bump: u8,
     ) -> Self {
         Self {
-            ncn,
-            tie_breaker_admin,
-            fee_admin,
+            ncn: *ncn,
+            tie_breaker_admin: *tie_breaker_admin,
+            fee_admin: *fee_admin,
             valid_slots_after_consensus: PodU64::from(valid_slots_after_consensus),
             epochs_before_stall: PodU64::from(epochs_before_stall),
             fee_config: *fee_config,
@@ -86,30 +89,30 @@ impl NcnConfig {
     pub fn load(
         program_id: &Pubkey,
         ncn: &Pubkey,
-        ncn_config_account: &AccountInfo,
+        account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if ncn_config_account.owner.ne(program_id) {
-            msg!("NCN Config account has an invalid owner");
+        if account.owner.ne(program_id) {
+            msg!("Config account has an invalid owner");
             return Err(ProgramError::InvalidAccountOwner);
         }
-        if ncn_config_account.data_is_empty() {
-            msg!("NCN Config account data is empty");
+        if account.data_is_empty() {
+            msg!("Config account data is empty");
             return Err(ProgramError::InvalidAccountData);
         }
-        if expect_writable && !ncn_config_account.is_writable {
-            msg!("NCN Config account is not writable");
+        if expect_writable && !account.is_writable {
+            msg!("Config account is not writable");
             return Err(ProgramError::InvalidAccountData);
         }
-        if ncn_config_account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("NCN Config account discriminator is invalid");
+        if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
+            msg!("Config account discriminator is invalid");
             return Err(ProgramError::InvalidAccountData);
         }
-        if ncn_config_account
+        if account
             .key
             .ne(&Self::find_program_address(program_id, ncn).0)
         {
-            msg!("NCN Config account is not at the correct PDA");
+            msg!("Config account is not at the correct PDA");
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())

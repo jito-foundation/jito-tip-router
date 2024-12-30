@@ -3,7 +3,9 @@ use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{
     derive_tip_distribution_account_address, instruction::upload_merkle_root_ix,
 };
-use jito_tip_router_core::{ballot_box::BallotBox, error::TipRouterError, ncn_config::NcnConfig};
+use jito_tip_router_core::{
+    ballot_box::BallotBox, config::Config as NcnConfig, error::TipRouterError,
+};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
     program_error::ProgramError, pubkey::Pubkey,
@@ -48,9 +50,9 @@ pub fn process_set_merkle_root(
     }
 
     ballot_box.verify_merkle_root(
-        tip_distribution_address,
+        &tip_distribution_address,
         proof,
-        merkle_root,
+        &merkle_root,
         max_total_claim,
         max_num_nodes,
     )?;

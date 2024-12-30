@@ -3,7 +3,9 @@ use jito_jsm_core::{
     loader::{load_signer, load_system_program},
     realloc,
 };
-use jito_tip_router_core::{ballot_box::BallotBox, ncn_config::NcnConfig, utils::get_new_size};
+use jito_tip_router_core::{
+    ballot_box::BallotBox, config::Config as NcnConfig, utils::get_new_size,
+};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
@@ -49,7 +51,7 @@ pub fn process_realloc_ballot_box(
         let mut ballot_box_data = ballot_box.try_borrow_mut_data()?;
         ballot_box_data[0] = BallotBox::DISCRIMINATOR;
         let ballot_box_account = BallotBox::try_from_slice_unchecked_mut(&mut ballot_box_data)?;
-        ballot_box_account.initialize(*ncn.key, epoch, ballot_box_bump, Clock::get()?.slot);
+        ballot_box_account.initialize(ncn.key, epoch, ballot_box_bump, Clock::get()?.slot);
     }
 
     Ok(())

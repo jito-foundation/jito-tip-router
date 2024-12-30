@@ -7,9 +7,9 @@ use jito_restaking_core::{
     config::Config, ncn::Ncn, ncn_operator_state::NcnOperatorState, operator::Operator,
 };
 use jito_tip_router_core::{
+    config::Config as NcnConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     loaders::load_ncn_epoch,
-    ncn_config::NcnConfig,
     stake_weight::StakeWeights,
     utils::get_new_size,
 };
@@ -116,8 +116,8 @@ pub fn process_realloc_operator_snapshot(
             OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
 
         operator_snapshot_account.initialize(
-            *operator.key,
-            *ncn.key,
+            operator.key,
+            ncn.key,
             epoch,
             operator_snapshot_bump,
             current_slot,

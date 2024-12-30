@@ -24,7 +24,7 @@ pub struct NcnRewardRouter {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub ncn: Pubkey,
-    pub ncn_epoch: u64,
+    pub epoch: u64,
     pub bump: u8,
     pub slot_created: u64,
     pub total_rewards: u64,
@@ -33,6 +33,8 @@ pub struct NcnRewardRouter {
     pub operator_rewards: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 128],
+    pub last_rewards_to_process: u64,
+    pub last_vault_operator_delegation_index: u16,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub vault_reward_routes: [VaultRewardRoute; 64],
 }

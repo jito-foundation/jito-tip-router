@@ -3,7 +3,7 @@ use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
 };
-use jito_restaking_core::{config::Config, ncn::Ncn};
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     constants::MAX_REALLOC_BYTES, vault_registry::VaultRegistry, weight_table::WeightTable,
 };
@@ -19,8 +19,7 @@ pub fn process_initialize_weight_table(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, vault_registry, ncn, weight_table, payer, restaking_program, system_program] =
-        accounts
+    let [vault_registry, ncn, weight_table, payer, restaking_program, system_program] = accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -31,7 +30,6 @@ pub fn process_initialize_weight_table(
     }
 
     VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
-    Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
     load_system_account(weight_table, true)?;

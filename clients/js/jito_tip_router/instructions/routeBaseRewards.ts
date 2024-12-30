@@ -10,6 +10,8 @@ import {
   combineCodec,
   getStructDecoder,
   getStructEncoder,
+  getU16Decoder,
+  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -29,7 +31,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ROUTE_BASE_REWARDS_DISCRIMINATOR = 13;
+export const ROUTE_BASE_REWARDS_DISCRIMINATOR = 18;
 
 export function getRouteBaseRewardsDiscriminatorBytes() {
   return getU8Encoder().encode(ROUTE_BASE_REWARDS_DISCRIMINATOR);
@@ -37,7 +39,6 @@ export function getRouteBaseRewardsDiscriminatorBytes() {
 
 export type RouteBaseRewardsInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountEpochSnapshot extends string | IAccountMeta<string> = string,
   TAccountBallotBox extends string | IAccountMeta<string> = string,
@@ -49,9 +50,6 @@ export type RouteBaseRewardsInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountRestakingConfig extends string
-        ? ReadonlyAccount<TAccountRestakingConfig>
-        : TAccountRestakingConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountEpochSnapshot extends string
         ? ReadonlyAccount<TAccountEpochSnapshot>
@@ -74,15 +72,20 @@ export type RouteBaseRewardsInstruction<
 
 export type RouteBaseRewardsInstructionData = {
   discriminator: number;
+  maxIterations: number;
   epoch: bigint;
 };
 
-export type RouteBaseRewardsInstructionDataArgs = { epoch: number | bigint };
+export type RouteBaseRewardsInstructionDataArgs = {
+  maxIterations: number;
+  epoch: number | bigint;
+};
 
 export function getRouteBaseRewardsInstructionDataEncoder(): Encoder<RouteBaseRewardsInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
+      ['maxIterations', getU16Encoder()],
       ['epoch', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: ROUTE_BASE_REWARDS_DISCRIMINATOR })
@@ -92,6 +95,7 @@ export function getRouteBaseRewardsInstructionDataEncoder(): Encoder<RouteBaseRe
 export function getRouteBaseRewardsInstructionDataDecoder(): Decoder<RouteBaseRewardsInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
+    ['maxIterations', getU16Decoder()],
     ['epoch', getU64Decoder()],
   ]);
 }
@@ -107,7 +111,6 @@ export function getRouteBaseRewardsInstructionDataCodec(): Codec<
 }
 
 export type RouteBaseRewardsInput<
-  TAccountRestakingConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountEpochSnapshot extends string = string,
   TAccountBallotBox extends string = string,
@@ -115,18 +118,17 @@ export type RouteBaseRewardsInput<
   TAccountBaseRewardReceiver extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
-  restakingConfig: Address<TAccountRestakingConfig>;
   ncn: Address<TAccountNcn>;
   epochSnapshot: Address<TAccountEpochSnapshot>;
   ballotBox: Address<TAccountBallotBox>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   baseRewardReceiver: Address<TAccountBaseRewardReceiver>;
   restakingProgram: Address<TAccountRestakingProgram>;
+  maxIterations: RouteBaseRewardsInstructionDataArgs['maxIterations'];
   epoch: RouteBaseRewardsInstructionDataArgs['epoch'];
 };
 
 export function getRouteBaseRewardsInstruction<
-  TAccountRestakingConfig extends string,
   TAccountNcn extends string,
   TAccountEpochSnapshot extends string,
   TAccountBallotBox extends string,
@@ -136,7 +138,6 @@ export function getRouteBaseRewardsInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: RouteBaseRewardsInput<
-    TAccountRestakingConfig,
     TAccountNcn,
     TAccountEpochSnapshot,
     TAccountBallotBox,
@@ -147,7 +148,6 @@ export function getRouteBaseRewardsInstruction<
   config?: { programAddress?: TProgramAddress }
 ): RouteBaseRewardsInstruction<
   TProgramAddress,
-  TAccountRestakingConfig,
   TAccountNcn,
   TAccountEpochSnapshot,
   TAccountBallotBox,
@@ -161,10 +161,6 @@ export function getRouteBaseRewardsInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    restakingConfig: {
-      value: input.restakingConfig ?? null,
-      isWritable: false,
-    },
     ncn: { value: input.ncn ?? null, isWritable: false },
     epochSnapshot: { value: input.epochSnapshot ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: false },
@@ -192,7 +188,6 @@ export function getRouteBaseRewardsInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.epochSnapshot),
       getAccountMeta(accounts.ballotBox),
@@ -206,7 +201,6 @@ export function getRouteBaseRewardsInstruction<
     ),
   } as RouteBaseRewardsInstruction<
     TProgramAddress,
-    TAccountRestakingConfig,
     TAccountNcn,
     TAccountEpochSnapshot,
     TAccountBallotBox,
@@ -224,13 +218,12 @@ export type ParsedRouteBaseRewardsInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    restakingConfig: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    epochSnapshot: TAccountMetas[2];
-    ballotBox: TAccountMetas[3];
-    baseRewardRouter: TAccountMetas[4];
-    baseRewardReceiver: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
+    ncn: TAccountMetas[0];
+    epochSnapshot: TAccountMetas[1];
+    ballotBox: TAccountMetas[2];
+    baseRewardRouter: TAccountMetas[3];
+    baseRewardReceiver: TAccountMetas[4];
+    restakingProgram: TAccountMetas[5];
   };
   data: RouteBaseRewardsInstructionData;
 };
@@ -243,7 +236,7 @@ export function parseRouteBaseRewardsInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedRouteBaseRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -256,7 +249,6 @@ export function parseRouteBaseRewardsInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      restakingConfig: getNextAccount(),
       ncn: getNextAccount(),
       epochSnapshot: getNextAccount(),
       ballotBox: getNextAccount(),

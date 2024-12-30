@@ -41,7 +41,6 @@ export function getInitializeEpochSnapshotDiscriminatorBytes() {
 export type InitializeEpochSnapshotInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountConfig extends string | IAccountMeta<string> = string,
-  TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountEpochSnapshot extends string | IAccountMeta<string> = string,
@@ -58,9 +57,6 @@ export type InitializeEpochSnapshotInstruction<
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
-      TAccountRestakingConfig extends string
-        ? ReadonlyAccount<TAccountRestakingConfig>
-        : TAccountRestakingConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountWeightTable extends string
         ? ReadonlyAccount<TAccountWeightTable>
@@ -123,7 +119,6 @@ export function getInitializeEpochSnapshotInstructionDataCodec(): Codec<
 
 export type InitializeEpochSnapshotInput<
   TAccountConfig extends string = string,
-  TAccountRestakingConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
   TAccountEpochSnapshot extends string = string,
@@ -132,7 +127,6 @@ export type InitializeEpochSnapshotInput<
   TAccountSystemProgram extends string = string,
 > = {
   config: Address<TAccountConfig>;
-  restakingConfig: Address<TAccountRestakingConfig>;
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   epochSnapshot: Address<TAccountEpochSnapshot>;
@@ -144,7 +138,6 @@ export type InitializeEpochSnapshotInput<
 
 export function getInitializeEpochSnapshotInstruction<
   TAccountConfig extends string,
-  TAccountRestakingConfig extends string,
   TAccountNcn extends string,
   TAccountWeightTable extends string,
   TAccountEpochSnapshot extends string,
@@ -155,7 +148,6 @@ export function getInitializeEpochSnapshotInstruction<
 >(
   input: InitializeEpochSnapshotInput<
     TAccountConfig,
-    TAccountRestakingConfig,
     TAccountNcn,
     TAccountWeightTable,
     TAccountEpochSnapshot,
@@ -167,7 +159,6 @@ export function getInitializeEpochSnapshotInstruction<
 ): InitializeEpochSnapshotInstruction<
   TProgramAddress,
   TAccountConfig,
-  TAccountRestakingConfig,
   TAccountNcn,
   TAccountWeightTable,
   TAccountEpochSnapshot,
@@ -182,10 +173,6 @@ export function getInitializeEpochSnapshotInstruction<
   // Original accounts.
   const originalAccounts = {
     config: { value: input.config ?? null, isWritable: false },
-    restakingConfig: {
-      value: input.restakingConfig ?? null,
-      isWritable: false,
-    },
     ncn: { value: input.ncn ?? null, isWritable: false },
     weightTable: { value: input.weightTable ?? null, isWritable: false },
     epochSnapshot: { value: input.epochSnapshot ?? null, isWritable: true },
@@ -214,7 +201,6 @@ export function getInitializeEpochSnapshotInstruction<
   const instruction = {
     accounts: [
       getAccountMeta(accounts.config),
-      getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.epochSnapshot),
@@ -229,7 +215,6 @@ export function getInitializeEpochSnapshotInstruction<
   } as InitializeEpochSnapshotInstruction<
     TProgramAddress,
     TAccountConfig,
-    TAccountRestakingConfig,
     TAccountNcn,
     TAccountWeightTable,
     TAccountEpochSnapshot,
@@ -248,13 +233,12 @@ export type ParsedInitializeEpochSnapshotInstruction<
   programAddress: Address<TProgram>;
   accounts: {
     config: TAccountMetas[0];
-    restakingConfig: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    weightTable: TAccountMetas[3];
-    epochSnapshot: TAccountMetas[4];
-    payer: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
-    systemProgram: TAccountMetas[7];
+    ncn: TAccountMetas[1];
+    weightTable: TAccountMetas[2];
+    epochSnapshot: TAccountMetas[3];
+    payer: TAccountMetas[4];
+    restakingProgram: TAccountMetas[5];
+    systemProgram: TAccountMetas[6];
   };
   data: InitializeEpochSnapshotInstructionData;
 };
@@ -267,7 +251,7 @@ export function parseInitializeEpochSnapshotInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeEpochSnapshotInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -281,7 +265,6 @@ export function parseInitializeEpochSnapshotInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       config: getNextAccount(),
-      restakingConfig: getNextAccount(),
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
       epochSnapshot: getNextAccount(),

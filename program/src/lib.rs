@@ -102,9 +102,9 @@ pub fn process_instruction(
     let instruction = TipRouterInstruction::try_from_slice(instruction_data)?;
 
     match instruction {
-        // ------------------------------------------
-        // Initialization
-        // ------------------------------------------
+        // ---------------------------------------------------- //
+        //                         GLOBAL                       //
+        // ---------------------------------------------------- //
         TipRouterInstruction::InitializeConfig {
             block_engine_fee_bps,
             dao_fee_bps,
@@ -127,9 +127,29 @@ pub fn process_instruction(
             msg!("Instruction: InitializeVaultRegistry");
             process_initialize_vault_registry(program_id, accounts)
         }
+        TipRouterInstruction::ReallocVaultRegistry => {
+            msg!("Instruction: ReallocVaultRegistry");
+            process_realloc_vault_registry(program_id, accounts)
+        }
+        TipRouterInstruction::RegisterVault => {
+            msg!("Instruction: RegisterVault");
+            process_register_vault(program_id, accounts)
+        }
+
+        // ---------------------------------------------------- //
+        //                       SNAPSHOT                       //
+        // ---------------------------------------------------- //
         TipRouterInstruction::InitializeWeightTable { epoch } => {
             msg!("Instruction: InitializeWeightTable");
             process_initialize_weight_table(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::ReallocWeightTable { epoch } => {
+            msg!("Instruction: ReallocWeightTable");
+            process_realloc_weight_table(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::SwitchboardSetWeight { epoch, st_mint } => {
+            msg!("Instruction: SwitchboardSetWeight");
+            process_switchboard_set_weight(program_id, accounts, &st_mint, epoch)
         }
         TipRouterInstruction::InitializeEpochSnapshot { epoch } => {
             msg!("Instruction: InitializeEpochSnapshot");
@@ -139,10 +159,62 @@ pub fn process_instruction(
             msg!("Instruction: InitializeOperatorSnapshot");
             process_initialize_operator_snapshot(program_id, accounts, epoch)
         }
+        TipRouterInstruction::ReallocOperatorSnapshot { epoch } => {
+            msg!("Instruction: ReallocOperatorSnapshot");
+            process_realloc_operator_snapshot(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::SnapshotVaultOperatorDelegation { epoch } => {
+            msg!("Instruction: SnapshotVaultOperatorDelegation");
+            process_snapshot_vault_operator_delegation(program_id, accounts, epoch)
+        }
 
+        // ---------------------------------------------------- //
+        //                         VOTE                         //
+        // ---------------------------------------------------- //
+        TipRouterInstruction::InitializeBallotBox { epoch } => {
+            msg!("Instruction: InitializeBallotBox");
+            process_initialize_ballot_box(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::ReallocBallotBox { epoch } => {
+            msg!("Instruction: ReallocBallotBox");
+            process_realloc_ballot_box(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::CastVote {
+            meta_merkle_root,
+            epoch,
+        } => {
+            msg!("Instruction: CastVote");
+            process_cast_vote(program_id, accounts, &meta_merkle_root, epoch)
+        }
+        TipRouterInstruction::SetMerkleRoot {
+            proof,
+            merkle_root,
+            max_total_claim,
+            max_num_nodes,
+            epoch,
+        } => {
+            msg!("Instruction: SetMerkleRoot");
+            process_set_merkle_root(
+                program_id,
+                accounts,
+                proof,
+                merkle_root,
+                max_total_claim,
+                max_num_nodes,
+                epoch,
+            )
+        }
+
+        // ---------------------------------------------------- //
+        //                ROUTE AND DISTRIBUTE                  //
+        // ---------------------------------------------------- //
         TipRouterInstruction::InitializeBaseRewardRouter { epoch } => {
             msg!("Instruction: InitializeBaseRewardRouter");
             process_initialize_base_reward_router(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::ReallocBaseRewardRouter { epoch } => {
+            msg!("Instruction: ReallocBaseRewardRouter");
+            process_realloc_base_reward_router(program_id, accounts, epoch)
         }
         TipRouterInstruction::InitializeNcnRewardRouter {
             ncn_fee_group,
@@ -151,23 +223,20 @@ pub fn process_instruction(
             msg!("Instruction: InitializeNcnRewardRouter");
             process_initialize_ncn_reward_router(program_id, accounts, ncn_fee_group, epoch)
         }
-        // ------------------------------------------
-        // Cranks
-        // ------------------------------------------
-        TipRouterInstruction::SnapshotVaultOperatorDelegation { epoch } => {
-            msg!("Instruction: SnapshotVaultOperatorDelegation");
-            process_snapshot_vault_operator_delegation(program_id, accounts, epoch)
-        }
-        TipRouterInstruction::RouteBaseRewards { epoch } => {
+        TipRouterInstruction::RouteBaseRewards {
+            max_iterations,
+            epoch,
+        } => {
             msg!("Instruction: RouteBaseRewards");
-            process_route_base_rewards(program_id, accounts, epoch)
+            process_route_base_rewards(program_id, accounts, max_iterations, epoch)
         }
         TipRouterInstruction::RouteNcnRewards {
             ncn_fee_group,
+            max_iterations,
             epoch,
         } => {
             msg!("Instruction: RouteNcnRewards");
-            process_route_ncn_rewards(program_id, accounts, ncn_fee_group, epoch)
+            process_route_ncn_rewards(program_id, accounts, ncn_fee_group, max_iterations, epoch)
         }
         TipRouterInstruction::DistributeBaseRewards {
             base_fee_group,
@@ -197,20 +266,29 @@ pub fn process_instruction(
             msg!("Instruction: DistributeNcnVaultRewards");
             process_distribute_ncn_vault_rewards(program_id, accounts, ncn_fee_group, epoch)
         }
-        TipRouterInstruction::SwitchboardSetWeight { epoch, st_mint } => {
-            msg!("Instruction: SwitchboardSetWeight");
-            process_switchboard_set_weight(program_id, accounts, st_mint, epoch)
-        }
-        // ------------------------------------------
-        // Update
-        // ------------------------------------------
-        TipRouterInstruction::AdminSetWeight {
-            st_mint,
-            epoch,
-            weight,
+        TipRouterInstruction::ClaimWithPayer {
+            proof,
+            amount,
+            bump,
         } => {
-            msg!("Instruction: AdminSetWeight");
-            process_admin_set_weight(program_id, accounts, st_mint, epoch, weight)
+            msg!("Instruction: ClaimWithPayer");
+            process_claim_with_payer(program_id, accounts, proof, amount, bump)
+        }
+
+        // ---------------------------------------------------- //
+        //                        ADMIN                         //
+        // ---------------------------------------------------- //
+        TipRouterInstruction::AdminSetParameters {
+            epochs_before_stall,
+            valid_slots_after_consensus,
+        } => {
+            msg!("Instruction: AdminSetParameters");
+            process_admin_set_parameters(
+                program_id,
+                accounts,
+                epochs_before_stall,
+                valid_slots_after_consensus,
+            )
         }
         TipRouterInstruction::AdminSetConfigFees {
             new_block_engine_fee_bps,
@@ -236,9 +314,20 @@ pub fn process_instruction(
             msg!("Instruction: AdminSetNewAdmin");
             process_admin_set_new_admin(program_id, accounts, role)
         }
-        TipRouterInstruction::RegisterVault => {
-            msg!("Instruction: RegisterVault");
-            process_register_vault(program_id, accounts)
+        TipRouterInstruction::AdminSetTieBreaker {
+            meta_merkle_root,
+            epoch,
+        } => {
+            msg!("Instruction: AdminSetTieBreaker");
+            process_admin_set_tie_breaker(program_id, accounts, &meta_merkle_root, epoch)
+        }
+        TipRouterInstruction::AdminSetWeight {
+            st_mint,
+            weight,
+            epoch,
+        } => {
+            msg!("Instruction: AdminSetWeight");
+            process_admin_set_weight(program_id, accounts, &st_mint, epoch, weight)
         }
         TipRouterInstruction::AdminRegisterStMint {
             ncn_fee_group,
@@ -267,88 +356,11 @@ pub fn process_instruction(
             process_admin_set_st_mint(
                 program_id,
                 accounts,
-                st_mint,
+                &st_mint,
                 ncn_fee_group,
                 reward_multiplier_bps,
                 switchboard_feed,
                 no_feed_weight,
-            )
-        }
-        TipRouterInstruction::InitializeBallotBox { epoch } => {
-            msg!("Instruction: InitializeBallotBox");
-            process_initialize_ballot_box(program_id, accounts, epoch)
-        }
-        TipRouterInstruction::CastVote {
-            meta_merkle_root,
-            epoch,
-        } => {
-            msg!("Instruction: CastVote");
-            process_cast_vote(program_id, accounts, meta_merkle_root, epoch)
-        }
-        TipRouterInstruction::SetMerkleRoot {
-            proof,
-            merkle_root,
-            max_total_claim,
-            max_num_nodes,
-            epoch,
-        } => {
-            msg!("Instruction: SetMerkleRoot");
-            process_set_merkle_root(
-                program_id,
-                accounts,
-                proof,
-                merkle_root,
-                max_total_claim,
-                max_num_nodes,
-                epoch,
-            )
-        }
-        TipRouterInstruction::AdminSetTieBreaker {
-            meta_merkle_root,
-            epoch,
-        } => {
-            msg!("Instruction: AdminSetTieBreaker");
-            process_admin_set_tie_breaker(program_id, accounts, meta_merkle_root, epoch)
-        }
-        TipRouterInstruction::ClaimWithPayer {
-            proof,
-            amount,
-            bump,
-        } => {
-            msg!("Instruction: ClaimWithPayer");
-            process_claim_with_payer(program_id, accounts, proof, amount, bump)
-        }
-
-        TipRouterInstruction::ReallocBallotBox { epoch } => {
-            msg!("Instruction: ReallocBallotBox");
-            process_realloc_ballot_box(program_id, accounts, epoch)
-        }
-        TipRouterInstruction::ReallocOperatorSnapshot { epoch } => {
-            msg!("Instruction: ReallocOperatorSnapshot");
-            process_realloc_operator_snapshot(program_id, accounts, epoch)
-        }
-        TipRouterInstruction::ReallocBaseRewardRouter { epoch } => {
-            msg!("Instruction: ReallocBaseRewardRouter");
-            process_realloc_base_reward_router(program_id, accounts, epoch)
-        }
-        TipRouterInstruction::ReallocWeightTable { epoch } => {
-            msg!("Instruction: ReallocWeightTable");
-            process_realloc_weight_table(program_id, accounts, epoch)
-        }
-        TipRouterInstruction::ReallocVaultRegistry => {
-            msg!("Instruction: ReallocVaultRegistry");
-            process_realloc_vault_registry(program_id, accounts)
-        }
-        TipRouterInstruction::AdminSetParameters {
-            epochs_before_stall,
-            valid_slots_after_consensus,
-        } => {
-            msg!("Instruction: AdminSetParameters");
-            process_admin_set_parameters(
-                program_id,
-                accounts,
-                epochs_before_stall,
-                valid_slots_after_consensus,
             )
         }
     }

@@ -29,7 +29,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const DISTRIBUTE_NCN_OPERATOR_REWARDS_DISCRIMINATOR = 17;
+export const DISTRIBUTE_NCN_OPERATOR_REWARDS_DISCRIMINATOR = 22;
 
 export function getDistributeNcnOperatorRewardsDiscriminatorBytes() {
   return getU8Encoder().encode(DISTRIBUTE_NCN_OPERATOR_REWARDS_DISCRIMINATOR);
@@ -37,7 +37,6 @@ export function getDistributeNcnOperatorRewardsDiscriminatorBytes() {
 
 export type DistributeNcnOperatorRewardsInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
@@ -67,9 +66,6 @@ export type DistributeNcnOperatorRewardsInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountRestakingConfig extends string
-        ? ReadonlyAccount<TAccountRestakingConfig>
-        : TAccountRestakingConfig,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
@@ -164,7 +160,6 @@ export function getDistributeNcnOperatorRewardsInstructionDataCodec(): Codec<
 }
 
 export type DistributeNcnOperatorRewardsInput<
-  TAccountRestakingConfig extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
@@ -182,7 +177,6 @@ export type DistributeNcnOperatorRewardsInput<
   TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  restakingConfig: Address<TAccountRestakingConfig>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
@@ -204,7 +198,6 @@ export type DistributeNcnOperatorRewardsInput<
 };
 
 export function getDistributeNcnOperatorRewardsInstruction<
-  TAccountRestakingConfig extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountOperator extends string,
@@ -224,7 +217,6 @@ export function getDistributeNcnOperatorRewardsInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: DistributeNcnOperatorRewardsInput<
-    TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
     TAccountOperator,
@@ -245,7 +237,6 @@ export function getDistributeNcnOperatorRewardsInstruction<
   config?: { programAddress?: TProgramAddress }
 ): DistributeNcnOperatorRewardsInstruction<
   TProgramAddress,
-  TAccountRestakingConfig,
   TAccountConfig,
   TAccountNcn,
   TAccountOperator,
@@ -269,10 +260,6 @@ export function getDistributeNcnOperatorRewardsInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    restakingConfig: {
-      value: input.restakingConfig ?? null,
-      isWritable: false,
-    },
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     operator: { value: input.operator ?? null, isWritable: true },
@@ -329,7 +316,6 @@ export function getDistributeNcnOperatorRewardsInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
@@ -353,7 +339,6 @@ export function getDistributeNcnOperatorRewardsInstruction<
     ),
   } as DistributeNcnOperatorRewardsInstruction<
     TProgramAddress,
-    TAccountRestakingConfig,
     TAccountConfig,
     TAccountNcn,
     TAccountOperator,
@@ -381,23 +366,22 @@ export type ParsedDistributeNcnOperatorRewardsInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    restakingConfig: TAccountMetas[0];
-    config: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    operator: TAccountMetas[3];
-    operatorAta: TAccountMetas[4];
-    ncnRewardRouter: TAccountMetas[5];
-    ncnRewardReceiver: TAccountMetas[6];
-    restakingProgram: TAccountMetas[7];
-    stakePoolProgram: TAccountMetas[8];
-    stakePool: TAccountMetas[9];
-    stakePoolWithdrawAuthority: TAccountMetas[10];
-    reserveStake: TAccountMetas[11];
-    managerFeeAccount: TAccountMetas[12];
-    referrerPoolTokensAccount: TAccountMetas[13];
-    poolMint: TAccountMetas[14];
-    tokenProgram: TAccountMetas[15];
-    systemProgram: TAccountMetas[16];
+    config: TAccountMetas[0];
+    ncn: TAccountMetas[1];
+    operator: TAccountMetas[2];
+    operatorAta: TAccountMetas[3];
+    ncnRewardRouter: TAccountMetas[4];
+    ncnRewardReceiver: TAccountMetas[5];
+    restakingProgram: TAccountMetas[6];
+    stakePoolProgram: TAccountMetas[7];
+    stakePool: TAccountMetas[8];
+    stakePoolWithdrawAuthority: TAccountMetas[9];
+    reserveStake: TAccountMetas[10];
+    managerFeeAccount: TAccountMetas[11];
+    referrerPoolTokensAccount: TAccountMetas[12];
+    poolMint: TAccountMetas[13];
+    tokenProgram: TAccountMetas[14];
+    systemProgram: TAccountMetas[15];
   };
   data: DistributeNcnOperatorRewardsInstructionData;
 };
@@ -410,7 +394,7 @@ export function parseDistributeNcnOperatorRewardsInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedDistributeNcnOperatorRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 17) {
+  if (instruction.accounts.length < 16) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -423,7 +407,6 @@ export function parseDistributeNcnOperatorRewardsInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      restakingConfig: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
       operator: getNextAccount(),

@@ -5,7 +5,7 @@ use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
 };
-use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
+use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
@@ -23,7 +23,7 @@ pub fn process_initialize_ncn_reward_router(
     ncn_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn, operator, ncn_reward_router, ncn_reward_receiver, payer, restaking_program, system_program] =
+    let [ncn, operator, ncn_reward_router, ncn_reward_receiver, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -34,7 +34,6 @@ pub fn process_initialize_ncn_reward_router(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
     NcnRewardReceiver::load(
@@ -95,8 +94,8 @@ pub fn process_initialize_ncn_reward_router(
 
     *ncn_reward_router_account = NcnRewardRouter::new(
         ncn_fee_group,
-        *operator.key,
-        *ncn.key,
+        operator.key,
+        ncn.key,
         epoch,
         ncn_reward_router_bump,
         current_slot,

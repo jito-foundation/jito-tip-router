@@ -30,7 +30,7 @@ import {
 } from '.';
 
 export type WeightEntry = {
-  mintEntry: StMintEntry;
+  stMintEntry: StMintEntry;
   weight: bigint;
   slotSet: bigint;
   slotUpdated: bigint;
@@ -38,7 +38,7 @@ export type WeightEntry = {
 };
 
 export type WeightEntryArgs = {
-  mintEntry: StMintEntryArgs;
+  stMintEntry: StMintEntryArgs;
   weight: number | bigint;
   slotSet: number | bigint;
   slotUpdated: number | bigint;
@@ -47,7 +47,7 @@ export type WeightEntryArgs = {
 
 export function getWeightEntryEncoder(): Encoder<WeightEntryArgs> {
   return getStructEncoder([
-    ['mintEntry', getStMintEntryEncoder()],
+    ['stMintEntry', getStMintEntryEncoder()],
     ['weight', getU128Encoder()],
     ['slotSet', getU64Encoder()],
     ['slotUpdated', getU64Encoder()],
@@ -57,7 +57,7 @@ export function getWeightEntryEncoder(): Encoder<WeightEntryArgs> {
 
 export function getWeightEntryDecoder(): Decoder<WeightEntry> {
   return getStructDecoder([
-    ['mintEntry', getStMintEntryDecoder()],
+    ['stMintEntry', getStMintEntryDecoder()],
     ['weight', getU128Decoder()],
     ['slotSet', getU64Decoder()],
     ['slotUpdated', getU64Decoder()],

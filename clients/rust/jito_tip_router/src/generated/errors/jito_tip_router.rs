@@ -219,12 +219,15 @@ pub enum JitoTipRouterError {
     /// 8764 - Weight entry needs either a feed or a no feed weight
     #[error("Weight entry needs either a feed or a no feed weight")]
     NoFeedWeightOrSwitchboardFeed = 0x223C,
-    /// 8765 - Invalid epochs before stall
+    /// 8765 - Router still routing
+    #[error("Router still routing")]
+    RouterStillRouting = 0x223D,
+    /// 8766 - Invalid epochs before stall
     #[error("Invalid epochs before stall")]
-    InvalidEpochsBeforeStall = 0x223D,
-    /// 8766 - Invalid slots after consensus
+    InvalidEpochsBeforeStall = 0x223E,
+    /// 8767 - Invalid slots after consensus
     #[error("Invalid slots after consensus")]
-    InvalidSlotsAfterConsensus = 0x223E,
+    InvalidSlotsAfterConsensus = 0x223F,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

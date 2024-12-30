@@ -3,9 +3,9 @@ use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     ballot_box::{Ballot, BallotBox},
+    config::Config as NcnConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     error::TipRouterError,
-    ncn_config::NcnConfig,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -15,7 +15,7 @@ use solana_program::{
 pub fn process_cast_vote(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    meta_merkle_root: [u8; 32],
+    meta_merkle_root: &[u8; 32],
     epoch: u64,
 ) -> ProgramResult {
     let [ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator, operator_admin, restaking_program] =
@@ -81,8 +81,8 @@ pub fn process_cast_vote(
     let ballot = Ballot::new(meta_merkle_root);
 
     ballot_box.cast_vote(
-        *operator.key,
-        ballot,
+        operator.key,
+        &ballot,
         &operator_stake_weights,
         slot,
         valid_slots_after_consensus,

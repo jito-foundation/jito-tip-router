@@ -41,7 +41,7 @@ import {
   type FeeConfigArgs,
 } from '../types';
 
-export type NcnConfig = {
+export type Config = {
   discriminator: bigint;
   ncn: Address;
   tieBreakerAdmin: Address;
@@ -53,7 +53,7 @@ export type NcnConfig = {
   reserved: Array<number>;
 };
 
-export type NcnConfigArgs = {
+export type ConfigArgs = {
   discriminator: number | bigint;
   ncn: Address;
   tieBreakerAdmin: Address;
@@ -65,7 +65,7 @@ export type NcnConfigArgs = {
   reserved: Array<number>;
 };
 
-export function getNcnConfigEncoder(): Encoder<NcnConfigArgs> {
+export function getConfigEncoder(): Encoder<ConfigArgs> {
   return getStructEncoder([
     ['discriminator', getU64Encoder()],
     ['ncn', getAddressEncoder()],
@@ -79,7 +79,7 @@ export function getNcnConfigEncoder(): Encoder<NcnConfigArgs> {
   ]);
 }
 
-export function getNcnConfigDecoder(): Decoder<NcnConfig> {
+export function getConfigDecoder(): Decoder<Config> {
   return getStructDecoder([
     ['discriminator', getU64Decoder()],
     ['ncn', getAddressDecoder()],
@@ -93,59 +93,59 @@ export function getNcnConfigDecoder(): Decoder<NcnConfig> {
   ]);
 }
 
-export function getNcnConfigCodec(): Codec<NcnConfigArgs, NcnConfig> {
-  return combineCodec(getNcnConfigEncoder(), getNcnConfigDecoder());
+export function getConfigCodec(): Codec<ConfigArgs, Config> {
+  return combineCodec(getConfigEncoder(), getConfigDecoder());
 }
 
-export function decodeNcnConfig<TAddress extends string = string>(
+export function decodeConfig<TAddress extends string = string>(
   encodedAccount: EncodedAccount<TAddress>
-): Account<NcnConfig, TAddress>;
-export function decodeNcnConfig<TAddress extends string = string>(
+): Account<Config, TAddress>;
+export function decodeConfig<TAddress extends string = string>(
   encodedAccount: MaybeEncodedAccount<TAddress>
-): MaybeAccount<NcnConfig, TAddress>;
-export function decodeNcnConfig<TAddress extends string = string>(
+): MaybeAccount<Config, TAddress>;
+export function decodeConfig<TAddress extends string = string>(
   encodedAccount: EncodedAccount<TAddress> | MaybeEncodedAccount<TAddress>
-): Account<NcnConfig, TAddress> | MaybeAccount<NcnConfig, TAddress> {
+): Account<Config, TAddress> | MaybeAccount<Config, TAddress> {
   return decodeAccount(
     encodedAccount as MaybeEncodedAccount<TAddress>,
-    getNcnConfigDecoder()
+    getConfigDecoder()
   );
 }
 
-export async function fetchNcnConfig<TAddress extends string = string>(
+export async function fetchConfig<TAddress extends string = string>(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<Account<NcnConfig, TAddress>> {
-  const maybeAccount = await fetchMaybeNcnConfig(rpc, address, config);
+): Promise<Account<Config, TAddress>> {
+  const maybeAccount = await fetchMaybeConfig(rpc, address, config);
   assertAccountExists(maybeAccount);
   return maybeAccount;
 }
 
-export async function fetchMaybeNcnConfig<TAddress extends string = string>(
+export async function fetchMaybeConfig<TAddress extends string = string>(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<MaybeAccount<NcnConfig, TAddress>> {
+): Promise<MaybeAccount<Config, TAddress>> {
   const maybeAccount = await fetchEncodedAccount(rpc, address, config);
-  return decodeNcnConfig(maybeAccount);
+  return decodeConfig(maybeAccount);
 }
 
-export async function fetchAllNcnConfig(
+export async function fetchAllConfig(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<Account<NcnConfig>[]> {
-  const maybeAccounts = await fetchAllMaybeNcnConfig(rpc, addresses, config);
+): Promise<Account<Config>[]> {
+  const maybeAccounts = await fetchAllMaybeConfig(rpc, addresses, config);
   assertAccountsExist(maybeAccounts);
   return maybeAccounts;
 }
 
-export async function fetchAllMaybeNcnConfig(
+export async function fetchAllMaybeConfig(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<MaybeAccount<NcnConfig>[]> {
+): Promise<MaybeAccount<Config>[]> {
   const maybeAccounts = await fetchEncodedAccounts(rpc, addresses, config);
-  return maybeAccounts.map((maybeAccount) => decodeNcnConfig(maybeAccount));
+  return maybeAccounts.map((maybeAccount) => decodeConfig(maybeAccount));
 }

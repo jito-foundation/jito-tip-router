@@ -3,7 +3,7 @@ use jito_jsm_core::{
     loader::{load_signer, load_system_account, load_system_program},
 };
 use jito_tip_router_core::{
-    ballot_box::BallotBox, constants::MAX_REALLOC_BYTES, ncn_config::NcnConfig,
+    ballot_box::BallotBox, config::Config as NcnConfig, constants::MAX_REALLOC_BYTES,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,

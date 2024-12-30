@@ -8,8 +8,6 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
 pub struct DistributeNcnVaultRewards {
-    pub restaking_config: solana_program::pubkey::Pubkey,
-
     pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
@@ -56,11 +54,7 @@ impl DistributeNcnVaultRewards {
         args: DistributeNcnVaultRewardsInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(17 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_config,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.config,
             false,
@@ -145,7 +139,7 @@ pub struct DistributeNcnVaultRewardsInstructionData {
 
 impl DistributeNcnVaultRewardsInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 18 }
+        Self { discriminator: 23 }
     }
 }
 
@@ -166,26 +160,24 @@ pub struct DistributeNcnVaultRewardsInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` config
-///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[writable]` vault
-///   5. `[writable]` vault_ata
-///   6. `[writable]` ncn_reward_router
-///   7. `[writable]` ncn_reward_receiver
-///   8. `[]` stake_pool_program
-///   9. `[writable]` stake_pool
-///   10. `[]` stake_pool_withdraw_authority
-///   11. `[writable]` reserve_stake
-///   12. `[writable]` manager_fee_account
-///   13. `[writable]` referrer_pool_tokens_account
-///   14. `[writable]` pool_mint
-///   15. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   16. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   0. `[]` config
+///   1. `[]` ncn
+///   2. `[]` operator
+///   3. `[writable]` vault
+///   4. `[writable]` vault_ata
+///   5. `[writable]` ncn_reward_router
+///   6. `[writable]` ncn_reward_receiver
+///   7. `[]` stake_pool_program
+///   8. `[writable]` stake_pool
+///   9. `[]` stake_pool_withdraw_authority
+///   10. `[writable]` reserve_stake
+///   11. `[writable]` manager_fee_account
+///   12. `[writable]` referrer_pool_tokens_account
+///   13. `[writable]` pool_mint
+///   14. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+///   15. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct DistributeNcnVaultRewardsBuilder {
-    restaking_config: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
@@ -210,14 +202,6 @@ pub struct DistributeNcnVaultRewardsBuilder {
 impl DistributeNcnVaultRewardsBuilder {
     pub fn new() -> Self {
         Self::default()
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_config = Some(restaking_config);
-        self
     }
     #[inline(always)]
     pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -350,7 +334,6 @@ impl DistributeNcnVaultRewardsBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = DistributeNcnVaultRewards {
-            restaking_config: self.restaking_config.expect("restaking_config is not set"),
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             operator: self.operator.expect("operator is not set"),
@@ -398,8 +381,6 @@ impl DistributeNcnVaultRewardsBuilder {
 
 /// `distribute_ncn_vault_rewards` CPI accounts.
 pub struct DistributeNcnVaultRewardsCpiAccounts<'a, 'b> {
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
@@ -437,8 +418,6 @@ pub struct DistributeNcnVaultRewardsCpiAccounts<'a, 'b> {
 pub struct DistributeNcnVaultRewardsCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -483,7 +462,6 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            restaking_config: accounts.restaking_config,
             config: accounts.config,
             ncn: accounts.ncn,
             operator: accounts.operator,
@@ -536,11 +514,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(17 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_config.key,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.config.key,
             false,
@@ -623,9 +597,8 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(17 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(16 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.restaking_config.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
@@ -658,23 +631,22 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` restaking_config
-///   1. `[]` config
-///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[writable]` vault
-///   5. `[writable]` vault_ata
-///   6. `[writable]` ncn_reward_router
-///   7. `[writable]` ncn_reward_receiver
-///   8. `[]` stake_pool_program
-///   9. `[writable]` stake_pool
-///   10. `[]` stake_pool_withdraw_authority
-///   11. `[writable]` reserve_stake
-///   12. `[writable]` manager_fee_account
-///   13. `[writable]` referrer_pool_tokens_account
-///   14. `[writable]` pool_mint
-///   15. `[]` token_program
-///   16. `[]` system_program
+///   0. `[]` config
+///   1. `[]` ncn
+///   2. `[]` operator
+///   3. `[writable]` vault
+///   4. `[writable]` vault_ata
+///   5. `[writable]` ncn_reward_router
+///   6. `[writable]` ncn_reward_receiver
+///   7. `[]` stake_pool_program
+///   8. `[writable]` stake_pool
+///   9. `[]` stake_pool_withdraw_authority
+///   10. `[writable]` reserve_stake
+///   11. `[writable]` manager_fee_account
+///   12. `[writable]` referrer_pool_tokens_account
+///   13. `[writable]` pool_mint
+///   14. `[]` token_program
+///   15. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
     instruction: Box<DistributeNcnVaultRewardsCpiBuilderInstruction<'a, 'b>>,
@@ -684,7 +656,6 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(DistributeNcnVaultRewardsCpiBuilderInstruction {
             __program: program,
-            restaking_config: None,
             config: None,
             ncn: None,
             operator: None,
@@ -706,14 +677,6 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
-    }
-    #[inline(always)]
-    pub fn restaking_config(
-        &mut self,
-        restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_config = Some(restaking_config);
-        self
     }
     #[inline(always)]
     pub fn config(
@@ -899,11 +862,6 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
         let instruction = DistributeNcnVaultRewardsCpi {
             __program: self.instruction.__program,
 
-            restaking_config: self
-                .instruction
-                .restaking_config
-                .expect("restaking_config is not set"),
-
             config: self.instruction.config.expect("config is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
@@ -974,7 +932,6 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct DistributeNcnVaultRewardsCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,

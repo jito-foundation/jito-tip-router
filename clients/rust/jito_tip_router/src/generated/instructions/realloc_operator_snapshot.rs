@@ -8,7 +8,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Accounts.
 pub struct ReallocOperatorSnapshot {
-    pub config: solana_program::pubkey::Pubkey,
+    pub ncn_config: solana_program::pubkey::Pubkey,
 
     pub restaking_config: solana_program::pubkey::Pubkey,
 
@@ -44,7 +44,7 @@ impl ReallocOperatorSnapshot {
     ) -> solana_program::instruction::Instruction {
         let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.config,
+            self.ncn_config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -103,7 +103,7 @@ pub struct ReallocOperatorSnapshotInstructionData {
 
 impl ReallocOperatorSnapshotInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 27 }
+        Self { discriminator: 9 }
     }
 }
 
@@ -123,7 +123,7 @@ pub struct ReallocOperatorSnapshotInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` config
+///   0. `[]` ncn_config
 ///   1. `[]` restaking_config
 ///   2. `[]` ncn
 ///   3. `[]` operator
@@ -135,7 +135,7 @@ pub struct ReallocOperatorSnapshotInstructionArgs {
 ///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct ReallocOperatorSnapshotBuilder {
-    config: Option<solana_program::pubkey::Pubkey>,
+    ncn_config: Option<solana_program::pubkey::Pubkey>,
     restaking_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
@@ -154,8 +154,8 @@ impl ReallocOperatorSnapshotBuilder {
         Self::default()
     }
     #[inline(always)]
-    pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.config = Some(config);
+    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.ncn_config = Some(ncn_config);
         self
     }
     #[inline(always)]
@@ -242,7 +242,7 @@ impl ReallocOperatorSnapshotBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = ReallocOperatorSnapshot {
-            config: self.config.expect("config is not set"),
+            ncn_config: self.ncn_config.expect("ncn_config is not set"),
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             operator: self.operator.expect("operator is not set"),
@@ -271,7 +271,7 @@ impl ReallocOperatorSnapshotBuilder {
 
 /// `realloc_operator_snapshot` CPI accounts.
 pub struct ReallocOperatorSnapshotCpiAccounts<'a, 'b> {
-    pub config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -297,7 +297,7 @@ pub struct ReallocOperatorSnapshotCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -328,7 +328,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            config: accounts.config,
+            ncn_config: accounts.ncn_config,
             restaking_config: accounts.restaking_config,
             ncn: accounts.ncn,
             operator: accounts.operator,
@@ -376,7 +376,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
     ) -> solana_program::entrypoint::ProgramResult {
         let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.config.key,
+            *self.ncn_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -435,7 +435,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
         };
         let mut account_infos = Vec::with_capacity(10 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.config.clone());
+        account_infos.push(self.ncn_config.clone());
         account_infos.push(self.restaking_config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
@@ -461,7 +461,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` config
+///   0. `[]` ncn_config
 ///   1. `[]` restaking_config
 ///   2. `[]` ncn
 ///   3. `[]` operator
@@ -480,7 +480,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(ReallocOperatorSnapshotCpiBuilderInstruction {
             __program: program,
-            config: None,
+            ncn_config: None,
             restaking_config: None,
             ncn: None,
             operator: None,
@@ -496,11 +496,11 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
         Self { instruction }
     }
     #[inline(always)]
-    pub fn config(
+    pub fn ncn_config(
         &mut self,
-        config: &'b solana_program::account_info::AccountInfo<'a>,
+        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.config = Some(config);
+        self.instruction.ncn_config = Some(ncn_config);
         self
     }
     #[inline(always)]
@@ -621,7 +621,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
         let instruction = ReallocOperatorSnapshotCpi {
             __program: self.instruction.__program,
 
-            config: self.instruction.config.expect("config is not set"),
+            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
 
             restaking_config: self
                 .instruction
@@ -670,7 +670,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct ReallocOperatorSnapshotCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,

@@ -19,6 +19,8 @@ import {
   getArrayEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU16Decoder,
+  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -48,13 +50,16 @@ import {
 export type BaseRewardRouter = {
   discriminator: bigint;
   ncn: Address;
-  ncnEpoch: bigint;
+  epoch: bigint;
   bump: number;
   slotCreated: bigint;
   totalRewards: bigint;
   rewardPool: bigint;
   rewardsProcessed: bigint;
   reserved: Array<number>;
+  lastNcnGroupIndex: number;
+  lastVoteIndex: number;
+  lastRewardsToProcess: bigint;
   baseFeeGroupRewards: Array<BaseRewardRouterRewards>;
   ncnFeeGroupRewards: Array<BaseRewardRouterRewards>;
   ncnFeeGroupRewardRoutes: Array<NcnRewardRoute>;
@@ -63,13 +68,16 @@ export type BaseRewardRouter = {
 export type BaseRewardRouterArgs = {
   discriminator: number | bigint;
   ncn: Address;
-  ncnEpoch: number | bigint;
+  epoch: number | bigint;
   bump: number;
   slotCreated: number | bigint;
   totalRewards: number | bigint;
   rewardPool: number | bigint;
   rewardsProcessed: number | bigint;
   reserved: Array<number>;
+  lastNcnGroupIndex: number;
+  lastVoteIndex: number;
+  lastRewardsToProcess: number | bigint;
   baseFeeGroupRewards: Array<BaseRewardRouterRewardsArgs>;
   ncnFeeGroupRewards: Array<BaseRewardRouterRewardsArgs>;
   ncnFeeGroupRewardRoutes: Array<NcnRewardRouteArgs>;
@@ -79,13 +87,16 @@ export function getBaseRewardRouterEncoder(): Encoder<BaseRewardRouterArgs> {
   return getStructEncoder([
     ['discriminator', getU64Encoder()],
     ['ncn', getAddressEncoder()],
-    ['ncnEpoch', getU64Encoder()],
+    ['epoch', getU64Encoder()],
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
     ['totalRewards', getU64Encoder()],
     ['rewardPool', getU64Encoder()],
     ['rewardsProcessed', getU64Encoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['lastNcnGroupIndex', getU8Encoder()],
+    ['lastVoteIndex', getU16Encoder()],
+    ['lastRewardsToProcess', getU64Encoder()],
     [
       'baseFeeGroupRewards',
       getArrayEncoder(getBaseRewardRouterRewardsEncoder(), { size: 8 }),
@@ -105,13 +116,16 @@ export function getBaseRewardRouterDecoder(): Decoder<BaseRewardRouter> {
   return getStructDecoder([
     ['discriminator', getU64Decoder()],
     ['ncn', getAddressDecoder()],
-    ['ncnEpoch', getU64Decoder()],
+    ['epoch', getU64Decoder()],
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
     ['totalRewards', getU64Decoder()],
     ['rewardPool', getU64Decoder()],
     ['rewardsProcessed', getU64Decoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['lastNcnGroupIndex', getU8Decoder()],
+    ['lastVoteIndex', getU16Decoder()],
+    ['lastRewardsToProcess', getU64Decoder()],
     [
       'baseFeeGroupRewards',
       getArrayDecoder(getBaseRewardRouterRewardsDecoder(), { size: 8 }),

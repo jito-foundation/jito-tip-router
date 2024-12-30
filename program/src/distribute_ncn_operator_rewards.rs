@@ -1,9 +1,10 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::load_associated_token_account;
-use jito_restaking_core::{config::Config, ncn::Ncn, operator::Operator};
+use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
-    constants::JITO_SOL_MINT,
-    ncn_config::NcnConfig,
+    config::Config as NcnConfig,
+    constants::JITOSOL_MINT,
+    error::TipRouterError,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
 };
@@ -20,7 +21,7 @@ pub fn process_distribute_ncn_operator_rewards(
     ncn_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [restaking_config, ncn_config, ncn, operator, operator_ata, ncn_reward_router, ncn_reward_receiver, restaking_program, stake_pool_program, stake_pool, stake_pool_withdraw_authority, reserve_stake, manager_fee_account, referrer_pool_tokens_account, pool_mint, token_program, system_program] =
+    let [ncn_config, ncn, operator, operator_ata, ncn_reward_router, ncn_reward_receiver, restaking_program, stake_pool_program, stake_pool, stake_pool_withdraw_authority, reserve_stake, manager_fee_account, referrer_pool_tokens_account, pool_mint, token_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -31,7 +32,6 @@ pub fn process_distribute_ncn_operator_rewards(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, true)?;
 
@@ -56,7 +56,7 @@ pub fn process_distribute_ncn_operator_rewards(
         epoch,
         true,
     )?;
-    load_associated_token_account(operator_ata, operator.key, &JITO_SOL_MINT)?;
+    load_associated_token_account(operator_ata, operator.key, &JITOSOL_MINT)?;
 
     if stake_pool_program.key.ne(&spl_stake_pool::id()) {
         msg!("Incorrect stake pool program ID");
@@ -68,6 +68,11 @@ pub fn process_distribute_ncn_operator_rewards(
         let mut ncn_reward_router_data = ncn_reward_router.try_borrow_mut_data()?;
         let ncn_reward_router_account =
             NcnRewardRouter::try_from_slice_unchecked_mut(&mut ncn_reward_router_data)?;
+
+        if ncn_reward_router_account.still_routing() {
+            msg!("Rewards still routing");
+            return Err(TipRouterError::RouterStillRouting.into());
+        }
 
         ncn_reward_router_account.distribute_operator_rewards()?
     };

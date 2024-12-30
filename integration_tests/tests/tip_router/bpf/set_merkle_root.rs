@@ -6,8 +6,8 @@ mod set_merkle_root {
     use jito_tip_router_core::{
         ballot_box::{Ballot, BallotBox},
         claim_status_payer::ClaimStatusPayer,
+        config::Config as NcnConfig,
         error::TipRouterError,
-        ncn_config::NcnConfig,
     };
     use meta_merkle_tree::{
         generated_merkle_tree::{
@@ -215,9 +215,9 @@ mod set_merkle_root {
             BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn_address, epoch);
 
         let ballot_box_fixture = {
-            let mut ballot_box = BallotBox::new(ncn_address, epoch, bump, 0);
-            let winning_ballot = Ballot::new(winning_root);
-            ballot_box.set_winning_ballot(winning_ballot);
+            let mut ballot_box = BallotBox::new(&ncn_address, epoch, bump, 0);
+            let winning_ballot = Ballot::new(&winning_root);
+            ballot_box.set_winning_ballot(&winning_ballot);
             ballot_box
         };
 
@@ -250,9 +250,9 @@ mod set_merkle_root {
 
         ballot_box_fixture
             .verify_merkle_root(
-                tip_distribution_address,
+                &tip_distribution_address,
                 node.proof.unwrap(),
-                node.validator_merkle_root,
+                &node.validator_merkle_root,
                 node.max_total_claim,
                 node.max_num_nodes,
             )
@@ -406,9 +406,9 @@ mod set_merkle_root {
 
         ballot_box
             .verify_merkle_root(
-                tip_distribution_address,
+                &tip_distribution_address,
                 node.proof.unwrap(),
-                node.validator_merkle_root,
+                &node.validator_merkle_root,
                 node.max_total_claim,
                 node.max_num_nodes,
             )

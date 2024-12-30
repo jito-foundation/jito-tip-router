@@ -3,9 +3,9 @@ use jito_restaking_core::{
     config::Config, ncn::Ncn, ncn_vault_ticket::NcnVaultTicket, operator::Operator,
 };
 use jito_tip_router_core::{
+    config::Config as NcnConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     loaders::load_ncn_epoch,
-    ncn_config::NcnConfig,
     stake_weight::StakeWeights,
     weight_table::WeightTable,
 };
@@ -130,8 +130,8 @@ pub fn process_snapshot_vault_operator_delegation(
         };
 
         (
-            weight_entry.mint_entry().ncn_fee_group(),
-            weight_entry.mint_entry().reward_multiplier_bps(),
+            weight_entry.st_mint_entry().ncn_fee_group(),
+            weight_entry.st_mint_entry().reward_multiplier_bps(),
             total_stake_weight,
         )
     };
@@ -146,7 +146,7 @@ pub fn process_snapshot_vault_operator_delegation(
 
     operator_snapshot_account.increment_vault_operator_delegation_registration(
         current_slot,
-        *vault.key,
+        vault.key,
         vault_index,
         ncn_fee_group,
         &stake_weights,
