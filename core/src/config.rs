@@ -4,9 +4,9 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 
-use crate::{discriminators::Discriminators, fees::FeeConfig};
+use crate::{discriminators::Discriminators, fees::FeeConfig, loaders::check_load};
 
 #[derive(Debug, BorshSerialize, BorshDeserialize)]
 pub enum ConfigAdminRole {
@@ -92,30 +92,14 @@ impl Config {
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if account.owner.ne(program_id) {
-            msg!("Config account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-        if account.data_is_empty() {
-            msg!("Config account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if expect_writable && !account.is_writable {
-            msg!("Config account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Config account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account
-            .key
-            .ne(&Self::find_program_address(program_id, ncn).0)
-        {
-            msg!("Config account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
+        let expected_pda = Self::find_program_address(program_id, ncn).0;
+        check_load(
+            program_id,
+            account,
+            &expected_pda,
+            Some(Self::DISCRIMINATOR),
+            expect_writable,
+        )
     }
 
     pub fn valid_slots_after_consensus(&self) -> u64 {
@@ -124,118 +108,5 @@ impl Config {
 
     pub fn epochs_before_stall(&self) -> u64 {
         self.epochs_before_stall.into()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-    #[test]
-    fn test_load() {
-        let program_id = Pubkey::new_unique();
-        let ncn = Pubkey::new_unique();
-        let mut lamports = 0;
-
-        let (address, _, _) = Config::find_program_address(&program_id, &ncn);
-        let mut data = [0u8; Config::SIZE];
-
-        // Set the discriminator
-        data[0] = Config::DISCRIMINATOR;
-
-        // Test 1: Valid case - should succeed
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = Config::load(&program_id, &ncn, &account, false);
-        assert!(result.is_ok());
-
-        // Test 2: Invalid owner
-        let wrong_program_id = Pubkey::new_unique();
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &wrong_program_id,
-            false,
-            0,
-        );
-
-        let result = Config::load(&program_id, &ncn, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
-
-        // Test 3: Empty data
-        let mut empty_data = [0u8; 0];
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut empty_data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = Config::load(&program_id, &ncn, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Test 4: Not writable when expected
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false, // not writable
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = Config::load(&program_id, &ncn, &account, true);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Test 5: Invalid discriminator
-        let mut bad_discriminator_data = [0u8; Config::SIZE];
-        bad_discriminator_data[0] = Config::DISCRIMINATOR + 1; // wrong discriminator
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut bad_discriminator_data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = Config::load(&program_id, &ncn, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Test 6: Wrong PDA address
-        let wrong_address = Pubkey::new_unique();
-        let account = AccountInfo::new(
-            &wrong_address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = Config::load(&program_id, &ncn, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
     }
 }
