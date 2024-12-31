@@ -98,7 +98,7 @@ pub fn generate_stake_meta(
     Ok(stake_meta_coll)
 }
 
-fn tip_distributuon_account_from_tda_wrapper(
+fn tip_distribution_account_from_tda_wrapper(
     tda_wrapper: TipDistributionAccountWrapper,
     // The amount that will be left remaining in the tda to maintain rent exemption status.
     rent_exempt_amount: u64,
@@ -247,7 +247,7 @@ pub fn generate_stake_meta_collection(
                 let rent_exempt_amount =
                     bank.get_minimum_balance_for_rent_exemption(tda.account_data.data().len());
 
-                Some(tip_distributuon_account_from_tda_wrapper(
+                Some(tip_distribution_account_from_tda_wrapper(
                     tda,
                     rent_exempt_amount,
                 )?)

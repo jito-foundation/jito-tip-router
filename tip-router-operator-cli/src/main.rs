@@ -31,9 +31,6 @@ async fn main() -> Result<()> {
             info!("Running Tip Router...");
 
             loop {
-                // Wait for epoch change
-                wait_for_next_epoch(&rpc_client).await?;
-
                 // Get the last slot of the previous epoch
                 let (previous_epoch, previous_epoch_slot) =
                     get_previous_epoch_last_slot(&rpc_client).await?;
@@ -59,6 +56,9 @@ async fn main() -> Result<()> {
                         // Continue to next epoch even if this one failed
                     }
                 }
+
+                // Wait for epoch change
+                wait_for_next_epoch(&rpc_client).await?;
             }
         }
     }

@@ -3,6 +3,7 @@ use std::{fs::File, io::BufReader, path::PathBuf};
 use jito_tip_distribution_sdk::{
     jito_tip_distribution::ID as TIP_DISTRIBUTION_ID, CLAIM_STATUS_SEED,
 };
+use jito_vault_core::MAX_BPS;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use solana_program::{
     clock::{Epoch, Slot},
@@ -53,12 +54,12 @@ pub struct GeneratedMerkleTree {
 
 impl GeneratedMerkleTreeCollection {
     pub fn new_from_stake_meta_collection(
-        stake_meta_coll: StakeMetaCollection,
+        stake_meta_collection: StakeMetaCollection,
         ncn_address: &Pubkey,
         epoch: u64,
         protocol_fee_bps: u64,
     ) -> Result<Self, MerkleRootGeneratorError> {
-        let generated_merkle_trees = stake_meta_coll
+        let generated_merkle_trees = stake_meta_collection
             .stake_metas
             .into_iter()
             .filter(|stake_meta| stake_meta.maybe_tip_distribution_meta.is_some())
@@ -69,7 +70,7 @@ impl GeneratedMerkleTreeCollection {
                     protocol_fee_bps,
                     ncn_address,
                     epoch,
-                    &stake_meta_coll.tip_distribution_program_id, // Pass the program ID
+                    &stake_meta_collection.tip_distribution_program_id, // Pass the program ID
                 ) {
                     Err(e) => return Some(Err(e)),
                     Ok(maybe_tree_nodes) => maybe_tree_nodes,
@@ -102,9 +103,9 @@ impl GeneratedMerkleTreeCollection {
 
         Ok(Self {
             generated_merkle_trees,
-            bank_hash: stake_meta_coll.bank_hash,
-            epoch: stake_meta_coll.epoch,
-            slot: stake_meta_coll.slot,
+            bank_hash: stake_meta_collection.bank_hash,
+            epoch: stake_meta_collection.epoch,
+            slot: stake_meta_collection.slot,
         })
     }
 }
@@ -148,7 +149,7 @@ impl TreeNode {
                 (tip_distribution_meta.total_tips as u128)
                     .checked_mul(protocol_fee_bps as u128)
                     .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
-                10_000,
+                MAX_BPS as u128,
             );
             let protocol_fee_amount = u64::try_from(protocol_fee_amount)
                 .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
@@ -157,7 +158,7 @@ impl TreeNode {
                 (tip_distribution_meta.total_tips as u128)
                     .checked_mul(tip_distribution_meta.validator_fee_bps as u128)
                     .ok_or(MerkleRootGeneratorError::CheckedMathError)?
-                    .checked_div(10_000)
+                    .checked_div(MAX_BPS as u128)
                     .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
             )
             .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;

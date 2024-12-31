@@ -2209,8 +2209,6 @@ impl TipRouterClient {
             blockhash,
         );
 
-        println!("tx: {:?}", tx);
-
         self.process_transaction(&tx).await
     }
 
