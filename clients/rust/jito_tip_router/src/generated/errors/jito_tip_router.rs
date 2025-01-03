@@ -228,6 +228,9 @@ pub enum JitoTipRouterError {
     /// 8767 - Invalid slots after consensus
     #[error("Invalid slots after consensus")]
     InvalidSlotsAfterConsensus = 0x223F,
+    /// 8768 - Vault needs to be updated
+    #[error("Vault needs to be updated")]
+    VaultNeedsUpdate = 0x2240,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

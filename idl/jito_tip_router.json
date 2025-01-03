@@ -3327,6 +3327,11 @@
       "code": 8767,
       "name": "InvalidSlotsAfterConsensus",
       "msg": "Invalid slots after consensus"
+    },
+    {
+      "code": 8768,
+      "name": "VaultNeedsUpdate",
+      "msg": "Vault needs to be updated"
     }
   ],
   "metadata": {

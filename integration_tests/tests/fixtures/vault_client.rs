@@ -222,6 +222,20 @@ impl VaultProgramClient {
         )?)
     }
 
+    pub async fn get_vault_is_update_needed(
+        &mut self,
+        vault: &Pubkey,
+        slot: u64,
+    ) -> Result<bool, TestError> {
+        let vault_config = self
+            .get_config(&Config::find_program_address(&jito_vault_program::id()).0)
+            .await?;
+        let vault_account = self.get_vault(vault).await?;
+
+        let is_update_needed = vault_account.is_update_needed(slot, vault_config.epoch_length())?;
+        Ok(is_update_needed)
+    }
+
     pub async fn do_initialize_config(&mut self) -> Result<Keypair, TestError> {
         let config_admin = Keypair::new();
 
