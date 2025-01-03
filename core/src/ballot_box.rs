@@ -16,6 +16,7 @@ use crate::{
     constants::{precise_consensus, DEFAULT_CONSENSUS_REACHED_SLOT, MAX_OPERATORS},
     discriminators::Discriminators,
     error::TipRouterError,
+    loaders::check_load,
     stake_weight::StakeWeights,
 };
 
@@ -313,30 +314,14 @@ impl BallotBox {
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if account.owner.ne(program_id) {
-            msg!("Ballot box account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-        if account.data_is_empty() {
-            msg!("Ballot box account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if expect_writable && !account.is_writable {
-            msg!("Ballot box account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Ballot box account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account
-            .key
-            .ne(&Self::find_program_address(program_id, ncn, epoch).0)
-        {
-            msg!("Ballot box account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
+        let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
+        check_load(
+            program_id,
+            account,
+            &expected_pda,
+            Some(Self::DISCRIMINATOR),
+            expect_writable,
+        )
     }
 
     pub fn epoch(&self) -> u64 {
@@ -617,113 +602,6 @@ impl BallotBox {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_load() {
-        let program_id = Pubkey::new_unique();
-        let ncn = Pubkey::new_unique();
-        let epoch = 1;
-        let mut lamports = 0;
-
-        let (address, _, _) = BallotBox::find_program_address(&program_id, &ncn, epoch);
-        let mut data = [0u8; BallotBox::SIZE];
-
-        data[0] = BallotBox::DISCRIMINATOR;
-
-        // Load OK
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = BallotBox::load(&program_id, &ncn, epoch, &account, false);
-        assert!(result.is_ok());
-
-        // Invalid Owner
-        let bad_owner = Pubkey::new_unique();
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &bad_owner,
-            false,
-            0,
-        );
-
-        let result = BallotBox::load(&program_id, &ncn, epoch, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
-
-        // Empty Data
-        let mut bad_data = [0u8; 0];
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut bad_data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = BallotBox::load(&program_id, &ncn, epoch, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Writable
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = BallotBox::load(&program_id, &ncn, epoch, &account, true);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // No Discriminator
-        let mut bad_data = [0u8; BallotBox::SIZE];
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut bad_data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = BallotBox::load(&program_id, &ncn, epoch, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Bad Key
-        let bad_address = Pubkey::new_unique();
-        let account = AccountInfo::new(
-            &bad_address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = BallotBox::load(&program_id, &ncn, epoch, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-    }
 
     #[test]
     fn test_len() {

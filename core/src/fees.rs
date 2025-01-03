@@ -121,6 +121,15 @@ impl FeeConfig {
         current_fees.precise_total_fee_bps()
     }
 
+    pub fn adjusted_total_fees_bps(&self, current_epoch: u64) -> Result<u64, TipRouterError> {
+        let total_fees_bps = self.total_fees_bps(current_epoch)?;
+        self.adjusted_fee_bps(
+            total_fees_bps
+                .try_into()
+                .map_err(|_| TipRouterError::ArithmeticOverflow)?,
+        )
+    }
+
     // ------------------- BLOCK ENGINE -------------------
     pub fn block_engine_fee_bps(&self) -> u16 {
         self.block_engine_fee_bps.into()

@@ -68,7 +68,7 @@ pub fn process_snapshot_vault_operator_delegation(
     let current_slot = Clock::get()?.slot;
     let (_, ncn_epoch_length) = load_ncn_epoch(restaking_config, current_slot, None)?;
 
-    WeightTable::load(program_id, weight_table, ncn, epoch, false)?;
+    WeightTable::load(program_id, weight_table, ncn.key, epoch, false)?;
     EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, true)?;
     OperatorSnapshot::load(
         program_id,

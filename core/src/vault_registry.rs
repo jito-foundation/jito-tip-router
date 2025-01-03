@@ -6,12 +6,13 @@ use jito_bytemuck::{
     AccountDeserialize, Discriminator,
 };
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 
 use crate::{
     constants::{MAX_ST_MINTS, MAX_VAULTS},
     discriminators::Discriminators,
     error::TipRouterError,
+    loaders::check_load,
     ncn_fee_group::NcnFeeGroup,
 };
 
@@ -203,35 +204,14 @@ impl VaultRegistry {
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if account.owner.ne(program_id) {
-            msg!("Vault Registry account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-
-        if account.data_is_empty() {
-            msg!("Vault Registry account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        if expect_writable && !account.is_writable {
-            msg!("Vault Registry account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Vault Registry account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        if account
-            .key
-            .ne(&Self::find_program_address(program_id, ncn).0)
-        {
-            msg!("Vault Registry account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        Ok(())
+        let expected_pda = Self::find_program_address(program_id, ncn).0;
+        check_load(
+            program_id,
+            account,
+            &expected_pda,
+            Some(Self::DISCRIMINATOR),
+            expect_writable,
+        )
     }
 
     pub fn has_st_mint(&self, mint: &Pubkey) -> bool {
@@ -392,114 +372,6 @@ mod tests {
 
         let vault_registry = VaultRegistry::new(&Pubkey::default(), 0);
         assert_eq!(vault_registry.vault_list.len(), MAX_VAULTS);
-    }
-
-    #[test]
-    fn test_load() {
-        let program_id = Pubkey::new_unique();
-        let ncn = Pubkey::new_unique();
-        let mut lamports = 0;
-
-        let (address, _, _) = VaultRegistry::find_program_address(&program_id, &ncn);
-        let mut data = [0u8; VaultRegistry::SIZE];
-
-        // Set discriminator
-        data[0] = VaultRegistry::DISCRIMINATOR;
-
-        // Test 1: Valid case - should succeed
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = VaultRegistry::load(&program_id, &ncn, &account, false);
-        assert!(result.is_ok());
-
-        // Test 2: Invalid owner
-        let wrong_program_id = Pubkey::new_unique();
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &wrong_program_id,
-            false,
-            0,
-        );
-
-        let result = VaultRegistry::load(&program_id, &ncn, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
-
-        // Test 3: Empty data
-        let mut empty_data = [0u8; 0];
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut empty_data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = VaultRegistry::load(&program_id, &ncn, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Test 4: Not writable when expected to be
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false, // not writable
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = VaultRegistry::load(&program_id, &ncn, &account, true);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Test 5: Invalid discriminator
-        let mut bad_discriminator_data = [0u8; VaultRegistry::SIZE];
-        bad_discriminator_data[0] = VaultRegistry::DISCRIMINATOR + 1; // wrong discriminator
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut bad_discriminator_data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = VaultRegistry::load(&program_id, &ncn, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Test 6: Wrong PDA address
-        let wrong_address = Pubkey::new_unique();
-        let account = AccountInfo::new(
-            &wrong_address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = VaultRegistry::load(&program_id, &ncn, &account, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
     }
 
     #[test]

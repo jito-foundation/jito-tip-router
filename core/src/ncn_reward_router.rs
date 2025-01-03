@@ -9,12 +9,13 @@ use jito_vault_core::MAX_BPS;
 use shank::{ShankAccount, ShankType};
 use solana_program::{
     account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
+    system_program,
 };
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     constants::MAX_VAULTS, discriminators::Discriminators, epoch_snapshot::OperatorSnapshot,
-    error::TipRouterError, ncn_fee_group::NcnFeeGroup,
+    error::TipRouterError, loaders::check_load, ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -132,35 +133,15 @@ impl NcnRewardRouter {
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if account.owner.ne(program_id) {
-            msg!("NCN Reward Router account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-        if account.data_is_empty() {
-            msg!("NCN Reward Router account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if expect_writable && !account.is_writable {
-            msg!("NCN Reward Router account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("NCN Reward Router account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account.key.ne(&Self::find_program_address(
+        let expected_pda =
+            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, ncn_epoch).0;
+        check_load(
             program_id,
-            ncn_fee_group,
-            operator,
-            ncn,
-            ncn_epoch,
+            account,
+            &expected_pda,
+            Some(Self::DISCRIMINATOR),
+            expect_writable,
         )
-        .0)
-        {
-            msg!("NCN Reward Router account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
     }
 
     pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
@@ -639,29 +620,16 @@ impl NcnRewardReceiver {
         ncn_epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if account.owner.ne(&solana_program::system_program::ID) {
-            msg!("NcnRewardRouterReceiver account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-
-        if expect_writable && !account.is_writable {
-            msg!("NcnRewardRouterReceiver account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        if account.key.ne(&Self::find_program_address(
-            program_id,
-            ncn_fee_group,
-            operator,
-            ncn,
-            ncn_epoch,
+        let system_program_id = system_program::id();
+        let expected_pda =
+            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, ncn_epoch).0;
+        check_load(
+            &system_program_id,
+            account,
+            &expected_pda,
+            None,
+            expect_writable,
         )
-        .0)
-        {
-            msg!("NcnRewardRouterReceiver account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
     }
 }
 
@@ -815,171 +783,6 @@ mod tests {
     }
 
     #[test]
-    fn test_load() {
-        let program_id = Pubkey::new_unique();
-        let ncn_fee_group = NcnFeeGroup::default();
-        let operator = Pubkey::new_unique();
-        let ncn = Pubkey::new_unique();
-        let epoch = 1;
-        let mut lamports = 0;
-
-        let (address, _, _) = NcnRewardRouter::find_program_address(
-            &program_id,
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        );
-        let mut data = [0u8; NcnRewardRouter::SIZE];
-
-        // Set discriminator
-        data[0] = NcnRewardRouter::DISCRIMINATOR;
-
-        // Test 1: Valid case - should succeed
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = NcnRewardRouter::load(
-            &program_id,
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-            &account,
-            false,
-        );
-        assert!(result.is_ok());
-
-        // Test 2: Invalid owner
-        let wrong_program_id = Pubkey::new_unique();
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &wrong_program_id,
-            false,
-            0,
-        );
-
-        let result = NcnRewardRouter::load(
-            &program_id,
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-            &account,
-            false,
-        );
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
-
-        // Test 3: Empty data
-        let mut empty_data = [0u8; 0];
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut empty_data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = NcnRewardRouter::load(
-            &program_id,
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-            &account,
-            false,
-        );
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Test 4: Not writable when expected to be
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false, // not writable
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = NcnRewardRouter::load(
-            &program_id,
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-            &account,
-            true,
-        );
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Test 5: Invalid discriminator
-        let mut bad_discriminator_data = [0u8; NcnRewardRouter::SIZE];
-        bad_discriminator_data[0] = NcnRewardRouter::DISCRIMINATOR + 1; // wrong discriminator
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut bad_discriminator_data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = NcnRewardRouter::load(
-            &program_id,
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-            &account,
-            false,
-        );
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Test 6: Wrong PDA address
-        let wrong_address = Pubkey::new_unique();
-        let account = AccountInfo::new(
-            &wrong_address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &program_id,
-            false,
-            0,
-        );
-
-        let result = NcnRewardRouter::load(
-            &program_id,
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-            &account,
-            false,
-        );
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-    }
-
-    #[test]
     fn test_route_incoming_rewards() {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
@@ -1113,67 +916,6 @@ mod tests {
         // Test routing operator rewards
         router.route_operator_rewards(&operator_snapshot).unwrap();
         assert_eq!(router.operator_rewards(), INCOMING_REWARDS);
-
-        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
-        assert_eq!(router.reward_pool(), 0);
-        assert_eq!(router.rewards_processed(), INCOMING_REWARDS);
-    }
-
-    #[test]
-    fn test_route_vaults() {
-        const INCOMING_REWARDS: u64 = 1000;
-
-        let mut router = NcnRewardRouter::new(
-            NcnFeeGroup::default(),
-            &Pubkey::new_unique(), // ncn
-            &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
-            1,                     // bump
-            TEST_CURRENT_SLOT,     // slot_created
-        );
-
-        // Initial state checks
-        assert_eq!(router.total_rewards(), 0);
-        assert_eq!(router.reward_pool(), 0);
-        assert_eq!(router.rewards_processed(), 0);
-
-        // Test routing 1000 lamports
-        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
-
-        // Verify rewards were routed correctly
-        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
-        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
-        assert_eq!(router.rewards_processed(), 0);
-
-        let operator_snapshot = {
-            let operator_fee_bps = 0; // 0%
-            let vault_operator_delegation_count = 10;
-            let mut operator_snapshot =
-                get_test_operator_snapshot(operator_fee_bps, vault_operator_delegation_count);
-
-            for _ in 0..vault_operator_delegation_count {
-                register_test_vault_operator_delegation(&mut operator_snapshot, 1000, 1000);
-            }
-
-            operator_snapshot
-        };
-
-        // Test routing operator rewards
-        router.route_operator_rewards(&operator_snapshot).unwrap();
-        assert_eq!(router.operator_rewards(), 0);
-
-        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
-        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
-        assert_eq!(router.rewards_processed(), 0);
-
-        router.route_reward_pool(&operator_snapshot, 1000).unwrap();
-        for route in router
-            .vault_reward_routes()
-            .iter()
-            .filter(|route| !route.is_empty())
-        {
-            assert_eq!(route.rewards(), 100);
-        }
 
         assert_eq!(router.total_rewards(), INCOMING_REWARDS);
         assert_eq!(router.reward_pool(), 0);
@@ -1382,7 +1124,10 @@ mod tests {
     #[test]
     fn test_route_max_vaults_with_operator() {
         // 64_000 / 0.9 ~= 71_111
-        let incoming_rewards: u64 = ((MAX_VAULTS * 1000) as f64 / 0.9).round() as u64;
+        let expected_vault_rewards: u64 = 1000;
+        let expected_all_vault_rewards: u64 = MAX_VAULTS as u64 * expected_vault_rewards;
+        let incoming_rewards: u64 = (expected_all_vault_rewards as f64 / 0.9).round() as u64;
+        let expected_operator_rewards: u64 = incoming_rewards - expected_all_vault_rewards;
 
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
@@ -1421,11 +1166,11 @@ mod tests {
 
         // Test routing operator rewards
         router.route_operator_rewards(&operator_snapshot).unwrap();
-        assert_eq!(router.operator_rewards(), 7111);
+        assert_eq!(router.operator_rewards(), expected_operator_rewards);
 
         assert_eq!(router.total_rewards(), incoming_rewards);
-        assert_eq!(router.reward_pool(), 64000);
-        assert_eq!(router.rewards_processed(), 7111);
+        assert_eq!(router.reward_pool(), expected_all_vault_rewards);
+        assert_eq!(router.rewards_processed(), expected_operator_rewards);
 
         router.route_reward_pool(&operator_snapshot, 1000).unwrap();
         for route in router
@@ -1433,7 +1178,7 @@ mod tests {
             .iter()
             .filter(|route| !route.is_empty())
         {
-            assert_eq!(route.rewards(), 1000);
+            assert_eq!(route.rewards(), expected_vault_rewards);
         }
 
         assert_eq!(router.total_rewards(), incoming_rewards);

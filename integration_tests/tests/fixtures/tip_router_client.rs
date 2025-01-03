@@ -2202,13 +2202,14 @@ impl TipRouterClient {
             .instruction();
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
+        let tx = Transaction::new_signed_with_payer(
             &[ix],
             Some(&self.payer.pubkey()),
             &[&self.payer],
             blockhash,
-        ))
-        .await
+        );
+
+        self.process_transaction(&tx).await
     }
 
     pub async fn do_set_parameters(

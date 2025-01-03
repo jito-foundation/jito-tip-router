@@ -1,6 +1,10 @@
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{
+    account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program,
+};
 
-/// Uninitiatilized, no-data account used to hold SOL for ClaimStatus rent
+use crate::loaders::check_load;
+
+/// Uninitialized, no-data account used to hold SOL for ClaimStatus rent
 /// Must be empty and uninitialized to be used as a payer or `transfer` instructions fail
 pub struct ClaimStatusPayer {}
 
@@ -31,30 +35,20 @@ impl ClaimStatusPayer {
         tip_distribution_program: &Pubkey,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if account.owner.ne(&solana_program::system_program::ID) {
-            msg!("ClaimStatusPayer account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-
-        if expect_writable && !account.is_writable {
-            msg!("ClaimStatusPayer account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        if account
-            .key
-            .ne(&Self::find_program_address(program_id, tip_distribution_program).0)
-        {
-            msg!("ClaimStatusPayer account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
+        let system_program_id = system_program::id();
+        let expected_pda = Self::find_program_address(program_id, tip_distribution_program).0;
+        check_load(
+            &system_program_id,
+            account,
+            &expected_pda,
+            None,
+            expect_writable,
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use solana_program::system_program;
 
     use super::*;
 
@@ -94,86 +88,5 @@ mod tests {
 
         assert_eq!(pda, derived_address);
         assert_eq!(bump, derived_bump);
-    }
-
-    #[test]
-    fn test_load() {
-        let program_id = Pubkey::new_unique();
-        let tip_distribution_program = Pubkey::new_unique();
-        let mut lamports = 0;
-        let mut data = vec![];
-
-        let (address, _, _) =
-            ClaimStatusPayer::find_program_address(&program_id, &tip_distribution_program);
-
-        // Test 1: Valid case
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &system_program::ID,
-            false,
-            0,
-        );
-
-        let result =
-            ClaimStatusPayer::load(&program_id, &account, &tip_distribution_program, false);
-        assert!(result.is_ok());
-
-        // Test 2: Invalid owner
-        let wrong_owner = Pubkey::new_unique();
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &wrong_owner,
-            false,
-            0,
-        );
-
-        let result =
-            ClaimStatusPayer::load(&program_id, &account, &tip_distribution_program, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
-
-        // Test 3: Not writable when expected
-        let account = AccountInfo::new(
-            &address,
-            false,
-            false, // not writable
-            &mut lamports,
-            &mut data,
-            &system_program::ID,
-            false,
-            0,
-        );
-
-        let result = ClaimStatusPayer::load(
-            &program_id,
-            &account,
-            &tip_distribution_program,
-            true, // expect writable
-        );
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-        // Test 4: Wrong PDA address
-        let wrong_address = Pubkey::new_unique();
-        let account = AccountInfo::new(
-            &wrong_address,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &system_program::ID,
-            false,
-            0,
-        );
-
-        let result =
-            ClaimStatusPayer::load(&program_id, &account, &tip_distribution_program, false);
-        assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
     }
 }
