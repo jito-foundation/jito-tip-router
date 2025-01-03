@@ -4,9 +4,9 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 
-use crate::{discriminators::Discriminators, fees::FeeConfig};
+use crate::{discriminators::Discriminators, fees::FeeConfig, loaders::check_load};
 
 #[derive(Debug, BorshSerialize, BorshDeserialize)]
 pub enum ConfigAdminRole {
@@ -92,30 +92,14 @@ impl Config {
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if account.owner.ne(program_id) {
-            msg!("Config account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-        if account.data_is_empty() {
-            msg!("Config account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if expect_writable && !account.is_writable {
-            msg!("Config account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Config account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account
-            .key
-            .ne(&Self::find_program_address(program_id, ncn).0)
-        {
-            msg!("Config account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
+        let expected_pda = Self::find_program_address(program_id, ncn).0;
+        check_load(
+            program_id,
+            account,
+            &expected_pda,
+            Some(Self::DISCRIMINATOR),
+            expect_writable,
+        )
     }
 
     pub fn valid_slots_after_consensus(&self) -> u64 {

@@ -27,7 +27,7 @@ pub fn process_switchboard_set_weight(
 
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
 
-    WeightTable::load(program_id, weight_table, ncn, epoch, true)?;
+    WeightTable::load(program_id, weight_table, ncn.key, epoch, true)?;
 
     let (registered_switchboard_feed, no_feed_weight) = {
         let weight_table_data = weight_table.data.borrow();

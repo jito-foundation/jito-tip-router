@@ -177,6 +177,7 @@ mod set_merkle_root {
         })
     }
 
+    // #[ignore = "code coverage"]
     #[tokio::test]
     async fn test_set_merkle_root_ok() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
@@ -345,6 +346,7 @@ mod set_merkle_root {
         Ok(())
     }
 
+    // #[ignore = "code coverage"]
     #[tokio::test]
     async fn test_set_merkle_root_no_fixture() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
@@ -447,6 +449,7 @@ mod set_merkle_root {
         Ok(())
     }
 
+    // #[ignore = "code coverage"]
     #[tokio::test]
     async fn test_set_merkle_root_before_consensus() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;

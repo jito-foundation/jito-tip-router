@@ -8,12 +8,14 @@ use jito_bytemuck::{
 use shank::{ShankAccount, ShankType};
 use solana_program::{
     account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
+    system_program,
 };
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     ballot_box::BallotBox, base_fee_group::BaseFeeGroup, constants::MAX_OPERATORS,
-    discriminators::Discriminators, error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup,
+    discriminators::Discriminators, error::TipRouterError, fees::Fees, loaders::check_load,
+    ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -135,30 +137,14 @@ impl BaseRewardRouter {
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if account.owner.ne(program_id) {
-            msg!("Base Reward Router account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-        if account.data_is_empty() {
-            msg!("Base Reward Router account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if expect_writable && !account.is_writable {
-            msg!("Base Reward Router account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Base Reward Router account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account
-            .key
-            .ne(&Self::find_program_address(program_id, ncn, ncn_epoch).0)
-        {
-            msg!("Base Reward Router account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
+        let expected_pda = Self::find_program_address(program_id, ncn, ncn_epoch).0;
+        check_load(
+            program_id,
+            account,
+            &expected_pda,
+            Some(Self::DISCRIMINATOR),
+            expect_writable,
+        )
     }
 
     // ----------------- ROUTE STATE TRACKING --------------
@@ -822,24 +808,15 @@ impl BaseRewardReceiver {
         ncn_epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if account.owner.ne(&solana_program::system_program::ID) {
-            msg!("BaseRewardRouterReceiver account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-
-        if expect_writable && !account.is_writable {
-            msg!("BaseRewardRouterReceiver account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        if account
-            .key
-            .ne(&Self::find_program_address(program_id, ncn, ncn_epoch).0)
-        {
-            msg!("BaseRewardRouterReceiver account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
+        let system_program_id = system_program::id();
+        let expected_pda = Self::find_program_address(program_id, ncn, ncn_epoch).0;
+        check_load(
+            &system_program_id,
+            account,
+            &expected_pda,
+            None,
+            expect_writable,
+        )
     }
 }
 
@@ -936,6 +913,120 @@ mod tests {
             + size_of::<NcnRewardRoute>() * MAX_OPERATORS; // ncn_fee_group_reward_routes
 
         assert_eq!(size_of::<BaseRewardRouter>(), expected_total);
+    }
+
+    #[test]
+    fn test_operator() {
+        // Test case 1: Default operator (zero pubkey)
+        let default_route = NcnRewardRoute::default();
+        assert_eq!(*default_route.operator(), Pubkey::default());
+
+        // Test case 2: Custom operator
+        let custom_pubkey = Pubkey::new_unique();
+        let custom_route =
+            NcnRewardRoute::new(&custom_pubkey, NcnFeeGroup::default(), 100).unwrap();
+        assert_eq!(*custom_route.operator(), custom_pubkey);
+    }
+
+    #[test]
+    fn test_increment_rewards_processed_zero() {
+        // Create a new router
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(),
+            1,   // epoch
+            1,   // bump
+            100, // slot_created
+        );
+
+        // Get initial rewards processed value
+        let initial_rewards = router.rewards_processed();
+
+        // Try to increment by 0
+        let result = router.increment_rewards_processed(0);
+
+        // Verify operation succeeded
+        assert!(result.is_ok());
+
+        // Verify rewards_processed hasn't changed
+        assert_eq!(router.rewards_processed(), initial_rewards);
+    }
+
+    #[test]
+    fn test_distribute_ncn_fee_group_reward_route_not_found() {
+        // Create a new router
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(),
+            1,   // epoch
+            1,   // bump
+            100, // slot_created
+        );
+
+        // Try to distribute rewards for a non-existent operator
+        let non_existent_operator = Pubkey::new_unique();
+        let result = router
+            .distribute_ncn_fee_group_reward_route(NcnFeeGroup::default(), &non_existent_operator);
+
+        // Verify we get the expected error
+        assert_eq!(result.unwrap_err(), TipRouterError::OperatorRewardNotFound);
+    }
+
+    #[test]
+    fn test_route_to_reward_pool_zero() {
+        // Create a new router
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(),
+            1,   // epoch
+            1,   // bump
+            100, // slot_created
+        );
+
+        // Record initial values
+        let initial_total_rewards = router.total_rewards();
+        let initial_reward_pool = router.reward_pool();
+
+        // Try to route 0 rewards
+        let result = router.route_to_reward_pool(0);
+
+        // Verify operation succeeded
+        assert!(result.is_ok());
+
+        // Verify state hasn't changed
+        assert_eq!(router.total_rewards(), initial_total_rewards);
+        assert_eq!(router.reward_pool(), initial_reward_pool);
+    }
+
+    #[test]
+    fn test_has_rewards() {
+        // Test case 1: No rewards in any group
+        let empty_route = NcnRewardRoute::default();
+        assert!(!empty_route.has_rewards().unwrap());
+
+        // Test case 2: Rewards in first group only
+        let single_group_route =
+            NcnRewardRoute::new(&Pubkey::new_unique(), NcnFeeGroup::default(), 100).unwrap();
+        assert!(single_group_route.has_rewards().unwrap());
+
+        // Test case 3: Rewards in multiple groups
+        let mut multi_group_route = NcnRewardRoute::default();
+        for group in NcnFeeGroup::all_groups().iter().take(3) {
+            multi_group_route.set_rewards(*group, 50).unwrap();
+        }
+        assert!(multi_group_route.has_rewards().unwrap());
+
+        // Test case 4: Zero rewards in all groups
+        let mut zero_rewards_route = NcnRewardRoute::default();
+        for group in NcnFeeGroup::all_groups().iter() {
+            zero_rewards_route.set_rewards(*group, 0).unwrap();
+        }
+        assert!(!zero_rewards_route.has_rewards().unwrap());
+
+        // Test case 5: Mix of zero and non-zero rewards
+        let mut mixed_rewards_route = NcnRewardRoute::default();
+        for (i, group) in NcnFeeGroup::all_groups().iter().enumerate() {
+            let amount = if i % 2 == 0 { 100 } else { 0 };
+            mixed_rewards_route.set_rewards(*group, amount).unwrap();
+        }
+        assert!(mixed_rewards_route.has_rewards().unwrap());
     }
 
     #[test]

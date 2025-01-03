@@ -356,7 +356,7 @@ impl FeeConfig {
     fn adjusted_fee_bps(&self, fee: u16) -> Result<u64, TipRouterError> {
         let remaining_bps = MAX_FEE_BPS
             .checked_sub(self.block_engine_fee_bps() as u64)
-            .ok_or(TipRouterError::ArithmeticOverflow)?;
+            .ok_or(TipRouterError::ArithmeticUnderflowError)?;
         (fee as u64)
             .checked_mul(MAX_FEE_BPS)
             .and_then(|x| x.checked_div(remaining_bps))
@@ -942,5 +942,222 @@ mod tests {
         assert_eq!(fee_config.fee_2.activation_epoch(), 13);
 
         assert_eq!(fee_config.updatable_fees(u64::MAX).activation_epoch(), 11);
+    }
+
+    #[test]
+    fn test_precise_total_fee_bps() {
+        // Setup
+        const BLOCK_ENGINE_FEE: u16 = 100;
+        const DAO_FEE: u16 = 200;
+        const DEFAULT_NCN_FEE: u16 = 300;
+        const EPOCH: u64 = 10;
+
+        let dao_fee_wallet = Pubkey::new_unique();
+
+        // Create fee config
+        let fee_config = FeeConfig::new(
+            &dao_fee_wallet,
+            BLOCK_ENGINE_FEE,
+            DAO_FEE,
+            DEFAULT_NCN_FEE,
+            EPOCH,
+        )
+        .unwrap();
+
+        // Test the function
+        let total = fee_config.precise_total_fee_bps(EPOCH).unwrap();
+        let expected = PreciseNumber::new((DAO_FEE + DEFAULT_NCN_FEE) as u128).unwrap();
+
+        assert!(total.eq(&expected));
+    }
+
+    #[test]
+    fn test_precise_block_engine_fee_bps() {
+        const BLOCK_ENGINE_FEE: u16 = 100;
+        let dao_fee_wallet = Pubkey::new_unique();
+
+        let fee_config = FeeConfig::new(&dao_fee_wallet, BLOCK_ENGINE_FEE, 0, 0, 0).unwrap();
+
+        let precise_fee = fee_config.precise_block_engine_fee_bps().unwrap();
+        let expected = PreciseNumber::new(BLOCK_ENGINE_FEE.into()).unwrap();
+
+        assert!(precise_fee.eq(&expected));
+    }
+
+    #[test]
+    fn test_set_block_engine_fee_bps() {
+        let dao_fee_wallet = Pubkey::new_unique();
+        let mut fee_config = FeeConfig::new(&dao_fee_wallet, 100, 0, 0, 0).unwrap();
+
+        // Test successful update
+        fee_config.set_block_engine_fee_bps(200).unwrap();
+        assert_eq!(fee_config.block_engine_fee_bps(), 200);
+
+        // Test error when exceeding MAX_FEE_BPS
+        let result = fee_config.set_block_engine_fee_bps(MAX_FEE_BPS as u16 + 1);
+        assert_eq!(result.unwrap_err(), TipRouterError::FeeCapExceeded);
+    }
+
+    #[test]
+    fn test_base_fee_bps() {
+        const BASE_FEE: u16 = 200;
+        const EPOCH: u64 = 10;
+
+        let dao_fee_wallet = Pubkey::new_unique();
+        let fee_config = FeeConfig::new(&dao_fee_wallet, 0, BASE_FEE, 0, EPOCH).unwrap();
+
+        let base_fee_group = BaseFeeGroup::default();
+        let fee = fee_config.base_fee_bps(base_fee_group, EPOCH).unwrap();
+        assert_eq!(fee, BASE_FEE);
+    }
+
+    #[test]
+    fn test_precise_base_fee_bps() {
+        const BASE_FEE: u16 = 200;
+        const EPOCH: u64 = 10;
+
+        let dao_fee_wallet = Pubkey::new_unique();
+        let fee_config = FeeConfig::new(&dao_fee_wallet, 0, BASE_FEE, 0, EPOCH).unwrap();
+
+        let base_fee_group = BaseFeeGroup::default();
+        let precise_fee = fee_config
+            .precise_base_fee_bps(base_fee_group, EPOCH)
+            .unwrap();
+        let expected = PreciseNumber::new(BASE_FEE.into()).unwrap();
+
+        assert!(precise_fee.eq(&expected));
+    }
+
+    #[test]
+    fn test_adjusted_base_fee_bps() {
+        const BLOCK_ENGINE_FEE: u16 = 100;
+        const BASE_FEE: u16 = 200;
+        const EPOCH: u64 = 10;
+
+        let dao_fee_wallet = Pubkey::new_unique();
+        let fee_config =
+            FeeConfig::new(&dao_fee_wallet, BLOCK_ENGINE_FEE, BASE_FEE, 0, EPOCH).unwrap();
+
+        let base_fee_group = BaseFeeGroup::default();
+        let adjusted_fee = fee_config
+            .adjusted_base_fee_bps(base_fee_group, EPOCH)
+            .unwrap();
+
+        // Expected calculation: BASE_FEE * MAX_FEE_BPS / (MAX_FEE_BPS - BLOCK_ENGINE_FEE)
+        let expected = ((BASE_FEE as f64 * MAX_FEE_BPS as f64)
+            / (MAX_FEE_BPS as f64 - (BLOCK_ENGINE_FEE as f64)).trunc())
+            as u64;
+        assert_eq!(adjusted_fee, expected);
+    }
+
+    #[test]
+    fn test_ncn_fee_bps() {
+        const NCN_FEE: u16 = 300;
+        const EPOCH: u64 = 10;
+
+        let dao_fee_wallet = Pubkey::new_unique();
+        let fee_config = FeeConfig::new(&dao_fee_wallet, 0, 0, NCN_FEE, EPOCH).unwrap();
+
+        let ncn_fee_group = NcnFeeGroup::default();
+        let fee = fee_config.ncn_fee_bps(ncn_fee_group, EPOCH).unwrap();
+        assert_eq!(fee, NCN_FEE);
+    }
+
+    #[test]
+    fn test_precise_ncn_fee_bps() {
+        const NCN_FEE: u16 = 300;
+        const EPOCH: u64 = 10;
+
+        let dao_fee_wallet = Pubkey::new_unique();
+        let fee_config = FeeConfig::new(&dao_fee_wallet, 0, 0, NCN_FEE, EPOCH).unwrap();
+
+        let ncn_fee_group = NcnFeeGroup::default();
+        let precise_fee = fee_config
+            .precise_ncn_fee_bps(ncn_fee_group, EPOCH)
+            .unwrap();
+        let expected = PreciseNumber::new(NCN_FEE.into()).unwrap();
+
+        assert!(precise_fee.eq(&expected));
+    }
+
+    #[test]
+    fn test_adjusted_ncn_fee_bps() {
+        const BLOCK_ENGINE_FEE: u16 = 100;
+        const NCN_FEE: u16 = 300;
+        const EPOCH: u64 = 10;
+
+        let dao_fee_wallet = Pubkey::new_unique();
+        let fee_config =
+            FeeConfig::new(&dao_fee_wallet, BLOCK_ENGINE_FEE, 0, NCN_FEE, EPOCH).unwrap();
+
+        let ncn_fee_group = NcnFeeGroup::default();
+        let adjusted_fee = fee_config
+            .adjusted_ncn_fee_bps(ncn_fee_group, EPOCH)
+            .unwrap();
+
+        // Expected calculation: NCN_FEE * MAX_FEE_BPS / (MAX_FEE_BPS - BLOCK_ENGINE_FEE)
+        let expected = ((NCN_FEE as f64 * MAX_FEE_BPS as f64)
+            / (MAX_FEE_BPS as f64 - (BLOCK_ENGINE_FEE as f64)).trunc())
+            as u64;
+        assert_eq!(adjusted_fee, expected);
+    }
+
+    #[test]
+    fn test_adjusted_fee_bps() {
+        let dao_fee_wallet = Pubkey::new_unique();
+
+        // Test successful case
+        let block_engine_fee = 100;
+        let fee_config = FeeConfig::new(&dao_fee_wallet, block_engine_fee, 0, 0, 0).unwrap();
+
+        let adjusted = fee_config.adjusted_fee_bps(200).unwrap();
+        let expected = ((200 as f64 * MAX_FEE_BPS as f64)
+            / (MAX_FEE_BPS as f64 - (block_engine_fee as f64)).trunc())
+            as u64;
+        assert_eq!(adjusted, expected);
+
+        // Test denominator zero
+        // Check fees will throw an error if the denominator is zero
+        let fee_config = FeeConfig::new(&dao_fee_wallet, MAX_FEE_BPS as u16, 0, 0, 0);
+        assert_eq!(fee_config.unwrap_err(), TipRouterError::DenominatorIsZero);
+    }
+
+    #[test]
+    fn test_fees_precise_base_fee_bps() {
+        const BASE_FEE: u16 = 200;
+
+        let fees = Fees::new(BASE_FEE, 0, 0).unwrap();
+
+        let base_fee_group = BaseFeeGroup::default();
+        let precise_fee = fees.precise_base_fee_bps(base_fee_group).unwrap();
+        let expected = PreciseNumber::new(BASE_FEE.into()).unwrap();
+
+        assert!(precise_fee.eq(&expected));
+    }
+
+    #[test]
+    fn test_fees_precise_ncn_fee_bps() {
+        const NCN_FEE: u16 = 300;
+
+        let fees = Fees::new(0, NCN_FEE, 0).unwrap();
+
+        let ncn_fee_group = NcnFeeGroup::default();
+        let precise_fee = fees.precise_ncn_fee_bps(ncn_fee_group).unwrap();
+        let expected = PreciseNumber::new(NCN_FEE.into()).unwrap();
+
+        assert!(precise_fee.eq(&expected));
+    }
+
+    #[test]
+    fn test_fees_precise_total_fee_bps() {
+        const BASE_FEE: u16 = 200;
+        const NCN_FEE: u16 = 300;
+
+        let fees = Fees::new(BASE_FEE, NCN_FEE, 0).unwrap();
+
+        let precise_total = fees.precise_total_fee_bps().unwrap();
+        let expected = PreciseNumber::new((BASE_FEE + NCN_FEE) as u128).unwrap();
+
+        assert!(precise_total.eq(&expected));
     }
 }
