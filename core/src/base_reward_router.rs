@@ -860,6 +860,62 @@ mod tests {
     use solana_program::pubkey::Pubkey;
 
     use super::*;
+    use crate::{ballot_box::Ballot, stake_weight::StakeWeights, utils::assert_tip_router_error};
+
+    const TEST_EPOCH: u64 = 1;
+    const TEST_CURRENT_SLOT: u64 = 100;
+    const TEST_VALID_SLOTS_AFTER_CONSENSUS: u64 = 1000;
+
+    pub fn get_test_ballot_box() -> BallotBox {
+        let ncn = Pubkey::new_unique();
+        let epoch = TEST_EPOCH;
+        let current_slot = TEST_CURRENT_SLOT;
+        let bump = 1;
+
+        BallotBox::new(&ncn, epoch, bump, current_slot)
+    }
+
+    pub fn cast_test_vote(
+        ballot_box: &mut BallotBox,
+        group: NcnFeeGroup,
+        stake_weight: u128,
+        reward_multiplier: u64,
+        merkle_root_prefix: u8,
+    ) {
+        let operator = Pubkey::new_unique();
+        let merkle_root = [merkle_root_prefix; 32];
+        let ballot = Ballot::new(&merkle_root);
+        let stake_weights = StakeWeights::snapshot(group, stake_weight, reward_multiplier).unwrap();
+
+        ballot_box
+            .cast_vote(
+                &operator,
+                &ballot,
+                &stake_weights,
+                TEST_CURRENT_SLOT,
+                TEST_VALID_SLOTS_AFTER_CONSENSUS,
+            )
+            .unwrap();
+    }
+
+    pub fn get_test_operators(ballot_box: &BallotBox) -> Vec<Pubkey> {
+        ballot_box
+            .operator_votes()
+            .iter()
+            .filter(|vote| !vote.is_empty())
+            .map(|votes| *votes.operator())
+            .collect()
+    }
+
+    pub fn get_test_total_stake_weights(ballot_box: &BallotBox) -> StakeWeights {
+        let mut total_stake_weights = StakeWeights::default();
+        for vote in ballot_box.operator_votes() {
+            total_stake_weights.increment(vote.stake_weights()).unwrap();
+        }
+
+        total_stake_weights
+    }
+
     #[test]
     fn test_len() {
         use std::mem::size_of;
@@ -1109,6 +1165,393 @@ mod tests {
 
         for group in NcnFeeGroup::all_groups().iter() {
             assert_eq!(router.ncn_fee_group_rewards(*group).unwrap(), 100);
+        }
+    }
+
+    #[test]
+    fn test_rounding() {
+        const INCOMING_REWARDS: u64 = 101;
+
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
+        );
+
+        // Fees - all base groups and ncn groups
+        let fees = Fees::new(99, 1, 1).unwrap();
+
+        // Route incoming rewards
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+
+        router.route_reward_pool(&fees).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+
+        assert_eq!(
+            router
+                .base_fee_group_reward(BaseFeeGroup::default())
+                .unwrap(),
+            100
+        );
+        assert_eq!(
+            router
+                .ncn_fee_group_rewards(NcnFeeGroup::default())
+                .unwrap(),
+            1
+        );
+    }
+
+    #[test]
+    fn test_route_to_operators_consensus_not_reached() {
+        const INCOMING_REWARDS: u64 = 1600;
+
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
+        );
+
+        // Fees
+        let mut fees = Fees::new(100, 100, 1).unwrap();
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            fees.set_base_fee_bps(*group, 100).unwrap();
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            fees.set_ncn_fee_bps(*group, 100).unwrap();
+        }
+
+        // Route incoming rewards
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+
+        router.route_reward_pool(&fees).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            assert_eq!(router.base_fee_group_reward(*group).unwrap(), 100);
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            assert_eq!(router.ncn_fee_group_rewards(*group).unwrap(), 100);
+        }
+
+        let (ballot_box, _) = {
+            let mut ballot_box = get_test_ballot_box();
+
+            for group in NcnFeeGroup::all_groups().iter() {
+                cast_test_vote(&mut ballot_box, *group, 200, 1, 1);
+            }
+
+            (ballot_box, get_test_operators(&ballot_box))
+        };
+
+        let result = router.route_ncn_fee_group_rewards(&ballot_box, 100);
+
+        assert_tip_router_error(result, TipRouterError::ConsensusNotReached);
+    }
+
+    #[test]
+    fn test_route_to_operators() {
+        const INCOMING_REWARDS: u64 = 1600;
+
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
+        );
+
+        // Fees
+        let mut fees = Fees::new(100, 100, 1).unwrap();
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            fees.set_base_fee_bps(*group, 100).unwrap();
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            fees.set_ncn_fee_bps(*group, 100).unwrap();
+        }
+
+        // Route incoming rewards
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+
+        router.route_reward_pool(&fees).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            assert_eq!(router.base_fee_group_reward(*group).unwrap(), 100);
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            assert_eq!(router.ncn_fee_group_rewards(*group).unwrap(), 100);
+        }
+
+        let (ballot_box, operators) = {
+            let mut ballot_box = get_test_ballot_box();
+
+            for group in NcnFeeGroup::all_groups().iter() {
+                cast_test_vote(&mut ballot_box, *group, 200, 1, 1);
+            }
+
+            let total_stake_weights = get_test_total_stake_weights(&ballot_box);
+
+            ballot_box
+                .tally_votes(total_stake_weights.stake_weight(), TEST_CURRENT_SLOT)
+                .unwrap();
+
+            (ballot_box, get_test_operators(&ballot_box))
+        };
+
+        router
+            .route_ncn_fee_group_rewards(&ballot_box, 100)
+            .unwrap();
+
+        for operator in operators.iter() {
+            let route = router.ncn_fee_group_reward_route(operator).unwrap();
+
+            let mut rewards = 0;
+            for group in NcnFeeGroup::all_groups().iter() {
+                rewards += route.rewards(*group).unwrap();
+            }
+
+            assert_eq!(rewards, 100);
+        }
+    }
+
+    #[test]
+    fn test_route_to_operators_with_wrong_vote() {
+        const INCOMING_REWARDS: u64 = 1600;
+
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
+        );
+
+        // Fees
+        let mut fees = Fees::new(100, 100, 1).unwrap();
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            fees.set_base_fee_bps(*group, 100).unwrap();
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            fees.set_ncn_fee_bps(*group, 100).unwrap();
+        }
+
+        // Route incoming rewards
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+
+        router.route_reward_pool(&fees).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            assert_eq!(router.base_fee_group_reward(*group).unwrap(), 100);
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            assert_eq!(router.ncn_fee_group_rewards(*group).unwrap(), 100);
+        }
+
+        let (ballot_box, _) = {
+            let mut ballot_box = get_test_ballot_box();
+
+            for group in NcnFeeGroup::all_groups().iter() {
+                if group == &NcnFeeGroup::default() {
+                    cast_test_vote(&mut ballot_box, *group, 200, 1, 1);
+                } else {
+                    cast_test_vote(&mut ballot_box, *group, 200, 1, 2);
+                }
+            }
+
+            let total_stake_weights = get_test_total_stake_weights(&ballot_box);
+
+            ballot_box
+                .tally_votes(total_stake_weights.stake_weight(), TEST_CURRENT_SLOT)
+                .unwrap();
+
+            (ballot_box, get_test_operators(&ballot_box))
+        };
+
+        router
+            .route_ncn_fee_group_rewards(&ballot_box, 100)
+            .unwrap();
+
+        // Operator 1, did not vote with consensus, so it should not have a route
+        let route_count = router
+            .ncn_fee_group_reward_routes()
+            .iter()
+            .filter(|route| !route.is_empty())
+            .count();
+
+        assert_eq!(route_count, 7);
+    }
+
+    #[test]
+    fn test_route_to_max_operators() {
+        const INCOMING_REWARDS: u64 = 256_000;
+
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
+        );
+
+        // Fees
+        let fees = Fees::new(0, 100, 1).unwrap();
+
+        // Route incoming rewards
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+
+        router.route_reward_pool(&fees).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            assert_eq!(router.base_fee_group_reward(*group).unwrap(), 0);
+        }
+
+        assert_eq!(
+            router
+                .ncn_fee_group_rewards(NcnFeeGroup::default())
+                .unwrap(),
+            INCOMING_REWARDS
+        );
+
+        let (ballot_box, operators) = {
+            let mut ballot_box = get_test_ballot_box();
+
+            for _ in 0..256 {
+                cast_test_vote(&mut ballot_box, NcnFeeGroup::default(), 200, 1, 1);
+            }
+
+            let total_stake_weights = get_test_total_stake_weights(&ballot_box);
+
+            ballot_box
+                .tally_votes(total_stake_weights.stake_weight(), TEST_CURRENT_SLOT)
+                .unwrap();
+
+            (ballot_box, get_test_operators(&ballot_box))
+        };
+
+        router
+            .route_ncn_fee_group_rewards(&ballot_box, 1000)
+            .unwrap();
+
+        assert!(!router.still_routing());
+
+        for operator in operators.iter() {
+            let route = router.ncn_fee_group_reward_route(operator).unwrap();
+
+            let mut rewards = 0;
+            for group in NcnFeeGroup::all_groups().iter() {
+                rewards += route.rewards(*group).unwrap();
+            }
+
+            assert_eq!(rewards, 1000);
+        }
+    }
+
+    #[test]
+    fn test_route_with_interruption() {
+        const INCOMING_REWARDS: u64 = 256_000;
+
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
+        );
+
+        // Fees
+        let fees = Fees::new(0, 100, 1).unwrap();
+
+        // Route incoming rewards
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+
+        router.route_reward_pool(&fees).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            assert_eq!(router.base_fee_group_reward(*group).unwrap(), 0);
+        }
+
+        assert_eq!(
+            router
+                .ncn_fee_group_rewards(NcnFeeGroup::default())
+                .unwrap(),
+            INCOMING_REWARDS
+        );
+
+        let (ballot_box, operators) = {
+            let mut ballot_box = get_test_ballot_box();
+
+            for _ in 0..256 {
+                cast_test_vote(&mut ballot_box, NcnFeeGroup::default(), 200, 1, 1);
+            }
+
+            let total_stake_weights = get_test_total_stake_weights(&ballot_box);
+
+            ballot_box
+                .tally_votes(total_stake_weights.stake_weight(), TEST_CURRENT_SLOT)
+                .unwrap();
+
+            (ballot_box, get_test_operators(&ballot_box))
+        };
+
+        router.route_ncn_fee_group_rewards(&ballot_box, 5).unwrap();
+
+        assert!(router.still_routing());
+
+        router
+            .route_ncn_fee_group_rewards(&ballot_box, 1000)
+            .unwrap();
+
+        assert!(!router.still_routing());
+
+        for operator in operators.iter() {
+            let route = router.ncn_fee_group_reward_route(operator).unwrap();
+
+            let mut rewards = 0;
+            for group in NcnFeeGroup::all_groups().iter() {
+                rewards += route.rewards(*group).unwrap();
+            }
+
+            assert_eq!(rewards, 1000);
         }
     }
 }
