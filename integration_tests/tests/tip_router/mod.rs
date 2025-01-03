@@ -14,6 +14,7 @@ mod initialize_vault_registry;
 mod initialize_weight_table;
 mod meta_tests;
 mod register_vault;
+mod restaking_variations;
 mod set_config_fees;
 mod set_new_admin;
 mod set_tie_breaker;

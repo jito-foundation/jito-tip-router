@@ -5,6 +5,7 @@ use jito_restaking_core::{
 use jito_tip_router_core::{
     config::Config as NcnConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    error::TipRouterError,
     loaders::load_ncn_epoch,
     stake_weight::StakeWeights,
     weight_table::WeightTable,
@@ -78,6 +79,18 @@ pub fn process_snapshot_vault_operator_delegation(
         operator_snapshot,
         true,
     )?;
+
+    // check vault is up to date
+    let vault_needs_update = {
+        let vault_data = vault.data.borrow();
+        let vault_account = Vault::try_from_slice_unchecked(&vault_data)?;
+
+        vault_account.is_update_needed(current_slot, ncn_epoch_length)?
+    };
+    if vault_needs_update {
+        msg!("Vault is not up to date");
+        return Err(TipRouterError::VaultNeedsUpdate.into());
+    }
 
     let (vault_index, st_mint) = {
         let vault_data = vault.data.borrow();

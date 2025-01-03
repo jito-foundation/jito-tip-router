@@ -10,7 +10,6 @@ use jito_tip_router_core::{
     base_reward_router::BaseRewardReceiver,
     constants::{JITOSOL_MINT, JTO_SOL_FEED},
     ncn_fee_group::NcnFeeGroup,
-    ncn_reward_router::NcnRewardReceiver,
 };
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
@@ -20,6 +19,7 @@ use solana_program::{
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
     account::Account,
+    clock::DEFAULT_SLOTS_PER_EPOCH,
     commitment_config::CommitmentLevel,
     epoch_schedule::EpochSchedule,
     native_token::lamports_to_sol,
@@ -185,6 +185,22 @@ impl TestBuilder {
         let clock: Clock = self.context.banks_client.get_sysvar().await?;
         self.context
             .warp_to_slot(clock.slot.checked_add(incremental_slots).unwrap())
+            .map_err(|_| BanksClientError::ClientError("failed to warp slot"))?;
+        Ok(())
+    }
+
+    pub async fn warp_epoch_incremental(
+        &mut self,
+        incremental_epochs: u64,
+    ) -> Result<(), BanksClientError> {
+        let clock: Clock = self.context.banks_client.get_sysvar().await?;
+        self.context
+            .warp_to_slot(
+                clock
+                    .slot
+                    .checked_add(DEFAULT_SLOTS_PER_EPOCH * incremental_epochs)
+                    .unwrap(),
+            )
             .map_err(|_| BanksClientError::ClientError("failed to warp slot"))?;
         Ok(())
     }
@@ -622,15 +638,43 @@ impl TestBuilder {
         test_ncn: &TestNcn,
     ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
+        let mut vault_program_client = self.vault_program_client();
 
         let clock = self.clock().await;
+        let slot = clock.slot;
         let epoch = clock.epoch;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
+        let operators_for_update = test_ncn
+            .operators
+            .iter()
+            .map(|operator_root| operator_root.operator_pubkey)
+            .collect::<Vec<Pubkey>>();
+
         for operator_root in test_ncn.operators.iter() {
             let operator = operator_root.operator_pubkey;
+
+            let operator_snapshot = tip_router_client
+                .get_operator_snapshot(operator, ncn, epoch)
+                .await?;
+
+            // If operator snapshot is finalized it means that the operator is not active.
+            if operator_snapshot.finalized() {
+                continue;
+            }
+
             for vault_root in test_ncn.vaults.iter() {
                 let vault = vault_root.vault_pubkey;
+
+                let vault_is_update_needed = vault_program_client
+                    .get_vault_is_update_needed(&vault, slot)
+                    .await?;
+
+                if vault_is_update_needed {
+                    vault_program_client
+                        .do_full_vault_update(&vault, &operators_for_update)
+                        .await?;
+                }
 
                 tip_router_client
                     .do_snapshot_vault_operator_delegation(vault, operator, ncn, epoch)
@@ -781,17 +825,17 @@ impl TestBuilder {
                         continue;
                     }
 
-                    let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
-                        &jito_tip_router_program::id(),
-                        *group,
-                        &operator,
-                        &ncn,
-                        epoch,
-                    );
-                    let sol_rewards = lamports_to_sol(rewards);
-                    tip_router_client
-                        .airdrop(&ncn_reward_receiver, sol_rewards)
-                        .await?;
+                    // let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+                    //     &jito_tip_router_program::id(),
+                    //     *group,
+                    //     &operator,
+                    //     &ncn,
+                    //     epoch,
+                    // );
+                    // let sol_rewards = lamports_to_sol(rewards);
+                    // tip_router_client
+                    //     .airdrop(&ncn_reward_receiver, sol_rewards)
+                    //     .await?;
 
                     tip_router_client
                         .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)

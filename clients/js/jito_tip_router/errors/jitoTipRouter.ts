@@ -160,6 +160,8 @@ export const JITO_TIP_ROUTER_ERROR__ROUTER_STILL_ROUTING = 0x223d; // 8765
 export const JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL = 0x223e; // 8766
 /** InvalidSlotsAfterConsensus: Invalid slots after consensus */
 export const JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS = 0x223f; // 8767
+/** VaultNeedsUpdate: Vault needs to be updated */
+export const JITO_TIP_ROUTER_ERROR__VAULT_NEEDS_UPDATE = 0x2240; // 8768
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR
@@ -223,6 +225,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULTS_FOR_REGISTRY
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE
+  | typeof JITO_TIP_ROUTER_ERROR__VAULT_NEEDS_UPDATE
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_NOT_IN_REGISTRY
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_REGISTRY_LIST_FULL
@@ -300,6 +303,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS]: `Too many vault operator delegations`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULTS_FOR_REGISTRY]: `Too many vaults for registry`,
     [JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE]: `Vault index already in use by a different mint`,
+    [JITO_TIP_ROUTER_ERROR__VAULT_NEEDS_UPDATE]: `Vault needs to be updated`,
     [JITO_TIP_ROUTER_ERROR__VAULT_NOT_IN_REGISTRY]: `Vault not in weight table registry`,
     [JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED]: `Vault operator delegation is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__VAULT_REGISTRY_LIST_FULL]: `Vault Registry mints are at capacity`,
