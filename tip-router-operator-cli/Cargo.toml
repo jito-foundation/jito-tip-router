@@ -1,0 +1,45 @@
+[package]
+name = "tip-router-operator-cli"
+version = "0.1.0"
+edition = "2021"
+description = "CLI for Jito Tip Router"
+
+[dependencies]
+anchor-lang = { workspace = true }
+anyhow = { workspace = true }
+base64 = "0.13"
+clap = { workspace = true }
+ellipsis-client = "0.1"
+env_logger = { workspace = true }
+hex = "0.4"
+im = "15.1"
+itertools = "0.11"
+jito-bytemuck = { workspace = true }
+jito-restaking-program = { workspace = true }
+jito-tip-distribution-sdk = { workspace = true }
+jito-tip-payment-sdk = { workspace = true }
+jito-tip-router-client = { workspace = true }
+jito-tip-router-core = { workspace = true }
+jito-tip-router-program = { workspace = true }
+log = { workspace = true }
+meta-merkle-tree = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+solana-accounts-db = { workspace = true }
+solana-client = { workspace = true }
+solana-ledger = { workspace = true }
+solana-metrics = { workspace = true }
+solana-program = { workspace = true }
+solana-rpc-client = { workspace = true }
+solana-runtime = { workspace = true }
+solana-sdk = { workspace = true }
+solana-stake-program = { workspace = true }
+solana-vote = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+solana-program-test = { workspace = true }
+solana-runtime = { workspace = true, features = ["dev-context-only-utils"] }
+solana-sdk = { workspace = true, features = ["dev-context-only-utils"] }
+tempfile = "3.2"

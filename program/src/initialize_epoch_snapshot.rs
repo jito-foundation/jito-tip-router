@@ -41,7 +41,7 @@ pub fn process_initialize_epoch_snapshot(
     let current_slot = Clock::get()?.slot;
     let ncn_epoch = epoch;
 
-    WeightTable::load(program_id, weight_table, ncn, ncn_epoch, false)?;
+    WeightTable::load(program_id, weight_table, ncn.key, ncn_epoch, false)?;
 
     // Weight table needs to be finalized before the snapshot can be taken
     let vault_count = {

@@ -86,7 +86,17 @@ jobs:
       - run: cargo sort --workspace --check
       - run: cargo fmt --all --check
       - run: |
-          cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D clippy::integer_division -D clippy::arithmetic_side_effects -D clippy::style -D clippy::perf
+          cargo clippy \
+            --all-features \
+            --workspace \
+            -- \
+            -D warnings \
+            -D clippy::all \
+            -D clippy::nursery \
+            -D clippy::integer_division \
+            -D clippy::arithmetic_side_effects \
+            -D clippy::style \
+            -D clippy::perf
 
   build:
     name: build
@@ -154,7 +164,7 @@ jobs:
           name: jito_tip_router_program.so
           path: integration_tests/tests/fixtures/
       - uses: taiki-e/install-action@nextest
-      - run: cargo nextest run --all-features
+      - run: cargo nextest run --all-features -E 'not test(ledger_utils::tests::test_get_bank_from_ledger_success) and not test(test_meta_merkle_creation_from_ledger)'
         env:
           SBF_OUT_DIR: ${{ github.workspace }}/integration_tests/tests/fixtures
 

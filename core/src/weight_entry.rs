@@ -108,4 +108,26 @@ mod tests {
         assert_eq!(weight_entry.slot_set(), 0);
         assert_eq!(weight_entry.slot_updated(), 0);
     }
+
+    #[test]
+    fn test_precise_weight() {
+        let mint = Pubkey::new_unique();
+        let mint_entry =
+            StMintEntry::new(&mint, NcnFeeGroup::default(), 0, &Pubkey::new_unique(), 0);
+        let mut weight_entry = WeightEntry::new(&mint_entry);
+
+        // Test 1: Zero weight should convert successfully
+        let result = weight_entry.precise_weight().unwrap();
+        assert_eq!(result.to_imprecise().unwrap(), 0u128);
+
+        // Test 2: Normal positive weight should convert successfully
+        weight_entry.set_weight(1000, 1);
+        let result = weight_entry.precise_weight().unwrap();
+        assert_eq!(result.to_imprecise().unwrap(), 1000u128);
+
+        // Test 3: Maximum normal weight should convert successfully
+        weight_entry.set_weight(u128::MAX, 2);
+        let result = weight_entry.precise_weight().unwrap();
+        assert_eq!(result.to_imprecise().unwrap(), u128::MAX);
+    }
 }

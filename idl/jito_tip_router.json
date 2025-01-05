@@ -1978,6 +1978,12 @@
             }
           },
           {
+            "name": "lastRewardsToProcess",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
             "name": "baseFeeGroupRewards",
             "type": {
               "array": [
