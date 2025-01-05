@@ -3189,136 +3189,141 @@
     },
     {
       "code": 8741,
+      "name": "BallotTallyNotEmpty",
+      "msg": "Ballot tally not empty"
+    },
+    {
+      "code": 8742,
       "name": "ConsensusAlreadyReached",
       "msg": "Consensus already reached, cannot change vote"
     },
     {
-      "code": 8742,
+      "code": 8743,
       "name": "ConsensusNotReached",
       "msg": "Consensus not reached"
     },
     {
-      "code": 8743,
+      "code": 8744,
       "name": "EpochSnapshotNotFinalized",
       "msg": "Epoch snapshot not finalized"
     },
     {
-      "code": 8744,
+      "code": 8745,
       "name": "VotingNotValid",
       "msg": "Voting not valid, too many slots after consensus reached"
     },
     {
-      "code": 8745,
+      "code": 8746,
       "name": "TieBreakerAdminInvalid",
       "msg": "Tie breaker admin invalid"
     },
     {
-      "code": 8746,
+      "code": 8747,
       "name": "VotingNotFinalized",
       "msg": "Voting not finalized"
     },
     {
-      "code": 8747,
+      "code": 8748,
       "name": "TieBreakerNotInPriorVotes",
       "msg": "Tie breaking ballot must be one of the prior votes"
     },
     {
-      "code": 8748,
+      "code": 8749,
       "name": "InvalidMerkleProof",
       "msg": "Invalid merkle proof"
     },
     {
-      "code": 8749,
+      "code": 8750,
       "name": "OperatorAdminInvalid",
       "msg": "Operator admin needs to sign its vote"
     },
     {
-      "code": 8750,
+      "code": 8751,
       "name": "InvalidNcnFeeGroup",
       "msg": "Not a valid NCN fee group"
     },
     {
-      "code": 8751,
+      "code": 8752,
       "name": "InvalidBaseFeeGroup",
       "msg": "Not a valid base fee group"
     },
     {
-      "code": 8752,
+      "code": 8753,
       "name": "OperatorRewardListFull",
       "msg": "Operator reward list full"
     },
     {
-      "code": 8753,
+      "code": 8754,
       "name": "OperatorRewardNotFound",
       "msg": "Operator Reward not found"
     },
     {
-      "code": 8754,
+      "code": 8755,
       "name": "VaultRewardNotFound",
       "msg": "Vault Reward not found"
     },
     {
-      "code": 8755,
+      "code": 8756,
       "name": "DestinationMismatch",
       "msg": "Destination mismatch"
     },
     {
-      "code": 8756,
+      "code": 8757,
       "name": "NcnRewardRouteNotFound",
       "msg": "Ncn reward route not found"
     },
     {
-      "code": 8757,
+      "code": 8758,
       "name": "FeeNotActive",
       "msg": "Fee not active"
     },
     {
-      "code": 8758,
+      "code": 8759,
       "name": "NoRewards",
       "msg": "No rewards to distribute"
     },
     {
-      "code": 8759,
+      "code": 8760,
       "name": "NoFeedWeightNotSet",
       "msg": "No Feed Weight not set"
     },
     {
-      "code": 8760,
+      "code": 8761,
       "name": "SwitchboardNotRegistered",
       "msg": "Switchboard not registered"
     },
     {
-      "code": 8761,
+      "code": 8762,
       "name": "BadSwitchboardFeed",
       "msg": "Bad switchboard feed"
     },
     {
-      "code": 8762,
+      "code": 8763,
       "name": "BadSwitchboardValue",
       "msg": "Bad switchboard value"
     },
     {
-      "code": 8763,
+      "code": 8764,
       "name": "StaleSwitchboardFeed",
       "msg": "Stale switchboard feed"
     },
     {
-      "code": 8764,
+      "code": 8765,
       "name": "NoFeedWeightOrSwitchboardFeed",
       "msg": "Weight entry needs either a feed or a no feed weight"
     },
     {
-      "code": 8765,
+      "code": 8766,
       "name": "RouterStillRouting",
       "msg": "Router still routing"
     },
     {
-      "code": 8766,
+      "code": 8767,
       "name": "InvalidEpochsBeforeStall",
       "msg": "Invalid epochs before stall"
     },
     {
-      "code": 8767,
+      "code": 8768,
       "name": "InvalidSlotsAfterConsensus",
       "msg": "Invalid slots after consensus"
     }

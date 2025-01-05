@@ -147,87 +147,90 @@ pub enum JitoTipRouterError {
     /// 8740 - Ballot tally not found
     #[error("Ballot tally not found")]
     BallotTallyNotFoundFull = 0x2224,
-    /// 8741 - Consensus already reached, cannot change vote
+    /// 8741 - Ballot tally not empty
+    #[error("Ballot tally not empty")]
+    BallotTallyNotEmpty = 0x2225,
+    /// 8742 - Consensus already reached, cannot change vote
     #[error("Consensus already reached, cannot change vote")]
-    ConsensusAlreadyReached = 0x2225,
-    /// 8742 - Consensus not reached
+    ConsensusAlreadyReached = 0x2226,
+    /// 8743 - Consensus not reached
     #[error("Consensus not reached")]
-    ConsensusNotReached = 0x2226,
-    /// 8743 - Epoch snapshot not finalized
+    ConsensusNotReached = 0x2227,
+    /// 8744 - Epoch snapshot not finalized
     #[error("Epoch snapshot not finalized")]
-    EpochSnapshotNotFinalized = 0x2227,
-    /// 8744 - Voting not valid, too many slots after consensus reached
+    EpochSnapshotNotFinalized = 0x2228,
+    /// 8745 - Voting not valid, too many slots after consensus reached
     #[error("Voting not valid, too many slots after consensus reached")]
-    VotingNotValid = 0x2228,
-    /// 8745 - Tie breaker admin invalid
+    VotingNotValid = 0x2229,
+    /// 8746 - Tie breaker admin invalid
     #[error("Tie breaker admin invalid")]
-    TieBreakerAdminInvalid = 0x2229,
-    /// 8746 - Voting not finalized
+    TieBreakerAdminInvalid = 0x222A,
+    /// 8747 - Voting not finalized
     #[error("Voting not finalized")]
-    VotingNotFinalized = 0x222A,
-    /// 8747 - Tie breaking ballot must be one of the prior votes
+    VotingNotFinalized = 0x222B,
+    /// 8748 - Tie breaking ballot must be one of the prior votes
     #[error("Tie breaking ballot must be one of the prior votes")]
-    TieBreakerNotInPriorVotes = 0x222B,
-    /// 8748 - Invalid merkle proof
+    TieBreakerNotInPriorVotes = 0x222C,
+    /// 8749 - Invalid merkle proof
     #[error("Invalid merkle proof")]
-    InvalidMerkleProof = 0x222C,
-    /// 8749 - Operator admin needs to sign its vote
+    InvalidMerkleProof = 0x222D,
+    /// 8750 - Operator admin needs to sign its vote
     #[error("Operator admin needs to sign its vote")]
-    OperatorAdminInvalid = 0x222D,
-    /// 8750 - Not a valid NCN fee group
+    OperatorAdminInvalid = 0x222E,
+    /// 8751 - Not a valid NCN fee group
     #[error("Not a valid NCN fee group")]
-    InvalidNcnFeeGroup = 0x222E,
-    /// 8751 - Not a valid base fee group
+    InvalidNcnFeeGroup = 0x222F,
+    /// 8752 - Not a valid base fee group
     #[error("Not a valid base fee group")]
-    InvalidBaseFeeGroup = 0x222F,
-    /// 8752 - Operator reward list full
+    InvalidBaseFeeGroup = 0x2230,
+    /// 8753 - Operator reward list full
     #[error("Operator reward list full")]
-    OperatorRewardListFull = 0x2230,
-    /// 8753 - Operator Reward not found
+    OperatorRewardListFull = 0x2231,
+    /// 8754 - Operator Reward not found
     #[error("Operator Reward not found")]
-    OperatorRewardNotFound = 0x2231,
-    /// 8754 - Vault Reward not found
+    OperatorRewardNotFound = 0x2232,
+    /// 8755 - Vault Reward not found
     #[error("Vault Reward not found")]
-    VaultRewardNotFound = 0x2232,
-    /// 8755 - Destination mismatch
+    VaultRewardNotFound = 0x2233,
+    /// 8756 - Destination mismatch
     #[error("Destination mismatch")]
-    DestinationMismatch = 0x2233,
-    /// 8756 - Ncn reward route not found
+    DestinationMismatch = 0x2234,
+    /// 8757 - Ncn reward route not found
     #[error("Ncn reward route not found")]
-    NcnRewardRouteNotFound = 0x2234,
-    /// 8757 - Fee not active
+    NcnRewardRouteNotFound = 0x2235,
+    /// 8758 - Fee not active
     #[error("Fee not active")]
-    FeeNotActive = 0x2235,
-    /// 8758 - No rewards to distribute
+    FeeNotActive = 0x2236,
+    /// 8759 - No rewards to distribute
     #[error("No rewards to distribute")]
-    NoRewards = 0x2236,
-    /// 8759 - No Feed Weight not set
+    NoRewards = 0x2237,
+    /// 8760 - No Feed Weight not set
     #[error("No Feed Weight not set")]
-    NoFeedWeightNotSet = 0x2237,
-    /// 8760 - Switchboard not registered
+    NoFeedWeightNotSet = 0x2238,
+    /// 8761 - Switchboard not registered
     #[error("Switchboard not registered")]
-    SwitchboardNotRegistered = 0x2238,
-    /// 8761 - Bad switchboard feed
+    SwitchboardNotRegistered = 0x2239,
+    /// 8762 - Bad switchboard feed
     #[error("Bad switchboard feed")]
-    BadSwitchboardFeed = 0x2239,
-    /// 8762 - Bad switchboard value
+    BadSwitchboardFeed = 0x223A,
+    /// 8763 - Bad switchboard value
     #[error("Bad switchboard value")]
-    BadSwitchboardValue = 0x223A,
-    /// 8763 - Stale switchboard feed
+    BadSwitchboardValue = 0x223B,
+    /// 8764 - Stale switchboard feed
     #[error("Stale switchboard feed")]
-    StaleSwitchboardFeed = 0x223B,
-    /// 8764 - Weight entry needs either a feed or a no feed weight
+    StaleSwitchboardFeed = 0x223C,
+    /// 8765 - Weight entry needs either a feed or a no feed weight
     #[error("Weight entry needs either a feed or a no feed weight")]
-    NoFeedWeightOrSwitchboardFeed = 0x223C,
-    /// 8765 - Router still routing
+    NoFeedWeightOrSwitchboardFeed = 0x223D,
+    /// 8766 - Router still routing
     #[error("Router still routing")]
-    RouterStillRouting = 0x223D,
-    /// 8766 - Invalid epochs before stall
+    RouterStillRouting = 0x223E,
+    /// 8767 - Invalid epochs before stall
     #[error("Invalid epochs before stall")]
-    InvalidEpochsBeforeStall = 0x223E,
-    /// 8767 - Invalid slots after consensus
+    InvalidEpochsBeforeStall = 0x223F,
+    /// 8768 - Invalid slots after consensus
     #[error("Invalid slots after consensus")]
-    InvalidSlotsAfterConsensus = 0x223F,
+    InvalidSlotsAfterConsensus = 0x2240,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

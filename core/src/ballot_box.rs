@@ -408,8 +408,7 @@ impl BallotBox {
         ballot: &Ballot,
         stake_weights: &StakeWeights,
     ) -> Result<usize, TipRouterError> {
-        let mut tally_index: usize = 0;
-        for tally in self.ballot_tallies.iter_mut() {
+        for (tally_index, tally) in self.ballot_tallies.iter_mut().enumerate() {
             if tally.ballot.eq(ballot) {
                 tally.increment_tally(stake_weights)?;
                 return Ok(tally_index);
@@ -426,10 +425,6 @@ impl BallotBox {
 
                 return Ok(tally_index);
             }
-
-            tally_index = tally_index
-                .checked_add(1)
-                .ok_or(TipRouterError::ArithmeticOverflow)?;
         }
 
         Err(TipRouterError::BallotTallyFull)
@@ -449,6 +444,7 @@ impl BallotBox {
 
         let ballot_index = self.increment_or_create_ballot_tally(ballot, stake_weights)?;
 
+        let unique_ballots = self.unique_ballots();
         let consensus_reached = self.is_consensus_reached();
 
         for vote in self.operator_votes.iter_mut() {
@@ -461,6 +457,16 @@ impl BallotBox {
                 let prev_ballot_index = vote.ballot_index();
                 if let Some(prev_tally) = self.ballot_tallies.get_mut(prev_ballot_index as usize) {
                     prev_tally.decrement_tally(vote.stake_weights())?;
+
+                    // If no more operators voting for the previous ballot, wipe and decrement the unique ballots
+                    if prev_tally.tally() == 0 {
+                        *prev_tally = BallotTally::default();
+                        self.unique_ballots = PodU64::from(
+                            unique_ballots
+                                .checked_sub(1)
+                                .ok_or(TipRouterError::ArithmeticOverflow)?,
+                        );
+                    }
                 }
 
                 let operator_vote =
@@ -987,7 +993,7 @@ mod tests {
             .unwrap();
 
         // Verify initial stake weight
-        let initial_tally = ballot_box
+        let initial_tally = *ballot_box
             .ballot_tallies
             .iter()
             .find(|t| t.ballot().eq(&ballot1))
@@ -1009,14 +1015,20 @@ mod tests {
             )
             .unwrap();
 
-        // Verify stake weight moved from ballot1 to ballot2
+        // Verify old tally is gone
         let old_tally = ballot_box
             .ballot_tallies
             .iter()
-            .find(|t| t.ballot().eq(&ballot1))
-            .unwrap();
-        assert_eq!(old_tally.stake_weights().stake_weight(), 0);
+            .find(|t| t.ballot().eq(&ballot1));
+        assert!(old_tally.is_none());
+        assert_eq!(
+            ballot_box.ballot_tallies[initial_tally.index() as usize]
+                .ballot()
+                .root(),
+            Ballot::default().root()
+        );
 
+        // Verify stake weight moved from ballot1 to ballot2
         let new_tally = ballot_box
             .ballot_tallies
             .iter()
