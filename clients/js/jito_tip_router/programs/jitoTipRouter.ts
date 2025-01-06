@@ -48,7 +48,7 @@ import {
 } from '../instructions';
 
 export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
-  'Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaSH' as Address<'Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaSH'>;
+  'Ap2AH3VcZGuuauEDq87uhgjNoUKcCAafc4DTyTByLMFf' as Address<'Ap2AH3VcZGuuauEDq87uhgjNoUKcCAafc4DTyTByLMFf'>;
 
 export enum JitoTipRouterAccount {
   BallotBox,
@@ -202,7 +202,7 @@ export function identifyJitoTipRouterInstruction(
 }
 
 export type ParsedJitoTipRouterInstruction<
-  TProgram extends string = 'Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaSH',
+  TProgram extends string = 'Ap2AH3VcZGuuauEDq87uhgjNoUKcCAafc4DTyTByLMFf',
 > =
   | ({
       instructionType: JitoTipRouterInstruction.InitializeConfig;

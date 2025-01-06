@@ -1,6 +1,6 @@
 # placeholders for clippy and other tools
 # Program IDs may not be correct
 [env]
-TIP_ROUTER_PROGRAM_ID = "Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaSH"
+TIP_ROUTER_PROGRAM_ID = "Ap2AH3VcZGuuauEDq87uhgjNoUKcCAafc4DTyTByLMFf"
 RESTAKING_PROGRAM_ID = "RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q"
 VAULT_PROGRAM_ID = "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
