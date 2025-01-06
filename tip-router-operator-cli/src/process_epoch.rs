@@ -71,10 +71,11 @@ pub async fn process_epoch(
     let operator = Pubkey::from_str(&cli_args.operator_address).unwrap();
 
     // Get the protocol fees
-    let ncn_config = get_ncn_config(client, ncn_address).await.unwrap();
-    let adjusted_total_fees = ncn_config
-        .fee_config
-        .adjusted_total_fees_bps(previous_epoch)?;
+    // let ncn_config = get_ncn_config(client, ncn_address).await.unwrap();
+    // let adjusted_total_fees = ncn_config
+    //     .fee_config
+    //     .adjusted_total_fees_bps(previous_epoch)?;
+    let adjusted_total_fees = 300;
 
     let account_paths = account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
     let full_snapshots_path = full_snapshots_path.map_or(ledger_path, |path| path);

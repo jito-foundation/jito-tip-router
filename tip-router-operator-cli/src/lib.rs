@@ -94,6 +94,14 @@ pub fn get_meta_merkle_root(
     )
     .map_err(|_| MerkleRootError::StakeMetaGeneratorError("Failed to generate stake meta"))?;
 
+    info!(
+        "Created StakeMetaCollection:\n - epoch: {:?}\n - slot: {:?}\n - num stake metas: {:?}\n - bank_hash: {:?}",
+        stake_meta_collection.epoch,
+        stake_meta_collection.slot,
+        stake_meta_collection.stake_metas.len(),
+        stake_meta_collection.bank_hash
+    );
+
     // Generate merkle tree collection
     let merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
         stake_meta_collection,
@@ -105,6 +113,14 @@ pub fn get_meta_merkle_root(
         MerkleRootError::MerkleRootGeneratorError("Failed to generate merkle tree collection")
     })?;
 
+    info!(
+        "Created GeneratedMerkleTreeCollection:\n - epoch: {:?}\n - slot: {:?}\n - num generated merkle trees: {:?}\n - bank_hash: {:?}",
+        merkle_tree_coll.epoch,
+        merkle_tree_coll.slot,
+        merkle_tree_coll.generated_merkle_trees.len(),
+        merkle_tree_coll.bank_hash
+    );
+
     // Convert to MetaMerkleTree
     let meta_merkle_tree = MetaMerkleTree::new_from_generated_merkle_tree_collection(
         merkle_tree_coll,
@@ -113,5 +129,10 @@ pub fn get_meta_merkle_root(
         info!("Meta merkle tree creation error: {:?}", e);
         MerkleRootError::MerkleTreeError("Failed to create meta merkle tree")
     })?;
+
+    info!(
+        "Created MetaMerkleTree:\n - num nodes: {:?}\n - merkle root: {:?}",
+        meta_merkle_tree.num_nodes, meta_merkle_tree.merkle_root
+    );
     Ok(meta_merkle_tree)
 }

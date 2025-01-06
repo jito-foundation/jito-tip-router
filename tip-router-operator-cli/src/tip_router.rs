@@ -7,6 +7,7 @@ use jito_tip_router_core::{
     config::Config,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
 };
+use log::info;
 use solana_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signature},
@@ -46,7 +47,7 @@ pub async fn cast_vote(
     )
     .0;
 
-    let ix = CastVoteBuilder::new()
+    let _ix = CastVoteBuilder::new()
         .config(ncn_config)
         .ballot_box(ballot_box)
         .ncn(ncn)
@@ -58,6 +59,10 @@ pub async fn cast_vote(
         .meta_merkle_root(meta_merkle_root)
         .epoch(epoch)
         .instruction();
+
+    // Until we actually want to start voting on live or test NCN
+    let ix = spl_memo::build_memo(&meta_merkle_root.to_vec(), &[&operator_admin.pubkey()]);
+    info!("Submitting meta merkle root {:?}", meta_merkle_root);
 
     let tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
     client
