@@ -1,14 +1,15 @@
 use anyhow::Result;
 use clap::Parser;
 use clap_markdown::MarkdownOptions;
-use env_logger::Env;
+use dotenv::dotenv;
 
-use jito_tip_router_cli::{args::Args, handler::CliHandler};
+use jito_tip_router_cli::{args::Args, handler::CliHandler, log::init_logger};
 use log::info;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    dotenv().ok();
+    init_logger();
 
     let args: Args = Args::parse();
 
@@ -27,10 +28,9 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    let handler = CliHandler::from_args(&args).await?;
-
     info!("{}\n", args);
 
+    let handler = CliHandler::from_args(&args).await?;
     handler.handle(args.command).await?;
 
     Ok(())

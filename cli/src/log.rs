@@ -16,12 +16,13 @@ fn format_log_message(buf: &mut Formatter, record: &Record) -> std::io::Result<(
     let mut style = buf.style();
     let level = colored_level(&mut style, record.level());
 
-    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+    let _timestamp = Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
 
     writeln!(
         buf,
-        "[{} {} {}] {}",
-        timestamp,
+        // "[{} {} {}] {}",
+        "[{} {}] {}",
+        // timestamp,
         level,
         record.target(),
         record.args()

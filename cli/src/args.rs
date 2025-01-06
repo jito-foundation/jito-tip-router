@@ -36,8 +36,8 @@ pub struct Args {
     pub tip_router_program_id: String,
 
     #[arg(
-        long, 
-        global = true, 
+        long,
+        global = true,
         env = "RESTAKING_PROGRAM_ID",
         default_value_t = jito_restaking_program::id().to_string(),
         help = "Restaking program ID"
@@ -54,31 +54,26 @@ pub struct Args {
     pub vault_program_id: String,
 
     #[arg(
-        long, 
-        global = true, 
+        long,
+        global = true,
         env = "TIP_DISTRIBUTION_PROGRAM_ID",
         default_value_t = jito_tip_distribution_sdk::jito_tip_distribution::ID.to_string(),
         help = "Tip distribution program ID"
     )]
     pub tip_distribution_program_id: String,
 
-    #[arg(
-        long, 
-        global = true, 
-        env = "NCN",
-        help = "NCN Account Address"
-    )]
+    #[arg(long, global = true, env = "NCN", help = "NCN Account Address")]
     pub ncn: Option<String>,
 
     #[arg(
-        long, 
-        global = true, 
+        long,
+        global = true,
         env = "EPOCH",
         help = "Epoch - defaults to current epoch"
     )]
     pub epoch: Option<u64>,
 
-    #[arg(long, global = true, help = "keypair path")]
+    #[arg(long, global = true, env = "KEYPAIR_PATH", help = "keypair path")]
     pub keypair_path: Option<String>,
 
     #[arg(long, global = true, help = "Verbose mode")]
@@ -90,47 +85,87 @@ pub struct Args {
 
 #[derive(Subcommand)]
 pub enum ProgramCommand {
-    /// Create a new NCN
+    /// TEST
     Test,
+
+    /// Create Test NCN
+    CreateTestNcn,
+    CreateAndAddTestOperator {
+        #[arg(
+            long, 
+            env = "OPERATOR_FEE_BPS",
+            default_value_t = 100,
+            help = "Operator Fee BPS")
+        ]
+        operator_fee_bps: u16,
+    },
+
+    /// Getters
+    GetNcn,
+    GetNcnOperatorState {
+        #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
+        operator: String,
+    },
+    GetAllOperatorsInNcn,
+    GetAllVaultsInNcn,
 }
 
 impl fmt::Display for Args {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "MEV Tip Distribution NCN CLI Configuration")?;
+        writeln!(f, "\nMEV Tip Distribution NCN CLI Configuration")?;
         writeln!(f, "═══════════════════════════════════════")?;
-        
+
         // Network Configuration
         writeln!(f, "\n📡 Network Settings:")?;
         writeln!(f, "  • RPC URL:     {}", self.rpc_url)?;
         writeln!(f, "  • Commitment:  {}", self.commitment)?;
-        
+
         // Program IDs
         writeln!(f, "\n🔑 Program IDs:")?;
         writeln!(f, "  • Tip Router:        {}", self.tip_router_program_id)?;
         writeln!(f, "  • Restaking:         {}", self.restaking_program_id)?;
         writeln!(f, "  • Vault:             {}", self.vault_program_id)?;
-        writeln!(f, "  • Tip Distribution:  {}", self.tip_distribution_program_id)?;
-        
-        // Optional Settings
+        writeln!(
+            f,
+            "  • Tip Distribution:  {}",
+            self.tip_distribution_program_id
+        )?;
+
+        // Solana Settings
         writeln!(f, "\n◎  Solana Settings:")?;
-        writeln!(f, "  • Keypair Path:  {}", self.keypair_path.as_deref().unwrap_or("Not Set"))?;
+        writeln!(
+            f,
+            "  • Keypair Path:  {}",
+            self.keypair_path.as_deref().unwrap_or("Not Set")
+        )?;
         writeln!(f, "  • NCN:  {}", self.ncn.as_deref().unwrap_or("Not Set"))?;
-        writeln!(f, "  • Epoch: {}", if self.epoch.is_some() { format!("{}", self.epoch.unwrap()) } else { "Current".to_string() })?;
-        
+        writeln!(
+            f,
+            "  • Epoch: {}",
+            if self.epoch.is_some() {
+                format!("{}", self.epoch.unwrap())
+            } else {
+                "Current".to_string()
+            }
+        )?;
 
         // Optional Settings
         writeln!(f, "\n⚙️  Additional Settings:")?;
-        writeln!(f, "  • Verbose Mode:  {}", if self.verbose { "Enabled" } else { "Disabled" })?;
-        writeln!(f, "  • Markdown Help: {}", if self.markdown_help { "Enabled" } else { "Disabled" })?;
+        writeln!(
+            f,
+            "  • Verbose Mode:  {}",
+            if self.verbose { "Enabled" } else { "Disabled" }
+        )?;
+        writeln!(
+            f,
+            "  • Markdown Help: {}",
+            if self.markdown_help {
+                "Enabled"
+            } else {
+                "Disabled"
+            }
+        )?;
 
-        // Command
-        writeln!(f, "\n🔧 Active Command:")?;
-        match &self.command {
-            cmd => writeln!(f, "  • {}", match cmd {
-                ProgramCommand::Test => "Test",
-            })?,
-        }
-        
         writeln!(f, "")?;
 
         Ok(())
