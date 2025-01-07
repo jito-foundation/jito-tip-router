@@ -4,7 +4,7 @@ use ::{
     ellipsis_client::EllipsisClient,
     log::{error, info},
     solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::signer::keypair::read_keypair_file,
+    solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, signer::keypair::read_keypair_file},
     tip_router_operator_cli::{
         cli::{Cli, Commands},
         process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
@@ -79,5 +79,36 @@ async fn main() -> Result<()> {
                 wait_for_next_epoch(&rpc_client).await?;
             }
         }
+        Commands::SnapshotSlot {
+            ncn_address,
+            tip_distribution_program_id,
+            tip_payment_program_id,
+            enable_snapshots,
+            slot,
+        } => {
+            info!("Snapshotting slot...");
+            let epoch = slot / DEFAULT_SLOTS_PER_EPOCH;
+            // Process the epoch
+            match process_epoch(
+                &rpc_client,
+                *slot,
+                epoch,
+                &keypair,
+                tip_distribution_program_id,
+                tip_payment_program_id,
+                ncn_address,
+                *enable_snapshots,
+                &cli,
+            )
+            .await
+            {
+                Ok(_) => info!("Successfully processed slot"),
+                Err(e) => {
+                    error!("Error processing epoch: {}", e);
+                    // Continue to next epoch even if this one failed
+                }
+            }
+        }
     }
+    Ok(())
 }
