@@ -21,6 +21,24 @@ async fn main() -> Result<()> {
         &read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
     )?;
 
+    info!(
+        "CLI Arguments:
+        keypair_path: {}
+        operator_address: {}
+        rpc_url: {}
+        ledger_path: {}
+        account_paths: {:?}
+        full_snapshots_path: {:?}
+        snapshot_output_dir: {}",
+        cli.keypair_path,
+        cli.operator_address,
+        cli.rpc_url,
+        cli.ledger_path.display(),
+        cli.account_paths,
+        cli.full_snapshots_path,
+        cli.snapshot_output_dir.display()
+    );
+
     match &cli.command {
         Commands::Run {
             ncn_address,
