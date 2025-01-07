@@ -12,6 +12,7 @@ use jito_restaking_core::{
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
 };
+use jito_tip_router_client::instructions::InitializeConfig;
 use jito_vault_client::instructions::{
     AddDelegationBuilder, InitializeVaultBuilder, InitializeVaultNcnTicketBuilder,
     InitializeVaultOperatorDelegationBuilder, MintToBuilder, WarmupVaultNcnTicketBuilder,
@@ -39,7 +40,35 @@ use tokio::time::sleep;
 
 // --------------------- TIP ROUTER ------------------------------
 
-//TODO admin create config
+pub async fn create_config(handler: &CliHandler) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let base = Keypair::new();
+    let (ncn, _, _) = Ncn::find_program_address(&handler.restaking_program_id, &base.pubkey());
+
+    let (config, _, _) = RestakingConfig::find_program_address(&handler.restaking_program_id);
+
+    // let mut ix_builder = InitializeConfig::new()
+    //     .config(config)
+    //     .admin(keypair.pubkey())
+    //     .base(base.pubkey())
+    //     .ncn(ncn)
+    //     .instruction();
+
+    // send_and_log_transaction(
+    //     &client,
+    //     &keypair,
+    //     &[ix_builder.instruction()],
+    //     &[&base],
+    //     "Created Test Ncn",
+    //     &[format!("NCN: {:?}", ncn)],
+    // )
+    // .await?;
+
+    Ok(())
+}
+
 //TODO create vault registry
 //TODO admin register st mint
 //TODO admin register vault

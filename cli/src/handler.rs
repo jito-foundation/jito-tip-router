@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::{
     args::{Args, ProgramCommand},
     getters::{get_all_operators_in_ncn, get_all_vaults_in_ncn, get_ncn, get_ncn_operator_state},
-    instructions::{create_and_add_test_operator, create_and_add_test_vault, create_test_ncn},
+    instructions::{create_and_add_test_operator, create_and_add_test_vault, create_config},
 };
 use anyhow::{anyhow, Result};
 use log::info;
@@ -132,7 +132,7 @@ impl CliHandler {
 
     async fn create_test_ncn(&self) -> Result<()> {
         info!("Creating Test NCN...");
-        create_test_ncn(self).await?;
+        create_config(self).await?;
         Ok(())
     }
 
