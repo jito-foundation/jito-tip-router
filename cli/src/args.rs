@@ -62,6 +62,15 @@ pub struct Args {
     )]
     pub tip_distribution_program_id: String,
 
+    #[arg(
+        long,
+        global = true,
+        env = "TOKEN_PROGRAM_ID",
+        default_value_t = spl_token::id().to_string(),
+        help = "Token Program ID"
+    )]
+    pub token_program_id: String,
+
     #[arg(long, global = true, env = "NCN", help = "NCN Account Address")]
     pub ncn: Option<String>,
 
@@ -99,6 +108,29 @@ pub enum ProgramCommand {
         ]
         operator_fee_bps: u16,
     },
+    CreateAndAddTestVault {
+        #[arg(
+            long, 
+            env = "VAULT_DEPOSIT_FEE",
+            default_value_t = 100,
+            help = "Deposit fee BPS")
+        ]
+        deposit_fee_bps: u16,
+        #[arg(
+            long, 
+            env = "VAULT_WITHDRAWAL_FEE",
+            default_value_t = 100,
+            help = "Withdrawal fee BPS")
+        ]
+        withdrawal_fee_bps: u16,
+        #[arg(
+            long, 
+            env = "VAULT_REWARD_FEE",
+            default_value_t = 100,
+            help = "Reward fee BPS")
+        ]
+        reward_fee_bps: u16,
+    },
 
     /// Getters
     GetNcn,
@@ -125,6 +157,7 @@ impl fmt::Display for Args {
         writeln!(f, "  • Tip Router:        {}", self.tip_router_program_id)?;
         writeln!(f, "  • Restaking:         {}", self.restaking_program_id)?;
         writeln!(f, "  • Vault:             {}", self.vault_program_id)?;
+        writeln!(f, "  • Token:             {}", self.token_program_id)?;
         writeln!(
             f,
             "  • Tip Distribution:  {}",

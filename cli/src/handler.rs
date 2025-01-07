@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::{
     args::{Args, ProgramCommand},
     getters::{get_all_operators_in_ncn, get_all_vaults_in_ncn, get_ncn, get_ncn_operator_state},
-    instructions::{create_and_add_test_operator, create_test_ncn},
+    instructions::{create_and_add_test_operator, create_and_add_test_vault, create_test_ncn},
 };
 use anyhow::{anyhow, Result};
 use log::info;
@@ -22,8 +22,10 @@ pub struct CliHandler {
     pub vault_program_id: Pubkey,
     pub tip_router_program_id: Pubkey,
     pub tip_distribution_program_id: Pubkey,
+    pub token_program_id: Pubkey,
     ncn: Option<Pubkey>,
     pub epoch: u64,
+    rpc_client: RpcClient,
 }
 
 impl CliHandler {
@@ -45,11 +47,15 @@ impl CliHandler {
 
         let tip_distribution_program_id = Pubkey::from_str(&args.tip_distribution_program_id)?;
 
+        let token_program_id = Pubkey::from_str(&args.token_program_id)?;
+
         let ncn = args
             .ncn
             .clone()
             .map(|id| Pubkey::from_str(&id))
             .transpose()?;
+
+        let rpc_client = RpcClient::new_with_commitment(rpc_url.clone(), commitment);
 
         let mut handler = Self {
             rpc_url,
@@ -59,8 +65,10 @@ impl CliHandler {
             vault_program_id,
             tip_router_program_id,
             tip_distribution_program_id,
+            token_program_id,
             ncn,
             epoch: u64::MAX,
+            rpc_client,
         };
 
         handler.epoch = {
@@ -76,8 +84,8 @@ impl CliHandler {
         Ok(handler)
     }
 
-    pub fn rpc_client(&self) -> RpcClient {
-        RpcClient::new_with_commitment(self.rpc_url.clone(), self.commitment)
+    pub fn rpc_client(&self) -> &RpcClient {
+        return &self.rpc_client;
     }
 
     pub fn keypair(&self) -> Result<&Keypair> {
@@ -90,11 +98,22 @@ impl CliHandler {
 
     pub async fn handle(&self, action: ProgramCommand) -> Result<()> {
         match action {
+            // Testers
             ProgramCommand::Test {} => self.test().await,
             ProgramCommand::CreateTestNcn {} => self.create_test_ncn().await,
             ProgramCommand::CreateAndAddTestOperator { operator_fee_bps } => {
                 self.create_and_add_test_operator(operator_fee_bps).await
             }
+            ProgramCommand::CreateAndAddTestVault {
+                deposit_fee_bps,
+                withdrawal_fee_bps,
+                reward_fee_bps,
+            } => {
+                self.create_and_add_test_vault(deposit_fee_bps, withdrawal_fee_bps, reward_fee_bps)
+                    .await
+            }
+
+            // Getters
             ProgramCommand::GetNcn {} => self.get_ncn().await,
             ProgramCommand::GetNcnOperatorState { operator } => {
                 let operator = Pubkey::from_str(&operator).expect("error parsing operator arg");
@@ -123,6 +142,18 @@ impl CliHandler {
         Ok(())
     }
 
+    async fn create_and_add_test_vault(
+        &self,
+        deposit_fee_bps: u16,
+        withdrawal_fee_bps: u16,
+        reward_fee_bps: u16,
+    ) -> Result<()> {
+        info!("Creating and adding vault for {}...", self.ncn()?);
+        create_and_add_test_vault(self, deposit_fee_bps, withdrawal_fee_bps, reward_fee_bps)
+            .await?;
+        Ok(())
+    }
+
     // --------------- GETTERS -----------------
     async fn get_ncn(&self) -> Result<()> {
         info!("Getting NCN...");
@@ -142,14 +173,15 @@ impl CliHandler {
     async fn get_all_operators_in_ncn(&self) -> Result<()> {
         info!("Getting all operators in NCN...");
         let operators = get_all_operators_in_ncn(self).await?;
-        info!("Operators: {:?}", operators.len());
+
+        info!("Operators: {:?}", operators);
         Ok(())
     }
 
     async fn get_all_vaults_in_ncn(&self) -> Result<()> {
         info!("Getting all vaults in NCN...");
         let vaults = get_all_vaults_in_ncn(self).await?;
-        info!("Vaults: {:?}", vaults.len());
+        info!("Vaults: {:?}", vaults);
         Ok(())
     }
 }
