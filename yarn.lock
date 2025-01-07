@@ -2,127 +2,176 @@
 # yarn lockfile v1
 
 
-"@kinobi-so/errors@0.21.5":
-  version "0.21.5"
-  resolved "https://registry.npmjs.org/@kinobi-so/errors/-/errors-0.21.5.tgz"
-  integrity sha512-IqPMOe0qbmuBI8vux9HU+tvx+SaCVk32g5GnRvYxJh6OmpYOEuJRg02nT2XtYPeYWB2IFKJ1X2AnwTbEz9Vx8Q==
+"@codama/errors@1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@codama/errors/-/errors-1.1.0.tgz#3ee488f2a597a0508881b0759a486f5b96434d1a"
+  integrity sha512-njLWTPYgz5uJP02617CX0BZCHGHrHnQvKroU0z4YcJZiaMQlw3VLzb+e2ZU2X+uVpp+3ITJZ9yexuoEhJBVQdQ==
   dependencies:
     "@codama/node-types" "1.1.0"
     chalk "^5.3.0"
     commander "^12.1.0"
 
-"@kinobi-so/node-types@0.21.5":
-  version "0.21.5"
-  resolved "https://registry.npmjs.org/@kinobi-so/node-types/-/node-types-0.21.5.tgz"
-  integrity sha512-OKpk08+nTsO25xSZBT+PXpjx2FOHfn7jr0CbnQZ+ulfRa+dr3eSf7zSn+0ipKjG+FFWUUGpizgSkgpTQMjAqLA==
-
-"@kinobi-so/nodes-from-anchor@0.21.3", "@kinobi-so/nodes-from-anchor@^0.21.1":
-  version "0.21.3"
-  resolved "https://registry.npmjs.org/@kinobi-so/nodes-from-anchor/-/nodes-from-anchor-0.21.3.tgz"
-  integrity sha512-mar3UeJNx61k77NhucqYIwUXZvC0b6mhLYFksQY0Wz+gCFTWLr8exxB7KmgSycT+XuFNOydpYnEOeMa5lUywBQ==
+"@codama/errors@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@codama/errors/-/errors-1.2.0.tgz#5292fac4f61cde9f98f453f178f647edd8f804a8"
+  integrity sha512-7cLTgu1UpDkvDIx+9WclYaQr4vuFxnRYlZ5GFhZ0vP3QPlhj2FORwDC+crUy+YzboNKL7tGg53CAOpF61HnEpg==
   dependencies:
-    "@codama/errors" "1.1.0"
-    "@codama/nodes" "1.1.0"
-    "@codama/visitors" "1.1.0"
-    "@noble/hashes" "^1.5.0"
+    "@codama/node-types" "1.2.0"
+    chalk "^5.4.1"
+    commander "^12.1.0"
 
-"@kinobi-so/nodes@0.21.5":
-  version "0.21.5"
-  resolved "https://registry.npmjs.org/@kinobi-so/nodes/-/nodes-0.21.5.tgz"
-  integrity sha512-6iu9/GXrVs14olVeUAAw73BK2js7RGefVGHBDF6PKcvw6i0DlxhPkZiNOSpzweaeTmZsowHO7xEJKov0446fbQ==
+"@codama/node-types@1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@codama/node-types/-/node-types-1.1.0.tgz#8223d3cb67386ec9617cb04627abecdbcd8ce8ee"
+  integrity sha512-+J6E0didCY0+8dr2vI6ag+FMaMr3SemvXJYKOhxKEJ6HXR/J+7cddpptXyrIhLa8R2Kw0yzIG9VjAlUGL7u8OQ==
+
+"@codama/node-types@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@codama/node-types/-/node-types-1.2.0.tgz#7669e68b43a523cf3ff165129417173046927cc7"
+  integrity sha512-r/gBY8vi2tsrThtT1uKXQvI2c7Zv3hJH/+a35JJS/pkkt2tsAgX45/9TQWMepiGECfak8OhiMmqb+Naf+qDg4w==
+
+"@codama/nodes-from-anchor@1.1.0", "@codama/nodes-from-anchor@^1.0.1":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@codama/nodes-from-anchor/-/nodes-from-anchor-1.1.0.tgz#9ee635921cc206ef8957dca4ec61a54976852e4c"
+  integrity sha512-cEe3tsQMZU8y3YJOi0HOSbsZcTiKP0AxC4XVMFmFJjJe8lKWZW6hghxKG9N4YyryujtZkSGvdpxk+rnmd12Lwg==
+  dependencies:
+    "@codama/errors" "1.2.0"
+    "@codama/nodes" "1.2.0"
+    "@codama/visitors" "1.2.0"
+    "@noble/hashes" "^1.6.1"
+
+"@codama/nodes@1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@codama/nodes/-/nodes-1.1.0.tgz#cc843b6b8be8ee7fbdd6eaad57dd37b55a30b90d"
+  integrity sha512-a6lX45CqfvdU5jKx63zWVEUbyAjEKqjye3EkboKNEJIM0RDmDwtTqNuQBR8HHx9nO7EBPypxYOXtGpmVXg0xYw==
   dependencies:
     "@codama/errors" "1.1.0"
     "@codama/node-types" "1.1.0"
 
-"@kinobi-so/renderers-core@0.21.3":
-  version "0.21.3"
-  resolved "https://registry.npmjs.org/@kinobi-so/renderers-core/-/renderers-core-0.21.3.tgz"
-  integrity sha512-Ow1x0IaRmUlqQUAFTQZpq56wpkB6YKdnpNmfjM8IS/ssgz2IG5Jw3LREvNLvdXwpp/eyjSYOsux2RDFJkERl0g==
+"@codama/nodes@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@codama/nodes/-/nodes-1.2.0.tgz#db0911f9295321413781d36d067d79721623d3d2"
+  integrity sha512-3wb449llwUOYpHlIxKAwNFpJpazOTrpC3fhoFd3l0gSVKq77qz1IbYq8M3mVxNLSnXv8bHNrW0BCenyzjO1e2g==
   dependencies:
-    "@codama/errors" "1.1.0"
-    "@codama/nodes" "1.1.0"
-    "@codama/visitors-core" "1.1.0"
+    "@codama/errors" "1.2.0"
+    "@codama/node-types" "1.2.0"
 
-"@kinobi-so/renderers-js-umi@0.21.7", "@kinobi-so/renderers-js-umi@^0.21.1":
-  version "0.21.7"
-  resolved "https://registry.npmjs.org/@kinobi-so/renderers-js-umi/-/renderers-js-umi-0.21.7.tgz"
-  integrity sha512-OgM8L44jWYww7gnCSC7gSNPC+yWVEPCj/cffhDb1O1WfglpeQiHFiRUEnBc8GCGF8Oc6Azn2jjQlja8JNsqZmA==
+"@codama/renderers-core@1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@codama/renderers-core/-/renderers-core-1.0.2.tgz#a670ca5a63a3c72a0fe55026572daeb21e4fb87b"
+  integrity sha512-feDqtNB0PIocgrDIPdG0mdv+l28VEA64gExg1NdR2aiydp0LxpBrU5gnPOqxiZ2et4ARtt9yGU959CYdzqh2Qg==
   dependencies:
-    "@codama/errors" "1.1.0"
-    "@codama/nodes" "1.1.0"
-    "@codama/renderers-core" "1.0.1"
-    "@codama/validators" "1.1.0"
-    "@codama/visitors-core" "1.1.0"
+    "@codama/errors" "1.2.0"
+    "@codama/nodes" "1.2.0"
+    "@codama/visitors-core" "1.2.0"
+
+"@codama/renderers-js-umi@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@codama/renderers-js-umi/-/renderers-js-umi-1.1.1.tgz#c44caa9fb473352e9a8e92aff953b22a1d648dac"
+  integrity sha512-QR7a6xhkt9ohq7YgNBjAfMc1fj9B9hCE8OJM0vXLlcbrbrtEdl/eGPrbrInuINXjY0wxLbgxn3XXEYhVfZnRzw==
+  dependencies:
+    "@codama/errors" "1.2.0"
+    "@codama/nodes" "1.2.0"
+    "@codama/renderers-core" "1.0.2"
+    "@codama/validators" "1.2.0"
+    "@codama/visitors-core" "1.2.0"
     "@solana/codecs-strings" rc
     nunjucks "^3.2.4"
-    prettier "^3.3.3"
+    prettier "^3.4.2"
 
-"@kinobi-so/renderers-js@0.21.9":
-  version "0.21.9"
-  resolved "https://registry.npmjs.org/@kinobi-so/renderers-js/-/renderers-js-0.21.9.tgz"
-  integrity sha512-ZwN3UIYGZHu1V9TYsCPolVPdScR71r4PrLVVLsxixIxPBhdTMIgUbXK4OqHkzxaR5kn8Ssrvuq6+V2f7XFbVSg==
+"@codama/renderers-js@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@codama/renderers-js/-/renderers-js-1.1.1.tgz#3b7d35f123e4b355f7595dee8f8fdb64004895cb"
+  integrity sha512-lAsZkFswL7FI59wgzenVRgK2Hcw0u9bkMk+BMupoFQlOs29xZb3xihtL2CBfEsvzLbHdq/XdDSypiVfuD6A3Cg==
   dependencies:
-    "@codama/errors" "1.1.0"
-    "@codama/nodes" "1.1.0"
-    "@codama/nodes-from-anchor" "1.0.1"
-    "@codama/renderers-core" "1.0.1"
-    "@codama/visitors-core" "1.1.0"
+    "@codama/errors" "1.2.0"
+    "@codama/nodes" "1.2.0"
+    "@codama/nodes-from-anchor" "1.1.0"
+    "@codama/renderers-core" "1.0.2"
+    "@codama/visitors-core" "1.2.0"
     "@solana/codecs-strings" rc
     nunjucks "^3.2.4"
-    prettier "^3.3.3"
+    prettier "^3.4.2"
 
-"@kinobi-so/renderers-rust@0.21.8", "@kinobi-so/renderers-rust@^0.21.1":
-  version "0.21.8"
-  resolved "https://registry.npmjs.org/@kinobi-so/renderers-rust/-/renderers-rust-0.21.8.tgz"
-  integrity sha512-rjWK+hWnniAcfaVAPwgzom3LtXkGj4iZ/LPsm8LpgfSdTbXLT2HihVgyQGQDpSTDdVvGb4PuuX7A01Et3N7iog==
+"@codama/renderers-rust@1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@codama/renderers-rust/-/renderers-rust-1.0.5.tgz#6c898a1e8f4ff7c041789ab782252c7f03417ec5"
+  integrity sha512-1b+VVcww1Po/2xza3FReEhjoDvpIOdVKjToxnIGZWSy1RWmc+ULEmzJr8OfzWX4+9cIHAuGqrf/Nvqb9Z4tJRQ==
   dependencies:
-    "@codama/errors" "1.1.0"
-    "@codama/nodes" "1.1.0"
-    "@codama/renderers-core" "1.0.1"
-    "@codama/visitors-core" "1.1.0"
+    "@codama/errors" "1.2.0"
+    "@codama/nodes" "1.2.0"
+    "@codama/renderers-core" "1.0.2"
+    "@codama/visitors-core" "1.2.0"
     "@solana/codecs-strings" rc
     nunjucks "^3.2.4"
 
-"@kinobi-so/renderers@^0.21.1":
-  version "0.21.5"
-  resolved "https://registry.npmjs.org/@kinobi-so/renderers/-/renderers-0.21.5.tgz"
-  integrity sha512-JwHaYEjx1l/nf302b2RoZv3TEsBDsE1u+sgEt+noC3WXjqHVJJkjZ7DTL6IBSgBerR9OwukraCN7RWK2XQVwgA==
+"@codama/renderers@^1.0.4":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@codama/renderers/-/renderers-1.0.5.tgz#f8d41faf09da65d4bc60fac2e9f684e6d8688272"
+  integrity sha512-0xD8ICxcpLjDWRlUXlNmUdL4sGAiUSpavPqfHGpAiVDAaysTtJuTbCN/WjC52nHJqOE31T1fBT2053XKOAcWdA==
   dependencies:
-    "@codama/renderers-js" "1.1.0"
-    "@codama/renderers-js-umi" "1.1.0"
-    "@codama/renderers-rust" "1.0.4"
+    "@codama/renderers-js" "1.1.1"
+    "@codama/renderers-js-umi" "1.1.1"
+    "@codama/renderers-rust" "1.0.5"
 
-"@kinobi-so/validators@0.21.5":
-  version "0.21.5"
-  resolved "https://registry.npmjs.org/@kinobi-so/validators/-/validators-0.21.5.tgz"
-  integrity sha512-JYZWHgma1TrnjhiUJn5/oYS9XfeirUBhwpuTPDRmRrSiHHv329gjWimzZO2uLAm5S5PgFyhLTz+S6jjxRsdNXg==
+"@codama/validators@1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@codama/validators/-/validators-1.1.0.tgz#804b5d0e44ed977ab82d6df0daf8ca8f68f2c23f"
+  integrity sha512-TVzTjN2m1bGauLnqJE12lZfZf1L2C9Hal7/i0sjNmtc3UbUL7pIH5Rp4bFSyfDuyhMD0JfxtJqr3YlK6yXoqkA==
   dependencies:
     "@codama/errors" "1.1.0"
     "@codama/nodes" "1.1.0"
     "@codama/visitors-core" "1.1.0"
 
-"@kinobi-so/visitors-core@0.21.5":
-  version "0.21.5"
-  resolved "https://registry.npmjs.org/@kinobi-so/visitors-core/-/visitors-core-0.21.5.tgz"
-  integrity sha512-qNq9CcDh1P/A0BRR7zEdRpzeWL6ObAowMNWpkxZTT2BKqejK9oKWSh2/gzg6ehcn2Fn/J5DE8bnKZfAlEww95g==
+"@codama/validators@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@codama/validators/-/validators-1.2.0.tgz#12b6425f69e7a1fcf718f31f515e982b4565f027"
+  integrity sha512-/HV7aMgzm93vUqPsnWnDYUPx3hz6i1GxmY3CrW0Ivo0hoyR73Es4t48jYcIjYBb4bqQlO2eTfWuXUEAjwTsCAA==
+  dependencies:
+    "@codama/errors" "1.2.0"
+    "@codama/nodes" "1.2.0"
+    "@codama/visitors-core" "1.2.0"
+
+"@codama/visitors-core@1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@codama/visitors-core/-/visitors-core-1.1.0.tgz#b7aaf5ca92fabb91a480458cb61046c0e3b39cc9"
+  integrity sha512-NBJAgGmVdFIWHDsKSKjTYbIfSZRyRzgqPzmHFgRIRjy4Uw63zOwP5Yk1bctWrP6YRlGjrTunfVkOIA6QiVr6lg==
   dependencies:
     "@codama/errors" "1.1.0"
     "@codama/nodes" "1.1.0"
     json-stable-stringify "^1.1.1"
 
-"@kinobi-so/visitors@0.21.5":
-  version "0.21.5"
-  resolved "https://registry.npmjs.org/@kinobi-so/visitors/-/visitors-0.21.5.tgz"
-  integrity sha512-RCJFaN1Q1f/MQW6PP3Oz0fgNXFVmfUEyErMzPM9CjBi1j2BJzTjff7IzEjbTpG7SbDY91eEyTDcl430ygcDBkA==
+"@codama/visitors-core@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@codama/visitors-core/-/visitors-core-1.2.0.tgz#f52fb376c705cb3d13a814e13c856c8a2185f599"
+  integrity sha512-sr8+xGx+QPAMedBY0wT5W0HAQJypBWNPGWKPImNg5t3Da1DC5oofrW3JHmqtSUHDdFbDXtagcEZ32DGqJFJ5hA==
+  dependencies:
+    "@codama/errors" "1.2.0"
+    "@codama/nodes" "1.2.0"
+    json-stable-stringify "^1.2.1"
+
+"@codama/visitors@1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@codama/visitors/-/visitors-1.1.0.tgz#22ec6e0be2b3babc9cc74e80ed6a64af84f71fbb"
+  integrity sha512-QpAShuxemS8oplHDXNqnUnYwhJq58RZjfZ/KMIpdm88OCBnQRO4YfM/zQLEvXjA+tpwJpe4WnL6opTLLnSYThw==
   dependencies:
     "@codama/errors" "1.1.0"
     "@codama/nodes" "1.1.0"
     "@codama/visitors-core" "1.1.0"
 
-"@noble/hashes@^1.5.0":
-  version "1.5.0"
-  resolved "https://registry.npmjs.org/@noble/hashes/-/hashes-1.5.0.tgz"
-  integrity sha512-1j6kQFb7QRru7eKN3ZDvRcP13rugwdxZqCjbiAVZfIJwgj2A65UmT4TgARXGlXgnRkORLTDTrO19ZErt7+QXgA==
+"@codama/visitors@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@codama/visitors/-/visitors-1.2.0.tgz#04d73fada915464338b6426876febe08defa7d7d"
+  integrity sha512-3edQ1aCVdzYK6eNSUSCgs+P4SJ0UyrVpU7s1ykQog1El//ZkjGJNAAjyuCuA4EMuKxDW0sQa9RXkPfIJSxpa6g==
+  dependencies:
+    "@codama/errors" "1.2.0"
+    "@codama/nodes" "1.2.0"
+    "@codama/visitors-core" "1.2.0"
+
+"@noble/hashes@^1.6.1":
+  version "1.7.0"
+  resolved "https://registry.yarnpkg.com/@noble/hashes/-/hashes-1.7.0.tgz#5d9e33af2c7d04fee35de1519b80c958b2e35e39"
+  integrity sha512-HXydb0DgzTpDPwbVeDGCG1gIu7X6+AuU6Zl6av/E/KG8LMsvPntvq+w17CHRpKBmN6Ybdrt1eP3k4cj8DJa78w==
 
 "@solana/codecs-core@2.0.0-rc.3":
   version "2.0.0-rc.3"
@@ -166,6 +215,14 @@ asap@^2.0.3:
   resolved "https://registry.npmjs.org/asap/-/asap-2.0.6.tgz"
   integrity sha512-BSHWgDSAiKs50o2Re8ppvp3seVHXSRM44cdSsT9FfNEUUZLOGWVCsiWaRPWM1Znn+mqZ1OfVZ3z3DWEzSp7hRA==
 
+call-bind-apply-helpers@^1.0.0, call-bind-apply-helpers@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/call-bind-apply-helpers/-/call-bind-apply-helpers-1.0.1.tgz#32e5892e6361b29b0b545ba6f7763378daca2840"
+  integrity sha512-BhYE+WDaywFg2TBWYNXAE+8B1ATnThNBqXHP5nQu0jWJdVvY2hvkpyB3qOmtmDePiS5/BDQ8wASEWGMWRG148g==
+  dependencies:
+    es-errors "^1.3.0"
+    function-bind "^1.1.2"
+
 call-bind@^1.0.5:
   version "1.0.7"
   resolved "https://registry.npmjs.org/call-bind/-/call-bind-1.0.7.tgz"
@@ -177,10 +234,33 @@ call-bind@^1.0.5:
     get-intrinsic "^1.2.4"
     set-function-length "^1.2.1"
 
+call-bind@^1.0.8:
+  version "1.0.8"
+  resolved "https://registry.yarnpkg.com/call-bind/-/call-bind-1.0.8.tgz#0736a9660f537e3388826f440d5ec45f744eaa4c"
+  integrity sha512-oKlSFMcMwpUg2ednkhQ454wfWiU/ul3CkJe/PEHcTKuiX6RpbehUiFMXu13HalGZxfUwCQzZG747YXBn1im9ww==
+  dependencies:
+    call-bind-apply-helpers "^1.0.0"
+    es-define-property "^1.0.0"
+    get-intrinsic "^1.2.4"
+    set-function-length "^1.2.2"
+
+call-bound@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/call-bound/-/call-bound-1.0.3.tgz#41cfd032b593e39176a71533ab4f384aa04fd681"
+  integrity sha512-YTd+6wGlNlPxSuri7Y6X8tY2dmm12UMH66RpKMhiX6rsk5wXXnYgbUcOt8kiS31/AjfoTOvCsE+w8nZQLQnzHA==
+  dependencies:
+    call-bind-apply-helpers "^1.0.1"
+    get-intrinsic "^1.2.6"
+
 chalk@^5.3.0:
   version "5.3.0"
   resolved "https://registry.npmjs.org/chalk/-/chalk-5.3.0.tgz"
   integrity sha512-dLitG79d+GV1Nb/VYcCDFivJeK1hiukt9QjRNVOsUtTy1rR1YJsmpGGTZ3qJos+uw7WmWF4wUwBd9jxjocFC2w==
+
+chalk@^5.4.1:
+  version "5.4.1"
+  resolved "https://registry.yarnpkg.com/chalk/-/chalk-5.4.1.tgz#1b48bf0963ec158dce2aacf69c093ae2dd2092d8"
+  integrity sha512-zgVZuo2WcZgfUEmsn6eO3kINexW8RAE4maiQ8QNs8CtpPCSyMiYsULR3HQYkm3w8FIA3SberyMJMSldGsW+U3w==
 
 codama@^1.1.0:
   version "1.1.0"
@@ -216,6 +296,15 @@ define-data-property@^1.1.4:
     es-errors "^1.3.0"
     gopd "^1.0.1"
 
+dunder-proto@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/dunder-proto/-/dunder-proto-1.0.1.tgz#d7ae667e1dc83482f8b70fd0f6eefc50da30f58a"
+  integrity sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==
+  dependencies:
+    call-bind-apply-helpers "^1.0.1"
+    es-errors "^1.3.0"
+    gopd "^1.2.0"
+
 es-define-property@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/es-define-property/-/es-define-property-1.0.0.tgz"
@@ -223,10 +312,22 @@ es-define-property@^1.0.0:
   dependencies:
     get-intrinsic "^1.2.4"
 
+es-define-property@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/es-define-property/-/es-define-property-1.0.1.tgz#983eb2f9a6724e9303f61addf011c72e09e0b0fa"
+  integrity sha512-e3nRfgfUZ4rNGL232gUgX06QNyyez04KdjFrF+LTRoOXmrOgFKDg4BCdsjW8EnT69eqdYGmRpJwiPVYNrCaW3g==
+
 es-errors@^1.3.0:
   version "1.3.0"
   resolved "https://registry.npmjs.org/es-errors/-/es-errors-1.3.0.tgz"
   integrity sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==
+
+es-object-atoms@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/es-object-atoms/-/es-object-atoms-1.0.0.tgz#ddb55cd47ac2e240701260bc2a8e31ecb643d941"
+  integrity sha512-MZ4iQ6JwHOBQjahnjwaC1ZtIBH+2ohjamzAO3oaHcXYup7qxjF2fixyH+Q71voWHeOkI2q/TnJao/KfXYIZWbw==
+  dependencies:
+    es-errors "^1.3.0"
 
 function-bind@^1.1.2:
   version "1.1.2"
@@ -244,12 +345,41 @@ get-intrinsic@^1.1.3, get-intrinsic@^1.2.4:
     has-symbols "^1.0.3"
     hasown "^2.0.0"
 
+get-intrinsic@^1.2.6:
+  version "1.2.7"
+  resolved "https://registry.yarnpkg.com/get-intrinsic/-/get-intrinsic-1.2.7.tgz#dcfcb33d3272e15f445d15124bc0a216189b9044"
+  integrity sha512-VW6Pxhsrk0KAOqs3WEd0klDiF/+V7gQOpAvY1jVU/LHmaD/kQO4523aiJuikX/QAKYiW6x8Jh+RJej1almdtCA==
+  dependencies:
+    call-bind-apply-helpers "^1.0.1"
+    es-define-property "^1.0.1"
+    es-errors "^1.3.0"
+    es-object-atoms "^1.0.0"
+    function-bind "^1.1.2"
+    get-proto "^1.0.0"
+    gopd "^1.2.0"
+    has-symbols "^1.1.0"
+    hasown "^2.0.2"
+    math-intrinsics "^1.1.0"
+
+get-proto@^1.0.0:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/get-proto/-/get-proto-1.0.1.tgz#150b3f2743869ef3e851ec0c49d15b1d14d00ee1"
+  integrity sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==
+  dependencies:
+    dunder-proto "^1.0.1"
+    es-object-atoms "^1.0.0"
+
 gopd@^1.0.1:
   version "1.0.1"
   resolved "https://registry.npmjs.org/gopd/-/gopd-1.0.1.tgz"
   integrity sha512-d65bNlIadxvpb/A2abVdlqKqV563juRnZ1Wtk6s1sIR8uNsXR70xqIzVqxVf1eTqDunwT2MkczEeaezCKTZhwA==
   dependencies:
     get-intrinsic "^1.1.3"
+
+gopd@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/gopd/-/gopd-1.2.0.tgz#89f56b8217bdbc8802bd299df6d7f1081d7e51a1"
+  integrity sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==
 
 has-property-descriptors@^1.0.2:
   version "1.0.2"
@@ -268,7 +398,12 @@ has-symbols@^1.0.3:
   resolved "https://registry.npmjs.org/has-symbols/-/has-symbols-1.0.3.tgz"
   integrity sha512-l3LCuF6MgDNwTDKkdYGEihYjt5pRPbEg46rtlmnSPlUbgmB8LOIrKJbYYFBSbnPaJexMKtiPO8hmeRjRz2Td+A==
 
-hasown@^2.0.0:
+has-symbols@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/has-symbols/-/has-symbols-1.1.0.tgz#fc9c6a783a084951d0b971fe1018de813707a338"
+  integrity sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ==
+
+hasown@^2.0.0, hasown@^2.0.2:
   version "2.0.2"
   resolved "https://registry.npmjs.org/hasown/-/hasown-2.0.2.tgz"
   integrity sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==
@@ -290,20 +425,26 @@ json-stable-stringify@^1.1.1:
     jsonify "^0.0.1"
     object-keys "^1.1.1"
 
+json-stable-stringify@^1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/json-stable-stringify/-/json-stable-stringify-1.2.1.tgz#addb683c2b78014d0b78d704c2fcbdf0695a60e2"
+  integrity sha512-Lp6HbbBgosLmJbjx0pBLbgvx68FaFU1sdkmBuckmhhJ88kL13OA51CDtR2yJB50eCNMH9wRqtQNNiAqQH4YXnA==
+  dependencies:
+    call-bind "^1.0.8"
+    call-bound "^1.0.3"
+    isarray "^2.0.5"
+    jsonify "^0.0.1"
+    object-keys "^1.1.1"
+
 jsonify@^0.0.1:
   version "0.0.1"
   resolved "https://registry.npmjs.org/jsonify/-/jsonify-0.0.1.tgz"
   integrity sha512-2/Ki0GcmuqSrgFyelQq9M05y7PS0mEwuIzrf3f1fPqkVDVRvZrPZtVSMHxdgo8Aq0sxAOb/cr2aqqA3LeWHVPg==
 
-kinobi@^0.21.1:
-  version "0.21.5"
-  resolved "https://registry.npmjs.org/kinobi/-/kinobi-0.21.5.tgz"
-  integrity sha512-1xgN00od8x4tokR1Xuqv5Gbg0Iqo9bzrEvA9o2rm63vXqoW7/C+TN1voPhj1SQE4h2VmpfM3MD1clTUvJK0J2g==
-  dependencies:
-    "@kinobi-so/errors" "0.21.5"
-    "@kinobi-so/nodes" "0.21.5"
-    "@kinobi-so/validators" "0.21.5"
-    "@kinobi-so/visitors" "0.21.5"
+math-intrinsics@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/math-intrinsics/-/math-intrinsics-1.1.0.tgz#a0dd74be81e2aa5c2f27e65ce283605ee4e2b7f9"
+  integrity sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==
 
 nunjucks@^3.2.4:
   version "3.2.4"
@@ -319,14 +460,14 @@ object-keys@^1.1.1:
   resolved "https://registry.npmjs.org/object-keys/-/object-keys-1.1.1.tgz"
   integrity sha512-NuAESUOUMrlIXOfHKzD6bpPu3tYt3xvjNdRIQ+FeT0lNb4K8WR70CaDxhuNguS2XG+GjkyMwOzsN5ZktImfhLA==
 
-prettier@^3.3.3:
-  version "3.3.3"
-  resolved "https://registry.npmjs.org/prettier/-/prettier-3.3.3.tgz"
-  integrity sha512-i2tDNA0O5IrMO757lfrdQZCc2jPNDVntV0m/+4whiDfWaTKfMNgR7Qz0NAeGz/nRqF4m5/6CLzbP4/liHt12Ew==
+prettier@^3.4.2:
+  version "3.4.2"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-3.4.2.tgz#a5ce1fb522a588bf2b78ca44c6e6fe5aa5a2b13f"
+  integrity sha512-e9MewbtFo+Fevyuxn/4rrcDAaq0IYxPGLvObpQjiZBMAzB9IGmzlnG9RZy3FFas+eBMu2vA0CszMeduow5dIuQ==
 
-set-function-length@^1.2.1:
+set-function-length@^1.2.1, set-function-length@^1.2.2:
   version "1.2.2"
-  resolved "https://registry.npmjs.org/set-function-length/-/set-function-length-1.2.2.tgz"
+  resolved "https://registry.yarnpkg.com/set-function-length/-/set-function-length-1.2.2.tgz#aac72314198eaed975cf77b2c3b6b880695e5449"
   integrity sha512-pgRc4hJ4/sNjWCSS9AmnS40x3bNMDTknHgL5UaMBTMyJnU90EgWh1Rz+MC9eFu4BuN/UwZjKQuY/1v3rM7HMfg==
   dependencies:
     define-data-property "^1.1.4"
