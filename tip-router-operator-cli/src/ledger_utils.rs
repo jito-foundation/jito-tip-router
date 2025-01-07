@@ -72,6 +72,14 @@ pub fn get_bank_from_ledger(
         }
     };
 
+    let mut slots_in_blockstore = Vec::new();
+    for i in 312382937..312400925 {
+        if blockstore.meta(i).unwrap().is_some() {
+            slots_in_blockstore.push(i);
+        }
+    }
+    info!("Slots in blockstore: {:?}", slots_in_blockstore);
+
     let snapshot_config = SnapshotConfig {
         full_snapshot_archives_dir: full_snapshots_path.clone(),
         incremental_snapshot_archives_dir: full_snapshots_path.clone(),
@@ -99,6 +107,15 @@ pub fn get_bank_from_ledger(
             false,
         )
         .unwrap();
+    info!(
+        "Bank forks highest slot: {:?}",
+        bank_forks.read().unwrap().highest_slot()
+    );
+    info!(
+        "Bank forks working bank slot: {:?}",
+        bank_forks.read().unwrap().working_bank().slot()
+    );
+
     blockstore_processor::process_blockstore_from_root(
         &blockstore,
         &bank_forks,
