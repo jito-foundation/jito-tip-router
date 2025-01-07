@@ -61,6 +61,7 @@ mod set_merkle_root {
     fn create_generated_merkle_tree_collection(
         vote_account: Pubkey,
         merkle_root_upload_authority: Pubkey,
+        ncn_address: Pubkey,
         epoch: u64,
     ) -> TestResult<GeneratedMerkleTreeCollectionFixture> {
         let claimant_staker_withdrawer = Pubkey::new_unique();
@@ -119,9 +120,13 @@ mod set_merkle_root {
             slot: 0,
         };
 
-        let collection =
-            GeneratedMerkleTreeCollection::new_from_stake_meta_collection(stake_meta_collection)
-                .map_err(TestError::from)?;
+        let collection = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
+            stake_meta_collection,
+            &ncn_address,
+            epoch,
+            300,
+        )
+        .map_err(TestError::from)?;
 
         let test_tip_distribution_account = derive_tip_distribution_account_address(
             &jito_tip_distribution::ID,
@@ -151,11 +156,13 @@ mod set_merkle_root {
     fn create_meta_merkle_tree(
         vote_account: Pubkey,
         merkle_root_upload_authority: Pubkey,
+        ncn_address: Pubkey,
         epoch: u64,
     ) -> TestResult<MetaMerkleTreeFixture> {
         let generated_merkle_tree_fixture = create_generated_merkle_tree_collection(
             vote_account,
             merkle_root_upload_authority,
+            ncn_address,
             epoch,
         )
         .map_err(TestError::from)?;
@@ -170,6 +177,7 @@ mod set_merkle_root {
         })
     }
 
+    // #[ignore = "code coverage"]
     #[tokio::test]
     async fn test_set_merkle_root_ok() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
@@ -201,7 +209,7 @@ mod set_merkle_root {
             .await?;
 
         let meta_merkle_tree_fixture =
-            create_meta_merkle_tree(vote_account, ncn_config_address, epoch)?;
+            create_meta_merkle_tree(vote_account, ncn_config_address, ncn_address, epoch)?;
         let winning_root = meta_merkle_tree_fixture.meta_merkle_tree.merkle_root;
 
         let (ballot_box_address, bump, _) =
@@ -311,6 +319,8 @@ mod set_merkle_root {
         let target_claimant_node_proof = target_claimant_node.proof.clone().unwrap();
         let target_claimant_node_amount = target_claimant_node.amount;
 
+        tip_router_client.airdrop(&target_claimant, 1.0).await?;
+
         // Run passthrough claim
         tip_router_client
             .do_claim_with_payer(
@@ -336,6 +346,7 @@ mod set_merkle_root {
         Ok(())
     }
 
+    // #[ignore = "code coverage"]
     #[tokio::test]
     async fn test_set_merkle_root_no_fixture() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
@@ -371,7 +382,7 @@ mod set_merkle_root {
             .await?;
 
         let meta_merkle_tree_fixture =
-            create_meta_merkle_tree(vote_account, ncn_config_address, epoch)?;
+            create_meta_merkle_tree(vote_account, ncn_config_address, ncn, epoch)?;
         let winning_root = meta_merkle_tree_fixture.meta_merkle_tree.merkle_root;
 
         let operator = test_ncn.operators[0].operator_pubkey;
@@ -438,6 +449,7 @@ mod set_merkle_root {
         Ok(())
     }
 
+    // #[ignore = "code coverage"]
     #[tokio::test]
     async fn test_set_merkle_root_before_consensus() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
@@ -470,7 +482,7 @@ mod set_merkle_root {
             .await?;
 
         let meta_merkle_tree_fixture =
-            create_meta_merkle_tree(vote_account, ncn_config_address, ncn_epoch)?;
+            create_meta_merkle_tree(vote_account, ncn_config_address, ncn, ncn_epoch)?;
 
         let tip_distribution_address = derive_tip_distribution_account_address(
             &jito_tip_distribution::ID,

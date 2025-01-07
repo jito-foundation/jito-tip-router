@@ -4,10 +4,10 @@ members = [
     "clients/rust/jito_tip_router",
     "core",
     "integration_tests",
-    "meta_merkle_tree",
     "program",
     "shank_cli",
-    "tip_distribution_sdk",
+    "tip-router-operator-cli",
+    "tip_distribution_sdk", "tip_payment_sdk",
 ]
 
 resolver = "2"
@@ -39,14 +39,14 @@ borsh = { version = "0.10.3" }
 bytemuck = { version = "1.16.3", features = ["min_const_generics"] }
 cfg-if = "1.0.0"
 chrono = "0.4.38"
-clap = { version = "4.5.16", features = ["derive"] }
+clap = { version = "4.5.16", features = ["derive", "env", "cargo"] }
 const_str_to_pubkey = "0.1.1"
 envfile = "0.2.1"
 env_logger = "0.10.2"
 fast-math = "0.1"
 getrandom = { version = "0.1.16", features = ["custom"] }
-
 hex = "0.4.3"
+home = "=0.5.9" # Custom for compatibility with rust 1.75
 log = "0.4.22"
 matches = "0.1.10"
 num-derive = "0.4.2"
@@ -60,25 +60,31 @@ serde_with = "3.9.0"
 serde-big-array = "0.5.1"
 shank = "0.4.2"
 shank_idl = "0.4.2"
-spl-math = { version = "0.3.0", features = ["no-entrypoint"] }
-solana-account-decoder = "~1.18"
-solana-cli-config = "~1.18"
-solana-program = "~1.18"
-solana-program-test = "~1.18"
-solana-sdk = "~1.18"
-solana-rpc-client = "~1.18"
-solana-rpc-client-api = "~1.18"
+spl-math = { version = "0.2.0", features = ["no-entrypoint"] }
+solana-account-decoder = { package = "solana-account-decoder", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-metrics = { package = "solana-metrics", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-accounts-db = { package = "solana-accounts-db", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-client = { package = "solana-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-ledger = { package = "solana-ledger", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-program = { package = "solana-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-program-test = { package = "solana-program-test", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-rpc-client = { package = "solana-rpc-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-runtime = { package = "solana-runtime", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-sdk = { package = "solana-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-stake-program = { package = "solana-stake-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-vote = { package = "solana-vote", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
 solana-security-txt = "1.1.1"
-spl-associated-token-account = { version = "2.2.0", features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "2.3.0", features = ["no-entrypoint"] }
 spl-stake-pool = { version = "1.0.0", features = ["no-entrypoint"] }
 spl-token = { version = "4.0.0", features = ["no-entrypoint"] }
+spl-token-2022 = "=1.0.0"
 switchboard-on-demand = "0.1.0"
 syn = "2.0.72"
 thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
 meta-merkle-tree = { path = "./meta_merkle_tree", version = "=0.0.1" }
 jito-tip-distribution-sdk = { path = "./tip_distribution_sdk", version = "=0.0.1" }
-# jito-tip-distribution = { default-features = false, features = ["no-entrypoint", "no-idl"], git = "https://github.com/jito-foundation/jito-programs", rev = "2849874101336e7ef6ee93bb64b1354d5e682bb9" }
+jito-tip-payment-sdk = { path = "./tip_payment_sdk", version = "=0.0.1" }
 jito-tip-router-client = { path = "./clients/rust/jito_tip_router", version = "0.0.1" }
 jito-tip-router-core = { path = "./core", version = "=0.0.1" }
 jito-tip-router-program = { path = "./program", version = "=0.0.1" }
@@ -94,3 +100,13 @@ jito-vault-client = { git = "https://github.com/jito-foundation/restaking.git", 
 jito-vault-core = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
 jito-vault-program = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d", features = ["no-entrypoint"] }
 jito-vault-sdk = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
+
+[patch.crates-io]
+# Force all Solana dependencies to use the Jito fork
+solana-program = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-sdk = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-rpc-client = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+# necessary for solana thin client
+solana-rpc-client-api = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+# necessary for ellipsis client
+solana-transaction-status = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }

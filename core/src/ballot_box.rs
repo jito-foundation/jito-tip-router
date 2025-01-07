@@ -16,6 +16,7 @@ use crate::{
     constants::{precise_consensus, DEFAULT_CONSENSUS_REACHED_SLOT, MAX_OPERATORS},
     discriminators::Discriminators,
     error::TipRouterError,
+    loaders::check_load,
     stake_weight::StakeWeights,
 };
 
@@ -313,30 +314,14 @@ impl BallotBox {
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if account.owner.ne(program_id) {
-            msg!("Ballot box account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-        if account.data_is_empty() {
-            msg!("Ballot box account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if expect_writable && !account.is_writable {
-            msg!("Ballot box account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Ballot box account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if account
-            .key
-            .ne(&Self::find_program_address(program_id, ncn, epoch).0)
-        {
-            msg!("Ballot box account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
+        let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
+        check_load(
+            program_id,
+            account,
+            &expected_pda,
+            Some(Self::DISCRIMINATOR),
+            expect_writable,
+        )
     }
 
     pub fn epoch(&self) -> u64 {
@@ -642,17 +627,66 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO?
     fn test_verify_merkle_root() {
-        // Create merkle tree of merkle trees
+        use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 
-        // Intialize ballot box
-        let ballot_box = BallotBox::new(&Pubkey::default(), 0, 0, 0);
+        // Create test data with unique pubkeys
+        let tip_distribution1 = Pubkey::new_unique();
+        let tip_distribution2 = Pubkey::new_unique();
+        let tip_distribution3 = Pubkey::new_unique();
+        let max_total_claim = 1000;
+        let max_num_nodes = 10;
 
-        // Set winning merkle root, don't care about anything else
-        ballot_box
-            .verify_merkle_root(&Pubkey::default(), vec![], &[0u8; 32], 0, 0)
-            .unwrap();
+        // Create tree nodes with unique tip_distribution_accounts
+        let mut tree_nodes = vec![
+            TreeNode::new(&tip_distribution1, &[1; 32], max_total_claim, max_num_nodes),
+            TreeNode::new(&tip_distribution2, &[2; 32], max_total_claim, max_num_nodes),
+            TreeNode::new(&tip_distribution3, &[3; 32], max_total_claim, max_num_nodes),
+        ];
+
+        // Sort nodes by hash (required for consistent tree creation)
+        tree_nodes.sort_by_key(|node| node.hash());
+
+        // Build the merkle tree
+        let meta_merkle_tree = MetaMerkleTree::new(tree_nodes).unwrap();
+
+        // Initialize ballot box and set the winning ballot with the merkle root
+        let mut ballot_box = BallotBox::new(&Pubkey::default(), 0, 0, 0);
+        let winning_ballot = Ballot::new(&meta_merkle_tree.merkle_root);
+        ballot_box.set_winning_ballot(&winning_ballot);
+
+        // Get the first node and its proof from the merkle tree
+        let test_node = &meta_merkle_tree.tree_nodes[0];
+        let valid_proof = test_node.proof.clone().unwrap();
+
+        // Test with valid proof - use the specific tip_distribution_account from the test node
+        let result = ballot_box.verify_merkle_root(
+            &test_node.tip_distribution_account,
+            valid_proof.clone(),
+            &test_node.validator_merkle_root,
+            max_total_claim,
+            max_num_nodes,
+        );
+        assert!(result.is_ok(), "Valid proof should succeed");
+
+        // Test with invalid proof (modify one hash in the proof)
+        let mut invalid_proof = valid_proof;
+        if let Some(first_hash) = invalid_proof.first_mut() {
+            first_hash[0] ^= 0xFF; // Flip some bits to make it invalid
+        }
+
+        let result = ballot_box.verify_merkle_root(
+            &test_node.tip_distribution_account,
+            invalid_proof,
+            &test_node.validator_merkle_root,
+            max_total_claim,
+            max_num_nodes,
+        );
+        assert_eq!(
+            result,
+            Err(TipRouterError::InvalidMerkleProof),
+            "Invalid proof should fail"
+        );
     }
 
     #[test]
@@ -749,6 +783,72 @@ mod tests {
             valid_slots_after_consensus,
         );
         assert!(matches!(result, Err(TipRouterError::VotingNotValid)));
+    }
+
+    #[test]
+    fn test_get_winning_ballot() {
+        // Create a new ballot box (should have no winning ballot)
+        let ballot_box = BallotBox::new(&Pubkey::default(), 0, 0, 0);
+
+        // Test with no winning ballot initialized
+        let result = ballot_box.get_winning_ballot();
+        assert_eq!(
+            result,
+            Err(TipRouterError::ConsensusNotReached),
+            "Should return ConsensusNotReached when no winning ballot is set"
+        );
+
+        // Create a new ballot box and set a winning ballot
+        let mut ballot_box = BallotBox::new(&Pubkey::default(), 0, 0, 0);
+        let expected_ballot = Ballot::new(&[1; 32]);
+        ballot_box.set_winning_ballot(&expected_ballot);
+
+        // Test with winning ballot set
+        let result = ballot_box.get_winning_ballot();
+        assert!(result.is_ok(), "Should succeed when winning ballot is set");
+        assert_eq!(
+            result.unwrap(),
+            &expected_ballot,
+            "Should return the correct winning ballot"
+        );
+    }
+
+    #[test]
+    fn test_operator_votes_full() {
+        let current_slot = 100;
+        let epoch = 1;
+        let valid_slots_after_consensus = 10;
+        let mut ballot_box = BallotBox::new(&Pubkey::default(), epoch, 0, current_slot);
+        let ballot = Ballot::new(&[1; 32]);
+        let stake_weights = StakeWeights::new(1000);
+
+        // Fill up all operator vote slots (MAX_OPERATORS = 256)
+        for _ in 0..MAX_OPERATORS {
+            let operator = Pubkey::new_unique();
+            let result = ballot_box.cast_vote(
+                &operator,
+                &ballot,
+                &stake_weights,
+                current_slot,
+                valid_slots_after_consensus,
+            );
+            assert!(result.is_ok(), "Vote should succeed when slots available");
+        }
+
+        // Try to add one more vote, which should fail
+        let extra_operator = Pubkey::new_unique();
+        let result = ballot_box.cast_vote(
+            &extra_operator,
+            &ballot,
+            &stake_weights,
+            current_slot,
+            valid_slots_after_consensus,
+        );
+        assert_eq!(
+            result,
+            Err(TipRouterError::OperatorVotesFull),
+            "Should return OperatorVotesFull when no slots available"
+        );
     }
 
     #[test]

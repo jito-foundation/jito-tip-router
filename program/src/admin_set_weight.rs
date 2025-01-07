@@ -26,8 +26,8 @@ pub fn process_admin_set_weight(
         ncn.weight_table_admin
     };
 
-    load_signer(weight_table_admin, false)?;
-    WeightTable::load(program_id, weight_table, ncn, epoch, true)?;
+    load_signer(weight_table_admin, true)?;
+    WeightTable::load(program_id, weight_table, ncn.key, epoch, true)?;
 
     if restaking_program.key.ne(&jito_restaking_program::id()) {
         msg!("Incorrect restaking program ID");

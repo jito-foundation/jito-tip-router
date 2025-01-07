@@ -3,13 +3,14 @@ use std::mem::size_of;
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     constants::{MAX_ST_MINTS, MAX_VAULTS},
     discriminators::Discriminators,
     error::TipRouterError,
+    loaders::check_load,
     vault_registry::{StMintEntry, VaultEntry},
     weight_entry::WeightEntry,
 };
@@ -230,7 +231,6 @@ impl WeightTable {
 
     pub fn check_table_initialized(&self) -> Result<(), TipRouterError> {
         if !self.table_initialized() {
-            msg!("Weight table not initialized");
             return Err(TipRouterError::TableNotInitialized);
         }
         Ok(())
@@ -238,17 +238,16 @@ impl WeightTable {
 
     pub fn check_registry_initialized(&self) -> Result<(), TipRouterError> {
         if !self.vault_registry_initialized() {
-            msg!(
-                "Vault registry not initialized {}/{}",
-                self.vault_count(),
-                self.vault_entry_count()
-            );
             return Err(TipRouterError::RegistryNotInitialized);
         }
         Ok(())
     }
 
     pub fn check_registry_for_vault(&self, vault_index: u64) -> Result<(), TipRouterError> {
+        if vault_index == VaultEntry::EMPTY_VAULT_INDEX {
+            return Err(TipRouterError::VaultNotInRegistry);
+        }
+
         if !self
             .vault_registry
             .iter()
@@ -262,32 +261,18 @@ impl WeightTable {
     pub fn load(
         program_id: &Pubkey,
         weight_table: &AccountInfo,
-        ncn: &AccountInfo,
+        ncn: &Pubkey,
         ncn_epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if weight_table.owner.ne(program_id) {
-            msg!("Weight table account is not owned by the program");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-        if weight_table.data_is_empty() {
-            msg!("Weight table account is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if expect_writable && !weight_table.is_writable {
-            msg!("Weight table account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if weight_table.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Weight table account has an incorrect discriminator",);
-            return Err(ProgramError::InvalidAccountData);
-        }
-        let expected_pubkey = Self::find_program_address(program_id, ncn.key, ncn_epoch).0;
-        if weight_table.key.ne(&expected_pubkey) {
-            msg!("Weight table incorrect PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
+        let expected_pda = Self::find_program_address(program_id, ncn, ncn_epoch).0;
+        check_load(
+            program_id,
+            weight_table,
+            &expected_pda,
+            Some(Self::DISCRIMINATOR),
+            expect_writable,
+        )
     }
 }
 
@@ -328,6 +313,63 @@ mod tests {
             + size_of::<[WeightEntry; MAX_ST_MINTS]>(); // weight table
 
         assert_eq!(size_of::<WeightTable>(), expected_total);
+    }
+
+    #[test]
+    fn test_check_registry_for_vault() {
+        let ncn = Pubkey::new_unique();
+        let mut table = WeightTable::new(&ncn, 0, 0, 3, 0); // vault_count = 3
+
+        // Create vault registry entries
+        let mut vault_registry = [VaultEntry::default(); MAX_VAULTS];
+
+        // Add three vault entries with different indexes
+        vault_registry[0] = VaultEntry::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            1,   // vault_index
+            100, // slot_registered
+        );
+        vault_registry[1] = VaultEntry::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            5,   // vault_index
+            100, // slot_registered
+        );
+        vault_registry[2] = VaultEntry::new(
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            10,  // vault_index
+            100, // slot_registered
+        );
+
+        // Initialize the table with vault entries
+        table.set_vault_entries(&vault_registry).unwrap();
+
+        // Test 1: Check existing vault indices should succeed
+        assert!(table.check_registry_for_vault(1).is_ok());
+        assert!(table.check_registry_for_vault(5).is_ok());
+        assert!(table.check_registry_for_vault(10).is_ok());
+
+        // Test 2: Check non-existent vault indices should fail
+        assert_eq!(
+            table.check_registry_for_vault(2),
+            Err(TipRouterError::VaultNotInRegistry)
+        );
+        assert_eq!(
+            table.check_registry_for_vault(0),
+            Err(TipRouterError::VaultNotInRegistry)
+        );
+        assert_eq!(
+            table.check_registry_for_vault(11),
+            Err(TipRouterError::VaultNotInRegistry)
+        );
+
+        // Test 3: Check edge case values
+        assert_eq!(
+            table.check_registry_for_vault(u64::MAX),
+            Err(TipRouterError::VaultNotInRegistry)
+        );
     }
 
     #[test]
