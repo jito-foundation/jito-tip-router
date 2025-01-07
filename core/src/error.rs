@@ -176,3 +176,105 @@ impl From<TipRouterError> for u32 {
         e as Self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_codes() {
+        // Test base error codes are correct
+        assert_eq!(TipRouterError::DenominatorIsZero as u32, 0x2100);
+        assert_eq!(TipRouterError::IncorrectWeightTableAdmin as u32, 0x2200);
+
+        // Test sequential error codes
+        assert_eq!(
+            TipRouterError::ArithmeticOverflow as u32,
+            TipRouterError::DenominatorIsZero as u32 + 1
+        );
+        assert_eq!(
+            TipRouterError::ArithmeticUnderflowError as u32,
+            TipRouterError::ArithmeticOverflow as u32 + 1
+        );
+    }
+
+    #[test]
+    fn test_error_messages() {
+        // Test error messages match their definitions
+        assert_eq!(
+            TipRouterError::DenominatorIsZero.to_string(),
+            "Zero in the denominator"
+        );
+        assert_eq!(TipRouterError::ArithmeticOverflow.to_string(), "Overflow");
+        assert_eq!(
+            TipRouterError::WeightTableNotFinalized.to_string(),
+            "Weight table not finalized"
+        );
+        assert_eq!(
+            TipRouterError::InvalidMerkleProof.to_string(),
+            "Invalid merkle proof"
+        );
+    }
+
+    #[test]
+    fn test_program_error_conversion() {
+        // Test conversion to ProgramError
+        let program_error: ProgramError = TipRouterError::DenominatorIsZero.into();
+        assert_eq!(
+            program_error,
+            ProgramError::Custom(TipRouterError::DenominatorIsZero as u32)
+        );
+
+        let program_error: ProgramError = TipRouterError::WeightTableNotFinalized.into();
+        assert_eq!(
+            program_error,
+            ProgramError::Custom(TipRouterError::WeightTableNotFinalized as u32)
+        );
+    }
+
+    #[test]
+    fn test_numeric_conversions() {
+        // Test conversion to u64
+        let error_u64: u64 = TipRouterError::DenominatorIsZero.into();
+        assert_eq!(error_u64, 0x2100);
+
+        // Test conversion to u32
+        let error_u32: u32 = TipRouterError::DenominatorIsZero.into();
+        assert_eq!(error_u32, 0x2100);
+
+        // Test conversion for different error types
+        assert_eq!(u64::from(TipRouterError::IncorrectWeightTableAdmin), 0x2200);
+        assert_eq!(u32::from(TipRouterError::IncorrectWeightTableAdmin), 0x2200);
+    }
+
+    #[test]
+    fn test_decode_error_type() {
+        assert_eq!(
+            <TipRouterError as DecodeError<ProgramError>>::type_of(),
+            "jito::weight_table"
+        );
+    }
+
+    #[test]
+    fn test_error_equality() {
+        // Test PartialEq implementation
+        assert_eq!(
+            TipRouterError::DenominatorIsZero,
+            TipRouterError::DenominatorIsZero
+        );
+        assert_ne!(
+            TipRouterError::DenominatorIsZero,
+            TipRouterError::ArithmeticOverflow
+        );
+
+        // Test with different error variants
+        assert_eq!(
+            TipRouterError::WeightTableNotFinalized,
+            TipRouterError::WeightTableNotFinalized
+        );
+        assert_ne!(
+            TipRouterError::WeightTableNotFinalized,
+            TipRouterError::InvalidMerkleProof
+        );
+    }
+}

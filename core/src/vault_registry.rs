@@ -6,12 +6,13 @@ use jito_bytemuck::{
     AccountDeserialize, Discriminator,
 };
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 
 use crate::{
     constants::{MAX_ST_MINTS, MAX_VAULTS},
     discriminators::Discriminators,
     error::TipRouterError,
+    loaders::check_load,
     ncn_fee_group::NcnFeeGroup,
 };
 
@@ -104,6 +105,9 @@ pub struct VaultEntry {
 }
 
 impl VaultEntry {
+    pub const EMPTY_VAULT_INDEX: u64 = u64::MAX;
+    pub const EMPTY_SLOT_REGISTERED: u64 = u64::MAX;
+
     pub fn new(vault: &Pubkey, st_mint: &Pubkey, vault_index: u64, slot_registered: u64) -> Self {
         Self {
             vault: *vault,
@@ -112,10 +116,6 @@ impl VaultEntry {
             slot_registered: PodU64::from(slot_registered),
             reserved: [0; 128],
         }
-    }
-
-    pub const fn vault(&self) -> &Pubkey {
-        &self.vault
     }
 
     pub fn vault_index(&self) -> u64 {
@@ -127,14 +127,18 @@ impl VaultEntry {
     }
 
     pub fn is_empty(&self) -> bool {
-        // self.vault.eq(&Pubkey::default())
         self.slot_registered() == u64::MAX
     }
 }
 
 impl Default for VaultEntry {
     fn default() -> Self {
-        Self::new(&Pubkey::default(), &Pubkey::default(), u64::MAX, u64::MAX)
+        Self::new(
+            &Pubkey::default(),
+            &Pubkey::default(),
+            Self::EMPTY_VAULT_INDEX,
+            Self::EMPTY_SLOT_REGISTERED,
+        )
     }
 }
 
@@ -200,44 +204,21 @@ impl VaultRegistry {
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if account.owner.ne(program_id) {
-            msg!("Vault Registry account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-
-        if account.data_is_empty() {
-            msg!("Vault Registry account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        if expect_writable && !account.is_writable {
-            msg!("Vault Registry account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        if account.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Vault Registry account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        if account
-            .key
-            .ne(&Self::find_program_address(program_id, ncn).0)
-        {
-            msg!("Vault Registry account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        Ok(())
+        let expected_pda = Self::find_program_address(program_id, ncn).0;
+        check_load(
+            program_id,
+            account,
+            &expected_pda,
+            Some(Self::DISCRIMINATOR),
+            expect_writable,
+        )
     }
 
     pub fn has_st_mint(&self, mint: &Pubkey) -> bool {
         self.st_mint_list.iter().any(|m| m.st_mint.eq(mint))
     }
 
-    pub fn check_st_mint(&self, st_mint: &Pubkey) -> Result<(), ProgramError> {
-        let entry = self.get_mint_entry(st_mint)?;
-
+    pub fn check_st_mint_entry(entry: &StMintEntry) -> Result<(), ProgramError> {
         if entry.no_feed_weight() == 0 && entry.switchboard_feed().eq(&Pubkey::default()) {
             return Err(TipRouterError::NoFeedWeightOrSwitchboardFeed.into());
         }
@@ -265,7 +246,7 @@ impl VaultRegistry {
             .find(|m| m.st_mint == StMintEntry::default().st_mint)
             .ok_or(TipRouterError::VaultRegistryListFull)?;
 
-        *mint_entry = StMintEntry::new(
+        let new_mint_entry = StMintEntry::new(
             st_mint,
             ncn_fee_group,
             reward_multiplier_bps,
@@ -273,7 +254,9 @@ impl VaultRegistry {
             no_feed_weight,
         );
 
-        self.check_st_mint(st_mint)?;
+        Self::check_st_mint_entry(&new_mint_entry)?;
+
+        *mint_entry = new_mint_entry;
 
         Ok(())
     }
@@ -292,23 +275,27 @@ impl VaultRegistry {
             .find(|m| m.st_mint.eq(st_mint))
             .ok_or(TipRouterError::MintEntryNotFound)?;
 
+        let mut updated_mint_entry = *mint_entry;
+
         if let Some(ncn_fee_group) = ncn_fee_group {
-            mint_entry.ncn_fee_group = NcnFeeGroup::try_from(ncn_fee_group)?;
+            updated_mint_entry.ncn_fee_group = NcnFeeGroup::try_from(ncn_fee_group)?;
         }
 
         if let Some(reward_multiplier_bps) = reward_multiplier_bps {
-            mint_entry.reward_multiplier_bps = PodU64::from(reward_multiplier_bps);
+            updated_mint_entry.reward_multiplier_bps = PodU64::from(reward_multiplier_bps);
         }
 
         if let Some(switchboard_feed) = switchboard_feed {
-            mint_entry.switchboard_feed = switchboard_feed;
+            updated_mint_entry.switchboard_feed = switchboard_feed;
         }
 
         if let Some(no_feed_weight) = no_feed_weight {
-            mint_entry.no_feed_weight = PodU128::from(no_feed_weight);
+            updated_mint_entry.no_feed_weight = PodU128::from(no_feed_weight);
         }
 
-        self.check_st_mint(st_mint)?;
+        Self::check_st_mint_entry(&updated_mint_entry)?;
+
+        *mint_entry = updated_mint_entry;
 
         Ok(())
     }
@@ -334,14 +321,6 @@ impl VaultRegistry {
 
         *mint_entry = VaultEntry::new(vault, st_mint, vault_index, current_slot);
         Ok(())
-    }
-
-    pub fn get_valid_vault_entries(&self) -> Vec<VaultEntry> {
-        self.vault_list
-            .iter()
-            .filter(|m| !m.is_empty())
-            .copied()
-            .collect()
     }
 
     pub const fn get_vault_entries(&self) -> &[VaultEntry; MAX_VAULTS] {
@@ -395,38 +374,207 @@ mod tests {
         assert_eq!(vault_registry.vault_list.len(), MAX_VAULTS);
     }
 
-    // #[test]
-    // fn test_add_mint() {
-    //     let mut vault_registry = VaultRegistry::new(Pubkey::default(), 0);
-    //     let vault = Pubkey::new_unique();
-    //     let mint = Pubkey::new_unique();
+    #[test]
+    fn test_add_mint() {
+        let mut vault_registry = VaultRegistry::new(&Pubkey::default(), 0);
+        let mint = Pubkey::new_unique();
+        let switchboard_feed = Pubkey::new_unique();
 
-    //     assert_eq!(vault_registry.vault_count(), 0);
-    //     vault_registry.register_vault(mint, 0, 0).unwrap();
-    //     assert_eq!(vault_registry.vault_count(), 1);
+        // Test 1: Initial registration should succeed
+        assert_eq!(vault_registry.get_valid_mint_entries().len(), 0);
+        vault_registry
+            .register_st_mint(&mint, NcnFeeGroup::jto(), 1000, &switchboard_feed, 0)
+            .unwrap();
+        assert_eq!(vault_registry.get_valid_mint_entries().len(), 1);
 
-    //     // Adding same mint with different vault index should succeed
-    //     vault_registry.register_vault(mint, 1, 0).unwrap();
-    //     assert_eq!(vault_registry.vault_count(), 2);
+        // Test 2: Trying to add the same mint should fail
+        let result =
+            vault_registry.register_st_mint(&mint, NcnFeeGroup::jto(), 1000, &switchboard_feed, 0);
+        assert!(result.is_err());
+        assert_eq!(vault_registry.get_valid_mint_entries().len(), 1);
 
-    //     // Adding same mint with same vault index should succeed but do nothing
-    //     vault_registry.register_vault(mint, 1, 0).unwrap();
-    //     assert_eq!(vault_registry.vault_count(), 2);
+        // Test 3: Adding a different mint should succeed
+        let mint2 = Pubkey::new_unique();
+        vault_registry
+            .register_st_mint(&mint2, NcnFeeGroup::jto(), 1000, &switchboard_feed, 0)
+            .unwrap();
+        assert_eq!(vault_registry.get_valid_mint_entries().len(), 2);
 
-    //     // Adding different mint with same vault index should fail
-    //     let mint2 = Pubkey::new_unique();
-    //     assert!(vault_registry.register_vault(mint2, 1, 0).is_err());
+        // Test 4: Verify mint entry data is stored correctly
+        let entry = vault_registry.get_mint_entry(&mint).unwrap();
+        assert_eq!(entry.st_mint(), &mint);
+        assert_eq!(entry.ncn_fee_group(), NcnFeeGroup::jto());
+        assert_eq!(entry.reward_multiplier_bps(), 1000);
+        assert_eq!(entry.switchboard_feed(), &switchboard_feed);
+        assert_eq!(entry.no_feed_weight(), 0);
 
-    //     // Adding to a full list should fail
-    //     for i in (vault_registry.vault_count() as usize)..vault_registry.vault_list.len() {
-    //         vault_registry
-    //             .register_vault(Pubkey::new_unique(), Pubkey::new_unique(), i as u64, 0)
-    //             .unwrap();
-    //     }
-    //     assert!(vault_registry
-    //         .register_vault(Pubkey::new_unique(), Pubkey::new_unique(), 0, 0)
-    //         .is_err());
-    // }
+        // Test 5: Adding a mint without either switchboard feed or no_feed_weight should fail
+        let mint3 = Pubkey::new_unique();
+        let result = vault_registry.register_st_mint(
+            &mint3,
+            NcnFeeGroup::jto(),
+            1000,
+            &Pubkey::default(),
+            0,
+        );
+        assert!(result.is_err());
+        assert_eq!(vault_registry.get_valid_mint_entries().len(), 2);
+
+        // Test 6: Fill up the mint list
+        for _ in 2..MAX_ST_MINTS {
+            let new_mint = Pubkey::new_unique();
+            vault_registry
+                .register_st_mint(&new_mint, NcnFeeGroup::jto(), 1000, &switchboard_feed, 0)
+                .unwrap();
+        }
+
+        // Test 7: Attempting to add to a full list should fail
+        let overflow_mint = Pubkey::new_unique();
+        let result = vault_registry.register_st_mint(
+            &overflow_mint,
+            NcnFeeGroup::jto(),
+            1000,
+            &switchboard_feed,
+            0,
+        );
+        assert!(result.is_err());
+        assert_eq!(vault_registry.get_valid_mint_entries().len(), MAX_ST_MINTS);
+
+        // Test 8: has_st_mint should work correctly
+        assert!(vault_registry.has_st_mint(&mint));
+        assert!(vault_registry.has_st_mint(&mint2));
+        assert!(!vault_registry.has_st_mint(&overflow_mint));
+
+        // Test 9: Test mint with no_feed_weight instead of switchboard feed
+        let mut fresh_registry = VaultRegistry::new(&Pubkey::default(), 0);
+        let mint_with_weight = Pubkey::new_unique();
+        fresh_registry
+            .register_st_mint(
+                &mint_with_weight,
+                NcnFeeGroup::jto(),
+                1000,
+                &Pubkey::default(),
+                100,
+            )
+            .unwrap();
+
+        let entry = fresh_registry.get_mint_entry(&mint_with_weight).unwrap();
+        assert_eq!(entry.no_feed_weight(), 100);
+        assert_eq!(entry.switchboard_feed(), &Pubkey::default());
+    }
+
+    #[test]
+    fn test_set_st_mint() {
+        let mut vault_registry = VaultRegistry::new(&Pubkey::default(), 0);
+        let mint = Pubkey::new_unique();
+        let switchboard_feed = Pubkey::new_unique();
+
+        // First register a mint to update
+        vault_registry
+            .register_st_mint(&mint, NcnFeeGroup::lst(), 1000, &switchboard_feed, 0)
+            .unwrap();
+
+        // Test 1: Verify initial state
+        let entry = vault_registry.get_mint_entry(&mint).unwrap();
+        assert_eq!(entry.st_mint(), &mint);
+        assert_eq!(entry.ncn_fee_group(), NcnFeeGroup::lst());
+        assert_eq!(entry.reward_multiplier_bps(), 1000);
+        assert_eq!(entry.switchboard_feed(), &switchboard_feed);
+        assert_eq!(entry.no_feed_weight(), 0);
+
+        // Test 2: Update ncn_fee_group only
+        vault_registry
+            .set_st_mint(&mint, Some(NcnFeeGroup::lst().group), None, None, None)
+            .unwrap();
+        let entry = vault_registry.get_mint_entry(&mint).unwrap();
+        assert_eq!(entry.ncn_fee_group(), NcnFeeGroup::lst());
+        assert_eq!(entry.reward_multiplier_bps(), 1000); // unchanged
+        assert_eq!(entry.switchboard_feed(), &switchboard_feed); // unchanged
+        assert_eq!(entry.no_feed_weight(), 0); // unchanged
+
+        // Test 3: Update reward_multiplier_bps only
+        vault_registry
+            .set_st_mint(&mint, None, Some(2000), None, None)
+            .unwrap();
+        let entry = vault_registry.get_mint_entry(&mint).unwrap();
+        assert_eq!(entry.ncn_fee_group(), NcnFeeGroup::lst()); // unchanged
+        assert_eq!(entry.reward_multiplier_bps(), 2000);
+        assert_eq!(entry.switchboard_feed(), &switchboard_feed); // unchanged
+        assert_eq!(entry.no_feed_weight(), 0); // unchanged
+
+        // Test 4: Update switchboard_feed only
+        let new_switchboard_feed = Pubkey::new_unique();
+        vault_registry
+            .set_st_mint(&mint, None, None, Some(new_switchboard_feed), None)
+            .unwrap();
+        let entry = vault_registry.get_mint_entry(&mint).unwrap();
+        assert_eq!(entry.ncn_fee_group(), NcnFeeGroup::lst()); // unchanged
+        assert_eq!(entry.reward_multiplier_bps(), 2000); // unchanged
+        assert_eq!(entry.switchboard_feed(), &new_switchboard_feed);
+        assert_eq!(entry.no_feed_weight(), 0); // unchanged
+
+        // Test 5: Update no_feed_weight only
+        vault_registry
+            .set_st_mint(&mint, None, None, None, Some(100))
+            .unwrap();
+        let entry = vault_registry.get_mint_entry(&mint).unwrap();
+        assert_eq!(entry.ncn_fee_group(), NcnFeeGroup::lst()); // unchanged
+        assert_eq!(entry.reward_multiplier_bps(), 2000); // unchanged
+        assert_eq!(entry.switchboard_feed(), &new_switchboard_feed); // unchanged
+        assert_eq!(entry.no_feed_weight(), 100);
+
+        // Test 6: Update multiple fields at once
+        vault_registry
+            .set_st_mint(
+                &mint,
+                Some(NcnFeeGroup::jto().group),
+                Some(3000),
+                Some(switchboard_feed),
+                Some(200),
+            )
+            .unwrap();
+        let entry = vault_registry.get_mint_entry(&mint).unwrap();
+        assert_eq!(entry.ncn_fee_group(), NcnFeeGroup::jto());
+        assert_eq!(entry.reward_multiplier_bps(), 3000);
+        assert_eq!(entry.switchboard_feed(), &switchboard_feed);
+        assert_eq!(entry.no_feed_weight(), 200);
+
+        // Test 7: Attempt to update non-existent mint
+        let nonexistent_mint = Pubkey::new_unique();
+        let result = vault_registry.set_st_mint(
+            &nonexistent_mint,
+            Some(NcnFeeGroup::jto().group),
+            None,
+            None,
+            None,
+        );
+        assert_eq!(
+            result.unwrap_err(),
+            ProgramError::from(TipRouterError::MintEntryNotFound)
+        );
+
+        // Test 8: Setting both switchboard_feed and no_feed_weight to invalid values should fail
+        let result =
+            vault_registry.set_st_mint(&mint, None, None, Some(Pubkey::default()), Some(0));
+        assert!(result.is_err());
+
+        // Test 9: Verify original values remain after failed update
+        let entry = vault_registry.get_mint_entry(&mint).unwrap();
+        assert_eq!(entry.ncn_fee_group(), NcnFeeGroup::jto());
+        assert_eq!(entry.reward_multiplier_bps(), 3000);
+        assert_eq!(entry.switchboard_feed(), &switchboard_feed);
+        assert_eq!(entry.no_feed_weight(), 200);
+
+        // Test 10: Invalid ncn_fee_group value should fail
+        let result = vault_registry.set_st_mint(
+            &mint,
+            Some(255), // Invalid group
+            None,
+            None,
+            None,
+        );
+        assert!(result.is_err());
+    }
 
     #[test]
     fn test_mint_count() {

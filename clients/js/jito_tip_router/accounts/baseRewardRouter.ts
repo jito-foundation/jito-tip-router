@@ -59,6 +59,7 @@ export type BaseRewardRouter = {
   reserved: Array<number>;
   lastNcnGroupIndex: number;
   lastVoteIndex: number;
+  lastRewardsToProcess: bigint;
   baseFeeGroupRewards: Array<BaseRewardRouterRewards>;
   ncnFeeGroupRewards: Array<BaseRewardRouterRewards>;
   ncnFeeGroupRewardRoutes: Array<NcnRewardRoute>;
@@ -76,6 +77,7 @@ export type BaseRewardRouterArgs = {
   reserved: Array<number>;
   lastNcnGroupIndex: number;
   lastVoteIndex: number;
+  lastRewardsToProcess: number | bigint;
   baseFeeGroupRewards: Array<BaseRewardRouterRewardsArgs>;
   ncnFeeGroupRewards: Array<BaseRewardRouterRewardsArgs>;
   ncnFeeGroupRewardRoutes: Array<NcnRewardRouteArgs>;
@@ -94,6 +96,7 @@ export function getBaseRewardRouterEncoder(): Encoder<BaseRewardRouterArgs> {
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
     ['lastNcnGroupIndex', getU8Encoder()],
     ['lastVoteIndex', getU16Encoder()],
+    ['lastRewardsToProcess', getU64Encoder()],
     [
       'baseFeeGroupRewards',
       getArrayEncoder(getBaseRewardRouterRewardsEncoder(), { size: 8 }),
@@ -122,6 +125,7 @@ export function getBaseRewardRouterDecoder(): Decoder<BaseRewardRouter> {
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
     ['lastNcnGroupIndex', getU8Decoder()],
     ['lastVoteIndex', getU16Decoder()],
+    ['lastRewardsToProcess', getU64Decoder()],
     [
       'baseFeeGroupRewards',
       getArrayDecoder(getBaseRewardRouterRewardsDecoder(), { size: 8 }),
