@@ -192,8 +192,27 @@ impl TreeNode {
             let remaining_total_rewards = tip_distribution_meta
                 .total_tips
                 .checked_sub(protocol_fee_amount)
-                .and_then(|v| v.checked_sub(validator_amount))
-                .ok_or(MerkleRootGeneratorError::CheckedMathErrorF)?;
+                .and_then(|v| v.checked_sub(validator_amount));
+
+            if remaining_total_rewards.is_none() {
+                info!(
+                    "Invalid remaining rewards calculation:\n\
+                    total_tips: {}\n\
+                    protocol_fee_amount: {}\n\
+                    validator_amount: {}\n\
+                    protocol_fee_bps: {}\n\
+                    validator_fee_bps: {}",
+                    tip_distribution_meta.total_tips,
+                    protocol_fee_amount,
+                    validator_amount,
+                    protocol_fee_bps,
+                    tip_distribution_meta.validator_fee_bps
+                );
+                return Ok(None);
+            }
+
+            let remaining_total_rewards =
+                remaining_total_rewards.ok_or(MerkleRootGeneratorError::CheckedMathErrorF)?;
 
             // Must match the seeds from `core::BaseRewardReceiver`. Cannot
             // use `BaseRewardReceiver::find_program_address` as it would cause
