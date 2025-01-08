@@ -95,6 +95,9 @@ pub struct Args {
 
 #[derive(Subcommand)]
 pub enum ProgramCommand {
+    /// Keeper
+    Keeper,
+
     /// Instructions
     AdminCreateConfig {
         #[arg(long, default_value_t = 10 as u64, help = "Epochs before tie breaker can set consensus")]

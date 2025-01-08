@@ -13,6 +13,7 @@ pub mod loaders;
 pub mod ncn_fee_group;
 pub mod ncn_reward_router;
 pub mod stake_weight;
+pub mod state;
 pub mod utils;
 pub mod vault_registry;
 pub mod weight_entry;

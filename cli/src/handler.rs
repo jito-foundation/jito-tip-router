@@ -14,8 +14,9 @@ use crate::{
         distribute_base_ncn_rewards, register_vault, route_base_rewards, route_ncn_rewards,
         set_weight, snapshot_vault_operator_delegation,
     },
+    keeper::keeper::startup_keeper,
 };
-use anyhow::{anyhow, Ok, Result};
+use anyhow::{anyhow, Result};
 use jito_tip_router_core::ncn_fee_group::NcnFeeGroup;
 use log::info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
@@ -109,6 +110,9 @@ impl CliHandler {
 
     pub async fn handle(&self, action: ProgramCommand) -> Result<()> {
         match action {
+            // Keeper
+            ProgramCommand::Keeper {} => startup_keeper(self).await,
+
             // Instructions
             ProgramCommand::AdminCreateConfig {
                 epochs_before_stall,
