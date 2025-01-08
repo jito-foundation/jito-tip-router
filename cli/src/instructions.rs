@@ -1,6 +1,12 @@
 use std::time::Duration;
 
-use crate::{getters::get_all_operators_in_ncn, handler::CliHandler};
+use crate::{
+    getters::{
+        get_account, get_all_operators_in_ncn, get_base_reward_router, get_ncn_reward_router,
+        get_vault, get_vault_registry,
+    },
+    handler::CliHandler,
+};
 use anyhow::{anyhow, Ok, Result};
 use jito_restaking_client::instructions::{
     InitializeNcnBuilder, InitializeNcnOperatorStateBuilder, InitializeNcnVaultTicketBuilder,
@@ -12,7 +18,28 @@ use jito_restaking_core::{
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
 };
-use jito_tip_router_client::instructions::InitializeConfig;
+use jito_tip_router_client::instructions::{
+    AdminRegisterStMintBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder, CastVoteBuilder,
+    DistributeBaseNcnRewardRouteBuilder, InitializeBallotBoxBuilder,
+    InitializeBaseRewardRouterBuilder, InitializeConfigBuilder as InitializeTipRouterConfigBuilder,
+    InitializeEpochSnapshotBuilder, InitializeNcnRewardRouterBuilder,
+    InitializeOperatorSnapshotBuilder, InitializeVaultRegistryBuilder,
+    InitializeWeightTableBuilder, ReallocBallotBoxBuilder, ReallocBaseRewardRouterBuilder,
+    ReallocOperatorSnapshotBuilder, ReallocVaultRegistryBuilder, ReallocWeightTableBuilder,
+    RegisterVaultBuilder, RouteBaseRewardsBuilder, RouteNcnRewardsBuilder,
+    SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
+};
+use jito_tip_router_core::{
+    ballot_box::BallotBox,
+    base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
+    config::Config as TipRouterConfig,
+    constants::MAX_REALLOC_BYTES,
+    epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    ncn_fee_group::NcnFeeGroup,
+    ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
+    vault_registry::VaultRegistry,
+    weight_table::WeightTable,
+};
 use jito_vault_client::instructions::{
     AddDelegationBuilder, InitializeVaultBuilder, InitializeVaultNcnTicketBuilder,
     InitializeVaultOperatorDelegationBuilder, MintToBuilder, WarmupVaultNcnTicketBuilder,
@@ -22,14 +49,16 @@ use jito_vault_core::{
     vault_operator_delegation::VaultOperatorDelegation,
 };
 use log::info;
-use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_rpc_client::rpc_client::SerializableTransaction;
+use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 
 use solana_sdk::{
+    commitment_config::CommitmentConfig,
+    compute_budget::ComputeBudgetInstruction,
     instruction::Instruction,
     program_pack::Pack,
+    pubkey::Pubkey,
     rent::Rent,
-    signature::{Keypair, Signature},
+    signature::{self, Keypair, Signature},
     signer::Signer,
     system_instruction::create_account,
     system_program,
@@ -40,57 +69,1154 @@ use tokio::time::sleep;
 
 // --------------------- TIP ROUTER ------------------------------
 
-pub async fn create_config(handler: &CliHandler) -> Result<()> {
+pub async fn admin_create_config(
+    handler: &CliHandler,
+    epochs_before_stall: u64,
+    valid_slots_after_consensus: u64,
+    dao_fee_bps: u16,
+    block_engine_fee: u16,
+    default_ncn_fee_bps: u16,
+    fee_wallet: Option<Pubkey>,
+    tie_breaker_admin: Option<Pubkey>,
+) -> Result<()> {
     let keypair = handler.keypair()?;
     let client = handler.rpc_client();
 
-    let base = Keypair::new();
-    let (ncn, _, _) = Ncn::find_program_address(&handler.restaking_program_id, &base.pubkey());
+    let ncn = *handler.ncn()?;
 
-    let (config, _, _) = RestakingConfig::find_program_address(&handler.restaking_program_id);
+    let (config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
-    // let mut ix_builder = InitializeConfig::new()
-    //     .config(config)
-    //     .admin(keypair.pubkey())
-    //     .base(base.pubkey())
-    //     .ncn(ncn)
-    //     .instruction();
+    let fee_wallet = fee_wallet.unwrap_or(keypair.pubkey());
+    let tie_breaker_admin = tie_breaker_admin.unwrap_or(keypair.pubkey());
 
-    // send_and_log_transaction(
-    //     &client,
-    //     &keypair,
-    //     &[ix_builder.instruction()],
-    //     &[&base],
-    //     "Created Test Ncn",
-    //     &[format!("NCN: {:?}", ncn)],
-    // )
-    // .await?;
+    let initialize_config_ix = InitializeTipRouterConfigBuilder::new()
+        .config(config)
+        .ncn_admin(keypair.pubkey())
+        .ncn(ncn)
+        .epochs_before_stall(epochs_before_stall)
+        .valid_slots_after_consensus(valid_slots_after_consensus)
+        .dao_fee_bps(dao_fee_bps)
+        .block_engine_fee_bps(block_engine_fee)
+        .default_ncn_fee_bps(default_ncn_fee_bps)
+        .tie_breaker_admin(keypair.pubkey())
+        .fee_wallet(fee_wallet)
+        .restaking_program(handler.restaking_program_id)
+        .instruction();
+
+    let program = client.get_account(&handler.tip_router_program_id).await?;
+
+    info!(
+        "\n\n----------------------\nProgram: {:?}\n\nProgram Account:\n{:?}\n\nIX:\n{:?}\n----------------------\n",
+        &handler.tip_router_program_id, program, &initialize_config_ix
+    );
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &[initialize_config_ix],
+        &[],
+        "Created Tip Router Config",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Ncn Admin: {:?}", keypair.pubkey()),
+            format!("Fee Wallet: {:?}", fee_wallet),
+            format!("Tie Breaker Admin: {:?}", tie_breaker_admin),
+            format!(
+                "Valid Slots After Consensus: {:?}",
+                valid_slots_after_consensus
+            ),
+            format!("DAO Fee BPS: {:?}", dao_fee_bps),
+            format!("Block Engine Fee BPS: {:?}", block_engine_fee),
+            format!("Default NCN Fee BPS: {:?}", default_ncn_fee_bps),
+        ],
+    )
+    .await?;
 
     Ok(())
 }
 
-//TODO create vault registry
-//TODO admin register st mint
-//TODO admin register vault
-//TODO create weight table
-//TODO admin set weight
-//TODO set weight
-//TODO create epoch snapshot
-//TODO create operator snapshot
-//TODO snapshot vault operator delegation
-//TODO create ballot box
-//TODO cast vote
-//TODO create base reward router
-//TODO create ncn reward router
-//TODO route base rewards
-//TODO route ncn rewards
+pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+
+    let (config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (vault_registry, _, _) =
+        VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let vault_registry_account = get_account(handler, &vault_registry).await?;
+
+    // Skip if vault registry already exists
+    if vault_registry_account.data.len() == 0 {
+        let initialize_vault_registry_ix = InitializeVaultRegistryBuilder::new()
+            .config(config)
+            .payer(keypair.pubkey())
+            .ncn(ncn)
+            .vault_registry(vault_registry)
+            .instruction();
+
+        send_and_log_transaction(
+            &client,
+            &keypair,
+            &[initialize_vault_registry_ix],
+            &[],
+            "Created Vault Registry",
+            &[format!("NCN: {:?}", ncn)],
+        )
+        .await?;
+    }
+
+    // Number of reallocations needed based on VaultRegistry::SIZE
+    let num_reallocs = (VaultRegistry::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
+
+    let realloc_vault_registry_ix = ReallocVaultRegistryBuilder::new()
+        .config(config)
+        .vault_registry(vault_registry)
+        .ncn(ncn)
+        .payer(keypair.pubkey())
+        .system_program(system_program::id())
+        .instruction();
+
+    let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
+    realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
+    for _ in 0..num_reallocs {
+        realloc_ixs.push(realloc_vault_registry_ix.clone());
+    }
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &realloc_ixs,
+        &[],
+        "Reallocated Vault Registry",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Number of reallocations: {:?}", num_reallocs),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn admin_register_st_mint(
+    handler: &CliHandler,
+    vault: &Pubkey,
+    ncn_fee_group: NcnFeeGroup,
+    reward_multiplier_bps: u64,
+    switchboard_feed: Option<Pubkey>,
+    no_feed_weight: Option<u128>,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+
+    let (config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (vault_registry, _, _) =
+        VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let vault_account = get_vault(handler, vault).await?;
+
+    let mut register_st_mint_builder = AdminRegisterStMintBuilder::new();
+
+    register_st_mint_builder
+        .config(config)
+        .admin(keypair.pubkey())
+        .vault_registry(vault_registry)
+        .ncn(ncn)
+        .st_mint(vault_account.supported_mint)
+        .ncn_fee_group(ncn_fee_group.group)
+        .restaking_program(handler.restaking_program_id)
+        .reward_multiplier_bps(reward_multiplier_bps);
+
+    if let Some(switchboard_feed) = switchboard_feed {
+        register_st_mint_builder.switchboard_feed(switchboard_feed);
+    }
+
+    if let Some(no_feed_weight) = no_feed_weight {
+        register_st_mint_builder.no_feed_weight(no_feed_weight);
+    }
+
+    let register_st_mint_ix = register_st_mint_builder.instruction();
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &[register_st_mint_ix],
+        &[],
+        "Registered ST Mint",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("ST Mint: {:?}", vault_account.supported_mint),
+            format!("NCN Fee Group: {:?}", ncn_fee_group.group),
+            format!("Reward Multiplier BPS: {:?}", reward_multiplier_bps),
+            format!(
+                "Switchboard Feed: {:?}",
+                switchboard_feed.unwrap_or_default()
+            ),
+            format!("No Feed Weight: {:?}", no_feed_weight.unwrap_or_default()),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn register_vault(handler: &CliHandler, vault: &Pubkey) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let vault = *vault;
+
+    let (vault_registry, _, _) =
+        VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (restaking_config, _, _) =
+        RestakingConfig::find_program_address(&handler.restaking_program_id);
+
+    let (ncn_vault_ticket, _, _) =
+        NcnVaultTicket::find_program_address(&handler.restaking_program_id, &ncn, &vault);
+
+    let (vault_ncn_ticket, _, _) =
+        VaultNcnTicket::find_program_address(&handler.vault_program_id, &vault, &ncn);
+
+    let register_vault_ix = RegisterVaultBuilder::new()
+        .vault_registry(vault_registry)
+        .vault(vault)
+        .ncn(ncn)
+        .ncn_vault_ticket(ncn_vault_ticket)
+        .restaking_config(restaking_config)
+        .restaking_program_id(handler.restaking_program_id)
+        .vault_ncn_ticket(vault_ncn_ticket)
+        .vault_program_id(handler.vault_program_id)
+        .vault_registry(vault_registry)
+        .instruction();
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &[register_vault_ix],
+        &[],
+        "Registered Vault",
+        &[format!("NCN: {:?}", ncn), format!("Vault: {:?}", vault)],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn create_weight_table(handler: &CliHandler) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+
+    let (config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (vault_registry, _, _) =
+        VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (weight_table, _, _) =
+        WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let weight_table_account = get_account(handler, &weight_table).await?;
+
+    // Skip if weight table already exists
+    if weight_table_account.data.len() == 0 {
+        // Initialize weight table
+        let initialize_weight_table_ix = InitializeWeightTableBuilder::new()
+            .vault_registry(vault_registry)
+            .ncn(ncn)
+            .weight_table(weight_table)
+            .payer(keypair.pubkey())
+            .restaking_program(handler.restaking_program_id)
+            .system_program(system_program::id())
+            .epoch(epoch)
+            .instruction();
+
+        send_and_log_transaction(
+            &client,
+            &keypair,
+            &[initialize_weight_table_ix],
+            &[],
+            "Initialized Weight Table",
+            &[format!("NCN: {:?}", ncn), format!("Epoch: {:?}", epoch)],
+        )
+        .await?;
+    }
+
+    // Number of reallocations needed based on WeightTable::SIZE
+    let num_reallocs = (WeightTable::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
+
+    // Realloc weight table
+    let realloc_weight_table_ix = ReallocWeightTableBuilder::new()
+        .config(config)
+        .weight_table(weight_table)
+        .ncn(ncn)
+        .vault_registry(vault_registry)
+        .epoch(epoch)
+        .payer(keypair.pubkey())
+        .system_program(system_program::id())
+        .instruction();
+
+    let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
+    realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
+    for _ in 0..num_reallocs {
+        realloc_ixs.push(realloc_weight_table_ix.clone());
+    }
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &realloc_ixs,
+        &[],
+        "Reallocated Weight Table",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Epoch: {:?}", epoch),
+            format!("Number of reallocations: {:?}", num_reallocs),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn admin_set_weight(handler: &CliHandler, vault: &Pubkey, weight: u128) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+
+    let vault_account = get_vault(handler, vault).await?;
+    let st_mint = vault_account.supported_mint;
+
+    let (weight_table, _, _) =
+        WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let admin_set_weight_ix = AdminSetWeightBuilder::new()
+        .ncn(ncn)
+        .weight_table(weight_table)
+        .weight_table_admin(keypair.pubkey())
+        .restaking_program(handler.restaking_program_id)
+        .st_mint(st_mint)
+        .weight(weight)
+        .epoch(epoch)
+        .instruction();
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &[admin_set_weight_ix],
+        &[],
+        "Set Weight",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Epoch: {:?}", epoch),
+            format!("ST Mint: {:?}", st_mint),
+            format!("Weight: {:?}", weight),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn set_weight(handler: &CliHandler, vault: &Pubkey) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+
+    let vault_registry = get_vault_registry(handler).await?;
+    let vault_account = get_vault(handler, vault).await?;
+
+    let mint_entry = vault_registry.get_mint_entry(&vault_account.supported_mint)?;
+    let switchboard_feed = mint_entry.switchboard_feed();
+
+    let (weight_table, _, _) =
+        WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let set_weight_ix = SwitchboardSetWeightBuilder::new()
+        .ncn(ncn)
+        .weight_table(weight_table)
+        .st_mint(vault_account.supported_mint)
+        .switchboard_feed(*switchboard_feed)
+        .epoch(epoch)
+        .instruction();
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &[set_weight_ix],
+        &[],
+        "Set Weight Using Switchboard Feed",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Epoch: {:?}", epoch),
+            format!("ST Mint: {:?}", vault_account.supported_mint),
+            format!("Switchboard Feed: {:?}", switchboard_feed),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn create_epoch_snapshot(handler: &CliHandler) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+
+    let (config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (weight_table, _, _) =
+        WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (epoch_snapshot, _, _) =
+        EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let initialize_epoch_snapshot_ix = InitializeEpochSnapshotBuilder::new()
+        .config(config)
+        .ncn(ncn)
+        .weight_table(weight_table)
+        .epoch_snapshot(epoch_snapshot)
+        .payer(keypair.pubkey())
+        .restaking_program(handler.restaking_program_id)
+        .system_program(system_program::id())
+        .epoch(epoch)
+        .instruction();
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &[initialize_epoch_snapshot_ix],
+        &[],
+        "Initialized Epoch Snapshot",
+        &[format!("NCN: {:?}", ncn), format!("Epoch: {:?}", epoch)],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn create_operator_snapshot(handler: &CliHandler, operator: &Pubkey) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+    let operator = *operator;
+
+    let (config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (ncn_operator_state, _, _) =
+        NcnOperatorState::find_program_address(&handler.restaking_program_id, &ncn, &operator);
+
+    let (epoch_snapshot, _, _) =
+        EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+        &handler.tip_router_program_id,
+        &operator,
+        &ncn,
+        epoch,
+    );
+
+    let operator_snapshot_account = get_account(handler, &operator_snapshot).await?;
+
+    // Skip if operator snapshot already exists
+    if operator_snapshot_account.data.len() == 0 {
+        // Initialize operator snapshot
+        let initialize_operator_snapshot_ix = InitializeOperatorSnapshotBuilder::new()
+            .config(config)
+            .ncn(ncn)
+            .operator(operator)
+            .ncn_operator_state(ncn_operator_state)
+            .epoch_snapshot(epoch_snapshot)
+            .operator_snapshot(operator_snapshot)
+            .payer(keypair.pubkey())
+            .restaking_program(handler.restaking_program_id)
+            .system_program(system_program::id())
+            .epoch(epoch)
+            .instruction();
+
+        send_and_log_transaction(
+            &client,
+            &keypair,
+            &[initialize_operator_snapshot_ix],
+            &[],
+            "Initialized Operator Snapshot",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("Operator: {:?}", operator),
+                format!("Epoch: {:?}", epoch),
+            ],
+        )
+        .await?;
+    }
+
+    // Number of reallocations needed based on OperatorSnapshot::SIZE
+    let num_reallocs = (OperatorSnapshot::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
+
+    // Realloc operator snapshot
+    let realloc_operator_snapshot_ix = ReallocOperatorSnapshotBuilder::new()
+        .ncn_config(config)
+        .restaking_config(RestakingConfig::find_program_address(&handler.restaking_program_id).0)
+        .ncn(ncn)
+        .operator(operator)
+        .ncn_operator_state(ncn_operator_state)
+        .epoch_snapshot(epoch_snapshot)
+        .operator_snapshot(operator_snapshot)
+        .payer(keypair.pubkey())
+        .restaking_program(handler.restaking_program_id)
+        .system_program(system_program::id())
+        .epoch(epoch)
+        .instruction();
+
+    let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
+    realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
+    for _ in 0..num_reallocs {
+        realloc_ixs.push(realloc_operator_snapshot_ix.clone());
+    }
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &realloc_ixs,
+        &[],
+        "Reallocated Operator Snapshot",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Operator: {:?}", operator),
+            format!("Epoch: {:?}", epoch),
+            format!("Number of reallocations: {:?}", num_reallocs),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+pub async fn snapshot_vault_operator_delegation(
+    handler: &CliHandler,
+    vault: &Pubkey,
+    operator: &Pubkey,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+    let vault = *vault;
+    let operator = *operator;
+
+    let (config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (restaking_config, _, _) =
+        RestakingConfig::find_program_address(&handler.restaking_program_id);
+
+    let (vault_ncn_ticket, _, _) =
+        VaultNcnTicket::find_program_address(&handler.vault_program_id, &vault, &ncn);
+
+    let (ncn_vault_ticket, _, _) =
+        NcnVaultTicket::find_program_address(&handler.restaking_program_id, &ncn, &vault);
+
+    let (vault_operator_delegation, _, _) =
+        VaultOperatorDelegation::find_program_address(&handler.vault_program_id, &vault, &operator);
+
+    let (weight_table, _, _) =
+        WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (epoch_snapshot, _, _) =
+        EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+        &handler.tip_router_program_id,
+        &operator,
+        &ncn,
+        epoch,
+    );
+
+    let snapshot_vault_operator_delegation_ix = SnapshotVaultOperatorDelegationBuilder::new()
+        .config(config)
+        .restaking_config(restaking_config)
+        .ncn(ncn)
+        .operator(operator)
+        .vault(vault)
+        .vault_ncn_ticket(vault_ncn_ticket)
+        .ncn_vault_ticket(ncn_vault_ticket)
+        .vault_operator_delegation(vault_operator_delegation)
+        .weight_table(weight_table)
+        .epoch_snapshot(epoch_snapshot)
+        .operator_snapshot(operator_snapshot)
+        .vault_program(handler.vault_program_id)
+        .restaking_program(handler.restaking_program_id)
+        .epoch(epoch)
+        .instruction();
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &[snapshot_vault_operator_delegation_ix],
+        &[],
+        "Snapshotted Vault Operator Delegation",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Vault: {:?}", vault),
+            format!("Operator: {:?}", operator),
+            format!("Epoch: {:?}", epoch),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn create_ballot_box(handler: &CliHandler) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+
+    let (config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (ballot_box, _, _) =
+        BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let ballot_box_account = get_account(handler, &ballot_box).await?;
+
+    // Skip if ballot box already exists
+    if ballot_box_account.data.len() == 0 {
+        // Initialize ballot box
+        let initialize_ballot_box_ix = InitializeBallotBoxBuilder::new()
+            .config(config)
+            .ballot_box(ballot_box)
+            .ncn(ncn)
+            .epoch(epoch)
+            .payer(keypair.pubkey())
+            .system_program(system_program::id())
+            .instruction();
+
+        send_and_log_transaction(
+            &client,
+            &keypair,
+            &[initialize_ballot_box_ix],
+            &[],
+            "Initialized Ballot Box",
+            &[format!("NCN: {:?}", ncn), format!("Epoch: {:?}", epoch)],
+        )
+        .await?;
+    }
+
+    // Number of reallocations needed based on BallotBox::SIZE
+    let num_reallocs = (BallotBox::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
+
+    // Realloc ballot box
+    let realloc_ballot_box_ix = ReallocBallotBoxBuilder::new()
+        .config(config)
+        .ballot_box(ballot_box)
+        .ncn(ncn)
+        .epoch(epoch)
+        .payer(keypair.pubkey())
+        .system_program(system_program::id())
+        .instruction();
+
+    let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
+    realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
+    for _ in 0..num_reallocs {
+        realloc_ixs.push(realloc_ballot_box_ix.clone());
+    }
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &realloc_ixs,
+        &[],
+        "Reallocated Ballot Box",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Epoch: {:?}", epoch),
+            format!("Number of reallocations: {:?}", num_reallocs),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn admin_cast_vote(
+    handler: &CliHandler,
+    operator: &Pubkey,
+    meta_merkle_root: [u8; 32],
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+    let operator = *operator;
+
+    let (config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (ballot_box, _, _) =
+        BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (epoch_snapshot, _, _) =
+        EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+        &handler.tip_router_program_id,
+        &operator,
+        &ncn,
+        epoch,
+    );
+
+    let cast_vote_ix = CastVoteBuilder::new()
+        .config(config)
+        .ballot_box(ballot_box)
+        .ncn(ncn)
+        .epoch_snapshot(epoch_snapshot)
+        .operator_snapshot(operator_snapshot)
+        .operator(operator)
+        .operator_admin(keypair.pubkey())
+        .restaking_program(handler.restaking_program_id)
+        .meta_merkle_root(meta_merkle_root)
+        .epoch(epoch)
+        .instruction();
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &[cast_vote_ix],
+        &[],
+        "Cast Vote",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Operator: {:?}", operator),
+            format!("Meta Merkle Root: {:?}", meta_merkle_root),
+            format!("Epoch: {:?}", epoch),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn create_base_reward_router(handler: &CliHandler) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+
+    let (base_reward_router, _, _) =
+        BaseRewardRouter::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (base_reward_receiver, _, _) =
+        BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let base_reward_router_account = get_account(handler, &base_reward_router).await?;
+
+    // Skip if base reward router already exists
+    if base_reward_router_account.data.len() == 0 {
+        let initialize_base_reward_router_ix = InitializeBaseRewardRouterBuilder::new()
+            .ncn(ncn)
+            .base_reward_router(base_reward_router)
+            .base_reward_receiver(base_reward_receiver)
+            .payer(keypair.pubkey())
+            .restaking_program(handler.restaking_program_id)
+            .system_program(system_program::id())
+            .epoch(epoch)
+            .instruction();
+
+        send_and_log_transaction(
+            &client,
+            &keypair,
+            &[initialize_base_reward_router_ix],
+            &[],
+            "Initialized Base Reward Router",
+            &[format!("NCN: {:?}", ncn), format!("Epoch: {:?}", epoch)],
+        )
+        .await?;
+    }
+
+    // Number of reallocations needed based on BaseRewardRouter::SIZE
+    let num_reallocs = (BaseRewardRouter::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
+
+    let realloc_base_reward_router_ix = ReallocBaseRewardRouterBuilder::new()
+        .config(TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0)
+        .base_reward_router(base_reward_router)
+        .ncn(ncn)
+        .epoch(epoch)
+        .payer(keypair.pubkey())
+        .system_program(system_program::id())
+        .instruction();
+
+    let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
+    realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
+    for _ in 0..num_reallocs {
+        realloc_ixs.push(realloc_base_reward_router_ix.clone());
+    }
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &realloc_ixs,
+        &[],
+        "Reallocated Base Reward Router",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Epoch: {:?}", epoch),
+            format!("Number of reallocations: {:?}", num_reallocs),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn create_ncn_reward_router(
+    handler: &CliHandler,
+    operator: &Pubkey,
+    ncn_fee_group: NcnFeeGroup,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+    let operator = *operator;
+
+    let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        &operator,
+        &ncn,
+        epoch,
+    );
+
+    let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        &operator,
+        &ncn,
+        epoch,
+    );
+
+    let ncn_reward_router_account = get_account(handler, &ncn_reward_router).await?;
+
+    // Skip if ncn reward router already exists
+    if ncn_reward_router_account.data.len() == 0 {
+        let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
+            .ncn(ncn)
+            .operator(operator)
+            .ncn_reward_router(ncn_reward_router)
+            .ncn_reward_receiver(ncn_reward_receiver)
+            .payer(keypair.pubkey())
+            .restaking_program(handler.restaking_program_id)
+            .system_program(system_program::id())
+            .ncn_fee_group(ncn_fee_group.group)
+            .epoch(epoch)
+            .instruction();
+
+        send_and_log_transaction(
+            &client,
+            &keypair,
+            &[initialize_ncn_reward_router_ix],
+            &[],
+            "Initialized NCN Reward Router",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("Operator: {:?}", operator),
+                format!("NCN Fee Group: {:?}", ncn_fee_group.group),
+                format!("Epoch: {:?}", epoch),
+            ],
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+pub async fn route_base_rewards(handler: &CliHandler) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+
+    let (epoch_snapshot, _, _) =
+        EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (ballot_box, _, _) =
+        BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (base_reward_router, _, _) =
+        BaseRewardRouter::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (base_reward_receiver, _, _) =
+        BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    // Using max iterations defined in BaseRewardRouter
+    let max_iterations: u16 = BaseRewardRouter::MAX_ROUTE_BASE_ITERATIONS;
+
+    let mut still_routing = true;
+    while still_routing {
+        let route_base_rewards_ix = RouteBaseRewardsBuilder::new()
+            .ncn(ncn)
+            .epoch_snapshot(epoch_snapshot)
+            .ballot_box(ballot_box)
+            .base_reward_router(base_reward_router)
+            .base_reward_receiver(base_reward_receiver)
+            .restaking_program(handler.restaking_program_id)
+            .max_iterations(max_iterations)
+            .epoch(epoch)
+            .instruction();
+
+        let instructions = vec![
+            ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+            route_base_rewards_ix,
+        ];
+
+        send_and_log_transaction(
+            &client,
+            &keypair,
+            &instructions,
+            &[],
+            "Routed Base Rewards",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("Epoch: {:?}", epoch),
+                format!("Max iterations: {:?}", max_iterations),
+            ],
+        )
+        .await?;
+
+        // Check if we need to continue routing
+        let base_reward_router_account = get_base_reward_router(handler).await?;
+        still_routing = base_reward_router_account.still_routing();
+    }
+
+    Ok(())
+}
+
+pub async fn route_ncn_rewards(
+    handler: &CliHandler,
+    operator: &Pubkey,
+    ncn_fee_group: NcnFeeGroup,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+    let operator = *operator;
+
+    let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+        &handler.tip_router_program_id,
+        &operator,
+        &ncn,
+        epoch,
+    );
+
+    let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        &operator,
+        &ncn,
+        epoch,
+    );
+
+    let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        &operator,
+        &ncn,
+        epoch,
+    );
+
+    // Using max iterations defined in NcnRewardRouter
+    let max_iterations: u16 = NcnRewardRouter::MAX_ROUTE_NCN_ITERATIONS;
+
+    let mut still_routing = true;
+    while still_routing {
+        let route_ncn_rewards_ix = RouteNcnRewardsBuilder::new()
+            .ncn(ncn)
+            .operator(operator)
+            .operator_snapshot(operator_snapshot)
+            .ncn_reward_router(ncn_reward_router)
+            .ncn_reward_receiver(ncn_reward_receiver)
+            .restaking_program(handler.restaking_program_id)
+            .ncn_fee_group(ncn_fee_group.group)
+            .max_iterations(max_iterations)
+            .epoch(epoch)
+            .instruction();
+
+        let instructions = vec![
+            ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+            route_ncn_rewards_ix,
+        ];
+
+        send_and_log_transaction(
+            &client,
+            &keypair,
+            &instructions,
+            &[],
+            "Routed NCN Rewards",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("Operator: {:?}", operator),
+                format!("NCN Fee Group: {:?}", ncn_fee_group.group),
+                format!("Epoch: {:?}", epoch),
+                format!("Max iterations: {:?}", max_iterations),
+            ],
+        )
+        .await?;
+
+        // Check if we need to continue routing
+        let ncn_reward_router_account =
+            get_ncn_reward_router(handler, ncn_fee_group, &operator).await?;
+        still_routing = ncn_reward_router_account.still_routing();
+    }
+
+    Ok(())
+}
+
+pub async fn distribute_base_ncn_rewards(
+    handler: &CliHandler,
+    operator: &Pubkey,
+    ncn_fee_group: NcnFeeGroup,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+    let operator = *operator;
+
+    let (ncn_config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (base_reward_router, _, _) =
+        BaseRewardRouter::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (base_reward_receiver, _, _) =
+        BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        &operator,
+        &ncn,
+        epoch,
+    );
+
+    let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        &operator,
+        &ncn,
+        epoch,
+    );
+
+    let distribute_base_ncn_rewards_ix = DistributeBaseNcnRewardRouteBuilder::new()
+        .config(ncn_config)
+        .ncn(ncn)
+        .operator(operator)
+        .base_reward_router(base_reward_router)
+        .base_reward_receiver(base_reward_receiver)
+        .ncn_reward_router(ncn_reward_router)
+        .ncn_reward_receiver(ncn_reward_receiver)
+        .restaking_program(handler.restaking_program_id)
+        .system_program(system_program::id())
+        .ncn_fee_group(ncn_fee_group.group)
+        .epoch(epoch)
+        .instruction();
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &[distribute_base_ncn_rewards_ix],
+        &[],
+        "Distributed Base NCN Rewards",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Operator: {:?}", operator),
+            format!("NCN Fee Group: {:?}", ncn_fee_group.group),
+            format!("Epoch: {:?}", epoch),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
 //TODO distribute base rewards
-//TODO distribute base ncn rewards
 //TODO distribute ncn vault rewards
 //TODO distribute ncn operator rewards
-//TODO admin set tie breaker
+
+pub async fn admin_set_tie_breaker(handler: &CliHandler, meta_merkle_root: [u8; 32]) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let client = handler.rpc_client();
+
+    let ncn = *handler.ncn()?;
+    let epoch = handler.epoch;
+
+    let (ncn_config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (ballot_box, _, _) =
+        BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let set_tie_breaker_ix = AdminSetTieBreakerBuilder::new()
+        .config(ncn_config)
+        .ballot_box(ballot_box)
+        .ncn(ncn)
+        .tie_breaker_admin(keypair.pubkey())
+        .meta_merkle_root(meta_merkle_root)
+        .epoch(epoch)
+        .restaking_program(handler.restaking_program_id)
+        .instruction();
+
+    send_and_log_transaction(
+        &client,
+        &keypair,
+        &[set_tie_breaker_ix],
+        &[],
+        "Set Tie Breaker",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Meta Merkle Root: {:?}", meta_merkle_root),
+            format!("Epoch: {:?}", epoch),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
 
 // --------------------- NCN SETUP ------------------------------
+
 //TODO create NCN
 //TODO create Operator
 //TODO add vault to NCN
@@ -557,13 +1683,25 @@ pub async fn send_transactions(
         blockhash,
     );
 
+    // let config = RpcSendTransactionConfig {
+    //     skip_preflight: true,
+    //     ..RpcSendTransactionConfig::default()
+    // };
+    // let result = client
+    //     .send_and_confirm_transaction_with_spinner_and_config(
+    //         &tx,
+    //         CommitmentConfig::confirmed(),
+    //         config,
+    //     )
+    //     .await;
+
     let result = client.send_and_confirm_transaction(&tx).await;
 
     if let Err(e) = result {
-        return Err(anyhow!("Error: {:?}", e));
+        return Err(anyhow!("\nError: \n\n{:?}\n\n", e));
     }
 
-    Ok(*tx.get_signature())
+    Ok(result.unwrap())
 }
 
 pub fn log_transaction(title: &str, signature: Signature, log_items: &[String]) {

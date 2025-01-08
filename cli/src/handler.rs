@@ -2,10 +2,21 @@ use std::str::FromStr;
 
 use crate::{
     args::{Args, ProgramCommand},
-    getters::{get_all_operators_in_ncn, get_all_vaults_in_ncn, get_ncn, get_ncn_operator_state},
-    instructions::{create_and_add_test_operator, create_and_add_test_vault, create_config},
+    getters::{
+        get_all_operators_in_ncn, get_all_vaults_in_ncn, get_ncn, get_ncn_operator_state,
+        get_tip_router_config, get_vault_registry,
+    },
+    instructions::{
+        admin_create_config, admin_register_st_mint, admin_set_weight,
+        create_and_add_test_operator, create_and_add_test_vault, create_ballot_box,
+        create_base_reward_router, create_epoch_snapshot, create_ncn_reward_router,
+        create_operator_snapshot, create_test_ncn, create_vault_registry, create_weight_table,
+        distribute_base_ncn_rewards, register_vault, route_base_rewards, route_ncn_rewards,
+        set_weight, snapshot_vault_operator_delegation,
+    },
 };
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Ok, Result};
+use jito_tip_router_core::ncn_fee_group::NcnFeeGroup;
 use log::info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -98,90 +109,202 @@ impl CliHandler {
 
     pub async fn handle(&self, action: ProgramCommand) -> Result<()> {
         match action {
+            // Instructions
+            ProgramCommand::AdminCreateConfig {
+                epochs_before_stall,
+                valid_slots_after_consensus,
+                dao_fee_bps,
+                block_engine_fee_bps,
+                default_ncn_fee_bps,
+                fee_wallet,
+                tie_breaker_admin,
+            } => {
+                let fee_wallet =
+                    fee_wallet.map(|s| Pubkey::from_str(&s).expect("error parsing fee wallet"));
+                let tie_breaker = tie_breaker_admin
+                    .map(|s| Pubkey::from_str(&s).expect("error parsing tie breaker admin"));
+                admin_create_config(
+                    self,
+                    epochs_before_stall,
+                    valid_slots_after_consensus,
+                    dao_fee_bps,
+                    block_engine_fee_bps,
+                    default_ncn_fee_bps,
+                    fee_wallet,
+                    tie_breaker,
+                )
+                .await
+            }
+
+            ProgramCommand::CreateVaultRegistry {} => create_vault_registry(self).await,
+
+            ProgramCommand::AdminRegisterStMint {
+                vault,
+                ncn_fee_group,
+                reward_multiplier_bps,
+                switchboard_feed,
+                no_feed_weight,
+            } => {
+                let vault = Pubkey::from_str(&vault).expect("error parsing vault");
+                let switchboard = switchboard_feed
+                    .map(|s| Pubkey::from_str(&s).expect("error parsing switchboard feed"));
+                let ncn_fee_group =
+                    NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
+                admin_register_st_mint(
+                    self,
+                    &vault,
+                    ncn_fee_group,
+                    reward_multiplier_bps,
+                    switchboard,
+                    no_feed_weight,
+                )
+                .await
+            }
+
+            ProgramCommand::RegisterVault { vault } => {
+                let vault = Pubkey::from_str(&vault).expect("error parsing vault");
+                register_vault(self, &vault).await
+            }
+
+            ProgramCommand::CreateWeightTable {} => create_weight_table(self).await,
+
+            ProgramCommand::AdminSetWeight { vault, weight } => {
+                let vault = Pubkey::from_str(&vault).expect("error parsing vault");
+                admin_set_weight(self, &vault, weight).await
+            }
+
+            ProgramCommand::SetWeight { vault } => {
+                let vault = Pubkey::from_str(&vault).expect("error parsing vault");
+                set_weight(self, &vault).await
+            }
+
+            ProgramCommand::CreateEpochSnapshot {} => create_epoch_snapshot(self).await,
+
+            ProgramCommand::CreateOperatorSnapshot { operator } => {
+                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
+                create_operator_snapshot(self, &operator).await
+            }
+
+            ProgramCommand::SnapshotVaultOperatorDelegation { vault, operator } => {
+                let vault = Pubkey::from_str(&vault).expect("error parsing vault");
+                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
+                snapshot_vault_operator_delegation(self, &vault, &operator).await
+            }
+
+            ProgramCommand::CreateBallotBox {} => create_ballot_box(self).await,
+
+            ProgramCommand::AdminCastVote {
+                operator,
+                meta_merkle_root,
+            } => {
+                todo!(
+                    "Create and implement admin cast vote: {} {}",
+                    operator,
+                    meta_merkle_root
+                );
+                // let operator = Pubkey::from_str(&operator).expect("error parsing operator");
+                // let merkle_root = hex::decode(meta_merkle_root).expect("error parsing merkle root");
+                // let mut root = [0u8; 32];
+                // root.copy_from_slice(&merkle_root);
+                // admin_cast_vote(self, &operator, root).await
+            }
+
+            ProgramCommand::CreateBaseRewardRouter {} => create_base_reward_router(self).await,
+
+            ProgramCommand::CreateNcnRewardRouter {
+                operator,
+                ncn_fee_group,
+            } => {
+                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
+                let ncn_fee_group =
+                    NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
+                create_ncn_reward_router(self, &operator, ncn_fee_group).await
+            }
+
+            ProgramCommand::RouteBaseRewards {} => route_base_rewards(self).await,
+
+            ProgramCommand::RouteNcnRewards {
+                operator,
+                ncn_fee_group,
+            } => {
+                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
+                let ncn_fee_group =
+                    NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
+                route_ncn_rewards(self, &operator, ncn_fee_group).await
+            }
+
+            ProgramCommand::DistributeBaseNcnRewards {
+                operator,
+                ncn_fee_group,
+            } => {
+                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
+                let ncn_fee_group =
+                    NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
+                distribute_base_ncn_rewards(self, &operator, ncn_fee_group).await
+            }
+
+            ProgramCommand::AdminSetTieBreaker { meta_merkle_root } => {
+                todo!(
+                    "Create and implement admin set tie breaker: {}",
+                    meta_merkle_root
+                );
+                // let merkle_root = hex::decode(meta_merkle_root).expect("error parsing merkle root");
+                // let mut root = [0u8; 32];
+                // root.copy_from_slice(&merkle_root);
+                // admin_set_tie_breaker(self, root).await
+            }
+
+            // Getters
+            ProgramCommand::GetNcn {} => {
+                let ncn = get_ncn(self).await?;
+                info!("NCN: {:?}", ncn);
+                Ok(())
+            }
+            ProgramCommand::GetNcnOperatorState { operator } => {
+                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
+                let ncn_operator_state = get_ncn_operator_state(self, &operator).await?;
+                info!("NCN Operator State: {:?}", ncn_operator_state);
+                Ok(())
+            }
+            ProgramCommand::GetAllOperatorsInNcn {} => {
+                let operators = get_all_operators_in_ncn(self).await?;
+
+                info!("Operators: {:?}", operators);
+                Ok(())
+            }
+            ProgramCommand::GetAllVaultsInNcn {} => {
+                let vaults = get_all_vaults_in_ncn(self).await?;
+                info!("Vaults: {:?}", vaults);
+                Ok(())
+            }
+            ProgramCommand::GetTipRouterConfig {} => {
+                let config = get_tip_router_config(self).await?;
+                info!("Tip Router Config: {:?}", config);
+                Ok(())
+            }
+            ProgramCommand::GetVaultRegistry {} => {
+                let vault_registry = get_vault_registry(self).await?;
+                info!("Vault Registry: {:?}", vault_registry);
+                Ok(())
+            }
+
             // Testers
-            ProgramCommand::Test {} => self.test().await,
-            ProgramCommand::CreateTestNcn {} => self.create_test_ncn().await,
+            ProgramCommand::Test {} => {
+                info!("Test!");
+                Ok(())
+            }
+            ProgramCommand::CreateTestNcn {} => create_test_ncn(self).await,
             ProgramCommand::CreateAndAddTestOperator { operator_fee_bps } => {
-                self.create_and_add_test_operator(operator_fee_bps).await
+                create_and_add_test_operator(self, operator_fee_bps).await
             }
             ProgramCommand::CreateAndAddTestVault {
                 deposit_fee_bps,
                 withdrawal_fee_bps,
                 reward_fee_bps,
             } => {
-                self.create_and_add_test_vault(deposit_fee_bps, withdrawal_fee_bps, reward_fee_bps)
+                create_and_add_test_vault(self, deposit_fee_bps, withdrawal_fee_bps, reward_fee_bps)
                     .await
             }
-
-            // Getters
-            ProgramCommand::GetNcn {} => self.get_ncn().await,
-            ProgramCommand::GetNcnOperatorState { operator } => {
-                let operator = Pubkey::from_str(&operator).expect("error parsing operator arg");
-                self.get_ncn_operator_state(&operator).await
-            }
-            ProgramCommand::GetAllOperatorsInNcn {} => self.get_all_operators_in_ncn().await,
-            ProgramCommand::GetAllVaultsInNcn {} => self.get_all_vaults_in_ncn().await,
         }
-    }
-
-    // --------------- HELPERS -----------------
-    async fn test(&self) -> Result<()> {
-        info!("Test! {}", self.tip_router_program_id);
-        Ok(())
-    }
-
-    async fn create_test_ncn(&self) -> Result<()> {
-        info!("Creating Test NCN...");
-        create_config(self).await?;
-        Ok(())
-    }
-
-    async fn create_and_add_test_operator(&self, operator_fee_bps: u16) -> Result<()> {
-        info!("Creating and adding operator for {}...", self.ncn()?);
-        create_and_add_test_operator(self, operator_fee_bps).await?;
-        Ok(())
-    }
-
-    async fn create_and_add_test_vault(
-        &self,
-        deposit_fee_bps: u16,
-        withdrawal_fee_bps: u16,
-        reward_fee_bps: u16,
-    ) -> Result<()> {
-        info!("Creating and adding vault for {}...", self.ncn()?);
-        create_and_add_test_vault(self, deposit_fee_bps, withdrawal_fee_bps, reward_fee_bps)
-            .await?;
-        Ok(())
-    }
-
-    // --------------- GETTERS -----------------
-    async fn get_ncn(&self) -> Result<()> {
-        info!("Getting NCN...");
-        let ncn = get_ncn(self).await?;
-
-        info!("NCN: {:?}", ncn);
-        Ok(())
-    }
-
-    async fn get_ncn_operator_state(&self, operator: &Pubkey) -> Result<()> {
-        info!("Getting NCN Operator State for {}...", operator);
-        let ncn_operator_state = get_ncn_operator_state(self, operator).await?;
-        info!("NCN Operator State: {:?}", ncn_operator_state);
-        Ok(())
-    }
-
-    async fn get_all_operators_in_ncn(&self) -> Result<()> {
-        info!("Getting all operators in NCN...");
-        let operators = get_all_operators_in_ncn(self).await?;
-
-        info!("Operators: {:?}", operators);
-        Ok(())
-    }
-
-    async fn get_all_vaults_in_ncn(&self) -> Result<()> {
-        info!("Getting all vaults in NCN...");
-        let vaults = get_all_vaults_in_ncn(self).await?;
-        info!("Vaults: {:?}", vaults);
-        Ok(())
     }
 }

@@ -116,7 +116,7 @@ pub async fn get_base_reward_router(handler: &CliHandler) -> Result<BaseRewardRo
     Ok(*account)
 }
 
-pub async fn get_base_reward_reciever(handler: &CliHandler) -> Result<Account> {
+pub async fn get_base_reward_receiver(handler: &CliHandler) -> Result<Account> {
     let (address, _, _) = BaseRewardReceiver::find_program_address(
         &handler.tip_router_program_id,
         handler.ncn()?,

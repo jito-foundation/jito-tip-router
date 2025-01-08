@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    info!("{}\n", args);
+    // info!("{}\n", args);
 
     let handler = CliHandler::from_args(&args).await?;
     handler.handle(args.command).await?;

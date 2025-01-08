@@ -18,6 +18,7 @@ clap = { workspace = true }
 clap-markdown = { workspace = true }
 dotenv = { workspace = true }
 env_logger = { workspace = true }
+futures = { workspace = true }
 jito-bytemuck = { workspace = true }
 jito-jsm-core = { workspace = true }
 jito-restaking-client = { workspace = true }
@@ -34,17 +35,17 @@ jito-vault-program = { workspace = true }
 jito-vault-sdk = { workspace = true }
 log = { workspace = true }
 solana-account-decoder = { workspace = true }
+solana-client = { workspace = true }
+solana-metrics = { workspace = true }
 solana-program = { workspace = true }
 solana-rpc-client = { workspace = true }
 solana-sdk = { workspace = true }
-solana-client = { workspace = true }
-solana-metrics = { workspace = true }
 solana-transaction-status = { workspace = true }
 spl-associated-token-account = { workspace = true }
+spl-stake-pool = { workspace = true }
 spl-token = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
-futures = { workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }

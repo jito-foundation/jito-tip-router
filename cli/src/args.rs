@@ -1,6 +1,7 @@
 use std::fmt;
 
 use clap::{Parser, Subcommand};
+use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
 
 #[derive(Parser)]
 #[command(author, version, about = "A CLI for creating and managing the MEV Tip Distribution NCN", long_about = None)]
@@ -46,7 +47,7 @@ pub struct Args {
 
     #[arg(
         long,
-        global = true, 
+        global = true,
         env = "VAULT_PROGRAM_ID", 
         default_value_t = jito_vault_program::id().to_string(), 
         help = "Vault program ID"
@@ -94,42 +95,113 @@ pub struct Args {
 
 #[derive(Subcommand)]
 pub enum ProgramCommand {
-    /// TEST
-    Test,
-
-    /// Create Test NCN
-    CreateTestNcn,
-    CreateAndAddTestOperator {
-        #[arg(
-            long, 
-            env = "OPERATOR_FEE_BPS",
-            default_value_t = 100,
-            help = "Operator Fee BPS")
-        ]
-        operator_fee_bps: u16,
+    /// Instructions
+    AdminCreateConfig {
+        #[arg(long, default_value_t = 10 as u64, help = "Epochs before tie breaker can set consensus")]
+        epochs_before_stall: u64,
+        #[arg(long, default_value_t = (DEFAULT_SLOTS_PER_EPOCH as f64 * 0.1) as u64, help = "Valid slots after consensus")]
+        valid_slots_after_consensus: u64,
+        #[arg(long, default_value_t = 300, help = "DAO fee in basis points")]
+        dao_fee_bps: u16,
+        #[arg(long, default_value_t = 100, help = "Block engine fee in basis points")]
+        block_engine_fee_bps: u16,
+        #[arg(long, default_value_t = 100, help = "Default NCN fee in basis points")]
+        default_ncn_fee_bps: u16,
+        #[arg(long, help = "Fee wallet address")]
+        fee_wallet: Option<String>,
+        #[arg(long, help = "Tie breaker admin address")]
+        tie_breaker_admin: Option<String>,
     },
-    CreateAndAddTestVault {
+
+    CreateVaultRegistry,
+
+    AdminRegisterStMint {
+        #[arg(long, help = "Vault address")]
+        vault: String,
+        #[arg(long, default_value_t = 0, help = "NCN fee group")]
+        ncn_fee_group: u8,
         #[arg(
-            long, 
-            env = "VAULT_DEPOSIT_FEE",
+            long,
             default_value_t = 100,
-            help = "Deposit fee BPS")
-        ]
-        deposit_fee_bps: u16,
-        #[arg(
-            long, 
-            env = "VAULT_WITHDRAWAL_FEE",
-            default_value_t = 100,
-            help = "Withdrawal fee BPS")
-        ]
-        withdrawal_fee_bps: u16,
-        #[arg(
-            long, 
-            env = "VAULT_REWARD_FEE",
-            default_value_t = 100,
-            help = "Reward fee BPS")
-        ]
-        reward_fee_bps: u16,
+            help = "Reward multiplier in basis points"
+        )]
+        reward_multiplier_bps: u64,
+        #[arg(long, help = "Switchboard feed address")]
+        switchboard_feed: Option<String>,
+        #[arg(long, help = "Weight when no feed is available")]
+        no_feed_weight: Option<u128>,
+    },
+
+    RegisterVault {
+        #[arg(long, help = "Vault address")]
+        vault: String,
+    },
+
+    CreateWeightTable,
+
+    AdminSetWeight {
+        #[arg(long, help = "Vault address")]
+        vault: String,
+        #[arg(long, help = "Weight value")]
+        weight: u128,
+    },
+
+    SetWeight {
+        #[arg(long, help = "Vault address")]
+        vault: String,
+    },
+
+    CreateEpochSnapshot,
+
+    CreateOperatorSnapshot {
+        #[arg(long, help = "Operator address")]
+        operator: String,
+    },
+
+    SnapshotVaultOperatorDelegation {
+        #[arg(long, help = "Vault address")]
+        vault: String,
+        #[arg(long, help = "Operator address")]
+        operator: String,
+    },
+
+    CreateBallotBox,
+
+    AdminCastVote {
+        #[arg(long, help = "Operator address")]
+        operator: String,
+        #[arg(long, help = "Meta merkle root")]
+        meta_merkle_root: String,
+    },
+
+    CreateBaseRewardRouter,
+
+    CreateNcnRewardRouter {
+        #[arg(long, help = "Operator address")]
+        operator: String,
+        #[arg(long, default_value_t = 0, help = "NCN fee group")]
+        ncn_fee_group: u8,
+    },
+
+    RouteBaseRewards,
+
+    RouteNcnRewards {
+        #[arg(long, help = "Operator address")]
+        operator: String,
+        #[arg(long, default_value_t = 0, help = "NCN fee group")]
+        ncn_fee_group: u8,
+    },
+
+    DistributeBaseNcnRewards {
+        #[arg(long, help = "Operator address")]
+        operator: String,
+        #[arg(long, default_value_t = 0, help = "NCN fee group")]
+        ncn_fee_group: u8,
+    },
+
+    AdminSetTieBreaker {
+        #[arg(long, help = "Meta merkle root")]
+        meta_merkle_root: String,
     },
 
     /// Getters
@@ -140,6 +212,44 @@ pub enum ProgramCommand {
     },
     GetAllOperatorsInNcn,
     GetAllVaultsInNcn,
+    GetTipRouterConfig,
+    GetVaultRegistry,
+
+    /// TESTS
+    Test,
+    CreateTestNcn,
+    CreateAndAddTestOperator {
+        #[arg(
+            long,
+            env = "OPERATOR_FEE_BPS",
+            default_value_t = 100,
+            help = "Operator Fee BPS"
+        )]
+        operator_fee_bps: u16,
+    },
+    CreateAndAddTestVault {
+        #[arg(
+            long,
+            env = "VAULT_DEPOSIT_FEE",
+            default_value_t = 100,
+            help = "Deposit fee BPS"
+        )]
+        deposit_fee_bps: u16,
+        #[arg(
+            long,
+            env = "VAULT_WITHDRAWAL_FEE",
+            default_value_t = 100,
+            help = "Withdrawal fee BPS"
+        )]
+        withdrawal_fee_bps: u16,
+        #[arg(
+            long,
+            env = "VAULT_REWARD_FEE",
+            default_value_t = 100,
+            help = "Reward fee BPS"
+        )]
+        reward_fee_bps: u16,
+    },
 }
 
 impl fmt::Display for Args {

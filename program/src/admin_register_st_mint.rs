@@ -21,6 +21,7 @@ pub fn process_admin_register_st_mint(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
+    //TODO take out
     Config::load(program_id, ncn.key, config, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, true)?;
     Ncn::load(restaking_program.key, ncn, false)?;
