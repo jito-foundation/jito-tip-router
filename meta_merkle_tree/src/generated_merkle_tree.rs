@@ -43,12 +43,6 @@ pub enum MerkleRootGeneratorError {
     CheckedMathErrorE,
     #[error("Checked math error F")]
     CheckedMathErrorF,
-    #[error("Checked math error G")]
-    CheckedMathErrorG,
-    #[error("Checked math error H")]
-    CheckedMathErrorH,
-    #[error("Checked math error I")]
-    CheckedMathErrorI,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -171,14 +165,14 @@ impl TreeNode {
         tip_distribution_program_id: &Pubkey,
     ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
         if let Some(tip_distribution_meta) = stake_meta.maybe_tip_distribution_meta.as_ref() {
-            let protocol_fee_amount = u128::div_ceil(
+            let protocol_fee_amount = u64::try_from(
                 (tip_distribution_meta.total_tips as u128)
                     .checked_mul(protocol_fee_bps as u128)
-                    .ok_or(MerkleRootGeneratorError::CheckedMathErrorA)?,
-                MAX_BPS as u128,
-            );
-            let protocol_fee_amount = u64::try_from(protocol_fee_amount)
-                .map_err(|_| MerkleRootGeneratorError::CheckedMathErrorB)?;
+                    .ok_or(MerkleRootGeneratorError::CheckedMathErrorA)?
+                    .checked_div(MAX_BPS as u128)
+                    .ok_or(MerkleRootGeneratorError::CheckedMathErrorB)?,
+            )
+            .map_err(|_| MerkleRootGeneratorError::CheckedMathErrorC)?;
 
             let validator_amount = u64::try_from(
                 (tip_distribution_meta.total_tips as u128)
