@@ -72,13 +72,11 @@ pub fn get_bank_from_ledger(
         }
     };
 
-    let mut slots_in_blockstore = Vec::new();
-    for i in 312382937..312400925 {
-        if blockstore.meta(i).unwrap().is_some() {
-            slots_in_blockstore.push(i);
-        }
-    }
-    info!("Slots in blockstore: {:?}", slots_in_blockstore);
+    let desired_slot_in_blockstore = blockstore.meta(*desired_slot).unwrap().is_some();
+    info!(
+        "Desired slot {} in blockstore: {}",
+        desired_slot, desired_slot_in_blockstore
+    );
 
     let snapshot_config = SnapshotConfig {
         full_snapshot_archives_dir: full_snapshots_path.clone(),
