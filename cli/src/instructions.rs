@@ -49,16 +49,15 @@ use jito_vault_core::{
     vault_operator_delegation::VaultOperatorDelegation,
 };
 use log::info;
-use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
+use solana_client::nonblocking::rpc_client::RpcClient;
 
 use solana_sdk::{
-    commitment_config::CommitmentConfig,
     compute_budget::ComputeBudgetInstruction,
     instruction::Instruction,
     program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,
-    signature::{self, Keypair, Signature},
+    signature::{Keypair, Signature},
     signer::Signer,
     system_instruction::create_account,
     system_program,

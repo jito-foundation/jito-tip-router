@@ -14,6 +14,7 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
+    state::TipRouterState,
     vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
@@ -297,3 +298,27 @@ pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> 
 
     Ok(vaults)
 }
+
+pub struct AllTipRouterAccounts {
+    pub tip_router_config_raw: Account,
+    pub vault_registry_raw: Account,
+    pub weight_table_raw: Account,
+    pub epoch_snapshot_raw: Account,
+    pub operator_snapshots_raw: Vec<Account>,
+    pub ballot_box_raw: Account,
+    pub base_reward_router_raw: Account,
+    pub base_reward_receiver_raw: Account,
+    pub ncn_reward_routers_raw: Vec<Account>,
+    pub ncn_reward_receivers_raw: Vec<Account>,
+}
+
+impl AllTipRouterAccounts {}
+
+// pub async fn get_all_tip_router_accounts
+
+// pub async fn get_tip_router_state(handler: &CliHandler) -> Result<TipRouterState> {
+
+//     let weight_table_raw_account = get
+
+//     todo!("Return correct state");
+// }

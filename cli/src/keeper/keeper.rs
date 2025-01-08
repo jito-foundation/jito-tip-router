@@ -1,5 +1,6 @@
 use crate::handler::CliHandler;
-use anyhow::{anyhow, Ok, Result};
+use anyhow::Result;
+use jito_tip_router_core::state::TipRouterState;
 
 pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
     println!("Hello, world!");
@@ -8,7 +9,5 @@ pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
 }
 
 pub async fn run_keeper(handler: &CliHandler) -> Result<()> {
-    println!("Hello, world!");
-
-    Ok(())
+    todo!("Return correct state")
 }
