@@ -4,6 +4,7 @@ use jito_tip_distribution_sdk::{
     jito_tip_distribution::ID as TIP_DISTRIBUTION_ID, CLAIM_STATUS_SEED,
 };
 use jito_vault_core::MAX_BPS;
+use log::info;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use solana_program::{
     clock::{Epoch, Slot},
@@ -30,6 +31,24 @@ pub enum MerkleRootGeneratorError {
     MerkleTreeTestError,
     #[error("Checked math error")]
     CheckedMathError,
+    #[error("Checked math error A")]
+    CheckedMathErrorA,
+    #[error("Checked math error B")]
+    CheckedMathErrorB,
+    #[error("Checked math error C")]
+    CheckedMathErrorC,
+    #[error("Checked math error D")]
+    CheckedMathErrorD,
+    #[error("Checked math error E")]
+    CheckedMathErrorE,
+    #[error("Checked math error F")]
+    CheckedMathErrorF,
+    #[error("Checked math error G")]
+    CheckedMathErrorG,
+    #[error("Checked math error H")]
+    CheckedMathErrorH,
+    #[error("Checked math error I")]
+    CheckedMathErrorI,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -72,7 +91,10 @@ impl GeneratedMerkleTreeCollection {
                     epoch,
                     &stake_meta_collection.tip_distribution_program_id, // Pass the program ID
                 ) {
-                    Err(e) => return Some(Err(e)),
+                    Err(e) => {
+                        info!("Error creating tree nodes: {:?}", e);
+                        return Some(Err(e));
+                    }
                     Ok(maybe_tree_nodes) => maybe_tree_nodes,
                 }?;
 
@@ -99,7 +121,11 @@ impl GeneratedMerkleTreeCollection {
                     max_total_claim: tip_distribution_meta.total_tips,
                 }))
             })
-            .collect::<Result<Vec<_>, MerkleRootGeneratorError>>()?;
+            .collect::<Result<Vec<_>, MerkleRootGeneratorError>>()
+            .map_err(|e| {
+                info!("Error collecting generated merkle trees: {:?}", e);
+                e
+            })?;
 
         Ok(Self {
             generated_merkle_trees,
@@ -148,26 +174,26 @@ impl TreeNode {
             let protocol_fee_amount = u128::div_ceil(
                 (tip_distribution_meta.total_tips as u128)
                     .checked_mul(protocol_fee_bps as u128)
-                    .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
+                    .ok_or(MerkleRootGeneratorError::CheckedMathErrorA)?,
                 MAX_BPS as u128,
             );
             let protocol_fee_amount = u64::try_from(protocol_fee_amount)
-                .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
+                .map_err(|_| MerkleRootGeneratorError::CheckedMathErrorB)?;
 
             let validator_amount = u64::try_from(
                 (tip_distribution_meta.total_tips as u128)
                     .checked_mul(tip_distribution_meta.validator_fee_bps as u128)
-                    .ok_or(MerkleRootGeneratorError::CheckedMathError)?
+                    .ok_or(MerkleRootGeneratorError::CheckedMathErrorC)?
                     .checked_div(MAX_BPS as u128)
-                    .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
+                    .ok_or(MerkleRootGeneratorError::CheckedMathErrorD)?,
             )
-            .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
+            .map_err(|_| MerkleRootGeneratorError::CheckedMathErrorE)?;
 
             let remaining_total_rewards = tip_distribution_meta
                 .total_tips
                 .checked_sub(protocol_fee_amount)
                 .and_then(|v| v.checked_sub(validator_amount))
-                .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
+                .ok_or(MerkleRootGeneratorError::CheckedMathErrorF)?;
 
             // Must match the seeds from `core::BaseRewardReceiver`. Cannot
             // use `BaseRewardReceiver::find_program_address` as it would cause
@@ -231,11 +257,11 @@ impl TreeNode {
                         let amount_delegated = delegation.lamports_delegated as u128;
                         let reward_amount = u64::try_from(
                             (amount_delegated.checked_mul(remaining_total_rewards as u128))
-                                .ok_or(MerkleRootGeneratorError::CheckedMathError)?
+                                .ok_or(MerkleRootGeneratorError::CheckedMathErrorG)?
                                 .checked_div(total_delegated)
-                                .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
+                                .ok_or(MerkleRootGeneratorError::CheckedMathErrorH)?,
                         )
-                        .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
+                        .map_err(|_| MerkleRootGeneratorError::CheckedMathErrorI)?;
 
                         let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
                             &[
