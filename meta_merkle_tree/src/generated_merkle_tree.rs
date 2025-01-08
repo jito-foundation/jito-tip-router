@@ -43,6 +43,12 @@ pub enum MerkleRootGeneratorError {
     CheckedMathErrorE,
     #[error("Checked math error F")]
     CheckedMathErrorF,
+    #[error("Checked math error G")]
+    CheckedMathErrorG,
+    #[error("Checked math error H")]
+    CheckedMathErrorH,
+    #[error("Checked math error I")]
+    CheckedMathErrorI,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
