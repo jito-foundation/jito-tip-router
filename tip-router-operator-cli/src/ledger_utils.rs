@@ -72,6 +72,16 @@ pub fn get_bank_from_ledger(
         }
     };
 
+    let slots_to_check = [
+        312564097, 312582120, 312600208, 312618282, 312636395, 312654446, 312672572, 312690682,
+        312708741, 312726810,
+    ];
+
+    for slot in slots_to_check {
+        let slot_exists = blockstore.meta(slot).unwrap().is_some();
+        info!("Slot {} in blockstore: {}", slot, slot_exists);
+    }
+
     let desired_slot_in_blockstore = blockstore.meta(*desired_slot).unwrap().is_some();
     info!(
         "Desired slot {} in blockstore: {}",
