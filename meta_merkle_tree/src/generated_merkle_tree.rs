@@ -189,14 +189,31 @@ impl TreeNode {
             )
             .map_err(|_| MerkleRootGeneratorError::CheckedMathErrorE)?;
 
-            let remaining_total_rewards = tip_distribution_meta
-                .total_tips
-                .checked_sub(protocol_fee_amount)
-                .and_then(|v| v.checked_sub(validator_amount));
+            let (protocol_fee_amount, remaining_total_rewards) = validator_amount
+                .checked_add(protocol_fee_amount)
+                .map_or((protocol_fee_amount, None), |total_fees| {
+                    if total_fees > tip_distribution_meta.total_tips {
+                        // If fees exceed total tips, preference validator amount and reduce protocol fee
+                        tip_distribution_meta
+                            .total_tips
+                            .checked_sub(validator_amount)
+                            .map(|adjusted_protocol_fee| (adjusted_protocol_fee, Some(0)))
+                            .unwrap_or((0, None))
+                    } else {
+                        // Otherwise use original protocol fee and subtract both fees from total
+                        (
+                            protocol_fee_amount,
+                            tip_distribution_meta
+                                .total_tips
+                                .checked_sub(protocol_fee_amount)
+                                .and_then(|v| v.checked_sub(validator_amount)),
+                        )
+                    }
+                });
 
             if remaining_total_rewards.is_none() {
                 info!(
-                    "Invalid remaining rewards calculation:\n\
+                    "NOTE: Invalid remaining rewards calculation:\n\
                     total_tips: {}\n\
                     protocol_fee_amount: {}\n\
                     validator_amount: {}\n\
@@ -208,7 +225,6 @@ impl TreeNode {
                     protocol_fee_bps,
                     tip_distribution_meta.validator_fee_bps
                 );
-                return Ok(None);
             }
 
             let remaining_total_rewards =
