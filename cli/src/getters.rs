@@ -1,6 +1,6 @@
-use std::mem::size_of;
+use std::{mem::size_of, sync::Arc};
 
-use crate::handler::CliHandler;
+use crate::{handler::CliHandler, ported::transactions::get_multiple_accounts_batched};
 use anyhow::{Ok, Result};
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{
@@ -13,10 +13,9 @@ use jito_tip_router_core::{
     config::Config as TipRouterConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     ncn_fee_group::NcnFeeGroup,
-    ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
-    state::TipRouterState,
-    vault_registry::VaultRegistry,
-    weight_table::WeightTable,
+    ncn_reward_router::{self, NcnRewardReceiver, NcnRewardRouter},
+    vault_registry::{self, VaultRegistry},
+    weight_table::{self, WeightTable},
 };
 use jito_vault_core::vault::Vault;
 use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
@@ -299,26 +298,291 @@ pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> 
     Ok(vaults)
 }
 
-pub struct AllTipRouterAccounts {
-    pub tip_router_config_raw: Account,
-    pub vault_registry_raw: Account,
-    pub weight_table_raw: Account,
-    pub epoch_snapshot_raw: Account,
-    pub operator_snapshots_raw: Vec<Account>,
-    pub ballot_box_raw: Account,
-    pub base_reward_router_raw: Account,
-    pub base_reward_receiver_raw: Account,
-    pub ncn_reward_routers_raw: Vec<Account>,
-    pub ncn_reward_receivers_raw: Vec<Account>,
+pub struct TipRouterEpochState {
+    pub ncn: Pubkey,
+    pub vaults: Vec<Pubkey>,
+    pub operators: Vec<Pubkey>,
+    pub tip_router_config_address: Pubkey,
+    pub vault_registry_address: Pubkey,
+    pub weight_table_address: Pubkey,
+    pub epoch_snapshot_address: Pubkey,
+    pub operator_snapshots_address: Vec<Pubkey>,
+    pub ballot_box_address: Pubkey,
+    pub base_reward_router_address: Pubkey,
+    pub base_reward_receiver_address: Pubkey,
+    pub ncn_reward_routers_address: Vec<Vec<Pubkey>>,
+    pub ncn_reward_receivers_address: Vec<Vec<Pubkey>>,
 }
 
-impl AllTipRouterAccounts {}
+impl Default for TipRouterEpochState {
+    fn default() -> Self {
+        Self {
+            ncn: Pubkey::default(),
+            vaults: Vec::default(),
+            operators: Vec::default(),
+            tip_router_config_address: Pubkey::default(),
+            vault_registry_address: Pubkey::default(),
+            weight_table_address: Pubkey::default(),
+            epoch_snapshot_address: Pubkey::default(),
+            operator_snapshots_address: Vec::default(),
+            ballot_box_address: Pubkey::default(),
+            base_reward_router_address: Pubkey::default(),
+            base_reward_receiver_address: Pubkey::default(),
+            ncn_reward_routers_address: Vec::default(),
+            ncn_reward_receivers_address: Vec::default(),
+        }
+    }
+}
 
-// pub async fn get_all_tip_router_accounts
+impl TipRouterEpochState {
+    pub async fn fetch(handler: &CliHandler) -> Self {
+        let epoch = handler.epoch;
 
-// pub async fn get_tip_router_state(handler: &CliHandler) -> Result<TipRouterState> {
+        let mut state: TipRouterEpochState = Self::default();
 
-//     let weight_table_raw_account = get
+        // Fetch all vaults and operators
+        let ncn = *handler.ncn().unwrap();
+        state.ncn = ncn;
 
-//     todo!("Return correct state");
-// }
+        let vaults = get_all_vaults_in_ncn(handler).await.unwrap();
+        state.vaults = vaults;
+
+        let operators = get_all_operators_in_ncn(handler).await.unwrap();
+        state.operators = operators;
+
+        let (tip_router_config_address, _, _) =
+            TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+        state.tip_router_config_address = tip_router_config_address;
+
+        let (vault_registry_address, _, _) =
+            VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
+        state.vault_registry_address = vault_registry_address;
+
+        let (weight_table_address, _, _) =
+            WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+        state.weight_table_address = weight_table_address;
+
+        let (epoch_snapshot_address, _, _) =
+            EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+        state.epoch_snapshot_address = epoch_snapshot_address;
+
+        for operator in state.operators.iter() {
+            let (operator_snapshot_address, _, _) = OperatorSnapshot::find_program_address(
+                &handler.tip_router_program_id,
+                operator,
+                &ncn,
+                epoch,
+            );
+            state
+                .operator_snapshots_address
+                .push(operator_snapshot_address);
+        }
+
+        let (ballot_box_address, _, _) =
+            BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+        state.ballot_box_address = ballot_box_address;
+
+        let (base_reward_router_address, _, _) =
+            BaseRewardRouter::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+        state.base_reward_router_address = base_reward_router_address;
+
+        let (base_reward_receiver_address, _, _) =
+            BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+        state.base_reward_receiver_address = base_reward_receiver_address;
+
+        for operator in state.operators.iter() {
+            let mut ncn_reward_routers_address = Vec::default();
+            let mut ncn_reward_receivers_address = Vec::default();
+
+            for ncn_fee_group in NcnFeeGroup::all_groups() {
+                let (ncn_reward_router_address, _, _) = NcnRewardRouter::find_program_address(
+                    &handler.tip_router_program_id,
+                    ncn_fee_group,
+                    operator,
+                    &ncn,
+                    epoch,
+                );
+                ncn_reward_routers_address.push(ncn_reward_router_address);
+
+                let (ncn_reward_receiver_address, _, _) = NcnRewardReceiver::find_program_address(
+                    &handler.tip_router_program_id,
+                    ncn_fee_group,
+                    operator,
+                    &ncn,
+                    epoch,
+                );
+                ncn_reward_receivers_address.push(ncn_reward_receiver_address);
+            }
+
+            state
+                .ncn_reward_routers_address
+                .push(ncn_reward_routers_address);
+            state
+                .ncn_reward_receivers_address
+                .push(ncn_reward_receivers_address);
+        }
+
+        todo!();
+    }
+
+    pub async fn tip_router_config(&self, handler: &CliHandler) -> Result<Option<TipRouterConfig>> {
+        let raw_account = get_account(handler, &self.tip_router_config_address).await?;
+
+        if raw_account.data.is_empty() {
+            return Ok(None);
+        } else {
+            let account = TipRouterConfig::try_from_slice_unchecked(raw_account.data.as_slice())?;
+            return Ok(Some(*account));
+        }
+    }
+
+    pub async fn vault_registry(&self, handler: &CliHandler) -> Result<Option<VaultRegistry>> {
+        let raw_account = get_account(handler, &self.vault_registry_address).await?;
+
+        if raw_account.data.is_empty() {
+            return Ok(None);
+        } else {
+            let account = VaultRegistry::try_from_slice_unchecked(raw_account.data.as_slice())?;
+            return Ok(Some(*account));
+        }
+    }
+
+    pub async fn weight_table(&self, handler: &CliHandler) -> Result<Option<WeightTable>> {
+        let raw_account = get_account(handler, &self.weight_table_address).await?;
+
+        if raw_account.data.is_empty() {
+            return Ok(None);
+        } else {
+            let account = WeightTable::try_from_slice_unchecked(raw_account.data.as_slice())?;
+            return Ok(Some(*account));
+        }
+    }
+
+    pub async fn epoch_snapshot(&self, handler: &CliHandler) -> Result<Option<EpochSnapshot>> {
+        let raw_account = get_account(handler, &self.epoch_snapshot_address).await?;
+
+        if raw_account.data.is_empty() {
+            return Ok(None);
+        } else {
+            let account = EpochSnapshot::try_from_slice_unchecked(raw_account.data.as_slice())?;
+            return Ok(Some(*account));
+        }
+    }
+
+    pub async fn operator_snapshot(
+        &self,
+        handler: &CliHandler,
+        operator_index: usize,
+    ) -> Result<Option<OperatorSnapshot>> {
+        let raw_account =
+            get_account(handler, &self.operator_snapshots_address[operator_index]).await?;
+
+        if raw_account.data.is_empty() {
+            return Ok(None);
+        } else {
+            let account = OperatorSnapshot::try_from_slice_unchecked(raw_account.data.as_slice())?;
+            return Ok(Some(*account));
+        }
+    }
+
+    pub async fn ballot_box(&self, handler: &CliHandler) -> Result<Option<BallotBox>> {
+        let raw_account = get_account(handler, &self.ballot_box_address).await?;
+
+        if raw_account.data.is_empty() {
+            return Ok(None);
+        } else {
+            let account = BallotBox::try_from_slice_unchecked(raw_account.data.as_slice())?;
+            return Ok(Some(*account));
+        }
+    }
+
+    pub async fn base_reward_router(
+        &self,
+        handler: &CliHandler,
+    ) -> Result<Option<BaseRewardRouter>> {
+        let raw_account = get_account(handler, &self.base_reward_router_address).await?;
+
+        if raw_account.data.is_empty() {
+            return Ok(None);
+        } else {
+            let account = BaseRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice())?;
+            return Ok(Some(*account));
+        }
+    }
+
+    pub async fn base_reward_receiver(&self, handler: &CliHandler) -> Result<Option<Account>> {
+        let raw_account = get_account(handler, &self.base_reward_receiver_address).await?;
+
+        if raw_account.data.is_empty() {
+            return Ok(None);
+        } else {
+            return Ok(Some(raw_account));
+        }
+    }
+
+    pub async fn ncn_reward_router(
+        &self,
+        handler: &CliHandler,
+        operator_index: usize,
+        ncn_fee_group: NcnFeeGroup,
+    ) -> Result<Option<NcnRewardRouter>> {
+        let raw_account = get_account(
+            handler,
+            &self.ncn_reward_routers_address[operator_index][ncn_fee_group.group_index()?],
+        )
+        .await?;
+
+        if raw_account.data.is_empty() {
+            return Ok(None);
+        } else {
+            let account = NcnRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice())?;
+            return Ok(Some(*account));
+        }
+    }
+
+    pub async fn ncn_reward_receiver(
+        &self,
+        handler: &CliHandler,
+        operator_index: usize,
+        ncn_fee_group: NcnFeeGroup,
+    ) -> Result<Option<Account>> {
+        let raw_account = get_account(
+            handler,
+            &self.ncn_reward_receivers_address[operator_index][ncn_fee_group.group_index()?],
+        )
+        .await?;
+
+        if raw_account.data.is_empty() {
+            return Ok(None);
+        } else {
+            return Ok(Some(raw_account));
+        }
+    }
+
+    pub async fn get_state(&self, handler: &CliHandler) -> Result<TipRouterState> {
+        let tip_router_config = self.tip_router_config(handler).await?;
+        let vault_registry = self.vault_registry(handler).await?;
+
+        if tip_router_config.is_none() || vault_registry.is_none() {
+            return Ok(TipRouterState::NotConfigured);
+        }
+
+        let weight_table = self.weight_table(handler).await?;
+
+        if weight_table.is_none() {
+            return Ok(TipRouterState::Idle);
+        }
+
+        let epoch_snapshot = self.epoch_snapshot(handler).await?;
+
+        todo!()
+    }
+}
+
+pub enum TipRouterState {
+    NotConfigured,
+    Idle,
+    Snapshotting,
+    Voting,
+    Routing,
+}

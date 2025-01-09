@@ -1,6 +1,6 @@
 use crate::handler::CliHandler;
 use anyhow::Result;
-use jito_tip_router_core::state::TipRouterState;
+use jito_tip_router_core::epoch_state::TipRouterState;
 
 pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
     println!("Hello, world!");
