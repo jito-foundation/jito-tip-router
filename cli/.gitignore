@@ -1,1 +1,3 @@
 .env
+.env.devnet
+.env.mainnet

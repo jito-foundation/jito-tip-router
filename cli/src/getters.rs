@@ -47,9 +47,13 @@ pub async fn get_tip_router_config(handler: &CliHandler) -> Result<TipRouterConf
     let (address, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, handler.ncn()?);
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = TipRouterConfig::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -58,9 +62,13 @@ pub async fn get_vault_registry(handler: &CliHandler) -> Result<VaultRegistry> {
     let (address, _, _) =
         VaultRegistry::find_program_address(&handler.tip_router_program_id, handler.ncn()?);
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = VaultRegistry::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -69,9 +77,13 @@ pub async fn get_epoch_state(handler: &CliHandler, epoch: u64) -> Result<EpochSt
     let (address, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, handler.ncn()?, epoch);
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = EpochState::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -80,9 +92,13 @@ pub async fn get_weight_table(handler: &CliHandler, epoch: u64) -> Result<Weight
     let (address, _, _) =
         WeightTable::find_program_address(&handler.tip_router_program_id, handler.ncn()?, epoch);
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = WeightTable::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -91,9 +107,13 @@ pub async fn get_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<Epoc
     let (address, _, _) =
         EpochSnapshot::find_program_address(&handler.tip_router_program_id, handler.ncn()?, epoch);
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = EpochSnapshot::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -110,9 +130,13 @@ pub async fn get_operator_snapshot(
         epoch,
     );
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = OperatorSnapshot::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -121,9 +145,13 @@ pub async fn get_ballot_box(handler: &CliHandler, epoch: u64) -> Result<BallotBo
     let (address, _, _) =
         BallotBox::find_program_address(&handler.tip_router_program_id, handler.ncn()?, epoch);
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = BallotBox::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -135,9 +163,13 @@ pub async fn get_base_reward_router(handler: &CliHandler, epoch: u64) -> Result<
         epoch,
     );
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = BaseRewardRouter::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -149,9 +181,13 @@ pub async fn get_base_reward_receiver(handler: &CliHandler, epoch: u64) -> Resul
         epoch,
     );
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     Ok(account)
 }
 
@@ -169,9 +205,13 @@ pub async fn get_ncn_reward_router(
         epoch,
     );
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = NcnRewardRouter::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -190,9 +230,13 @@ pub async fn get_ncn_reward_reciever(
         epoch,
     );
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     Ok(account)
 }
 
@@ -200,17 +244,25 @@ pub async fn get_ncn_reward_reciever(
 
 pub async fn get_restaking_config(handler: &CliHandler) -> Result<RestakingConfig> {
     let (address, _, _) = RestakingConfig::find_program_address(&handler.restaking_program_id);
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = RestakingConfig::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
 
 pub async fn get_ncn(handler: &CliHandler) -> Result<Ncn> {
-    let account = get_account(handler, handler.ncn()?)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, handler.ncn()?).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = Ncn::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -224,9 +276,13 @@ pub async fn get_vault(handler: &CliHandler, vault: &Pubkey) -> Result<Vault> {
 }
 
 pub async fn get_operator(handler: &CliHandler, operator: &Pubkey) -> Result<Operator> {
-    let account = get_account(handler, operator)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, operator).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = Operator::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -241,20 +297,28 @@ pub async fn get_ncn_operator_state(
         operator,
     );
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = NcnOperatorState::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
 
 pub async fn get_vault_ncn_ticket(handler: &CliHandler, vault: &Pubkey) -> Result<VaultNcnTicket> {
     let (address, _, _) =
-        VaultNcnTicket::find_program_address(&handler.restaking_program_id, vault, handler.ncn()?);
+        VaultNcnTicket::find_program_address(&handler.vault_program_id, vault, handler.ncn()?);
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = VaultNcnTicket::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -263,9 +327,13 @@ pub async fn get_ncn_vault_ticket(handler: &CliHandler, vault: &Pubkey) -> Resul
     let (address, _, _) =
         NcnVaultTicket::find_program_address(&handler.restaking_program_id, handler.ncn()?, vault);
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
     let account = NcnVaultTicket::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -274,17 +342,38 @@ pub async fn get_vault_operator_delegation(
     handler: &CliHandler,
     vault: &Pubkey,
     operator: &Pubkey,
-) -> Result<Account> {
-    let (address, _, _) = VaultOperatorDelegation::find_program_address(
-        &handler.restaking_program_id,
-        vault,
-        operator,
-    );
+) -> Result<VaultOperatorDelegation> {
+    let (address, _, _) =
+        VaultOperatorDelegation::find_program_address(&handler.vault_program_id, vault, operator);
 
-    let account = get_account(handler, &address)
-        .await?
-        .expect("Account not found");
-    Ok(account)
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
+    let account = VaultOperatorDelegation::try_from_slice_unchecked(account.data.as_slice())?;
+    Ok(*account)
+}
+
+pub async fn get_operator_vault_ticket(
+    handler: &CliHandler,
+    vault: &Pubkey,
+    operator: &Pubkey,
+) -> Result<OperatorVaultTicket> {
+    let (address, _, _) =
+        OperatorVaultTicket::find_program_address(&handler.restaking_program_id, operator, vault);
+
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
+    let account = OperatorVaultTicket::try_from_slice_unchecked(account.data.as_slice())?;
+    Ok(*account)
 }
 
 pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
@@ -381,91 +470,273 @@ pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> 
     Ok(vaults)
 }
 
-pub async fn get_all_tickets(handler: &CliHandler) -> Result<Vec<NcnTicketState>> {
+pub async fn get_all_tickets(handler: &CliHandler) -> Result<Vec<NcnTickets>> {
     let client = handler.rpc_client();
 
-    let ncn = handler.ncn()?;
     let all_vaults = get_all_vaults_in_ncn(handler).await?;
     let all_operators = get_all_operators_in_ncn(handler).await?;
 
-    for operator in all_operators {
-        for vault in all_vaults {}
+    let restaking_config = get_restaking_config(handler).await?;
+
+    let slot = client.get_epoch_info().await?.absolute_slot;
+    let epoch_length = restaking_config.epoch_length();
+
+    let mut tickets = Vec::new();
+    for operator in all_operators.iter() {
+        for vault in all_vaults.iter() {
+            tickets.push(NcnTickets::fetch(handler, operator, vault, slot, epoch_length).await);
+        }
     }
 
-    todo!();
+    Ok(tickets)
 }
 
 pub struct NcnTickets {
     pub slot: u64,
     pub epoch_length: u64,
+    pub ncn: Pubkey,
     pub vault: Pubkey,
     pub operator: Pubkey,
-    pub ncn_vault_ticket: NcnVaultTicket,
-    pub vault_ncn_ticket: VaultNcnTicket,
-    pub vault_operator_delegation: VaultOperatorDelegation,
-    pub operator_vault_ticket: OperatorVaultTicket,
-    pub ncn_operator_state: NcnOperatorState,
+    pub ncn_vault_ticket: Option<NcnVaultTicket>,
+    pub vault_ncn_ticket: Option<VaultNcnTicket>,
+    pub vault_operator_delegation: Option<VaultOperatorDelegation>,
+    pub operator_vault_ticket: Option<OperatorVaultTicket>,
+    pub ncn_operator_state: Option<NcnOperatorState>,
 }
 
 impl NcnTickets {
-    pub fn ncn_operator(&self) -> bool {
-        self.ncn_operator_state
+    const DNE: u8 = 0;
+    const NOT_ACTIVE: u8 = 1;
+    const ACTIVE: u8 = 2;
+
+    pub async fn fetch(
+        handler: &CliHandler,
+        operator: &Pubkey,
+        vault: &Pubkey,
+        slot: u64,
+        epoch_length: u64,
+    ) -> Self {
+        let ncn = handler.ncn().expect("NCN not found");
+
+        let ncn_vault_ticket = get_ncn_vault_ticket(handler, vault).await;
+        let ncn_vault_ticket = {
+            match ncn_vault_ticket {
+                Ok(account) => Some(account),
+                Err(e) => {
+                    if e.to_string().contains("Account not found") {
+                        None
+                    } else {
+                        panic!("Error fetching NCN vault ticket: {}", e);
+                    }
+                }
+            }
+        };
+
+        let vault_ncn_ticket = get_vault_ncn_ticket(handler, vault).await;
+        let vault_ncn_ticket = {
+            match vault_ncn_ticket {
+                Ok(account) => Some(account),
+                Err(e) => {
+                    if e.to_string().contains("Account not found") {
+                        None
+                    } else {
+                        panic!("Error fetching NCN vault ticket: {}", e);
+                    }
+                }
+            }
+        };
+
+        let vault_operator_delegation =
+            get_vault_operator_delegation(handler, vault, operator).await;
+        let vault_operator_delegation = {
+            match vault_operator_delegation {
+                Ok(account) => Some(account),
+                Err(e) => {
+                    if e.to_string().contains("Account not found") {
+                        None
+                    } else {
+                        panic!("Error fetching NCN vault ticket: {}", e);
+                    }
+                }
+            }
+        };
+
+        let operator_vault_ticket = get_operator_vault_ticket(handler, vault, operator).await;
+        let operator_vault_ticket = {
+            match operator_vault_ticket {
+                Ok(account) => Some(account),
+                Err(e) => {
+                    if e.to_string().contains("Account not found") {
+                        None
+                    } else {
+                        panic!("Error fetching NCN vault ticket: {}", e);
+                    }
+                }
+            }
+        };
+
+        let ncn_operator_state = get_ncn_operator_state(handler, operator).await;
+        let ncn_operator_state = {
+            match ncn_operator_state {
+                Ok(account) => Some(account),
+                Err(e) => {
+                    if e.to_string().contains("Account not found") {
+                        None
+                    } else {
+                        panic!("Error fetching NCN vault ticket: {}", e);
+                    }
+                }
+            }
+        };
+
+        Self {
+            slot,
+            epoch_length,
+            ncn: *ncn,
+            vault: *vault,
+            operator: *operator,
+            ncn_vault_ticket,
+            vault_ncn_ticket,
+            vault_operator_delegation,
+            operator_vault_ticket,
+            ncn_operator_state,
+        }
+    }
+
+    pub fn ncn_operator(&self) -> u8 {
+        if self.ncn_operator_state.is_none() {
+            return Self::DNE;
+        }
+
+        if self
+            .ncn_operator_state
+            .as_ref()
+            .unwrap()
             .ncn_opt_in_state
             .is_active(self.slot, self.epoch_length)
+        {
+            return Self::ACTIVE;
+        }
+
+        Self::NOT_ACTIVE
     }
 
-    pub fn operator_ncn(&self) -> bool {
-        self.ncn_operator_state
+    pub fn operator_ncn(&self) -> u8 {
+        if self.ncn_operator_state.is_none() {
+            return Self::DNE;
+        }
+
+        if self
+            .ncn_operator_state
+            .as_ref()
+            .unwrap()
             .operator_opt_in_state
             .is_active(self.slot, self.epoch_length)
+        {
+            return Self::ACTIVE;
+        }
+
+        Self::NOT_ACTIVE
     }
 
-    pub fn ncn_vault(&self) -> bool {
-        self.ncn_vault_ticket
+    pub fn ncn_vault(&self) -> u8 {
+        if self.ncn_vault_ticket.is_none() {
+            return Self::DNE;
+        }
+
+        if self
+            .ncn_vault_ticket
+            .as_ref()
+            .unwrap()
             .state
-            .is_active_or_cooldown(self.slot, self.epoch_length)
+            .is_active(self.slot, self.epoch_length)
+        {
+            return Self::ACTIVE;
+        }
+
+        Self::NOT_ACTIVE
     }
 
-    pub fn vault_ncn(&self) -> bool {
-        self.vault_ncn_ticket
+    pub fn vault_ncn(&self) -> u8 {
+        if self.vault_ncn_ticket.is_none() {
+            return Self::DNE;
+        }
+
+        if self
+            .vault_ncn_ticket
+            .as_ref()
+            .unwrap()
             .state
-            .is_active_or_cooldown(self.slot, self.epoch_length)
+            .is_active(self.slot, self.epoch_length)
+        {
+            return Self::ACTIVE;
+        }
+
+        Self::NOT_ACTIVE
     }
 
-    pub fn operator_vault(&self) -> bool {
-        self.operator_vault_ticket
+    pub fn operator_vault(&self) -> u8 {
+        if self.operator_vault_ticket.is_none() {
+            return Self::DNE;
+        }
+
+        if self
+            .operator_vault_ticket
+            .as_ref()
+            .unwrap()
             .state
-            .is_active_or_cooldown(self.slot, self.epoch_length)
+            .is_active(self.slot, self.epoch_length)
+        {
+            return Self::ACTIVE;
+        }
+
+        Self::NOT_ACTIVE
     }
 
-    pub fn vault_operator(&self) -> bool {
-        self.vault_operator_delegation
+    pub fn vault_operator(&self) -> u8 {
+        if self.vault_operator_delegation.is_none() {
+            return Self::DNE;
+        }
+
+        if self
+            .vault_operator_delegation
+            .as_ref()
+            .unwrap()
             .delegation_state
-            .staked_amount()
+            .total_security()
+            .unwrap()
             > 0
+        {
+            return Self::ACTIVE;
+        }
+
+        Self::NOT_ACTIVE
     }
 }
 
 impl fmt::Display for NcnTickets {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Helper closure for arrow representation
-        let arrow = |state: bool| -> &str {
-            if state {
-                "==>"
-            } else {
-                "---"
+        let arrow = |state: u8| -> &str {
+            match state {
+                Self::DNE => "--X",
+                Self::NOT_ACTIVE => "---",
+                Self::ACTIVE => "==>",
+                _ => "",
             }
         };
 
         // Helper closure for checkmarks in summary
-        let check = |state: bool| -> &str {
-            if state {
-                "✓"
-            } else {
-                "✗"
+        let check = |state: u8| -> &str {
+            match state {
+                Self::DNE => "🚧",
+                Self::NOT_ACTIVE => "❌",
+                Self::ACTIVE => "✅",
+                _ => "",
             }
         };
 
+        writeln!(f, "\n\n")?;
         writeln!(f, "┌─────────────────────────────────┐")?;
         writeln!(f, "│            State                │")?;
         writeln!(f, "├─────────────────────────────────┤")?;
@@ -477,7 +748,7 @@ impl fmt::Display for NcnTickets {
         )?;
         writeln!(
             f,
-            "│       <--{}                     │",
+            "│       <--{}                    │",
             arrow(self.operator_ncn())
         )?;
         writeln!(f, "│                                 │")?;
@@ -488,7 +759,7 @@ impl fmt::Display for NcnTickets {
         )?;
         writeln!(
             f,
-            "│       <--{}                     │",
+            "│       <--{}                    │",
             arrow(self.vault_ncn())
         )?;
         writeln!(f, "│                                 │")?;
@@ -499,7 +770,7 @@ impl fmt::Display for NcnTickets {
         )?;
         writeln!(
             f,
-            "│           <--{}                 │",
+            "│           <--{}                │",
             arrow(self.vault_operator())
         )?;
         writeln!(f, "│                                 │")?;
@@ -509,13 +780,13 @@ impl fmt::Display for NcnTickets {
         writeln!(f, "Summary:")?;
         writeln!(
             f,
-            "NCN -> Operator: {}     Operator -> NCN: {}",
+            "NCN -> Operator: {}      Operator -> NCN: {}",
             check(self.ncn_operator()),
             check(self.operator_ncn())
         )?;
         writeln!(
             f,
-            "NCN -> Vault: {}        Vault -> NCN: {}",
+            "NCN -> Vault: {}         Vault -> NCN: {}",
             check(self.ncn_vault()),
             check(self.vault_ncn())
         )?;
@@ -525,7 +796,17 @@ impl fmt::Display for NcnTickets {
             check(self.operator_vault()),
             check(self.vault_operator())
         )?;
+        writeln!(f, "\nncn:      {}", self.ncn)?;
+        writeln!(f, "Operator: {}", self.operator)?;
+        writeln!(f, "Vault:    {}", self.vault)?;
+        writeln!(f, "\n\n")?;
 
         Ok(())
     }
 }
+
+// NCN: HCwK4Hi98Po1PdUzwX8rAmUhvHhmu1LtwBMFaTLFR2TK
+// Operator: 7LbsNkrA6RwQ8v76rsg6pdGqwsgHy5Gn3iDkFCwR9Jd8
+// Vault: 3WBxbSRwfFEaLAh89VYAVCygmNamkdKiq8Ga2TUJ4FBA
+// Amount: 1000
+// OVT: 7zRfBmgNFjw7VZLcr52emWxncdgMh55o3xfvu3B2gWwn

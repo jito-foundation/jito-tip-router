@@ -229,6 +229,7 @@ pub enum ProgramCommand {
         #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
         operator: String,
     },
+    GetAllTickets,
     GetAllOperatorsInNcn,
     GetAllVaultsInNcn,
     GetTipRouterConfig,

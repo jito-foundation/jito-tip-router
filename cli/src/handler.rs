@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::{
     args::{Args, ProgramCommand},
     getters::{
-        get_all_operators_in_ncn, get_all_vaults_in_ncn, get_epoch_state, get_ncn,
+        get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn, get_epoch_state, get_ncn,
         get_ncn_operator_state, get_ncn_vault_ticket, get_tip_router_config, get_vault_ncn_ticket,
         get_vault_operator_delegation, get_vault_registry,
     },
@@ -19,7 +19,6 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use jito_tip_router_core::ncn_fee_group::NcnFeeGroup;
-use jito_vault_core::vault_operator_delegation;
 use log::info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -311,6 +310,15 @@ impl CliHandler {
             ProgramCommand::GetAllVaultsInNcn {} => {
                 let vaults = get_all_vaults_in_ncn(self).await?;
                 info!("Vaults: {:?}", vaults);
+                Ok(())
+            }
+            ProgramCommand::GetAllTickets {} => {
+                let all_tickets = get_all_tickets(self).await?;
+
+                for tickets in all_tickets.iter() {
+                    info!("Tickets: {}", tickets);
+                }
+
                 Ok(())
             }
             ProgramCommand::GetTipRouterConfig {} => {

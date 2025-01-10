@@ -1487,6 +1487,7 @@ pub async fn create_and_add_test_vault(
         client,
         keypair,
         &[
+            ComputeBudgetInstruction::set_compute_unit_price(500_000),
             create_mint_account_ix,
             initialize_mint_ix,
             create_admin_ata_ix,
@@ -1556,6 +1557,7 @@ pub async fn create_and_add_test_vault(
         client,
         keypair,
         &[
+            ComputeBudgetInstruction::set_compute_unit_price(500_000),
             initialize_vault_ix,
             create_vault_ata_ix,
             create_admin_vrt_ata_ix,
@@ -1604,6 +1606,7 @@ pub async fn create_and_add_test_vault(
         client,
         keypair,
         &[
+            ComputeBudgetInstruction::set_compute_unit_price(500_000),
             initialize_ncn_vault_ticket_ix,
             initialize_vault_ncn_ticket_ix,
         ],
@@ -1634,7 +1637,11 @@ pub async fn create_and_add_test_vault(
     send_and_log_transaction(
         client,
         keypair,
-        &[warmup_ncn_vault_ticket_ix, warmup_vault_ncn_ticket_ix],
+        &[
+            ComputeBudgetInstruction::set_compute_unit_price(500_000),
+            warmup_ncn_vault_ticket_ix,
+            warmup_vault_ncn_ticket_ix,
+        ],
         &[],
         "Warmed up NCN Vault Tickets",
         &[format!("NCN: {:?}", ncn), format!("Vault: {:?}", vault)],
@@ -1667,7 +1674,10 @@ pub async fn create_and_add_test_vault(
         send_and_log_transaction(
             client,
             keypair,
-            &[initialize_operator_vault_ticket_ix],
+            &[
+                ComputeBudgetInstruction::set_compute_unit_price(500_000),
+                initialize_operator_vault_ticket_ix,
+            ],
             &[],
             "Connected Vault and Operator",
             &[
@@ -1713,6 +1723,7 @@ pub async fn create_and_add_test_vault(
             client,
             keypair,
             &[
+                ComputeBudgetInstruction::set_compute_unit_price(500_000),
                 warmup_operator_vault_ticket_ix,
                 initialize_vault_operator_delegation_ix,
                 delegate_to_operator_ix,
@@ -1723,6 +1734,7 @@ pub async fn create_and_add_test_vault(
                 format!("NCN: {:?}", ncn),
                 format!("Operator: {:?}", operator),
                 format!("Vault: {:?}", vault),
+                format!("Amount: {:?}", 1000),
             ],
         )
         .await?;
@@ -1741,6 +1753,8 @@ pub async fn send_and_log_transaction(
     title: &str,
     log_items: &[String],
 ) -> Result<()> {
+    sleep(Duration::from_secs(1)).await;
+
     let signature = send_transactions(client, keypair, instructions, signing_keypairs).await?;
 
     log_transaction(title, signature, log_items);
