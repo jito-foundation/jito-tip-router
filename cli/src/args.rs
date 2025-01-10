@@ -140,6 +140,8 @@ pub enum ProgramCommand {
         vault: String,
     },
 
+    CreateEpochState,
+
     CreateWeightTable,
 
     AdminSetWeight {
@@ -213,10 +215,25 @@ pub enum ProgramCommand {
         #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
         operator: String,
     },
+    GetVaultNcnTicket {
+        #[arg(long, env = "VAULT", help = "Vault Account Address")]
+        vault: String,
+    },
+    GetNcnVaultTicket {
+        #[arg(long, env = "VAULT", help = "Vault Account Address")]
+        vault: String,
+    },
+    GetVaultOperatorDelegation {
+        #[arg(long, env = "VAULT", help = "Vault Account Address")]
+        vault: String,
+        #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
+        operator: String,
+    },
     GetAllOperatorsInNcn,
     GetAllVaultsInNcn,
     GetTipRouterConfig,
     GetVaultRegistry,
+    GetEpochState,
 
     /// TESTS
     Test,

@@ -1,12 +1,27 @@
-use crate::handler::CliHandler;
+use std::time::Duration;
+
+use crate::{handler::CliHandler, keeper::keeper_state::KeeperState};
 use anyhow::Result;
+use tokio::time::sleep;
 
-pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
-    println!("Hello, world!");
-
-    run_keeper(handler).await
+pub async fn timeout_keeper() {
+    log::info!("Timeout keeper");
+    sleep(Duration::from_secs(1)).await;
 }
 
-pub async fn run_keeper(_handler: &CliHandler) -> Result<()> {
-    todo!("Return correct state")
+pub async fn startup_keeper(handler: &mut CliHandler) -> Result<()> {
+    run_keeper(handler).await;
+
+    // Will never reach
+    Ok(())
+}
+
+pub async fn run_keeper(handler: &mut CliHandler) {
+    let mut state = KeeperState::default();
+
+    state.fetch(handler).await.expect("Could not fetch state");
+
+    loop {
+        timeout_keeper().await;
+    }
 }

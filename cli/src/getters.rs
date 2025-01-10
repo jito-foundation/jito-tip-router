@@ -1,11 +1,13 @@
+use std::fmt;
 use std::mem::size_of;
 
 use crate::handler::CliHandler;
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{
     config::Config as RestakingConfig, ncn::Ncn, ncn_operator_state::NcnOperatorState,
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
+    operator_vault_ticket::OperatorVaultTicket,
 };
 use jito_tip_router_core::{
     ballot_box::BallotBox,
@@ -18,7 +20,10 @@ use jito_tip_router_core::{
     vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
-use jito_vault_core::vault::Vault;
+use jito_vault_core::{
+    vault::Vault, vault_ncn_ticket::VaultNcnTicket,
+    vault_operator_delegation::VaultOperatorDelegation,
+};
 use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
 use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
@@ -28,10 +33,13 @@ use solana_sdk::{account::Account, pubkey::Pubkey};
 
 // ---------------------- HELPERS ----------------------
 // So we can switch between the two implementations
-pub async fn get_account(handler: &CliHandler, account: &Pubkey) -> Result<Account> {
+pub async fn get_account(handler: &CliHandler, account: &Pubkey) -> Result<Option<Account>> {
     let client = handler.rpc_client();
-    let account = client.get_account(account).await?;
-    Ok(account)
+    let account = client
+        .get_account_with_commitment(account, handler.commitment)
+        .await?;
+
+    Ok(account.value)
 }
 
 // ---------------------- TIP ROUTER ----------------------
@@ -39,7 +47,9 @@ pub async fn get_tip_router_config(handler: &CliHandler) -> Result<TipRouterConf
     let (address, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, handler.ncn()?);
 
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     let account = TipRouterConfig::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -48,31 +58,42 @@ pub async fn get_vault_registry(handler: &CliHandler) -> Result<VaultRegistry> {
     let (address, _, _) =
         VaultRegistry::find_program_address(&handler.tip_router_program_id, handler.ncn()?);
 
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     let account = VaultRegistry::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
 
-pub async fn get_weight_table(handler: &CliHandler) -> Result<WeightTable> {
-    let (address, _, _) = WeightTable::find_program_address(
-        &handler.tip_router_program_id,
-        handler.ncn()?,
-        handler.epoch,
-    );
+pub async fn get_epoch_state(handler: &CliHandler, epoch: u64) -> Result<EpochState> {
+    let (address, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, handler.ncn()?, epoch);
 
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
+    let account = EpochState::try_from_slice_unchecked(account.data.as_slice())?;
+    Ok(*account)
+}
+
+pub async fn get_weight_table(handler: &CliHandler, epoch: u64) -> Result<WeightTable> {
+    let (address, _, _) =
+        WeightTable::find_program_address(&handler.tip_router_program_id, handler.ncn()?, epoch);
+
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     let account = WeightTable::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
 
-pub async fn get_epoch_snapshot(handler: &CliHandler) -> Result<EpochSnapshot> {
-    let (address, _, _) = EpochSnapshot::find_program_address(
-        &handler.tip_router_program_id,
-        handler.ncn()?,
-        handler.epoch,
-    );
+pub async fn get_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<EpochSnapshot> {
+    let (address, _, _) =
+        EpochSnapshot::find_program_address(&handler.tip_router_program_id, handler.ncn()?, epoch);
 
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     let account = EpochSnapshot::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -80,51 +101,57 @@ pub async fn get_epoch_snapshot(handler: &CliHandler) -> Result<EpochSnapshot> {
 pub async fn get_operator_snapshot(
     handler: &CliHandler,
     operator: &Pubkey,
+    epoch: u64,
 ) -> Result<OperatorSnapshot> {
     let (address, _, _) = OperatorSnapshot::find_program_address(
         &handler.tip_router_program_id,
         operator,
         handler.ncn()?,
-        handler.epoch,
+        epoch,
     );
 
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     let account = OperatorSnapshot::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
 
-pub async fn get_ballot_box(handler: &CliHandler) -> Result<BallotBox> {
-    let (address, _, _) = BallotBox::find_program_address(
-        &handler.tip_router_program_id,
-        handler.ncn()?,
-        handler.epoch,
-    );
+pub async fn get_ballot_box(handler: &CliHandler, epoch: u64) -> Result<BallotBox> {
+    let (address, _, _) =
+        BallotBox::find_program_address(&handler.tip_router_program_id, handler.ncn()?, epoch);
 
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     let account = BallotBox::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
 
-pub async fn get_base_reward_router(handler: &CliHandler) -> Result<BaseRewardRouter> {
+pub async fn get_base_reward_router(handler: &CliHandler, epoch: u64) -> Result<BaseRewardRouter> {
     let (address, _, _) = BaseRewardRouter::find_program_address(
         &handler.tip_router_program_id,
         handler.ncn()?,
-        handler.epoch,
+        epoch,
     );
 
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     let account = BaseRewardRouter::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
 
-pub async fn get_base_reward_receiver(handler: &CliHandler) -> Result<Account> {
+pub async fn get_base_reward_receiver(handler: &CliHandler, epoch: u64) -> Result<Account> {
     let (address, _, _) = BaseRewardReceiver::find_program_address(
         &handler.tip_router_program_id,
         handler.ncn()?,
-        handler.epoch,
+        epoch,
     );
 
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     Ok(account)
 }
 
@@ -132,16 +159,19 @@ pub async fn get_ncn_reward_router(
     handler: &CliHandler,
     ncn_fee_group: NcnFeeGroup,
     operator: &Pubkey,
+    epoch: u64,
 ) -> Result<NcnRewardRouter> {
     let (address, _, _) = NcnRewardRouter::find_program_address(
         &handler.tip_router_program_id,
         ncn_fee_group,
         operator,
         handler.ncn()?,
-        handler.epoch,
+        epoch,
     );
 
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     let account = NcnRewardRouter::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -150,16 +180,19 @@ pub async fn get_ncn_reward_reciever(
     handler: &CliHandler,
     ncn_fee_group: NcnFeeGroup,
     operator: &Pubkey,
+    epoch: u64,
 ) -> Result<Account> {
     let (address, _, _) = NcnRewardReceiver::find_program_address(
         &handler.tip_router_program_id,
         ncn_fee_group,
         operator,
         handler.ncn()?,
-        handler.epoch,
+        epoch,
     );
 
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     Ok(account)
 }
 
@@ -167,25 +200,33 @@ pub async fn get_ncn_reward_reciever(
 
 pub async fn get_restaking_config(handler: &CliHandler) -> Result<RestakingConfig> {
     let (address, _, _) = RestakingConfig::find_program_address(&handler.restaking_program_id);
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     let account = RestakingConfig::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
 
 pub async fn get_ncn(handler: &CliHandler) -> Result<Ncn> {
-    let account = get_account(handler, handler.ncn()?).await?;
+    let account = get_account(handler, handler.ncn()?)
+        .await?
+        .expect("Account not found");
     let account = Ncn::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
 
 pub async fn get_vault(handler: &CliHandler, vault: &Pubkey) -> Result<Vault> {
-    let account = get_account(handler, vault).await?;
+    let account = get_account(handler, vault)
+        .await?
+        .expect("Account not found");
     let account = Vault::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
 
 pub async fn get_operator(handler: &CliHandler, operator: &Pubkey) -> Result<Operator> {
-    let account = get_account(handler, operator).await?;
+    let account = get_account(handler, operator)
+        .await?
+        .expect("Account not found");
     let account = Operator::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -200,9 +241,50 @@ pub async fn get_ncn_operator_state(
         operator,
     );
 
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
     let account = NcnOperatorState::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
+}
+
+pub async fn get_vault_ncn_ticket(handler: &CliHandler, vault: &Pubkey) -> Result<VaultNcnTicket> {
+    let (address, _, _) =
+        VaultNcnTicket::find_program_address(&handler.restaking_program_id, vault, handler.ncn()?);
+
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
+    let account = VaultNcnTicket::try_from_slice_unchecked(account.data.as_slice())?;
+    Ok(*account)
+}
+
+pub async fn get_ncn_vault_ticket(handler: &CliHandler, vault: &Pubkey) -> Result<NcnVaultTicket> {
+    let (address, _, _) =
+        NcnVaultTicket::find_program_address(&handler.restaking_program_id, handler.ncn()?, vault);
+
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
+    let account = NcnVaultTicket::try_from_slice_unchecked(account.data.as_slice())?;
+    Ok(*account)
+}
+
+pub async fn get_vault_operator_delegation(
+    handler: &CliHandler,
+    vault: &Pubkey,
+    operator: &Pubkey,
+) -> Result<Account> {
+    let (address, _, _) = VaultOperatorDelegation::find_program_address(
+        &handler.restaking_program_id,
+        vault,
+        operator,
+    );
+
+    let account = get_account(handler, &address)
+        .await?
+        .expect("Account not found");
+    Ok(account)
 }
 
 pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
@@ -299,292 +381,151 @@ pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> 
     Ok(vaults)
 }
 
-#[derive(Default)]
-pub struct TipRouterEpochState {
-    pub ncn: Pubkey,
-    pub vaults: Vec<Pubkey>,
-    pub operators: Vec<Pubkey>,
-    pub tip_router_config_address: Pubkey,
-    pub vault_registry_address: Pubkey,
-    pub epoch_state_address: Pubkey,
-    pub weight_table_address: Pubkey,
-    pub epoch_snapshot_address: Pubkey,
-    pub operator_snapshots_address: Vec<Pubkey>,
-    pub ballot_box_address: Pubkey,
-    pub base_reward_router_address: Pubkey,
-    pub base_reward_receiver_address: Pubkey,
-    pub ncn_reward_routers_address: Vec<Vec<Pubkey>>,
-    pub ncn_reward_receivers_address: Vec<Vec<Pubkey>>,
+pub async fn get_all_tickets(handler: &CliHandler) -> Result<Vec<NcnTicketState>> {
+    let client = handler.rpc_client();
+
+    let ncn = handler.ncn()?;
+    let all_vaults = get_all_vaults_in_ncn(handler).await?;
+    let all_operators = get_all_operators_in_ncn(handler).await?;
+
+    for operator in all_operators {
+        for vault in all_vaults {}
+    }
+
+    todo!();
 }
 
-impl TipRouterEpochState {
-    pub async fn fetch(handler: &CliHandler) -> Self {
-        let epoch = handler.epoch;
+pub struct NcnTickets {
+    pub slot: u64,
+    pub epoch_length: u64,
+    pub vault: Pubkey,
+    pub operator: Pubkey,
+    pub ncn_vault_ticket: NcnVaultTicket,
+    pub vault_ncn_ticket: VaultNcnTicket,
+    pub vault_operator_delegation: VaultOperatorDelegation,
+    pub operator_vault_ticket: OperatorVaultTicket,
+    pub ncn_operator_state: NcnOperatorState,
+}
 
-        let mut state: Self = Self::default();
+impl NcnTickets {
+    pub fn ncn_operator(&self) -> bool {
+        self.ncn_operator_state
+            .ncn_opt_in_state
+            .is_active(self.slot, self.epoch_length)
+    }
 
-        // Fetch all vaults and operators
-        let ncn = *handler.ncn().unwrap();
-        state.ncn = ncn;
+    pub fn operator_ncn(&self) -> bool {
+        self.ncn_operator_state
+            .operator_opt_in_state
+            .is_active(self.slot, self.epoch_length)
+    }
 
-        let vaults = get_all_vaults_in_ncn(handler).await.unwrap();
-        state.vaults = vaults;
+    pub fn ncn_vault(&self) -> bool {
+        self.ncn_vault_ticket
+            .state
+            .is_active_or_cooldown(self.slot, self.epoch_length)
+    }
 
-        let operators = get_all_operators_in_ncn(handler).await.unwrap();
-        state.operators = operators;
+    pub fn vault_ncn(&self) -> bool {
+        self.vault_ncn_ticket
+            .state
+            .is_active_or_cooldown(self.slot, self.epoch_length)
+    }
 
-        let (tip_router_config_address, _, _) =
-            TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
-        state.tip_router_config_address = tip_router_config_address;
+    pub fn operator_vault(&self) -> bool {
+        self.operator_vault_ticket
+            .state
+            .is_active_or_cooldown(self.slot, self.epoch_length)
+    }
 
-        let (vault_registry_address, _, _) =
-            VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
-        state.vault_registry_address = vault_registry_address;
+    pub fn vault_operator(&self) -> bool {
+        self.vault_operator_delegation
+            .delegation_state
+            .staked_amount()
+            > 0
+    }
+}
 
-        let (epoch_state_address, _, _) =
-            WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-        state.epoch_state_address = epoch_state_address;
-
-        let (weight_table_address, _, _) =
-            WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-        state.weight_table_address = weight_table_address;
-
-        let (epoch_snapshot_address, _, _) =
-            EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-        state.epoch_snapshot_address = epoch_snapshot_address;
-
-        for operator in state.operators.iter() {
-            let (operator_snapshot_address, _, _) = OperatorSnapshot::find_program_address(
-                &handler.tip_router_program_id,
-                operator,
-                &ncn,
-                epoch,
-            );
-            state
-                .operator_snapshots_address
-                .push(operator_snapshot_address);
-        }
-
-        let (ballot_box_address, _, _) =
-            BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-        state.ballot_box_address = ballot_box_address;
-
-        let (base_reward_router_address, _, _) =
-            BaseRewardRouter::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-        state.base_reward_router_address = base_reward_router_address;
-
-        let (base_reward_receiver_address, _, _) =
-            BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-        state.base_reward_receiver_address = base_reward_receiver_address;
-
-        for operator in state.operators.iter() {
-            let mut ncn_reward_routers_address = Vec::default();
-            let mut ncn_reward_receivers_address = Vec::default();
-
-            for ncn_fee_group in NcnFeeGroup::all_groups() {
-                let (ncn_reward_router_address, _, _) = NcnRewardRouter::find_program_address(
-                    &handler.tip_router_program_id,
-                    ncn_fee_group,
-                    operator,
-                    &ncn,
-                    epoch,
-                );
-                ncn_reward_routers_address.push(ncn_reward_router_address);
-
-                let (ncn_reward_receiver_address, _, _) = NcnRewardReceiver::find_program_address(
-                    &handler.tip_router_program_id,
-                    ncn_fee_group,
-                    operator,
-                    &ncn,
-                    epoch,
-                );
-                ncn_reward_receivers_address.push(ncn_reward_receiver_address);
+impl fmt::Display for NcnTickets {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Helper closure for arrow representation
+        let arrow = |state: bool| -> &str {
+            if state {
+                "==>"
+            } else {
+                "---"
             }
+        };
 
-            state
-                .ncn_reward_routers_address
-                .push(ncn_reward_routers_address);
-            state
-                .ncn_reward_receivers_address
-                .push(ncn_reward_receivers_address);
-        }
+        // Helper closure for checkmarks in summary
+        let check = |state: bool| -> &str {
+            if state {
+                "✓"
+            } else {
+                "✗"
+            }
+        };
 
-        todo!();
+        writeln!(f, "┌─────────────────────────────────┐")?;
+        writeln!(f, "│            State                │")?;
+        writeln!(f, "├─────────────────────────────────┤")?;
+        writeln!(f, "│                                 │")?;
+        writeln!(
+            f,
+            "│   NCN {}--> Operator           │",
+            arrow(self.ncn_operator())
+        )?;
+        writeln!(
+            f,
+            "│       <--{}                     │",
+            arrow(self.operator_ncn())
+        )?;
+        writeln!(f, "│                                 │")?;
+        writeln!(
+            f,
+            "│   NCN {}--> Vault              │",
+            arrow(self.ncn_vault())
+        )?;
+        writeln!(
+            f,
+            "│       <--{}                     │",
+            arrow(self.vault_ncn())
+        )?;
+        writeln!(f, "│                                 │")?;
+        writeln!(
+            f,
+            "│   Operator {}--> Vault         │",
+            arrow(self.operator_vault())
+        )?;
+        writeln!(
+            f,
+            "│           <--{}                 │",
+            arrow(self.vault_operator())
+        )?;
+        writeln!(f, "│                                 │")?;
+        writeln!(f, "└─────────────────────────────────┘")?;
+
+        // Summary section
+        writeln!(f, "Summary:")?;
+        writeln!(
+            f,
+            "NCN -> Operator: {}     Operator -> NCN: {}",
+            check(self.ncn_operator()),
+            check(self.operator_ncn())
+        )?;
+        writeln!(
+            f,
+            "NCN -> Vault: {}        Vault -> NCN: {}",
+            check(self.ncn_vault()),
+            check(self.vault_ncn())
+        )?;
+        writeln!(
+            f,
+            "Operator -> Vault: {}    Vault -> Operator: {}",
+            check(self.operator_vault()),
+            check(self.vault_operator())
+        )?;
+
+        Ok(())
     }
-
-    pub async fn tip_router_config(&self, handler: &CliHandler) -> Result<Option<TipRouterConfig>> {
-        let raw_account = get_account(handler, &self.tip_router_config_address).await?;
-
-        if raw_account.data.is_empty() {
-            Ok(None)
-        } else {
-            let account = TipRouterConfig::try_from_slice_unchecked(raw_account.data.as_slice())?;
-            Ok(Some(*account))
-        }
-    }
-
-    pub async fn vault_registry(&self, handler: &CliHandler) -> Result<Option<VaultRegistry>> {
-        let raw_account = get_account(handler, &self.vault_registry_address).await?;
-
-        if raw_account.data.is_empty() {
-            Ok(None)
-        } else {
-            let account = VaultRegistry::try_from_slice_unchecked(raw_account.data.as_slice())?;
-            Ok(Some(*account))
-        }
-    }
-
-    pub async fn epoch_state(&self, handler: &CliHandler) -> Result<Option<Box<EpochState>>> {
-        let raw_account = get_account(handler, &self.epoch_state_address).await?;
-
-        if raw_account.data.is_empty() {
-            Ok(None)
-        } else {
-            let account = Box::new(*EpochState::try_from_slice_unchecked(
-                raw_account.data.as_slice(),
-            )?);
-            Ok(Some(account))
-        }
-    }
-
-    pub async fn weight_table(&self, handler: &CliHandler) -> Result<Option<WeightTable>> {
-        let raw_account = get_account(handler, &self.weight_table_address).await?;
-
-        if raw_account.data.is_empty() {
-            Ok(None)
-        } else {
-            let account = WeightTable::try_from_slice_unchecked(raw_account.data.as_slice())?;
-            Ok(Some(*account))
-        }
-    }
-
-    pub async fn epoch_snapshot(&self, handler: &CliHandler) -> Result<Option<EpochSnapshot>> {
-        let raw_account = get_account(handler, &self.epoch_snapshot_address).await?;
-
-        if raw_account.data.is_empty() {
-            Ok(None)
-        } else {
-            let account = EpochSnapshot::try_from_slice_unchecked(raw_account.data.as_slice())?;
-            Ok(Some(*account))
-        }
-    }
-
-    pub async fn operator_snapshot(
-        &self,
-        handler: &CliHandler,
-        operator_index: usize,
-    ) -> Result<Option<OperatorSnapshot>> {
-        let raw_account =
-            get_account(handler, &self.operator_snapshots_address[operator_index]).await?;
-
-        if raw_account.data.is_empty() {
-            Ok(None)
-        } else {
-            let account = OperatorSnapshot::try_from_slice_unchecked(raw_account.data.as_slice())?;
-            Ok(Some(*account))
-        }
-    }
-
-    pub async fn ballot_box(&self, handler: &CliHandler) -> Result<Option<Box<BallotBox>>> {
-        let raw_account = get_account(handler, &self.ballot_box_address).await?;
-
-        if raw_account.data.is_empty() {
-            Ok(None)
-        } else {
-            let account = Box::new(*BallotBox::try_from_slice_unchecked(
-                raw_account.data.as_slice(),
-            )?);
-            Ok(Some(account))
-        }
-    }
-
-    pub async fn base_reward_router(
-        &self,
-        handler: &CliHandler,
-    ) -> Result<Option<BaseRewardRouter>> {
-        let raw_account = get_account(handler, &self.base_reward_router_address).await?;
-
-        if raw_account.data.is_empty() {
-            Ok(None)
-        } else {
-            let account = BaseRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice())?;
-            Ok(Some(*account))
-        }
-    }
-
-    pub async fn base_reward_receiver(&self, handler: &CliHandler) -> Result<Option<Account>> {
-        let raw_account = get_account(handler, &self.base_reward_receiver_address).await?;
-
-        if raw_account.data.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(raw_account))
-        }
-    }
-
-    pub async fn ncn_reward_router(
-        &self,
-        handler: &CliHandler,
-        operator_index: usize,
-        ncn_fee_group: NcnFeeGroup,
-    ) -> Result<Option<NcnRewardRouter>> {
-        let raw_account = get_account(
-            handler,
-            &self.ncn_reward_routers_address[operator_index][ncn_fee_group.group_index()?],
-        )
-        .await?;
-
-        if raw_account.data.is_empty() {
-            Ok(None)
-        } else {
-            let account = NcnRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice())?;
-            Ok(Some(*account))
-        }
-    }
-
-    pub async fn ncn_reward_receiver(
-        &self,
-        handler: &CliHandler,
-        operator_index: usize,
-        ncn_fee_group: NcnFeeGroup,
-    ) -> Result<Option<Account>> {
-        let raw_account = get_account(
-            handler,
-            &self.ncn_reward_receivers_address[operator_index][ncn_fee_group.group_index()?],
-        )
-        .await?;
-
-        if raw_account.data.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(raw_account))
-        }
-    }
-
-    pub async fn get_state(&self, handler: &CliHandler) -> Result<TipRouterState> {
-        let tip_router_config = self.tip_router_config(handler).await?;
-        let vault_registry = self.vault_registry(handler).await?;
-
-        if tip_router_config.is_none() || vault_registry.is_none() {
-            return Ok(TipRouterState::NotConfigured);
-        }
-
-        let weight_table = self.weight_table(handler).await?;
-
-        if weight_table.is_none() {
-            return Ok(TipRouterState::Idle);
-        }
-
-        // let epoch_snapshot = self.epoch_snapshot(handler).await?;
-
-        todo!()
-    }
-}
-
-pub enum TipRouterState {
-    NotConfigured,
-    Idle,
-    Snapshotting,
-    Voting,
-    Routing,
 }
