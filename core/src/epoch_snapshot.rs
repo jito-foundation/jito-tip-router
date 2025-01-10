@@ -370,6 +370,10 @@ impl OperatorSnapshot {
         Ok(())
     }
 
+    pub fn ncn_operator_index(&self) -> u64 {
+        self.ncn_operator_index.into()
+    }
+
     pub fn slot_finalized(&self) -> u64 {
         self.slot_finalized.into()
     }

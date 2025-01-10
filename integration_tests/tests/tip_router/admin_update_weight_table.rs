@@ -17,6 +17,10 @@ mod tests {
         let epoch = clock.epoch;
 
         tip_router_client
+            .do_full_initialize_epoch_state(test_ncn.ncn_root.ncn_pubkey, epoch)
+            .await?;
+
+        tip_router_client
             .do_full_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 

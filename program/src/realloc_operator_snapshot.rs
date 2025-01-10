@@ -9,6 +9,7 @@ use jito_restaking_core::{
 use jito_tip_router_core::{
     config::Config as NcnConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_state::EpochState,
     loaders::load_ncn_epoch,
     stake_weight::StakeWeights,
     utils::get_new_size,
@@ -23,7 +24,7 @@ pub fn process_realloc_operator_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, restaking_config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, payer, restaking_program, system_program] =
+    let [epoch_state, ncn_config, restaking_config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -34,6 +35,7 @@ pub fn process_realloc_operator_snapshot(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
@@ -139,6 +141,15 @@ pub fn process_realloc_operator_snapshot(
                 0,
                 &StakeWeights::default(),
             )?;
+        }
+
+        // Update Epoch State
+        {
+            let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+            let epoch_state_account =
+                EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+            epoch_state_account
+                .update_realloc_operator_snapshot(ncn_operator_index as usize, is_active)?;
         }
     }
 

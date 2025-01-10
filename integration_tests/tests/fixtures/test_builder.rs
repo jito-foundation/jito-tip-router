@@ -518,15 +518,28 @@ impl TestBuilder {
         Ok(test_ncn)
     }
 
+    // 6-1. Admin Set weights
+    pub async fn add_epoch_state_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+
+        // Not sure if this is needed
+        self.warp_slot_incremental(1000).await?;
+
+        let clock = self.clock().await;
+        let epoch = clock.epoch;
+        tip_router_client
+            .do_full_initialize_epoch_state(test_ncn.ncn_root.ncn_pubkey, epoch)
+            .await?;
+
+        Ok(())
+    }
+
     // 6a. Admin Set weights
     pub async fn add_admin_weights_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
         let mut vault_client = self.vault_program_client();
 
         const WEIGHT: u128 = 100;
-
-        // Not sure if this is needed
-        self.warp_slot_incremental(1000).await?;
 
         let clock = self.clock().await;
         let epoch = clock.epoch;
@@ -643,6 +656,7 @@ impl TestBuilder {
 
     // Intermission 2 - all snapshots are taken
     pub async fn snapshot_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        self.add_epoch_state_for_test_ncn(test_ncn).await?;
         self.add_admin_weights_for_test_ncn(test_ncn).await?;
         self.add_epoch_snapshot_to_test_ncn(test_ncn).await?;
         self.add_operator_snapshots_to_test_ncn(test_ncn).await?;

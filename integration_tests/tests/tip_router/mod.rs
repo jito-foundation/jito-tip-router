@@ -4,6 +4,7 @@ mod admin_update_weight_table;
 mod bpf;
 mod cast_vote;
 mod distribute_rewards;
+mod epoch_state;
 mod initialize_ballot_box;
 mod initialize_base_reward_router;
 mod initialize_epoch_snapshot;

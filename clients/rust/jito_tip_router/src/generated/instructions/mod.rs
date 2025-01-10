@@ -21,12 +21,14 @@ pub(crate) mod r#initialize_ballot_box;
 pub(crate) mod r#initialize_base_reward_router;
 pub(crate) mod r#initialize_config;
 pub(crate) mod r#initialize_epoch_snapshot;
+pub(crate) mod r#initialize_epoch_state;
 pub(crate) mod r#initialize_ncn_reward_router;
 pub(crate) mod r#initialize_operator_snapshot;
 pub(crate) mod r#initialize_vault_registry;
 pub(crate) mod r#initialize_weight_table;
 pub(crate) mod r#realloc_ballot_box;
 pub(crate) mod r#realloc_base_reward_router;
+pub(crate) mod r#realloc_epoch_state;
 pub(crate) mod r#realloc_operator_snapshot;
 pub(crate) mod r#realloc_vault_registry;
 pub(crate) mod r#realloc_weight_table;
@@ -44,10 +46,11 @@ pub use self::{
     r#distribute_base_ncn_reward_route::*, r#distribute_base_rewards::*,
     r#distribute_ncn_operator_rewards::*, r#distribute_ncn_vault_rewards::*,
     r#initialize_ballot_box::*, r#initialize_base_reward_router::*, r#initialize_config::*,
-    r#initialize_epoch_snapshot::*, r#initialize_ncn_reward_router::*,
+    r#initialize_epoch_snapshot::*, r#initialize_epoch_state::*, r#initialize_ncn_reward_router::*,
     r#initialize_operator_snapshot::*, r#initialize_vault_registry::*,
     r#initialize_weight_table::*, r#realloc_ballot_box::*, r#realloc_base_reward_router::*,
-    r#realloc_operator_snapshot::*, r#realloc_vault_registry::*, r#realloc_weight_table::*,
-    r#register_vault::*, r#route_base_rewards::*, r#route_ncn_rewards::*, r#set_merkle_root::*,
-    r#snapshot_vault_operator_delegation::*, r#switchboard_set_weight::*,
+    r#realloc_epoch_state::*, r#realloc_operator_snapshot::*, r#realloc_vault_registry::*,
+    r#realloc_weight_table::*, r#register_vault::*, r#route_base_rewards::*,
+    r#route_ncn_rewards::*, r#set_merkle_root::*, r#snapshot_vault_operator_delegation::*,
+    r#switchboard_set_weight::*,
 };

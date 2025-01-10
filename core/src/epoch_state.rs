@@ -3,7 +3,7 @@ use std::mem::size_of;
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
 use crate::{
     constants::MAX_OPERATORS, discriminators::Discriminators, error::TipRouterError,
@@ -27,7 +27,7 @@ pub struct EpochAccountStatus {
     operator_snapshot: [u8; 256],
     ballot_box: u8,
     base_reward_router: u8,
-    ncn_reward_router: [u8; 256 * 8],
+    ncn_reward_router: [u8; 2048],
 }
 
 impl Default for EpochAccountStatus {
@@ -132,9 +132,9 @@ impl EpochAccountStatus {
         index: usize,
         group: NcnFeeGroup,
         status: AccountStatus,
-    ) {
-        self.ncn_reward_router[index * NcnFeeGroup::FEE_GROUP_COUNT + group.group as usize] =
-            status as u8;
+    ) -> Result<(), TipRouterError> {
+        self.ncn_reward_router[Self::get_ncn_reward_router_index(index, group)?] = status as u8;
+        Ok(())
     }
 }
 
@@ -217,6 +217,9 @@ pub struct EpochState {
     /// The bump seed for the PDA
     pub bump: u8,
 
+    /// The time this snapshot was created
+    pub slot_created: PodU64,
+
     /// The number of operators
     pub operator_count: PodU64,
 
@@ -264,11 +267,12 @@ impl Discriminator for EpochState {
 impl EpochState {
     pub const SIZE: usize = 8 + size_of::<Self>();
 
-    pub fn new(ncn: &Pubkey, epoch: u64, bump: u8) -> Self {
+    pub fn new(ncn: &Pubkey, epoch: u64, bump: u8, slot_created: u64) -> Self {
         Self {
             ncn: *ncn,
             epoch: PodU64::from(epoch),
             bump,
+            slot_created: PodU64::from(slot_created),
             operator_count: PodU64::from(0),
             vault_count: PodU64::from(0),
             account_status: EpochAccountStatus::default(),
@@ -286,11 +290,12 @@ impl EpochState {
         }
     }
 
-    pub fn initialize(&mut self, ncn: &Pubkey, epoch: u64, bump: u8) {
+    pub fn initialize(&mut self, ncn: &Pubkey, epoch: u64, bump: u8, slot_created: u64) {
         // Initializes field by field to avoid overflowing stack
         self.ncn = *ncn;
         self.bump = bump;
         self.epoch = PodU64::from(epoch);
+        self.slot_created = PodU64::from(slot_created);
         self.reserved = [0; 128];
     }
 
@@ -334,6 +339,26 @@ impl EpochState {
         )
     }
 
+    pub fn ncn(&self) -> &Pubkey {
+        &self.ncn
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.epoch.into()
+    }
+
+    pub fn slot_created(&self) -> u64 {
+        self.slot_created.into()
+    }
+
+    pub fn operator_count(&self) -> u64 {
+        self.operator_count.into()
+    }
+
+    pub fn vault_count(&self) -> u64 {
+        self.vault_count.into()
+    }
+
     pub fn update_realloc_epoch_state(&mut self) {
         self.account_status.set_epoch_state(AccountStatus::Created);
     }
@@ -365,12 +390,13 @@ impl EpochState {
         self.account_status
             .set_operator_snapshot(operator_index, AccountStatus::Created);
 
-        if !is_active {
+        if is_active {
+            self.operator_snapshot_progress[operator_index] =
+                Progress::new(self.vault_count.into());
+        } else {
             self.operator_snapshot_progress[operator_index] = Progress::new(1);
             self.operator_snapshot_progress[operator_index].increment_one()?;
             self.epoch_snapshot_progress.increment_one()?;
-        } else {
-            self.epoch_snapshot_progress = Progress::new(self.vault_count.into());
         }
 
         Ok(())
@@ -379,9 +405,10 @@ impl EpochState {
     pub fn update_snapshot_vault_operator_delegation(
         &mut self,
         operator_index: usize,
+        finalized: bool,
     ) -> Result<(), TipRouterError> {
         self.operator_snapshot_progress[operator_index].increment_one()?;
-        if self.operator_snapshot_progress[operator_index].is_complete() {
+        if finalized {
             self.epoch_snapshot_progress.increment_one()?;
         }
 
@@ -415,7 +442,7 @@ impl EpochState {
         group: NcnFeeGroup,
     ) -> Result<(), TipRouterError> {
         self.account_status
-            .set_ncn_reward_router(operator_index, group, AccountStatus::Created);
+            .set_ncn_reward_router(operator_index, group, AccountStatus::Created)?;
         self.ncn_distribution_progress
             [EpochAccountStatus::get_ncn_reward_router_index(operator_index, group)?] =
             Progress::new(0);
@@ -424,10 +451,11 @@ impl EpochState {
     }
 
     pub fn update_route_base_rewards(&mut self, total_rewards: u64) {
+        self.total_distribution_progress.set_total(total_rewards);
         self.base_distribution_progress.set_total(total_rewards);
     }
 
-    pub fn update_route_ncn(
+    pub fn update_route_ncn_rewards(
         &mut self,
         operator_index: usize,
         group: NcnFeeGroup,
@@ -440,7 +468,27 @@ impl EpochState {
     }
 
     pub fn update_distribute_base_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
+        self.total_distribution_progress.increment(rewards)?;
         self.base_distribution_progress.increment(rewards)
+    }
+
+    pub fn update_distribute_base_ncn_rewards(
+        &mut self,
+        rewards: u64,
+    ) -> Result<(), TipRouterError> {
+        self.base_distribution_progress.increment(rewards)
+    }
+
+    pub fn update_distribute_ncn_rewards(
+        &mut self,
+        operator_index: usize,
+        group: NcnFeeGroup,
+        rewards: u64,
+    ) -> Result<(), TipRouterError> {
+        self.total_distribution_progress.increment(rewards)?;
+        self.ncn_distribution_progress
+            [EpochAccountStatus::get_ncn_reward_router_index(operator_index, group)?]
+        .increment(rewards)
     }
 }
 
