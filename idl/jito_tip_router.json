@@ -2572,7 +2572,7 @@
             "type": {
               "array": [
                 "u8",
-                128
+                1024
               ]
             }
           }
@@ -3717,6 +3717,11 @@
       "code": 8767,
       "name": "InvalidSlotsAfterConsensus",
       "msg": "Invalid slots after consensus"
+    },
+    {
+      "code": 8768,
+      "name": "InvalidAccountStatus",
+      "msg": "Invalid Account Status"
     }
   ],
   "metadata": {

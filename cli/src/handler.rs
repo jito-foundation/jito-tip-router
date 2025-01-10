@@ -14,7 +14,7 @@ use crate::{
         distribute_base_ncn_rewards, register_vault, route_base_rewards, route_ncn_rewards,
         set_weight, snapshot_vault_operator_delegation,
     },
-    keeper::keeper::startup_keeper,
+    keeper::keeper_loop::startup_keeper,
 };
 use anyhow::{anyhow, Result};
 use jito_tip_router_core::ncn_fee_group::NcnFeeGroup;
@@ -96,8 +96,8 @@ impl CliHandler {
         Ok(handler)
     }
 
-    pub fn rpc_client(&self) -> &RpcClient {
-        return &self.rpc_client;
+    pub const fn rpc_client(&self) -> &RpcClient {
+        &self.rpc_client
     }
 
     pub fn keypair(&self) -> Result<&Keypair> {

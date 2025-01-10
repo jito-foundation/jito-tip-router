@@ -3,7 +3,7 @@ use std::mem::size_of;
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 
 use crate::{
     constants::MAX_OPERATORS, discriminators::Discriminators, error::TipRouterError,
@@ -47,50 +47,37 @@ impl Default for EpochAccountStatus {
 impl EpochAccountStatus {
     pub const SIZE: usize = size_of::<Self>();
 
-    pub fn get_account_status(u: u8) -> Result<AccountStatus, TipRouterError> {
+    pub const fn get_account_status(u: u8) -> Result<AccountStatus, TipRouterError> {
         match u {
             0 => Ok(AccountStatus::DNE),
             1 => Ok(AccountStatus::Created),
             2 => Ok(AccountStatus::Closed),
-            _ => Err(TipRouterError::InvalidBaseFeeGroup),
+            _ => Err(TipRouterError::InvalidAccountStatus),
         }
     }
 
-    pub fn epoch_state(&self) -> Result<AccountStatus, TipRouterError> {
+    pub const fn epoch_state(&self) -> Result<AccountStatus, TipRouterError> {
         Self::get_account_status(self.epoch_state)
     }
 
-    pub fn weight_table(&self) -> Result<AccountStatus, TipRouterError> {
+    pub const fn weight_table(&self) -> Result<AccountStatus, TipRouterError> {
         Self::get_account_status(self.weight_table)
     }
 
-    pub fn epoch_snapshot(&self) -> Result<AccountStatus, TipRouterError> {
+    pub const fn epoch_snapshot(&self) -> Result<AccountStatus, TipRouterError> {
         Self::get_account_status(self.epoch_snapshot)
     }
 
-    pub fn operator_snapshot(&self, index: usize) -> Result<AccountStatus, TipRouterError> {
+    pub const fn operator_snapshot(&self, index: usize) -> Result<AccountStatus, TipRouterError> {
         Self::get_account_status(self.operator_snapshot[index])
     }
 
-    pub fn ballot_box(&self) -> Result<AccountStatus, TipRouterError> {
+    pub const fn ballot_box(&self) -> Result<AccountStatus, TipRouterError> {
         Self::get_account_status(self.ballot_box)
     }
 
-    pub fn base_reward_router(&self) -> Result<AccountStatus, TipRouterError> {
+    pub const fn base_reward_router(&self) -> Result<AccountStatus, TipRouterError> {
         Self::get_account_status(self.base_reward_router)
-    }
-
-    pub fn get_ncn_reward_router_index(
-        operator_index: usize,
-        group: NcnFeeGroup,
-    ) -> Result<usize, TipRouterError> {
-        let mut index = operator_index
-            .checked_mul(NcnFeeGroup::FEE_GROUP_COUNT)
-            .ok_or(TipRouterError::ArithmeticOverflow)?;
-        index = index
-            .checked_add(group.group.into())
-            .ok_or(TipRouterError::ArithmeticOverflow)?;
-        Ok(index)
     }
 
     pub fn ncn_reward_router(
@@ -99,7 +86,7 @@ impl EpochAccountStatus {
         group: NcnFeeGroup,
     ) -> Result<AccountStatus, TipRouterError> {
         Self::get_account_status(
-            self.ncn_reward_router[Self::get_ncn_reward_router_index(index, group)?],
+            self.ncn_reward_router[EpochState::get_ncn_reward_router_index(index, group)?],
         )
     }
 
@@ -133,7 +120,8 @@ impl EpochAccountStatus {
         group: NcnFeeGroup,
         status: AccountStatus,
     ) -> Result<(), TipRouterError> {
-        self.ncn_reward_router[Self::get_ncn_reward_router_index(index, group)?] = status as u8;
+        self.ncn_reward_router[EpochState::get_ncn_reward_router_index(index, group)?] =
+            status as u8;
         Ok(())
     }
 }
@@ -150,8 +138,8 @@ pub struct Progress {
 impl Default for Progress {
     fn default() -> Self {
         Self {
-            tally: PodU64::from(Progress::INVALID),
-            total: PodU64::from(Progress::INVALID),
+            tally: PodU64::from(Self::INVALID),
+            total: PodU64::from(Self::INVALID),
         }
     }
 }
@@ -194,13 +182,12 @@ impl Progress {
     }
 
     pub fn is_invalid(&self) -> bool {
-        self.tally.eq(&PodU64::from(Progress::INVALID))
-            || self.total.eq(&PodU64::from(Progress::INVALID))
+        self.tally.eq(&PodU64::from(Self::INVALID)) || self.total.eq(&PodU64::from(Self::INVALID))
     }
 
     pub fn is_complete(&self) -> bool {
         if self.is_invalid() {
-            return false;
+            false
         } else {
             self.tally.eq(&self.total)
         }
@@ -218,46 +205,46 @@ pub struct EpochState {
     pub bump: u8,
 
     /// The time this snapshot was created
-    pub slot_created: PodU64,
+    slot_created: PodU64,
 
     /// The number of operators
-    pub operator_count: PodU64,
+    operator_count: PodU64,
 
     /// The number of vaults
-    pub vault_count: PodU64,
+    vault_count: PodU64,
 
     /// All of the epoch accounts status
-    pub account_status: EpochAccountStatus,
+    account_status: EpochAccountStatus,
 
     /// Progress on weight set
-    pub set_weight_progress: Progress,
+    set_weight_progress: Progress,
 
     /// Progress on Snapshotting Epoch
-    pub epoch_snapshot_progress: Progress,
+    epoch_snapshot_progress: Progress,
 
     /// Progress on Snapshotting Operators
-    pub operator_snapshot_progress: [Progress; 256],
+    operator_snapshot_progress: [Progress; 256],
 
     /// Progress on voting
-    pub voting_progress: Progress,
+    voting_progress: Progress,
 
     /// Progress on validation
-    pub validation_progress: Progress,
+    validation_progress: Progress,
 
     /// Upload progress
-    pub upload_progress: Progress,
+    upload_progress: Progress,
 
     /// Distribution progress
-    pub total_distribution_progress: Progress,
+    total_distribution_progress: Progress,
 
     /// base distribution progress
-    pub base_distribution_progress: Progress,
+    base_distribution_progress: Progress,
 
     /// ncn distribution progress
-    pub ncn_distribution_progress: [Progress; 2048],
+    ncn_distribution_progress: [Progress; 2048],
 
     /// Reserved space
-    pub reserved: [u8; 128],
+    reserved: [u8; 1024],
 }
 
 impl Discriminator for EpochState {
@@ -286,7 +273,7 @@ impl EpochState {
             base_distribution_progress: Progress::default(),
             ncn_distribution_progress: [Progress::default();
                 MAX_OPERATORS * NcnFeeGroup::FEE_GROUP_COUNT],
-            reserved: [0; 128],
+            reserved: [0; 1024],
         }
     }
 
@@ -296,7 +283,7 @@ impl EpochState {
         self.bump = bump;
         self.epoch = PodU64::from(epoch);
         self.slot_created = PodU64::from(slot_created);
-        self.reserved = [0; 128];
+        self.reserved = [0; 1024];
     }
 
     pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {
@@ -339,7 +326,27 @@ impl EpochState {
         )
     }
 
-    pub fn ncn(&self) -> &Pubkey {
+    // ------------ HELPER FUNCTIONS ------------
+    pub fn get_ncn_reward_router_index(
+        operator_index: usize,
+        group: NcnFeeGroup,
+    ) -> Result<usize, TipRouterError> {
+        let mut index = operator_index
+            .checked_mul(NcnFeeGroup::FEE_GROUP_COUNT)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+        index = index
+            .checked_add(group.group.into())
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+        Ok(index)
+    }
+
+    pub fn _set_upload_progress(&mut self) {
+        self.upload_progress = Progress::new(1);
+    }
+
+    // ------------ GETTERS ------------
+
+    pub const fn ncn(&self) -> &Pubkey {
         &self.ncn
     }
 
@@ -359,6 +366,52 @@ impl EpochState {
         self.vault_count.into()
     }
 
+    pub const fn account_status(&self) -> &EpochAccountStatus {
+        &self.account_status
+    }
+
+    pub const fn set_weight_progress(&self) -> Progress {
+        self.set_weight_progress
+    }
+
+    pub const fn epoch_snapshot_progress(&self) -> Progress {
+        self.epoch_snapshot_progress
+    }
+
+    pub const fn operator_snapshot_progress(&self, ncn_operator_index: usize) -> Progress {
+        self.operator_snapshot_progress[ncn_operator_index]
+    }
+
+    pub const fn voting_progress(&self) -> Progress {
+        self.voting_progress
+    }
+
+    pub const fn validation_progress(&self) -> Progress {
+        self.validation_progress
+    }
+
+    pub const fn upload_progress(&self) -> Progress {
+        self.upload_progress
+    }
+
+    pub const fn total_distribution_progress(&self) -> Progress {
+        self.total_distribution_progress
+    }
+
+    pub const fn base_distribution_progress(&self) -> Progress {
+        self.base_distribution_progress
+    }
+
+    pub fn ncn_distribution_progress(
+        &self,
+        ncn_operator_index: usize,
+        group: NcnFeeGroup,
+    ) -> Progress {
+        self.ncn_distribution_progress
+            [Self::get_ncn_reward_router_index(ncn_operator_index, group).unwrap()]
+    }
+
+    // ------------ UPDATERS ------------
     pub fn update_realloc_epoch_state(&mut self) {
         self.account_status.set_epoch_state(AccountStatus::Created);
     }
@@ -443,8 +496,7 @@ impl EpochState {
     ) -> Result<(), TipRouterError> {
         self.account_status
             .set_ncn_reward_router(operator_index, group, AccountStatus::Created)?;
-        self.ncn_distribution_progress
-            [EpochAccountStatus::get_ncn_reward_router_index(operator_index, group)?] =
+        self.ncn_distribution_progress[Self::get_ncn_reward_router_index(operator_index, group)?] =
             Progress::new(0);
 
         Ok(())
@@ -461,22 +513,23 @@ impl EpochState {
         group: NcnFeeGroup,
         total_rewards: u64,
     ) -> Result<(), TipRouterError> {
-        self.ncn_distribution_progress
-            [EpochAccountStatus::get_ncn_reward_router_index(operator_index, group)?]
-        .set_total(total_rewards);
+        self.ncn_distribution_progress[Self::get_ncn_reward_router_index(operator_index, group)?]
+            .set_total(total_rewards);
         Ok(())
     }
 
     pub fn update_distribute_base_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
         self.total_distribution_progress.increment(rewards)?;
-        self.base_distribution_progress.increment(rewards)
+        self.base_distribution_progress.increment(rewards)?;
+        Ok(())
     }
 
     pub fn update_distribute_base_ncn_rewards(
         &mut self,
         rewards: u64,
     ) -> Result<(), TipRouterError> {
-        self.base_distribution_progress.increment(rewards)
+        self.base_distribution_progress.increment(rewards)?;
+        Ok(())
     }
 
     pub fn update_distribute_ncn_rewards(
@@ -486,9 +539,9 @@ impl EpochState {
         rewards: u64,
     ) -> Result<(), TipRouterError> {
         self.total_distribution_progress.increment(rewards)?;
-        self.ncn_distribution_progress
-            [EpochAccountStatus::get_ncn_reward_router_index(operator_index, group)?]
-        .increment(rewards)
+        self.ncn_distribution_progress[Self::get_ncn_reward_router_index(operator_index, group)?]
+            .increment(rewards)?;
+        Ok(())
     }
 }
 

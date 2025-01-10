@@ -10,7 +10,6 @@ use jito_tip_router_core::{
     base_reward_router::BaseRewardReceiver,
     constants::{JITOSOL_MINT, JTO_SOL_FEED},
     ncn_fee_group::NcnFeeGroup,
-    ncn_reward_router::NcnRewardReceiver,
 };
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
@@ -310,6 +309,43 @@ impl TestBuilder {
         })
     }
 
+    // 1a.
+    pub async fn create_custom_test_ncn(
+        &mut self,
+        base_fee_bps: u16,
+        ncn_fee_bps: u16,
+    ) -> TestResult<TestNcn> {
+        let mut restaking_program_client = self.restaking_program_client();
+        let mut vault_program_client = self.vault_program_client();
+        let mut tip_router_client = self.tip_router_client();
+
+        vault_program_client.do_initialize_config().await?;
+        restaking_program_client.do_initialize_config().await?;
+        let ncn_root = restaking_program_client
+            .do_initialize_ncn(Some(self.context.payer.insecure_clone()))
+            .await?;
+
+        tip_router_client.setup_tip_router(&ncn_root).await?;
+
+        tip_router_client
+            .do_set_config_fees(
+                Some(300),
+                None,
+                Some(self.context.payer.pubkey()),
+                Some(base_fee_bps),
+                None,
+                Some(ncn_fee_bps),
+                &ncn_root,
+            )
+            .await?;
+
+        Ok(TestNcn {
+            ncn_root: ncn_root.clone(),
+            operators: vec![],
+            vaults: vec![],
+        })
+    }
+
     // 2. Setup Operators
     pub async fn add_operators_to_test_ncn(
         &mut self,
@@ -509,6 +545,27 @@ impl TestBuilder {
     ) -> TestResult<TestNcn> {
         let mut test_ncn = self.create_test_ncn().await?;
         self.add_operators_to_test_ncn(&mut test_ncn, operator_count, operator_fees_bps)
+            .await?;
+        self.add_vaults_to_test_ncn(&mut test_ncn, vault_count)
+            .await?;
+        self.add_delegation_in_test_ncn(&test_ncn, 100).await?;
+        self.add_vault_registry_to_test_ncn(&test_ncn).await?;
+
+        Ok(test_ncn)
+    }
+
+    pub async fn create_custom_initial_test_ncn(
+        &mut self,
+        operator_count: usize,
+        vault_count: usize,
+        operator_fees_bps: u16,
+        base_fee_bps: u16,
+        ncn_fee_bps: u16,
+    ) -> TestResult<TestNcn> {
+        let mut test_ncn = self
+            .create_custom_test_ncn(base_fee_bps, ncn_fee_bps)
+            .await?;
+        self.add_operators_to_test_ncn(&mut test_ncn, operator_count, Some(operator_fees_bps))
             .await?;
         self.add_vaults_to_test_ncn(&mut test_ncn, vault_count)
             .await?;
@@ -795,17 +852,18 @@ impl TestBuilder {
                         continue;
                     }
 
-                    let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
-                        &jito_tip_router_program::id(),
-                        *group,
-                        &operator,
-                        &ncn,
-                        epoch,
-                    );
-                    let sol_rewards = lamports_to_sol(rewards);
-                    tip_router_client
-                        .airdrop(&ncn_reward_receiver, sol_rewards)
-                        .await?;
+                    //TODO remove
+                    // let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+                    //     &jito_tip_router_program::id(),
+                    //     *group,
+                    //     &operator,
+                    //     &ncn,
+                    //     epoch,
+                    // );
+                    // let sol_rewards = lamports_to_sol(rewards);
+                    // tip_router_client
+                    //     .airdrop(&ncn_reward_receiver, sol_rewards)
+                    //     .await?;
 
                     tip_router_client
                         .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)

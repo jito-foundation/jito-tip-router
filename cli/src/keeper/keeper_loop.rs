@@ -7,6 +7,6 @@ pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
     run_keeper(handler).await
 }
 
-pub async fn run_keeper(handler: &CliHandler) -> Result<()> {
+pub async fn run_keeper(_handler: &CliHandler) -> Result<()> {
     todo!("Return correct state")
 }

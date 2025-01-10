@@ -68,6 +68,7 @@ use tokio::time::sleep;
 
 // --------------------- TIP ROUTER ------------------------------
 
+#[allow(clippy::too_many_arguments)]
 pub async fn admin_create_config(
     handler: &CliHandler,
     epochs_before_stall: u64,
@@ -86,8 +87,8 @@ pub async fn admin_create_config(
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
-    let fee_wallet = fee_wallet.unwrap_or(keypair.pubkey());
-    let tie_breaker_admin = tie_breaker_admin.unwrap_or(keypair.pubkey());
+    let fee_wallet = fee_wallet.unwrap_or_else(|| keypair.pubkey());
+    let tie_breaker_admin = tie_breaker_admin.unwrap_or_else(|| keypair.pubkey());
 
     let initialize_config_ix = InitializeTipRouterConfigBuilder::new()
         .config(config)
@@ -111,8 +112,8 @@ pub async fn admin_create_config(
     );
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[initialize_config_ix],
         &[],
         "Created Tip Router Config",
@@ -150,7 +151,7 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
     let vault_registry_account = get_account(handler, &vault_registry).await?;
 
     // Skip if vault registry already exists
-    if vault_registry_account.data.len() == 0 {
+    if vault_registry_account.data.is_empty() {
         let initialize_vault_registry_ix = InitializeVaultRegistryBuilder::new()
             .config(config)
             .payer(keypair.pubkey())
@@ -159,8 +160,8 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
             .instruction();
 
         send_and_log_transaction(
-            &client,
-            &keypair,
+            client,
+            keypair,
             &[initialize_vault_registry_ix],
             &[],
             "Created Vault Registry",
@@ -187,8 +188,8 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
     }
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &realloc_ixs,
         &[],
         "Reallocated Vault Registry",
@@ -246,8 +247,8 @@ pub async fn admin_register_st_mint(
     let register_st_mint_ix = register_st_mint_builder.instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[register_st_mint_ix],
         &[],
         "Registered ST Mint",
@@ -300,8 +301,8 @@ pub async fn register_vault(handler: &CliHandler, vault: &Pubkey) -> Result<()> 
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[register_vault_ix],
         &[],
         "Registered Vault",
@@ -331,7 +332,7 @@ pub async fn create_weight_table(handler: &CliHandler) -> Result<()> {
     let weight_table_account = get_account(handler, &weight_table).await?;
 
     // Skip if weight table already exists
-    if weight_table_account.data.len() == 0 {
+    if weight_table_account.data.is_empty() {
         // Initialize weight table
         let initialize_weight_table_ix = InitializeWeightTableBuilder::new()
             .vault_registry(vault_registry)
@@ -344,8 +345,8 @@ pub async fn create_weight_table(handler: &CliHandler) -> Result<()> {
             .instruction();
 
         send_and_log_transaction(
-            &client,
-            &keypair,
+            client,
+            keypair,
             &[initialize_weight_table_ix],
             &[],
             "Initialized Weight Table",
@@ -375,8 +376,8 @@ pub async fn create_weight_table(handler: &CliHandler) -> Result<()> {
     }
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &realloc_ixs,
         &[],
         "Reallocated Weight Table",
@@ -415,8 +416,8 @@ pub async fn admin_set_weight(handler: &CliHandler, vault: &Pubkey, weight: u128
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[admin_set_weight_ix],
         &[],
         "Set Weight",
@@ -457,8 +458,8 @@ pub async fn set_weight(handler: &CliHandler, vault: &Pubkey) -> Result<()> {
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[set_weight_ix],
         &[],
         "Set Weight Using Switchboard Feed",
@@ -502,8 +503,8 @@ pub async fn create_epoch_snapshot(handler: &CliHandler) -> Result<()> {
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[initialize_epoch_snapshot_ix],
         &[],
         "Initialized Epoch Snapshot",
@@ -541,7 +542,7 @@ pub async fn create_operator_snapshot(handler: &CliHandler, operator: &Pubkey) -
     let operator_snapshot_account = get_account(handler, &operator_snapshot).await?;
 
     // Skip if operator snapshot already exists
-    if operator_snapshot_account.data.len() == 0 {
+    if operator_snapshot_account.data.is_empty() {
         // Initialize operator snapshot
         let initialize_operator_snapshot_ix = InitializeOperatorSnapshotBuilder::new()
             .config(config)
@@ -557,8 +558,8 @@ pub async fn create_operator_snapshot(handler: &CliHandler, operator: &Pubkey) -
             .instruction();
 
         send_and_log_transaction(
-            &client,
-            &keypair,
+            client,
+            keypair,
             &[initialize_operator_snapshot_ix],
             &[],
             "Initialized Operator Snapshot",
@@ -596,8 +597,8 @@ pub async fn create_operator_snapshot(handler: &CliHandler, operator: &Pubkey) -
     }
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &realloc_ixs,
         &[],
         "Reallocated Operator Snapshot",
@@ -671,8 +672,8 @@ pub async fn snapshot_vault_operator_delegation(
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[snapshot_vault_operator_delegation_ix],
         &[],
         "Snapshotted Vault Operator Delegation",
@@ -704,7 +705,7 @@ pub async fn create_ballot_box(handler: &CliHandler) -> Result<()> {
     let ballot_box_account = get_account(handler, &ballot_box).await?;
 
     // Skip if ballot box already exists
-    if ballot_box_account.data.len() == 0 {
+    if ballot_box_account.data.is_empty() {
         // Initialize ballot box
         let initialize_ballot_box_ix = InitializeBallotBoxBuilder::new()
             .config(config)
@@ -716,8 +717,8 @@ pub async fn create_ballot_box(handler: &CliHandler) -> Result<()> {
             .instruction();
 
         send_and_log_transaction(
-            &client,
-            &keypair,
+            client,
+            keypair,
             &[initialize_ballot_box_ix],
             &[],
             "Initialized Ballot Box",
@@ -746,8 +747,8 @@ pub async fn create_ballot_box(handler: &CliHandler) -> Result<()> {
     }
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &realloc_ixs,
         &[],
         "Reallocated Ballot Box",
@@ -804,8 +805,8 @@ pub async fn admin_cast_vote(
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[cast_vote_ix],
         &[],
         "Cast Vote",
@@ -837,7 +838,7 @@ pub async fn create_base_reward_router(handler: &CliHandler) -> Result<()> {
     let base_reward_router_account = get_account(handler, &base_reward_router).await?;
 
     // Skip if base reward router already exists
-    if base_reward_router_account.data.len() == 0 {
+    if base_reward_router_account.data.is_empty() {
         let initialize_base_reward_router_ix = InitializeBaseRewardRouterBuilder::new()
             .ncn(ncn)
             .base_reward_router(base_reward_router)
@@ -849,8 +850,8 @@ pub async fn create_base_reward_router(handler: &CliHandler) -> Result<()> {
             .instruction();
 
         send_and_log_transaction(
-            &client,
-            &keypair,
+            client,
+            keypair,
             &[initialize_base_reward_router_ix],
             &[],
             "Initialized Base Reward Router",
@@ -878,8 +879,8 @@ pub async fn create_base_reward_router(handler: &CliHandler) -> Result<()> {
     }
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &realloc_ixs,
         &[],
         "Reallocated Base Reward Router",
@@ -925,7 +926,7 @@ pub async fn create_ncn_reward_router(
     let ncn_reward_router_account = get_account(handler, &ncn_reward_router).await?;
 
     // Skip if ncn reward router already exists
-    if ncn_reward_router_account.data.len() == 0 {
+    if ncn_reward_router_account.data.is_empty() {
         let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
             .ncn(ncn)
             .operator(operator)
@@ -939,8 +940,8 @@ pub async fn create_ncn_reward_router(
             .instruction();
 
         send_and_log_transaction(
-            &client,
-            &keypair,
+            client,
+            keypair,
             &[initialize_ncn_reward_router_ix],
             &[],
             "Initialized NCN Reward Router",
@@ -998,8 +999,8 @@ pub async fn route_base_rewards(handler: &CliHandler) -> Result<()> {
         ];
 
         send_and_log_transaction(
-            &client,
-            &keypair,
+            client,
+            keypair,
             &instructions,
             &[],
             "Routed Base Rewards",
@@ -1077,8 +1078,8 @@ pub async fn route_ncn_rewards(
         ];
 
         send_and_log_transaction(
-            &client,
-            &keypair,
+            client,
+            keypair,
             &instructions,
             &[],
             "Routed NCN Rewards",
@@ -1153,8 +1154,8 @@ pub async fn distribute_base_ncn_rewards(
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[distribute_base_ncn_rewards_ix],
         &[],
         "Distributed Base NCN Rewards",
@@ -1198,8 +1199,8 @@ pub async fn admin_set_tie_breaker(handler: &CliHandler, meta_merkle_root: [u8; 
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[set_tie_breaker_ix],
         &[],
         "Set Tie Breaker",
@@ -1243,8 +1244,8 @@ pub async fn create_test_ncn(handler: &CliHandler) -> Result<()> {
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[ix_builder.instruction()],
         &[&base],
         "Created Test Ncn",
@@ -1308,8 +1309,8 @@ pub async fn create_and_add_test_operator(
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[initalize_operator_ix, initialize_ncn_operator_state_ix],
         &[&base],
         "Created Test Operator",
@@ -1323,8 +1324,8 @@ pub async fn create_and_add_test_operator(
     sleep(Duration::from_millis(1000)).await;
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[ncn_warmup_operator_ix, operator_warmup_ncn_ix],
         &[],
         "Warmed up Operator",
@@ -1399,8 +1400,8 @@ pub async fn create_and_add_test_vault(
     .unwrap();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[
             create_mint_account_ix,
             initialize_mint_ix,
@@ -1468,8 +1469,8 @@ pub async fn create_and_add_test_vault(
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[
             initialize_vault_ix,
             create_vault_ata_ix,
@@ -1516,8 +1517,8 @@ pub async fn create_and_add_test_vault(
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[
             initialize_ncn_vault_ticket_ix,
             initialize_vault_ncn_ticket_ix,
@@ -1547,8 +1548,8 @@ pub async fn create_and_add_test_vault(
         .instruction();
 
     send_and_log_transaction(
-        &client,
-        &keypair,
+        client,
+        keypair,
         &[warmup_ncn_vault_ticket_ix, warmup_vault_ncn_ticket_ix],
         &[],
         "Warmed up NCN Vault Tickets",
@@ -1580,8 +1581,8 @@ pub async fn create_and_add_test_vault(
         // do_initialize_operator_vault_ticket
 
         send_and_log_transaction(
-            &client,
-            &keypair,
+            client,
+            keypair,
             &[initialize_operator_vault_ticket_ix],
             &[],
             "Connected Vault and Operator",
@@ -1625,8 +1626,8 @@ pub async fn create_and_add_test_vault(
             .instruction();
 
         send_and_log_transaction(
-            &client,
-            &keypair,
+            client,
+            keypair,
             &[
                 warmup_operator_vault_ticket_ix,
                 initialize_vault_operator_delegation_ix,

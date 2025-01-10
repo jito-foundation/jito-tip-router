@@ -4,10 +4,10 @@ mod set_merkle_root {
         jito_tip_distribution,
     };
     use jito_tip_router_core::{
-        ballot_box::{self, Ballot, BallotBox},
+        ballot_box::{Ballot, BallotBox},
         claim_status_payer::ClaimStatusPayer,
         config::Config as NcnConfig,
-        epoch_state::{EpochState, Progress},
+        epoch_state::{self, EpochState},
         error::TipRouterError,
     };
     use meta_merkle_tree::{
@@ -230,8 +230,7 @@ mod set_merkle_root {
 
         let epoch_state_fixture = {
             let mut epoch_state = EpochState::new(&ncn_address, epoch, bump, 0);
-            epoch_state.voting_progress = Progress::new(1);
-            epoch_state.upload_progress = Progress::new(1);
+            epoch_state._set_upload_progress();
             epoch_state
         };
 
@@ -516,6 +515,10 @@ mod set_merkle_root {
         let proof = node.proof.clone().unwrap();
 
         // Initialize ballot box
+        tip_router_client
+            .do_full_initialize_epoch_state(ncn, ncn_epoch)
+            .await?;
+
         tip_router_client
             .do_full_initialize_ballot_box(ncn, ncn_epoch)
             .await?;

@@ -151,6 +151,8 @@ pub enum TipRouterError {
     InvalidEpochsBeforeStall,
     #[error("Invalid slots after consensus")]
     InvalidSlotsAfterConsensus,
+    #[error("Invalid Account Status")]
+    InvalidAccountStatus,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

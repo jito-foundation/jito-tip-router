@@ -112,7 +112,7 @@ export function getEpochStateEncoder(): Encoder<EpochStateArgs> {
       'ncnDistributionProgress',
       getArrayEncoder(getProgressEncoder(), { size: 2048 }),
     ],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 1024 })],
   ]);
 }
 
@@ -141,7 +141,7 @@ export function getEpochStateDecoder(): Decoder<EpochState> {
       'ncnDistributionProgress',
       getArrayDecoder(getProgressDecoder(), { size: 2048 }),
     ],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 1024 })],
   ]);
 }
 

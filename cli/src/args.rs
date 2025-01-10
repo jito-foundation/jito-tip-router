@@ -49,7 +49,7 @@ pub struct Args {
         long,
         global = true,
         env = "VAULT_PROGRAM_ID", 
-        default_value_t = jito_vault_program::id().to_string(), 
+        default_value_t = jito_vault_program::id().to_string(),
         help = "Vault program ID"
     )]
     pub vault_program_id: String,
@@ -312,7 +312,7 @@ impl fmt::Display for Args {
             }
         )?;
 
-        writeln!(f, "")?;
+        writeln!(f, "\n")?;
 
         Ok(())
     }

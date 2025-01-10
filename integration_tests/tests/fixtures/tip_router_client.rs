@@ -29,7 +29,7 @@ use jito_tip_router_core::{
     config::Config as NcnConfig,
     constants::{JITOSOL_MINT, MAX_REALLOC_BYTES},
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
-    epoch_state::{self, EpochState},
+    epoch_state::EpochState,
     error::TipRouterError,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
