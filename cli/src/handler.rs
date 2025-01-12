@@ -39,6 +39,8 @@ pub struct CliHandler {
     ncn: Option<Pubkey>,
     pub epoch: u64,
     rpc_client: RpcClient,
+    pub retries: u64,
+    pub priority_fee_micro_lamports: u64,
 }
 
 impl CliHandler {
@@ -82,6 +84,8 @@ impl CliHandler {
             ncn,
             epoch: u64::MAX,
             rpc_client,
+            retries: args.transaction_retries,
+            priority_fee_micro_lamports: args.priority_fee_micro_lamports,
         };
 
         handler.epoch = {
@@ -231,7 +235,7 @@ impl CliHandler {
                 let operator = Pubkey::from_str(&operator).expect("error parsing operator");
                 let ncn_fee_group =
                     NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
-                create_ncn_reward_router(self, &operator, ncn_fee_group, self.epoch).await
+                create_ncn_reward_router(self, ncn_fee_group, &operator, self.epoch).await
             }
 
             ProgramCommand::RouteBaseRewards {} => route_base_rewards(self, self.epoch).await,

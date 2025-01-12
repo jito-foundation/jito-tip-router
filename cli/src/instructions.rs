@@ -2,8 +2,9 @@ use std::time::Duration;
 
 use crate::{
     getters::{
-        get_account, get_all_operators_in_ncn, get_base_reward_router, get_ncn_reward_router,
-        get_vault, get_vault_registry,
+        get_account, get_all_operators_in_ncn, get_ballot_box, get_base_reward_router,
+        get_ncn_reward_router, get_operator_snapshot, get_vault, get_vault_registry,
+        get_weight_table,
     },
     handler::CliHandler,
 };
@@ -31,6 +32,7 @@ use jito_tip_router_client::instructions::{
 };
 use jito_tip_router_core::{
     ballot_box::BallotBox,
+    base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
     constants::MAX_REALLOC_BYTES,
@@ -50,7 +52,7 @@ use jito_vault_core::{
     vault_operator_delegation::VaultOperatorDelegation,
 };
 use log::info;
-use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::rpc_config::RpcSendTransactionConfig;
 
 use solana_sdk::{
     compute_budget::ComputeBudgetInstruction,
@@ -113,8 +115,7 @@ pub async fn admin_create_config(
     );
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[initialize_config_ix],
         &[],
         "Created Tip Router Config",
@@ -139,7 +140,6 @@ pub async fn admin_create_config(
 
 pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -161,8 +161,7 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
             .instruction();
 
         send_and_log_transaction(
-            client,
-            keypair,
+            handler,
             &[initialize_vault_registry_ix],
             &[],
             "Created Vault Registry",
@@ -189,8 +188,7 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
     }
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &realloc_ixs,
         &[],
         "Reallocated Vault Registry",
@@ -213,7 +211,6 @@ pub async fn admin_register_st_mint(
     no_feed_weight: Option<u128>,
 ) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -248,8 +245,7 @@ pub async fn admin_register_st_mint(
     let register_st_mint_ix = register_st_mint_builder.instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[register_st_mint_ix],
         &[],
         "Registered ST Mint",
@@ -271,9 +267,6 @@ pub async fn admin_register_st_mint(
 }
 
 pub async fn register_vault(handler: &CliHandler, vault: &Pubkey) -> Result<()> {
-    let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
-
     let ncn = *handler.ncn()?;
     let vault = *vault;
 
@@ -302,8 +295,7 @@ pub async fn register_vault(handler: &CliHandler, vault: &Pubkey) -> Result<()> 
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[register_vault_ix],
         &[],
         "Registered Vault",
@@ -316,7 +308,6 @@ pub async fn register_vault(handler: &CliHandler, vault: &Pubkey) -> Result<()> 
 
 pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -341,8 +332,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
             .instruction();
 
         send_and_log_transaction(
-            client,
-            keypair,
+            handler,
             &[initialize_ballot_box_ix],
             &[],
             "Initialized Epoch State",
@@ -371,8 +361,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
     }
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &realloc_ixs,
         &[],
         "Reallocated Epoch State",
@@ -389,7 +378,6 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
 
 pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -418,8 +406,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
             .instruction();
 
         send_and_log_transaction(
-            client,
-            keypair,
+            handler,
             &[initialize_weight_table_ix],
             &[],
             "Initialized Weight Table",
@@ -449,8 +436,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     }
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &realloc_ixs,
         &[],
         "Reallocated Weight Table",
@@ -471,13 +457,20 @@ pub async fn admin_set_weight(
     epoch: u64,
     weight: u128,
 ) -> Result<()> {
+    let vault_account = get_vault(handler, vault).await?;
+
+    admin_set_weight_with_st_mint(handler, &vault_account.supported_mint, epoch, weight).await
+}
+
+pub async fn admin_set_weight_with_st_mint(
+    handler: &CliHandler,
+    st_mint: &Pubkey,
+    epoch: u64,
+    weight: u128,
+) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
-
-    let vault_account = get_vault(handler, vault).await?;
-    let st_mint = vault_account.supported_mint;
 
     let (weight_table, _, _) =
         WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
@@ -487,14 +480,13 @@ pub async fn admin_set_weight(
         .weight_table(weight_table)
         .weight_table_admin(keypair.pubkey())
         .restaking_program(handler.restaking_program_id)
-        .st_mint(st_mint)
+        .st_mint(*st_mint)
         .weight(weight)
         .epoch(epoch)
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[admin_set_weight_ix],
         &[],
         "Set Weight",
@@ -511,15 +503,21 @@ pub async fn admin_set_weight(
 }
 
 pub async fn set_weight(handler: &CliHandler, vault: &Pubkey, epoch: u64) -> Result<()> {
-    let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
+    let vault_account = get_vault(handler, vault).await?;
 
+    set_weight_with_st_mint(handler, &vault_account.supported_mint, epoch).await
+}
+
+pub async fn set_weight_with_st_mint(
+    handler: &CliHandler,
+    st_mint: &Pubkey,
+    epoch: u64,
+) -> Result<()> {
     let ncn = *handler.ncn()?;
 
     let vault_registry = get_vault_registry(handler).await?;
-    let vault_account = get_vault(handler, vault).await?;
 
-    let mint_entry = vault_registry.get_mint_entry(&vault_account.supported_mint)?;
+    let mint_entry = vault_registry.get_mint_entry(&st_mint)?;
     let switchboard_feed = mint_entry.switchboard_feed();
 
     let (weight_table, _, _) =
@@ -528,21 +526,20 @@ pub async fn set_weight(handler: &CliHandler, vault: &Pubkey, epoch: u64) -> Res
     let set_weight_ix = SwitchboardSetWeightBuilder::new()
         .ncn(ncn)
         .weight_table(weight_table)
-        .st_mint(vault_account.supported_mint)
+        .st_mint(*st_mint)
         .switchboard_feed(*switchboard_feed)
         .epoch(epoch)
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[set_weight_ix],
         &[],
         "Set Weight Using Switchboard Feed",
         &[
             format!("NCN: {:?}", ncn),
             format!("Epoch: {:?}", epoch),
-            format!("ST Mint: {:?}", vault_account.supported_mint),
+            format!("ST Mint: {:?}", st_mint),
             format!("Switchboard Feed: {:?}", switchboard_feed),
         ],
     )
@@ -553,7 +550,6 @@ pub async fn set_weight(handler: &CliHandler, vault: &Pubkey, epoch: u64) -> Res
 
 pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -578,8 +574,7 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[initialize_epoch_snapshot_ix],
         &[],
         "Initialized Epoch Snapshot",
@@ -596,7 +591,6 @@ pub async fn create_operator_snapshot(
     epoch: u64,
 ) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -637,8 +631,7 @@ pub async fn create_operator_snapshot(
             .instruction();
 
         send_and_log_transaction(
-            client,
-            keypair,
+            handler,
             &[initialize_operator_snapshot_ix],
             &[],
             "Initialized Operator Snapshot",
@@ -676,8 +669,7 @@ pub async fn create_operator_snapshot(
     }
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &realloc_ixs,
         &[],
         "Reallocated Operator Snapshot",
@@ -698,9 +690,6 @@ pub async fn snapshot_vault_operator_delegation(
     operator: &Pubkey,
     epoch: u64,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
-
     let ncn = *handler.ncn()?;
 
     let vault = *vault;
@@ -752,8 +741,7 @@ pub async fn snapshot_vault_operator_delegation(
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[snapshot_vault_operator_delegation_ix],
         &[],
         "Snapshotted Vault Operator Delegation",
@@ -771,7 +759,6 @@ pub async fn snapshot_vault_operator_delegation(
 
 pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -796,8 +783,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
             .instruction();
 
         send_and_log_transaction(
-            client,
-            keypair,
+            handler,
             &[initialize_ballot_box_ix],
             &[],
             "Initialized Ballot Box",
@@ -826,8 +812,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     }
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &realloc_ixs,
         &[],
         "Reallocated Ballot Box",
@@ -849,7 +834,6 @@ pub async fn admin_cast_vote(
     meta_merkle_root: [u8; 32],
 ) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -885,8 +869,7 @@ pub async fn admin_cast_vote(
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[cast_vote_ix],
         &[],
         "Cast Vote",
@@ -904,7 +887,6 @@ pub async fn admin_cast_vote(
 
 pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -929,8 +911,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
             .instruction();
 
         send_and_log_transaction(
-            client,
-            keypair,
+            handler,
             &[initialize_base_reward_router_ix],
             &[],
             "Initialized Base Reward Router",
@@ -958,8 +939,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
     }
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &realloc_ixs,
         &[],
         "Reallocated Base Reward Router",
@@ -976,12 +956,11 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
 
 pub async fn create_ncn_reward_router(
     handler: &CliHandler,
-    operator: &Pubkey,
     ncn_fee_group: NcnFeeGroup,
+    operator: &Pubkey,
     epoch: u64,
 ) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -1020,8 +999,7 @@ pub async fn create_ncn_reward_router(
             .instruction();
 
         send_and_log_transaction(
-            client,
-            keypair,
+            handler,
             &[initialize_ncn_reward_router_ix],
             &[],
             "Initialized NCN Reward Router",
@@ -1039,9 +1017,6 @@ pub async fn create_ncn_reward_router(
 }
 
 pub async fn route_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
-
     let ncn = *handler.ncn()?;
 
     let (epoch_snapshot, _, _) =
@@ -1078,8 +1053,7 @@ pub async fn route_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> 
         ];
 
         send_and_log_transaction(
-            client,
-            keypair,
+            handler,
             &instructions,
             &[],
             "Routed Base Rewards",
@@ -1105,9 +1079,6 @@ pub async fn route_ncn_rewards(
     ncn_fee_group: NcnFeeGroup,
     epoch: u64,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
-
     let ncn = *handler.ncn()?;
 
     let operator = *operator;
@@ -1158,8 +1129,7 @@ pub async fn route_ncn_rewards(
         ];
 
         send_and_log_transaction(
-            client,
-            keypair,
+            handler,
             &instructions,
             &[],
             "Routed NCN Rewards",
@@ -1188,9 +1158,6 @@ pub async fn distribute_base_ncn_rewards(
     ncn_fee_group: NcnFeeGroup,
     epoch: u64,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
-
     let ncn = *handler.ncn()?;
 
     let operator = *operator;
@@ -1235,8 +1202,7 @@ pub async fn distribute_base_ncn_rewards(
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[distribute_base_ncn_rewards_ix],
         &[],
         "Distributed Base NCN Rewards",
@@ -1262,7 +1228,6 @@ pub async fn admin_set_tie_breaker(
     meta_merkle_root: [u8; 32],
 ) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -1283,8 +1248,7 @@ pub async fn admin_set_tie_breaker(
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[set_tie_breaker_ix],
         &[],
         "Set Tie Breaker",
@@ -1299,6 +1263,279 @@ pub async fn admin_set_tie_breaker(
     Ok(())
 }
 
+// --------------------- MIDDLEWARE ------------------------------
+
+pub async fn get_or_create_weight_table(handler: &CliHandler, epoch: u64) -> Result<WeightTable> {
+    let ncn = *handler.ncn()?;
+
+    let (weight_table, _, _) =
+        WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let weight_table_raw = get_account(handler, &weight_table).await?;
+
+    if weight_table_raw.is_some() {
+        get_weight_table(handler, epoch).await
+    } else {
+        create_weight_table(handler, epoch).await?;
+        get_weight_table(handler, epoch).await
+    }
+}
+
+pub async fn get_or_create_operator_snapshot(
+    handler: &CliHandler,
+    operator: &Pubkey,
+    epoch: u64,
+) -> Result<OperatorSnapshot> {
+    let ncn = *handler.ncn()?;
+
+    let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+        &handler.tip_router_program_id,
+        operator,
+        &ncn,
+        epoch,
+    );
+
+    let operator_snapshot_raw = get_account(handler, &operator_snapshot).await?;
+
+    if operator_snapshot_raw.is_some() {
+        get_operator_snapshot(handler, operator, epoch).await
+    } else {
+        create_operator_snapshot(handler, operator, epoch).await?;
+        get_operator_snapshot(handler, operator, epoch).await
+    }
+}
+
+pub async fn get_or_create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<BallotBox> {
+    let ncn = *handler.ncn()?;
+
+    let (ballot_box, _, _) =
+        BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let ballot_box_raw = get_account(handler, &ballot_box).await?;
+
+    if ballot_box_raw.is_some() {
+        get_ballot_box(handler, epoch).await
+    } else {
+        create_ballot_box(handler, epoch).await?;
+        get_ballot_box(handler, epoch).await
+    }
+}
+
+pub async fn get_or_create_ncn_reward_router(
+    handler: &CliHandler,
+    ncn_fee_group: NcnFeeGroup,
+    operator: &Pubkey,
+    epoch: u64,
+) -> Result<NcnRewardRouter> {
+    let ncn = *handler.ncn()?;
+
+    let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        operator,
+        &ncn,
+        epoch,
+    );
+
+    let ncn_reward_router_raw = get_account(handler, &ncn_reward_router).await?;
+
+    if ncn_reward_router_raw.is_some() {
+        get_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await
+    } else {
+        create_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await?;
+        get_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await
+    }
+}
+
+// --------------------- CRANKERS ------------------------------
+
+pub async fn crank_set_weight(handler: &CliHandler, epoch: u64) -> Result<()> {
+    let weight_table = get_or_create_weight_table(handler, epoch).await?;
+
+    let st_mints = weight_table
+        .table()
+        .iter()
+        .filter(|entry| !entry.is_empty() && !entry.is_set())
+        .map(|entry| *entry.st_mint())
+        .collect::<Vec<Pubkey>>();
+
+    for st_mint in st_mints {
+        let result = set_weight_with_st_mint(handler, &st_mint, epoch).await;
+
+        if let Err(err) = result {
+            log::error!(
+                "Failed to set weight for st_mint: {:?} in epoch: {:?} with error: {:?}",
+                st_mint,
+                epoch,
+                err
+            );
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
+    let vault_registry = get_vault_registry(handler).await?;
+
+    let operators = get_all_operators_in_ncn(handler).await?;
+    let all_vaults: Vec<Pubkey> = vault_registry
+        .get_valid_vault_entries()
+        .iter()
+        .map(|entry| *entry.vault())
+        .collect();
+
+    for operator in operators.iter() {
+        // Create Vault Operator Delegation
+        let result = get_or_create_operator_snapshot(handler, operator, epoch).await;
+
+        if result.is_err() {
+            log::error!(
+                "Failed to get or create operator snapshot for operator: {:?} in epoch: {:?} with error: {:?}",
+                operator,
+                epoch,
+                result.err().unwrap()
+            );
+            continue;
+        };
+
+        let operator_snapshot = result?;
+
+        let vaults_to_run: Vec<Pubkey> = all_vaults
+            .iter()
+            .filter(|vault| !operator_snapshot.contains_vault(vault))
+            .map(|vault| *vault)
+            .collect();
+
+        for vault in vaults_to_run.iter() {
+            let result = snapshot_vault_operator_delegation(handler, vault, operator, epoch).await;
+
+            if let Err(err) = result {
+                log::error!(
+                    "Failed to snapshot vault operator delegation for vault: {:?} and operator: {:?} in epoch: {:?} with error: {:?}",
+                    vault,
+                    operator,
+                    epoch,
+                    err
+                );
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn crank_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
+    let _ballot_box = get_or_create_ballot_box(handler, epoch).await?;
+
+    info!("TODO crank vote");
+    Ok(())
+}
+
+pub async fn crank_setup_router(handler: &CliHandler, epoch: u64) -> Result<()> {
+    create_base_reward_router(handler, epoch).await
+}
+
+pub async fn crank_upload(handler: &CliHandler, epoch: u64) -> Result<()> {
+    info!("TODO crank upload");
+    Ok(())
+}
+
+pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
+    let ncn = *handler.ncn()?;
+    let operators = get_all_operators_in_ncn(handler).await?;
+
+    route_base_rewards(handler, epoch).await?;
+
+    for group in BaseFeeGroup::all_groups() {
+        //TODO
+        // distribute_base_rewards(handler, epoch).await?;
+    }
+
+    for operator in operators.iter() {
+        for group in NcnFeeGroup::all_groups() {
+            //TODO optimize such that we don't create a NCN Reward Router if we don't need it
+
+            let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
+
+            if let Err(err) = result {
+                log::error!(
+                    "Failed to get or create ncn reward router: {:?} in epoch: {:?} with error: {:?}",
+                    operator,
+                    epoch,
+                    err
+                );
+                continue;
+            }
+
+            let result = distribute_base_ncn_rewards(handler, operator, group, epoch).await;
+
+            if let Err(err) = result {
+                log::error!(
+                    "Failed to distribute base ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
+                    operator,
+                    epoch,
+                    err
+                );
+                continue;
+            }
+
+            let result = route_ncn_rewards(handler, operator, group, epoch).await;
+
+            if let Err(err) = result {
+                log::error!(
+                    "Failed to route ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
+                    operator,
+                    epoch,
+                    err
+                );
+                continue;
+            }
+
+            // TODO distribute ncn vault rewards
+            // TODO distribute ncn operator rewards
+        }
+    }
+
+    Ok(())
+}
+
+// pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
+//     let ncn = *handler.ncn()?;
+
+//     let operators = get_all_operators_in_ncn(handler).await?;
+
+//     for operator in operators.iter() {
+//         let operator_account = get_operator(handler, operator).await?;
+
+//         if operator_account.is_none() {
+//             log::error!(
+//                 "Operator account not found for operator: {:?} in epoch: {:?}",
+//                 operator,
+//                 epoch
+//             );
+//             continue;
+//         }
+
+//         let operator_account = operator_account.unwrap();
+
+//         let ncn_fee_group = operator_account.ncn_fee_group();
+
+//         let result = distribute_base_ncn_rewards(handler, operator, ncn_fee_group, epoch).await;
+
+//         if let Err(err) = result {
+//             log::error!(
+//                 "Failed to distribute base ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
+//                 operator,
+//                 epoch,
+//                 err
+//             );
+//         }
+//     }
+
+//     Ok(())
+// }
+
 // --------------------- NCN SETUP ------------------------------
 
 //TODO create NCN
@@ -1312,7 +1549,6 @@ pub async fn admin_set_tie_breaker(
 
 pub async fn create_test_ncn(handler: &CliHandler) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let base = Keypair::new();
     let (ncn, _, _) = Ncn::find_program_address(&handler.restaking_program_id, &base.pubkey());
@@ -1328,8 +1564,7 @@ pub async fn create_test_ncn(handler: &CliHandler) -> Result<()> {
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[ix_builder.instruction()],
         &[&base],
         "Created Test Ncn",
@@ -1345,7 +1580,6 @@ pub async fn create_and_add_test_operator(
     operator_fee_bps: u16,
 ) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -1393,8 +1627,7 @@ pub async fn create_and_add_test_operator(
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[initalize_operator_ix, initialize_ncn_operator_state_ix],
         &[&base],
         "Created Test Operator",
@@ -1408,8 +1641,7 @@ pub async fn create_and_add_test_operator(
     sleep(Duration::from_millis(1000)).await;
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[ncn_warmup_operator_ix, operator_warmup_ncn_ix],
         &[],
         "Warmed up Operator",
@@ -1430,7 +1662,6 @@ pub async fn create_and_add_test_vault(
     reward_fee_bps: u16,
 ) -> Result<()> {
     let keypair = handler.keypair()?;
-    let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
 
@@ -1484,10 +1715,8 @@ pub async fn create_and_add_test_vault(
     .unwrap();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[
-            ComputeBudgetInstruction::set_compute_unit_price(500_000),
             create_mint_account_ix,
             initialize_mint_ix,
             create_admin_ata_ix,
@@ -1554,10 +1783,8 @@ pub async fn create_and_add_test_vault(
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[
-            ComputeBudgetInstruction::set_compute_unit_price(500_000),
             initialize_vault_ix,
             create_vault_ata_ix,
             create_admin_vrt_ata_ix,
@@ -1603,10 +1830,8 @@ pub async fn create_and_add_test_vault(
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
+        handler,
         &[
-            ComputeBudgetInstruction::set_compute_unit_price(500_000),
             initialize_ncn_vault_ticket_ix,
             initialize_vault_ncn_ticket_ix,
         ],
@@ -1635,13 +1860,8 @@ pub async fn create_and_add_test_vault(
         .instruction();
 
     send_and_log_transaction(
-        client,
-        keypair,
-        &[
-            ComputeBudgetInstruction::set_compute_unit_price(500_000),
-            warmup_ncn_vault_ticket_ix,
-            warmup_vault_ncn_ticket_ix,
-        ],
+        handler,
+        &[warmup_ncn_vault_ticket_ix, warmup_vault_ncn_ticket_ix],
         &[],
         "Warmed up NCN Vault Tickets",
         &[format!("NCN: {:?}", ncn), format!("Vault: {:?}", vault)],
@@ -1672,12 +1892,8 @@ pub async fn create_and_add_test_vault(
         // do_initialize_operator_vault_ticket
 
         send_and_log_transaction(
-            client,
-            keypair,
-            &[
-                ComputeBudgetInstruction::set_compute_unit_price(500_000),
-                initialize_operator_vault_ticket_ix,
-            ],
+            handler,
+            &[initialize_operator_vault_ticket_ix],
             &[],
             "Connected Vault and Operator",
             &[
@@ -1720,10 +1936,8 @@ pub async fn create_and_add_test_vault(
             .instruction();
 
         send_and_log_transaction(
-            client,
-            keypair,
+            handler,
             &[
-                ComputeBudgetInstruction::set_compute_unit_price(500_000),
                 warmup_operator_vault_ticket_ix,
                 initialize_vault_operator_delegation_ix,
                 delegate_to_operator_ix,
@@ -1746,8 +1960,7 @@ pub async fn create_and_add_test_vault(
 // --------------------- HELPERS -------------------------
 
 pub async fn send_and_log_transaction(
-    client: &RpcClient,
-    keypair: &Keypair,
+    handler: &CliHandler,
     instructions: &[Instruction],
     signing_keypairs: &[&Keypair],
     title: &str,
@@ -1755,7 +1968,7 @@ pub async fn send_and_log_transaction(
 ) -> Result<()> {
     sleep(Duration::from_secs(1)).await;
 
-    let signature = send_transactions(client, keypair, instructions, signing_keypairs).await?;
+    let signature = send_transactions(handler, instructions, signing_keypairs).await?;
 
     log_transaction(title, signature, log_items);
 
@@ -1763,11 +1976,61 @@ pub async fn send_and_log_transaction(
 }
 
 pub async fn send_transactions(
-    client: &RpcClient,
-    keypair: &Keypair,
+    handler: &CliHandler,
     instructions: &[Instruction],
     signing_keypairs: &[&Keypair],
 ) -> Result<Signature> {
+    let client = handler.rpc_client();
+    let keypair = handler.keypair()?;
+    let retries = handler.retries;
+    let priority_fee_micro_lamports = handler.priority_fee_micro_lamports;
+
+    let mut all_instructions = vec![];
+
+    all_instructions.push(ComputeBudgetInstruction::set_compute_unit_price(
+        priority_fee_micro_lamports,
+    ));
+
+    all_instructions.extend_from_slice(instructions);
+
+    for iteration in 0..retries {
+        let blockhash = client.get_latest_blockhash().await?;
+
+        // Create a vector that combines all signing keypairs
+        let mut all_signers = vec![keypair];
+        all_signers.extend(signing_keypairs.iter());
+
+        let tx = Transaction::new_signed_with_payer(
+            &all_instructions,
+            Some(&keypair.pubkey()),
+            &all_signers, // Pass the reference to the vector of keypair references
+            blockhash,
+        );
+
+        let config = RpcSendTransactionConfig {
+            skip_preflight: true,
+            ..RpcSendTransactionConfig::default()
+        };
+        let result = client
+            .send_and_confirm_transaction_with_spinner_and_config(&tx, client.commitment(), config)
+            .await;
+
+        if let Err(_) = result {
+            info!(
+                "Retrying transaction after {}s {}/{}",
+                (1 + iteration),
+                iteration,
+                retries
+            );
+
+            sleep(Duration::from_secs(1 + iteration)).await;
+            continue;
+        }
+
+        Ok(result.unwrap());
+    }
+
+    // last retry
     let blockhash = client.get_latest_blockhash().await?;
 
     // Create a vector that combines all signing keypairs
@@ -1780,18 +2043,6 @@ pub async fn send_transactions(
         &all_signers, // Pass the reference to the vector of keypair references
         blockhash,
     );
-
-    // let config = RpcSendTransactionConfig {
-    //     skip_preflight: true,
-    //     ..RpcSendTransactionConfig::default()
-    // };
-    // let result = client
-    //     .send_and_confirm_transaction_with_spinner_and_config(
-    //         &tx,
-    //         CommitmentConfig::confirmed(),
-    //         config,
-    //     )
-    //     .await;
 
     let result = client.send_and_confirm_transaction(&tx).await;
 

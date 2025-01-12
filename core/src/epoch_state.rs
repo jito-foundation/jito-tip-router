@@ -543,6 +543,53 @@ impl EpochState {
             .increment(rewards)?;
         Ok(())
     }
+
+    // ------------ STATE ------------
+    pub fn current_state(&self) -> Result<State, TipRouterError> {
+        if self.account_status.weight_table()? == AccountStatus::DNE
+            || !self.set_weight_progress.is_complete()
+        {
+            return Ok(State::SetWeight);
+        }
+
+        if self.account_status.epoch_snapshot()? == AccountStatus::DNE
+            || !self.epoch_snapshot_progress.is_complete()
+        {
+            return Ok(State::Snapshot);
+        }
+
+        if self.account_status.ballot_box()? == AccountStatus::DNE
+            || !self.voting_progress.is_complete()
+        {
+            return Ok(State::Vote);
+        }
+
+        if self.account_status.base_reward_router()? == AccountStatus::DNE {
+            return Ok(State::SetupRouter);
+        }
+
+        if !self.upload_progress.is_complete() {
+            return Ok(State::Upload);
+        }
+
+        if !self.total_distribution_progress.is_complete()
+            || self.total_distribution_progress.total() == 0
+        {
+            return Ok(State::Distribute);
+        }
+
+        Ok(State::Done)
+    }
+}
+
+pub enum State {
+    SetWeight,
+    Snapshot,
+    Vote,
+    SetupRouter,
+    Upload,
+    Distribute,
+    Done,
 }
 
 #[cfg(test)]

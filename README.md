@@ -34,4 +34,4 @@
 
 - Close Buffers: `solana program close --buffers --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}')`
 
-- Upgrade Program Size: `solana program extend $(solana address --keypair target/deploy/jito_tip_router_program-keypair.json) 1000000 --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}') --url $(solana config get | grep "RPC URL" | awk '{print $3}')`
+- Upgrade Program Size: `solana program extend $(solana address --keypair target/deploy/jito_tip_router_program-keypair.json) 100000 --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}') --url $(solana config get | grep "RPC URL" | awk '{print $3}')`

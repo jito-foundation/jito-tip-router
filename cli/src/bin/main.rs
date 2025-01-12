@@ -4,7 +4,6 @@ use clap_markdown::MarkdownOptions;
 use dotenv::dotenv;
 
 use jito_tip_router_cli::{args::Args, handler::CliHandler, log::init_logger};
-use log::info;
 
 #[tokio::main]
 async fn main() -> Result<()> {

@@ -30,6 +30,24 @@ pub struct Args {
     #[arg(
         long,
         global = true,
+        env = "PRIORITY_FEE_MICRO_LAMPORTS",
+        default_value_t = 10_000,
+        help = "Priority fee in micro lamports"
+    )]
+    pub priority_fee_micro_lamports: u64,
+
+    #[arg(
+        long,
+        global = true,
+        env = "TRANSACTION_RETRIES",
+        default_value_t = 3,
+        help = "Amount of times to retry a transaction"
+    )]
+    pub transaction_retries: u64,
+
+    #[arg(
+        long,
+        global = true,
         env = "TIP_ROUTER_PROGRAM_ID",
         default_value_t = jito_tip_router_program::id().to_string(),
         help = "Tip router program ID"

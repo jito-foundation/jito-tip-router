@@ -420,6 +420,12 @@ impl OperatorSnapshot {
             .any(|v| v.vault_index() == vault_index)
     }
 
+    pub fn contains_vault(&self, vault: &Pubkey) -> bool {
+        self.vault_operator_stake_weight
+            .iter()
+            .any(|v| v.vault().eq(vault))
+    }
+
     pub const fn vault_operator_stake_weight(&self) -> &[VaultOperatorStakeWeight] {
         &self.vault_operator_stake_weight
     }

@@ -2,7 +2,7 @@ use crate::{
     getters::{get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn},
     handler::CliHandler,
 };
-use anyhow::{Ok, Result};
+use anyhow::{anyhow, Result};
 use jito_bytemuck::AccountDeserialize;
 
 use jito_tip_router_core::{
@@ -10,7 +10,7 @@ use jito_tip_router_core::{
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
-    epoch_state::EpochState,
+    epoch_state::{EpochState, State},
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
     vault_registry::VaultRegistry,
@@ -39,9 +39,7 @@ pub struct KeeperState {
 }
 
 impl KeeperState {
-    pub async fn fetch(&mut self, handler: &CliHandler) -> Result<()> {
-        let epoch = handler.epoch;
-
+    pub async fn fetch(&mut self, handler: &CliHandler, epoch: u64) -> Result<()> {
         // Fetch all vaults and operators
         let ncn = *handler.ncn().unwrap();
         self.ncn = ncn;
@@ -126,6 +124,9 @@ impl KeeperState {
         }
 
         self.update_epoch_state(handler).await?;
+
+        // To ensure that the state is fetched for the correct epoch
+        self.epoch = epoch;
 
         Ok(())
     }
@@ -281,6 +282,20 @@ impl KeeperState {
         .await?;
 
         Ok(raw_account)
+    }
+
+    pub fn current_state(&self) -> Result<State> {
+        if let Some(epoch_state) = &self.epoch_state {
+            let state_result = epoch_state.current_state();
+
+            if let Ok(state) = state_result {
+                return Ok(state);
+            } else {
+                return Err(anyhow!("Could not get current state"));
+            }
+        } else {
+            return Err(anyhow!("Epoch state does not exist"));
+        }
     }
 
     // pub async fn get_state(&self, handler: &CliHandler) -> Result<TipRouterState> {
