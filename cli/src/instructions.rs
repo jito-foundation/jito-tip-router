@@ -62,7 +62,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     rent::Rent,
     signature::{Keypair, Signature},
-    signer::{keypair, Signer},
+    signer::Signer,
     system_instruction::create_account,
     system_program,
     transaction::Transaction,
@@ -527,7 +527,7 @@ pub async fn set_weight_with_st_mint(
 
     let vault_registry = get_vault_registry(handler).await?;
 
-    let mint_entry = vault_registry.get_mint_entry(&st_mint)?;
+    let mint_entry = vault_registry.get_mint_entry(st_mint)?;
     let switchboard_feed = mint_entry.switchboard_feed();
 
     let (epoch_state, _, _) =
@@ -1305,7 +1305,7 @@ pub async fn distribute_base_rewards(
     let create_base_fee_wallet_ata_ix =
         spl_associated_token_account::instruction::create_associated_token_account_idempotent(
             &keypair.pubkey(),
-            &base_fee_wallet,
+            base_fee_wallet,
             &JITOSOL_MINT,
             &handler.token_program_id,
         );
@@ -1453,6 +1453,7 @@ pub async fn get_or_create_operator_snapshot(
     get_operator_snapshot(handler, operator, epoch).await
 }
 
+#[allow(clippy::large_stack_frames)]
 pub async fn get_or_create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<BallotBox> {
     let ncn = *handler.ncn()?;
     let (ballot_box, _, _) =
@@ -1587,7 +1588,7 @@ pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
         let vaults_to_run: Vec<Pubkey> = all_vaults
             .iter()
             .filter(|vault| !operator_snapshot.contains_vault(vault))
-            .map(|vault| *vault)
+            .cloned()
             .collect();
 
         for vault in vaults_to_run.iter() {
@@ -1608,6 +1609,7 @@ pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::large_stack_frames)]
 pub async fn crank_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
     let _ballot_box = get_or_create_ballot_box(handler, epoch).await?;
 
@@ -2161,7 +2163,7 @@ pub async fn send_transactions(
             .send_and_confirm_transaction_with_spinner_and_config(&tx, client.commitment(), config)
             .await;
 
-        if let Err(_) = result {
+        if result.is_err() {
             info!(
                 "Retrying transaction after {}s {}/{}",
                 (1 + iteration),

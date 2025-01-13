@@ -117,6 +117,7 @@ impl CliHandler {
         self.ncn.as_ref().ok_or_else(|| anyhow!("No NCN address"))
     }
 
+    #[allow(clippy::large_stack_frames)]
     pub async fn handle(&self, action: ProgramCommand) -> Result<()> {
         match action {
             // Keeper

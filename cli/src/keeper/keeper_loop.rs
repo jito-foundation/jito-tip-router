@@ -15,7 +15,7 @@ pub async fn wait_for_epoch(handler: &CliHandler, target_epoch: u64) {
     let client = handler.rpc_client();
 
     loop {
-        let result = client.get_epoch_info().await;
+        let result = client.get_epoch_info().await.map_err(Into::into);
 
         if check_and_timeout_error("Waiting for epoch".to_string(), &result).await {
             continue;
@@ -31,10 +31,8 @@ pub async fn wait_for_epoch(handler: &CliHandler, target_epoch: u64) {
     }
 }
 
-pub async fn check_and_timeout_error<T, E>(title: String, result: &Result<T, E>) -> bool
-where
-    E: std::fmt::Debug + Send,
-{
+#[allow(clippy::future_not_send)]
+pub async fn check_and_timeout_error<T>(title: String, result: &Result<T>) -> bool {
     if let Err(e) = result {
         log::error!("Error: [{}] \n{:?}\n\n", title, e);
         timeout_keeper(5000).await;
@@ -56,6 +54,7 @@ pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::large_stack_frames)]
 pub async fn run_keeper(handler: &CliHandler) {
     let mut state: KeeperState = KeeperState::default();
     let mut current_epoch = handler.epoch;
