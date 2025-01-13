@@ -117,7 +117,7 @@ impl CliHandler {
         self.ncn.as_ref().ok_or_else(|| anyhow!("No NCN address"))
     }
 
-    pub async fn handle(&mut self, action: ProgramCommand) -> Result<()> {
+    pub async fn handle(&self, action: ProgramCommand) -> Result<()> {
         match action {
             // Keeper
             ProgramCommand::Keeper {} => startup_keeper(self).await,
@@ -337,6 +337,14 @@ impl CliHandler {
             }
             ProgramCommand::GetEpochState {} => {
                 let epoch_state = get_epoch_state(self, self.epoch).await?;
+                // let (address, _, _) = EpochState::find_program_address(
+                //     &self.tip_router_program_id,
+                //     self.ncn()?,
+                //     self.epoch,
+                // );
+                // // B11bJ8VuRLhShaWFwCQ22kLjEbY4LZJwBTivRayt2Qq1
+
+                // // 5eaKPUXPR4CJQW9djRxPfkxaQUdtqnYiBhqJJyQodipT
                 info!("Epoch State: {:?}", epoch_state);
                 Ok(())
             }

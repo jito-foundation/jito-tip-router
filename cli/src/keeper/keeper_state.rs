@@ -59,7 +59,7 @@ impl KeeperState {
         self.vault_registry_address = vault_registry_address;
 
         let (epoch_state_address, _, _) =
-            WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+            EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
         self.epoch_state_address = epoch_state_address;
 
         let (weight_table_address, _, _) =
@@ -135,8 +135,12 @@ impl KeeperState {
         let raw_account = get_account(handler, &self.epoch_state_address).await?;
 
         if raw_account.is_none() {
+            println!("Epoch state does not exist {}", &self.epoch_state_address);
+
             self.epoch_state = None;
         } else {
+            println!("Epoch state does exist {}", &self.epoch_state_address);
+
             let raw_account = raw_account.unwrap();
             let account = Box::new(*EpochState::try_from_slice_unchecked(
                 raw_account.data.as_slice(),
@@ -284,36 +288,24 @@ impl KeeperState {
         Ok(raw_account)
     }
 
+    pub fn epoch_state(&self) -> Result<&EpochState> {
+        self.epoch_state
+            .as_ref()
+            .map(|boxed| boxed.as_ref())
+            .ok_or_else(|| anyhow!("Epoch state does not exist"))
+    }
+
     pub fn current_state(&self) -> Result<State> {
         if let Some(epoch_state) = &self.epoch_state {
             let state_result = epoch_state.current_state();
 
             if let Ok(state) = state_result {
-                return Ok(state);
+                Ok(state)
             } else {
-                return Err(anyhow!("Could not get current state"));
+                Err(anyhow!("Could not get current state"))
             }
         } else {
-            return Err(anyhow!("Epoch state does not exist"));
+            Err(anyhow!("Epoch state does not exist"))
         }
     }
-
-    // pub async fn get_state(&self, handler: &CliHandler) -> Result<TipRouterState> {
-    //     let tip_router_config = self.tip_router_config(handler).await?;
-    //     let vault_registry = self.vault_registry(handler).await?;
-
-    //     if tip_router_config.is_none() || vault_registry.is_none() {
-    //         return Ok(TipRouterState::NotConfigured);
-    //     }
-
-    //     let weight_table = self.weight_table(handler).await?;
-
-    //     if weight_table.is_none() {
-    //         return Ok(TipRouterState::Idle);
-    //     }
-
-    //     // let epoch_snapshot = self.epoch_snapshot(handler).await?;
-
-    //     todo!()
-    // }
 }

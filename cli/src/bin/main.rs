@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
 
     // info!("{}\n", args);
 
-    let mut handler = CliHandler::from_args(&args).await?;
+    let handler = CliHandler::from_args(&args).await?;
     handler.handle(args.command).await?;
 
     Ok(())

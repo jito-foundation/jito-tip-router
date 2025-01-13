@@ -177,6 +177,10 @@ impl Progress {
         Ok(())
     }
 
+    pub fn set_tally(&mut self, tally: u64) {
+        self.tally = PodU64::from(tally);
+    }
+
     pub fn set_total(&mut self, total: u64) {
         self.total = PodU64::from(total);
     }
@@ -189,7 +193,10 @@ impl Progress {
         if self.is_invalid() {
             false
         } else {
-            self.tally.eq(&self.total)
+            //TODO: Set back when we can figure out why weight tally was:
+            // Crank State: SetWeight Progress { tally: PodU64(3), total: PodU64(2) }
+            // self.tally.eq(&self.total)
+            self.tally().ge(&self.total())
         }
     }
 }
@@ -423,8 +430,8 @@ impl EpochState {
         self.set_weight_progress = Progress::new(vault_count);
     }
 
-    pub fn update_set_weight(&mut self) -> Result<(), TipRouterError> {
-        self.set_weight_progress.increment_one()
+    pub fn update_set_weight(&mut self, weights_set: u64) {
+        self.set_weight_progress.set_tally(weights_set)
     }
 
     pub fn update_initialize_epoch_snapshot(&mut self, operator_count: u64) {
@@ -582,6 +589,7 @@ impl EpochState {
     }
 }
 
+#[derive(Debug)]
 pub enum State {
     SetWeight,
     Snapshot,

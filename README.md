@@ -28,7 +28,7 @@
 
 - Deploy: `solana program deploy --use-rpc --buffer target/tmp/buffer.json --url $(solana config get | grep "RPC URL" | awk '{print $3}') --with-compute-unit-price 10000 --max-sign-attempts 10000 target/deploy/jito_tip_router_program.so --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}')`
 
-- Write to buffer: `solana program write-buffer --use-rpc --buffer target/tmp/buffer.json --url $(solana config get | grep "RPC URL" | awk '{print $3}') --with-compute-unit-price 10000 --max-sign-attempts 10000 target/deploy/jito_tip_router_program.so --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}')`
+- (Pre Upgrade) Write to buffer: `solana program write-buffer --use-rpc --buffer target/tmp/buffer.json --url $(solana config get | grep "RPC URL" | awk '{print $3}') --with-compute-unit-price 10000 --max-sign-attempts 10000 target/deploy/jito_tip_router_program.so --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}')`
 
 - Upgrade: `solana program upgrade $(solana address --keypair target/tmp/buffer.json) $(solana address --keypair target/deploy/jito_tip_router_program-keypair.json) --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}') --url $(solana config get | grep "RPC URL" | awk '{print $3}')`
 

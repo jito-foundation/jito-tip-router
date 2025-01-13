@@ -497,10 +497,15 @@ pub struct NcnTickets {
     pub ncn: Pubkey,
     pub vault: Pubkey,
     pub operator: Pubkey,
+    pub ncn_vault_ticket_address: Pubkey,
     pub ncn_vault_ticket: Option<NcnVaultTicket>,
+    pub vault_ncn_ticket_address: Pubkey,
     pub vault_ncn_ticket: Option<VaultNcnTicket>,
+    pub vault_operator_delegation_address: Pubkey,
     pub vault_operator_delegation: Option<VaultOperatorDelegation>,
+    pub operator_vault_ticket_address: Pubkey,
     pub operator_vault_ticket: Option<OperatorVaultTicket>,
+    pub ncn_operator_state_address: Pubkey,
     pub ncn_operator_state: Option<NcnOperatorState>,
 }
 
@@ -518,6 +523,8 @@ impl NcnTickets {
     ) -> Self {
         let ncn = handler.ncn().expect("NCN not found");
 
+        let (ncn_vault_ticket_address, _, _) =
+            NcnVaultTicket::find_program_address(&handler.restaking_program_id, ncn, vault);
         let ncn_vault_ticket = get_ncn_vault_ticket(handler, vault).await;
         let ncn_vault_ticket = {
             match ncn_vault_ticket {
@@ -532,6 +539,8 @@ impl NcnTickets {
             }
         };
 
+        let (vault_ncn_ticket_address, _, _) =
+            VaultNcnTicket::find_program_address(&handler.vault_program_id, vault, ncn);
         let vault_ncn_ticket = get_vault_ncn_ticket(handler, vault).await;
         let vault_ncn_ticket = {
             match vault_ncn_ticket {
@@ -546,6 +555,12 @@ impl NcnTickets {
             }
         };
 
+        let (vault_operator_delegation_address, _, _) =
+            VaultOperatorDelegation::find_program_address(
+                &handler.vault_program_id,
+                vault,
+                operator,
+            );
         let vault_operator_delegation =
             get_vault_operator_delegation(handler, vault, operator).await;
         let vault_operator_delegation = {
@@ -561,6 +576,11 @@ impl NcnTickets {
             }
         };
 
+        let (operator_vault_ticket_address, _, _) = OperatorVaultTicket::find_program_address(
+            &handler.restaking_program_id,
+            operator,
+            vault,
+        );
         let operator_vault_ticket = get_operator_vault_ticket(handler, vault, operator).await;
         let operator_vault_ticket = {
             match operator_vault_ticket {
@@ -575,6 +595,8 @@ impl NcnTickets {
             }
         };
 
+        let (ncn_operator_state_address, _, _) =
+            NcnOperatorState::find_program_address(&handler.restaking_program_id, ncn, operator);
         let ncn_operator_state = get_ncn_operator_state(handler, operator).await;
         let ncn_operator_state = {
             match ncn_operator_state {
@@ -600,6 +622,11 @@ impl NcnTickets {
             vault_operator_delegation,
             operator_vault_ticket,
             ncn_operator_state,
+            ncn_vault_ticket_address,
+            vault_ncn_ticket_address,
+            vault_operator_delegation_address,
+            operator_vault_ticket_address,
+            ncn_operator_state_address,
         }
     }
 
@@ -716,16 +743,6 @@ impl NcnTickets {
 
 impl fmt::Display for NcnTickets {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Helper closure for arrow representation
-        let arrow = |state: u8| -> &str {
-            match state {
-                Self::DNE => "--X",
-                Self::NOT_ACTIVE => "---",
-                Self::ACTIVE => "==>",
-                _ => "",
-            }
-        };
-
         // Helper closure for checkmarks in summary
         let check = |state: u8| -> &str {
             match state {
@@ -736,77 +753,50 @@ impl fmt::Display for NcnTickets {
             }
         };
 
-        writeln!(f, "\n\n")?;
-        writeln!(f, "┌─────────────────────────────────┐")?;
-        writeln!(f, "│            State                │")?;
-        writeln!(f, "├─────────────────────────────────┤")?;
-        writeln!(f, "│                                 │")?;
-        writeln!(
-            f,
-            "│   NCN {}--> Operator           │",
-            arrow(self.ncn_operator())
-        )?;
-        writeln!(
-            f,
-            "│       <--{}                    │",
-            arrow(self.operator_ncn())
-        )?;
-        writeln!(f, "│                                 │")?;
-        writeln!(
-            f,
-            "│   NCN {}--> Vault              │",
-            arrow(self.ncn_vault())
-        )?;
-        writeln!(
-            f,
-            "│       <--{}                    │",
-            arrow(self.vault_ncn())
-        )?;
-        writeln!(f, "│                                 │")?;
-        writeln!(
-            f,
-            "│   Operator {}--> Vault         │",
-            arrow(self.operator_vault())
-        )?;
-        writeln!(
-            f,
-            "│           <--{}                │",
-            arrow(self.vault_operator())
-        )?;
-        writeln!(f, "│                                 │")?;
-        writeln!(f, "└─────────────────────────────────┘")?;
-
-        // Summary section
-        writeln!(f, "Summary:")?;
-        writeln!(
-            f,
-            "NCN -> Operator: {}      Operator -> NCN: {}",
-            check(self.ncn_operator()),
-            check(self.operator_ncn())
-        )?;
-        writeln!(
-            f,
-            "NCN -> Vault: {}         Vault -> NCN: {}",
-            check(self.ncn_vault()),
-            check(self.vault_ncn())
-        )?;
-        writeln!(
-            f,
-            "Operator -> Vault: {}    Vault -> Operator: {}",
-            check(self.operator_vault()),
-            check(self.vault_operator())
-        )?;
-        writeln!(f, "\nncn:      {}", self.ncn)?;
+        writeln!(f, "\n")?;
+        writeln!(f, "------------------ STATE ---------------------\n")?;
+        writeln!(f, "NCN:      {}", self.ncn)?;
         writeln!(f, "Operator: {}", self.operator)?;
         writeln!(f, "Vault:    {}", self.vault)?;
-        writeln!(f, "\n\n")?;
+        writeln!(f, "\n")?;
+        writeln!(
+            f,
+            "NCN      -> Operator: {} {}",
+            check(self.ncn_operator()),
+            self.ncn_operator_state_address
+        )?;
+        writeln!(
+            f,
+            "Operator -> NCN:      {} {}",
+            check(self.operator_ncn()),
+            self.ncn_operator_state_address
+        )?;
+        writeln!(
+            f,
+            "NCN      -> Vault:    {} {}",
+            check(self.ncn_vault()),
+            self.ncn_vault_ticket_address
+        )?;
+        writeln!(
+            f,
+            "Vault    -> NCN:      {} {}",
+            check(self.vault_ncn()),
+            self.vault_ncn_ticket_address
+        )?;
+        writeln!(
+            f,
+            "Operator -> Vault:    {} {}",
+            check(self.operator_vault()),
+            self.operator_vault_ticket_address
+        )?;
+        writeln!(
+            f,
+            "Vault    -> Operator: {} {}",
+            check(self.vault_operator()),
+            self.vault_operator_delegation_address
+        )?;
+        writeln!(f, "\n")?;
 
         Ok(())
     }
 }
-
-// NCN: HCwK4Hi98Po1PdUzwX8rAmUhvHhmu1LtwBMFaTLFR2TK
-// Operator: 7LbsNkrA6RwQ8v76rsg6pdGqwsgHy5Gn3iDkFCwR9Jd8
-// Vault: 3WBxbSRwfFEaLAh89VYAVCygmNamkdKiq8Ga2TUJ4FBA
-// Amount: 1000
-// OVT: 7zRfBmgNFjw7VZLcr52emWxncdgMh55o3xfvu3B2gWwn

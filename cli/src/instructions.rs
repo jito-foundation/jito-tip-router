@@ -2,11 +2,12 @@ use std::time::Duration;
 
 use crate::{
     getters::{
-        get_account, get_all_operators_in_ncn, get_ballot_box, get_base_reward_router,
-        get_ncn_reward_router, get_operator_snapshot, get_vault, get_vault_registry,
-        get_weight_table,
+        get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn, get_ballot_box,
+        get_base_reward_router, get_epoch_snapshot, get_ncn_reward_router, get_operator_snapshot,
+        get_vault, get_vault_registry, get_weight_table,
     },
     handler::CliHandler,
+    log::boring_progress_bar,
 };
 use anyhow::{anyhow, Ok, Result};
 use jito_restaking_client::instructions::{
@@ -390,6 +391,9 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     let (weight_table, _, _) =
         WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let weight_table_account = get_account(handler, &weight_table).await?;
 
     // Skip if weight table already exists
@@ -398,6 +402,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
         let initialize_weight_table_ix = InitializeWeightTableBuilder::new()
             .vault_registry(vault_registry)
             .ncn(ncn)
+            .epoch_state(epoch_state)
             .weight_table(weight_table)
             .payer(keypair.pubkey())
             .restaking_program(handler.restaking_program_id)
@@ -423,6 +428,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
         .config(config)
         .weight_table(weight_table)
         .ncn(ncn)
+        .epoch_state(epoch_state)
         .vault_registry(vault_registry)
         .epoch(epoch)
         .payer(keypair.pubkey())
@@ -475,9 +481,13 @@ pub async fn admin_set_weight_with_st_mint(
     let (weight_table, _, _) =
         WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let admin_set_weight_ix = AdminSetWeightBuilder::new()
         .ncn(ncn)
         .weight_table(weight_table)
+        .epoch_state(epoch_state)
         .weight_table_admin(keypair.pubkey())
         .restaking_program(handler.restaking_program_id)
         .st_mint(*st_mint)
@@ -520,12 +530,16 @@ pub async fn set_weight_with_st_mint(
     let mint_entry = vault_registry.get_mint_entry(&st_mint)?;
     let switchboard_feed = mint_entry.switchboard_feed();
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (weight_table, _, _) =
         WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
     let set_weight_ix = SwitchboardSetWeightBuilder::new()
         .ncn(ncn)
         .weight_table(weight_table)
+        .epoch_state(epoch_state)
         .st_mint(*st_mint)
         .switchboard_feed(*switchboard_feed)
         .epoch(epoch)
@@ -556,6 +570,9 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (weight_table, _, _) =
         WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
@@ -565,6 +582,7 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
     let initialize_epoch_snapshot_ix = InitializeEpochSnapshotBuilder::new()
         .config(config)
         .ncn(ncn)
+        .epoch_state(epoch_state)
         .weight_table(weight_table)
         .epoch_snapshot(epoch_snapshot)
         .payer(keypair.pubkey())
@@ -599,6 +617,9 @@ pub async fn create_operator_snapshot(
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (ncn_operator_state, _, _) =
         NcnOperatorState::find_program_address(&handler.restaking_program_id, &ncn, &operator);
 
@@ -621,6 +642,7 @@ pub async fn create_operator_snapshot(
             .config(config)
             .ncn(ncn)
             .operator(operator)
+            .epoch_state(epoch_state)
             .ncn_operator_state(ncn_operator_state)
             .epoch_snapshot(epoch_snapshot)
             .operator_snapshot(operator_snapshot)
@@ -653,6 +675,7 @@ pub async fn create_operator_snapshot(
         .restaking_config(RestakingConfig::find_program_address(&handler.restaking_program_id).0)
         .ncn(ncn)
         .operator(operator)
+        .epoch_state(epoch_state)
         .ncn_operator_state(ncn_operator_state)
         .epoch_snapshot(epoch_snapshot)
         .operator_snapshot(operator_snapshot)
@@ -698,6 +721,9 @@ pub async fn snapshot_vault_operator_delegation(
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (restaking_config, _, _) =
         RestakingConfig::find_program_address(&handler.restaking_program_id);
 
@@ -725,6 +751,7 @@ pub async fn snapshot_vault_operator_delegation(
 
     let snapshot_vault_operator_delegation_ix = SnapshotVaultOperatorDelegationBuilder::new()
         .config(config)
+        .epoch_state(epoch_state)
         .restaking_config(restaking_config)
         .ncn(ncn)
         .operator(operator)
@@ -765,6 +792,9 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (ballot_box, _, _) =
         BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
@@ -775,6 +805,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
         // Initialize ballot box
         let initialize_ballot_box_ix = InitializeBallotBoxBuilder::new()
             .config(config)
+            .epoch_state(epoch_state)
             .ballot_box(ballot_box)
             .ncn(ncn)
             .epoch(epoch)
@@ -798,6 +829,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     // Realloc ballot box
     let realloc_ballot_box_ix = ReallocBallotBoxBuilder::new()
         .config(config)
+        .epoch_state(epoch_state)
         .ballot_box(ballot_box)
         .ncn(ncn)
         .epoch(epoch)
@@ -842,6 +874,9 @@ pub async fn admin_cast_vote(
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (ballot_box, _, _) =
         BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
@@ -857,6 +892,7 @@ pub async fn admin_cast_vote(
 
     let cast_vote_ix = CastVoteBuilder::new()
         .config(config)
+        .epoch_state(epoch_state)
         .ballot_box(ballot_box)
         .ncn(ncn)
         .epoch_snapshot(epoch_snapshot)
@@ -890,6 +926,9 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
 
     let ncn = *handler.ncn()?;
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (base_reward_router, _, _) =
         BaseRewardRouter::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
@@ -902,6 +941,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
     if base_reward_router_account.is_none() {
         let initialize_base_reward_router_ix = InitializeBaseRewardRouterBuilder::new()
             .ncn(ncn)
+            .epoch_state(epoch_state)
             .base_reward_router(base_reward_router)
             .base_reward_receiver(base_reward_receiver)
             .payer(keypair.pubkey())
@@ -925,6 +965,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
 
     let realloc_base_reward_router_ix = ReallocBaseRewardRouterBuilder::new()
         .config(TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0)
+        .epoch_state(epoch_state)
         .base_reward_router(base_reward_router)
         .ncn(ncn)
         .epoch(epoch)
@@ -966,6 +1007,9 @@ pub async fn create_ncn_reward_router(
 
     let operator = *operator;
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
         &handler.tip_router_program_id,
         ncn_fee_group,
@@ -987,6 +1031,7 @@ pub async fn create_ncn_reward_router(
     // Skip if ncn reward router already exists
     if ncn_reward_router_account.is_none() {
         let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
+            .epoch_state(epoch_state)
             .ncn(ncn)
             .operator(operator)
             .ncn_reward_router(ncn_reward_router)
@@ -1019,6 +1064,9 @@ pub async fn create_ncn_reward_router(
 pub async fn route_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> {
     let ncn = *handler.ncn()?;
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (epoch_snapshot, _, _) =
         EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
@@ -1037,6 +1085,7 @@ pub async fn route_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> 
     let mut still_routing = true;
     while still_routing {
         let route_base_rewards_ix = RouteBaseRewardsBuilder::new()
+            .epoch_state(epoch_state)
             .ncn(ncn)
             .epoch_snapshot(epoch_snapshot)
             .ballot_box(ballot_box)
@@ -1083,6 +1132,9 @@ pub async fn route_ncn_rewards(
 
     let operator = *operator;
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
         &handler.tip_router_program_id,
         &operator,
@@ -1112,6 +1164,7 @@ pub async fn route_ncn_rewards(
     let mut still_routing = true;
     while still_routing {
         let route_ncn_rewards_ix = RouteNcnRewardsBuilder::new()
+            .epoch_state(epoch_state)
             .ncn(ncn)
             .operator(operator)
             .operator_snapshot(operator_snapshot)
@@ -1162,6 +1215,9 @@ pub async fn distribute_base_ncn_rewards(
 
     let operator = *operator;
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (ncn_config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
@@ -1188,6 +1244,7 @@ pub async fn distribute_base_ncn_rewards(
     );
 
     let distribute_base_ncn_rewards_ix = DistributeBaseNcnRewardRouteBuilder::new()
+        .epoch_state(epoch_state)
         .config(ncn_config)
         .ncn(ncn)
         .operator(operator)
@@ -1231,6 +1288,9 @@ pub async fn admin_set_tie_breaker(
 
     let ncn = *handler.ncn()?;
 
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
     let (ncn_config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
@@ -1238,6 +1298,7 @@ pub async fn admin_set_tie_breaker(
         BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
     let set_tie_breaker_ix = AdminSetTieBreakerBuilder::new()
+        .epoch_state(epoch_state)
         .config(ncn_config)
         .ballot_box(ballot_box)
         .ncn(ncn)
@@ -1271,14 +1332,31 @@ pub async fn get_or_create_weight_table(handler: &CliHandler, epoch: u64) -> Res
     let (weight_table, _, _) =
         WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    let weight_table_raw = get_account(handler, &weight_table).await?;
-
-    if weight_table_raw.is_some() {
-        get_weight_table(handler, epoch).await
-    } else {
+    if get_account(handler, &weight_table)
+        .await?
+        .map_or(true, |table| table.data.len() < WeightTable::SIZE)
+    {
         create_weight_table(handler, epoch).await?;
-        get_weight_table(handler, epoch).await
     }
+    get_weight_table(handler, epoch).await
+}
+
+pub async fn get_or_create_epoch_snapshot(
+    handler: &CliHandler,
+    epoch: u64,
+) -> Result<EpochSnapshot> {
+    let ncn = *handler.ncn()?;
+    let (epoch_snapshot, _, _) =
+        EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    if get_account(handler, &epoch_snapshot)
+        .await?
+        .map_or(true, |snapshot| snapshot.data.len() < EpochSnapshot::SIZE)
+    {
+        create_epoch_snapshot(handler, epoch).await?;
+    }
+
+    get_epoch_snapshot(handler, epoch).await
 }
 
 pub async fn get_or_create_operator_snapshot(
@@ -1287,7 +1365,6 @@ pub async fn get_or_create_operator_snapshot(
     epoch: u64,
 ) -> Result<OperatorSnapshot> {
     let ncn = *handler.ncn()?;
-
     let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
         &handler.tip_router_program_id,
         operator,
@@ -1295,30 +1372,29 @@ pub async fn get_or_create_operator_snapshot(
         epoch,
     );
 
-    let operator_snapshot_raw = get_account(handler, &operator_snapshot).await?;
-
-    if operator_snapshot_raw.is_some() {
-        get_operator_snapshot(handler, operator, epoch).await
-    } else {
+    if get_account(handler, &operator_snapshot)
+        .await?
+        .map_or(true, |snapshot| {
+            snapshot.data.len() < OperatorSnapshot::SIZE
+        })
+    {
         create_operator_snapshot(handler, operator, epoch).await?;
-        get_operator_snapshot(handler, operator, epoch).await
     }
+    get_operator_snapshot(handler, operator, epoch).await
 }
 
 pub async fn get_or_create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<BallotBox> {
     let ncn = *handler.ncn()?;
-
     let (ballot_box, _, _) =
         BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    let ballot_box_raw = get_account(handler, &ballot_box).await?;
-
-    if ballot_box_raw.is_some() {
-        get_ballot_box(handler, epoch).await
-    } else {
+    if get_account(handler, &ballot_box)
+        .await?
+        .map_or(true, |ballot_box| ballot_box.data.len() < BallotBox::SIZE)
+    {
         create_ballot_box(handler, epoch).await?;
-        get_ballot_box(handler, epoch).await
     }
+    get_ballot_box(handler, epoch).await
 }
 
 pub async fn get_or_create_ncn_reward_router(
@@ -1328,7 +1404,6 @@ pub async fn get_or_create_ncn_reward_router(
     epoch: u64,
 ) -> Result<NcnRewardRouter> {
     let ncn = *handler.ncn()?;
-
     let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
         &handler.tip_router_program_id,
         ncn_fee_group,
@@ -1337,17 +1412,46 @@ pub async fn get_or_create_ncn_reward_router(
         epoch,
     );
 
-    let ncn_reward_router_raw = get_account(handler, &ncn_reward_router).await?;
-
-    if ncn_reward_router_raw.is_some() {
-        get_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await
-    } else {
+    if get_account(handler, &ncn_reward_router)
+        .await?
+        .map_or(true, |router| router.data.len() < NcnRewardRouter::SIZE)
+    {
         create_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await?;
-        get_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await
     }
+    get_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await
 }
 
 // --------------------- CRANKERS ------------------------------
+
+pub async fn crank_register_vaults(handler: &CliHandler) -> Result<()> {
+    let all_ncn_vaults = get_all_vaults_in_ncn(handler).await?;
+    let vault_registry = get_vault_registry(handler).await?;
+    let all_registered_vaults: Vec<Pubkey> = vault_registry
+        .get_valid_vault_entries()
+        .iter()
+        .map(|entry| *entry.vault())
+        .collect();
+
+    let vaults_to_register: Vec<Pubkey> = all_ncn_vaults
+        .iter()
+        .filter(|vault| !all_registered_vaults.contains(vault))
+        .copied()
+        .collect();
+
+    for vault in vaults_to_register.iter() {
+        let result = register_vault(handler, vault).await;
+
+        if let Err(err) = result {
+            log::error!(
+                "Failed to register vault: {:?} with error: {:?}",
+                vault,
+                err
+            );
+        }
+    }
+
+    Ok(())
+}
 
 pub async fn crank_set_weight(handler: &CliHandler, epoch: u64) -> Result<()> {
     let weight_table = get_or_create_weight_table(handler, epoch).await?;
@@ -1384,6 +1488,15 @@ pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
         .iter()
         .map(|entry| *entry.vault())
         .collect();
+
+    let epoch_snapshot = get_or_create_epoch_snapshot(handler, epoch).await?;
+    if epoch_snapshot.finalized() {
+        log::info!(
+            "Epoch snapshot already finalized for epoch: {:?}. Skipping snapshotting.",
+            epoch
+        );
+        return Ok(());
+    }
 
     for operator in operators.iter() {
         // Create Vault Operator Delegation
@@ -1436,18 +1549,17 @@ pub async fn crank_setup_router(handler: &CliHandler, epoch: u64) -> Result<()> 
     create_base_reward_router(handler, epoch).await
 }
 
-pub async fn crank_upload(handler: &CliHandler, epoch: u64) -> Result<()> {
+pub async fn crank_upload(_: &CliHandler, _: u64) -> Result<()> {
     info!("TODO crank upload");
     Ok(())
 }
 
 pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let ncn = *handler.ncn()?;
     let operators = get_all_operators_in_ncn(handler).await?;
 
     route_base_rewards(handler, epoch).await?;
 
-    for group in BaseFeeGroup::all_groups() {
+    for _ in BaseFeeGroup::all_groups() {
         //TODO
         // distribute_base_rewards(handler, epoch).await?;
     }
@@ -1499,42 +1611,6 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
     Ok(())
 }
-
-// pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
-//     let ncn = *handler.ncn()?;
-
-//     let operators = get_all_operators_in_ncn(handler).await?;
-
-//     for operator in operators.iter() {
-//         let operator_account = get_operator(handler, operator).await?;
-
-//         if operator_account.is_none() {
-//             log::error!(
-//                 "Operator account not found for operator: {:?} in epoch: {:?}",
-//                 operator,
-//                 epoch
-//             );
-//             continue;
-//         }
-
-//         let operator_account = operator_account.unwrap();
-
-//         let ncn_fee_group = operator_account.ncn_fee_group();
-
-//         let result = distribute_base_ncn_rewards(handler, operator, ncn_fee_group, epoch).await;
-
-//         if let Err(err) = result {
-//             log::error!(
-//                 "Failed to distribute base ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
-//                 operator,
-//                 epoch,
-//                 err
-//             );
-//         }
-//     }
-
-//     Ok(())
-// }
 
 // --------------------- NCN SETUP ------------------------------
 
@@ -2023,11 +2099,9 @@ pub async fn send_transactions(
                 retries
             );
 
-            sleep(Duration::from_secs(1 + iteration)).await;
+            boring_progress_bar((1 + iteration) * 1000).await;
             continue;
         }
-
-        Ok(result.unwrap());
     }
 
     // last retry

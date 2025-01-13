@@ -1,102 +1,117 @@
-use std::time::Duration;
-
 use crate::{
     handler::CliHandler,
     instructions::{
-        crank_distribute, crank_set_weight, crank_setup_router, crank_snapshot, crank_upload,
-        crank_vote, create_epoch_state,
+        crank_distribute, crank_register_vaults, crank_set_weight, crank_setup_router,
+        crank_snapshot, crank_upload, crank_vote, create_epoch_state,
     },
     keeper::keeper_state::KeeperState,
+    log::progress_bar,
 };
 use anyhow::Result;
 use jito_tip_router_core::epoch_state::State;
 use log::info;
-use tokio::time::sleep;
 
-pub async fn wait_for_epoch(handler: &mut CliHandler, target_epoch: u64) {
+pub async fn wait_for_epoch(handler: &CliHandler, target_epoch: u64) {
     let client = handler.rpc_client();
 
     loop {
-        info!("Waiting for epoch {}", target_epoch);
-
         let result = client.get_epoch_info().await;
 
-        if check_and_timeout_error("Waiting for epoch", &result).await {
+        if check_and_timeout_error(format!("Waiting for epoch"), &result).await {
             continue;
-        } else if result.unwrap().epoch >= target_epoch {
+        }
+
+        let current_epoch = result.unwrap().epoch;
+        if current_epoch >= target_epoch {
             break;
         }
 
-        info!("Sleeping for 15 minutes");
-        sleep(Duration::from_secs(60 * 15)).await;
+        info!("Waiting for epoch {}/{}", current_epoch, target_epoch);
+        timeout_keeper(1000 * 60 * 15).await;
     }
 }
 
-pub async fn check_and_timeout_error<T, E>(title: &str, result: &Result<T, E>) -> bool
+pub async fn check_and_timeout_error<T, E>(title: String, result: &Result<T, E>) -> bool
 where
     E: std::fmt::Debug,
 {
     if let Err(e) = result {
         log::error!("Error: [{}] \n{:?}\n\n", title, e);
-        timeout_keeper().await;
+        timeout_keeper(5000).await;
         true
     } else {
         false
     }
 }
-pub async fn timeout_keeper() {
-    log::info!("Timeout keeper");
-    sleep(Duration::from_secs(1)).await;
+
+pub async fn timeout_keeper(duration_ms: u64) {
+    // boring_progress_bar(duration_ms).await;
+    progress_bar(duration_ms).await;
 }
 
-pub async fn startup_keeper(handler: &mut CliHandler) -> Result<()> {
+pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
     run_keeper(handler).await;
 
     // Will never reach
     Ok(())
 }
 
-pub async fn run_keeper(handler: &mut CliHandler) {
+pub async fn run_keeper(handler: &CliHandler) {
     let mut state: KeeperState = KeeperState::default();
     let mut current_epoch = handler.epoch;
 
     loop {
-        // -2. TODO find and register vaults if needed
+        {
+            info!("-2. Register Vaults");
+            let result = crank_register_vaults(handler).await;
 
-        // -1. Wait for epoch
-        wait_for_epoch(handler, current_epoch).await;
-
-        // 0. Update Keeper State
-        if state.epoch != current_epoch {
-            let result = state.fetch(handler, current_epoch).await;
-
-            if check_and_timeout_error("Update Keeper State", &result).await {
+            if check_and_timeout_error(format!("Register Vaults"), &result).await {
                 continue;
             }
         }
 
-        // 1. Update the epoch state
         {
+            info!("-1. Wait for epoch");
+            wait_for_epoch(handler, current_epoch).await;
+        }
+
+        {
+            info!("0. Update Keeper State");
+            if state.epoch != current_epoch {
+                let result = state.fetch(handler, current_epoch).await;
+
+                if check_and_timeout_error(format!("Update Keeper State"), &result).await {
+                    continue;
+                }
+            }
+        }
+
+        {
+            info!("1. Update the epoch state");
             let result = state.update_epoch_state(handler).await;
 
-            if check_and_timeout_error("Update Epoch State", &result).await {
+            if check_and_timeout_error(format!("Update Epoch State"), &result).await {
                 continue;
             }
         }
 
-        // 2. If epoch state DNE, create it
-        if state.epoch_state.is_none() {
-            let result = create_epoch_state(handler, state.epoch).await;
+        {
+            info!("2. If epoch state DNE, create it");
+            if state.epoch_state.is_none() {
+                let result = create_epoch_state(handler, state.epoch).await;
 
-            let _ = check_and_timeout_error("Create Epoch State", &result).await;
+                let _ = check_and_timeout_error(format!("Create Epoch State"), &result).await;
 
-            // Go back either way
-            continue;
+                // Go back either way
+                continue;
+            }
         }
 
-        // 3. Check state
         {
-            let result = match state.current_state().unwrap() {
+            let current_state = state.current_state().unwrap();
+            info!("3. Crank State: {:?}", current_state);
+
+            let result = match current_state {
                 State::SetWeight => crank_set_weight(handler, state.epoch).await,
                 State::Snapshot => crank_snapshot(handler, state.epoch).await,
                 State::Vote => crank_vote(handler, state.epoch).await,
@@ -110,14 +125,15 @@ pub async fn run_keeper(handler: &mut CliHandler) {
                 }
             };
 
-            if check_and_timeout_error("Managing State", &result).await {
+            if check_and_timeout_error(format!("Managing State: {:?}", current_state), &result)
+                .await
+            {
                 continue;
             }
         }
 
-        // END. Timeout keeper
         {
-            timeout_keeper().await;
+            timeout_keeper(10_000).await;
         }
     }
 }

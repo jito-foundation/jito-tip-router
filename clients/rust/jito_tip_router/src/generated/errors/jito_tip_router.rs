@@ -231,6 +231,9 @@ pub enum JitoTipRouterError {
     /// 8768 - Invalid Account Status
     #[error("Invalid Account Status")]
     InvalidAccountStatus = 0x2240,
+    /// 8769 - Account already initialized
+    #[error("Account already initialized")]
+    AccountAlreadyInitialized = 0x2241,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

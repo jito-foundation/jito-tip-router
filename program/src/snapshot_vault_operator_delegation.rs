@@ -47,13 +47,6 @@ pub fn process_snapshot_vault_operator_delegation(
     Operator::load(restaking_program.key, operator, false)?;
     Vault::load(vault_program.key, vault, false)?;
 
-    VaultOperatorDelegation::load(
-        vault_program.key,
-        vault_operator_delegation,
-        vault,
-        operator,
-        false,
-    )?;
     VaultNcnTicket::load(vault_program.key, vault_ncn_ticket, vault, ncn, false)?;
     NcnVaultTicket::load(restaking_program.key, ncn_vault_ticket, ncn, vault, false)?;
 

@@ -7,7 +7,7 @@ mod set_merkle_root {
         ballot_box::{Ballot, BallotBox},
         claim_status_payer::ClaimStatusPayer,
         config::Config as NcnConfig,
-        epoch_state::{self, EpochState},
+        epoch_state::EpochState,
         error::TipRouterError,
     };
     use meta_merkle_tree::{

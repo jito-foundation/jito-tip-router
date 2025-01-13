@@ -3722,6 +3722,11 @@
       "code": 8768,
       "name": "InvalidAccountStatus",
       "msg": "Invalid Account Status"
+    },
+    {
+      "code": 8769,
+      "name": "AccountAlreadyInitialized",
+      "msg": "Account already initialized"
     }
   ],
   "metadata": {
