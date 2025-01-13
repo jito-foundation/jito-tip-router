@@ -4,7 +4,7 @@ use crate::{
     getters::{
         get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn, get_ballot_box,
         get_base_reward_router, get_epoch_snapshot, get_ncn_reward_router, get_operator_snapshot,
-        get_vault, get_vault_registry, get_weight_table,
+        get_tip_router_config, get_vault, get_vault_registry, get_weight_table,
     },
     handler::CliHandler,
     log::boring_progress_bar,
@@ -22,7 +22,7 @@ use jito_restaking_core::{
 };
 use jito_tip_router_client::instructions::{
     AdminRegisterStMintBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder, CastVoteBuilder,
-    DistributeBaseNcnRewardRouteBuilder, InitializeBallotBoxBuilder,
+    DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder, InitializeBallotBoxBuilder,
     InitializeBaseRewardRouterBuilder, InitializeConfigBuilder as InitializeTipRouterConfigBuilder,
     InitializeEpochSnapshotBuilder, InitializeEpochStateBuilder, InitializeNcnRewardRouterBuilder,
     InitializeOperatorSnapshotBuilder, InitializeVaultRegistryBuilder,
@@ -36,7 +36,7 @@ use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
-    constants::MAX_REALLOC_BYTES,
+    constants::{JITOSOL_MINT, MAX_REALLOC_BYTES},
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
@@ -62,7 +62,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     rent::Rent,
     signature::{Keypair, Signature},
-    signer::Signer,
+    signer::{keypair, Signer},
     system_instruction::create_account,
     system_program,
     transaction::Transaction,
@@ -1267,6 +1267,76 @@ pub async fn distribute_base_ncn_rewards(
             format!("NCN: {:?}", ncn),
             format!("Operator: {:?}", operator),
             format!("NCN Fee Group: {:?}", ncn_fee_group.group),
+            format!("Epoch: {:?}", epoch),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn distribute_base_rewards(
+    handler: &CliHandler,
+    base_fee_group: BaseFeeGroup,
+    epoch: u64,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let ncn = *handler.ncn()?;
+
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (ncn_config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (base_reward_router, _, _) =
+        BaseRewardRouter::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (base_reward_receiver, _, _) =
+        BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let tip_router_config = get_tip_router_config(handler).await?;
+    let base_fee_wallet = tip_router_config
+        .fee_config
+        .base_fee_wallet(base_fee_group)?;
+
+    let base_fee_wallet_ata = get_associated_token_address(base_fee_wallet, &JITOSOL_MINT);
+
+    let create_base_fee_wallet_ata_ix =
+        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+            &keypair.pubkey(),
+            &base_fee_wallet,
+            &JITOSOL_MINT,
+            &handler.token_program_id,
+        );
+
+    let distribute_base_ncn_rewards_ix = DistributeBaseRewardsBuilder::new()
+        .epoch_state(epoch_state)
+        .config(ncn_config)
+        .ncn(ncn)
+        .base_reward_router(base_reward_router)
+        .base_reward_receiver(base_reward_receiver)
+        .restaking_program(handler.restaking_program_id)
+        .system_program(system_program::id())
+        .epoch(epoch)
+        .base_fee_wallet(*base_fee_wallet)
+        .base_fee_wallet_ata(base_fee_wallet_ata)
+        .base_fee_group(base_fee_group.group)
+        // .manager_fee_account(manager_fee_account)
+        // .pool_mint(pool_mint)
+        .instruction();
+
+    send_and_log_transaction(
+        handler,
+        &[
+            create_base_fee_wallet_ata_ix,
+            distribute_base_ncn_rewards_ix,
+        ],
+        &[],
+        "Distributed Base Rewards",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Base Fee Group: {:?}", base_fee_group.group),
             format!("Epoch: {:?}", epoch),
         ],
     )
