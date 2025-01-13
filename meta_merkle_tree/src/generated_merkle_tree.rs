@@ -31,24 +31,6 @@ pub enum MerkleRootGeneratorError {
     MerkleTreeTestError,
     #[error("Checked math error")]
     CheckedMathError,
-    #[error("Checked math error A")]
-    CheckedMathErrorA,
-    #[error("Checked math error B")]
-    CheckedMathErrorB,
-    #[error("Checked math error C")]
-    CheckedMathErrorC,
-    #[error("Checked math error D")]
-    CheckedMathErrorD,
-    #[error("Checked math error E")]
-    CheckedMathErrorE,
-    #[error("Checked math error F")]
-    CheckedMathErrorF,
-    #[error("Checked math error G")]
-    CheckedMathErrorG,
-    #[error("Checked math error H")]
-    CheckedMathErrorH,
-    #[error("Checked math error I")]
-    CheckedMathErrorI,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -174,20 +156,20 @@ impl TreeNode {
             let protocol_fee_amount = u64::try_from(
                 (tip_distribution_meta.total_tips as u128)
                     .checked_mul(protocol_fee_bps as u128)
-                    .ok_or(MerkleRootGeneratorError::CheckedMathErrorA)?
+                    .ok_or(MerkleRootGeneratorError::CheckedMathError)?
                     .checked_div(MAX_BPS as u128)
-                    .ok_or(MerkleRootGeneratorError::CheckedMathErrorB)?,
+                    .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
             )
-            .map_err(|_| MerkleRootGeneratorError::CheckedMathErrorC)?;
+            .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
 
             let validator_amount = u64::try_from(
                 (tip_distribution_meta.total_tips as u128)
                     .checked_mul(tip_distribution_meta.validator_fee_bps as u128)
-                    .ok_or(MerkleRootGeneratorError::CheckedMathErrorC)?
+                    .ok_or(MerkleRootGeneratorError::CheckedMathError)?
                     .checked_div(MAX_BPS as u128)
-                    .ok_or(MerkleRootGeneratorError::CheckedMathErrorD)?,
+                    .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
             )
-            .map_err(|_| MerkleRootGeneratorError::CheckedMathErrorE)?;
+            .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
 
             let (protocol_fee_amount, remaining_total_rewards) = validator_amount
                 .checked_add(protocol_fee_amount)
@@ -211,24 +193,8 @@ impl TreeNode {
                     }
                 });
 
-            if remaining_total_rewards.is_none() {
-                info!(
-                    "NOTE: Invalid remaining rewards calculation:\n\
-                    total_tips: {}\n\
-                    protocol_fee_amount: {}\n\
-                    validator_amount: {}\n\
-                    protocol_fee_bps: {}\n\
-                    validator_fee_bps: {}",
-                    tip_distribution_meta.total_tips,
-                    protocol_fee_amount,
-                    validator_amount,
-                    protocol_fee_bps,
-                    tip_distribution_meta.validator_fee_bps
-                );
-            }
-
             let remaining_total_rewards =
-                remaining_total_rewards.ok_or(MerkleRootGeneratorError::CheckedMathErrorF)?;
+                remaining_total_rewards.ok_or(MerkleRootGeneratorError::CheckedMathError)?;
 
             // Must match the seeds from `core::BaseRewardReceiver`. Cannot
             // use `BaseRewardReceiver::find_program_address` as it would cause
@@ -292,11 +258,11 @@ impl TreeNode {
                         let amount_delegated = delegation.lamports_delegated as u128;
                         let reward_amount = u64::try_from(
                             (amount_delegated.checked_mul(remaining_total_rewards as u128))
-                                .ok_or(MerkleRootGeneratorError::CheckedMathErrorG)?
+                                .ok_or(MerkleRootGeneratorError::CheckedMathError)?
                                 .checked_div(total_delegated)
-                                .ok_or(MerkleRootGeneratorError::CheckedMathErrorH)?,
+                                .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
                         )
-                        .map_err(|_| MerkleRootGeneratorError::CheckedMathErrorI)?;
+                        .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
 
                         let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
                             &[

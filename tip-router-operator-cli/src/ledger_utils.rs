@@ -3,7 +3,7 @@ use std::{
     sync::{atomic::AtomicBool, Arc},
 };
 
-use log::info;
+use log::{info, warn};
 use solana_accounts_db::hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE};
 use solana_ledger::{
     bank_forks_utils::{self},
@@ -72,17 +72,13 @@ pub fn get_bank_from_ledger(
         }
     };
 
-    let slots_to_check = [
-        312564097, 312582120, 312600208, 312618282, 312636395, 312654446, 312672572, 312690682,
-        312708741, 312726810,
-    ];
-
-    for slot in slots_to_check {
-        let slot_exists = blockstore.meta(slot).unwrap().is_some();
-        info!("Slot {} in blockstore: {}", slot, slot_exists);
-    }
-
-    let desired_slot_in_blockstore = blockstore.meta(*desired_slot).unwrap().is_some();
+    let desired_slot_in_blockstore = match blockstore.meta(*desired_slot) {
+        Ok(meta) => meta.is_some(),
+        Err(err) => {
+            warn!("Failed to get meta for slot {}: {:?}", desired_slot, err);
+            false
+        }
+    };
     info!(
         "Desired slot {} in blockstore: {}",
         desired_slot, desired_slot_in_blockstore

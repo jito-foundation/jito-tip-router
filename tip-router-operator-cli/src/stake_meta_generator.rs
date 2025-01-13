@@ -83,11 +83,6 @@ pub fn generate_stake_meta(
     snapshots_enabled: bool,
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     info!("Creating bank from ledger path...");
-    info!("ledger_path: {}", ledger_path.display());
-    info!("account_paths: {:?}", account_paths);
-    info!("full_snapshots_path: {}", full_snapshots_path.display());
-    info!("desired_slot: {}", desired_slot);
-    info!("snapshots_enabled: {}", snapshots_enabled);
     let bank = get_bank_from_ledger(
         ledger_path,
         account_paths,
