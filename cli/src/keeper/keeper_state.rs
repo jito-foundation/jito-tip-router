@@ -296,16 +296,13 @@ impl KeeperState {
     }
 
     pub fn current_state(&self) -> Result<State> {
-        if let Some(epoch_state) = &self.epoch_state {
-            let state_result = epoch_state.current_state();
-
-            if let Ok(state) = state_result {
-                Ok(state)
-            } else {
-                Err(anyhow!("Could not get current state"))
-            }
-        } else {
-            Err(anyhow!("Epoch state does not exist"))
-        }
+        self.epoch_state
+            .as_ref()
+            .ok_or_else(|| anyhow!("Epoch state does not exist"))
+            .and_then(|epoch_state| {
+                epoch_state
+                    .current_state()
+                    .map_or_else(|_| Err(anyhow!("Could not get current state")), Ok)
+            })
     }
 }

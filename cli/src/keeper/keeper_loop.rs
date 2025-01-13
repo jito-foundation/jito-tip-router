@@ -17,7 +17,7 @@ pub async fn wait_for_epoch(handler: &CliHandler, target_epoch: u64) {
     loop {
         let result = client.get_epoch_info().await;
 
-        if check_and_timeout_error(format!("Waiting for epoch"), &result).await {
+        if check_and_timeout_error("Waiting for epoch".to_string(), &result).await {
             continue;
         }
 
@@ -33,7 +33,7 @@ pub async fn wait_for_epoch(handler: &CliHandler, target_epoch: u64) {
 
 pub async fn check_and_timeout_error<T, E>(title: String, result: &Result<T, E>) -> bool
 where
-    E: std::fmt::Debug,
+    E: std::fmt::Debug + Send,
 {
     if let Err(e) = result {
         log::error!("Error: [{}] \n{:?}\n\n", title, e);
@@ -65,7 +65,7 @@ pub async fn run_keeper(handler: &CliHandler) {
             info!("-2. Register Vaults");
             let result = crank_register_vaults(handler).await;
 
-            if check_and_timeout_error(format!("Register Vaults"), &result).await {
+            if check_and_timeout_error("Register Vaults".to_string(), &result).await {
                 continue;
             }
         }
@@ -80,7 +80,7 @@ pub async fn run_keeper(handler: &CliHandler) {
             if state.epoch != current_epoch {
                 let result = state.fetch(handler, current_epoch).await;
 
-                if check_and_timeout_error(format!("Update Keeper State"), &result).await {
+                if check_and_timeout_error("Update Keeper State".to_string(), &result).await {
                     continue;
                 }
             }
@@ -90,7 +90,7 @@ pub async fn run_keeper(handler: &CliHandler) {
             info!("1. Update the epoch state");
             let result = state.update_epoch_state(handler).await;
 
-            if check_and_timeout_error(format!("Update Epoch State"), &result).await {
+            if check_and_timeout_error("Update Epoch State".to_string(), &result).await {
                 continue;
             }
         }
@@ -100,7 +100,7 @@ pub async fn run_keeper(handler: &CliHandler) {
             if state.epoch_state.is_none() {
                 let result = create_epoch_state(handler, state.epoch).await;
 
-                let _ = check_and_timeout_error(format!("Create Epoch State"), &result).await;
+                let _ = check_and_timeout_error("Create Epoch State".to_string(), &result).await;
 
                 // Go back either way
                 continue;
