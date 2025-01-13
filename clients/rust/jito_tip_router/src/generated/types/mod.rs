@@ -3,6 +3,7 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
 pub(crate) mod r#ballot;
 pub(crate) mod r#ballot_tally;
@@ -25,10 +26,23 @@ pub(crate) mod r#vault_operator_stake_weight;
 pub(crate) mod r#vault_reward_route;
 pub(crate) mod r#weight_entry;
 
-pub use self::{
-    r#ballot::*, r#ballot_tally::*, r#base_fee_group::*, r#base_reward_router_rewards::*,
-    r#config_admin_role::*, r#epoch_account_status::*, r#fee::*, r#fee_config::*, r#fees::*,
-    r#ncn_fee_group::*, r#ncn_fee_group_weight::*, r#ncn_reward_route::*, r#operator_vote::*,
-    r#progress::*, r#st_mint_entry::*, r#stake_weights::*, r#vault_entry::*,
-    r#vault_operator_stake_weight::*, r#vault_reward_route::*, r#weight_entry::*,
-};
+pub use self::r#ballot::*;
+pub use self::r#ballot_tally::*;
+pub use self::r#base_fee_group::*;
+pub use self::r#base_reward_router_rewards::*;
+pub use self::r#config_admin_role::*;
+pub use self::r#epoch_account_status::*;
+pub use self::r#fee::*;
+pub use self::r#fee_config::*;
+pub use self::r#fees::*;
+pub use self::r#ncn_fee_group::*;
+pub use self::r#ncn_fee_group_weight::*;
+pub use self::r#ncn_reward_route::*;
+pub use self::r#operator_vote::*;
+pub use self::r#progress::*;
+pub use self::r#st_mint_entry::*;
+pub use self::r#stake_weights::*;
+pub use self::r#vault_entry::*;
+pub use self::r#vault_operator_stake_weight::*;
+pub use self::r#vault_reward_route::*;
+pub use self::r#weight_entry::*;
