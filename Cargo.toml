@@ -61,6 +61,7 @@ serde-big-array = "0.5.1"
 shank = "0.4.2"
 shank_idl = "0.4.2"
 spl-math = { version = "0.2.0", features = ["no-entrypoint"] }
+spl-memo = "4.0.0"
 solana-account-decoder = { package = "solana-account-decoder", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
 solana-metrics = { package = "solana-metrics", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
 solana-accounts-db = { package = "solana-accounts-db", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }

@@ -1,10 +1,14 @@
 use ::{
     anyhow::Result,
     clap::Parser,
-    ellipsis_client::EllipsisClient,
+    ellipsis_client::{ClientSubset, EllipsisClient},
     log::{error, info},
     solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, signer::keypair::read_keypair_file},
+    solana_sdk::{
+        clock::DEFAULT_SLOTS_PER_EPOCH,
+        signer::{keypair::read_keypair_file, Signer},
+        transaction::Transaction,
+    },
     tip_router_operator_cli::{
         cli::{Cli, Commands},
         process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
@@ -20,6 +24,13 @@ async fn main() -> Result<()> {
         RpcClient::new(cli.rpc_url.clone()),
         &read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
     )?;
+
+    let test_meta_merkle_root = [1; 32];
+    let ix = spl_memo::build_memo(&test_meta_merkle_root.to_vec(), &[&keypair.pubkey()]);
+    info!("Submitting test memo {:?}", test_meta_merkle_root);
+
+    let tx = Transaction::new_with_payer(&[ix], Some(&keypair.pubkey()));
+    rpc_client.process_transaction(tx, &[&keypair]).await?;
 
     info!(
         "CLI Arguments:

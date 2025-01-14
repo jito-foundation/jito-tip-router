@@ -35,7 +35,7 @@ solana-runtime = { workspace = true }
 solana-sdk = { workspace = true }
 solana-stake-program = { workspace = true }
 solana-vote = { workspace = true }
-spl-memo = "4.0.0"
+spl-memo = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 

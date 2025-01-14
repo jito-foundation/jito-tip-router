@@ -111,14 +111,6 @@ pub fn get_bank_from_ledger(
             false,
         )
         .unwrap();
-    info!(
-        "Bank forks highest slot: {:?}",
-        bank_forks.read().unwrap().highest_slot()
-    );
-    info!(
-        "Bank forks working bank slot: {:?}",
-        bank_forks.read().unwrap().working_bank().slot()
-    );
 
     blockstore_processor::process_blockstore_from_root(
         &blockstore,

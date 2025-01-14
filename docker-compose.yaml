@@ -1,0 +1,32 @@
+# docker-compose.yaml
+version: '3.8'
+
+services:
+  tip-router:
+    build: .
+    container_name: tip-router-operator
+    env_file:
+      - .env
+    environment:
+      - KEYPAIR_PATH=/etc/solana/keypair.json
+      - OPERATOR_ADDRESS=${OPERATOR_ADDRESS}
+      - RPC_URL=${RPC_URL}
+      - LEDGER_PATH=/solana/ledger
+      - ACCOUNT_PATHS=/solana/accounts
+      - FULL_SNAPSHOTS_PATH=/solana/snapshots
+      - SNAPSHOT_OUTPUT_DIR=/solana/snapshots/autosnapshot
+      - NCN_ADDRESS=${NCN_ADDRESS}
+      - TIP_DISTRIBUTION_PROGRAM_ID=${TIP_DISTRIBUTION_PROGRAM_ID}
+      - TIP_PAYMENT_PROGRAM_ID=${TIP_PAYMENT_PROGRAM_ID}
+      - ENABLE_SNAPSHOTS=false
+    volumes:
+      - /etc/solana/mev-upload-keypair.json:/etc/solana/keypair.json:ro # Replace this path with the path to the keypair
+      - /solana/ledger:/solana/ledger
+      - /solana/snapshots:/solana/snapshots
+      - /solana/snapshots/autosnapshot:/solana/snapshots/autosnapshot
+    command: ["run"]
+    ulimits:
+      nofile:
+        soft: 2000000
+        hard: 2000000
+    restart: unless-stopped

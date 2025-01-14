@@ -73,10 +73,7 @@ impl GeneratedMerkleTreeCollection {
                     epoch,
                     &stake_meta_collection.tip_distribution_program_id, // Pass the program ID
                 ) {
-                    Err(e) => {
-                        info!("Error creating tree nodes: {:?}", e);
-                        return Some(Err(e));
-                    }
+                    Err(e) => return Some(Err(e)),
                     Ok(maybe_tree_nodes) => maybe_tree_nodes,
                 }?;
 
@@ -103,11 +100,7 @@ impl GeneratedMerkleTreeCollection {
                     max_total_claim: tip_distribution_meta.total_tips,
                 }))
             })
-            .collect::<Result<Vec<_>, MerkleRootGeneratorError>>()
-            .map_err(|e| {
-                info!("Error collecting generated merkle trees: {:?}", e);
-                e
-            })?;
+            .collect::<Result<Vec<_>, MerkleRootGeneratorError>>()?;
 
         Ok(Self {
             generated_merkle_trees,
@@ -153,14 +146,14 @@ impl TreeNode {
         tip_distribution_program_id: &Pubkey,
     ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
         if let Some(tip_distribution_meta) = stake_meta.maybe_tip_distribution_meta.as_ref() {
-            let protocol_fee_amount = u64::try_from(
+            let protocol_fee_amount = u128::div_ceil(
                 (tip_distribution_meta.total_tips as u128)
                     .checked_mul(protocol_fee_bps as u128)
-                    .ok_or(MerkleRootGeneratorError::CheckedMathError)?
-                    .checked_div(MAX_BPS as u128)
                     .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
-            )
-            .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
+                MAX_BPS as u128,
+            );
+            let protocol_fee_amount = u64::try_from(protocol_fee_amount)
+                .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
 
             let validator_amount = u64::try_from(
                 (tip_distribution_meta.total_tips as u128)
