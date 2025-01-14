@@ -21,7 +21,7 @@ COPY . .
 # Build with cache mounting for faster builds
 RUN --mount=type=cache,mode=0777,target=/usr/src/app/target \
     --mount=type=cache,mode=0777,target=/usr/local/cargo/registry \
-    cargo build --release --bin tip-router-operator-cli
+    cargo build --release --package tip-router-operator-cli
 
 # Production image
 FROM debian:buster-slim
