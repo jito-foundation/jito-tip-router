@@ -62,7 +62,7 @@ This field enables the storage of an oracle feed for each underlying asset (supp
 ### Register Vault (vault_list)
 
 Permissionless Cranker can register the vault which is associated with Jito Tip Router NCN.
-`NcnVaultTicket` and `VaultNcnTicket` should be activated before running `process_register_vault` instruction.
+Both `NcnVaultTicket` and `VaultNcnTicket` accounts should be activated before running `process_register_vault` instruction.
 
 ```rust
 pub struct VaultEntry {
