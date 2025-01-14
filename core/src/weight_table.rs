@@ -2,7 +2,7 @@ use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
-use shank::{ShankAccount, ShankType};
+use shank::ShankAccount;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use spl_math::precise_number::PreciseNumber;
 
@@ -15,7 +15,7 @@ use crate::{
     weight_entry::WeightEntry,
 };
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct WeightTable {
     /// The NCN the account is associated with

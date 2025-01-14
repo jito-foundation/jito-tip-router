@@ -20,7 +20,7 @@ use crate::{
     stake_weight::StakeWeights,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct Ballot {
     /// The merkle root of the meta merkle tree
@@ -74,7 +74,7 @@ impl Ballot {
     }
 }
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct BallotTally {
     /// Index of the tally within the ballot_tallies
@@ -154,7 +154,7 @@ impl BallotTally {
     }
 }
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct OperatorVote {
     /// The operator that cast the vote
@@ -219,7 +219,7 @@ impl OperatorVote {
 }
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct BallotBox {
     /// The NCN account this ballot box is for
