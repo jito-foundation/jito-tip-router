@@ -9,7 +9,7 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
-/// Reallocates the ballot box account to its full size.
+/// Reallocates the epoch state account to its full size.
 /// This is needed due to Solana's account size limits during initialization.
 pub fn process_realloc_epoch_state(
     program_id: &Pubkey,

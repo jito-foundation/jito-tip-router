@@ -195,8 +195,8 @@ impl Progress {
         } else {
             //TODO: Set back when we can figure out why weight tally was:
             // Crank State: SetWeight Progress { tally: PodU64(3), total: PodU64(2) }
-            // self.tally.eq(&self.total)
-            self.tally().ge(&self.total())
+            self.tally.eq(&self.total)
+            // self.tally().ge(&self.total())
         }
     }
 }
@@ -575,7 +575,7 @@ impl EpochState {
             return Ok(State::SetupRouter);
         }
 
-        //TODO set back
+        //TODO set back when upload is implemented
         // if !self.upload_progress.is_complete() {
         //     return Ok(State::Upload);
         // }

@@ -26,12 +26,12 @@
 
 - create a new keypair: `solana-keygen new -o target/tmp/buffer.json`
 
-- Deploy: `solana program deploy --use-rpc --buffer target/tmp/buffer.json --url $(solana config get | grep "RPC URL" | awk '{print $3}') --with-compute-unit-price 10000 --max-sign-attempts 10000 target/deploy/jito_tip_router_program.so --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}')`
+- Deploy: `solana program deploy --use-rpc --buffer target/tmp/buffer.json --with-compute-unit-price 10000 --max-sign-attempts 10000 target/deploy/jito_tip_router_program.so`
 
-- (Pre Upgrade) Write to buffer: `solana program write-buffer --use-rpc --buffer target/tmp/buffer.json --url $(solana config get | grep "RPC URL" | awk '{print $3}') --with-compute-unit-price 10000 --max-sign-attempts 10000 target/deploy/jito_tip_router_program.so --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}')`
+- (Pre Upgrade) Write to buffer: `solana program write-buffer --use-rpc --buffer target/tmp/buffer.json --with-compute-unit-price 10000 --max-sign-attempts 10000 target/deploy/jito_tip_router_program.so`
 
-- Upgrade: `solana program upgrade $(solana address --keypair target/tmp/buffer.json) $(solana address --keypair target/deploy/jito_tip_router_program-keypair.json) --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}') --url $(solana config get | grep "RPC URL" | awk '{print $3}')`
+- Upgrade: `solana program upgrade $(solana address --keypair target/tmp/buffer.json) $(solana address --keypair target/deploy/jito_tip_router_program-keypair.json)`
 
-- Close Buffers: `solana program close --buffers --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}')`
+- Close Buffers: `solana program close --buffers`
 
-- Upgrade Program Size: `solana program extend $(solana address --keypair target/deploy/jito_tip_router_program-keypair.json) 100000 --keypair $(solana config get | grep "Keypair Path" | awk '{print $3}') --url $(solana config get | grep "RPC URL" | awk '{print $3}')`
+- Upgrade Program Size: `solana program extend $(solana address --keypair target/deploy/jito_tip_router_program-keypair.json) 100000`
