@@ -3,8 +3,10 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 use solana_program::pubkey::Pubkey;
 
 /// Accounts.
@@ -80,7 +82,7 @@ pub struct AdminRegisterStMintInstructionData {
 
 impl AdminRegisterStMintInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 30 }
+        Self { discriminator: 32 }
     }
 }
 

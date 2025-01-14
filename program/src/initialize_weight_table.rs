@@ -5,7 +5,8 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    constants::MAX_REALLOC_BYTES, vault_registry::VaultRegistry, weight_table::WeightTable,
+    constants::MAX_REALLOC_BYTES, epoch_state::EpochState, vault_registry::VaultRegistry,
+    weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -19,7 +20,8 @@ pub fn process_initialize_weight_table(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [vault_registry, ncn, weight_table, payer, restaking_program, system_program] = accounts
+    let [epoch_state, vault_registry, ncn, weight_table, payer, restaking_program, system_program] =
+        accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -29,6 +31,7 @@ pub fn process_initialize_weight_table(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
@@ -47,6 +50,8 @@ pub fn process_initialize_weight_table(
         let vault_registry = VaultRegistry::try_from_slice_unchecked(&vault_registry_data)?;
         vault_registry.vault_count()
     };
+    // DVCbuVDV47J9jHnydxbNy3u4nQpCWcoh3hWWnnmGBPir
+    // 96kfSRP6HELsLZb7rQHTHJhPeHJkFgmfpzor4rA8ntzX
 
     if vault_count != vault_registry_count {
         msg!("Vault count does not match supported mint count");

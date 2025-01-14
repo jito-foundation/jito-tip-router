@@ -4,7 +4,8 @@ use jito_jsm_core::{
     realloc,
 };
 use jito_tip_router_core::{
-    ballot_box::BallotBox, config::Config as NcnConfig, utils::get_new_size,
+    ballot_box::BallotBox, config::Config as NcnConfig, epoch_state::EpochState,
+    utils::get_new_size,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -18,12 +19,13 @@ pub fn process_realloc_ballot_box(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ballot_box, ncn, payer, system_program] = accounts else {
+    let [epoch_state, ncn_config, ballot_box, ncn, payer, system_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     load_system_program(system_program)?;
     load_signer(payer, false)?;
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
 
     let (ballot_box_pda, ballot_box_bump, _) =
@@ -52,6 +54,14 @@ pub fn process_realloc_ballot_box(
         ballot_box_data[0] = BallotBox::DISCRIMINATOR;
         let ballot_box_account = BallotBox::try_from_slice_unchecked_mut(&mut ballot_box_data)?;
         ballot_box_account.initialize(ncn.key, epoch, ballot_box_bump, Clock::get()?.slot);
+
+        // Update Epoch State
+        {
+            let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+            let epoch_state_account =
+                EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+            epoch_state_account.update_realloc_ballot_box();
+        }
     }
 
     Ok(())

@@ -5,6 +5,7 @@ use jito_restaking_core::{
 use jito_tip_router_core::{
     config::Config as NcnConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_state::EpochState,
     error::TipRouterError,
     loaders::load_ncn_epoch,
     stake_weight::StakeWeights,
@@ -24,7 +25,7 @@ pub fn process_snapshot_vault_operator_delegation(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
+    let [epoch_state, ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -40,19 +41,13 @@ pub fn process_snapshot_vault_operator_delegation(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     Config::load(restaking_program.key, restaking_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
     Vault::load(vault_program.key, vault, false)?;
 
-    VaultOperatorDelegation::load(
-        vault_program.key,
-        vault_operator_delegation,
-        vault,
-        operator,
-        false,
-    )?;
     VaultNcnTicket::load(vault_program.key, vault_ncn_ticket, vault, ncn, false)?;
     NcnVaultTicket::load(restaking_program.key, ncn_vault_ticket, ncn, vault, false)?;
 
@@ -175,6 +170,16 @@ pub fn process_snapshot_vault_operator_delegation(
             current_slot,
             operator_snapshot_account.valid_operator_vault_delegations(),
             operator_snapshot_account.stake_weights(),
+        )?;
+    }
+
+    // Update Epoch State
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_snapshot_vault_operator_delegation(
+            operator_snapshot_account.ncn_operator_index() as usize,
+            operator_snapshot_account.finalized(),
         )?;
     }
 

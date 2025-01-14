@@ -3,6 +3,7 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
 pub(crate) mod r#admin_register_st_mint;
 pub(crate) mod r#admin_set_config_fees;
@@ -21,12 +22,14 @@ pub(crate) mod r#initialize_ballot_box;
 pub(crate) mod r#initialize_base_reward_router;
 pub(crate) mod r#initialize_config;
 pub(crate) mod r#initialize_epoch_snapshot;
+pub(crate) mod r#initialize_epoch_state;
 pub(crate) mod r#initialize_ncn_reward_router;
 pub(crate) mod r#initialize_operator_snapshot;
 pub(crate) mod r#initialize_vault_registry;
 pub(crate) mod r#initialize_weight_table;
 pub(crate) mod r#realloc_ballot_box;
 pub(crate) mod r#realloc_base_reward_router;
+pub(crate) mod r#realloc_epoch_state;
 pub(crate) mod r#realloc_operator_snapshot;
 pub(crate) mod r#realloc_vault_registry;
 pub(crate) mod r#realloc_weight_table;
@@ -37,17 +40,37 @@ pub(crate) mod r#set_merkle_root;
 pub(crate) mod r#snapshot_vault_operator_delegation;
 pub(crate) mod r#switchboard_set_weight;
 
-pub use self::{
-    r#admin_register_st_mint::*, r#admin_set_config_fees::*, r#admin_set_new_admin::*,
-    r#admin_set_parameters::*, r#admin_set_st_mint::*, r#admin_set_tie_breaker::*,
-    r#admin_set_weight::*, r#cast_vote::*, r#claim_with_payer::*,
-    r#distribute_base_ncn_reward_route::*, r#distribute_base_rewards::*,
-    r#distribute_ncn_operator_rewards::*, r#distribute_ncn_vault_rewards::*,
-    r#initialize_ballot_box::*, r#initialize_base_reward_router::*, r#initialize_config::*,
-    r#initialize_epoch_snapshot::*, r#initialize_ncn_reward_router::*,
-    r#initialize_operator_snapshot::*, r#initialize_vault_registry::*,
-    r#initialize_weight_table::*, r#realloc_ballot_box::*, r#realloc_base_reward_router::*,
-    r#realloc_operator_snapshot::*, r#realloc_vault_registry::*, r#realloc_weight_table::*,
-    r#register_vault::*, r#route_base_rewards::*, r#route_ncn_rewards::*, r#set_merkle_root::*,
-    r#snapshot_vault_operator_delegation::*, r#switchboard_set_weight::*,
-};
+pub use self::r#admin_register_st_mint::*;
+pub use self::r#admin_set_config_fees::*;
+pub use self::r#admin_set_new_admin::*;
+pub use self::r#admin_set_parameters::*;
+pub use self::r#admin_set_st_mint::*;
+pub use self::r#admin_set_tie_breaker::*;
+pub use self::r#admin_set_weight::*;
+pub use self::r#cast_vote::*;
+pub use self::r#claim_with_payer::*;
+pub use self::r#distribute_base_ncn_reward_route::*;
+pub use self::r#distribute_base_rewards::*;
+pub use self::r#distribute_ncn_operator_rewards::*;
+pub use self::r#distribute_ncn_vault_rewards::*;
+pub use self::r#initialize_ballot_box::*;
+pub use self::r#initialize_base_reward_router::*;
+pub use self::r#initialize_config::*;
+pub use self::r#initialize_epoch_snapshot::*;
+pub use self::r#initialize_epoch_state::*;
+pub use self::r#initialize_ncn_reward_router::*;
+pub use self::r#initialize_operator_snapshot::*;
+pub use self::r#initialize_vault_registry::*;
+pub use self::r#initialize_weight_table::*;
+pub use self::r#realloc_ballot_box::*;
+pub use self::r#realloc_base_reward_router::*;
+pub use self::r#realloc_epoch_state::*;
+pub use self::r#realloc_operator_snapshot::*;
+pub use self::r#realloc_vault_registry::*;
+pub use self::r#realloc_weight_table::*;
+pub use self::r#register_vault::*;
+pub use self::r#route_base_rewards::*;
+pub use self::r#route_ncn_rewards::*;
+pub use self::r#set_merkle_root::*;
+pub use self::r#snapshot_vault_operator_delegation::*;
+pub use self::r#switchboard_set_weight::*;

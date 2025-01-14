@@ -1,7 +1,9 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::ncn::Ncn;
-use jito_tip_router_core::{error::TipRouterError, weight_table::WeightTable};
+use jito_tip_router_core::{
+    epoch_state::EpochState, error::TipRouterError, weight_table::WeightTable,
+};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
@@ -15,7 +17,7 @@ pub fn process_admin_set_weight(
     epoch: u64,
     weight: u128,
 ) -> ProgramResult {
-    let [ncn, weight_table, weight_table_admin, restaking_program] = accounts else {
+    let [epoch_state, ncn, weight_table, weight_table_admin, restaking_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
@@ -27,6 +29,7 @@ pub fn process_admin_set_weight(
     };
 
     load_signer(weight_table_admin, true)?;
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     WeightTable::load(program_id, weight_table, ncn.key, epoch, true)?;
 
     if restaking_program.key.ne(&jito_restaking_program::id()) {
@@ -49,6 +52,13 @@ pub fn process_admin_set_weight(
     }
 
     weight_table_account.set_weight(st_mint, weight, Clock::get()?.slot)?;
+
+    // Update Epoch State
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_set_weight(weight_table_account.weight_count() as u64);
+    }
 
     Ok(())
 }

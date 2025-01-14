@@ -14,6 +14,8 @@ mod tests {
             .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, None)
             .await?;
 
+        fixture.add_epoch_state_for_test_ncn(&test_ncn).await?;
+
         fixture
             .add_switchboard_weights_for_test_ncn(&test_ncn)
             .await?;

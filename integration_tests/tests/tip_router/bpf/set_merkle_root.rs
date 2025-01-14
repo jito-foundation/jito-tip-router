@@ -7,6 +7,7 @@ mod set_merkle_root {
         ballot_box::{Ballot, BallotBox},
         claim_status_payer::ClaimStatusPayer,
         config::Config as NcnConfig,
+        epoch_state::EpochState,
         error::TipRouterError,
     };
     use meta_merkle_tree::{
@@ -23,7 +24,9 @@ mod set_merkle_root {
             test_builder::TestBuilder, tip_router_client::assert_tip_router_error, TestError,
             TestResult,
         },
-        helpers::ballot_box::serialized_ballot_box_account,
+        helpers::serialized_accounts::{
+            serialized_ballot_box_account, serialized_epoch_state_account,
+        },
     };
 
     struct GeneratedMerkleTreeCollectionFixture {
@@ -177,7 +180,6 @@ mod set_merkle_root {
         })
     }
 
-    // #[ignore = "code coverage"]
     #[tokio::test]
     async fn test_set_merkle_root_ok() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
@@ -190,6 +192,7 @@ mod set_merkle_root {
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_address).0;
 
         let epoch = 0;
+
         tip_distribution_client
             .do_initialize(ncn_config_address)
             .await?;
@@ -222,6 +225,15 @@ mod set_merkle_root {
             ballot_box
         };
 
+        let (epoch_state_address, bump, _) =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn_address, epoch);
+
+        let epoch_state_fixture = {
+            let mut epoch_state = EpochState::new(&ncn_address, epoch, bump, 0);
+            epoch_state._set_upload_progress();
+            epoch_state
+        };
+
         let epoch_schedule: EpochSchedule = fixture.epoch_schedule().await;
 
         // Must warp before .set_account
@@ -233,6 +245,13 @@ mod set_merkle_root {
             .set_account(
                 ballot_box_address,
                 serialized_ballot_box_account(&ballot_box_fixture),
+            )
+            .await;
+
+        fixture
+            .set_account(
+                epoch_state_address,
+                serialized_epoch_state_account(&epoch_state_fixture),
             )
             .await;
 
@@ -496,6 +515,10 @@ mod set_merkle_root {
         let proof = node.proof.clone().unwrap();
 
         // Initialize ballot box
+        tip_router_client
+            .do_full_initialize_epoch_state(ncn, ncn_epoch)
+            .await?;
+
         tip_router_client
             .do_full_initialize_ballot_box(ncn, ncn_epoch)
             .await?;

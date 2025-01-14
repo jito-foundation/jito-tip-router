@@ -7,6 +7,7 @@ use jito_tip_router_core::{
     config::Config,
     constants::MAX_REALLOC_BYTES,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_state::EpochState,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -19,7 +20,7 @@ pub fn process_initialize_operator_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, payer, restaking_program, system_program] =
+    let [epoch_state, config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -30,6 +31,7 @@ pub fn process_initialize_operator_snapshot(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     Config::load(program_id, ncn.key, config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;

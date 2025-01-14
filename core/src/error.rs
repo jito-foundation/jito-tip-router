@@ -153,6 +153,10 @@ pub enum TipRouterError {
     InvalidSlotsAfterConsensus,
     #[error("Vault needs to be updated")]
     VaultNeedsUpdate,
+    #[error("Invalid Account Status")]
+    InvalidAccountStatus,
+    #[error("Account already initialized")]
+    AccountAlreadyInitialized,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

@@ -2,7 +2,8 @@ use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    ballot_box::BallotBox, config::Config as NcnConfig, error::TipRouterError,
+    ballot_box::BallotBox, config::Config as NcnConfig, epoch_state::EpochState,
+    error::TipRouterError,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -15,10 +16,12 @@ pub fn process_admin_set_tie_breaker(
     meta_merkle_root: &[u8; 32],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ballot_box, ncn, tie_breaker_admin, restaking_program] = accounts else {
+    let [epoch_state, ncn_config, ballot_box, ncn, tie_breaker_admin, restaking_program] = accounts
+    else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
@@ -42,6 +45,13 @@ pub fn process_admin_set_tie_breaker(
         current_epoch,
         ncn_config.epochs_before_stall(),
     )?;
+
+    // Update Epoch State
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_cast_vote()?;
+    }
 
     Ok(())
 }

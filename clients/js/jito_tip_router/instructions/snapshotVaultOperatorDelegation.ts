@@ -29,7 +29,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const SNAPSHOT_VAULT_OPERATOR_DELEGATION_DISCRIMINATOR = 10;
+export const SNAPSHOT_VAULT_OPERATOR_DELEGATION_DISCRIMINATOR = 12;
 
 export function getSnapshotVaultOperatorDelegationDiscriminatorBytes() {
   return getU8Encoder().encode(
@@ -39,6 +39,7 @@ export function getSnapshotVaultOperatorDelegationDiscriminatorBytes() {
 
 export type SnapshotVaultOperatorDelegationInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
@@ -59,6 +60,9 @@ export type SnapshotVaultOperatorDelegationInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? WritableAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
@@ -140,6 +144,7 @@ export function getSnapshotVaultOperatorDelegationInstructionDataCodec(): Codec<
 }
 
 export type SnapshotVaultOperatorDelegationInput<
+  TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountRestakingConfig extends string = string,
   TAccountNcn extends string = string,
@@ -154,6 +159,7 @@ export type SnapshotVaultOperatorDelegationInput<
   TAccountVaultProgram extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   restakingConfig: Address<TAccountRestakingConfig>;
   ncn: Address<TAccountNcn>;
@@ -171,6 +177,7 @@ export type SnapshotVaultOperatorDelegationInput<
 };
 
 export function getSnapshotVaultOperatorDelegationInstruction<
+  TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountRestakingConfig extends string,
   TAccountNcn extends string,
@@ -187,6 +194,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: SnapshotVaultOperatorDelegationInput<
+    TAccountEpochState,
     TAccountConfig,
     TAccountRestakingConfig,
     TAccountNcn,
@@ -204,6 +212,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
   config?: { programAddress?: TProgramAddress }
 ): SnapshotVaultOperatorDelegationInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountConfig,
   TAccountRestakingConfig,
   TAccountNcn,
@@ -224,6 +233,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     restakingConfig: {
       value: input.restakingConfig ?? null,
@@ -261,6 +271,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.ncn),
@@ -281,6 +292,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
     ),
   } as SnapshotVaultOperatorDelegationInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountConfig,
     TAccountRestakingConfig,
     TAccountNcn,
@@ -305,19 +317,20 @@ export type ParsedSnapshotVaultOperatorDelegationInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    config: TAccountMetas[0];
-    restakingConfig: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    operator: TAccountMetas[3];
-    vault: TAccountMetas[4];
-    vaultNcnTicket: TAccountMetas[5];
-    ncnVaultTicket: TAccountMetas[6];
-    vaultOperatorDelegation: TAccountMetas[7];
-    weightTable: TAccountMetas[8];
-    epochSnapshot: TAccountMetas[9];
-    operatorSnapshot: TAccountMetas[10];
-    vaultProgram: TAccountMetas[11];
-    restakingProgram: TAccountMetas[12];
+    epochState: TAccountMetas[0];
+    config: TAccountMetas[1];
+    restakingConfig: TAccountMetas[2];
+    ncn: TAccountMetas[3];
+    operator: TAccountMetas[4];
+    vault: TAccountMetas[5];
+    vaultNcnTicket: TAccountMetas[6];
+    ncnVaultTicket: TAccountMetas[7];
+    vaultOperatorDelegation: TAccountMetas[8];
+    weightTable: TAccountMetas[9];
+    epochSnapshot: TAccountMetas[10];
+    operatorSnapshot: TAccountMetas[11];
+    vaultProgram: TAccountMetas[12];
+    restakingProgram: TAccountMetas[13];
   };
   data: SnapshotVaultOperatorDelegationInstructionData;
 };
@@ -330,7 +343,7 @@ export function parseSnapshotVaultOperatorDelegationInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedSnapshotVaultOperatorDelegationInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 13) {
+  if (instruction.accounts.length < 14) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -343,6 +356,7 @@ export function parseSnapshotVaultOperatorDelegationInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       config: getNextAccount(),
       restakingConfig: getNextAccount(),
       ncn: getNextAccount(),

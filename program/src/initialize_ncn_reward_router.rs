@@ -7,6 +7,8 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
+    epoch_snapshot::OperatorSnapshot,
+    epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
 };
@@ -23,7 +25,7 @@ pub fn process_initialize_ncn_reward_router(
     ncn_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn, operator, ncn_reward_router, ncn_reward_receiver, payer, restaking_program, system_program] =
+    let [epoch_state, ncn, operator, operator_snapshot, ncn_reward_router, ncn_reward_receiver, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -34,8 +36,17 @@ pub fn process_initialize_ncn_reward_router(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
+    OperatorSnapshot::load(
+        program_id,
+        operator.key,
+        ncn.key,
+        epoch,
+        operator_snapshot,
+        false,
+    )?;
     NcnRewardReceiver::load(
         program_id,
         ncn_reward_receiver,
@@ -113,6 +124,19 @@ pub fn process_initialize_ncn_reward_router(
         &transfer(payer.key, ncn_reward_receiver.key, min_system_account_rent),
         &[payer.clone(), ncn_reward_receiver.clone()],
     )?;
+
+    {
+        let operator_snapshot_data = operator_snapshot.try_borrow_data()?;
+        let operator_snapshot_account =
+            OperatorSnapshot::try_from_slice_unchecked(&operator_snapshot_data)?;
+
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_realloc_ncn_reward_router(
+            operator_snapshot_account.ncn_operator_index() as usize,
+            ncn_fee_group,
+        )?;
+    }
 
     Ok(())
 }

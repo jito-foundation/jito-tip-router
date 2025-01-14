@@ -10,10 +10,6 @@ mod tests {
         test_builder::TestBuilder, tip_router_client::assert_tip_router_error, TestResult,
     };
 
-    // Remove vault
-
-    // snapshot with not up to date vault
-
     #[tokio::test]
     async fn test_removing_operator() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
@@ -281,6 +277,7 @@ mod tests {
             fixture.warp_epoch_incremental(1).await?;
         }
 
+        fixture.add_epoch_state_for_test_ncn(&test_ncn).await?;
         fixture.add_admin_weights_for_test_ncn(&test_ncn).await?;
         fixture.add_epoch_snapshot_to_test_ncn(&test_ncn).await?;
         fixture

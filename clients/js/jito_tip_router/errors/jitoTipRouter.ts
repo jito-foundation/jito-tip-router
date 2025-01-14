@@ -162,8 +162,13 @@ export const JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL = 0x223e; // 876
 export const JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS = 0x223f; // 8767
 /** VaultNeedsUpdate: Vault needs to be updated */
 export const JITO_TIP_ROUTER_ERROR__VAULT_NEEDS_UPDATE = 0x2240; // 8768
+/** InvalidAccountStatus: Invalid Account Status */
+export const JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS = 0x2241; // 8769
+/** AccountAlreadyInitialized: Account already initialized */
+export const JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED = 0x2242; // 8770
 
 export type JitoTipRouterError =
+  | typeof JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR
@@ -192,6 +197,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF
@@ -242,6 +248,7 @@ export type JitoTipRouterError =
 let jitoTipRouterErrorMessages: Record<JitoTipRouterError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   jitoTipRouterErrorMessages = {
+    [JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED]: `Account already initialized`,
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR]: `Floor Overflow`,
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW]: `Overflow`,
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR]: `Underflow`,
@@ -270,6 +277,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN]: `Incorrect NCN`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN]: `Incorrect NCN Admin`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN]: `Incorrect weight table admin`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS]: `Invalid Account Status`,
     [JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP]: `Not a valid base fee group`,
     [JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL]: `Invalid epochs before stall`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF]: `Invalid merkle proof`,

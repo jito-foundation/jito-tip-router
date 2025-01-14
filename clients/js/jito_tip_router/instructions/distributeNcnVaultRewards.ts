@@ -29,7 +29,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const DISTRIBUTE_NCN_VAULT_REWARDS_DISCRIMINATOR = 23;
+export const DISTRIBUTE_NCN_VAULT_REWARDS_DISCRIMINATOR = 25;
 
 export function getDistributeNcnVaultRewardsDiscriminatorBytes() {
   return getU8Encoder().encode(DISTRIBUTE_NCN_VAULT_REWARDS_DISCRIMINATOR);
@@ -37,11 +37,13 @@ export function getDistributeNcnVaultRewardsDiscriminatorBytes() {
 
 export type DistributeNcnVaultRewardsInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
   TAccountVault extends string | IAccountMeta<string> = string,
   TAccountVaultAta extends string | IAccountMeta<string> = string,
+  TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
   TAccountNcnRewardRouter extends string | IAccountMeta<string> = string,
   TAccountNcnRewardReceiver extends string | IAccountMeta<string> = string,
   TAccountStakePoolProgram extends string | IAccountMeta<string> = string,
@@ -66,6 +68,9 @@ export type DistributeNcnVaultRewardsInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? WritableAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
@@ -79,6 +84,9 @@ export type DistributeNcnVaultRewardsInstruction<
       TAccountVaultAta extends string
         ? WritableAccount<TAccountVaultAta>
         : TAccountVaultAta,
+      TAccountOperatorSnapshot extends string
+        ? WritableAccount<TAccountOperatorSnapshot>
+        : TAccountOperatorSnapshot,
       TAccountNcnRewardRouter extends string
         ? WritableAccount<TAccountNcnRewardRouter>
         : TAccountNcnRewardRouter,
@@ -160,11 +168,13 @@ export function getDistributeNcnVaultRewardsInstructionDataCodec(): Codec<
 }
 
 export type DistributeNcnVaultRewardsInput<
+  TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
   TAccountVault extends string = string,
   TAccountVaultAta extends string = string,
+  TAccountOperatorSnapshot extends string = string,
   TAccountNcnRewardRouter extends string = string,
   TAccountNcnRewardReceiver extends string = string,
   TAccountStakePoolProgram extends string = string,
@@ -177,11 +187,13 @@ export type DistributeNcnVaultRewardsInput<
   TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
   vault: Address<TAccountVault>;
   vaultAta: Address<TAccountVaultAta>;
+  operatorSnapshot: Address<TAccountOperatorSnapshot>;
   ncnRewardRouter: Address<TAccountNcnRewardRouter>;
   ncnRewardReceiver: Address<TAccountNcnRewardReceiver>;
   stakePoolProgram: Address<TAccountStakePoolProgram>;
@@ -198,11 +210,13 @@ export type DistributeNcnVaultRewardsInput<
 };
 
 export function getDistributeNcnVaultRewardsInstruction<
+  TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountOperator extends string,
   TAccountVault extends string,
   TAccountVaultAta extends string,
+  TAccountOperatorSnapshot extends string,
   TAccountNcnRewardRouter extends string,
   TAccountNcnRewardReceiver extends string,
   TAccountStakePoolProgram extends string,
@@ -217,11 +231,13 @@ export function getDistributeNcnVaultRewardsInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: DistributeNcnVaultRewardsInput<
+    TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
     TAccountOperator,
     TAccountVault,
     TAccountVaultAta,
+    TAccountOperatorSnapshot,
     TAccountNcnRewardRouter,
     TAccountNcnRewardReceiver,
     TAccountStakePoolProgram,
@@ -237,11 +253,13 @@ export function getDistributeNcnVaultRewardsInstruction<
   config?: { programAddress?: TProgramAddress }
 ): DistributeNcnVaultRewardsInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountConfig,
   TAccountNcn,
   TAccountOperator,
   TAccountVault,
   TAccountVaultAta,
+  TAccountOperatorSnapshot,
   TAccountNcnRewardRouter,
   TAccountNcnRewardReceiver,
   TAccountStakePoolProgram,
@@ -260,11 +278,16 @@ export function getDistributeNcnVaultRewardsInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     operator: { value: input.operator ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: true },
     vaultAta: { value: input.vaultAta ?? null, isWritable: true },
+    operatorSnapshot: {
+      value: input.operatorSnapshot ?? null,
+      isWritable: true,
+    },
     ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
     ncnRewardReceiver: {
       value: input.ncnRewardReceiver ?? null,
@@ -313,11 +336,13 @@ export function getDistributeNcnVaultRewardsInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
       getAccountMeta(accounts.vault),
       getAccountMeta(accounts.vaultAta),
+      getAccountMeta(accounts.operatorSnapshot),
       getAccountMeta(accounts.ncnRewardRouter),
       getAccountMeta(accounts.ncnRewardReceiver),
       getAccountMeta(accounts.stakePoolProgram),
@@ -336,11 +361,13 @@ export function getDistributeNcnVaultRewardsInstruction<
     ),
   } as DistributeNcnVaultRewardsInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
     TAccountOperator,
     TAccountVault,
     TAccountVaultAta,
+    TAccountOperatorSnapshot,
     TAccountNcnRewardRouter,
     TAccountNcnRewardReceiver,
     TAccountStakePoolProgram,
@@ -363,22 +390,24 @@ export type ParsedDistributeNcnVaultRewardsInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    config: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    operator: TAccountMetas[2];
-    vault: TAccountMetas[3];
-    vaultAta: TAccountMetas[4];
-    ncnRewardRouter: TAccountMetas[5];
-    ncnRewardReceiver: TAccountMetas[6];
-    stakePoolProgram: TAccountMetas[7];
-    stakePool: TAccountMetas[8];
-    stakePoolWithdrawAuthority: TAccountMetas[9];
-    reserveStake: TAccountMetas[10];
-    managerFeeAccount: TAccountMetas[11];
-    referrerPoolTokensAccount: TAccountMetas[12];
-    poolMint: TAccountMetas[13];
-    tokenProgram: TAccountMetas[14];
-    systemProgram: TAccountMetas[15];
+    epochState: TAccountMetas[0];
+    config: TAccountMetas[1];
+    ncn: TAccountMetas[2];
+    operator: TAccountMetas[3];
+    vault: TAccountMetas[4];
+    vaultAta: TAccountMetas[5];
+    operatorSnapshot: TAccountMetas[6];
+    ncnRewardRouter: TAccountMetas[7];
+    ncnRewardReceiver: TAccountMetas[8];
+    stakePoolProgram: TAccountMetas[9];
+    stakePool: TAccountMetas[10];
+    stakePoolWithdrawAuthority: TAccountMetas[11];
+    reserveStake: TAccountMetas[12];
+    managerFeeAccount: TAccountMetas[13];
+    referrerPoolTokensAccount: TAccountMetas[14];
+    poolMint: TAccountMetas[15];
+    tokenProgram: TAccountMetas[16];
+    systemProgram: TAccountMetas[17];
   };
   data: DistributeNcnVaultRewardsInstructionData;
 };
@@ -391,7 +420,7 @@ export function parseDistributeNcnVaultRewardsInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedDistributeNcnVaultRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 16) {
+  if (instruction.accounts.length < 18) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -404,11 +433,13 @@ export function parseDistributeNcnVaultRewardsInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
       operator: getNextAccount(),
       vault: getNextAccount(),
       vaultAta: getNextAccount(),
+      operatorSnapshot: getNextAccount(),
       ncnRewardRouter: getNextAccount(),
       ncnRewardReceiver: getNextAccount(),
       stakePoolProgram: getNextAccount(),

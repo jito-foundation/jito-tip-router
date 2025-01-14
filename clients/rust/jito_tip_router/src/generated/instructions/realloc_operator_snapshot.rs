@@ -3,11 +3,15 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 
 /// Accounts.
 pub struct ReallocOperatorSnapshot {
+    pub epoch_state: solana_program::pubkey::Pubkey,
+
     pub ncn_config: solana_program::pubkey::Pubkey,
 
     pub restaking_config: solana_program::pubkey::Pubkey,
@@ -42,7 +46,11 @@ impl ReallocOperatorSnapshot {
         args: ReallocOperatorSnapshotInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.epoch_state,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn_config,
             false,
@@ -103,7 +111,7 @@ pub struct ReallocOperatorSnapshotInstructionData {
 
 impl ReallocOperatorSnapshotInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 9 }
+        Self { discriminator: 11 }
     }
 }
 
@@ -123,18 +131,20 @@ pub struct ReallocOperatorSnapshotInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
-///   1. `[]` restaking_config
-///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[]` ncn_operator_state
-///   5. `[writable]` epoch_snapshot
-///   6. `[writable]` operator_snapshot
-///   7. `[writable, signer]` payer
-///   8. `[]` restaking_program
-///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   0. `[writable]` epoch_state
+///   1. `[]` ncn_config
+///   2. `[]` restaking_config
+///   3. `[]` ncn
+///   4. `[]` operator
+///   5. `[]` ncn_operator_state
+///   6. `[writable]` epoch_snapshot
+///   7. `[writable]` operator_snapshot
+///   8. `[writable, signer]` payer
+///   9. `[]` restaking_program
+///   10. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct ReallocOperatorSnapshotBuilder {
+    epoch_state: Option<solana_program::pubkey::Pubkey>,
     ncn_config: Option<solana_program::pubkey::Pubkey>,
     restaking_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
@@ -152,6 +162,11 @@ pub struct ReallocOperatorSnapshotBuilder {
 impl ReallocOperatorSnapshotBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+    #[inline(always)]
+    pub fn epoch_state(&mut self, epoch_state: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.epoch_state = Some(epoch_state);
+        self
     }
     #[inline(always)]
     pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -242,6 +257,7 @@ impl ReallocOperatorSnapshotBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = ReallocOperatorSnapshot {
+            epoch_state: self.epoch_state.expect("epoch_state is not set"),
             ncn_config: self.ncn_config.expect("ncn_config is not set"),
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
@@ -271,6 +287,8 @@ impl ReallocOperatorSnapshotBuilder {
 
 /// `realloc_operator_snapshot` CPI accounts.
 pub struct ReallocOperatorSnapshotCpiAccounts<'a, 'b> {
+    pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
@@ -296,6 +314,8 @@ pub struct ReallocOperatorSnapshotCpiAccounts<'a, 'b> {
 pub struct ReallocOperatorSnapshotCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -328,6 +348,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
+            epoch_state: accounts.epoch_state,
             ncn_config: accounts.ncn_config,
             restaking_config: accounts.restaking_config,
             ncn: accounts.ncn,
@@ -374,7 +395,11 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.epoch_state.key,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn_config.key,
             false,
@@ -433,8 +458,9 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(10 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(11 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
+        account_infos.push(self.epoch_state.clone());
         account_infos.push(self.ncn_config.clone());
         account_infos.push(self.restaking_config.clone());
         account_infos.push(self.ncn.clone());
@@ -461,16 +487,17 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` ncn_config
-///   1. `[]` restaking_config
-///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[]` ncn_operator_state
-///   5. `[writable]` epoch_snapshot
-///   6. `[writable]` operator_snapshot
-///   7. `[writable, signer]` payer
-///   8. `[]` restaking_program
-///   9. `[]` system_program
+///   0. `[writable]` epoch_state
+///   1. `[]` ncn_config
+///   2. `[]` restaking_config
+///   3. `[]` ncn
+///   4. `[]` operator
+///   5. `[]` ncn_operator_state
+///   6. `[writable]` epoch_snapshot
+///   7. `[writable]` operator_snapshot
+///   8. `[writable, signer]` payer
+///   9. `[]` restaking_program
+///   10. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
     instruction: Box<ReallocOperatorSnapshotCpiBuilderInstruction<'a, 'b>>,
@@ -480,6 +507,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(ReallocOperatorSnapshotCpiBuilderInstruction {
             __program: program,
+            epoch_state: None,
             ncn_config: None,
             restaking_config: None,
             ncn: None,
@@ -494,6 +522,14 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
+    }
+    #[inline(always)]
+    pub fn epoch_state(
+        &mut self,
+        epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.epoch_state = Some(epoch_state);
+        self
     }
     #[inline(always)]
     pub fn ncn_config(
@@ -621,6 +657,11 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
         let instruction = ReallocOperatorSnapshotCpi {
             __program: self.instruction.__program,
 
+            epoch_state: self
+                .instruction
+                .epoch_state
+                .expect("epoch_state is not set"),
+
             ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
 
             restaking_config: self
@@ -670,6 +711,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct ReallocOperatorSnapshotCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
+    epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,

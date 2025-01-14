@@ -4,7 +4,8 @@ use jito_tip_distribution_sdk::{
     derive_tip_distribution_account_address, instruction::upload_merkle_root_ix,
 };
 use jito_tip_router_core::{
-    ballot_box::BallotBox, config::Config as NcnConfig, error::TipRouterError,
+    ballot_box::BallotBox, config::Config as NcnConfig, epoch_state::EpochState,
+    error::TipRouterError,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
@@ -20,12 +21,13 @@ pub fn process_set_merkle_root(
     max_num_nodes: u64,
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ncn, ballot_box, vote_account, tip_distribution_account, tip_distribution_config, tip_distribution_program_id, restaking_program_id] =
+    let [epoch_state, ncn_config, ncn, ballot_box, vote_account, tip_distribution_account, tip_distribution_config, tip_distribution_program_id, restaking_program_id] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, true)?;
     Ncn::load(restaking_program_id.key, ncn, false)?;
     BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
@@ -80,6 +82,13 @@ pub fn process_set_merkle_root(
             .collect::<Vec<&[u8]>>()
             .as_slice()],
     )?;
+
+    // Update Epoch State
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_set_merkle_root()?;
+    }
 
     Ok(())
 }
