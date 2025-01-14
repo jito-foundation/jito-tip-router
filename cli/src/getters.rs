@@ -3,6 +3,7 @@ use std::mem::size_of;
 
 use crate::handler::CliHandler;
 use anyhow::Result;
+use borsh::BorshDeserialize;
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{
     config::Config as RestakingConfig, ncn::Ncn, ncn_operator_state::NcnOperatorState,
@@ -11,8 +12,10 @@ use jito_restaking_core::{
 };
 use jito_tip_router_core::{
     ballot_box::BallotBox,
+    base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
+    constants::JITOSOL_POOL_ADDRESS,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
@@ -30,6 +33,8 @@ use solana_client::{
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
 };
 use solana_sdk::{account::Account, pubkey::Pubkey};
+use spl_associated_token_account::get_associated_token_address;
+use spl_stake_pool::{find_withdraw_authority_program_address, state::StakePool};
 
 // ---------------------- HELPERS ----------------------
 // So we can switch between the two implementations
@@ -374,6 +379,51 @@ pub async fn get_operator_vault_ticket(
 
     let account = OperatorVaultTicket::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
+}
+
+pub async fn get_stake_pool(handler: &CliHandler) -> Result<StakePool> {
+    let stake_pool = JITOSOL_POOL_ADDRESS;
+    let account = get_account(handler, &stake_pool).await?.unwrap();
+    let mut data_slice = account.data.as_slice();
+    let account = StakePool::deserialize(&mut data_slice)
+        .map_err(|_| anyhow::anyhow!("Invalid stake pool account"))?;
+
+    Ok(account)
+}
+
+pub struct StakePoolAccounts {
+    pub stake_pool_program_id: Pubkey,
+    pub stake_pool_address: Pubkey,
+    pub stake_pool: StakePool,
+    pub stake_pool_withdraw_authority: Pubkey,
+    pub referrer_pool_tokens_account: Pubkey,
+}
+
+pub async fn get_stake_pool_accounts(handler: &CliHandler) -> Result<StakePoolAccounts> {
+    let stake_pool_program_id = spl_stake_pool::id();
+    let stake_pool_address = JITOSOL_POOL_ADDRESS;
+    let stake_pool = get_stake_pool(handler).await?;
+
+    let (stake_pool_withdraw_authority, _) =
+        find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool_address);
+
+    let referrer_pool_tokens_account = {
+        let tip_router_config = get_tip_router_config(handler).await?;
+        let base_fee_wallet = tip_router_config
+            .fee_config
+            .base_fee_wallet(BaseFeeGroup::default())?;
+        get_associated_token_address(base_fee_wallet, &stake_pool.pool_mint)
+    };
+
+    let accounts = StakePoolAccounts {
+        stake_pool_program_id,
+        stake_pool_address,
+        stake_pool,
+        stake_pool_withdraw_authority,
+        referrer_pool_tokens_account,
+    };
+
+    Ok(accounts)
 }
 
 pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
@@ -746,8 +796,8 @@ impl fmt::Display for NcnTickets {
         // Helper closure for checkmarks in summary
         let check = |state: u8| -> &str {
             match state {
-                Self::DNE => "🚧",
-                Self::NOT_ACTIVE => "❌",
+                Self::DNE => "❌",
+                Self::NOT_ACTIVE => "🕘",
                 Self::ACTIVE => "✅",
                 _ => "",
             }

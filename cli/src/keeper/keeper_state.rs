@@ -135,12 +135,8 @@ impl KeeperState {
         let raw_account = get_account(handler, &self.epoch_state_address).await?;
 
         if raw_account.is_none() {
-            println!("Epoch state does not exist {}", &self.epoch_state_address);
-
             self.epoch_state = None;
         } else {
-            println!("Epoch state does exist {}", &self.epoch_state_address);
-
             let raw_account = raw_account.unwrap();
             let account = Box::new(*EpochState::try_from_slice_unchecked(
                 raw_account.data.as_slice(),

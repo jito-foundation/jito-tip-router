@@ -3,9 +3,10 @@ use std::str::FromStr;
 use crate::{
     args::{Args, ProgramCommand},
     getters::{
-        get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn, get_epoch_state, get_ncn,
-        get_ncn_operator_state, get_ncn_vault_ticket, get_tip_router_config, get_vault_ncn_ticket,
-        get_vault_operator_delegation, get_vault_registry,
+        get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn, get_ballot_box,
+        get_base_reward_receiver, get_base_reward_router, get_epoch_state, get_ncn,
+        get_ncn_operator_state, get_ncn_vault_ticket, get_stake_pool, get_tip_router_config,
+        get_vault_ncn_ticket, get_vault_operator_delegation, get_vault_registry,
     },
     instructions::{
         admin_create_config, admin_register_st_mint, admin_set_weight,
@@ -338,15 +339,33 @@ impl CliHandler {
             }
             ProgramCommand::GetEpochState {} => {
                 let epoch_state = get_epoch_state(self, self.epoch).await?;
-                // let (address, _, _) = EpochState::find_program_address(
-                //     &self.tip_router_program_id,
-                //     self.ncn()?,
-                //     self.epoch,
-                // );
-                // // B11bJ8VuRLhShaWFwCQ22kLjEbY4LZJwBTivRayt2Qq1
-
-                // // 5eaKPUXPR4CJQW9djRxPfkxaQUdtqnYiBhqJJyQodipT
                 info!("Epoch State: {:?}", epoch_state);
+                Ok(())
+            }
+            ProgramCommand::GetStakePool {} => {
+                let stake_pool = get_stake_pool(self).await?;
+                info!("Stake Pool: {:?}", stake_pool);
+                Ok(())
+            }
+            ProgramCommand::GetBallotBox {} => {
+                let ballot_box = get_ballot_box(self, self.epoch).await?;
+                info!("Ballot Box: {:?}", ballot_box);
+                Ok(())
+            }
+            ProgramCommand::GetBaseRewardRouter {} => {
+                let base_reward_router = get_base_reward_router(self, self.epoch).await?;
+                info!("Base Reward Router: {:?}", base_reward_router);
+                Ok(())
+            }
+            ProgramCommand::GetBaseRewardReceiver {} => {
+                let base_reward_receiver = get_base_reward_receiver(self, self.epoch).await?;
+                let rent = self
+                    .rpc_client
+                    .get_minimum_balance_for_rent_exemption(0)
+                    .await?;
+
+                info!("Base Reward Receiver: {} {:?}", rent, base_reward_receiver);
+
                 Ok(())
             }
 

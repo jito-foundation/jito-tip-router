@@ -253,6 +253,10 @@ pub enum ProgramCommand {
     GetTipRouterConfig,
     GetVaultRegistry,
     GetEpochState,
+    GetStakePool,
+    GetBallotBox,
+    GetBaseRewardRouter,
+    GetBaseRewardReceiver,
 
     /// TESTS
     Test,

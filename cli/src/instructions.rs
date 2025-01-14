@@ -4,7 +4,8 @@ use crate::{
     getters::{
         get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn, get_ballot_box,
         get_base_reward_router, get_epoch_snapshot, get_ncn_reward_router, get_operator_snapshot,
-        get_tip_router_config, get_vault, get_vault_registry, get_weight_table,
+        get_stake_pool_accounts, get_tip_router_config, get_vault, get_vault_registry,
+        get_weight_table,
     },
     handler::CliHandler,
     log::boring_progress_bar,
@@ -22,9 +23,11 @@ use jito_restaking_core::{
 };
 use jito_tip_router_client::instructions::{
     AdminRegisterStMintBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder, CastVoteBuilder,
-    DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder, InitializeBallotBoxBuilder,
-    InitializeBaseRewardRouterBuilder, InitializeConfigBuilder as InitializeTipRouterConfigBuilder,
-    InitializeEpochSnapshotBuilder, InitializeEpochStateBuilder, InitializeNcnRewardRouterBuilder,
+    DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
+    DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
+    InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder,
+    InitializeConfigBuilder as InitializeTipRouterConfigBuilder, InitializeEpochSnapshotBuilder,
+    InitializeEpochStateBuilder, InitializeNcnRewardRouterBuilder,
     InitializeOperatorSnapshotBuilder, InitializeVaultRegistryBuilder,
     InitializeWeightTableBuilder, ReallocBallotBoxBuilder, ReallocBaseRewardRouterBuilder,
     ReallocEpochStateBuilder, ReallocOperatorSnapshotBuilder, ReallocVaultRegistryBuilder,
@@ -36,7 +39,7 @@ use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
-    constants::{JITOSOL_MINT, MAX_REALLOC_BYTES},
+    constants::MAX_REALLOC_BYTES,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
@@ -58,12 +61,13 @@ use solana_client::rpc_config::RpcSendTransactionConfig;
 use solana_sdk::{
     compute_budget::ComputeBudgetInstruction,
     instruction::Instruction,
+    native_token::sol_to_lamports,
     program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,
     signature::{Keypair, Signature},
     signer::Signer,
-    system_instruction::create_account,
+    system_instruction::{create_account, transfer},
     system_program,
     transaction::Transaction,
 };
@@ -1010,6 +1014,13 @@ pub async fn create_ncn_reward_router(
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+        &handler.tip_router_program_id,
+        &operator,
+        &ncn,
+        epoch,
+    );
+
     let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
         &handler.tip_router_program_id,
         ncn_fee_group,
@@ -1026,37 +1037,33 @@ pub async fn create_ncn_reward_router(
         epoch,
     );
 
-    let ncn_reward_router_account = get_account(handler, &ncn_reward_router).await?;
+    let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
+        .epoch_state(epoch_state)
+        .ncn(ncn)
+        .operator(operator)
+        .operator_snapshot(operator_snapshot)
+        .ncn_reward_router(ncn_reward_router)
+        .ncn_reward_receiver(ncn_reward_receiver)
+        .payer(keypair.pubkey())
+        .restaking_program(handler.restaking_program_id)
+        .system_program(system_program::id())
+        .ncn_fee_group(ncn_fee_group.group)
+        .epoch(epoch)
+        .instruction();
 
-    // Skip if ncn reward router already exists
-    if ncn_reward_router_account.is_none() {
-        let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
-            .epoch_state(epoch_state)
-            .ncn(ncn)
-            .operator(operator)
-            .ncn_reward_router(ncn_reward_router)
-            .ncn_reward_receiver(ncn_reward_receiver)
-            .payer(keypair.pubkey())
-            .restaking_program(handler.restaking_program_id)
-            .system_program(system_program::id())
-            .ncn_fee_group(ncn_fee_group.group)
-            .epoch(epoch)
-            .instruction();
-
-        send_and_log_transaction(
-            handler,
-            &[initialize_ncn_reward_router_ix],
-            &[],
-            "Initialized NCN Reward Router",
-            &[
-                format!("NCN: {:?}", ncn),
-                format!("Operator: {:?}", operator),
-                format!("NCN Fee Group: {:?}", ncn_fee_group.group),
-                format!("Epoch: {:?}", epoch),
-            ],
-        )
-        .await?;
-    }
+    send_and_log_transaction(
+        handler,
+        &[initialize_ncn_reward_router_ix],
+        &[],
+        "Initialized NCN Reward Router",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Operator: {:?}", operator),
+            format!("NCN Fee Group: {:?}", ncn_fee_group.group),
+            format!("Epoch: {:?}", epoch),
+        ],
+    )
+    .await?;
 
     Ok(())
 }
@@ -1300,13 +1307,16 @@ pub async fn distribute_base_rewards(
         .fee_config
         .base_fee_wallet(base_fee_group)?;
 
-    let base_fee_wallet_ata = get_associated_token_address(base_fee_wallet, &JITOSOL_MINT);
+    let stake_pool_accounts = get_stake_pool_accounts(handler).await?;
+
+    let base_fee_wallet_ata =
+        get_associated_token_address(base_fee_wallet, &stake_pool_accounts.stake_pool.pool_mint);
 
     let create_base_fee_wallet_ata_ix =
         spl_associated_token_account::instruction::create_associated_token_account_idempotent(
             &keypair.pubkey(),
             base_fee_wallet,
-            &JITOSOL_MINT,
+            &stake_pool_accounts.stake_pool.pool_mint,
             &handler.token_program_id,
         );
 
@@ -1322,8 +1332,13 @@ pub async fn distribute_base_rewards(
         .base_fee_wallet(*base_fee_wallet)
         .base_fee_wallet_ata(base_fee_wallet_ata)
         .base_fee_group(base_fee_group.group)
-        // .manager_fee_account(manager_fee_account)
-        // .pool_mint(pool_mint)
+        .pool_mint(stake_pool_accounts.stake_pool.pool_mint)
+        .manager_fee_account(stake_pool_accounts.stake_pool.manager_fee_account)
+        .referrer_pool_tokens_account(stake_pool_accounts.referrer_pool_tokens_account)
+        .reserve_stake(stake_pool_accounts.stake_pool.reserve_stake)
+        .stake_pool(stake_pool_accounts.stake_pool_address)
+        .stake_pool_withdraw_authority(stake_pool_accounts.stake_pool_withdraw_authority)
+        .stake_pool_program(stake_pool_accounts.stake_pool_program_id)
         .instruction();
 
     send_and_log_transaction(
@@ -1345,9 +1360,189 @@ pub async fn distribute_base_rewards(
     Ok(())
 }
 
-//TODO distribute base rewards
-//TODO distribute ncn vault rewards
-//TODO distribute ncn operator rewards
+pub async fn distribute_ncn_vault_rewards(
+    handler: &CliHandler,
+    vault: &Pubkey,
+    operator: &Pubkey,
+    ncn_fee_group: NcnFeeGroup,
+    epoch: u64,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let ncn = *handler.ncn()?;
+
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (ncn_config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        operator,
+        &ncn,
+        epoch,
+    );
+
+    let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        operator,
+        &ncn,
+        epoch,
+    );
+
+    let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+        &handler.tip_router_program_id,
+        operator,
+        &ncn,
+        epoch,
+    );
+
+    let stake_pool_accounts = get_stake_pool_accounts(handler).await?;
+
+    let vault = *vault;
+    let vault_ata = get_associated_token_address(&vault, &stake_pool_accounts.stake_pool.pool_mint);
+
+    let create_vault_ata_ix =
+        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+            &keypair.pubkey(),
+            &vault,
+            &stake_pool_accounts.stake_pool.pool_mint,
+            &handler.token_program_id,
+        );
+
+    let distribute_ncn_vault_rewards_ix = DistributeNcnVaultRewardsBuilder::new()
+        .epoch_state(epoch_state)
+        .config(ncn_config)
+        .ncn(ncn)
+        .operator(*operator)
+        .vault(vault)
+        .vault_ata(vault_ata)
+        .operator_snapshot(operator_snapshot)
+        .ncn_reward_router(ncn_reward_router)
+        .ncn_reward_receiver(ncn_reward_receiver)
+        .pool_mint(stake_pool_accounts.stake_pool.pool_mint)
+        .manager_fee_account(stake_pool_accounts.stake_pool.manager_fee_account)
+        .referrer_pool_tokens_account(stake_pool_accounts.referrer_pool_tokens_account)
+        .reserve_stake(stake_pool_accounts.stake_pool.reserve_stake)
+        .stake_pool(stake_pool_accounts.stake_pool_address)
+        .stake_pool_withdraw_authority(stake_pool_accounts.stake_pool_withdraw_authority)
+        .stake_pool_program(stake_pool_accounts.stake_pool_program_id)
+        .token_program(handler.token_program_id)
+        .system_program(system_program::id())
+        .ncn_fee_group(ncn_fee_group.group)
+        .epoch(epoch)
+        .instruction();
+
+    send_and_log_transaction(
+        handler,
+        &[create_vault_ata_ix, distribute_ncn_vault_rewards_ix],
+        &[],
+        "Distributed NCN Vault Rewards",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Vault: {:?}", vault),
+            format!("Operator: {:?}", operator),
+            format!("NCN Fee Group: {:?}", ncn_fee_group.group),
+            format!("Epoch: {:?}", epoch),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn distribute_ncn_operator_rewards(
+    handler: &CliHandler,
+    operator: &Pubkey,
+    ncn_fee_group: NcnFeeGroup,
+    epoch: u64,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let ncn = *handler.ncn()?;
+
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (ncn_config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        operator,
+        &ncn,
+        epoch,
+    );
+
+    let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        operator,
+        &ncn,
+        epoch,
+    );
+
+    let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+        &handler.tip_router_program_id,
+        operator,
+        &ncn,
+        epoch,
+    );
+
+    let stake_pool_accounts = get_stake_pool_accounts(handler).await?;
+
+    let operator_ata =
+        get_associated_token_address(operator, &stake_pool_accounts.stake_pool.pool_mint);
+
+    let create_operator_ata_ix =
+        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+            &keypair.pubkey(),
+            operator,
+            &stake_pool_accounts.stake_pool.pool_mint,
+            &handler.token_program_id,
+        );
+
+    let distribute_ncn_operator_rewards_ix = DistributeNcnOperatorRewardsBuilder::new()
+        .epoch_state(epoch_state)
+        .config(ncn_config)
+        .ncn(ncn)
+        .operator(*operator)
+        .operator_ata(operator_ata)
+        .operator_snapshot(operator_snapshot)
+        .ncn_reward_router(ncn_reward_router)
+        .ncn_reward_receiver(ncn_reward_receiver)
+        .pool_mint(stake_pool_accounts.stake_pool.pool_mint)
+        .manager_fee_account(stake_pool_accounts.stake_pool.manager_fee_account)
+        .referrer_pool_tokens_account(stake_pool_accounts.referrer_pool_tokens_account)
+        .reserve_stake(stake_pool_accounts.stake_pool.reserve_stake)
+        .stake_pool(stake_pool_accounts.stake_pool_address)
+        .stake_pool_withdraw_authority(stake_pool_accounts.stake_pool_withdraw_authority)
+        .stake_pool_program(stake_pool_accounts.stake_pool_program_id)
+        .token_program(handler.token_program_id)
+        .system_program(system_program::id())
+        .restaking_program(handler.restaking_program_id)
+        .ncn_fee_group(ncn_fee_group.group)
+        .epoch(epoch)
+        .instruction();
+
+    send_and_log_transaction(
+        handler,
+        &[create_operator_ata_ix, distribute_ncn_operator_rewards_ix],
+        &[],
+        "Distributed NCN Operator Rewards",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Operator: {:?}", operator),
+            format!("NCN Fee Group: {:?}", ncn_fee_group.group),
+            format!("Epoch: {:?}", epoch),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
 
 pub async fn admin_set_tie_breaker(
     handler: &CliHandler,
@@ -1509,6 +1704,8 @@ pub async fn crank_register_vaults(handler: &CliHandler) -> Result<()> {
         .copied()
         .collect();
 
+    //TODO check if ST mint is registered first
+
     for vault in vaults_to_register.iter() {
         let result = register_vault(handler, vault).await;
 
@@ -1617,6 +1814,56 @@ pub async fn crank_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::large_stack_frames)]
+pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
+    let meta_merkle_root = [8; 32];
+    let operators = get_all_operators_in_ncn(handler).await?;
+
+    for operator in operators.iter() {
+        let result = admin_cast_vote(handler, operator, epoch, meta_merkle_root).await;
+
+        if let Err(err) = result {
+            log::error!(
+                "Failed to cast vote for operator: {:?} in epoch: {:?} with error: {:?}",
+                operator,
+                epoch,
+                err
+            );
+        }
+    }
+
+    let ballot_box = get_or_create_ballot_box(handler, epoch).await?;
+
+    // Send 'Test' Rewards
+    if ballot_box.has_winning_ballot() {
+        let (base_reward_receiver_address, _, _) = BaseRewardReceiver::find_program_address(
+            &handler.tip_router_program_id,
+            handler.ncn().unwrap(),
+            epoch,
+        );
+
+        let base_reward_receiver = get_account(handler, &base_reward_receiver_address).await?;
+
+        if base_reward_receiver.is_none() {
+            let keypair = handler.keypair()?;
+
+            let lamports = sol_to_lamports(0.1);
+            let transfer_ix = transfer(&keypair.pubkey(), &base_reward_receiver_address, lamports);
+
+            send_and_log_transaction(
+                handler,
+                &[transfer_ix],
+                &[],
+                "Sent Test Rewards",
+                &[format!("Epoch: {:?}", epoch)],
+            )
+            .await?;
+        }
+    }
+
+    Ok(())
+}
+
 pub async fn crank_setup_router(handler: &CliHandler, epoch: u64) -> Result<()> {
     create_base_reward_router(handler, epoch).await
 }
@@ -1629,16 +1876,33 @@ pub async fn crank_upload(_: &CliHandler, _: u64) -> Result<()> {
 pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
     let operators = get_all_operators_in_ncn(handler).await?;
 
+    let config = get_tip_router_config(handler).await?;
+    let fee_config = config.fee_config;
+
     route_base_rewards(handler, epoch).await?;
 
-    for _ in BaseFeeGroup::all_groups() {
-        //TODO
-        // distribute_base_rewards(handler, epoch).await?;
+    for group in BaseFeeGroup::all_groups() {
+        if fee_config.base_fee_bps(group, epoch)? == 0 {
+            continue;
+        }
+
+        let result = distribute_base_rewards(handler, group, epoch).await;
+
+        if let Err(err) = result {
+            log::error!(
+                "Failed to distribute base rewards for group: {:?} in epoch: {:?} with error: {:?}",
+                group,
+                epoch,
+                err
+            );
+        }
     }
 
     for operator in operators.iter() {
         for group in NcnFeeGroup::all_groups() {
-            //TODO optimize such that we don't create a NCN Reward Router if we don't need it
+            if fee_config.ncn_fee_bps(group, epoch)? == 0 {
+                continue;
+            }
 
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
 
@@ -1651,6 +1915,7 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
                 );
                 continue;
             }
+            let ncn_reward_router = result?;
 
             let result = distribute_base_ncn_rewards(handler, operator, group, epoch).await;
 
@@ -1676,8 +1941,39 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
                 continue;
             }
 
-            // TODO distribute ncn vault rewards
-            // TODO distribute ncn operator rewards
+            let result = distribute_ncn_operator_rewards(handler, operator, group, epoch).await;
+
+            if let Err(err) = result {
+                log::error!(
+                    "Failed to distribute ncn operator rewards for operator: {:?} in epoch: {:?} with error: {:?}",
+                    operator,
+                    epoch,
+                    err
+                );
+                continue;
+            }
+
+            let vaults_to_route = ncn_reward_router
+                .vault_reward_routes()
+                .iter()
+                .filter(|route| !route.is_empty())
+                .map(|route| route.vault())
+                .collect::<Vec<Pubkey>>();
+
+            for vault in vaults_to_route {
+                let result: std::result::Result<(), anyhow::Error> =
+                    distribute_ncn_vault_rewards(handler, &vault, operator, group, epoch).await;
+
+                if let Err(err) = result {
+                    log::error!(
+                        "Failed to distribute ncn vault rewards for vault: {:?} and operator: {:?} in epoch: {:?} with error: {:?}",
+                        vault,
+                        operator,
+                        epoch,
+                        err
+                    );
+                }
+            }
         }
     }
 
@@ -2174,6 +2470,8 @@ pub async fn send_transactions(
             boring_progress_bar((1 + iteration) * 1000).await;
             continue;
         }
+
+        return Ok(result.unwrap());
     }
 
     // last retry

@@ -575,9 +575,10 @@ impl EpochState {
             return Ok(State::SetupRouter);
         }
 
-        if !self.upload_progress.is_complete() {
-            return Ok(State::Upload);
-        }
+        //TODO set back
+        // if !self.upload_progress.is_complete() {
+        //     return Ok(State::Upload);
+        // }
 
         if !self.total_distribution_progress.is_complete()
             || self.total_distribution_progress.total() == 0

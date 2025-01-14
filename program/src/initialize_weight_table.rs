@@ -50,6 +50,8 @@ pub fn process_initialize_weight_table(
         let vault_registry = VaultRegistry::try_from_slice_unchecked(&vault_registry_data)?;
         vault_registry.vault_count()
     };
+    // DVCbuVDV47J9jHnydxbNy3u4nQpCWcoh3hWWnnmGBPir
+    // 96kfSRP6HELsLZb7rQHTHJhPeHJkFgmfpzor4rA8ntzX
 
     if vault_count != vault_registry_count {
         msg!("Vault count does not match supported mint count");
