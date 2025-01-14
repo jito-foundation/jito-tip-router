@@ -1,0 +1,48 @@
+title: Jito Tip Router Documentation
+longtitle: Jito Tip Router Documentation
+description: Jito Tip Router Documentation
+url: "https://docs.jito-tip-router.jito.network"
+
+remote_theme: sighingnow/jekyll-gitbook
+
+markdown: kramdown
+syntax_highlighter_style: colorful
+
+toc:
+  enabled: true
+  h_min: 1
+  h_max: 3
+
+assets:
+  dirname: assets
+  baseurl: /assets/
+  sources:
+    - assets
+
+collections:
+  about:
+    output: true
+    permalink: /:collection/:title/
+    sort_by: weight
+  restaking:
+    output: true
+    permalink: /:collection/:title/
+    sort_by: weight
+  vault:
+    output: true
+    permalink: /:collection/:title/
+    sort_by: weight
+  advanced:
+    output: true
+    permalink: /:collection/:title/
+    sort_by: weight
+  tools:
+    output: true
+    permalink: /:collection/:title/
+
+ordered_collections:
+  - about
+  - restaking
+  - vault
+  - tools
+  - advanced
