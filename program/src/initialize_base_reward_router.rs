@@ -6,6 +6,7 @@ use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     constants::MAX_REALLOC_BYTES,
+    epoch_state::EpochState,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke,
@@ -19,7 +20,7 @@ pub fn process_initialize_base_reward_router(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn, base_reward_router, base_reward_receiver, payer, restaking_program, system_program] =
+    let [epoch_state, ncn, base_reward_router, base_reward_receiver, payer, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -30,6 +31,7 @@ pub fn process_initialize_base_reward_router(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
 

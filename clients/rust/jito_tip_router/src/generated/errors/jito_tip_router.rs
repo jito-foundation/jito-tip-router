@@ -3,6 +3,7 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
 use num_derive::FromPrimitive;
 use thiserror::Error;
@@ -231,6 +232,18 @@ pub enum JitoTipRouterError {
     /// 8768 - Invalid slots after consensus
     #[error("Invalid slots after consensus")]
     InvalidSlotsAfterConsensus = 0x2240,
+    /// 8769 - Vault needs to be updated
+    #[error("Vault needs to be updated")]
+    VaultNeedsUpdate = 0x2241,
+    /// 8770 - Invalid Account Status
+    #[error("Invalid Account Status")]
+    InvalidAccountStatus = 0x2242,
+    /// 8771 - Account already initialized
+    #[error("Account already initialized")]
+    AccountAlreadyInitialized = 0x2243,
+    /// 8772 - Cannot vote with uninitialized account
+    #[error("Cannot vote with uninitialized account")]
+    BadBallot = 0x2244,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

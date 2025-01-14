@@ -29,7 +29,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const DISTRIBUTE_BASE_REWARDS_DISCRIMINATOR = 20;
+export const DISTRIBUTE_BASE_REWARDS_DISCRIMINATOR = 22;
 
 export function getDistributeBaseRewardsDiscriminatorBytes() {
   return getU8Encoder().encode(DISTRIBUTE_BASE_REWARDS_DISCRIMINATOR);
@@ -37,6 +37,7 @@ export function getDistributeBaseRewardsDiscriminatorBytes() {
 
 export type DistributeBaseRewardsInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
@@ -66,6 +67,9 @@ export type DistributeBaseRewardsInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? WritableAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
@@ -160,6 +164,7 @@ export function getDistributeBaseRewardsInstructionDataCodec(): Codec<
 }
 
 export type DistributeBaseRewardsInput<
+  TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountBaseRewardRouter extends string = string,
@@ -177,6 +182,7 @@ export type DistributeBaseRewardsInput<
   TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
@@ -198,6 +204,7 @@ export type DistributeBaseRewardsInput<
 };
 
 export function getDistributeBaseRewardsInstruction<
+  TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountBaseRewardRouter extends string,
@@ -217,6 +224,7 @@ export function getDistributeBaseRewardsInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: DistributeBaseRewardsInput<
+    TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
     TAccountBaseRewardRouter,
@@ -237,6 +245,7 @@ export function getDistributeBaseRewardsInstruction<
   config?: { programAddress?: TProgramAddress }
 ): DistributeBaseRewardsInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountConfig,
   TAccountNcn,
   TAccountBaseRewardRouter,
@@ -260,6 +269,7 @@ export function getDistributeBaseRewardsInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     baseRewardRouter: {
@@ -322,6 +332,7 @@ export function getDistributeBaseRewardsInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.baseRewardRouter),
@@ -345,6 +356,7 @@ export function getDistributeBaseRewardsInstruction<
     ),
   } as DistributeBaseRewardsInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
     TAccountBaseRewardRouter,
@@ -372,22 +384,23 @@ export type ParsedDistributeBaseRewardsInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    config: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    baseRewardRouter: TAccountMetas[2];
-    baseRewardReceiver: TAccountMetas[3];
-    baseFeeWallet: TAccountMetas[4];
-    baseFeeWalletAta: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
-    stakePoolProgram: TAccountMetas[7];
-    stakePool: TAccountMetas[8];
-    stakePoolWithdrawAuthority: TAccountMetas[9];
-    reserveStake: TAccountMetas[10];
-    managerFeeAccount: TAccountMetas[11];
-    referrerPoolTokensAccount: TAccountMetas[12];
-    poolMint: TAccountMetas[13];
-    tokenProgram: TAccountMetas[14];
-    systemProgram: TAccountMetas[15];
+    epochState: TAccountMetas[0];
+    config: TAccountMetas[1];
+    ncn: TAccountMetas[2];
+    baseRewardRouter: TAccountMetas[3];
+    baseRewardReceiver: TAccountMetas[4];
+    baseFeeWallet: TAccountMetas[5];
+    baseFeeWalletAta: TAccountMetas[6];
+    restakingProgram: TAccountMetas[7];
+    stakePoolProgram: TAccountMetas[8];
+    stakePool: TAccountMetas[9];
+    stakePoolWithdrawAuthority: TAccountMetas[10];
+    reserveStake: TAccountMetas[11];
+    managerFeeAccount: TAccountMetas[12];
+    referrerPoolTokensAccount: TAccountMetas[13];
+    poolMint: TAccountMetas[14];
+    tokenProgram: TAccountMetas[15];
+    systemProgram: TAccountMetas[16];
   };
   data: DistributeBaseRewardsInstructionData;
 };
@@ -400,7 +413,7 @@ export function parseDistributeBaseRewardsInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedDistributeBaseRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 16) {
+  if (instruction.accounts.length < 17) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -413,6 +426,7 @@ export function parseDistributeBaseRewardsInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
       baseRewardRouter: getNextAccount(),

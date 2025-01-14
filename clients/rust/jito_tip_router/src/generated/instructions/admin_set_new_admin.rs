@@ -3,10 +3,11 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
-
-use borsh::{BorshDeserialize, BorshSerialize};
+//!
 
 use crate::generated::types::ConfigAdminRole;
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 
 /// Accounts.
 pub struct AdminSetNewAdmin {
@@ -74,7 +75,7 @@ pub struct AdminSetNewAdminInstructionData {
 
 impl AdminSetNewAdminInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 27 }
+        Self { discriminator: 29 }
     }
 }
 

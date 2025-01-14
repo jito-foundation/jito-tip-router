@@ -3,11 +3,15 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 
 /// Accounts.
 pub struct DistributeNcnVaultRewards {
+    pub epoch_state: solana_program::pubkey::Pubkey,
+
     pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
@@ -17,6 +21,8 @@ pub struct DistributeNcnVaultRewards {
     pub vault: solana_program::pubkey::Pubkey,
 
     pub vault_ata: solana_program::pubkey::Pubkey,
+
+    pub operator_snapshot: solana_program::pubkey::Pubkey,
 
     pub ncn_reward_router: solana_program::pubkey::Pubkey,
 
@@ -54,7 +60,11 @@ impl DistributeNcnVaultRewards {
         args: DistributeNcnVaultRewardsInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(18 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.epoch_state,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.config,
             false,
@@ -71,6 +81,10 @@ impl DistributeNcnVaultRewards {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.vault_ata,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.operator_snapshot,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -139,7 +153,7 @@ pub struct DistributeNcnVaultRewardsInstructionData {
 
 impl DistributeNcnVaultRewardsInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 23 }
+        Self { discriminator: 25 }
     }
 }
 
@@ -160,29 +174,33 @@ pub struct DistributeNcnVaultRewardsInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` config
-///   1. `[]` ncn
-///   2. `[]` operator
-///   3. `[writable]` vault
-///   4. `[writable]` vault_ata
-///   5. `[writable]` ncn_reward_router
-///   6. `[writable]` ncn_reward_receiver
-///   7. `[]` stake_pool_program
-///   8. `[writable]` stake_pool
-///   9. `[]` stake_pool_withdraw_authority
-///   10. `[writable]` reserve_stake
-///   11. `[writable]` manager_fee_account
-///   12. `[writable]` referrer_pool_tokens_account
-///   13. `[writable]` pool_mint
-///   14. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   15. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   0. `[writable]` epoch_state
+///   1. `[]` config
+///   2. `[]` ncn
+///   3. `[]` operator
+///   4. `[writable]` vault
+///   5. `[writable]` vault_ata
+///   6. `[writable]` operator_snapshot
+///   7. `[writable]` ncn_reward_router
+///   8. `[writable]` ncn_reward_receiver
+///   9. `[]` stake_pool_program
+///   10. `[writable]` stake_pool
+///   11. `[]` stake_pool_withdraw_authority
+///   12. `[writable]` reserve_stake
+///   13. `[writable]` manager_fee_account
+///   14. `[writable]` referrer_pool_tokens_account
+///   15. `[writable]` pool_mint
+///   16. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+///   17. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct DistributeNcnVaultRewardsBuilder {
+    epoch_state: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
     vault: Option<solana_program::pubkey::Pubkey>,
     vault_ata: Option<solana_program::pubkey::Pubkey>,
+    operator_snapshot: Option<solana_program::pubkey::Pubkey>,
     ncn_reward_router: Option<solana_program::pubkey::Pubkey>,
     ncn_reward_receiver: Option<solana_program::pubkey::Pubkey>,
     stake_pool_program: Option<solana_program::pubkey::Pubkey>,
@@ -202,6 +220,11 @@ pub struct DistributeNcnVaultRewardsBuilder {
 impl DistributeNcnVaultRewardsBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+    #[inline(always)]
+    pub fn epoch_state(&mut self, epoch_state: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.epoch_state = Some(epoch_state);
+        self
     }
     #[inline(always)]
     pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -226,6 +249,14 @@ impl DistributeNcnVaultRewardsBuilder {
     #[inline(always)]
     pub fn vault_ata(&mut self, vault_ata: solana_program::pubkey::Pubkey) -> &mut Self {
         self.vault_ata = Some(vault_ata);
+        self
+    }
+    #[inline(always)]
+    pub fn operator_snapshot(
+        &mut self,
+        operator_snapshot: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.operator_snapshot = Some(operator_snapshot);
         self
     }
     #[inline(always)]
@@ -334,11 +365,15 @@ impl DistributeNcnVaultRewardsBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = DistributeNcnVaultRewards {
+            epoch_state: self.epoch_state.expect("epoch_state is not set"),
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             operator: self.operator.expect("operator is not set"),
             vault: self.vault.expect("vault is not set"),
             vault_ata: self.vault_ata.expect("vault_ata is not set"),
+            operator_snapshot: self
+                .operator_snapshot
+                .expect("operator_snapshot is not set"),
             ncn_reward_router: self
                 .ncn_reward_router
                 .expect("ncn_reward_router is not set"),
@@ -381,6 +416,8 @@ impl DistributeNcnVaultRewardsBuilder {
 
 /// `distribute_ncn_vault_rewards` CPI accounts.
 pub struct DistributeNcnVaultRewardsCpiAccounts<'a, 'b> {
+    pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
@@ -390,6 +427,8 @@ pub struct DistributeNcnVaultRewardsCpiAccounts<'a, 'b> {
     pub vault: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub vault_ata: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -419,6 +458,8 @@ pub struct DistributeNcnVaultRewardsCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
@@ -428,6 +469,8 @@ pub struct DistributeNcnVaultRewardsCpi<'a, 'b> {
     pub vault: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub vault_ata: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -462,11 +505,13 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
+            epoch_state: accounts.epoch_state,
             config: accounts.config,
             ncn: accounts.ncn,
             operator: accounts.operator,
             vault: accounts.vault,
             vault_ata: accounts.vault_ata,
+            operator_snapshot: accounts.operator_snapshot,
             ncn_reward_router: accounts.ncn_reward_router,
             ncn_reward_receiver: accounts.ncn_reward_receiver,
             stake_pool_program: accounts.stake_pool_program,
@@ -514,7 +559,11 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(18 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.epoch_state.key,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.config.key,
             false,
@@ -533,6 +582,10 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.vault_ata.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.operator_snapshot.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -597,13 +650,15 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(16 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(18 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
+        account_infos.push(self.epoch_state.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.vault_ata.clone());
+        account_infos.push(self.operator_snapshot.clone());
         account_infos.push(self.ncn_reward_router.clone());
         account_infos.push(self.ncn_reward_receiver.clone());
         account_infos.push(self.stake_pool_program.clone());
@@ -631,22 +686,24 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` config
-///   1. `[]` ncn
-///   2. `[]` operator
-///   3. `[writable]` vault
-///   4. `[writable]` vault_ata
-///   5. `[writable]` ncn_reward_router
-///   6. `[writable]` ncn_reward_receiver
-///   7. `[]` stake_pool_program
-///   8. `[writable]` stake_pool
-///   9. `[]` stake_pool_withdraw_authority
-///   10. `[writable]` reserve_stake
-///   11. `[writable]` manager_fee_account
-///   12. `[writable]` referrer_pool_tokens_account
-///   13. `[writable]` pool_mint
-///   14. `[]` token_program
-///   15. `[]` system_program
+///   0. `[writable]` epoch_state
+///   1. `[]` config
+///   2. `[]` ncn
+///   3. `[]` operator
+///   4. `[writable]` vault
+///   5. `[writable]` vault_ata
+///   6. `[writable]` operator_snapshot
+///   7. `[writable]` ncn_reward_router
+///   8. `[writable]` ncn_reward_receiver
+///   9. `[]` stake_pool_program
+///   10. `[writable]` stake_pool
+///   11. `[]` stake_pool_withdraw_authority
+///   12. `[writable]` reserve_stake
+///   13. `[writable]` manager_fee_account
+///   14. `[writable]` referrer_pool_tokens_account
+///   15. `[writable]` pool_mint
+///   16. `[]` token_program
+///   17. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
     instruction: Box<DistributeNcnVaultRewardsCpiBuilderInstruction<'a, 'b>>,
@@ -656,11 +713,13 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(DistributeNcnVaultRewardsCpiBuilderInstruction {
             __program: program,
+            epoch_state: None,
             config: None,
             ncn: None,
             operator: None,
             vault: None,
             vault_ata: None,
+            operator_snapshot: None,
             ncn_reward_router: None,
             ncn_reward_receiver: None,
             stake_pool_program: None,
@@ -677,6 +736,14 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
+    }
+    #[inline(always)]
+    pub fn epoch_state(
+        &mut self,
+        epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.epoch_state = Some(epoch_state);
+        self
     }
     #[inline(always)]
     pub fn config(
@@ -710,6 +777,14 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
         vault_ata: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.vault_ata = Some(vault_ata);
+        self
+    }
+    #[inline(always)]
+    pub fn operator_snapshot(
+        &mut self,
+        operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.operator_snapshot = Some(operator_snapshot);
         self
     }
     #[inline(always)]
@@ -862,6 +937,11 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
         let instruction = DistributeNcnVaultRewardsCpi {
             __program: self.instruction.__program,
 
+            epoch_state: self
+                .instruction
+                .epoch_state
+                .expect("epoch_state is not set"),
+
             config: self.instruction.config.expect("config is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
@@ -871,6 +951,11 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
             vault: self.instruction.vault.expect("vault is not set"),
 
             vault_ata: self.instruction.vault_ata.expect("vault_ata is not set"),
+
+            operator_snapshot: self
+                .instruction
+                .operator_snapshot
+                .expect("operator_snapshot is not set"),
 
             ncn_reward_router: self
                 .instruction
@@ -932,11 +1017,13 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct DistributeNcnVaultRewardsCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
+    epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault_ata: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     stake_pool_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,

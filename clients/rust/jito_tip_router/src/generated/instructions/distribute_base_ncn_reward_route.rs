@@ -3,11 +3,15 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 
 /// Accounts.
 pub struct DistributeBaseNcnRewardRoute {
+    pub epoch_state: solana_program::pubkey::Pubkey,
+
     pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
@@ -40,7 +44,11 @@ impl DistributeBaseNcnRewardRoute {
         args: DistributeBaseNcnRewardRouteInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.epoch_state,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.config,
             false,
@@ -98,7 +106,7 @@ pub struct DistributeBaseNcnRewardRouteInstructionData {
 
 impl DistributeBaseNcnRewardRouteInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 21 }
+        Self { discriminator: 23 }
     }
 }
 
@@ -119,17 +127,19 @@ pub struct DistributeBaseNcnRewardRouteInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` config
-///   1. `[]` ncn
-///   2. `[]` operator
-///   3. `[writable]` base_reward_router
-///   4. `[writable]` base_reward_receiver
-///   5. `[writable]` ncn_reward_router
-///   6. `[writable]` ncn_reward_receiver
-///   7. `[]` restaking_program
-///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   0. `[writable]` epoch_state
+///   1. `[]` config
+///   2. `[]` ncn
+///   3. `[]` operator
+///   4. `[writable]` base_reward_router
+///   5. `[writable]` base_reward_receiver
+///   6. `[writable]` ncn_reward_router
+///   7. `[writable]` ncn_reward_receiver
+///   8. `[]` restaking_program
+///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct DistributeBaseNcnRewardRouteBuilder {
+    epoch_state: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
@@ -147,6 +157,11 @@ pub struct DistributeBaseNcnRewardRouteBuilder {
 impl DistributeBaseNcnRewardRouteBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+    #[inline(always)]
+    pub fn epoch_state(&mut self, epoch_state: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.epoch_state = Some(epoch_state);
+        self
     }
     #[inline(always)]
     pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -240,6 +255,7 @@ impl DistributeBaseNcnRewardRouteBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = DistributeBaseNcnRewardRoute {
+            epoch_state: self.epoch_state.expect("epoch_state is not set"),
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             operator: self.operator.expect("operator is not set"),
@@ -276,6 +292,8 @@ impl DistributeBaseNcnRewardRouteBuilder {
 
 /// `distribute_base_ncn_reward_route` CPI accounts.
 pub struct DistributeBaseNcnRewardRouteCpiAccounts<'a, 'b> {
+    pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
@@ -299,6 +317,8 @@ pub struct DistributeBaseNcnRewardRouteCpiAccounts<'a, 'b> {
 pub struct DistributeBaseNcnRewardRouteCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -329,6 +349,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
+            epoch_state: accounts.epoch_state,
             config: accounts.config,
             ncn: accounts.ncn,
             operator: accounts.operator,
@@ -374,7 +395,11 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.epoch_state.key,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.config.key,
             false,
@@ -429,8 +454,9 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(9 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(10 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
+        account_infos.push(self.epoch_state.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
@@ -456,15 +482,16 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` config
-///   1. `[]` ncn
-///   2. `[]` operator
-///   3. `[writable]` base_reward_router
-///   4. `[writable]` base_reward_receiver
-///   5. `[writable]` ncn_reward_router
-///   6. `[writable]` ncn_reward_receiver
-///   7. `[]` restaking_program
-///   8. `[]` system_program
+///   0. `[writable]` epoch_state
+///   1. `[]` config
+///   2. `[]` ncn
+///   3. `[]` operator
+///   4. `[writable]` base_reward_router
+///   5. `[writable]` base_reward_receiver
+///   6. `[writable]` ncn_reward_router
+///   7. `[writable]` ncn_reward_receiver
+///   8. `[]` restaking_program
+///   9. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
     instruction: Box<DistributeBaseNcnRewardRouteCpiBuilderInstruction<'a, 'b>>,
@@ -474,6 +501,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(DistributeBaseNcnRewardRouteCpiBuilderInstruction {
             __program: program,
+            epoch_state: None,
             config: None,
             ncn: None,
             operator: None,
@@ -488,6 +516,14 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
+    }
+    #[inline(always)]
+    pub fn epoch_state(
+        &mut self,
+        epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.epoch_state = Some(epoch_state);
+        self
     }
     #[inline(always)]
     pub fn config(
@@ -620,6 +656,11 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
         let instruction = DistributeBaseNcnRewardRouteCpi {
             __program: self.instruction.__program,
 
+            epoch_state: self
+                .instruction
+                .epoch_state
+                .expect("epoch_state is not set"),
+
             config: self.instruction.config.expect("config is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
@@ -667,6 +708,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct DistributeBaseNcnRewardRouteCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
+    epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,

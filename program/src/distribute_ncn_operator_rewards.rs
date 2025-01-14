@@ -4,6 +4,8 @@ use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     config::Config as NcnConfig,
     constants::JITOSOL_MINT,
+    epoch_snapshot::OperatorSnapshot,
+    epoch_state::EpochState,
     error::TipRouterError,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
@@ -21,7 +23,7 @@ pub fn process_distribute_ncn_operator_rewards(
     ncn_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ncn, operator, operator_ata, ncn_reward_router, ncn_reward_receiver, restaking_program, stake_pool_program, stake_pool, stake_pool_withdraw_authority, reserve_stake, manager_fee_account, referrer_pool_tokens_account, pool_mint, token_program, system_program] =
+    let [epoch_state, ncn_config, ncn, operator, operator_ata, operator_snapshot, ncn_reward_router, ncn_reward_receiver, restaking_program, stake_pool_program, stake_pool, stake_pool_withdraw_authority, reserve_stake, manager_fee_account, referrer_pool_tokens_account, pool_mint, token_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -32,8 +34,17 @@ pub fn process_distribute_ncn_operator_rewards(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, true)?;
+    OperatorSnapshot::load(
+        program_id,
+        operator.key,
+        ncn.key,
+        epoch,
+        operator_snapshot,
+        true,
+    )?;
 
     let ncn_fee_group = NcnFeeGroup::try_from(ncn_fee_group)?;
 
@@ -122,6 +133,20 @@ pub fn process_distribute_ncn_operator_rewards(
                 .map(|s| s.as_slice())
                 .collect::<Vec<&[u8]>>()
                 .as_slice()],
+        )?;
+    }
+
+    {
+        let operator_snapshot_data = operator_snapshot.try_borrow_data()?;
+        let operator_snapshot_account =
+            OperatorSnapshot::try_from_slice_unchecked(&operator_snapshot_data)?;
+
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_distribute_ncn_rewards(
+            operator_snapshot_account.ncn_operator_index() as usize,
+            ncn_fee_group,
+            rewards,
         )?;
     }
 

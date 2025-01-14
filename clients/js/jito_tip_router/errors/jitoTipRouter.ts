@@ -162,11 +162,21 @@ export const JITO_TIP_ROUTER_ERROR__ROUTER_STILL_ROUTING = 0x223e; // 8766
 export const JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL = 0x223f; // 8767
 /** InvalidSlotsAfterConsensus: Invalid slots after consensus */
 export const JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS = 0x2240; // 8768
+/** VaultNeedsUpdate: Vault needs to be updated */
+export const JITO_TIP_ROUTER_ERROR__VAULT_NEEDS_UPDATE = 0x2241; // 8769
+/** InvalidAccountStatus: Invalid Account Status */
+export const JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS = 0x2242; // 8770
+/** AccountAlreadyInitialized: Account already initialized */
+export const JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED = 0x2243; // 8771
+/** BadBallot: Cannot vote with uninitialized account */
+export const JITO_TIP_ROUTER_ERROR__BAD_BALLOT = 0x2244; // 8772
 
 export type JitoTipRouterError =
+  | typeof JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW
   | typeof JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR
+  | typeof JITO_TIP_ROUTER_ERROR__BAD_BALLOT
   | typeof JITO_TIP_ROUTER_ERROR__BAD_SWITCHBOARD_FEED
   | typeof JITO_TIP_ROUTER_ERROR__BAD_SWITCHBOARD_VALUE
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL
@@ -193,6 +203,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF
@@ -226,6 +237,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS
   | typeof JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULTS_FOR_REGISTRY
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE
+  | typeof JITO_TIP_ROUTER_ERROR__VAULT_NEEDS_UPDATE
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_NOT_IN_REGISTRY
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_REGISTRY_LIST_FULL
@@ -242,9 +254,11 @@ export type JitoTipRouterError =
 let jitoTipRouterErrorMessages: Record<JitoTipRouterError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   jitoTipRouterErrorMessages = {
+    [JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED]: `Account already initialized`,
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_FLOOR_ERROR]: `Floor Overflow`,
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_OVERFLOW]: `Overflow`,
     [JITO_TIP_ROUTER_ERROR__ARITHMETIC_UNDERFLOW_ERROR]: `Underflow`,
+    [JITO_TIP_ROUTER_ERROR__BAD_BALLOT]: `Cannot vote with uninitialized account`,
     [JITO_TIP_ROUTER_ERROR__BAD_SWITCHBOARD_FEED]: `Bad switchboard feed`,
     [JITO_TIP_ROUTER_ERROR__BAD_SWITCHBOARD_VALUE]: `Bad switchboard value`,
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL]: `Merkle root tally full`,
@@ -271,6 +285,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN]: `Incorrect NCN`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN]: `Incorrect NCN Admin`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN]: `Incorrect weight table admin`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS]: `Invalid Account Status`,
     [JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP]: `Not a valid base fee group`,
     [JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL]: `Invalid epochs before stall`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF]: `Invalid merkle proof`,
@@ -304,6 +319,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULT_OPERATOR_DELEGATIONS]: `Too many vault operator delegations`,
     [JITO_TIP_ROUTER_ERROR__TOO_MANY_VAULTS_FOR_REGISTRY]: `Too many vaults for registry`,
     [JITO_TIP_ROUTER_ERROR__VAULT_INDEX_ALREADY_IN_USE]: `Vault index already in use by a different mint`,
+    [JITO_TIP_ROUTER_ERROR__VAULT_NEEDS_UPDATE]: `Vault needs to be updated`,
     [JITO_TIP_ROUTER_ERROR__VAULT_NOT_IN_REGISTRY]: `Vault not in weight table registry`,
     [JITO_TIP_ROUTER_ERROR__VAULT_OPERATOR_DELEGATION_FINALIZED]: `Vault operator delegation is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__VAULT_REGISTRY_LIST_FULL]: `Vault Registry mints are at capacity`,

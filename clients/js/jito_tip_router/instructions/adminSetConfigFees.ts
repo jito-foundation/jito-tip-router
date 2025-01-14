@@ -38,7 +38,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ADMIN_SET_CONFIG_FEES_DISCRIMINATOR = 26;
+export const ADMIN_SET_CONFIG_FEES_DISCRIMINATOR = 28;
 
 export function getAdminSetConfigFeesDiscriminatorBytes() {
   return getU8Encoder().encode(ADMIN_SET_CONFIG_FEES_DISCRIMINATOR);

@@ -370,6 +370,10 @@ impl OperatorSnapshot {
         Ok(())
     }
 
+    pub fn ncn_operator_index(&self) -> u64 {
+        self.ncn_operator_index.into()
+    }
+
     pub fn slot_finalized(&self) -> u64 {
         self.slot_finalized.into()
     }
@@ -414,6 +418,12 @@ impl OperatorSnapshot {
         self.vault_operator_stake_weight
             .iter()
             .any(|v| v.vault_index() == vault_index)
+    }
+
+    pub fn contains_vault(&self, vault: &Pubkey) -> bool {
+        self.vault_operator_stake_weight
+            .iter()
+            .any(|v| v.vault().eq(vault))
     }
 
     pub const fn vault_operator_stake_weight(&self) -> &[VaultOperatorStakeWeight] {

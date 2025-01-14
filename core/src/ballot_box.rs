@@ -20,7 +20,7 @@ use crate::{
     stake_weight::StakeWeights,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod, ShankType)]
+#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, ShankType)]
 #[repr(C)]
 pub struct Ballot {
     /// The merkle root of the meta merkle tree
@@ -30,6 +30,17 @@ pub struct Ballot {
     /// Reserved space
     reserved: [u8; 63],
 }
+
+impl PartialEq for Ballot {
+    fn eq(&self, other: &Self) -> bool {
+        if !self.is_initialized() || !other.is_initialized() {
+            return false;
+        }
+        self.meta_merkle_root == other.meta_merkle_root
+    }
+}
+
+impl Eq for Ballot {}
 
 impl Default for Ballot {
     fn default() -> Self {
@@ -393,12 +404,18 @@ impl BallotBox {
         ballot: &Ballot,
         stake_weights: &StakeWeights,
     ) -> Result<usize, TipRouterError> {
-        for (tally_index, tally) in self.ballot_tallies.iter_mut().enumerate() {
-            if tally.ballot.eq(ballot) {
-                tally.increment_tally(stake_weights)?;
-                return Ok(tally_index);
-            }
+        let result = self
+            .ballot_tallies
+            .iter()
+            .enumerate()
+            .find(|(_, t)| t.is_valid() && t.ballot.eq(ballot));
 
+        if let Some((tally_index, _)) = result {
+            self.ballot_tallies[tally_index].increment_tally(stake_weights)?;
+            return Ok(tally_index);
+        }
+
+        for (tally_index, tally) in self.ballot_tallies.iter_mut().enumerate() {
             if !tally.is_valid() {
                 *tally = BallotTally::new(tally_index as u16, ballot, stake_weights);
 
@@ -425,6 +442,10 @@ impl BallotBox {
     ) -> Result<(), TipRouterError> {
         if !self.is_voting_valid(current_slot, valid_slots_after_consensus)? {
             return Err(TipRouterError::VotingNotValid);
+        }
+
+        if !ballot.is_initialized() {
+            return Err(TipRouterError::BadBallot);
         }
 
         let ballot_index = self.increment_or_create_ballot_tally(ballot, stake_weights)?;
@@ -607,6 +628,8 @@ impl BallotBox {
 
 #[cfg(test)]
 mod tests {
+    use crate::utils::assert_tip_router_error;
+
     use super::*;
 
     #[test]
@@ -1003,6 +1026,124 @@ mod tests {
             *ballot_box.get_winning_ballot_tally().unwrap().ballot(),
             ballot3
         );
+    }
+
+    #[test]
+    fn test_cast_bad_ballot() {
+        let ncn = Pubkey::new_unique();
+        let current_slot = 100;
+        let epoch = 1;
+        let valid_slots_after_consensus = 10;
+        let stake_weight_per_operator = 1000;
+        let mut ballot_box = BallotBox::new(&ncn, epoch, 0, current_slot);
+
+        let operator1 = Pubkey::new_unique();
+
+        let stake_weights = StakeWeights::new(stake_weight_per_operator);
+        let ballot1 = Ballot::new(&[0; 32]);
+
+        // Operator 1 votes for ballot1 initially
+        let result = ballot_box.cast_vote(
+            &operator1,
+            &ballot1,
+            &stake_weights,
+            current_slot,
+            valid_slots_after_consensus,
+        );
+
+        assert_tip_router_error(result, TipRouterError::BadBallot);
+    }
+
+    #[test]
+    fn test_multiple_operators_converging_votes() {
+        let ncn = Pubkey::new_unique();
+        let current_slot = 100;
+        let epoch = 1;
+        let valid_slots_after_consensus = 10;
+        let stake_weight_per_operator = 1000;
+        let total_stake_weight = stake_weight_per_operator * 3;
+        let mut ballot_box = BallotBox::new(&ncn, epoch, 0, current_slot);
+
+        let operator1 = Pubkey::new_unique();
+        let operator2 = Pubkey::new_unique();
+        let operator3 = Pubkey::new_unique();
+
+        let stake_weights = StakeWeights::new(stake_weight_per_operator);
+        let ballot1 = Ballot::new(&[1; 32]);
+        let ballot2 = Ballot::new(&[2; 32]);
+
+        // Operator 1 votes for ballot1 initially
+        ballot_box
+            .cast_vote(
+                &operator1,
+                &ballot1,
+                &stake_weights,
+                current_slot,
+                valid_slots_after_consensus,
+            )
+            .unwrap();
+
+        assert_eq!(ballot_box.unique_ballots(), 1);
+
+        // Operator 1 changes vote to ballot2
+        ballot_box
+            .cast_vote(
+                &operator1,
+                &ballot2,
+                &stake_weights,
+                current_slot + 1,
+                valid_slots_after_consensus,
+            )
+            .unwrap();
+
+        // Ballot1 should be removed and ballot2 should be the only ballot
+        assert_eq!(ballot_box.unique_ballots(), 1);
+
+        // Operator 2 votes for ballot2
+        ballot_box
+            .cast_vote(
+                &operator2,
+                &ballot2,
+                &stake_weights,
+                current_slot + 2,
+                valid_slots_after_consensus,
+            )
+            .unwrap();
+        assert_eq!(ballot_box.unique_ballots(), 1);
+
+        // Operator 3 votes for ballot2
+        ballot_box
+            .cast_vote(
+                &operator3,
+                &ballot2,
+                &stake_weights,
+                current_slot + 3,
+                valid_slots_after_consensus,
+            )
+            .unwrap();
+
+        // Still only one unique ballot
+        assert_eq!(ballot_box.unique_ballots(), 1);
+
+        // Check total stake weight
+        let winning_tally = ballot_box
+            .ballot_tallies
+            .iter()
+            .find(|t| t.ballot().eq(&ballot2))
+            .unwrap();
+
+        assert_eq!(
+            winning_tally.stake_weights().stake_weight(),
+            total_stake_weight as u128
+        );
+        assert_eq!(winning_tally.tally(), 3);
+
+        // Verify ballot2 wins consensus with all votes
+        ballot_box
+            .tally_votes(total_stake_weight as u128, current_slot + 4)
+            .unwrap();
+        assert!(ballot_box.has_winning_ballot());
+        assert_eq!(*ballot_box.get_winning_ballot().unwrap(), ballot2);
     }
 
     #[test]
