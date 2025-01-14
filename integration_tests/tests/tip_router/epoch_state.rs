@@ -10,13 +10,10 @@ mod tests {
     #[tokio::test]
     async fn test_all_test_ncn_functions_pt1() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
-        let mut stake_pool_client = fixture.stake_pool_client();
         let mut tip_router_client = fixture.tip_router_client();
 
         const OPERATOR_COUNT: usize = 2;
         const VAULT_COUNT: usize = 3;
-
-        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
 
         let test_ncn = fixture
             .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, Some(100))
@@ -65,6 +62,46 @@ mod tests {
                     VAULT_COUNT as u64
                 );
             }
+        }
+
+        // To be continued... Running into stack overflow issues
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_all_test_ncn_functions_pt2() -> TestResult<()> {
+        let mut fixture = TestBuilder::new().await;
+        let mut stake_pool_client = fixture.stake_pool_client();
+        let mut tip_router_client = fixture.tip_router_client();
+
+        const OPERATOR_COUNT: usize = 2;
+        const VAULT_COUNT: usize = 3;
+
+        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
+
+        let test_ncn = fixture
+            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, Some(100))
+            .await?;
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+        let epoch = fixture.clock().await.epoch;
+
+        {
+            fixture.add_epoch_state_for_test_ncn(&test_ncn).await?;
+        }
+
+        {
+            fixture.add_admin_weights_for_test_ncn(&test_ncn).await?;
+        }
+
+        {
+            fixture.add_epoch_snapshot_to_test_ncn(&test_ncn).await?;
+        }
+
+        {
+            fixture
+                .add_operator_snapshots_to_test_ncn(&test_ncn)
+                .await?;
         }
 
         {
@@ -123,22 +160,13 @@ mod tests {
             }
         }
 
-        {
-            fixture
-                .route_in_base_rewards_for_test_ncn(&test_ncn, 10_000, &pool_root)
-                .await?;
-            fixture
-                .route_in_ncn_rewards_for_test_ncn(&test_ncn, &pool_root)
-                .await?;
-        }
-
         // To be continued... Running into stack overflow issues
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_all_test_ncn_functions_pt2() -> TestResult<()> {
+    async fn test_all_test_ncn_functions_pt3() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut stake_pool_client = fixture.stake_pool_client();
         let mut tip_router_client = fixture.tip_router_client();
