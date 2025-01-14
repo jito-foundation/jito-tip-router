@@ -18,6 +18,7 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
+// TODO rename to admin_initialize_config
 pub fn process_initialize_ncn_config(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

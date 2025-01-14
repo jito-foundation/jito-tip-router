@@ -14,6 +14,7 @@ mod distribute_ncn_vault_rewards;
 mod initialize_ballot_box;
 mod initialize_base_reward_router;
 mod initialize_epoch_snapshot;
+mod initialize_epoch_state;
 mod initialize_ncn_config;
 mod initialize_ncn_reward_router;
 mod initialize_operator_snapshot;
@@ -21,6 +22,7 @@ mod initialize_vault_registry;
 mod initialize_weight_table;
 mod realloc_ballot_box;
 mod realloc_base_reward_router;
+mod realloc_epoch_state;
 mod realloc_operator_snapshot;
 mod realloc_vault_registry;
 mod realloc_weight_table;
@@ -34,7 +36,9 @@ mod switchboard_set_weight;
 use admin_set_new_admin::process_admin_set_new_admin;
 use borsh::BorshDeserialize;
 use const_str_to_pubkey::str_to_pubkey;
+use initialize_epoch_state::process_initialize_epoch_state;
 use jito_tip_router_core::instruction::TipRouterInstruction;
+use realloc_epoch_state::process_realloc_epoch_state;
 use solana_program::{
     account_info::AccountInfo, declare_id, entrypoint::ProgramResult, msg,
     program_error::ProgramError, pubkey::Pubkey,
@@ -139,6 +143,14 @@ pub fn process_instruction(
         // ---------------------------------------------------- //
         //                       SNAPSHOT                       //
         // ---------------------------------------------------- //
+        TipRouterInstruction::InitializeEpochState { epoch } => {
+            msg!("Instruction: InitializeEpochState");
+            process_initialize_epoch_state(program_id, accounts, epoch)
+        }
+        TipRouterInstruction::ReallocEpochState { epoch } => {
+            msg!("Instruction: ReallocEpochState");
+            process_realloc_epoch_state(program_id, accounts, epoch)
+        }
         TipRouterInstruction::InitializeWeightTable { epoch } => {
             msg!("Instruction: InitializeWeightTable");
             process_initialize_weight_table(program_id, accounts, epoch)

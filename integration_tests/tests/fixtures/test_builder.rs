@@ -10,7 +10,6 @@ use jito_tip_router_core::{
     base_reward_router::BaseRewardReceiver,
     constants::{JITOSOL_MINT, JTO_SOL_FEED},
     ncn_fee_group::NcnFeeGroup,
-    ncn_reward_router::NcnRewardReceiver,
 };
 use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
@@ -20,6 +19,7 @@ use solana_program::{
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
     account::Account,
+    clock::DEFAULT_SLOTS_PER_EPOCH,
     commitment_config::CommitmentLevel,
     epoch_schedule::EpochSchedule,
     native_token::lamports_to_sol,
@@ -189,6 +189,22 @@ impl TestBuilder {
         Ok(())
     }
 
+    pub async fn warp_epoch_incremental(
+        &mut self,
+        incremental_epochs: u64,
+    ) -> Result<(), BanksClientError> {
+        let clock: Clock = self.context.banks_client.get_sysvar().await?;
+        self.context
+            .warp_to_slot(
+                clock
+                    .slot
+                    .checked_add(DEFAULT_SLOTS_PER_EPOCH * incremental_epochs)
+                    .unwrap(),
+            )
+            .map_err(|_| BanksClientError::ClientError("failed to warp slot"))?;
+        Ok(())
+    }
+
     pub async fn set_account(&mut self, address: Pubkey, account: Account) {
         self.context
             .borrow_mut()
@@ -299,6 +315,43 @@ impl TestBuilder {
                 Some(270),
                 None,
                 Some(15),
+                &ncn_root,
+            )
+            .await?;
+
+        Ok(TestNcn {
+            ncn_root: ncn_root.clone(),
+            operators: vec![],
+            vaults: vec![],
+        })
+    }
+
+    // 1a.
+    pub async fn create_custom_test_ncn(
+        &mut self,
+        base_fee_bps: u16,
+        ncn_fee_bps: u16,
+    ) -> TestResult<TestNcn> {
+        let mut restaking_program_client = self.restaking_program_client();
+        let mut vault_program_client = self.vault_program_client();
+        let mut tip_router_client = self.tip_router_client();
+
+        vault_program_client.do_initialize_config().await?;
+        restaking_program_client.do_initialize_config().await?;
+        let ncn_root = restaking_program_client
+            .do_initialize_ncn(Some(self.context.payer.insecure_clone()))
+            .await?;
+
+        tip_router_client.setup_tip_router(&ncn_root).await?;
+
+        tip_router_client
+            .do_set_config_fees(
+                Some(300),
+                None,
+                Some(self.context.payer.pubkey()),
+                Some(base_fee_bps),
+                None,
+                Some(ncn_fee_bps),
                 &ncn_root,
             )
             .await?;
@@ -518,15 +571,49 @@ impl TestBuilder {
         Ok(test_ncn)
     }
 
+    pub async fn create_custom_initial_test_ncn(
+        &mut self,
+        operator_count: usize,
+        vault_count: usize,
+        operator_fees_bps: u16,
+        base_fee_bps: u16,
+        ncn_fee_bps: u16,
+    ) -> TestResult<TestNcn> {
+        let mut test_ncn = self
+            .create_custom_test_ncn(base_fee_bps, ncn_fee_bps)
+            .await?;
+        self.add_operators_to_test_ncn(&mut test_ncn, operator_count, Some(operator_fees_bps))
+            .await?;
+        self.add_vaults_to_test_ncn(&mut test_ncn, vault_count)
+            .await?;
+        self.add_delegation_in_test_ncn(&test_ncn, 100).await?;
+        self.add_vault_registry_to_test_ncn(&test_ncn).await?;
+
+        Ok(test_ncn)
+    }
+
+    // 6-1. Admin Set weights
+    pub async fn add_epoch_state_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+
+        // Not sure if this is needed
+        self.warp_slot_incremental(1000).await?;
+
+        let clock = self.clock().await;
+        let epoch = clock.epoch;
+        tip_router_client
+            .do_full_initialize_epoch_state(test_ncn.ncn_root.ncn_pubkey, epoch)
+            .await?;
+
+        Ok(())
+    }
+
     // 6a. Admin Set weights
     pub async fn add_admin_weights_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
         let mut vault_client = self.vault_program_client();
 
         const WEIGHT: u128 = 100;
-
-        // Not sure if this is needed
-        self.warp_slot_incremental(1000).await?;
 
         let clock = self.clock().await;
         let epoch = clock.epoch;
@@ -622,15 +709,43 @@ impl TestBuilder {
         test_ncn: &TestNcn,
     ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
+        let mut vault_program_client = self.vault_program_client();
 
         let clock = self.clock().await;
+        let slot = clock.slot;
         let epoch = clock.epoch;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
+        let operators_for_update = test_ncn
+            .operators
+            .iter()
+            .map(|operator_root| operator_root.operator_pubkey)
+            .collect::<Vec<Pubkey>>();
+
         for operator_root in test_ncn.operators.iter() {
             let operator = operator_root.operator_pubkey;
+
+            let operator_snapshot = tip_router_client
+                .get_operator_snapshot(operator, ncn, epoch)
+                .await?;
+
+            // If operator snapshot is finalized it means that the operator is not active.
+            if operator_snapshot.finalized() {
+                continue;
+            }
+
             for vault_root in test_ncn.vaults.iter() {
                 let vault = vault_root.vault_pubkey;
+
+                let vault_is_update_needed = vault_program_client
+                    .get_vault_is_update_needed(&vault, slot)
+                    .await?;
+
+                if vault_is_update_needed {
+                    vault_program_client
+                        .do_full_vault_update(&vault, &operators_for_update)
+                        .await?;
+                }
 
                 tip_router_client
                     .do_snapshot_vault_operator_delegation(vault, operator, ncn, epoch)
@@ -643,6 +758,7 @@ impl TestBuilder {
 
     // Intermission 2 - all snapshots are taken
     pub async fn snapshot_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        self.add_epoch_state_for_test_ncn(test_ncn).await?;
         self.add_admin_weights_for_test_ncn(test_ncn).await?;
         self.add_epoch_snapshot_to_test_ncn(test_ncn).await?;
         self.add_operator_snapshots_to_test_ncn(test_ncn).await?;
@@ -780,18 +896,6 @@ impl TestBuilder {
                     if rewards == 0 {
                         continue;
                     }
-
-                    let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
-                        &jito_tip_router_program::id(),
-                        *group,
-                        &operator,
-                        &ncn,
-                        epoch,
-                    );
-                    let sol_rewards = lamports_to_sol(rewards);
-                    tip_router_client
-                        .airdrop(&ncn_reward_receiver, sol_rewards)
-                        .await?;
 
                     tip_router_client
                         .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)

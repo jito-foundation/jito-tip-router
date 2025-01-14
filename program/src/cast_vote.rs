@@ -5,6 +5,7 @@ use jito_tip_router_core::{
     ballot_box::{Ballot, BallotBox},
     config::Config as NcnConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_state::EpochState,
     error::TipRouterError,
 };
 use solana_program::{
@@ -18,7 +19,7 @@ pub fn process_cast_vote(
     meta_merkle_root: &[u8; 32],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator, operator_admin, restaking_program] =
+    let [epoch_state, ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator, operator_admin, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -27,6 +28,7 @@ pub fn process_cast_vote(
     // Operator is casting the vote, needs to be signer
     load_signer(operator_admin, false)?;
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
@@ -96,6 +98,14 @@ pub fn process_cast_vote(
             epoch,
             ballot_box.get_winning_ballot_tally()?
         );
+
+        // Update Epoch State
+        {
+            let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+            let epoch_state_account =
+                EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+            epoch_state_account.update_cast_vote()?;
+        }
     }
 
     Ok(())

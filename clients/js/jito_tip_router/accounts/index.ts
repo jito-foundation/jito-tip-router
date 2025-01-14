@@ -10,6 +10,7 @@ export * from './ballotBox';
 export * from './baseRewardRouter';
 export * from './config';
 export * from './epochSnapshot';
+export * from './epochState';
 export * from './ncnRewardRouter';
 export * from './operatorSnapshot';
 export * from './vaultRegistry';

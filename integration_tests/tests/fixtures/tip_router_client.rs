@@ -11,12 +11,13 @@ use jito_tip_router_client::{
         DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
         DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
         InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder, InitializeConfigBuilder,
-        InitializeEpochSnapshotBuilder, InitializeNcnRewardRouterBuilder,
-        InitializeOperatorSnapshotBuilder, InitializeVaultRegistryBuilder,
-        InitializeWeightTableBuilder, ReallocBallotBoxBuilder, ReallocBaseRewardRouterBuilder,
-        ReallocOperatorSnapshotBuilder, ReallocVaultRegistryBuilder, ReallocWeightTableBuilder,
-        RegisterVaultBuilder, RouteBaseRewardsBuilder, RouteNcnRewardsBuilder,
-        SetMerkleRootBuilder, SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
+        InitializeEpochSnapshotBuilder, InitializeEpochStateBuilder,
+        InitializeNcnRewardRouterBuilder, InitializeOperatorSnapshotBuilder,
+        InitializeVaultRegistryBuilder, InitializeWeightTableBuilder, ReallocBallotBoxBuilder,
+        ReallocBaseRewardRouterBuilder, ReallocEpochStateBuilder, ReallocOperatorSnapshotBuilder,
+        ReallocVaultRegistryBuilder, ReallocWeightTableBuilder, RegisterVaultBuilder,
+        RouteBaseRewardsBuilder, RouteNcnRewardsBuilder, SetMerkleRootBuilder,
+        SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
     },
     types::ConfigAdminRole,
 };
@@ -28,6 +29,7 @@ use jito_tip_router_core::{
     config::Config as NcnConfig,
     constants::{JITOSOL_MINT, MAX_REALLOC_BYTES},
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_state::EpochState,
     error::TipRouterError,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
@@ -161,6 +163,13 @@ impl TipRouterClient {
             .await?
             .unwrap();
         Ok(*VaultRegistry::try_from_slice_unchecked(vault_registry.data.as_slice()).unwrap())
+    }
+
+    pub async fn get_epoch_state(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<EpochState> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+        let raw_account = self.banks_client.get_account(epoch_state).await?.unwrap();
+        Ok(*EpochState::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap())
     }
 
     #[allow(dead_code)]
@@ -445,6 +454,88 @@ impl TipRouterClient {
         .await
     }
 
+    pub async fn do_full_initialize_epoch_state(
+        &mut self,
+        ncn: Pubkey,
+        epoch: u64,
+    ) -> TestResult<()> {
+        self.do_intialize_epoch_state(ncn, epoch).await?;
+        let num_reallocs = (WeightTable::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
+        self.do_realloc_epoch_state(ncn, epoch, num_reallocs)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn do_intialize_epoch_state(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<()> {
+        self.initialize_epoch_state(ncn, epoch).await
+    }
+
+    pub async fn initialize_epoch_state(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
+        let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
+        let ix = InitializeEpochStateBuilder::new()
+            .epoch_state(epoch_state)
+            .config(config)
+            .ncn(ncn)
+            .payer(self.payer.pubkey())
+            .system_program(system_program::id())
+            .epoch(epoch)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
+    pub async fn do_realloc_epoch_state(
+        &mut self,
+        ncn: Pubkey,
+        epoch: u64,
+        num_reallocations: u64,
+    ) -> TestResult<()> {
+        self.realloc_epoch_state(ncn, epoch, num_reallocations)
+            .await
+    }
+
+    pub async fn realloc_epoch_state(
+        &mut self,
+        ncn: Pubkey,
+        epoch: u64,
+        num_reallocations: u64,
+    ) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+        let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
+        let ix = ReallocEpochStateBuilder::new()
+            .epoch_state(epoch_state)
+            .config(config)
+            .ncn(ncn)
+            .payer(self.payer.pubkey())
+            .system_program(system_program::id())
+            .epoch(epoch)
+            .instruction();
+
+        let ixs = vec![ix; num_reallocations as usize];
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        self.process_transaction(&Transaction::new_signed_with_payer(
+            &ixs,
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        ))
+        .await
+    }
+
     pub async fn do_full_initialize_weight_table(
         &mut self,
         ncn: Pubkey,
@@ -462,12 +553,15 @@ impl TipRouterClient {
     }
 
     pub async fn initialize_weight_table(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
         let vault_registry =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let ix = InitializeWeightTableBuilder::new()
+            .epoch_state(epoch_state)
             .vault_registry(vault_registry)
             .ncn(ncn)
             .weight_table(weight_table)
@@ -506,8 +600,11 @@ impl TipRouterClient {
     ) -> TestResult<()> {
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let ix = AdminSetWeightBuilder::new()
+            .epoch_state(epoch_state)
             .ncn(ncn)
             .weight_table(weight_table)
             .weight_table_admin(self.payer.pubkey())
@@ -551,8 +648,11 @@ impl TipRouterClient {
     ) -> TestResult<()> {
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let ix = SwitchboardSetWeightBuilder::new()
+            .epoch_state(epoch_state)
             .ncn(ncn)
             .weight_table(weight_table)
             .st_mint(st_mint)
@@ -870,12 +970,16 @@ impl TipRouterClient {
 
     pub async fn initialize_epoch_snapshot(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<()> {
         let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
         let epoch_snapshot =
             EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let ix = InitializeEpochSnapshotBuilder::new()
+            .epoch_state(epoch_state)
             .config(config_pda)
             .ncn(ncn)
             .weight_table(weight_table)
@@ -927,6 +1031,8 @@ impl TipRouterClient {
         ncn: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
         let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let ncn_operator_state =
             NcnOperatorState::find_program_address(&jito_restaking_program::id(), &ncn, &operator)
@@ -942,6 +1048,7 @@ impl TipRouterClient {
         .0;
 
         let ix = InitializeOperatorSnapshotBuilder::new()
+            .epoch_state(epoch_state)
             .config(config_pda)
             .ncn(ncn)
             .operator(operator)
@@ -982,6 +1089,8 @@ impl TipRouterClient {
         ncn: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
 
         let config_pda = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
@@ -1013,6 +1122,7 @@ impl TipRouterClient {
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let ix = SnapshotVaultOperatorDelegationBuilder::new()
+            .epoch_state(epoch_state)
             .config(config_pda)
             .restaking_config(restaking_config)
             .ncn(ncn)
@@ -1075,7 +1185,11 @@ impl TipRouterClient {
         ncn: Pubkey,
         epoch: u64,
     ) -> Result<(), TestError> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = InitializeBallotBoxBuilder::new()
+            .epoch_state(epoch_state)
             .config(config)
             .ballot_box(ballot_box)
             .ncn(ncn)
@@ -1120,7 +1234,11 @@ impl TipRouterClient {
         epoch: u64,
         num_reallocations: u64,
     ) -> Result<(), TestError> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = ReallocBallotBoxBuilder::new()
+            .epoch_state(epoch_state)
             .config(config)
             .ballot_box(ballot_box)
             .ncn(ncn)
@@ -1200,7 +1318,11 @@ impl TipRouterClient {
         meta_merkle_root: [u8; 32],
         epoch: u64,
     ) -> Result<(), TestError> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = CastVoteBuilder::new()
+            .epoch_state(epoch_state)
             .config(ncn_config)
             .ballot_box(ballot_box)
             .ncn(ncn)
@@ -1284,7 +1406,11 @@ impl TipRouterClient {
         max_num_nodes: u64,
         epoch: u64,
     ) -> Result<(), TestError> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = SetMerkleRootBuilder::new()
+            .epoch_state(epoch_state)
             .config(ncn_config)
             .ncn(ncn)
             .ballot_box(ballot_box)
@@ -1345,7 +1471,11 @@ impl TipRouterClient {
         epoch: u64,
         restaking_program_id: Pubkey,
     ) -> Result<(), TestError> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = AdminSetTieBreakerBuilder::new()
+            .epoch_state(epoch_state)
             .config(ncn_config)
             .ballot_box(ballot_box)
             .ncn(ncn)
@@ -1400,7 +1530,11 @@ impl TipRouterClient {
         base_reward_receiver: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = InitializeBaseRewardRouterBuilder::new()
+            .epoch_state(epoch_state)
             .ncn(ncn)
             .base_reward_router(base_reward_router)
             .base_reward_receiver(base_reward_receiver)
@@ -1443,10 +1577,18 @@ impl TipRouterClient {
             epoch,
         );
 
+        let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+            &jito_tip_router_program::id(),
+            &operator,
+            &ncn,
+            epoch,
+        );
+
         self.initialize_ncn_reward_router(
             ncn_fee_group,
             ncn,
             operator,
+            operator_snapshot,
             ncn_reward_router,
             ncn_reward_receiver,
             epoch,
@@ -1459,13 +1601,18 @@ impl TipRouterClient {
         ncn_fee_group: NcnFeeGroup,
         ncn: Pubkey,
         operator: Pubkey,
+        operator_snapshot: Pubkey,
         ncn_reward_router: Pubkey,
         ncn_reward_receiver: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
         let ix = InitializeNcnRewardRouterBuilder::new()
+            .epoch_state(epoch_state)
             .ncn(ncn)
             .operator(operator)
+            .operator_snapshot(operator_snapshot)
             .ncn_reward_router(ncn_reward_router)
             .ncn_reward_receiver(ncn_reward_receiver)
             .payer(self.payer.pubkey())
@@ -1532,7 +1679,11 @@ impl TipRouterClient {
         max_iterations: u16,
         epoch: u64,
     ) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = RouteBaseRewardsBuilder::new()
+            .epoch_state(epoch_state)
             .ncn(ncn)
             .epoch_snapshot(epoch_snapshot)
             .ballot_box(ballot_box)
@@ -1639,7 +1790,11 @@ impl TipRouterClient {
         max_iterations: u16,
         epoch: u64,
     ) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = RouteNcnRewardsBuilder::new()
+            .epoch_state(epoch_state)
             .ncn(ncn)
             .operator(operator)
             .operator_snapshot(operator_snapshot)
@@ -1672,6 +1827,9 @@ impl TipRouterClient {
         epoch: u64,
         pool_root: &PoolRoot,
     ) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let (ncn_config, _, _) =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
 
@@ -1702,6 +1860,7 @@ impl TipRouterClient {
         let referrer_pool_tokens_account = pool_root.referrer_pool_tokens_account;
 
         let ix = DistributeBaseRewardsBuilder::new()
+            .epoch_state(epoch_state)
             .config(ncn_config)
             .ncn(ncn)
             .base_reward_router(base_reward_router)
@@ -1790,7 +1949,11 @@ impl TipRouterClient {
         ncn_reward_receiver: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = DistributeBaseNcnRewardRouteBuilder::new()
+            .epoch_state(epoch_state)
             .config(ncn_config)
             .ncn(ncn)
             .operator(operator)
@@ -1856,11 +2019,24 @@ impl TipRouterClient {
             &spl_token::id(),
         );
 
+        let operator_snapshot = OperatorSnapshot::find_program_address(
+            &jito_tip_router_program::id(),
+            &operator,
+            &ncn,
+            epoch,
+        )
+        .0;
+
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = DistributeNcnOperatorRewardsBuilder::new()
+            .epoch_state(epoch_state)
             .config(ncn_config)
             .ncn(ncn)
             .operator(operator)
             .operator_ata(operator_ata)
+            .operator_snapshot(operator_snapshot)
             .ncn_reward_router(ncn_reward_router)
             .ncn_reward_receiver(ncn_reward_receiver)
             .restaking_program(jito_restaking_program::id())
@@ -1913,6 +2089,14 @@ impl TipRouterClient {
             epoch,
         );
 
+        let operator_snapshot = OperatorSnapshot::find_program_address(
+            &jito_tip_router_program::id(),
+            &operator,
+            &ncn,
+            epoch,
+        )
+        .0;
+
         // Add stake pool accounts
         let stake_pool = pool_root.pool_address;
         let (stake_pool_withdraw_authority, _) =
@@ -1929,13 +2113,17 @@ impl TipRouterClient {
             &JITOSOL_MINT,
             &spl_token::id(),
         );
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let ix = DistributeNcnVaultRewardsBuilder::new()
+            .epoch_state(epoch_state)
             .config(ncn_config)
             .ncn(ncn)
             .operator(operator)
             .vault(vault)
             .vault_ata(vault_ata)
+            .operator_snapshot(operator_snapshot)
             .ncn_reward_router(ncn_reward_router)
             .ncn_reward_receiver(ncn_reward_receiver)
             .stake_pool_program(spl_stake_pool::id())
@@ -2009,7 +2197,11 @@ impl TipRouterClient {
         epoch: u64,
         num_reallocations: u64,
     ) -> Result<(), TestError> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = ReallocOperatorSnapshotBuilder::new()
+            .epoch_state(epoch_state)
             .ncn_config(ncn_config)
             .restaking_config(restaking_config)
             .ncn(ncn)
@@ -2063,7 +2255,11 @@ impl TipRouterClient {
         epoch: u64,
         num_reallocations: u64,
     ) -> Result<(), TestError> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = ReallocBaseRewardRouterBuilder::new()
+            .epoch_state(epoch_state)
             .config(ncn_config)
             .base_reward_router(base_reward_router)
             .ncn(ncn)
@@ -2116,7 +2312,11 @@ impl TipRouterClient {
         epoch: u64,
         num_reallocations: u64,
     ) -> Result<(), TestError> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
         let ix = ReallocWeightTableBuilder::new()
+            .epoch_state(epoch_state)
             .config(ncn_config)
             .weight_table(weight_table)
             .ncn(ncn)

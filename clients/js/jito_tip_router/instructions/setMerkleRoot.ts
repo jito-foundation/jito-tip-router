@@ -36,7 +36,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const SET_MERKLE_ROOT_DISCRIMINATOR = 14;
+export const SET_MERKLE_ROOT_DISCRIMINATOR = 16;
 
 export function getSetMerkleRootDiscriminatorBytes() {
   return getU8Encoder().encode(SET_MERKLE_ROOT_DISCRIMINATOR);
@@ -44,6 +44,7 @@ export function getSetMerkleRootDiscriminatorBytes() {
 
 export type SetMerkleRootInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountBallotBox extends string | IAccountMeta<string> = string,
@@ -57,6 +58,9 @@ export type SetMerkleRootInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? WritableAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountConfig extends string
         ? WritableAccount<TAccountConfig>
         : TAccountConfig,
@@ -136,6 +140,7 @@ export function getSetMerkleRootInstructionDataCodec(): Codec<
 }
 
 export type SetMerkleRootInput<
+  TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountBallotBox extends string = string,
@@ -145,6 +150,7 @@ export type SetMerkleRootInput<
   TAccountTipDistributionProgram extends string = string,
   TAccountRestakingProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   ballotBox: Address<TAccountBallotBox>;
@@ -161,6 +167,7 @@ export type SetMerkleRootInput<
 };
 
 export function getSetMerkleRootInstruction<
+  TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountBallotBox extends string,
@@ -172,6 +179,7 @@ export function getSetMerkleRootInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: SetMerkleRootInput<
+    TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
     TAccountBallotBox,
@@ -184,6 +192,7 @@ export function getSetMerkleRootInstruction<
   config?: { programAddress?: TProgramAddress }
 ): SetMerkleRootInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountConfig,
   TAccountNcn,
   TAccountBallotBox,
@@ -199,6 +208,7 @@ export function getSetMerkleRootInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: false },
@@ -231,6 +241,7 @@ export function getSetMerkleRootInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.ballotBox),
@@ -246,6 +257,7 @@ export function getSetMerkleRootInstruction<
     ),
   } as SetMerkleRootInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
     TAccountBallotBox,
@@ -265,14 +277,15 @@ export type ParsedSetMerkleRootInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    config: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    ballotBox: TAccountMetas[2];
-    voteAccount: TAccountMetas[3];
-    tipDistributionAccount: TAccountMetas[4];
-    tipDistributionConfig: TAccountMetas[5];
-    tipDistributionProgram: TAccountMetas[6];
-    restakingProgram: TAccountMetas[7];
+    epochState: TAccountMetas[0];
+    config: TAccountMetas[1];
+    ncn: TAccountMetas[2];
+    ballotBox: TAccountMetas[3];
+    voteAccount: TAccountMetas[4];
+    tipDistributionAccount: TAccountMetas[5];
+    tipDistributionConfig: TAccountMetas[6];
+    tipDistributionProgram: TAccountMetas[7];
+    restakingProgram: TAccountMetas[8];
   };
   data: SetMerkleRootInstructionData;
 };
@@ -285,7 +298,7 @@ export function parseSetMerkleRootInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedSetMerkleRootInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 9) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -298,6 +311,7 @@ export function parseSetMerkleRootInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
       ballotBox: getNextAccount(),

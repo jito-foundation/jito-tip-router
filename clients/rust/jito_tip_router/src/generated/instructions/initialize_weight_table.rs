@@ -3,11 +3,15 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 
 /// Accounts.
 pub struct InitializeWeightTable {
+    pub epoch_state: solana_program::pubkey::Pubkey,
+
     pub vault_registry: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
@@ -34,7 +38,11 @@ impl InitializeWeightTable {
         args: InitializeWeightTableInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.epoch_state,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.vault_registry,
             false,
@@ -79,7 +87,7 @@ pub struct InitializeWeightTableInstructionData {
 
 impl InitializeWeightTableInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 4 }
+        Self { discriminator: 6 }
     }
 }
 
@@ -99,14 +107,16 @@ pub struct InitializeWeightTableInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` vault_registry
-///   1. `[]` ncn
-///   2. `[writable]` weight_table
-///   3. `[writable, signer]` payer
-///   4. `[]` restaking_program
-///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   0. `[]` epoch_state
+///   1. `[]` vault_registry
+///   2. `[]` ncn
+///   3. `[writable]` weight_table
+///   4. `[writable, signer]` payer
+///   5. `[]` restaking_program
+///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeWeightTableBuilder {
+    epoch_state: Option<solana_program::pubkey::Pubkey>,
     vault_registry: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     weight_table: Option<solana_program::pubkey::Pubkey>,
@@ -120,6 +130,11 @@ pub struct InitializeWeightTableBuilder {
 impl InitializeWeightTableBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+    #[inline(always)]
+    pub fn epoch_state(&mut self, epoch_state: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.epoch_state = Some(epoch_state);
+        self
     }
     #[inline(always)]
     pub fn vault_registry(&mut self, vault_registry: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -181,6 +196,7 @@ impl InitializeWeightTableBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = InitializeWeightTable {
+            epoch_state: self.epoch_state.expect("epoch_state is not set"),
             vault_registry: self.vault_registry.expect("vault_registry is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             weight_table: self.weight_table.expect("weight_table is not set"),
@@ -202,6 +218,8 @@ impl InitializeWeightTableBuilder {
 
 /// `initialize_weight_table` CPI accounts.
 pub struct InitializeWeightTableCpiAccounts<'a, 'b> {
+    pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
@@ -219,6 +237,8 @@ pub struct InitializeWeightTableCpiAccounts<'a, 'b> {
 pub struct InitializeWeightTableCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -243,6 +263,7 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
+            epoch_state: accounts.epoch_state,
             vault_registry: accounts.vault_registry,
             ncn: accounts.ncn,
             weight_table: accounts.weight_table,
@@ -285,7 +306,11 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.epoch_state.key,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.vault_registry.key,
             false,
@@ -328,8 +353,9 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
+        account_infos.push(self.epoch_state.clone());
         account_infos.push(self.vault_registry.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.weight_table.clone());
@@ -352,12 +378,13 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` vault_registry
-///   1. `[]` ncn
-///   2. `[writable]` weight_table
-///   3. `[writable, signer]` payer
-///   4. `[]` restaking_program
-///   5. `[]` system_program
+///   0. `[]` epoch_state
+///   1. `[]` vault_registry
+///   2. `[]` ncn
+///   3. `[writable]` weight_table
+///   4. `[writable, signer]` payer
+///   5. `[]` restaking_program
+///   6. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeWeightTableCpiBuilder<'a, 'b> {
     instruction: Box<InitializeWeightTableCpiBuilderInstruction<'a, 'b>>,
@@ -367,6 +394,7 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(InitializeWeightTableCpiBuilderInstruction {
             __program: program,
+            epoch_state: None,
             vault_registry: None,
             ncn: None,
             weight_table: None,
@@ -377,6 +405,14 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
+    }
+    #[inline(always)]
+    pub fn epoch_state(
+        &mut self,
+        epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.epoch_state = Some(epoch_state);
+        self
     }
     #[inline(always)]
     pub fn vault_registry(
@@ -472,6 +508,11 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
         let instruction = InitializeWeightTableCpi {
             __program: self.instruction.__program,
 
+            epoch_state: self
+                .instruction
+                .epoch_state
+                .expect("epoch_state is not set"),
+
             vault_registry: self
                 .instruction
                 .vault_registry
@@ -507,6 +548,7 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct InitializeWeightTableCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
+    epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,

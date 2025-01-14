@@ -2,6 +2,7 @@ use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     constants::{SWITCHBOARD_MAX_STALE_SLOTS, WEIGHT_PRECISION},
+    epoch_state::EpochState,
     error::TipRouterError,
     weight_table::WeightTable,
 };
@@ -21,12 +22,12 @@ pub fn process_switchboard_set_weight(
     st_mint: &Pubkey,
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn, weight_table, switchboard_feed] = accounts else {
+    let [epoch_state, ncn, weight_table, switchboard_feed] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-
     WeightTable::load(program_id, weight_table, ncn.key, epoch, true)?;
 
     let (registered_switchboard_feed, no_feed_weight) = {
@@ -94,6 +95,13 @@ pub fn process_switchboard_set_weight(
     }
 
     weight_table_account.set_weight(st_mint, weight, Clock::get()?.slot)?;
+
+    // Update Epoch State
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_set_weight(weight_table_account.weight_count() as u64);
+    }
 
     Ok(())
 }

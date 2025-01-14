@@ -4,6 +4,7 @@ use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as NcnConfig,
+    epoch_state::EpochState,
     error::TipRouterError,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
@@ -20,7 +21,7 @@ pub fn process_distribute_base_ncn_reward_route(
     ncn_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ncn, operator, base_reward_router, base_reward_receiver, ncn_reward_router, ncn_reward_receiver, restaking_program, system_program] =
+    let [epoch_state, ncn_config, ncn, operator, base_reward_router, base_reward_receiver, ncn_reward_router, ncn_reward_receiver, restaking_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -31,6 +32,7 @@ pub fn process_distribute_base_ncn_reward_route(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     Ncn::load(restaking_program.key, ncn, false)?;
     Operator::load(restaking_program.key, operator, false)?;
 
@@ -94,6 +96,12 @@ pub fn process_distribute_base_ncn_reward_route(
                 .collect::<Vec<&[u8]>>()
                 .as_slice()],
         )?;
+    }
+
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_distribute_base_ncn_rewards(rewards)?;
     }
 
     Ok(())

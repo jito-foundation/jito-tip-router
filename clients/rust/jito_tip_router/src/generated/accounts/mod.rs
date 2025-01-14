@@ -3,17 +3,24 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
 pub(crate) mod r#ballot_box;
 pub(crate) mod r#base_reward_router;
 pub(crate) mod r#config;
 pub(crate) mod r#epoch_snapshot;
+pub(crate) mod r#epoch_state;
 pub(crate) mod r#ncn_reward_router;
 pub(crate) mod r#operator_snapshot;
 pub(crate) mod r#vault_registry;
 pub(crate) mod r#weight_table;
 
-pub use self::{
-    r#ballot_box::*, r#base_reward_router::*, r#config::*, r#epoch_snapshot::*,
-    r#ncn_reward_router::*, r#operator_snapshot::*, r#vault_registry::*, r#weight_table::*,
-};
+pub use self::r#ballot_box::*;
+pub use self::r#base_reward_router::*;
+pub use self::r#config::*;
+pub use self::r#epoch_snapshot::*;
+pub use self::r#epoch_state::*;
+pub use self::r#ncn_reward_router::*;
+pub use self::r#operator_snapshot::*;
+pub use self::r#vault_registry::*;
+pub use self::r#weight_table::*;
