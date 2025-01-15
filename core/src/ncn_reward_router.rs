@@ -277,7 +277,7 @@ impl NcnRewardRouter {
                         .checked_add(1)
                         .ok_or(TipRouterError::ArithmeticOverflow)?;
 
-                    if iterations >= max_iterations {
+                    if iterations > max_iterations {
                         msg!(
                             "Reached max iterations, saving state and exiting {}/{}",
                             rewards_to_process,
