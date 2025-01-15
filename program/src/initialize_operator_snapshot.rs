@@ -20,23 +20,18 @@ pub fn process_initialize_operator_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, payer, restaking_program, system_program] =
+    let [epoch_state, config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
     EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     Config::load(program_id, ncn.key, config, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
-    Operator::load(restaking_program.key, operator, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Operator::load(&jito_restaking_program::id(), operator, false)?;
     NcnOperatorState::load(
-        restaking_program.key,
+        &jito_restaking_program::id(),
         ncn_operator_state,
         ncn,
         operator,

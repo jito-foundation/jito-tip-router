@@ -25,35 +25,37 @@ pub fn process_snapshot_vault_operator_delegation(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
+    let [epoch_state, ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if vault_program.key.ne(&jito_vault_program::id()) {
-        msg!("Incorrect vault program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    Config::load(restaking_program.key, restaking_config, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
-    Operator::load(restaking_program.key, operator, false)?;
-    Vault::load(vault_program.key, vault, false)?;
+    Config::load(&jito_restaking_program::id(), restaking_config, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Operator::load(&jito_restaking_program::id(), operator, false)?;
+    Vault::load(&jito_vault_program::id(), vault, false)?;
 
-    VaultNcnTicket::load(vault_program.key, vault_ncn_ticket, vault, ncn, false)?;
-    NcnVaultTicket::load(restaking_program.key, ncn_vault_ticket, ncn, vault, false)?;
+    VaultNcnTicket::load(
+        &jito_vault_program::id(),
+        vault_ncn_ticket,
+        vault,
+        ncn,
+        false,
+    )?;
+    NcnVaultTicket::load(
+        &jito_restaking_program::id(),
+        ncn_vault_ticket,
+        ncn,
+        vault,
+        false,
+    )?;
 
     if !vault_operator_delegation.data_is_empty() {
         VaultOperatorDelegation::load(
-            vault_program.key,
+            &jito_vault_program::id(),
             vault_operator_delegation,
             vault,
             operator,

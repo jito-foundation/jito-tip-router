@@ -3,6 +3,7 @@ use jito_jsm_core::{
     loader::{load_signer, load_system_program},
     realloc,
 };
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     config::Config as NcnConfig, epoch_state::EpochState, utils::get_new_size,
     vault_registry::VaultRegistry, weight_table::WeightTable,
@@ -25,6 +26,7 @@ pub fn process_realloc_weight_table(
 
     load_system_program(system_program)?;
     load_signer(payer, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;

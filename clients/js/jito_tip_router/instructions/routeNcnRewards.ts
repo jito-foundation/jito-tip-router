@@ -45,7 +45,6 @@ export type RouteNcnRewardsInstruction<
   TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
   TAccountNcnRewardRouter extends string | IAccountMeta<string> = string,
   TAccountNcnRewardReceiver extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -67,9 +66,6 @@ export type RouteNcnRewardsInstruction<
       TAccountNcnRewardReceiver extends string
         ? WritableAccount<TAccountNcnRewardReceiver>
         : TAccountNcnRewardReceiver,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -125,7 +121,6 @@ export type RouteNcnRewardsInput<
   TAccountOperatorSnapshot extends string = string,
   TAccountNcnRewardRouter extends string = string,
   TAccountNcnRewardReceiver extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   ncn: Address<TAccountNcn>;
@@ -133,7 +128,6 @@ export type RouteNcnRewardsInput<
   operatorSnapshot: Address<TAccountOperatorSnapshot>;
   ncnRewardRouter: Address<TAccountNcnRewardRouter>;
   ncnRewardReceiver: Address<TAccountNcnRewardReceiver>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   ncnFeeGroup: RouteNcnRewardsInstructionDataArgs['ncnFeeGroup'];
   maxIterations: RouteNcnRewardsInstructionDataArgs['maxIterations'];
   epoch: RouteNcnRewardsInstructionDataArgs['epoch'];
@@ -146,7 +140,6 @@ export function getRouteNcnRewardsInstruction<
   TAccountOperatorSnapshot extends string,
   TAccountNcnRewardRouter extends string,
   TAccountNcnRewardReceiver extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: RouteNcnRewardsInput<
@@ -155,8 +148,7 @@ export function getRouteNcnRewardsInstruction<
     TAccountOperator,
     TAccountOperatorSnapshot,
     TAccountNcnRewardRouter,
-    TAccountNcnRewardReceiver,
-    TAccountRestakingProgram
+    TAccountNcnRewardReceiver
   >,
   config?: { programAddress?: TProgramAddress }
 ): RouteNcnRewardsInstruction<
@@ -166,8 +158,7 @@ export function getRouteNcnRewardsInstruction<
   TAccountOperator,
   TAccountOperatorSnapshot,
   TAccountNcnRewardRouter,
-  TAccountNcnRewardReceiver,
-  TAccountRestakingProgram
+  TAccountNcnRewardReceiver
 > {
   // Program address.
   const programAddress =
@@ -187,10 +178,6 @@ export function getRouteNcnRewardsInstruction<
       value: input.ncnRewardReceiver ?? null,
       isWritable: true,
     },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -209,7 +196,6 @@ export function getRouteNcnRewardsInstruction<
       getAccountMeta(accounts.operatorSnapshot),
       getAccountMeta(accounts.ncnRewardRouter),
       getAccountMeta(accounts.ncnRewardReceiver),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getRouteNcnRewardsInstructionDataEncoder().encode(
@@ -222,8 +208,7 @@ export function getRouteNcnRewardsInstruction<
     TAccountOperator,
     TAccountOperatorSnapshot,
     TAccountNcnRewardRouter,
-    TAccountNcnRewardReceiver,
-    TAccountRestakingProgram
+    TAccountNcnRewardReceiver
   >;
 
   return instruction;
@@ -241,7 +226,6 @@ export type ParsedRouteNcnRewardsInstruction<
     operatorSnapshot: TAccountMetas[3];
     ncnRewardRouter: TAccountMetas[4];
     ncnRewardReceiver: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
   };
   data: RouteNcnRewardsInstructionData;
 };
@@ -254,7 +238,7 @@ export function parseRouteNcnRewardsInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedRouteNcnRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -273,7 +257,6 @@ export function parseRouteNcnRewardsInstruction<
       operatorSnapshot: getNextAccount(),
       ncnRewardRouter: getNextAccount(),
       ncnRewardReceiver: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getRouteNcnRewardsInstructionDataDecoder().decode(instruction.data),
   };

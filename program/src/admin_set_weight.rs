@@ -17,11 +17,11 @@ pub fn process_admin_set_weight(
     epoch: u64,
     weight: u128,
 ) -> ProgramResult {
-    let [epoch_state, ncn, weight_table, weight_table_admin, restaking_program] = accounts else {
+    let [epoch_state, ncn, weight_table, weight_table_admin] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    Ncn::load(restaking_program.key, ncn, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     let ncn_weight_table_admin = {
         let ncn_data = ncn.data.borrow();
         let ncn = Ncn::try_from_slice_unchecked(&ncn_data)?;
@@ -31,11 +31,6 @@ pub fn process_admin_set_weight(
     load_signer(weight_table_admin, true)?;
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     WeightTable::load(program_id, weight_table, ncn.key, epoch, true)?;
-
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
 
     if ncn_weight_table_admin.ne(weight_table_admin.key) {
         msg!("Vault update delegations ticket is not at the correct PDA");

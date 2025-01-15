@@ -45,7 +45,6 @@ export type RouteBaseRewardsInstruction<
   TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
   TAccountBaseRewardReceiver extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -67,9 +66,6 @@ export type RouteBaseRewardsInstruction<
       TAccountBaseRewardReceiver extends string
         ? WritableAccount<TAccountBaseRewardReceiver>
         : TAccountBaseRewardReceiver,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -121,7 +117,6 @@ export type RouteBaseRewardsInput<
   TAccountBallotBox extends string = string,
   TAccountBaseRewardRouter extends string = string,
   TAccountBaseRewardReceiver extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   ncn: Address<TAccountNcn>;
@@ -129,7 +124,6 @@ export type RouteBaseRewardsInput<
   ballotBox: Address<TAccountBallotBox>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   baseRewardReceiver: Address<TAccountBaseRewardReceiver>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   maxIterations: RouteBaseRewardsInstructionDataArgs['maxIterations'];
   epoch: RouteBaseRewardsInstructionDataArgs['epoch'];
 };
@@ -141,7 +135,6 @@ export function getRouteBaseRewardsInstruction<
   TAccountBallotBox extends string,
   TAccountBaseRewardRouter extends string,
   TAccountBaseRewardReceiver extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: RouteBaseRewardsInput<
@@ -150,8 +143,7 @@ export function getRouteBaseRewardsInstruction<
     TAccountEpochSnapshot,
     TAccountBallotBox,
     TAccountBaseRewardRouter,
-    TAccountBaseRewardReceiver,
-    TAccountRestakingProgram
+    TAccountBaseRewardReceiver
   >,
   config?: { programAddress?: TProgramAddress }
 ): RouteBaseRewardsInstruction<
@@ -161,8 +153,7 @@ export function getRouteBaseRewardsInstruction<
   TAccountEpochSnapshot,
   TAccountBallotBox,
   TAccountBaseRewardRouter,
-  TAccountBaseRewardReceiver,
-  TAccountRestakingProgram
+  TAccountBaseRewardReceiver
 > {
   // Program address.
   const programAddress =
@@ -182,10 +173,6 @@ export function getRouteBaseRewardsInstruction<
       value: input.baseRewardReceiver ?? null,
       isWritable: true,
     },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -204,7 +191,6 @@ export function getRouteBaseRewardsInstruction<
       getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.baseRewardRouter),
       getAccountMeta(accounts.baseRewardReceiver),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getRouteBaseRewardsInstructionDataEncoder().encode(
@@ -217,8 +203,7 @@ export function getRouteBaseRewardsInstruction<
     TAccountEpochSnapshot,
     TAccountBallotBox,
     TAccountBaseRewardRouter,
-    TAccountBaseRewardReceiver,
-    TAccountRestakingProgram
+    TAccountBaseRewardReceiver
   >;
 
   return instruction;
@@ -236,7 +221,6 @@ export type ParsedRouteBaseRewardsInstruction<
     ballotBox: TAccountMetas[3];
     baseRewardRouter: TAccountMetas[4];
     baseRewardReceiver: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
   };
   data: RouteBaseRewardsInstructionData;
 };
@@ -249,7 +233,7 @@ export function parseRouteBaseRewardsInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedRouteBaseRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -268,7 +252,6 @@ export function parseRouteBaseRewardsInstruction<
       ballotBox: getNextAccount(),
       baseRewardRouter: getNextAccount(),
       baseRewardReceiver: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getRouteBaseRewardsInstructionDataDecoder().decode(instruction.data),
   };

@@ -20,19 +20,14 @@ pub fn process_initialize_base_reward_router(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn, base_reward_router, base_reward_receiver, payer, restaking_program, system_program] =
+    let [epoch_state, ncn, base_reward_router, base_reward_receiver, payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
     EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
 
     load_system_account(base_reward_router, true)?;

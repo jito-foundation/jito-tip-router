@@ -7,7 +7,7 @@ use jito_tip_router_core::{
     epoch_state::EpochState,
 };
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
+    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
@@ -18,19 +18,14 @@ pub fn process_route_base_rewards(
     max_iterations: u16,
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn, epoch_snapshot, ballot_box, base_reward_router, base_reward_receiver, restaking_program] =
+    let [epoch_state, ncn, epoch_snapshot, ballot_box, base_reward_router, base_reward_receiver] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
 
     EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;
     BaseRewardRouter::load(program_id, ncn.key, epoch, base_reward_router, true)?;
