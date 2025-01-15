@@ -3,12 +3,14 @@ use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     ballot_box::BallotBox,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
+    config::Config as NcnConfig,
     epoch_snapshot::EpochSnapshot,
     epoch_state::EpochState,
+    error::TipRouterError,
 };
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
 /// Can be backfilled for previous epochs
@@ -18,7 +20,7 @@ pub fn process_route_base_rewards(
     max_iterations: u16,
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn, epoch_snapshot, ballot_box, base_reward_router, base_reward_receiver, restaking_program] =
+    let [epoch_state, config, ncn, epoch_snapshot, ballot_box, base_reward_router, base_reward_receiver, restaking_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -30,6 +32,7 @@ pub fn process_route_base_rewards(
     }
 
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
+    NcnConfig::load(program_id, ncn.key, config, false)?;
     Ncn::load(restaking_program.key, ncn, false)?;
 
     EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;
@@ -42,6 +45,19 @@ pub fn process_route_base_rewards(
 
     let ballot_box_data = ballot_box.try_borrow_data()?;
     let ballot_box_account = BallotBox::try_from_slice_unchecked(&ballot_box_data)?;
+
+    let current_slot = Clock::get()?.slot;
+    let valid_slots_after_consensus = {
+        let ncn_config_data = config.data.borrow();
+        let ncn_config = NcnConfig::try_from_slice_unchecked(&ncn_config_data)?;
+        ncn_config.valid_slots_after_consensus()
+    };
+
+    // Do not route if voting is still ongoing
+    if ballot_box_account.is_voting_valid(current_slot, valid_slots_after_consensus)? {
+        msg!("Voting is still ongoing, cannot route until voting is complete");
+        return Err(TipRouterError::VotingIsNotOver.into());
+    }
 
     let base_reward_receiver_balance = **base_reward_receiver.try_borrow_lamports()?;
 

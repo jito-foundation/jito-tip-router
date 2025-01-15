@@ -1682,8 +1682,11 @@ impl TipRouterClient {
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
+        let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
         let ix = RouteBaseRewardsBuilder::new()
             .epoch_state(epoch_state)
+            .config(config)
             .ncn(ncn)
             .epoch_snapshot(epoch_snapshot)
             .ballot_box(ballot_box)

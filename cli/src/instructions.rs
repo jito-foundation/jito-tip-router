@@ -1074,6 +1074,8 @@ pub async fn route_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> 
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let config = TipRouterConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
     let (epoch_snapshot, _, _) =
         EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
@@ -1093,6 +1095,7 @@ pub async fn route_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> 
     while still_routing {
         let route_base_rewards_ix = RouteBaseRewardsBuilder::new()
             .epoch_state(epoch_state)
+            .config(config)
             .ncn(ncn)
             .epoch_snapshot(epoch_snapshot)
             .ballot_box(ballot_box)

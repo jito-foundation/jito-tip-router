@@ -276,12 +276,13 @@ pub enum TipRouterInstruction {
 
     /// Routes base reward router
     #[account(0, writable, name = "epoch_state")]
-    #[account(1, name = "ncn")]
-    #[account(2, name = "epoch_snapshot")]
-    #[account(3, name = "ballot_box")]
-    #[account(4, writable, name = "base_reward_router")]
-    #[account(5, writable, name = "base_reward_receiver")]
-    #[account(6, name = "restaking_program")]
+    #[account(1, name = "config")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "epoch_snapshot")]
+    #[account(4, name = "ballot_box")]
+    #[account(5, writable, name = "base_reward_router")]
+    #[account(6, writable, name = "base_reward_receiver")]
+    #[account(7, name = "restaking_program")]
     RouteBaseRewards{
         max_iterations: u16,
         epoch: u64,

@@ -855,6 +855,14 @@ impl TestBuilder {
         let ncn = test_ncn.ncn_root.ncn_pubkey;
         let epoch = self.clock().await.epoch;
 
+        let valid_slots_after_consensus = {
+            let config = tip_router_client.get_ncn_config(ncn).await?;
+            config.valid_slots_after_consensus()
+        };
+
+        self.warp_slot_incremental(valid_slots_after_consensus + 1)
+            .await?;
+
         let base_reward_receiver =
             BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 

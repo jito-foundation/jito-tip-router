@@ -1097,6 +1097,11 @@
           "isSigner": false
         },
         {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "ncn",
           "isMut": false,
           "isSigner": false
@@ -3742,6 +3747,11 @@
       "code": 8772,
       "name": "BadBallot",
       "msg": "Cannot vote with uninitialized account"
+    },
+    {
+      "code": 8773,
+      "name": "VotingIsNotOver",
+      "msg": "Cannot route until voting is over"
     }
   ],
   "metadata": {

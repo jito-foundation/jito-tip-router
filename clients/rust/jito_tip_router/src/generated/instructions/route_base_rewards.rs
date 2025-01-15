@@ -12,6 +12,8 @@ use borsh::BorshSerialize;
 pub struct RouteBaseRewards {
     pub epoch_state: solana_program::pubkey::Pubkey,
 
+    pub config: solana_program::pubkey::Pubkey,
+
     pub ncn: solana_program::pubkey::Pubkey,
 
     pub epoch_snapshot: solana_program::pubkey::Pubkey,
@@ -38,9 +40,13 @@ impl RouteBaseRewards {
         args: RouteBaseRewardsInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.epoch_state,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -108,15 +114,17 @@ pub struct RouteBaseRewardsInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[writable]` epoch_state
-///   1. `[]` ncn
-///   2. `[]` epoch_snapshot
-///   3. `[]` ballot_box
-///   4. `[writable]` base_reward_router
-///   5. `[writable]` base_reward_receiver
-///   6. `[]` restaking_program
+///   1. `[]` config
+///   2. `[]` ncn
+///   3. `[]` epoch_snapshot
+///   4. `[]` ballot_box
+///   5. `[writable]` base_reward_router
+///   6. `[writable]` base_reward_receiver
+///   7. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct RouteBaseRewardsBuilder {
     epoch_state: Option<solana_program::pubkey::Pubkey>,
+    config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
     ballot_box: Option<solana_program::pubkey::Pubkey>,
@@ -135,6 +143,11 @@ impl RouteBaseRewardsBuilder {
     #[inline(always)]
     pub fn epoch_state(&mut self, epoch_state: solana_program::pubkey::Pubkey) -> &mut Self {
         self.epoch_state = Some(epoch_state);
+        self
+    }
+    #[inline(always)]
+    pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.config = Some(config);
         self
     }
     #[inline(always)]
@@ -208,6 +221,7 @@ impl RouteBaseRewardsBuilder {
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = RouteBaseRewards {
             epoch_state: self.epoch_state.expect("epoch_state is not set"),
+            config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             epoch_snapshot: self.epoch_snapshot.expect("epoch_snapshot is not set"),
             ballot_box: self.ballot_box.expect("ballot_box is not set"),
@@ -237,6 +251,8 @@ impl RouteBaseRewardsBuilder {
 pub struct RouteBaseRewardsCpiAccounts<'a, 'b> {
     pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
@@ -256,6 +272,8 @@ pub struct RouteBaseRewardsCpi<'a, 'b> {
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -281,6 +299,7 @@ impl<'a, 'b> RouteBaseRewardsCpi<'a, 'b> {
         Self {
             __program: program,
             epoch_state: accounts.epoch_state,
+            config: accounts.config,
             ncn: accounts.ncn,
             epoch_snapshot: accounts.epoch_snapshot,
             ballot_box: accounts.ballot_box,
@@ -323,9 +342,13 @@ impl<'a, 'b> RouteBaseRewardsCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.epoch_state.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -368,9 +391,10 @@ impl<'a, 'b> RouteBaseRewardsCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.epoch_state.clone());
+        account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.epoch_snapshot.clone());
         account_infos.push(self.ballot_box.clone());
@@ -394,12 +418,13 @@ impl<'a, 'b> RouteBaseRewardsCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[writable]` epoch_state
-///   1. `[]` ncn
-///   2. `[]` epoch_snapshot
-///   3. `[]` ballot_box
-///   4. `[writable]` base_reward_router
-///   5. `[writable]` base_reward_receiver
-///   6. `[]` restaking_program
+///   1. `[]` config
+///   2. `[]` ncn
+///   3. `[]` epoch_snapshot
+///   4. `[]` ballot_box
+///   5. `[writable]` base_reward_router
+///   6. `[writable]` base_reward_receiver
+///   7. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct RouteBaseRewardsCpiBuilder<'a, 'b> {
     instruction: Box<RouteBaseRewardsCpiBuilderInstruction<'a, 'b>>,
@@ -410,6 +435,7 @@ impl<'a, 'b> RouteBaseRewardsCpiBuilder<'a, 'b> {
         let instruction = Box::new(RouteBaseRewardsCpiBuilderInstruction {
             __program: program,
             epoch_state: None,
+            config: None,
             ncn: None,
             epoch_snapshot: None,
             ballot_box: None,
@@ -428,6 +454,14 @@ impl<'a, 'b> RouteBaseRewardsCpiBuilder<'a, 'b> {
         epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.epoch_state = Some(epoch_state);
+        self
+    }
+    #[inline(always)]
+    pub fn config(
+        &mut self,
+        config: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.config = Some(config);
         self
     }
     #[inline(always)]
@@ -542,6 +576,8 @@ impl<'a, 'b> RouteBaseRewardsCpiBuilder<'a, 'b> {
                 .epoch_state
                 .expect("epoch_state is not set"),
 
+            config: self.instruction.config.expect("config is not set"),
+
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
             epoch_snapshot: self
@@ -578,6 +614,7 @@ impl<'a, 'b> RouteBaseRewardsCpiBuilder<'a, 'b> {
 struct RouteBaseRewardsCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
