@@ -44,14 +44,12 @@ pub enum TipRouterInstruction {
     ReallocVaultRegistry,
 
     /// Registers a vault to the vault registry
-    #[account(0, name = "restaking_config")]
-    #[account(1, writable, name = "vault_registry")]
-    #[account(2, name = "ncn")]
-    #[account(3, name = "vault")]
-    #[account(4, name = "vault_ncn_ticket")]
-    #[account(5, name = "ncn_vault_ticket")]
-    #[account(6, name = "restaking_program_id")]
-    #[account(7, name = "vault_program_id")]
+    #[account(0, writable, name = "vault_registry")]
+    #[account(1, name = "ncn")]
+    #[account(2, name = "vault")]
+    #[account(3, name = "ncn_vault_ticket")]
+    #[account(4, name = "restaking_program_id")]
+    #[account(5, name = "vault_program_id")]
     RegisterVault,
 
     // ---------------------------------------------------- //

@@ -11,7 +11,6 @@ use jito_tip_router_core::{
     constants::{JITOSOL_MINT, JTO_SOL_FEED},
     ncn_fee_group::NcnFeeGroup,
 };
-use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
     clock::Clock, native_token::sol_to_lamports, program_pack::Pack, pubkey::Pubkey,
     system_instruction::transfer,
@@ -528,9 +527,6 @@ impl TestBuilder {
 
             let st_mint = vault_client.get_vault(&vault).await?.supported_mint;
 
-            let vault_ncn_ticket =
-                VaultNcnTicket::find_program_address(&jito_vault_program::id(), &vault, &ncn).0;
-
             let ncn_vault_ticket =
                 NcnVaultTicket::find_program_address(&jito_restaking_program::id(), &ncn, &vault).0;
 
@@ -546,7 +542,7 @@ impl TestBuilder {
                 .await?;
 
             tip_router_client
-                .do_register_vault(ncn, vault, vault_ncn_ticket, ncn_vault_ticket)
+                .do_register_vault(ncn, vault, ncn_vault_ticket)
                 .await?;
         }
 

@@ -48,8 +48,11 @@ pub fn process_snapshot_vault_operator_delegation(
     Operator::load(restaking_program.key, operator, false)?;
     Vault::load(vault_program.key, vault, false)?;
 
-    VaultNcnTicket::load(vault_program.key, vault_ncn_ticket, vault, ncn, false)?;
     NcnVaultTicket::load(restaking_program.key, ncn_vault_ticket, ncn, vault, false)?;
+
+    if !vault_ncn_ticket.data_is_empty() {
+        VaultNcnTicket::load(vault_program.key, vault_ncn_ticket, vault, ncn, false)?;
+    }
 
     if !vault_operator_delegation.data_is_empty() {
         VaultOperatorDelegation::load(
@@ -93,23 +96,28 @@ pub fn process_snapshot_vault_operator_delegation(
         (vault_account.vault_index(), vault_account.supported_mint)
     };
 
-    //TODO move to helper function
     let is_active: bool = {
-        let vault_ncn_ticket_data = vault_ncn_ticket.data.borrow();
-        let vault_ncn_ticket_account =
-            VaultNcnTicket::try_from_slice_unchecked(&vault_ncn_ticket_data)?;
+        let ncn_vault_okay = {
+            let ncn_vault_ticket_data = ncn_vault_ticket.data.borrow();
+            let ncn_vault_ticket_account =
+                NcnVaultTicket::try_from_slice_unchecked(&ncn_vault_ticket_data)?;
+            ncn_vault_ticket_account
+                .state
+                .is_active(current_slot, ncn_epoch_length)
+        };
 
-        let ncn_vault_ticket_data = ncn_vault_ticket.data.borrow();
-        let ncn_vault_ticket_account =
-            NcnVaultTicket::try_from_slice_unchecked(&ncn_vault_ticket_data)?;
-
-        let vault_ncn_okay = vault_ncn_ticket_account
-            .state
-            .is_active(current_slot, ncn_epoch_length);
-
-        let ncn_vault_okay = ncn_vault_ticket_account
-            .state
-            .is_active(current_slot, ncn_epoch_length);
+        let vault_ncn_okay = {
+            if vault_ncn_ticket.data_is_empty() {
+                false
+            } else {
+                let vault_ncn_ticket_data = vault_ncn_ticket.data.borrow();
+                let vault_ncn_ticket_account =
+                    VaultNcnTicket::try_from_slice_unchecked(&vault_ncn_ticket_data)?;
+                vault_ncn_ticket_account
+                    .state
+                    .is_active(current_slot, ncn_epoch_length)
+            }
+        };
 
         let delegation_dne = vault_operator_delegation.data_is_empty();
 

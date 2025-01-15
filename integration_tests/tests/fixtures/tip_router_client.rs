@@ -753,40 +753,26 @@ impl TipRouterClient {
         &mut self,
         ncn: Pubkey,
         vault: Pubkey,
-        vault_ncn_ticket: Pubkey,
         ncn_vault_ticket: Pubkey,
     ) -> TestResult<()> {
-        let restaking_config_address =
-            Config::find_program_address(&jito_restaking_program::id()).0;
         let vault_registry =
             VaultRegistry::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
-        self.register_vault(
-            restaking_config_address,
-            vault_registry,
-            ncn,
-            vault,
-            vault_ncn_ticket,
-            ncn_vault_ticket,
-        )
-        .await
+        self.register_vault(vault_registry, ncn, vault, ncn_vault_ticket)
+            .await
     }
 
     pub async fn register_vault(
         &mut self,
-        restaking_config: Pubkey,
         vault_registry: Pubkey,
         ncn: Pubkey,
         vault: Pubkey,
-        vault_ncn_ticket: Pubkey,
         ncn_vault_ticket: Pubkey,
     ) -> TestResult<()> {
         let ix = RegisterVaultBuilder::new()
-            .restaking_config(restaking_config)
             .vault_registry(vault_registry)
             .ncn(ncn)
             .vault(vault)
-            .vault_ncn_ticket(vault_ncn_ticket)
             .ncn_vault_ticket(ncn_vault_ticket)
             .restaking_program_id(jito_restaking_program::id())
             .vault_program_id(jito_vault_program::id())
