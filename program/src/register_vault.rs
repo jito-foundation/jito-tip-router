@@ -18,6 +18,7 @@ pub fn process_register_vault(program_id: &Pubkey, accounts: &[AccountInfo]) -> 
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
+    Config::load(restaking_program_id.key, restaking_config, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, true)?;
     Ncn::load(restaking_program_id.key, ncn, false)?;
     Vault::load(vault_program_id.key, vault, false)?;
