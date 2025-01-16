@@ -103,6 +103,8 @@ pub fn process_snapshot_vault_operator_delegation(
             let ncn_vault_ticket_data = ncn_vault_ticket.data.borrow();
             let ncn_vault_ticket_account =
                 NcnVaultTicket::try_from_slice_unchecked(&ncn_vault_ticket_data)?;
+
+            // If the NCN removes a vault, it should immediately be barred from the snapshot
             ncn_vault_ticket_account
                 .state
                 .is_active(current_slot, ncn_epoch_length)
@@ -117,7 +119,7 @@ pub fn process_snapshot_vault_operator_delegation(
                     VaultNcnTicket::try_from_slice_unchecked(&vault_ncn_ticket_data)?;
                 vault_ncn_ticket_account
                     .state
-                    .is_active(current_slot, ncn_epoch_length)
+                    .is_active_or_cooldown(current_slot, ncn_epoch_length)
             }
         };
 
