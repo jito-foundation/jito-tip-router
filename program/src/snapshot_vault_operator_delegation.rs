@@ -117,6 +117,10 @@ pub fn process_snapshot_vault_operator_delegation(
                 let vault_ncn_ticket_data = vault_ncn_ticket.data.borrow();
                 let vault_ncn_ticket_account =
                     VaultNcnTicket::try_from_slice_unchecked(&vault_ncn_ticket_data)?;
+
+                // If a vault removes itself from the ncn, it should still be able to participate
+                // until it is finished cooling down - this is so the operators with delegation
+                // from this vault can still participate
                 vault_ncn_ticket_account
                     .state
                     .is_active_or_cooldown(current_slot, ncn_epoch_length)
