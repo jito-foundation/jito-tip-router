@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::types::{PodU16, PodU64};
 use shank::ShankType;
@@ -352,6 +354,10 @@ impl FeeConfig {
         let total_fees_bps = self.total_fees_bps(current_epoch)?;
         if total_fees_bps > MAX_FEE_BPS {
             return Err(TipRouterError::FeeCapExceeded);
+        }
+
+        if total_fees_bps == 0 {
+            return Err(TipRouterError::TotalFeesCannotBeZero);
         }
 
         Ok(())
