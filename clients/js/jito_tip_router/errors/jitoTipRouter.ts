@@ -172,6 +172,8 @@ export const JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED = 0x2243; // 877
 export const JITO_TIP_ROUTER_ERROR__BAD_BALLOT = 0x2244; // 8772
 /** VotingIsNotOver: Cannot route until voting is over */
 export const JITO_TIP_ROUTER_ERROR__VOTING_IS_NOT_OVER = 0x2245; // 8773
+/** OperatorIsNotInSnapshot: Operator is not in snapshot */
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_IS_NOT_IN_SNAPSHOT = 0x2246; // 8774
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED
@@ -225,6 +227,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__NO_VAULTS_IN_REGISTRY
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED
+  | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_IS_NOT_IN_SNAPSHOT
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL
@@ -308,6 +311,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__NO_VAULTS_IN_REGISTRY]: `There are no vaults in the registry`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID]: `Operator admin needs to sign its vote`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED]: `Operator is already finalized - should not happen`,
+    [JITO_TIP_ROUTER_ERROR__OPERATOR_IS_NOT_IN_SNAPSHOT]: `Operator is not in snapshot`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL]: `Operator reward list full`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_NOT_FOUND]: `Operator Reward not found`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_VOTES_FULL]: `Operator votes full`,

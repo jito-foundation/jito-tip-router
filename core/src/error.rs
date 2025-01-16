@@ -163,6 +163,8 @@ pub enum TipRouterError {
     BadBallot,
     #[error("Cannot route until voting is over")]
     VotingIsNotOver,
+    #[error("Operator is not in snapshot")]
+    OperatorIsNotInSnapshot,
 }
 
 impl<T> DecodeError<T> for TipRouterError {
