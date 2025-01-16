@@ -25,7 +25,7 @@ pub async fn get_ncn_config(client: &EllipsisClient, ncn_pubkey: &Pubkey) -> Res
 /// Generate and send a CastVote instruction with the merkle root.
 pub async fn cast_vote(
     client: &EllipsisClient,
-    payer: &Keypair,
+    _payer: &Keypair,
     ncn: Pubkey,
     operator: Pubkey,
     operator_admin: &Keypair,
@@ -64,8 +64,6 @@ pub async fn cast_vote(
     let ix = spl_memo::build_memo(&meta_merkle_root.to_vec(), &[&operator_admin.pubkey()]);
     info!("Submitting meta merkle root {:?}", meta_merkle_root);
 
-    let tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
-    client
-        .process_transaction(tx, &[payer, operator_admin])
-        .await
+    let tx = Transaction::new_with_payer(&[ix], Some(&operator_admin.pubkey()));
+    client.process_transaction(tx, &[operator_admin]).await
 }

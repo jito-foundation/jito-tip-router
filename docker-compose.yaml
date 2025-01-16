@@ -1,6 +1,3 @@
-# docker-compose.yaml
-version: '3.8'
-
 services:
   tip-router:
     build: .
@@ -19,8 +16,8 @@ services:
       - TIP_DISTRIBUTION_PROGRAM_ID=${TIP_DISTRIBUTION_PROGRAM_ID}
       - TIP_PAYMENT_PROGRAM_ID=${TIP_PAYMENT_PROGRAM_ID}
       - ENABLE_SNAPSHOTS=false
-    volumes:
-      - /etc/solana/mev-upload-keypair.json:/etc/solana/keypair.json:ro # Replace this path with the path to the keypair
+    volumes: # Replace the paths before the ":" with the path to your keypair and relevant directories
+      - /etc/solana/keypair.json:/etc/solana/keypair.json:ro
       - /solana/ledger:/solana/ledger
       - /solana/snapshots:/solana/snapshots
       - /solana/snapshots/autosnapshot:/solana/snapshots/autosnapshot
