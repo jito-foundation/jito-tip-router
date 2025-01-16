@@ -244,6 +244,9 @@ pub enum JitoTipRouterError {
     /// 8772 - Cannot vote with uninitialized account
     #[error("Cannot vote with uninitialized account")]
     BadBallot = 0x2244,
+    /// 8773 - Cannot route until voting is over
+    #[error("Cannot route until voting is over")]
+    VotingIsNotOver = 0x2245,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

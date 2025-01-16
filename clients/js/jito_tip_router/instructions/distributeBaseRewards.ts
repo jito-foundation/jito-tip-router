@@ -44,7 +44,6 @@ export type DistributeBaseRewardsInstruction<
   TAccountBaseRewardReceiver extends string | IAccountMeta<string> = string,
   TAccountBaseFeeWallet extends string | IAccountMeta<string> = string,
   TAccountBaseFeeWalletAta extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TAccountStakePoolProgram extends string | IAccountMeta<string> = string,
   TAccountStakePool extends string | IAccountMeta<string> = string,
   TAccountStakePoolWithdrawAuthority extends
@@ -86,9 +85,6 @@ export type DistributeBaseRewardsInstruction<
       TAccountBaseFeeWalletAta extends string
         ? WritableAccount<TAccountBaseFeeWalletAta>
         : TAccountBaseFeeWalletAta,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       TAccountStakePoolProgram extends string
         ? ReadonlyAccount<TAccountStakePoolProgram>
         : TAccountStakePoolProgram,
@@ -171,7 +167,6 @@ export type DistributeBaseRewardsInput<
   TAccountBaseRewardReceiver extends string = string,
   TAccountBaseFeeWallet extends string = string,
   TAccountBaseFeeWalletAta extends string = string,
-  TAccountRestakingProgram extends string = string,
   TAccountStakePoolProgram extends string = string,
   TAccountStakePool extends string = string,
   TAccountStakePoolWithdrawAuthority extends string = string,
@@ -189,7 +184,6 @@ export type DistributeBaseRewardsInput<
   baseRewardReceiver: Address<TAccountBaseRewardReceiver>;
   baseFeeWallet: Address<TAccountBaseFeeWallet>;
   baseFeeWalletAta: Address<TAccountBaseFeeWalletAta>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   stakePoolProgram: Address<TAccountStakePoolProgram>;
   stakePool: Address<TAccountStakePool>;
   stakePoolWithdrawAuthority: Address<TAccountStakePoolWithdrawAuthority>;
@@ -211,7 +205,6 @@ export function getDistributeBaseRewardsInstruction<
   TAccountBaseRewardReceiver extends string,
   TAccountBaseFeeWallet extends string,
   TAccountBaseFeeWalletAta extends string,
-  TAccountRestakingProgram extends string,
   TAccountStakePoolProgram extends string,
   TAccountStakePool extends string,
   TAccountStakePoolWithdrawAuthority extends string,
@@ -231,7 +224,6 @@ export function getDistributeBaseRewardsInstruction<
     TAccountBaseRewardReceiver,
     TAccountBaseFeeWallet,
     TAccountBaseFeeWalletAta,
-    TAccountRestakingProgram,
     TAccountStakePoolProgram,
     TAccountStakePool,
     TAccountStakePoolWithdrawAuthority,
@@ -252,7 +244,6 @@ export function getDistributeBaseRewardsInstruction<
   TAccountBaseRewardReceiver,
   TAccountBaseFeeWallet,
   TAccountBaseFeeWalletAta,
-  TAccountRestakingProgram,
   TAccountStakePoolProgram,
   TAccountStakePool,
   TAccountStakePoolWithdrawAuthority,
@@ -284,10 +275,6 @@ export function getDistributeBaseRewardsInstruction<
     baseFeeWalletAta: {
       value: input.baseFeeWalletAta ?? null,
       isWritable: true,
-    },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
     },
     stakePoolProgram: {
       value: input.stakePoolProgram ?? null,
@@ -339,7 +326,6 @@ export function getDistributeBaseRewardsInstruction<
       getAccountMeta(accounts.baseRewardReceiver),
       getAccountMeta(accounts.baseFeeWallet),
       getAccountMeta(accounts.baseFeeWalletAta),
-      getAccountMeta(accounts.restakingProgram),
       getAccountMeta(accounts.stakePoolProgram),
       getAccountMeta(accounts.stakePool),
       getAccountMeta(accounts.stakePoolWithdrawAuthority),
@@ -363,7 +349,6 @@ export function getDistributeBaseRewardsInstruction<
     TAccountBaseRewardReceiver,
     TAccountBaseFeeWallet,
     TAccountBaseFeeWalletAta,
-    TAccountRestakingProgram,
     TAccountStakePoolProgram,
     TAccountStakePool,
     TAccountStakePoolWithdrawAuthority,
@@ -391,16 +376,15 @@ export type ParsedDistributeBaseRewardsInstruction<
     baseRewardReceiver: TAccountMetas[4];
     baseFeeWallet: TAccountMetas[5];
     baseFeeWalletAta: TAccountMetas[6];
-    restakingProgram: TAccountMetas[7];
-    stakePoolProgram: TAccountMetas[8];
-    stakePool: TAccountMetas[9];
-    stakePoolWithdrawAuthority: TAccountMetas[10];
-    reserveStake: TAccountMetas[11];
-    managerFeeAccount: TAccountMetas[12];
-    referrerPoolTokensAccount: TAccountMetas[13];
-    poolMint: TAccountMetas[14];
-    tokenProgram: TAccountMetas[15];
-    systemProgram: TAccountMetas[16];
+    stakePoolProgram: TAccountMetas[7];
+    stakePool: TAccountMetas[8];
+    stakePoolWithdrawAuthority: TAccountMetas[9];
+    reserveStake: TAccountMetas[10];
+    managerFeeAccount: TAccountMetas[11];
+    referrerPoolTokensAccount: TAccountMetas[12];
+    poolMint: TAccountMetas[13];
+    tokenProgram: TAccountMetas[14];
+    systemProgram: TAccountMetas[15];
   };
   data: DistributeBaseRewardsInstructionData;
 };
@@ -413,7 +397,7 @@ export function parseDistributeBaseRewardsInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedDistributeBaseRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 17) {
+  if (instruction.accounts.length < 16) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -433,7 +417,6 @@ export function parseDistributeBaseRewardsInstruction<
       baseRewardReceiver: getNextAccount(),
       baseFeeWallet: getNextAccount(),
       baseFeeWalletAta: getNextAccount(),
-      restakingProgram: getNextAccount(),
       stakePoolProgram: getNextAccount(),
       stakePool: getNextAccount(),
       stakePoolWithdrawAuthority: getNextAccount(),

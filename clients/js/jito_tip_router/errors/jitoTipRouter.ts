@@ -170,6 +170,8 @@ export const JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS = 0x2242; // 8770
 export const JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED = 0x2243; // 8771
 /** BadBallot: Cannot vote with uninitialized account */
 export const JITO_TIP_ROUTER_ERROR__BAD_BALLOT = 0x2244; // 8772
+/** VotingIsNotOver: Cannot route until voting is over */
+export const JITO_TIP_ROUTER_ERROR__VOTING_IS_NOT_OVER = 0x2245; // 8773
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED
@@ -243,6 +245,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_REGISTRY_LIST_FULL
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_REGISTRY_VAULT_LOCKED
   | typeof JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND
+  | typeof JITO_TIP_ROUTER_ERROR__VOTING_IS_NOT_OVER
   | typeof JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID
   | typeof JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH
@@ -325,6 +328,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__VAULT_REGISTRY_LIST_FULL]: `Vault Registry mints are at capacity`,
     [JITO_TIP_ROUTER_ERROR__VAULT_REGISTRY_VAULT_LOCKED]: `Vault registry are locked for the epoch`,
     [JITO_TIP_ROUTER_ERROR__VAULT_REWARD_NOT_FOUND]: `Vault Reward not found`,
+    [JITO_TIP_ROUTER_ERROR__VOTING_IS_NOT_OVER]: `Cannot route until voting is over`,
     [JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED]: `Voting not finalized`,
     [JITO_TIP_ROUTER_ERROR__VOTING_NOT_VALID]: `Voting not valid, too many slots after consensus reached`,
     [JITO_TIP_ROUTER_ERROR__WEIGHT_MINTS_DO_NOT_MATCH_LENGTH]: `Weight mints do not match - length`,

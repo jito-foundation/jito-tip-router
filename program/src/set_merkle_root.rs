@@ -21,7 +21,7 @@ pub fn process_set_merkle_root(
     max_num_nodes: u64,
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, ncn, ballot_box, vote_account, tip_distribution_account, tip_distribution_config, tip_distribution_program_id, restaking_program_id] =
+    let [epoch_state, ncn_config, ncn, ballot_box, vote_account, tip_distribution_account, tip_distribution_config, tip_distribution_program_id] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -29,7 +29,7 @@ pub fn process_set_merkle_root(
 
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, true)?;
-    Ncn::load(restaking_program_id.key, ncn, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
 
     let (tip_distribution_address, _) = derive_tip_distribution_account_address(

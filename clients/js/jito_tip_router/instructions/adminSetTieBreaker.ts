@@ -50,7 +50,6 @@ export type AdminSetTieBreakerInstruction<
   TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountTieBreakerAdmin extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -70,9 +69,6 @@ export type AdminSetTieBreakerInstruction<
         ? ReadonlySignerAccount<TAccountTieBreakerAdmin> &
             IAccountSignerMeta<TAccountTieBreakerAdmin>
         : TAccountTieBreakerAdmin,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -126,14 +122,12 @@ export type AdminSetTieBreakerInput<
   TAccountBallotBox extends string = string,
   TAccountNcn extends string = string,
   TAccountTieBreakerAdmin extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ballotBox: Address<TAccountBallotBox>;
   ncn: Address<TAccountNcn>;
   tieBreakerAdmin: TransactionSigner<TAccountTieBreakerAdmin>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   metaMerkleRoot: AdminSetTieBreakerInstructionDataArgs['metaMerkleRoot'];
   epoch: AdminSetTieBreakerInstructionDataArgs['epoch'];
 };
@@ -144,7 +138,6 @@ export function getAdminSetTieBreakerInstruction<
   TAccountBallotBox extends string,
   TAccountNcn extends string,
   TAccountTieBreakerAdmin extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: AdminSetTieBreakerInput<
@@ -152,8 +145,7 @@ export function getAdminSetTieBreakerInstruction<
     TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
-    TAccountTieBreakerAdmin,
-    TAccountRestakingProgram
+    TAccountTieBreakerAdmin
   >,
   config?: { programAddress?: TProgramAddress }
 ): AdminSetTieBreakerInstruction<
@@ -162,8 +154,7 @@ export function getAdminSetTieBreakerInstruction<
   TAccountConfig,
   TAccountBallotBox,
   TAccountNcn,
-  TAccountTieBreakerAdmin,
-  TAccountRestakingProgram
+  TAccountTieBreakerAdmin
 > {
   // Program address.
   const programAddress =
@@ -177,10 +168,6 @@ export function getAdminSetTieBreakerInstruction<
     ncn: { value: input.ncn ?? null, isWritable: false },
     tieBreakerAdmin: {
       value: input.tieBreakerAdmin ?? null,
-      isWritable: false,
-    },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
       isWritable: false,
     },
   };
@@ -200,7 +187,6 @@ export function getAdminSetTieBreakerInstruction<
       getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.tieBreakerAdmin),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getAdminSetTieBreakerInstructionDataEncoder().encode(
@@ -212,8 +198,7 @@ export function getAdminSetTieBreakerInstruction<
     TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
-    TAccountTieBreakerAdmin,
-    TAccountRestakingProgram
+    TAccountTieBreakerAdmin
   >;
 
   return instruction;
@@ -230,7 +215,6 @@ export type ParsedAdminSetTieBreakerInstruction<
     ballotBox: TAccountMetas[2];
     ncn: TAccountMetas[3];
     tieBreakerAdmin: TAccountMetas[4];
-    restakingProgram: TAccountMetas[5];
   };
   data: AdminSetTieBreakerInstructionData;
 };
@@ -243,7 +227,7 @@ export function parseAdminSetTieBreakerInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminSetTieBreakerInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -261,7 +245,6 @@ export function parseAdminSetTieBreakerInstruction<
       ballotBox: getNextAccount(),
       ncn: getNextAccount(),
       tieBreakerAdmin: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getAdminSetTieBreakerInstructionDataDecoder().decode(
       instruction.data

@@ -54,7 +54,6 @@ pub async fn cast_vote(
         .operator_snapshot(operator_snapshot)
         .operator(operator)
         .operator_admin(operator_admin.pubkey())
-        .restaking_program(jito_restaking_program::id())
         .meta_merkle_root(meta_merkle_root)
         .epoch(epoch)
         .instruction();

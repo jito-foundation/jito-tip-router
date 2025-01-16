@@ -20,8 +20,6 @@ pub struct AdminRegisterStMint {
     pub vault_registry: solana_program::pubkey::Pubkey,
 
     pub admin: solana_program::pubkey::Pubkey,
-
-    pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
 impl AdminRegisterStMint {
@@ -37,7 +35,7 @@ impl AdminRegisterStMint {
         args: AdminRegisterStMintInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.config,
             false,
@@ -55,10 +53,6 @@ impl AdminRegisterStMint {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.admin, true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program,
-            false,
         ));
         accounts.extend_from_slice(remaining_accounts);
         let mut data = AdminRegisterStMintInstructionData::new()
@@ -110,7 +104,6 @@ pub struct AdminRegisterStMintInstructionArgs {
 ///   2. `[]` st_mint
 ///   3. `[writable]` vault_registry
 ///   4. `[writable, signer]` admin
-///   5. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct AdminRegisterStMintBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
@@ -118,7 +111,6 @@ pub struct AdminRegisterStMintBuilder {
     st_mint: Option<solana_program::pubkey::Pubkey>,
     vault_registry: Option<solana_program::pubkey::Pubkey>,
     admin: Option<solana_program::pubkey::Pubkey>,
-    restaking_program: Option<solana_program::pubkey::Pubkey>,
     ncn_fee_group: Option<u8>,
     reward_multiplier_bps: Option<u64>,
     switchboard_feed: Option<Pubkey>,
@@ -153,14 +145,6 @@ impl AdminRegisterStMintBuilder {
     #[inline(always)]
     pub fn admin(&mut self, admin: solana_program::pubkey::Pubkey) -> &mut Self {
         self.admin = Some(admin);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -211,9 +195,6 @@ impl AdminRegisterStMintBuilder {
             st_mint: self.st_mint.expect("st_mint is not set"),
             vault_registry: self.vault_registry.expect("vault_registry is not set"),
             admin: self.admin.expect("admin is not set"),
-            restaking_program: self
-                .restaking_program
-                .expect("restaking_program is not set"),
         };
         let args = AdminRegisterStMintInstructionArgs {
             ncn_fee_group: self
@@ -243,8 +224,6 @@ pub struct AdminRegisterStMintCpiAccounts<'a, 'b> {
     pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub admin: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `admin_register_st_mint` CPI instruction.
@@ -261,8 +240,6 @@ pub struct AdminRegisterStMintCpi<'a, 'b> {
     pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub admin: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AdminRegisterStMintInstructionArgs,
 }
@@ -280,7 +257,6 @@ impl<'a, 'b> AdminRegisterStMintCpi<'a, 'b> {
             st_mint: accounts.st_mint,
             vault_registry: accounts.vault_registry,
             admin: accounts.admin,
-            restaking_program: accounts.restaking_program,
             __args: args,
         }
     }
@@ -317,7 +293,7 @@ impl<'a, 'b> AdminRegisterStMintCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.config.key,
             false,
@@ -338,10 +314,6 @@ impl<'a, 'b> AdminRegisterStMintCpi<'a, 'b> {
             *self.admin.key,
             true,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program.key,
-            false,
-        ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_program::instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -360,14 +332,13 @@ impl<'a, 'b> AdminRegisterStMintCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.st_mint.clone());
         account_infos.push(self.vault_registry.clone());
         account_infos.push(self.admin.clone());
-        account_infos.push(self.restaking_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -389,7 +360,6 @@ impl<'a, 'b> AdminRegisterStMintCpi<'a, 'b> {
 ///   2. `[]` st_mint
 ///   3. `[writable]` vault_registry
 ///   4. `[writable, signer]` admin
-///   5. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct AdminRegisterStMintCpiBuilder<'a, 'b> {
     instruction: Box<AdminRegisterStMintCpiBuilderInstruction<'a, 'b>>,
@@ -404,7 +374,6 @@ impl<'a, 'b> AdminRegisterStMintCpiBuilder<'a, 'b> {
             st_mint: None,
             vault_registry: None,
             admin: None,
-            restaking_program: None,
             ncn_fee_group: None,
             reward_multiplier_bps: None,
             switchboard_feed: None,
@@ -445,14 +414,6 @@ impl<'a, 'b> AdminRegisterStMintCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn admin(&mut self, admin: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.admin = Some(admin);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -547,11 +508,6 @@ impl<'a, 'b> AdminRegisterStMintCpiBuilder<'a, 'b> {
                 .expect("vault_registry is not set"),
 
             admin: self.instruction.admin.expect("admin is not set"),
-
-            restaking_program: self
-                .instruction
-                .restaking_program
-                .expect("restaking_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -569,7 +525,6 @@ struct AdminRegisterStMintCpiBuilderInstruction<'a, 'b> {
     st_mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_fee_group: Option<u8>,
     reward_multiplier_bps: Option<u64>,
     switchboard_feed: Option<Pubkey>,

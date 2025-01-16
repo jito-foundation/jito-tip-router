@@ -1,6 +1,6 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{ncn::Ncn, ncn_vault_ticket::NcnVaultTicket};
-use jito_tip_router_core::vault_registry::VaultRegistry;
+use jito_tip_router_core::{config::Config, vault_registry::VaultRegistry};
 use jito_vault_core::vault::Vault;
 use solana_program::{
     account_info::AccountInfo,
@@ -12,17 +12,16 @@ use solana_program::{
 };
 
 pub fn process_register_vault(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-    let [vault_registry, ncn, vault, ncn_vault_ticket, restaking_program_id, vault_program_id] =
-        accounts
-    else {
+    let [config, vault_registry, ncn, vault, ncn_vault_ticket] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
+    Config::load(program_id, ncn.key, config, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, true)?;
-    Ncn::load(restaking_program_id.key, ncn, false)?;
-    Vault::load(vault_program_id.key, vault, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Vault::load(&jito_vault_program::id(), vault, false)?;
     NcnVaultTicket::load(
-        restaking_program_id.key,
+        &jito_restaking_program::id(),
         ncn_vault_ticket,
         ncn,
         vault,

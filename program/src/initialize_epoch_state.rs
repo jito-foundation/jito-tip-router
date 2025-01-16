@@ -2,6 +2,7 @@ use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
 };
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{config::Config, constants::MAX_REALLOC_BYTES, epoch_state::EpochState};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
@@ -28,6 +29,7 @@ pub fn process_initialize_epoch_state(
 
     load_signer(payer, false)?;
 
+    Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
     Config::load(program_id, ncn_account.key, config, false)?;
 
     let (epoch_state_pda, epoch_state_bump, mut epoch_state_seeds) =

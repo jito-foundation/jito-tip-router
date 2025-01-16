@@ -49,7 +49,6 @@ export type AdminSetConfigFeesInstruction<
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountNcnAdmin extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -63,9 +62,6 @@ export type AdminSetConfigFeesInstruction<
         ? ReadonlySignerAccount<TAccountNcnAdmin> &
             IAccountSignerMeta<TAccountNcnAdmin>
         : TAccountNcnAdmin,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -133,12 +129,10 @@ export type AdminSetConfigFeesInput<
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountNcnAdmin extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   newBlockEngineFeeBps: AdminSetConfigFeesInstructionDataArgs['newBlockEngineFeeBps'];
   baseFeeGroup: AdminSetConfigFeesInstructionDataArgs['baseFeeGroup'];
   newBaseFeeWallet: AdminSetConfigFeesInstructionDataArgs['newBaseFeeWallet'];
@@ -151,22 +145,15 @@ export function getAdminSetConfigFeesInstruction<
   TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountNcnAdmin extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: AdminSetConfigFeesInput<
-    TAccountConfig,
-    TAccountNcn,
-    TAccountNcnAdmin,
-    TAccountRestakingProgram
-  >,
+  input: AdminSetConfigFeesInput<TAccountConfig, TAccountNcn, TAccountNcnAdmin>,
   config?: { programAddress?: TProgramAddress }
 ): AdminSetConfigFeesInstruction<
   TProgramAddress,
   TAccountConfig,
   TAccountNcn,
-  TAccountNcnAdmin,
-  TAccountRestakingProgram
+  TAccountNcnAdmin
 > {
   // Program address.
   const programAddress =
@@ -177,10 +164,6 @@ export function getAdminSetConfigFeesInstruction<
     config: { value: input.config ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -196,7 +179,6 @@ export function getAdminSetConfigFeesInstruction<
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.ncnAdmin),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getAdminSetConfigFeesInstructionDataEncoder().encode(
@@ -206,8 +188,7 @@ export function getAdminSetConfigFeesInstruction<
     TProgramAddress,
     TAccountConfig,
     TAccountNcn,
-    TAccountNcnAdmin,
-    TAccountRestakingProgram
+    TAccountNcnAdmin
   >;
 
   return instruction;
@@ -222,7 +203,6 @@ export type ParsedAdminSetConfigFeesInstruction<
     config: TAccountMetas[0];
     ncn: TAccountMetas[1];
     ncnAdmin: TAccountMetas[2];
-    restakingProgram: TAccountMetas[3];
   };
   data: AdminSetConfigFeesInstructionData;
 };
@@ -235,7 +215,7 @@ export function parseAdminSetConfigFeesInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminSetConfigFeesInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 3) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -251,7 +231,6 @@ export function parseAdminSetConfigFeesInstruction<
       config: getNextAccount(),
       ncn: getNextAccount(),
       ncnAdmin: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getAdminSetConfigFeesInstructionDataDecoder().decode(
       instruction.data

@@ -26,8 +26,6 @@ pub struct DistributeNcnOperatorRewards {
 
     pub ncn_reward_receiver: solana_program::pubkey::Pubkey,
 
-    pub restaking_program: solana_program::pubkey::Pubkey,
-
     pub stake_pool_program: solana_program::pubkey::Pubkey,
 
     pub stake_pool: solana_program::pubkey::Pubkey,
@@ -60,7 +58,7 @@ impl DistributeNcnOperatorRewards {
         args: DistributeNcnOperatorRewardsInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(18 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(17 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.epoch_state,
             false,
@@ -90,10 +88,6 @@ impl DistributeNcnOperatorRewards {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.ncn_reward_receiver,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -183,16 +177,15 @@ pub struct DistributeNcnOperatorRewardsInstructionArgs {
 ///   5. `[writable]` operator_snapshot
 ///   6. `[writable]` ncn_reward_router
 ///   7. `[writable]` ncn_reward_receiver
-///   8. `[]` restaking_program
-///   9. `[]` stake_pool_program
-///   10. `[writable]` stake_pool
-///   11. `[]` stake_pool_withdraw_authority
-///   12. `[writable]` reserve_stake
-///   13. `[writable]` manager_fee_account
-///   14. `[writable]` referrer_pool_tokens_account
-///   15. `[writable]` pool_mint
-///   16. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   17. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   8. `[]` stake_pool_program
+///   9. `[writable]` stake_pool
+///   10. `[]` stake_pool_withdraw_authority
+///   11. `[writable]` reserve_stake
+///   12. `[writable]` manager_fee_account
+///   13. `[writable]` referrer_pool_tokens_account
+///   14. `[writable]` pool_mint
+///   15. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+///   16. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct DistributeNcnOperatorRewardsBuilder {
     epoch_state: Option<solana_program::pubkey::Pubkey>,
@@ -203,7 +196,6 @@ pub struct DistributeNcnOperatorRewardsBuilder {
     operator_snapshot: Option<solana_program::pubkey::Pubkey>,
     ncn_reward_router: Option<solana_program::pubkey::Pubkey>,
     ncn_reward_receiver: Option<solana_program::pubkey::Pubkey>,
-    restaking_program: Option<solana_program::pubkey::Pubkey>,
     stake_pool_program: Option<solana_program::pubkey::Pubkey>,
     stake_pool: Option<solana_program::pubkey::Pubkey>,
     stake_pool_withdraw_authority: Option<solana_program::pubkey::Pubkey>,
@@ -269,14 +261,6 @@ impl DistributeNcnOperatorRewardsBuilder {
         ncn_reward_receiver: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
         self.ncn_reward_receiver = Some(ncn_reward_receiver);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -383,9 +367,6 @@ impl DistributeNcnOperatorRewardsBuilder {
             ncn_reward_receiver: self
                 .ncn_reward_receiver
                 .expect("ncn_reward_receiver is not set"),
-            restaking_program: self
-                .restaking_program
-                .expect("restaking_program is not set"),
             stake_pool_program: self
                 .stake_pool_program
                 .expect("stake_pool_program is not set"),
@@ -438,8 +419,6 @@ pub struct DistributeNcnOperatorRewardsCpiAccounts<'a, 'b> {
 
     pub ncn_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub stake_pool_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub stake_pool: &'b solana_program::account_info::AccountInfo<'a>,
@@ -480,8 +459,6 @@ pub struct DistributeNcnOperatorRewardsCpi<'a, 'b> {
 
     pub ncn_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub stake_pool_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub stake_pool: &'b solana_program::account_info::AccountInfo<'a>,
@@ -519,7 +496,6 @@ impl<'a, 'b> DistributeNcnOperatorRewardsCpi<'a, 'b> {
             operator_snapshot: accounts.operator_snapshot,
             ncn_reward_router: accounts.ncn_reward_router,
             ncn_reward_receiver: accounts.ncn_reward_receiver,
-            restaking_program: accounts.restaking_program,
             stake_pool_program: accounts.stake_pool_program,
             stake_pool: accounts.stake_pool,
             stake_pool_withdraw_authority: accounts.stake_pool_withdraw_authority,
@@ -565,7 +541,7 @@ impl<'a, 'b> DistributeNcnOperatorRewardsCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(18 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(17 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.epoch_state.key,
             false,
@@ -596,10 +572,6 @@ impl<'a, 'b> DistributeNcnOperatorRewardsCpi<'a, 'b> {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.ncn_reward_receiver.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -656,7 +628,7 @@ impl<'a, 'b> DistributeNcnOperatorRewardsCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(18 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(17 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.epoch_state.clone());
         account_infos.push(self.config.clone());
@@ -666,7 +638,6 @@ impl<'a, 'b> DistributeNcnOperatorRewardsCpi<'a, 'b> {
         account_infos.push(self.operator_snapshot.clone());
         account_infos.push(self.ncn_reward_router.clone());
         account_infos.push(self.ncn_reward_receiver.clone());
-        account_infos.push(self.restaking_program.clone());
         account_infos.push(self.stake_pool_program.clone());
         account_infos.push(self.stake_pool.clone());
         account_infos.push(self.stake_pool_withdraw_authority.clone());
@@ -700,16 +671,15 @@ impl<'a, 'b> DistributeNcnOperatorRewardsCpi<'a, 'b> {
 ///   5. `[writable]` operator_snapshot
 ///   6. `[writable]` ncn_reward_router
 ///   7. `[writable]` ncn_reward_receiver
-///   8. `[]` restaking_program
-///   9. `[]` stake_pool_program
-///   10. `[writable]` stake_pool
-///   11. `[]` stake_pool_withdraw_authority
-///   12. `[writable]` reserve_stake
-///   13. `[writable]` manager_fee_account
-///   14. `[writable]` referrer_pool_tokens_account
-///   15. `[writable]` pool_mint
-///   16. `[]` token_program
-///   17. `[]` system_program
+///   8. `[]` stake_pool_program
+///   9. `[writable]` stake_pool
+///   10. `[]` stake_pool_withdraw_authority
+///   11. `[writable]` reserve_stake
+///   12. `[writable]` manager_fee_account
+///   13. `[writable]` referrer_pool_tokens_account
+///   14. `[writable]` pool_mint
+///   15. `[]` token_program
+///   16. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct DistributeNcnOperatorRewardsCpiBuilder<'a, 'b> {
     instruction: Box<DistributeNcnOperatorRewardsCpiBuilderInstruction<'a, 'b>>,
@@ -727,7 +697,6 @@ impl<'a, 'b> DistributeNcnOperatorRewardsCpiBuilder<'a, 'b> {
             operator_snapshot: None,
             ncn_reward_router: None,
             ncn_reward_receiver: None,
-            restaking_program: None,
             stake_pool_program: None,
             stake_pool: None,
             stake_pool_withdraw_authority: None,
@@ -802,14 +771,6 @@ impl<'a, 'b> DistributeNcnOperatorRewardsCpiBuilder<'a, 'b> {
         ncn_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.ncn_reward_receiver = Some(ncn_reward_receiver);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -977,11 +938,6 @@ impl<'a, 'b> DistributeNcnOperatorRewardsCpiBuilder<'a, 'b> {
                 .ncn_reward_receiver
                 .expect("ncn_reward_receiver is not set"),
 
-            restaking_program: self
-                .instruction
-                .restaking_program
-                .expect("restaking_program is not set"),
-
             stake_pool_program: self
                 .instruction
                 .stake_pool_program
@@ -1040,7 +996,6 @@ struct DistributeNcnOperatorRewardsCpiBuilderInstruction<'a, 'b> {
     operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     stake_pool_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     stake_pool: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     stake_pool_withdraw_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,

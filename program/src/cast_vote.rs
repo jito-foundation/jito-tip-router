@@ -19,7 +19,7 @@ pub fn process_cast_vote(
     meta_merkle_root: &[u8; 32],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator, operator_admin, restaking_program] =
+    let [epoch_state, ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator, operator_admin] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -30,8 +30,8 @@ pub fn process_cast_vote(
 
     EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
-    Operator::load(restaking_program.key, operator, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Operator::load(&jito_restaking_program::id(), operator, false)?;
 
     BallotBox::load(program_id, ncn.key, epoch, ballot_box, true)?;
     EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;

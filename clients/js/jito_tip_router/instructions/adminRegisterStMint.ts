@@ -53,7 +53,6 @@ export type AdminRegisterStMintInstruction<
   TAccountStMint extends string | IAccountMeta<string> = string,
   TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountAdmin extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -73,9 +72,6 @@ export type AdminRegisterStMintInstruction<
         ? WritableSignerAccount<TAccountAdmin> &
             IAccountSignerMeta<TAccountAdmin>
         : TAccountAdmin,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -137,14 +133,12 @@ export type AdminRegisterStMintInput<
   TAccountStMint extends string = string,
   TAccountVaultRegistry extends string = string,
   TAccountAdmin extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   stMint: Address<TAccountStMint>;
   vaultRegistry: Address<TAccountVaultRegistry>;
   admin: TransactionSigner<TAccountAdmin>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   ncnFeeGroup: AdminRegisterStMintInstructionDataArgs['ncnFeeGroup'];
   rewardMultiplierBps: AdminRegisterStMintInstructionDataArgs['rewardMultiplierBps'];
   switchboardFeed: AdminRegisterStMintInstructionDataArgs['switchboardFeed'];
@@ -157,7 +151,6 @@ export function getAdminRegisterStMintInstruction<
   TAccountStMint extends string,
   TAccountVaultRegistry extends string,
   TAccountAdmin extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: AdminRegisterStMintInput<
@@ -165,8 +158,7 @@ export function getAdminRegisterStMintInstruction<
     TAccountNcn,
     TAccountStMint,
     TAccountVaultRegistry,
-    TAccountAdmin,
-    TAccountRestakingProgram
+    TAccountAdmin
   >,
   config?: { programAddress?: TProgramAddress }
 ): AdminRegisterStMintInstruction<
@@ -175,8 +167,7 @@ export function getAdminRegisterStMintInstruction<
   TAccountNcn,
   TAccountStMint,
   TAccountVaultRegistry,
-  TAccountAdmin,
-  TAccountRestakingProgram
+  TAccountAdmin
 > {
   // Program address.
   const programAddress =
@@ -189,10 +180,6 @@ export function getAdminRegisterStMintInstruction<
     stMint: { value: input.stMint ?? null, isWritable: false },
     vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: true },
     admin: { value: input.admin ?? null, isWritable: true },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -210,7 +197,6 @@ export function getAdminRegisterStMintInstruction<
       getAccountMeta(accounts.stMint),
       getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.admin),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getAdminRegisterStMintInstructionDataEncoder().encode(
@@ -222,8 +208,7 @@ export function getAdminRegisterStMintInstruction<
     TAccountNcn,
     TAccountStMint,
     TAccountVaultRegistry,
-    TAccountAdmin,
-    TAccountRestakingProgram
+    TAccountAdmin
   >;
 
   return instruction;
@@ -240,7 +225,6 @@ export type ParsedAdminRegisterStMintInstruction<
     stMint: TAccountMetas[2];
     vaultRegistry: TAccountMetas[3];
     admin: TAccountMetas[4];
-    restakingProgram: TAccountMetas[5];
   };
   data: AdminRegisterStMintInstructionData;
 };
@@ -253,7 +237,7 @@ export function parseAdminRegisterStMintInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminRegisterStMintInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -271,7 +255,6 @@ export function parseAdminRegisterStMintInstruction<
       stMint: getNextAccount(),
       vaultRegistry: getNextAccount(),
       admin: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getAdminRegisterStMintInstructionDataDecoder().decode(
       instruction.data

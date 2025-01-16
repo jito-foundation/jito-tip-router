@@ -78,7 +78,7 @@ mod tests {
             )
             .await;
 
-        assert_ix_error(transaction_error, InstructionError::InvalidAccountData);
+        assert_ix_error(transaction_error, InstructionError::InvalidAccountOwner);
         Ok(())
     }
 

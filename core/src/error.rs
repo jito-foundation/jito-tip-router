@@ -161,6 +161,8 @@ pub enum TipRouterError {
     AccountAlreadyInitialized,
     #[error("Cannot vote with uninitialized account")]
     BadBallot,
+    #[error("Cannot route until voting is over")]
+    VotingIsNotOver,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

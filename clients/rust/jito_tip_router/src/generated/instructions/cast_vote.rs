@@ -25,8 +25,6 @@ pub struct CastVote {
     pub operator: solana_program::pubkey::Pubkey,
 
     pub operator_admin: solana_program::pubkey::Pubkey,
-
-    pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
 impl CastVote {
@@ -42,7 +40,7 @@ impl CastVote {
         args: CastVoteInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.epoch_state,
             false,
@@ -73,10 +71,6 @@ impl CastVote {
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.operator_admin,
             true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program,
-            false,
         ));
         accounts.extend_from_slice(remaining_accounts);
         let mut data = CastVoteInstructionData::new().try_to_vec().unwrap();
@@ -127,7 +121,6 @@ pub struct CastVoteInstructionArgs {
 ///   5. `[]` operator_snapshot
 ///   6. `[]` operator
 ///   7. `[signer]` operator_admin
-///   8. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct CastVoteBuilder {
     epoch_state: Option<solana_program::pubkey::Pubkey>,
@@ -138,7 +131,6 @@ pub struct CastVoteBuilder {
     operator_snapshot: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
     operator_admin: Option<solana_program::pubkey::Pubkey>,
-    restaking_program: Option<solana_program::pubkey::Pubkey>,
     meta_merkle_root: Option<[u8; 32]>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -192,14 +184,6 @@ impl CastVoteBuilder {
         self
     }
     #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_program = Some(restaking_program);
-        self
-    }
-    #[inline(always)]
     pub fn meta_merkle_root(&mut self, meta_merkle_root: [u8; 32]) -> &mut Self {
         self.meta_merkle_root = Some(meta_merkle_root);
         self
@@ -240,9 +224,6 @@ impl CastVoteBuilder {
                 .expect("operator_snapshot is not set"),
             operator: self.operator.expect("operator is not set"),
             operator_admin: self.operator_admin.expect("operator_admin is not set"),
-            restaking_program: self
-                .restaking_program
-                .expect("restaking_program is not set"),
         };
         let args = CastVoteInstructionArgs {
             meta_merkle_root: self
@@ -273,8 +254,6 @@ pub struct CastVoteCpiAccounts<'a, 'b> {
     pub operator: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub operator_admin: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `cast_vote` CPI instruction.
@@ -297,8 +276,6 @@ pub struct CastVoteCpi<'a, 'b> {
     pub operator: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub operator_admin: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: CastVoteInstructionArgs,
 }
@@ -319,7 +296,6 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
             operator_snapshot: accounts.operator_snapshot,
             operator: accounts.operator,
             operator_admin: accounts.operator_admin,
-            restaking_program: accounts.restaking_program,
             __args: args,
         }
     }
@@ -356,7 +332,7 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.epoch_state.key,
             false,
@@ -389,10 +365,6 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
             *self.operator_admin.key,
             true,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program.key,
-            false,
-        ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_program::instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -409,7 +381,7 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(9 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.epoch_state.clone());
         account_infos.push(self.config.clone());
@@ -419,7 +391,6 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
         account_infos.push(self.operator_snapshot.clone());
         account_infos.push(self.operator.clone());
         account_infos.push(self.operator_admin.clone());
-        account_infos.push(self.restaking_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -444,7 +415,6 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
 ///   5. `[]` operator_snapshot
 ///   6. `[]` operator
 ///   7. `[signer]` operator_admin
-///   8. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct CastVoteCpiBuilder<'a, 'b> {
     instruction: Box<CastVoteCpiBuilderInstruction<'a, 'b>>,
@@ -462,7 +432,6 @@ impl<'a, 'b> CastVoteCpiBuilder<'a, 'b> {
             operator_snapshot: None,
             operator: None,
             operator_admin: None,
-            restaking_program: None,
             meta_merkle_root: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
@@ -528,14 +497,6 @@ impl<'a, 'b> CastVoteCpiBuilder<'a, 'b> {
         operator_admin: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.operator_admin = Some(operator_admin);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -627,11 +588,6 @@ impl<'a, 'b> CastVoteCpiBuilder<'a, 'b> {
                 .instruction
                 .operator_admin
                 .expect("operator_admin is not set"),
-
-            restaking_program: self
-                .instruction
-                .restaking_program
-                .expect("restaking_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -652,7 +608,6 @@ struct CastVoteCpiBuilderInstruction<'a, 'b> {
     operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     meta_merkle_root: Option<[u8; 32]>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
