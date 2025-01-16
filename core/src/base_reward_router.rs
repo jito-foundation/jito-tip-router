@@ -324,6 +324,14 @@ impl BaseRewardRouter {
                 }
             }
 
+            // DAO gets any remainder
+            {
+                let leftover_rewards = self.ncn_fee_group_rewards(group)?;
+
+                self.route_from_ncn_fee_group_rewards(group, leftover_rewards)?;
+                self.route_to_base_fee_group_rewards(BaseFeeGroup::default(), leftover_rewards)?;
+            }
+
             starting_vote_index = 0;
         }
 
