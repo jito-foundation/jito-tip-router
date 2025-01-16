@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::types::{PodU16, PodU64};
 use shank::ShankType;
@@ -1043,7 +1041,7 @@ mod tests {
         const BLOCK_ENGINE_FEE: u16 = 100;
         let dao_fee_wallet = Pubkey::new_unique();
 
-        let fee_config = FeeConfig::new(&dao_fee_wallet, BLOCK_ENGINE_FEE, 0, 0, 0).unwrap();
+        let fee_config = FeeConfig::new(&dao_fee_wallet, BLOCK_ENGINE_FEE, 100, 0, 0).unwrap();
 
         let precise_fee = fee_config.precise_block_engine_fee_bps().unwrap();
         let expected = PreciseNumber::new(BLOCK_ENGINE_FEE.into()).unwrap();
@@ -1054,7 +1052,7 @@ mod tests {
     #[test]
     fn test_set_block_engine_fee_bps() {
         let dao_fee_wallet = Pubkey::new_unique();
-        let mut fee_config = FeeConfig::new(&dao_fee_wallet, 100, 0, 0, 0).unwrap();
+        let mut fee_config = FeeConfig::new(&dao_fee_wallet, 100, 100, 0, 0).unwrap();
 
         // Test successful update
         fee_config.set_block_engine_fee_bps(200).unwrap();
@@ -1175,7 +1173,7 @@ mod tests {
 
         // Test successful case
         let block_engine_fee = 100;
-        let fee_config = FeeConfig::new(&dao_fee_wallet, block_engine_fee, 0, 0, 0).unwrap();
+        let fee_config = FeeConfig::new(&dao_fee_wallet, block_engine_fee, 100, 100, 0).unwrap();
 
         let adjusted = fee_config.adjusted_fee_bps(200).unwrap();
         let expected = ((200 as f64 * MAX_FEE_BPS as f64)

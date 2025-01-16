@@ -286,9 +286,9 @@ impl TipRouterClient {
             ncn_admin,
             &ncn_admin_pubkey,
             &ncn_admin_pubkey,
-            0,
-            0,
-            0,
+            100,
+            100,
+            100,
             3,
             10000,
         )
