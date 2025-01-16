@@ -56,7 +56,7 @@ pub fn process_initialize_ncn_config(
         return Err(ProgramError::InvalidSeeds);
     }
 
-    if block_engine_fee_bps as u64 >= MAX_FEE_BPS {
+    if block_engine_fee_bps as u64 > MAX_FEE_BPS {
         return Err(TipRouterError::FeeCapExceeded.into());
     }
     if dao_fee_bps as u64 > MAX_FEE_BPS {
