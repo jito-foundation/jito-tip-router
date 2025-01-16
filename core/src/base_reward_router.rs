@@ -264,7 +264,10 @@ impl BaseRewardRouter {
 
         let (starting_group_index, mut starting_vote_index, mut starting_rewards_to_process) =
             self.resume_routing_state();
+
         let mut iterations: u16 = 0;
+        // Always have at least 1 iteration
+        let max_iterations = max_iterations.max(1);
 
         for group_index in starting_group_index..NcnFeeGroup::FEE_GROUP_COUNT {
             let group = NcnFeeGroup::all_groups()[group_index];
@@ -1531,6 +1534,92 @@ mod tests {
         router
             .route_ncn_fee_group_rewards(&ballot_box, 256 * 8)
             .unwrap();
+
+        assert!(!router.still_routing());
+
+        for operator in operators.iter() {
+            let route = router.ncn_fee_group_reward_route(operator).unwrap();
+
+            let mut rewards = 0;
+            for group in NcnFeeGroup::all_groups().iter() {
+                rewards += route.rewards(*group).unwrap();
+            }
+
+            assert_eq!(rewards, 1000);
+        }
+    }
+
+    #[test]
+    fn test_route_with_0_iterations() {
+        const INCOMING_REWARDS: u64 = 256_000;
+
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
+        );
+
+        // Fees
+        let mut fees: Fees = Fees::new(0, 100, 1).unwrap();
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            fees.set_base_fee_bps(*group, 0).unwrap();
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            fees.set_ncn_fee_bps(*group, 100).unwrap();
+        }
+
+        // Route incoming rewards
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+
+        router.route_reward_pool(&fees).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            assert_eq!(router.base_fee_group_reward(*group).unwrap(), 0);
+        }
+
+        assert_eq!(
+            router
+                .ncn_fee_group_rewards(NcnFeeGroup::default())
+                .unwrap(),
+            INCOMING_REWARDS / 8
+        );
+
+        let (ballot_box, operators) = {
+            let mut ballot_box = get_test_ballot_box();
+
+            for _ in 0..32 {
+                for group in NcnFeeGroup::all_groups().iter() {
+                    cast_test_vote(&mut ballot_box, *group, 200, 1, 1);
+                }
+            }
+
+            let total_stake_weights = get_test_total_stake_weights(&ballot_box);
+
+            ballot_box
+                .tally_votes(total_stake_weights.stake_weight(), TEST_CURRENT_SLOT)
+                .unwrap();
+
+            (ballot_box, get_test_operators(&ballot_box))
+        };
+
+        assert_eq!(operators.len(), 256);
+
+        router.route_ncn_fee_group_rewards(&ballot_box, 0).unwrap();
+
+        assert!(router.still_routing());
+
+        for _ in 0..256 * 8 {
+            router.route_ncn_fee_group_rewards(&ballot_box, 0).unwrap();
+        }
 
         assert!(!router.still_routing());
 
