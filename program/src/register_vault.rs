@@ -12,18 +12,24 @@ use solana_program::{
 };
 
 pub fn process_register_vault(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-    let [restaking_config, vault_registry, ncn, vault, vault_ncn_ticket, ncn_vault_ticket, restaking_program_id, vault_program_id] =
+    let [restaking_config, vault_registry, ncn, vault, vault_ncn_ticket, ncn_vault_ticket] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     VaultRegistry::load(program_id, ncn.key, vault_registry, true)?;
-    Ncn::load(restaking_program_id.key, ncn, false)?;
-    Vault::load(vault_program_id.key, vault, false)?;
-    VaultNcnTicket::load(vault_program_id.key, vault_ncn_ticket, vault, ncn, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Vault::load(&jito_vault_program::id(), vault, false)?;
+    VaultNcnTicket::load(
+        &jito_vault_program::id(),
+        vault_ncn_ticket,
+        vault,
+        ncn,
+        false,
+    )?;
     NcnVaultTicket::load(
-        restaking_program_id.key,
+        &jito_restaking_program::id(),
         ncn_vault_ticket,
         ncn,
         vault,

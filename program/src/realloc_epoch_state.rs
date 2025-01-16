@@ -3,6 +3,7 @@ use jito_jsm_core::{
     loader::{load_signer, load_system_program},
     realloc,
 };
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{config::Config, epoch_state::EpochState, utils::get_new_size};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -22,6 +23,7 @@ pub fn process_realloc_epoch_state(
 
     load_system_program(system_program)?;
     load_signer(payer, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     Config::load(program_id, ncn.key, config, false)?;
 
     let (epoch_state_pda, epoch_state_bump, _) =

@@ -262,7 +262,7 @@ impl BaseRewardRouter {
         let winning_ballot = ballot_box.get_winning_ballot_tally()?;
         let winning_stake_weight = winning_ballot.stake_weights();
 
-        let (starting_group_index, starting_vote_index, mut starting_rewards_to_process) =
+        let (starting_group_index, mut starting_vote_index, mut starting_rewards_to_process) =
             self.resume_routing_state();
         let mut iterations: u16 = 0;
 
@@ -323,6 +323,8 @@ impl BaseRewardRouter {
                     )?;
                 }
             }
+
+            starting_vote_index = 0;
         }
 
         msg!("Finished routing NCN fee group rewards");
@@ -1470,7 +1472,15 @@ mod tests {
         );
 
         // Fees
-        let fees = Fees::new(0, 100, 1).unwrap();
+        let mut fees: Fees = Fees::new(0, 100, 1).unwrap();
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            fees.set_base_fee_bps(*group, 0).unwrap();
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            fees.set_ncn_fee_bps(*group, 100).unwrap();
+        }
 
         // Route incoming rewards
         router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
@@ -1491,14 +1501,16 @@ mod tests {
             router
                 .ncn_fee_group_rewards(NcnFeeGroup::default())
                 .unwrap(),
-            INCOMING_REWARDS
+            INCOMING_REWARDS / 8
         );
 
         let (ballot_box, operators) = {
             let mut ballot_box = get_test_ballot_box();
 
-            for _ in 0..256 {
-                cast_test_vote(&mut ballot_box, NcnFeeGroup::default(), 200, 1, 1);
+            for _ in 0..32 {
+                for group in NcnFeeGroup::all_groups().iter() {
+                    cast_test_vote(&mut ballot_box, *group, 200, 1, 1);
+                }
             }
 
             let total_stake_weights = get_test_total_stake_weights(&ballot_box);
@@ -1510,12 +1522,14 @@ mod tests {
             (ballot_box, get_test_operators(&ballot_box))
         };
 
+        assert_eq!(operators.len(), 256);
+
         router.route_ncn_fee_group_rewards(&ballot_box, 5).unwrap();
 
         assert!(router.still_routing());
 
         router
-            .route_ncn_fee_group_rewards(&ballot_box, 1000)
+            .route_ncn_fee_group_rewards(&ballot_box, 256 * 8)
             .unwrap();
 
         assert!(!router.still_routing());

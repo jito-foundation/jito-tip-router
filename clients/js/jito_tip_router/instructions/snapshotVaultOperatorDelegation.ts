@@ -53,8 +53,6 @@ export type SnapshotVaultOperatorDelegationInstruction<
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountEpochSnapshot extends string | IAccountMeta<string> = string,
   TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
-  TAccountVaultProgram extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -94,12 +92,6 @@ export type SnapshotVaultOperatorDelegationInstruction<
       TAccountOperatorSnapshot extends string
         ? WritableAccount<TAccountOperatorSnapshot>
         : TAccountOperatorSnapshot,
-      TAccountVaultProgram extends string
-        ? ReadonlyAccount<TAccountVaultProgram>
-        : TAccountVaultProgram,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -156,8 +148,6 @@ export type SnapshotVaultOperatorDelegationInput<
   TAccountWeightTable extends string = string,
   TAccountEpochSnapshot extends string = string,
   TAccountOperatorSnapshot extends string = string,
-  TAccountVaultProgram extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
@@ -171,8 +161,6 @@ export type SnapshotVaultOperatorDelegationInput<
   weightTable: Address<TAccountWeightTable>;
   epochSnapshot: Address<TAccountEpochSnapshot>;
   operatorSnapshot: Address<TAccountOperatorSnapshot>;
-  vaultProgram: Address<TAccountVaultProgram>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   epoch: SnapshotVaultOperatorDelegationInstructionDataArgs['epoch'];
 };
 
@@ -189,8 +177,6 @@ export function getSnapshotVaultOperatorDelegationInstruction<
   TAccountWeightTable extends string,
   TAccountEpochSnapshot extends string,
   TAccountOperatorSnapshot extends string,
-  TAccountVaultProgram extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: SnapshotVaultOperatorDelegationInput<
@@ -205,9 +191,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
     TAccountVaultOperatorDelegation,
     TAccountWeightTable,
     TAccountEpochSnapshot,
-    TAccountOperatorSnapshot,
-    TAccountVaultProgram,
-    TAccountRestakingProgram
+    TAccountOperatorSnapshot
   >,
   config?: { programAddress?: TProgramAddress }
 ): SnapshotVaultOperatorDelegationInstruction<
@@ -223,9 +207,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
   TAccountVaultOperatorDelegation,
   TAccountWeightTable,
   TAccountEpochSnapshot,
-  TAccountOperatorSnapshot,
-  TAccountVaultProgram,
-  TAccountRestakingProgram
+  TAccountOperatorSnapshot
 > {
   // Program address.
   const programAddress =
@@ -254,11 +236,6 @@ export function getSnapshotVaultOperatorDelegationInstruction<
       value: input.operatorSnapshot ?? null,
       isWritable: true,
     },
-    vaultProgram: { value: input.vaultProgram ?? null, isWritable: false },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -283,8 +260,6 @@ export function getSnapshotVaultOperatorDelegationInstruction<
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.epochSnapshot),
       getAccountMeta(accounts.operatorSnapshot),
-      getAccountMeta(accounts.vaultProgram),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getSnapshotVaultOperatorDelegationInstructionDataEncoder().encode(
@@ -303,9 +278,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
     TAccountVaultOperatorDelegation,
     TAccountWeightTable,
     TAccountEpochSnapshot,
-    TAccountOperatorSnapshot,
-    TAccountVaultProgram,
-    TAccountRestakingProgram
+    TAccountOperatorSnapshot
   >;
 
   return instruction;
@@ -329,8 +302,6 @@ export type ParsedSnapshotVaultOperatorDelegationInstruction<
     weightTable: TAccountMetas[9];
     epochSnapshot: TAccountMetas[10];
     operatorSnapshot: TAccountMetas[11];
-    vaultProgram: TAccountMetas[12];
-    restakingProgram: TAccountMetas[13];
   };
   data: SnapshotVaultOperatorDelegationInstructionData;
 };
@@ -343,7 +314,7 @@ export function parseSnapshotVaultOperatorDelegationInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedSnapshotVaultOperatorDelegationInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 14) {
+  if (instruction.accounts.length < 12) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -368,8 +339,6 @@ export function parseSnapshotVaultOperatorDelegationInstruction<
       weightTable: getNextAccount(),
       epochSnapshot: getNextAccount(),
       operatorSnapshot: getNextAccount(),
-      vaultProgram: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getSnapshotVaultOperatorDelegationInstructionDataDecoder().decode(
       instruction.data

@@ -48,7 +48,6 @@ export type AdminSetWeightInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountWeightTableAdmin extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -65,9 +64,6 @@ export type AdminSetWeightInstruction<
         ? ReadonlySignerAccount<TAccountWeightTableAdmin> &
             IAccountSignerMeta<TAccountWeightTableAdmin>
         : TAccountWeightTableAdmin,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -121,13 +117,11 @@ export type AdminSetWeightInput<
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
   TAccountWeightTableAdmin extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   weightTableAdmin: TransactionSigner<TAccountWeightTableAdmin>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   stMint: AdminSetWeightInstructionDataArgs['stMint'];
   weight: AdminSetWeightInstructionDataArgs['weight'];
   epoch: AdminSetWeightInstructionDataArgs['epoch'];
@@ -138,15 +132,13 @@ export function getAdminSetWeightInstruction<
   TAccountNcn extends string,
   TAccountWeightTable extends string,
   TAccountWeightTableAdmin extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: AdminSetWeightInput<
     TAccountEpochState,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountWeightTableAdmin,
-    TAccountRestakingProgram
+    TAccountWeightTableAdmin
   >,
   config?: { programAddress?: TProgramAddress }
 ): AdminSetWeightInstruction<
@@ -154,8 +146,7 @@ export function getAdminSetWeightInstruction<
   TAccountEpochState,
   TAccountNcn,
   TAccountWeightTable,
-  TAccountWeightTableAdmin,
-  TAccountRestakingProgram
+  TAccountWeightTableAdmin
 > {
   // Program address.
   const programAddress =
@@ -168,10 +159,6 @@ export function getAdminSetWeightInstruction<
     weightTable: { value: input.weightTable ?? null, isWritable: true },
     weightTableAdmin: {
       value: input.weightTableAdmin ?? null,
-      isWritable: false,
-    },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
       isWritable: false,
     },
   };
@@ -190,7 +177,6 @@ export function getAdminSetWeightInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.weightTableAdmin),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getAdminSetWeightInstructionDataEncoder().encode(
@@ -201,8 +187,7 @@ export function getAdminSetWeightInstruction<
     TAccountEpochState,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountWeightTableAdmin,
-    TAccountRestakingProgram
+    TAccountWeightTableAdmin
   >;
 
   return instruction;
@@ -218,7 +203,6 @@ export type ParsedAdminSetWeightInstruction<
     ncn: TAccountMetas[1];
     weightTable: TAccountMetas[2];
     weightTableAdmin: TAccountMetas[3];
-    restakingProgram: TAccountMetas[4];
   };
   data: AdminSetWeightInstructionData;
 };
@@ -231,7 +215,7 @@ export function parseAdminSetWeightInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminSetWeightInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+  if (instruction.accounts.length < 4) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -248,7 +232,6 @@ export function parseAdminSetWeightInstruction<
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
       weightTableAdmin: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getAdminSetWeightInstructionDataDecoder().decode(instruction.data),
   };

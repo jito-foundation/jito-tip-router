@@ -16,15 +16,14 @@ pub fn process_admin_set_tie_breaker(
     meta_merkle_root: &[u8; 32],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, ballot_box, ncn, tie_breaker_admin, restaking_program] = accounts
-    else {
+    let [epoch_state, ncn_config, ballot_box, ncn, tie_breaker_admin] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     load_signer(tie_breaker_admin, false)?;
 
     let ncn_config_data = ncn_config.data.borrow();

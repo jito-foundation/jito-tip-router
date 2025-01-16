@@ -30,13 +30,10 @@ pub fn process_distribute_ncn_vault_rewards(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    let restaking_program = jito_restaking_program::id();
-    let vault_program = jito_vault_program::id();
-
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    Ncn::load(&restaking_program, ncn, false)?;
-    Operator::load(&restaking_program, operator, false)?;
-    Vault::load(&vault_program, vault, true)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Operator::load(&jito_restaking_program::id(), operator, false)?;
+    Vault::load(&jito_vault_program::id(), vault, true)?;
     OperatorSnapshot::load(
         program_id,
         operator.key,

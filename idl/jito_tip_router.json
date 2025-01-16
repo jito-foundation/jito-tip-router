@@ -31,11 +31,6 @@
           "isSigner": false
         },
         {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -170,16 +165,6 @@
           "name": "ncnVaultTicket",
           "isMut": false,
           "isSigner": false
-        },
-        {
-          "name": "restakingProgramId",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "vaultProgramId",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [],
@@ -295,11 +280,6 @@
           "name": "payer",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -441,11 +421,6 @@
           "isSigner": true
         },
         {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -504,11 +479,6 @@
           "name": "payer",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -574,11 +544,6 @@
           "name": "payer",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -658,16 +623,6 @@
         {
           "name": "operatorSnapshot",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vaultProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
           "isSigner": false
         }
       ],
@@ -814,11 +769,6 @@
           "name": "operatorAdmin",
           "isMut": false,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -881,11 +831,6 @@
         },
         {
           "name": "tipDistributionProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -956,11 +901,6 @@
           "name": "payer",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -1063,11 +1003,6 @@
           "isSigner": true
         },
         {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -1125,11 +1060,6 @@
           "name": "baseRewardReceiver",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1178,11 +1108,6 @@
         {
           "name": "ncnRewardReceiver",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
           "isSigner": false
         }
       ],
@@ -1241,11 +1166,6 @@
         {
           "name": "baseFeeWalletAta",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -1353,11 +1273,6 @@
           "isSigner": false
         },
         {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -1419,11 +1334,6 @@
         {
           "name": "ncnRewardReceiver",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -1678,11 +1588,6 @@
           "name": "ncnAdmin",
           "isMut": false,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1721,11 +1626,6 @@
           "name": "ncnAdmin",
           "isMut": false,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1793,11 +1693,6 @@
           "name": "newAdmin",
           "isMut": false,
           "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1840,11 +1735,6 @@
           "name": "tieBreakerAdmin",
           "isMut": false,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1889,11 +1779,6 @@
           "name": "weightTableAdmin",
           "isMut": false,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1942,11 +1827,6 @@
           "name": "admin",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1998,11 +1878,6 @@
           "name": "admin",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
