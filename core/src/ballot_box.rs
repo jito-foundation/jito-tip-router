@@ -395,6 +395,10 @@ impl BallotBox {
         &self.operator_votes
     }
 
+    pub fn ballot_tallies(&self) -> &[BallotTally; 256] {
+        &self.ballot_tallies
+    }
+
     pub fn set_winning_ballot(&mut self, ballot: &Ballot) {
         self.winning_ballot = *ballot;
     }

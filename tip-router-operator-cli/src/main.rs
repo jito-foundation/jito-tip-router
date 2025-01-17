@@ -9,10 +9,13 @@ use ::{
         signer::{keypair::read_keypair_file, Signer},
         transaction::Transaction,
     },
+    std::time::Duration,
     tip_router_operator_cli::{
         cli::{Cli, Commands},
         process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
+        submit::submit_recent_epochs_to_ncn,
     },
+    tokio::time::sleep,
 };
 
 #[tokio::main]
@@ -50,14 +53,41 @@ async fn main() -> Result<()> {
         cli.snapshot_output_dir.display()
     );
 
-    match &cli.command {
+    match cli.command {
         Commands::Run {
             ncn_address,
             tip_distribution_program_id,
             tip_payment_program_id,
+            tip_router_program_id,
             enable_snapshots,
+            num_monitored_epochs,
         } => {
             info!("Running Tip Router...");
+
+            // TODO turn into arc
+            let keypair_clone = keypair.insecure_clone();
+            let rpc_client_clone = rpc_client.clone();
+            let cli_clone = cli.clone();
+
+            // Check for new meta merkle trees and submit to NCN periodically
+            tokio::spawn(async move {
+                loop {
+                    if let Err(e) = submit_recent_epochs_to_ncn(
+                        &rpc_client_clone,
+                        &keypair_clone,
+                        &ncn_address,
+                        &tip_router_program_id,
+                        &tip_distribution_program_id,
+                        num_monitored_epochs,
+                        &cli_clone,
+                    )
+                    .await
+                    {
+                        error!("Error submitting to NCN: {}", e);
+                    }
+                    sleep(Duration::from_secs(60)).await;
+                }
+            });
 
             loop {
                 // Get the last slot of the previous epoch
@@ -71,10 +101,11 @@ async fn main() -> Result<()> {
                     previous_epoch_slot,
                     previous_epoch,
                     &keypair,
-                    tip_distribution_program_id,
-                    tip_payment_program_id,
-                    ncn_address,
-                    *enable_snapshots,
+                    &tip_distribution_program_id,
+                    &tip_payment_program_id,
+                    &tip_router_program_id,
+                    &ncn_address,
+                    enable_snapshots,
                     &cli,
                 )
                 .await
@@ -94,6 +125,7 @@ async fn main() -> Result<()> {
             ncn_address,
             tip_distribution_program_id,
             tip_payment_program_id,
+            tip_router_program_id,
             enable_snapshots,
             slot,
         } => {
@@ -102,13 +134,14 @@ async fn main() -> Result<()> {
             // Process the epoch
             match process_epoch(
                 &rpc_client,
-                *slot,
+                slot,
                 epoch,
                 &keypair,
-                tip_distribution_program_id,
-                tip_payment_program_id,
-                ncn_address,
-                *enable_snapshots,
+                &tip_distribution_program_id,
+                &tip_payment_program_id,
+                &tip_router_program_id,
+                &ncn_address,
+                enable_snapshots,
                 &cli,
             )
             .await

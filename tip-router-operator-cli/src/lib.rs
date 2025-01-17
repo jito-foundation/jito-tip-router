@@ -5,6 +5,7 @@ pub use crate::cli::{Cli, Commands};
 pub mod cli;
 pub use crate::process_epoch::process_epoch;
 pub mod process_epoch;
+pub mod submit;
 
 use std::path::{Path, PathBuf};
 

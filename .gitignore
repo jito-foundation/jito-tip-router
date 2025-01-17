@@ -1,6 +1,8 @@
 /target
 
 .developer
+.env
+.cursorrules
 node_modules
 test-ledger
 tip-router-operator-cli/scripts/test-validator-keys

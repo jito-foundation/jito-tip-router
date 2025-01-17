@@ -52,16 +52,17 @@ pub async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<(u64
 #[allow(clippy::too_many_arguments)]
 pub async fn process_epoch(
     client: &EllipsisClient,
-    previous_epoch_slot: u64,
-    previous_epoch: u64,
+    target_slot: u64,
+    target_epoch: u64,
     payer: &Keypair,
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     ncn_address: &Pubkey,
+    tip_router_program_id: &Pubkey,
     snapshots_enabled: bool,
     cli_args: &Cli,
 ) -> Result<()> {
-    info!("Processing epoch {:?}", previous_epoch);
+    info!("Processing epoch {:?}", target_epoch);
 
     let start = Instant::now();
 
@@ -69,13 +70,13 @@ pub async fn process_epoch(
     let account_paths = cli_args.account_paths.clone();
     let full_snapshots_path = cli_args.full_snapshots_path.clone();
     let operator = Pubkey::from_str(&cli_args.operator_address).unwrap();
+    let meta_merkle_tree_dir = cli_args.meta_merkle_tree_dir.clone();
 
     // Get the protocol fees
-    // let ncn_config = get_ncn_config(client, ncn_address).await.unwrap();
-    // let adjusted_total_fees = ncn_config
-    //     .fee_config
-    //     .adjusted_total_fees_bps(previous_epoch)?;
-    let adjusted_total_fees = 300;
+    let ncn_config = get_ncn_config(client, tip_router_program_id, ncn_address).await?;
+    let adjusted_total_fees = ncn_config
+        .fee_config
+        .adjusted_total_fees_bps(target_epoch)?;
 
     let account_paths = account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
     let full_snapshots_path = full_snapshots_path.map_or(ledger_path, |path| path);
@@ -85,48 +86,81 @@ pub async fn process_epoch(
         cli_args.ledger_path.as_path(),
         account_paths,
         full_snapshots_path,
-        &previous_epoch_slot,
+        &target_slot,
         tip_distribution_program_id,
         "", // TODO out_path is not used, unsure what should be put here. Maybe `snapshot_output_dir` from cli args?
         tip_payment_program_id,
         ncn_address,
-        previous_epoch,
+        target_epoch,
         adjusted_total_fees,
         snapshots_enabled,
     ) {
         Ok(tree) => {
             datapoint_info!(
                 "tip_router_cli-merkle_root_generated",
-                ("epoch", previous_epoch, i64)
+                ("epoch", target_epoch, i64)
             );
             tree
         }
         Err(e) => {
             datapoint_error!(
                 "tip_router_cli-merkle_root_error",
-                ("epoch", previous_epoch, i64),
+                ("epoch", target_epoch, i64),
                 ("error", format!("{:?}", e), String)
             );
             return Err(anyhow::anyhow!("Failed to generate merkle root: {:?}", e));
         }
     };
 
+    // Write meta merkle tree to file
+    let meta_merkle_tree_path =
+        meta_merkle_tree_dir.join(format!("meta_merkle_tree_{}.json", target_epoch));
+    let meta_merkle_tree_json = match serde_json::to_string(&meta_merkle_tree) {
+        Ok(json) => json,
+        Err(e) => {
+            datapoint_error!(
+                "tip_router_cli-merkle_root_error",
+                ("epoch", target_epoch, i64),
+                ("error", format!("{:?}", e), String)
+            );
+            return Err(anyhow::anyhow!(
+                "Failed to serialize meta merkle tree: {}",
+                e
+            ));
+        }
+    };
+
+    if let Err(e) = std::fs::write(&meta_merkle_tree_path, meta_merkle_tree_json) {
+        datapoint_error!(
+            "tip_router_cli-merkle_root_error",
+            ("epoch", target_epoch, i64),
+            ("error", format!("{:?}", e), String)
+        );
+        return Err(anyhow::anyhow!(
+            "Failed to write meta merkle tree to file: {}",
+            e
+        ));
+    }
+
+    /////// TODO DELETE ////////
+
     // Cast vote using the generated merkle root
     let tx_sig = match cast_vote(
         client,
         payer,
+        tip_distribution_program_id, // not important
         *ncn_address,
         operator,
         payer,
         meta_merkle_tree.merkle_root,
-        previous_epoch,
+        target_epoch,
     )
     .await
     {
         Ok(sig) => {
             datapoint_info!(
                 "tip_router_cli-vote_cast_success",
-                ("epoch", previous_epoch, i64),
+                ("epoch", target_epoch, i64),
                 ("tx_sig", format!("{:?}", sig), String)
             );
             sig
@@ -134,7 +168,7 @@ pub async fn process_epoch(
         Err(e) => {
             datapoint_error!(
                 "tip_router_cli-vote_cast_error",
-                ("epoch", previous_epoch, i64),
+                ("epoch", target_epoch, i64),
                 ("error", format!("{:?}", e), String)
             );
             return Err(anyhow::anyhow!("Failed to cast vote: {}", e)); // Convert the error
@@ -147,7 +181,7 @@ pub async fn process_epoch(
     // Emit a datapoint for starting the epoch processing
     datapoint_info!(
         "tip_router_cli-process_epoch",
-        ("epoch", previous_epoch, i64),
+        ("epoch", target_epoch, i64),
         ("elapsed_us", elapsed_us, i64),
     );
 
