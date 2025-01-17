@@ -6,6 +6,7 @@ use jito_tip_router_core::{
     ballot_box::BallotBox,
     config::Config,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_state::EpochState,
 };
 use log::info;
 use solana_sdk::{
@@ -32,6 +33,9 @@ pub async fn cast_vote(
     meta_merkle_root: [u8; 32],
     epoch: u64,
 ) -> EllipsisClientResult<Signature> {
+    let epoch_state =
+        EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
     let ncn_config = Config::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
     let ballot_box = BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
@@ -48,6 +52,7 @@ pub async fn cast_vote(
     .0;
 
     let _ix = CastVoteBuilder::new()
+        .epoch_state(epoch_state)
         .config(ncn_config)
         .ballot_box(ballot_box)
         .ncn(ncn)
