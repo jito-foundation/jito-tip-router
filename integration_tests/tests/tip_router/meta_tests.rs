@@ -21,6 +21,7 @@ mod tests {
             .await?;
         fixture.add_delegation_in_test_ncn(&test_ncn, 100).await?;
         fixture.add_vault_registry_to_test_ncn(&test_ncn).await?;
+        fixture.add_epoch_state_for_test_ncn(&test_ncn).await?;
         fixture.add_admin_weights_for_test_ncn(&test_ncn).await?;
         fixture.add_epoch_snapshot_to_test_ncn(&test_ncn).await?;
         fixture

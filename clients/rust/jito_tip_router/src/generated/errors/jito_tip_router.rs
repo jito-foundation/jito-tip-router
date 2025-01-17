@@ -3,6 +3,7 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
 use num_derive::FromPrimitive;
 use thiserror::Error;
@@ -102,132 +103,156 @@ pub enum JitoTipRouterError {
     /// 8725 - Fee cap exceeded
     #[error("Fee cap exceeded")]
     FeeCapExceeded = 0x2215,
-    /// 8726 - DAO wallet cannot be default
+    /// 8726 - Total fees cannot be 0
+    #[error("Total fees cannot be 0")]
+    TotalFeesCannotBeZero = 0x2216,
+    /// 8727 - DAO wallet cannot be default
     #[error("DAO wallet cannot be default")]
-    DefaultDaoWallet = 0x2216,
-    /// 8727 - Incorrect NCN Admin
+    DefaultDaoWallet = 0x2217,
+    /// 8728 - Incorrect NCN Admin
     #[error("Incorrect NCN Admin")]
-    IncorrectNcnAdmin = 0x2217,
-    /// 8728 - Incorrect NCN
+    IncorrectNcnAdmin = 0x2218,
+    /// 8729 - Incorrect NCN
     #[error("Incorrect NCN")]
-    IncorrectNcn = 0x2218,
-    /// 8729 - Incorrect fee admin
+    IncorrectNcn = 0x2219,
+    /// 8730 - Incorrect fee admin
     #[error("Incorrect fee admin")]
-    IncorrectFeeAdmin = 0x2219,
-    /// 8730 - Weight table not finalized
+    IncorrectFeeAdmin = 0x221A,
+    /// 8731 - Weight table not finalized
     #[error("Weight table not finalized")]
-    WeightTableNotFinalized = 0x221A,
-    /// 8731 - Weight not found
+    WeightTableNotFinalized = 0x221B,
+    /// 8732 - Weight not found
     #[error("Weight not found")]
-    WeightNotFound = 0x221B,
-    /// 8732 - No operators in ncn
+    WeightNotFound = 0x221C,
+    /// 8733 - No operators in ncn
     #[error("No operators in ncn")]
-    NoOperators = 0x221C,
-    /// 8733 - Vault operator delegation is already finalized - should not happen
+    NoOperators = 0x221D,
+    /// 8734 - Vault operator delegation is already finalized - should not happen
     #[error("Vault operator delegation is already finalized - should not happen")]
-    VaultOperatorDelegationFinalized = 0x221D,
-    /// 8734 - Operator is already finalized - should not happen
+    VaultOperatorDelegationFinalized = 0x221E,
+    /// 8735 - Operator is already finalized - should not happen
     #[error("Operator is already finalized - should not happen")]
-    OperatorFinalized = 0x221E,
-    /// 8735 - Too many vault operator delegations
+    OperatorFinalized = 0x221F,
+    /// 8736 - Too many vault operator delegations
     #[error("Too many vault operator delegations")]
-    TooManyVaultOperatorDelegations = 0x221F,
-    /// 8736 - Duplicate vault operator delegation
+    TooManyVaultOperatorDelegations = 0x2220,
+    /// 8737 - Duplicate vault operator delegation
     #[error("Duplicate vault operator delegation")]
-    DuplicateVaultOperatorDelegation = 0x2220,
-    /// 8737 - Duplicate Vote Cast
+    DuplicateVaultOperatorDelegation = 0x2221,
+    /// 8738 - Duplicate Vote Cast
     #[error("Duplicate Vote Cast")]
-    DuplicateVoteCast = 0x2221,
-    /// 8738 - Operator votes full
+    DuplicateVoteCast = 0x2222,
+    /// 8739 - Operator votes full
     #[error("Operator votes full")]
-    OperatorVotesFull = 0x2222,
-    /// 8739 - Merkle root tally full
+    OperatorVotesFull = 0x2223,
+    /// 8740 - Merkle root tally full
     #[error("Merkle root tally full")]
-    BallotTallyFull = 0x2223,
-    /// 8740 - Ballot tally not found
+    BallotTallyFull = 0x2224,
+    /// 8741 - Ballot tally not found
     #[error("Ballot tally not found")]
-    BallotTallyNotFoundFull = 0x2224,
-    /// 8741 - Consensus already reached, cannot change vote
+    BallotTallyNotFoundFull = 0x2225,
+    /// 8742 - Ballot tally not empty
+    #[error("Ballot tally not empty")]
+    BallotTallyNotEmpty = 0x2226,
+    /// 8743 - Consensus already reached, cannot change vote
     #[error("Consensus already reached, cannot change vote")]
-    ConsensusAlreadyReached = 0x2225,
-    /// 8742 - Consensus not reached
+    ConsensusAlreadyReached = 0x2227,
+    /// 8744 - Consensus not reached
     #[error("Consensus not reached")]
-    ConsensusNotReached = 0x2226,
-    /// 8743 - Epoch snapshot not finalized
+    ConsensusNotReached = 0x2228,
+    /// 8745 - Epoch snapshot not finalized
     #[error("Epoch snapshot not finalized")]
-    EpochSnapshotNotFinalized = 0x2227,
-    /// 8744 - Voting not valid, too many slots after consensus reached
+    EpochSnapshotNotFinalized = 0x2229,
+    /// 8746 - Voting not valid, too many slots after consensus reached
     #[error("Voting not valid, too many slots after consensus reached")]
-    VotingNotValid = 0x2228,
-    /// 8745 - Tie breaker admin invalid
+    VotingNotValid = 0x222A,
+    /// 8747 - Tie breaker admin invalid
     #[error("Tie breaker admin invalid")]
-    TieBreakerAdminInvalid = 0x2229,
-    /// 8746 - Voting not finalized
+    TieBreakerAdminInvalid = 0x222B,
+    /// 8748 - Voting not finalized
     #[error("Voting not finalized")]
-    VotingNotFinalized = 0x222A,
-    /// 8747 - Tie breaking ballot must be one of the prior votes
+    VotingNotFinalized = 0x222C,
+    /// 8749 - Tie breaking ballot must be one of the prior votes
     #[error("Tie breaking ballot must be one of the prior votes")]
-    TieBreakerNotInPriorVotes = 0x222B,
-    /// 8748 - Invalid merkle proof
+    TieBreakerNotInPriorVotes = 0x222D,
+    /// 8750 - Invalid merkle proof
     #[error("Invalid merkle proof")]
-    InvalidMerkleProof = 0x222C,
-    /// 8749 - Operator admin needs to sign its vote
+    InvalidMerkleProof = 0x222E,
+    /// 8751 - Operator admin needs to sign its vote
     #[error("Operator admin needs to sign its vote")]
-    OperatorAdminInvalid = 0x222D,
-    /// 8750 - Not a valid NCN fee group
+    OperatorAdminInvalid = 0x222F,
+    /// 8752 - Not a valid NCN fee group
     #[error("Not a valid NCN fee group")]
-    InvalidNcnFeeGroup = 0x222E,
-    /// 8751 - Not a valid base fee group
+    InvalidNcnFeeGroup = 0x2230,
+    /// 8753 - Not a valid base fee group
     #[error("Not a valid base fee group")]
-    InvalidBaseFeeGroup = 0x222F,
-    /// 8752 - Operator reward list full
+    InvalidBaseFeeGroup = 0x2231,
+    /// 8754 - Operator reward list full
     #[error("Operator reward list full")]
-    OperatorRewardListFull = 0x2230,
-    /// 8753 - Operator Reward not found
+    OperatorRewardListFull = 0x2232,
+    /// 8755 - Operator Reward not found
     #[error("Operator Reward not found")]
-    OperatorRewardNotFound = 0x2231,
-    /// 8754 - Vault Reward not found
+    OperatorRewardNotFound = 0x2233,
+    /// 8756 - Vault Reward not found
     #[error("Vault Reward not found")]
-    VaultRewardNotFound = 0x2232,
-    /// 8755 - Destination mismatch
+    VaultRewardNotFound = 0x2234,
+    /// 8757 - Destination mismatch
     #[error("Destination mismatch")]
-    DestinationMismatch = 0x2233,
-    /// 8756 - Ncn reward route not found
+    DestinationMismatch = 0x2235,
+    /// 8758 - Ncn reward route not found
     #[error("Ncn reward route not found")]
-    NcnRewardRouteNotFound = 0x2234,
-    /// 8757 - Fee not active
+    NcnRewardRouteNotFound = 0x2236,
+    /// 8759 - Fee not active
     #[error("Fee not active")]
-    FeeNotActive = 0x2235,
-    /// 8758 - No rewards to distribute
+    FeeNotActive = 0x2237,
+    /// 8760 - No rewards to distribute
     #[error("No rewards to distribute")]
-    NoRewards = 0x2236,
-    /// 8759 - No Feed Weight not set
+    NoRewards = 0x2238,
+    /// 8761 - No Feed Weight not set
     #[error("No Feed Weight not set")]
-    NoFeedWeightNotSet = 0x2237,
-    /// 8760 - Switchboard not registered
+    NoFeedWeightNotSet = 0x2239,
+    /// 8762 - Switchboard not registered
     #[error("Switchboard not registered")]
-    SwitchboardNotRegistered = 0x2238,
-    /// 8761 - Bad switchboard feed
+    SwitchboardNotRegistered = 0x223A,
+    /// 8763 - Bad switchboard feed
     #[error("Bad switchboard feed")]
-    BadSwitchboardFeed = 0x2239,
-    /// 8762 - Bad switchboard value
+    BadSwitchboardFeed = 0x223B,
+    /// 8764 - Bad switchboard value
     #[error("Bad switchboard value")]
-    BadSwitchboardValue = 0x223A,
-    /// 8763 - Stale switchboard feed
+    BadSwitchboardValue = 0x223C,
+    /// 8765 - Stale switchboard feed
     #[error("Stale switchboard feed")]
-    StaleSwitchboardFeed = 0x223B,
-    /// 8764 - Weight entry needs either a feed or a no feed weight
+    StaleSwitchboardFeed = 0x223D,
+    /// 8766 - Weight entry needs either a feed or a no feed weight
     #[error("Weight entry needs either a feed or a no feed weight")]
-    NoFeedWeightOrSwitchboardFeed = 0x223C,
-    /// 8765 - Router still routing
+    NoFeedWeightOrSwitchboardFeed = 0x223E,
+    /// 8767 - Router still routing
     #[error("Router still routing")]
-    RouterStillRouting = 0x223D,
-    /// 8766 - Invalid epochs before stall
+    RouterStillRouting = 0x223F,
+    /// 8768 - Invalid epochs before stall
     #[error("Invalid epochs before stall")]
-    InvalidEpochsBeforeStall = 0x223E,
-    /// 8767 - Invalid slots after consensus
+    InvalidEpochsBeforeStall = 0x2240,
+    /// 8769 - Invalid slots after consensus
     #[error("Invalid slots after consensus")]
-    InvalidSlotsAfterConsensus = 0x223F,
+    InvalidSlotsAfterConsensus = 0x2241,
+    /// 8770 - Vault needs to be updated
+    #[error("Vault needs to be updated")]
+    VaultNeedsUpdate = 0x2242,
+    /// 8771 - Invalid Account Status
+    #[error("Invalid Account Status")]
+    InvalidAccountStatus = 0x2243,
+    /// 8772 - Account already initialized
+    #[error("Account already initialized")]
+    AccountAlreadyInitialized = 0x2244,
+    /// 8773 - Cannot vote with uninitialized account
+    #[error("Cannot vote with uninitialized account")]
+    BadBallot = 0x2245,
+    /// 8774 - Cannot route until voting is over
+    #[error("Cannot route until voting is over")]
+    VotingIsNotOver = 0x2246,
+    /// 8775 - Operator is not in snapshot
+    #[error("Operator is not in snapshot")]
+    OperatorIsNotInSnapshot = 0x2247,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

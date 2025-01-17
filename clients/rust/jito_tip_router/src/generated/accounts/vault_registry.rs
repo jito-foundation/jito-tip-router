@@ -3,11 +3,13 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use crate::generated::types::StMintEntry;
+use crate::generated::types::VaultEntry;
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 use solana_program::pubkey::Pubkey;
-
-use crate::generated::types::{StMintEntry, VaultEntry};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

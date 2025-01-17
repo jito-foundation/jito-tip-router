@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_BASE_REWARD_ROUTER_DISCRIMINATOR = 15;
+export const INITIALIZE_BASE_REWARD_ROUTER_DISCRIMINATOR = 17;
 
 export function getInitializeBaseRewardRouterDiscriminatorBytes() {
   return getU8Encoder().encode(INITIALIZE_BASE_REWARD_ROUTER_DISCRIMINATOR);
@@ -40,11 +40,11 @@ export function getInitializeBaseRewardRouterDiscriminatorBytes() {
 
 export type InitializeBaseRewardRouterInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
   TAccountBaseRewardReceiver extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -53,6 +53,9 @@ export type InitializeBaseRewardRouterInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? ReadonlyAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountBaseRewardRouter extends string
         ? WritableAccount<TAccountBaseRewardRouter>
@@ -64,9 +67,6 @@ export type InitializeBaseRewardRouterInstruction<
         ? WritableSignerAccount<TAccountPayer> &
             IAccountSignerMeta<TAccountPayer>
         : TAccountPayer,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -114,47 +114,47 @@ export function getInitializeBaseRewardRouterInstructionDataCodec(): Codec<
 }
 
 export type InitializeBaseRewardRouterInput<
+  TAccountEpochState extends string = string,
   TAccountNcn extends string = string,
   TAccountBaseRewardRouter extends string = string,
   TAccountBaseRewardReceiver extends string = string,
   TAccountPayer extends string = string,
-  TAccountRestakingProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   ncn: Address<TAccountNcn>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   baseRewardReceiver: Address<TAccountBaseRewardReceiver>;
   payer: TransactionSigner<TAccountPayer>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: InitializeBaseRewardRouterInstructionDataArgs['epoch'];
 };
 
 export function getInitializeBaseRewardRouterInstruction<
+  TAccountEpochState extends string,
   TAccountNcn extends string,
   TAccountBaseRewardRouter extends string,
   TAccountBaseRewardReceiver extends string,
   TAccountPayer extends string,
-  TAccountRestakingProgram extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeBaseRewardRouterInput<
+    TAccountEpochState,
     TAccountNcn,
     TAccountBaseRewardRouter,
     TAccountBaseRewardReceiver,
     TAccountPayer,
-    TAccountRestakingProgram,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): InitializeBaseRewardRouterInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountNcn,
   TAccountBaseRewardRouter,
   TAccountBaseRewardReceiver,
   TAccountPayer,
-  TAccountRestakingProgram,
   TAccountSystemProgram
 > {
   // Program address.
@@ -163,6 +163,7 @@ export function getInitializeBaseRewardRouterInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     baseRewardRouter: {
       value: input.baseRewardRouter ?? null,
@@ -173,10 +174,6 @@ export function getInitializeBaseRewardRouterInstruction<
       isWritable: true,
     },
     payer: { value: input.payer ?? null, isWritable: true },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -196,11 +193,11 @@ export function getInitializeBaseRewardRouterInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.baseRewardRouter),
       getAccountMeta(accounts.baseRewardReceiver),
       getAccountMeta(accounts.payer),
-      getAccountMeta(accounts.restakingProgram),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -209,11 +206,11 @@ export function getInitializeBaseRewardRouterInstruction<
     ),
   } as InitializeBaseRewardRouterInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountNcn,
     TAccountBaseRewardRouter,
     TAccountBaseRewardReceiver,
     TAccountPayer,
-    TAccountRestakingProgram,
     TAccountSystemProgram
   >;
 
@@ -226,11 +223,11 @@ export type ParsedInitializeBaseRewardRouterInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    ncn: TAccountMetas[0];
-    baseRewardRouter: TAccountMetas[1];
-    baseRewardReceiver: TAccountMetas[2];
-    payer: TAccountMetas[3];
-    restakingProgram: TAccountMetas[4];
+    epochState: TAccountMetas[0];
+    ncn: TAccountMetas[1];
+    baseRewardRouter: TAccountMetas[2];
+    baseRewardReceiver: TAccountMetas[3];
+    payer: TAccountMetas[4];
     systemProgram: TAccountMetas[5];
   };
   data: InitializeBaseRewardRouterInstructionData;
@@ -257,11 +254,11 @@ export function parseInitializeBaseRewardRouterInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       ncn: getNextAccount(),
       baseRewardRouter: getNextAccount(),
       baseRewardReceiver: getNextAccount(),
       payer: getNextAccount(),
-      restakingProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeBaseRewardRouterInstructionDataDecoder().decode(

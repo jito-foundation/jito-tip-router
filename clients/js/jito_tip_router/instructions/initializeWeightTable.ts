@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR = 4;
+export const INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR = 6;
 
 export function getInitializeWeightTableDiscriminatorBytes() {
   return getU8Encoder().encode(INITIALIZE_WEIGHT_TABLE_DISCRIMINATOR);
@@ -40,11 +40,11 @@ export function getInitializeWeightTableDiscriminatorBytes() {
 
 export type InitializeWeightTableInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -53,6 +53,9 @@ export type InitializeWeightTableInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? ReadonlyAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountVaultRegistry extends string
         ? ReadonlyAccount<TAccountVaultRegistry>
         : TAccountVaultRegistry,
@@ -64,9 +67,6 @@ export type InitializeWeightTableInstruction<
         ? WritableSignerAccount<TAccountPayer> &
             IAccountSignerMeta<TAccountPayer>
         : TAccountPayer,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -114,47 +114,47 @@ export function getInitializeWeightTableInstructionDataCodec(): Codec<
 }
 
 export type InitializeWeightTableInput<
+  TAccountEpochState extends string = string,
   TAccountVaultRegistry extends string = string,
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
   TAccountPayer extends string = string,
-  TAccountRestakingProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   vaultRegistry: Address<TAccountVaultRegistry>;
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   payer: TransactionSigner<TAccountPayer>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: InitializeWeightTableInstructionDataArgs['epoch'];
 };
 
 export function getInitializeWeightTableInstruction<
+  TAccountEpochState extends string,
   TAccountVaultRegistry extends string,
   TAccountNcn extends string,
   TAccountWeightTable extends string,
   TAccountPayer extends string,
-  TAccountRestakingProgram extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeWeightTableInput<
+    TAccountEpochState,
     TAccountVaultRegistry,
     TAccountNcn,
     TAccountWeightTable,
     TAccountPayer,
-    TAccountRestakingProgram,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): InitializeWeightTableInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountVaultRegistry,
   TAccountNcn,
   TAccountWeightTable,
   TAccountPayer,
-  TAccountRestakingProgram,
   TAccountSystemProgram
 > {
   // Program address.
@@ -163,14 +163,11 @@ export function getInitializeWeightTableInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: false },
     vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     weightTable: { value: input.weightTable ?? null, isWritable: true },
     payer: { value: input.payer ?? null, isWritable: true },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -190,11 +187,11 @@ export function getInitializeWeightTableInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.payer),
-      getAccountMeta(accounts.restakingProgram),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -203,11 +200,11 @@ export function getInitializeWeightTableInstruction<
     ),
   } as InitializeWeightTableInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountVaultRegistry,
     TAccountNcn,
     TAccountWeightTable,
     TAccountPayer,
-    TAccountRestakingProgram,
     TAccountSystemProgram
   >;
 
@@ -220,11 +217,11 @@ export type ParsedInitializeWeightTableInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    vaultRegistry: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    weightTable: TAccountMetas[2];
-    payer: TAccountMetas[3];
-    restakingProgram: TAccountMetas[4];
+    epochState: TAccountMetas[0];
+    vaultRegistry: TAccountMetas[1];
+    ncn: TAccountMetas[2];
+    weightTable: TAccountMetas[3];
+    payer: TAccountMetas[4];
     systemProgram: TAccountMetas[5];
   };
   data: InitializeWeightTableInstructionData;
@@ -251,11 +248,11 @@ export function parseInitializeWeightTableInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       vaultRegistry: getNextAccount(),
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
       payer: getNextAccount(),
-      restakingProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeWeightTableInstructionDataDecoder().decode(

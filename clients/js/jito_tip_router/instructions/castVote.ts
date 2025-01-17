@@ -37,7 +37,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const CAST_VOTE_DISCRIMINATOR = 13;
+export const CAST_VOTE_DISCRIMINATOR = 15;
 
 export function getCastVoteDiscriminatorBytes() {
   return getU8Encoder().encode(CAST_VOTE_DISCRIMINATOR);
@@ -45,6 +45,7 @@ export function getCastVoteDiscriminatorBytes() {
 
 export type CastVoteInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
@@ -52,12 +53,14 @@ export type CastVoteInstruction<
   TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
   TAccountOperatorAdmin extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? WritableAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
@@ -78,9 +81,6 @@ export type CastVoteInstruction<
         ? ReadonlySignerAccount<TAccountOperatorAdmin> &
             IAccountSignerMeta<TAccountOperatorAdmin>
         : TAccountOperatorAdmin,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -126,6 +126,7 @@ export function getCastVoteInstructionDataCodec(): Codec<
 }
 
 export type CastVoteInput<
+  TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountBallotBox extends string = string,
   TAccountNcn extends string = string,
@@ -133,8 +134,8 @@ export type CastVoteInput<
   TAccountOperatorSnapshot extends string = string,
   TAccountOperator extends string = string,
   TAccountOperatorAdmin extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ballotBox: Address<TAccountBallotBox>;
   ncn: Address<TAccountNcn>;
@@ -142,12 +143,12 @@ export type CastVoteInput<
   operatorSnapshot: Address<TAccountOperatorSnapshot>;
   operator: Address<TAccountOperator>;
   operatorAdmin: TransactionSigner<TAccountOperatorAdmin>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   metaMerkleRoot: CastVoteInstructionDataArgs['metaMerkleRoot'];
   epoch: CastVoteInstructionDataArgs['epoch'];
 };
 
 export function getCastVoteInstruction<
+  TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountBallotBox extends string,
   TAccountNcn extends string,
@@ -155,30 +156,29 @@ export function getCastVoteInstruction<
   TAccountOperatorSnapshot extends string,
   TAccountOperator extends string,
   TAccountOperatorAdmin extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: CastVoteInput<
+    TAccountEpochState,
     TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot,
     TAccountOperator,
-    TAccountOperatorAdmin,
-    TAccountRestakingProgram
+    TAccountOperatorAdmin
   >,
   config?: { programAddress?: TProgramAddress }
 ): CastVoteInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountConfig,
   TAccountBallotBox,
   TAccountNcn,
   TAccountEpochSnapshot,
   TAccountOperatorSnapshot,
   TAccountOperator,
-  TAccountOperatorAdmin,
-  TAccountRestakingProgram
+  TAccountOperatorAdmin
 > {
   // Program address.
   const programAddress =
@@ -186,6 +186,7 @@ export function getCastVoteInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
@@ -196,10 +197,6 @@ export function getCastVoteInstruction<
     },
     operator: { value: input.operator ?? null, isWritable: false },
     operatorAdmin: { value: input.operatorAdmin ?? null, isWritable: false },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -212,6 +209,7 @@ export function getCastVoteInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncn),
@@ -219,7 +217,6 @@ export function getCastVoteInstruction<
       getAccountMeta(accounts.operatorSnapshot),
       getAccountMeta(accounts.operator),
       getAccountMeta(accounts.operatorAdmin),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getCastVoteInstructionDataEncoder().encode(
@@ -227,14 +224,14 @@ export function getCastVoteInstruction<
     ),
   } as CastVoteInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot,
     TAccountOperator,
-    TAccountOperatorAdmin,
-    TAccountRestakingProgram
+    TAccountOperatorAdmin
   >;
 
   return instruction;
@@ -246,14 +243,14 @@ export type ParsedCastVoteInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    config: TAccountMetas[0];
-    ballotBox: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    epochSnapshot: TAccountMetas[3];
-    operatorSnapshot: TAccountMetas[4];
-    operator: TAccountMetas[5];
-    operatorAdmin: TAccountMetas[6];
-    restakingProgram: TAccountMetas[7];
+    epochState: TAccountMetas[0];
+    config: TAccountMetas[1];
+    ballotBox: TAccountMetas[2];
+    ncn: TAccountMetas[3];
+    epochSnapshot: TAccountMetas[4];
+    operatorSnapshot: TAccountMetas[5];
+    operator: TAccountMetas[6];
+    operatorAdmin: TAccountMetas[7];
   };
   data: CastVoteInstructionData;
 };
@@ -279,6 +276,7 @@ export function parseCastVoteInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       config: getNextAccount(),
       ballotBox: getNextAccount(),
       ncn: getNextAccount(),
@@ -286,7 +284,6 @@ export function parseCastVoteInstruction<
       operatorSnapshot: getNextAccount(),
       operator: getNextAccount(),
       operatorAdmin: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getCastVoteInstructionDataDecoder().decode(instruction.data),
   };

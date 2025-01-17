@@ -35,3 +35,6 @@ pub const JITOSOL_SOL_FEED: Pubkey = pubkey!("4Z1SLH9g4ikNBV8uP2ZctEouqjYmVqB2Tz
 
 pub const JITOSOL_MINT: Pubkey = pubkey!("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn");
 pub const JITOSOL_POOL_ADDRESS: Pubkey = pubkey!("Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb");
+pub const JITOSOL_POOL_MANAGER: Pubkey = pubkey!("5eosrve6LktMZgVNszYzebgmmC7BjLK8NoWyRQtcmGTF");
+pub const JITOSOL_POOL_FEE: Pubkey = pubkey!("5eosrve6LktMZgVNszYzebgmmC7BjLK8NoWyRQtcmGTF");
+pub const JITOSOL_RESERVE_STAKE: Pubkey = pubkey!("BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL");

@@ -29,7 +29,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const DISTRIBUTE_BASE_REWARDS_DISCRIMINATOR = 20;
+export const DISTRIBUTE_BASE_REWARDS_DISCRIMINATOR = 22;
 
 export function getDistributeBaseRewardsDiscriminatorBytes() {
   return getU8Encoder().encode(DISTRIBUTE_BASE_REWARDS_DISCRIMINATOR);
@@ -37,13 +37,13 @@ export function getDistributeBaseRewardsDiscriminatorBytes() {
 
 export type DistributeBaseRewardsInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
   TAccountBaseRewardReceiver extends string | IAccountMeta<string> = string,
   TAccountBaseFeeWallet extends string | IAccountMeta<string> = string,
   TAccountBaseFeeWalletAta extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TAccountStakePoolProgram extends string | IAccountMeta<string> = string,
   TAccountStakePool extends string | IAccountMeta<string> = string,
   TAccountStakePoolWithdrawAuthority extends
@@ -66,6 +66,9 @@ export type DistributeBaseRewardsInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? WritableAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
@@ -82,9 +85,6 @@ export type DistributeBaseRewardsInstruction<
       TAccountBaseFeeWalletAta extends string
         ? WritableAccount<TAccountBaseFeeWalletAta>
         : TAccountBaseFeeWalletAta,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       TAccountStakePoolProgram extends string
         ? ReadonlyAccount<TAccountStakePoolProgram>
         : TAccountStakePoolProgram,
@@ -160,13 +160,13 @@ export function getDistributeBaseRewardsInstructionDataCodec(): Codec<
 }
 
 export type DistributeBaseRewardsInput<
+  TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountBaseRewardRouter extends string = string,
   TAccountBaseRewardReceiver extends string = string,
   TAccountBaseFeeWallet extends string = string,
   TAccountBaseFeeWalletAta extends string = string,
-  TAccountRestakingProgram extends string = string,
   TAccountStakePoolProgram extends string = string,
   TAccountStakePool extends string = string,
   TAccountStakePoolWithdrawAuthority extends string = string,
@@ -177,13 +177,13 @@ export type DistributeBaseRewardsInput<
   TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   baseRewardReceiver: Address<TAccountBaseRewardReceiver>;
   baseFeeWallet: Address<TAccountBaseFeeWallet>;
   baseFeeWalletAta: Address<TAccountBaseFeeWalletAta>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   stakePoolProgram: Address<TAccountStakePoolProgram>;
   stakePool: Address<TAccountStakePool>;
   stakePoolWithdrawAuthority: Address<TAccountStakePoolWithdrawAuthority>;
@@ -198,13 +198,13 @@ export type DistributeBaseRewardsInput<
 };
 
 export function getDistributeBaseRewardsInstruction<
+  TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountBaseRewardRouter extends string,
   TAccountBaseRewardReceiver extends string,
   TAccountBaseFeeWallet extends string,
   TAccountBaseFeeWalletAta extends string,
-  TAccountRestakingProgram extends string,
   TAccountStakePoolProgram extends string,
   TAccountStakePool extends string,
   TAccountStakePoolWithdrawAuthority extends string,
@@ -217,13 +217,13 @@ export function getDistributeBaseRewardsInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: DistributeBaseRewardsInput<
+    TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
     TAccountBaseRewardRouter,
     TAccountBaseRewardReceiver,
     TAccountBaseFeeWallet,
     TAccountBaseFeeWalletAta,
-    TAccountRestakingProgram,
     TAccountStakePoolProgram,
     TAccountStakePool,
     TAccountStakePoolWithdrawAuthority,
@@ -237,13 +237,13 @@ export function getDistributeBaseRewardsInstruction<
   config?: { programAddress?: TProgramAddress }
 ): DistributeBaseRewardsInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountConfig,
   TAccountNcn,
   TAccountBaseRewardRouter,
   TAccountBaseRewardReceiver,
   TAccountBaseFeeWallet,
   TAccountBaseFeeWalletAta,
-  TAccountRestakingProgram,
   TAccountStakePoolProgram,
   TAccountStakePool,
   TAccountStakePoolWithdrawAuthority,
@@ -260,6 +260,7 @@ export function getDistributeBaseRewardsInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     baseRewardRouter: {
@@ -274,10 +275,6 @@ export function getDistributeBaseRewardsInstruction<
     baseFeeWalletAta: {
       value: input.baseFeeWalletAta ?? null,
       isWritable: true,
-    },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
     },
     stakePoolProgram: {
       value: input.stakePoolProgram ?? null,
@@ -322,13 +319,13 @@ export function getDistributeBaseRewardsInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.baseRewardRouter),
       getAccountMeta(accounts.baseRewardReceiver),
       getAccountMeta(accounts.baseFeeWallet),
       getAccountMeta(accounts.baseFeeWalletAta),
-      getAccountMeta(accounts.restakingProgram),
       getAccountMeta(accounts.stakePoolProgram),
       getAccountMeta(accounts.stakePool),
       getAccountMeta(accounts.stakePoolWithdrawAuthority),
@@ -345,13 +342,13 @@ export function getDistributeBaseRewardsInstruction<
     ),
   } as DistributeBaseRewardsInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
     TAccountBaseRewardRouter,
     TAccountBaseRewardReceiver,
     TAccountBaseFeeWallet,
     TAccountBaseFeeWalletAta,
-    TAccountRestakingProgram,
     TAccountStakePoolProgram,
     TAccountStakePool,
     TAccountStakePoolWithdrawAuthority,
@@ -372,13 +369,13 @@ export type ParsedDistributeBaseRewardsInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    config: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    baseRewardRouter: TAccountMetas[2];
-    baseRewardReceiver: TAccountMetas[3];
-    baseFeeWallet: TAccountMetas[4];
-    baseFeeWalletAta: TAccountMetas[5];
-    restakingProgram: TAccountMetas[6];
+    epochState: TAccountMetas[0];
+    config: TAccountMetas[1];
+    ncn: TAccountMetas[2];
+    baseRewardRouter: TAccountMetas[3];
+    baseRewardReceiver: TAccountMetas[4];
+    baseFeeWallet: TAccountMetas[5];
+    baseFeeWalletAta: TAccountMetas[6];
     stakePoolProgram: TAccountMetas[7];
     stakePool: TAccountMetas[8];
     stakePoolWithdrawAuthority: TAccountMetas[9];
@@ -413,13 +410,13 @@ export function parseDistributeBaseRewardsInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
       baseRewardRouter: getNextAccount(),
       baseRewardReceiver: getNextAccount(),
       baseFeeWallet: getNextAccount(),
       baseFeeWalletAta: getNextAccount(),
-      restakingProgram: getNextAccount(),
       stakePoolProgram: getNextAccount(),
       stakePool: getNextAccount(),
       stakePoolWithdrawAuthority: getNextAccount(),

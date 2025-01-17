@@ -1,0 +1,4 @@
+.env
+.env.devnet
+.env.mainnet
+.DS_Store
