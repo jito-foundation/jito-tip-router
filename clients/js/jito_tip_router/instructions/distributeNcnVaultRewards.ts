@@ -79,7 +79,7 @@ export type DistributeNcnVaultRewardsInstruction<
         ? ReadonlyAccount<TAccountOperator>
         : TAccountOperator,
       TAccountVault extends string
-        ? WritableAccount<TAccountVault>
+        ? ReadonlyAccount<TAccountVault>
         : TAccountVault,
       TAccountVaultAta extends string
         ? WritableAccount<TAccountVaultAta>
@@ -282,7 +282,7 @@ export function getDistributeNcnVaultRewardsInstruction<
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     operator: { value: input.operator ?? null, isWritable: false },
-    vault: { value: input.vault ?? null, isWritable: true },
+    vault: { value: input.vault ?? null, isWritable: false },
     vaultAta: { value: input.vaultAta ?? null, isWritable: true },
     operatorSnapshot: {
       value: input.operatorSnapshot ?? null,

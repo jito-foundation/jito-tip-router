@@ -76,7 +76,7 @@ impl DistributeNcnVaultRewards {
             self.operator,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.vault, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -178,7 +178,7 @@ pub struct DistributeNcnVaultRewardsInstructionArgs {
 ///   1. `[]` config
 ///   2. `[]` ncn
 ///   3. `[]` operator
-///   4. `[writable]` vault
+///   4. `[]` vault
 ///   5. `[writable]` vault_ata
 ///   6. `[writable]` operator_snapshot
 ///   7. `[writable]` ncn_reward_router
@@ -576,7 +576,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
             *self.operator.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.vault.key,
             false,
         ));
@@ -690,7 +690,7 @@ impl<'a, 'b> DistributeNcnVaultRewardsCpi<'a, 'b> {
 ///   1. `[]` config
 ///   2. `[]` ncn
 ///   3. `[]` operator
-///   4. `[writable]` vault
+///   4. `[]` vault
 ///   5. `[writable]` vault_ata
 ///   6. `[writable]` operator_snapshot
 ///   7. `[writable]` ncn_reward_router

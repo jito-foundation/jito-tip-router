@@ -33,7 +33,7 @@ pub fn process_distribute_ncn_vault_rewards(
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     Operator::load(&jito_restaking_program::id(), operator, false)?;
-    Vault::load(&jito_vault_program::id(), vault, true)?;
+    Vault::load(&jito_vault_program::id(), vault, false)?;
     OperatorSnapshot::load(
         program_id,
         operator.key,

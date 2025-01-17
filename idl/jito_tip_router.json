@@ -462,7 +462,7 @@
         },
         {
           "name": "epochSnapshot",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -1259,7 +1259,7 @@
         },
         {
           "name": "ncnRewardRouter",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -1417,7 +1417,7 @@
         },
         {
           "name": "vault",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {

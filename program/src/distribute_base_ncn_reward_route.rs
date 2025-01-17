@@ -42,7 +42,7 @@ pub fn process_distribute_base_ncn_reward_route(
         ncn.key,
         epoch,
         ncn_reward_router,
-        true,
+        false,
     )?;
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
     NcnRewardReceiver::load(
@@ -52,7 +52,7 @@ pub fn process_distribute_base_ncn_reward_route(
         operator.key,
         ncn.key,
         epoch,
-        true,
+        false,
     )?;
 
     load_system_program(system_program)?;

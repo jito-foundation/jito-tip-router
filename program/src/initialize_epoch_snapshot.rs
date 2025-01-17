@@ -30,8 +30,7 @@ pub fn process_initialize_epoch_snapshot(
 
     load_system_account(epoch_snapshot, true)?;
     load_system_program(system_program)?;
-    //TODO check that it is not writable
-    load_signer(payer, false)?;
+    load_signer(payer, true)?;
 
     let current_slot = Clock::get()?.slot;
     let ncn_epoch = epoch;

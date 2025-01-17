@@ -70,7 +70,7 @@ export type InitializeOperatorSnapshotInstruction<
         ? ReadonlyAccount<TAccountNcnOperatorState>
         : TAccountNcnOperatorState,
       TAccountEpochSnapshot extends string
-        ? WritableAccount<TAccountEpochSnapshot>
+        ? ReadonlyAccount<TAccountEpochSnapshot>
         : TAccountEpochSnapshot,
       TAccountOperatorSnapshot extends string
         ? WritableAccount<TAccountOperatorSnapshot>
@@ -198,7 +198,7 @@ export function getInitializeOperatorSnapshotInstruction<
       value: input.ncnOperatorState ?? null,
       isWritable: false,
     },
-    epochSnapshot: { value: input.epochSnapshot ?? null, isWritable: true },
+    epochSnapshot: { value: input.epochSnapshot ?? null, isWritable: false },
     operatorSnapshot: {
       value: input.operatorSnapshot ?? null,
       isWritable: true,

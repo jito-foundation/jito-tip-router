@@ -22,7 +22,7 @@ pub fn process_admin_set_tie_breaker(
 
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
+    BallotBox::load(program_id, ncn.key, epoch, ballot_box, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     load_signer(tie_breaker_admin, false)?;
 
