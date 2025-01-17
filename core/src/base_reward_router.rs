@@ -248,7 +248,7 @@ impl BaseRewardRouter {
             let leftover_rewards = self.reward_pool();
 
             self.route_from_reward_pool(leftover_rewards)?;
-            self.route_to_base_fee_group_rewards(BaseFeeGroup::default(), leftover_rewards)?;
+            self.route_to_base_fee_group_rewards(BaseFeeGroup::dao(), leftover_rewards)?;
         }
 
         Ok(())
@@ -329,7 +329,7 @@ impl BaseRewardRouter {
                 let leftover_rewards = self.ncn_fee_group_rewards(group)?;
 
                 self.route_from_ncn_fee_group_rewards(group, leftover_rewards)?;
-                self.route_to_base_fee_group_rewards(BaseFeeGroup::default(), leftover_rewards)?;
+                self.route_to_base_fee_group_rewards(BaseFeeGroup::dao(), leftover_rewards)?;
             }
 
             starting_vote_index = 0;
