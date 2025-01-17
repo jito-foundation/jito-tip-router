@@ -78,13 +78,16 @@ pub fn process_realloc_operator_snapshot(
             let ncn_operator_state_account =
                 NcnOperatorState::try_from_slice_unchecked(&ncn_operator_state_data)?;
 
+            // If the NCN removes an operator, it should immediately be barred from the snapshot
             let ncn_operator_okay = ncn_operator_state_account
                 .ncn_opt_in_state
                 .is_active(current_slot, ncn_epoch_length);
 
+            // If the operator removes itself from the ncn, it should still be able to participate
+            // while it is cooling down
             let operator_ncn_okay = ncn_operator_state_account
                 .operator_opt_in_state
-                .is_active(current_slot, ncn_epoch_length);
+                .is_active_or_cooldown(current_slot, ncn_epoch_length);
 
             let ncn_operator_index = ncn_operator_state_account.index();
 

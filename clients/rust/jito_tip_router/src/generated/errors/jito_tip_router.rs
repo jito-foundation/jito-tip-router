@@ -250,6 +250,9 @@ pub enum JitoTipRouterError {
     /// 8774 - Cannot route until voting is over
     #[error("Cannot route until voting is over")]
     VotingIsNotOver = 0x2246,
+    /// 8775 - Operator is not in snapshot
+    #[error("Operator is not in snapshot")]
+    OperatorIsNotInSnapshot = 0x2247,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

@@ -263,7 +263,13 @@ impl NcnRewardRouter {
             let (rewards_to_process, starting_vault_operator_delegation_index) =
                 self.resume_routing_state(rewards_to_process);
 
+            if rewards_to_process == 0 {
+                return Ok(());
+            }
+
             let mut iterations: u16 = 0;
+            // Always have at least 1 iteration
+            let max_iterations = max_iterations.max(1);
 
             for vault_operator_delegation_index in starting_vault_operator_delegation_index
                 ..operator_snapshot.vault_operator_stake_weight().len()
@@ -1173,6 +1179,78 @@ mod tests {
         assert_eq!(router.rewards_processed(), expected_operator_rewards);
 
         router.route_reward_pool(&operator_snapshot, 1000).unwrap();
+        for route in router
+            .vault_reward_routes()
+            .iter()
+            .filter(|route| !route.is_empty())
+        {
+            assert_eq!(route.rewards(), expected_vault_rewards);
+        }
+
+        assert_eq!(router.total_rewards(), incoming_rewards);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), incoming_rewards);
+    }
+
+    #[test]
+    fn test_route_with_0_iterations() {
+        // 64_000 / 0.9 ~= 71_111
+        let expected_vault_rewards: u64 = 1000;
+        let expected_all_vault_rewards: u64 = MAX_VAULTS as u64 * expected_vault_rewards;
+        let incoming_rewards: u64 = (expected_all_vault_rewards as f64 / 0.9).round() as u64;
+        let expected_operator_rewards: u64 = incoming_rewards - expected_all_vault_rewards;
+
+        let mut router = NcnRewardRouter::new(
+            NcnFeeGroup::default(),
+            &Pubkey::new_unique(), // ncn
+            &Pubkey::new_unique(), // ncn
+            TEST_EPOCH,            // ncn_epoch
+            1,                     // bump
+            TEST_CURRENT_SLOT,     // slot_created
+        );
+
+        // Initial state checks
+        assert_eq!(router.total_rewards(), 0);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test routing 1000 lamports
+        router.route_incoming_rewards(0, incoming_rewards).unwrap();
+
+        // Verify rewards were routed correctly
+        assert_eq!(router.total_rewards(), incoming_rewards);
+        assert_eq!(router.reward_pool(), incoming_rewards);
+        assert_eq!(router.rewards_processed(), 0);
+
+        let operator_snapshot = {
+            let operator_fee_bps = 1000; // 0%
+            let vault_operator_delegation_count = MAX_VAULTS as u64;
+            let mut operator_snapshot =
+                get_test_operator_snapshot(operator_fee_bps, vault_operator_delegation_count);
+
+            for _ in 0..vault_operator_delegation_count {
+                register_test_vault_operator_delegation(&mut operator_snapshot, 1000, 1000);
+            }
+
+            operator_snapshot
+        };
+
+        // Test routing operator rewards
+        router.route_operator_rewards(&operator_snapshot).unwrap();
+        assert_eq!(router.operator_rewards(), expected_operator_rewards);
+
+        assert_eq!(router.total_rewards(), incoming_rewards);
+        assert_eq!(router.reward_pool(), expected_all_vault_rewards);
+        assert_eq!(router.rewards_processed(), expected_operator_rewards);
+
+        router.route_reward_pool(&operator_snapshot, 0).unwrap();
+        assert!(router.still_routing());
+
+        for _ in 0..MAX_VAULTS * 2 {
+            router.route_reward_pool(&operator_snapshot, 0).unwrap();
+        }
+        assert!(!router.still_routing());
+
         for route in router
             .vault_reward_routes()
             .iter()

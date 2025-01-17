@@ -3627,6 +3627,11 @@
       "code": 8774,
       "name": "VotingIsNotOver",
       "msg": "Cannot route until voting is over"
+    },
+    {
+      "code": 8775,
+      "name": "OperatorIsNotInSnapshot",
+      "msg": "Operator is not in snapshot"
     }
   ],
   "metadata": {

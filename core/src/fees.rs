@@ -330,6 +330,11 @@ impl FeeConfig {
 
         // CHECK FEES
         self.check_fees_okay(current_epoch)?;
+        self.check_fees_okay(
+            current_epoch
+                .checked_add(1)
+                .ok_or(TipRouterError::ArithmeticOverflow)?,
+        )?;
 
         Ok(())
     }
