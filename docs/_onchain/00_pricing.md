@@ -6,11 +6,33 @@ layout: post
 
 # Pricing
 
+## Introduction
+
+The Pricing section of the Jito Tip Router defines the mechanisms for managing and updating price data for supported tokens and vaults within the system.
+Accurate and efficient pricing is critical for ensuring fair and transparent reward distribution across participants.
+This section introduces key components, such as the `VaultRegistry` and `WeightTable`, which are used to store metadata, pricing information, and asset weights.
+
+The pricing architecture leverages oracle feeds, such as Switchboard, to provide real-time price updates for supported tokens and vaults.
+Additionally, it includes fallback mechanisms for scenarios where feeds are unavailable, ensuring continuous operation.
+The system supports permissionless interactions for certain roles, such as Crankers, to initialize and update accounts, making the pricing process both robust and decentralized.
+
+This section covers:
+
+- **VaultRegistry**: A registry for storing metadata about vaults and their associated tokens, including pricing feeds and backup weights.
+- **WeightTable**: A mechanism to assign weights to assets each epoch based on their relative value, ensuring dynamic and fair pricing adjustments.
+
+The pricing system ensures that all registered vaults and tokens within the Jito Tip Router NCN operate with accurate and transparent price data, fostering trust and efficiency in the ecosystem.
+
+
+![alt text](/assets/images/pricing.png)
+*Figure: Overview of the Pricing
+
+
 ## VaultRegistry
 
 ### Initialize VaultRegistry
 
-A Permissionless Cranker initializes the `VaultRegistry` account to store metadata about vaults registered for the Jito Tip Router NCN and inoformation abount underlying tokens.
+A Permissionless Cranker initializes the `VaultRegistry` account to store metadata about vaults registered for the Jito Tip Router NCN and inoformation about underlying tokens.
 While the [Jito Vault Program] stores all on-chain vault information, the Permissionless Cranker manages key details, quotes important data, and uploads it to the `VaultRegistry`.
 
 ```rs
@@ -62,7 +84,7 @@ This field enables the storage of an oracle feed for each underlying asset (supp
 ### Register Vault (vault_list)
 
 Permissionless Cranker can register the vault which is associated with Jito Tip Router NCN.
-Both `NcnVaultTicket` and `VaultNcnTicket` accounts should be activated before running `process_register_vault` instruction.
+Before running `process_register_vault` instruction, both `NcnVaultTicket` and `VaultNcnTicket` accounts must be activated 
 
 ```rust
 pub struct VaultEntry {
@@ -79,6 +101,7 @@ pub struct VaultEntry {
     slot_registered: PodU64,
 }
 ```
+
 
 ## WeightTable
 

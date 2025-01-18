@@ -6,6 +6,8 @@ layout: post
 
 # Snapshot
 
+## Introduction
+
 In order to have fixed voting weights for consensus, a snapshot process is done to track the stake balances of all operators, and the composition of assets for each operator for reward payouts later in the epoch.
 Fees are also stored. This is performed in a top-down approach:
 
@@ -13,6 +15,11 @@ Fees are also stored. This is performed in a top-down approach:
 2. Initialize `EpochSnapshot`.
 3. Initialize `OperatorSnapshot`.
 4. Tracks stake weights and stake reward multipliers based on asset type.
+
+
+![alt text](/assets/images/snapshot.png)
+*Figure: Overview of the Snapshot
+
 
 ## EpochSnapshot
 
@@ -44,6 +51,7 @@ pub struct EpochSnapshot {
     stake_weights: StakeWeights,
 }
 ```
+
 
 ## OperatorSnapshot
 

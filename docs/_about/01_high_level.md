@@ -40,10 +40,6 @@ Onchain NCN program has several components:
 - Take snapshots of Operator and Vault per epoch.
 
 
-![alt text](/assets/images/opt_in.png)
-*Figure: Overview of the Jito Restaking Ecosystem*
-
-When a NCN, operator, and vault have all opted-in to each other and the vault has staked assets to the operator, those
-assets are considered staked to the NCN. The operator will then be able to participate in the NCN's consensus protocol.
-Assuming the vault has opted-in to the slasher, the staked assets can be slashed.
+![alt text](/assets/images/overview.png)
+*Figure: Overview of the Jito Tip Router*
 
