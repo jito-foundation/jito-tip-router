@@ -461,7 +461,7 @@ pub enum TipRouterInstruction {
     #[account(0, name = "config")]
     #[account(1, name = "ncn")]
     #[account(2, writable, name = "vault_registry")]
-    #[account(3, signer, writable, name = "admin")]
+    #[account(3, signer, name = "admin")]
     AdminSetStMint{
         st_mint: Pubkey,
         ncn_fee_group: Option<u8>,

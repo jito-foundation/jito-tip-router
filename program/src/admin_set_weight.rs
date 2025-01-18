@@ -28,7 +28,7 @@ pub fn process_admin_set_weight(
         ncn.weight_table_admin
     };
 
-    load_signer(weight_table_admin, true)?;
+    load_signer(weight_table_admin, false)?;
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     WeightTable::load(program_id, weight_table, ncn.key, epoch, true)?;
 

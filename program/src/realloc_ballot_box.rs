@@ -25,7 +25,7 @@ pub fn process_realloc_ballot_box(
     };
 
     load_system_program(system_program)?;
-    load_signer(payer, false)?;
+    load_signer(payer, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;

@@ -95,8 +95,7 @@ pub struct AdminSetStMintInstructionArgs {
 ///   0. `[]` config
 ///   1. `[]` ncn
 ///   2. `[writable]` vault_registry
-///   3. `[writable, signer]` admin
-///   4. `[]` restaking_program
+///   3. `[signer]` admin
 #[derive(Clone, Debug, Default)]
 pub struct AdminSetStMintBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
@@ -335,8 +334,7 @@ impl<'a, 'b> AdminSetStMintCpi<'a, 'b> {
 ///   0. `[]` config
 ///   1. `[]` ncn
 ///   2. `[writable]` vault_registry
-///   3. `[writable, signer]` admin
-///   4. `[]` restaking_program
+///   3. `[signer]` admin
 #[derive(Clone, Debug)]
 pub struct AdminSetStMintCpiBuilder<'a, 'b> {
     instruction: Box<AdminSetStMintCpiBuilderInstruction<'a, 'b>>,
