@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_OPERATOR_SNAPSHOT_DISCRIMINATOR = 8;
+export const INITIALIZE_OPERATOR_SNAPSHOT_DISCRIMINATOR = 10;
 
 export function getInitializeOperatorSnapshotDiscriminatorBytes() {
   return getU8Encoder().encode(INITIALIZE_OPERATOR_SNAPSHOT_DISCRIMINATOR);
@@ -40,6 +40,7 @@ export function getInitializeOperatorSnapshotDiscriminatorBytes() {
 
 export type InitializeOperatorSnapshotInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
@@ -47,7 +48,6 @@ export type InitializeOperatorSnapshotInstruction<
   TAccountEpochSnapshot extends string | IAccountMeta<string> = string,
   TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -56,6 +56,9 @@ export type InitializeOperatorSnapshotInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? ReadonlyAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
@@ -67,7 +70,7 @@ export type InitializeOperatorSnapshotInstruction<
         ? ReadonlyAccount<TAccountNcnOperatorState>
         : TAccountNcnOperatorState,
       TAccountEpochSnapshot extends string
-        ? WritableAccount<TAccountEpochSnapshot>
+        ? ReadonlyAccount<TAccountEpochSnapshot>
         : TAccountEpochSnapshot,
       TAccountOperatorSnapshot extends string
         ? WritableAccount<TAccountOperatorSnapshot>
@@ -76,9 +79,6 @@ export type InitializeOperatorSnapshotInstruction<
         ? WritableSignerAccount<TAccountPayer> &
             IAccountSignerMeta<TAccountPayer>
         : TAccountPayer,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -126,6 +126,7 @@ export function getInitializeOperatorSnapshotInstructionDataCodec(): Codec<
 }
 
 export type InitializeOperatorSnapshotInput<
+  TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
@@ -133,9 +134,9 @@ export type InitializeOperatorSnapshotInput<
   TAccountEpochSnapshot extends string = string,
   TAccountOperatorSnapshot extends string = string,
   TAccountPayer extends string = string,
-  TAccountRestakingProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
@@ -143,12 +144,12 @@ export type InitializeOperatorSnapshotInput<
   epochSnapshot: Address<TAccountEpochSnapshot>;
   operatorSnapshot: Address<TAccountOperatorSnapshot>;
   payer: TransactionSigner<TAccountPayer>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: InitializeOperatorSnapshotInstructionDataArgs['epoch'];
 };
 
 export function getInitializeOperatorSnapshotInstruction<
+  TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountOperator extends string,
@@ -156,11 +157,11 @@ export function getInitializeOperatorSnapshotInstruction<
   TAccountEpochSnapshot extends string,
   TAccountOperatorSnapshot extends string,
   TAccountPayer extends string,
-  TAccountRestakingProgram extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeOperatorSnapshotInput<
+    TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
     TAccountOperator,
@@ -168,12 +169,12 @@ export function getInitializeOperatorSnapshotInstruction<
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot,
     TAccountPayer,
-    TAccountRestakingProgram,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): InitializeOperatorSnapshotInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountConfig,
   TAccountNcn,
   TAccountOperator,
@@ -181,7 +182,6 @@ export function getInitializeOperatorSnapshotInstruction<
   TAccountEpochSnapshot,
   TAccountOperatorSnapshot,
   TAccountPayer,
-  TAccountRestakingProgram,
   TAccountSystemProgram
 > {
   // Program address.
@@ -190,6 +190,7 @@ export function getInitializeOperatorSnapshotInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: false },
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     operator: { value: input.operator ?? null, isWritable: false },
@@ -197,16 +198,12 @@ export function getInitializeOperatorSnapshotInstruction<
       value: input.ncnOperatorState ?? null,
       isWritable: false,
     },
-    epochSnapshot: { value: input.epochSnapshot ?? null, isWritable: true },
+    epochSnapshot: { value: input.epochSnapshot ?? null, isWritable: false },
     operatorSnapshot: {
       value: input.operatorSnapshot ?? null,
       isWritable: true,
     },
     payer: { value: input.payer ?? null, isWritable: true },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -226,6 +223,7 @@ export function getInitializeOperatorSnapshotInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
@@ -233,7 +231,6 @@ export function getInitializeOperatorSnapshotInstruction<
       getAccountMeta(accounts.epochSnapshot),
       getAccountMeta(accounts.operatorSnapshot),
       getAccountMeta(accounts.payer),
-      getAccountMeta(accounts.restakingProgram),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -242,6 +239,7 @@ export function getInitializeOperatorSnapshotInstruction<
     ),
   } as InitializeOperatorSnapshotInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
     TAccountOperator,
@@ -249,7 +247,6 @@ export function getInitializeOperatorSnapshotInstruction<
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot,
     TAccountPayer,
-    TAccountRestakingProgram,
     TAccountSystemProgram
   >;
 
@@ -262,14 +259,14 @@ export type ParsedInitializeOperatorSnapshotInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    config: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    operator: TAccountMetas[2];
-    ncnOperatorState: TAccountMetas[3];
-    epochSnapshot: TAccountMetas[4];
-    operatorSnapshot: TAccountMetas[5];
-    payer: TAccountMetas[6];
-    restakingProgram: TAccountMetas[7];
+    epochState: TAccountMetas[0];
+    config: TAccountMetas[1];
+    ncn: TAccountMetas[2];
+    operator: TAccountMetas[3];
+    ncnOperatorState: TAccountMetas[4];
+    epochSnapshot: TAccountMetas[5];
+    operatorSnapshot: TAccountMetas[6];
+    payer: TAccountMetas[7];
     systemProgram: TAccountMetas[8];
   };
   data: InitializeOperatorSnapshotInstructionData;
@@ -296,6 +293,7 @@ export function parseInitializeOperatorSnapshotInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
       operator: getNextAccount(),
@@ -303,7 +301,6 @@ export function parseInitializeOperatorSnapshotInstruction<
       epochSnapshot: getNextAccount(),
       operatorSnapshot: getNextAccount(),
       payer: getNextAccount(),
-      restakingProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeOperatorSnapshotInstructionDataDecoder().decode(

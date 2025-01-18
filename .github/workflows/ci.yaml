@@ -138,7 +138,7 @@ jobs:
   #     - name: Generate code coverage
   #       run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
   #       env:
-  #         TIP_ROUTER_PROGRAM_ID: Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaSH
+  #         TIP_ROUTER_PROGRAM_ID: Ap2AH3VcZGuuauEDq87uhgjNoUKcCAafc4DTyTByLMFf
   #     - name: Upload coverage to Codecov
   #       uses: codecov/codecov-action@v4.5.0
   #       with:

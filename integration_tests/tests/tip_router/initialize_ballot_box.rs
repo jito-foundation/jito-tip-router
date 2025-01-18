@@ -15,6 +15,8 @@ mod tests {
 
         let test_ncn = fixture.create_initial_test_ncn(1, 1, None).await?;
 
+        fixture.add_epoch_state_for_test_ncn(&test_ncn).await?;
+
         fixture.warp_slot_incremental(1000).await?;
 
         let epoch = fixture.clock().await.epoch;

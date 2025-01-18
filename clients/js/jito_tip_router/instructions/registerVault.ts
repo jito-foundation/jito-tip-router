@@ -35,22 +35,19 @@ export function getRegisterVaultDiscriminatorBytes() {
 
 export type RegisterVaultInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountRestakingConfig extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountVault extends string | IAccountMeta<string> = string,
-  TAccountVaultNcnTicket extends string | IAccountMeta<string> = string,
   TAccountNcnVaultTicket extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgramId extends string | IAccountMeta<string> = string,
-  TAccountVaultProgramId extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountRestakingConfig extends string
-        ? ReadonlyAccount<TAccountRestakingConfig>
-        : TAccountRestakingConfig,
+      TAccountConfig extends string
+        ? ReadonlyAccount<TAccountConfig>
+        : TAccountConfig,
       TAccountVaultRegistry extends string
         ? WritableAccount<TAccountVaultRegistry>
         : TAccountVaultRegistry,
@@ -58,18 +55,9 @@ export type RegisterVaultInstruction<
       TAccountVault extends string
         ? ReadonlyAccount<TAccountVault>
         : TAccountVault,
-      TAccountVaultNcnTicket extends string
-        ? ReadonlyAccount<TAccountVaultNcnTicket>
-        : TAccountVaultNcnTicket,
       TAccountNcnVaultTicket extends string
         ? ReadonlyAccount<TAccountNcnVaultTicket>
         : TAccountNcnVaultTicket,
-      TAccountRestakingProgramId extends string
-        ? ReadonlyAccount<TAccountRestakingProgramId>
-        : TAccountRestakingProgramId,
-      TAccountVaultProgramId extends string
-        ? ReadonlyAccount<TAccountVaultProgramId>
-        : TAccountVaultProgramId,
       ...TRemainingAccounts,
     ]
   >;
@@ -100,57 +88,42 @@ export function getRegisterVaultInstructionDataCodec(): Codec<
 }
 
 export type RegisterVaultInput<
-  TAccountRestakingConfig extends string = string,
+  TAccountConfig extends string = string,
   TAccountVaultRegistry extends string = string,
   TAccountNcn extends string = string,
   TAccountVault extends string = string,
-  TAccountVaultNcnTicket extends string = string,
   TAccountNcnVaultTicket extends string = string,
-  TAccountRestakingProgramId extends string = string,
-  TAccountVaultProgramId extends string = string,
 > = {
-  restakingConfig: Address<TAccountRestakingConfig>;
+  config: Address<TAccountConfig>;
   vaultRegistry: Address<TAccountVaultRegistry>;
   ncn: Address<TAccountNcn>;
   vault: Address<TAccountVault>;
-  vaultNcnTicket: Address<TAccountVaultNcnTicket>;
   ncnVaultTicket: Address<TAccountNcnVaultTicket>;
-  restakingProgramId: Address<TAccountRestakingProgramId>;
-  vaultProgramId: Address<TAccountVaultProgramId>;
 };
 
 export function getRegisterVaultInstruction<
-  TAccountRestakingConfig extends string,
+  TAccountConfig extends string,
   TAccountVaultRegistry extends string,
   TAccountNcn extends string,
   TAccountVault extends string,
-  TAccountVaultNcnTicket extends string,
   TAccountNcnVaultTicket extends string,
-  TAccountRestakingProgramId extends string,
-  TAccountVaultProgramId extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: RegisterVaultInput<
-    TAccountRestakingConfig,
+    TAccountConfig,
     TAccountVaultRegistry,
     TAccountNcn,
     TAccountVault,
-    TAccountVaultNcnTicket,
-    TAccountNcnVaultTicket,
-    TAccountRestakingProgramId,
-    TAccountVaultProgramId
+    TAccountNcnVaultTicket
   >,
   config?: { programAddress?: TProgramAddress }
 ): RegisterVaultInstruction<
   TProgramAddress,
-  TAccountRestakingConfig,
+  TAccountConfig,
   TAccountVaultRegistry,
   TAccountNcn,
   TAccountVault,
-  TAccountVaultNcnTicket,
-  TAccountNcnVaultTicket,
-  TAccountRestakingProgramId,
-  TAccountVaultProgramId
+  TAccountNcnVaultTicket
 > {
   // Program address.
   const programAddress =
@@ -158,20 +131,11 @@ export function getRegisterVaultInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    restakingConfig: {
-      value: input.restakingConfig ?? null,
-      isWritable: false,
-    },
+    config: { value: input.config ?? null, isWritable: false },
     vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: false },
-    vaultNcnTicket: { value: input.vaultNcnTicket ?? null, isWritable: false },
     ncnVaultTicket: { value: input.ncnVaultTicket ?? null, isWritable: false },
-    restakingProgramId: {
-      value: input.restakingProgramId ?? null,
-      isWritable: false,
-    },
-    vaultProgramId: { value: input.vaultProgramId ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -181,27 +145,21 @@ export function getRegisterVaultInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.restakingConfig),
+      getAccountMeta(accounts.config),
       getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.vault),
-      getAccountMeta(accounts.vaultNcnTicket),
       getAccountMeta(accounts.ncnVaultTicket),
-      getAccountMeta(accounts.restakingProgramId),
-      getAccountMeta(accounts.vaultProgramId),
     ],
     programAddress,
     data: getRegisterVaultInstructionDataEncoder().encode({}),
   } as RegisterVaultInstruction<
     TProgramAddress,
-    TAccountRestakingConfig,
+    TAccountConfig,
     TAccountVaultRegistry,
     TAccountNcn,
     TAccountVault,
-    TAccountVaultNcnTicket,
-    TAccountNcnVaultTicket,
-    TAccountRestakingProgramId,
-    TAccountVaultProgramId
+    TAccountNcnVaultTicket
   >;
 
   return instruction;
@@ -213,14 +171,11 @@ export type ParsedRegisterVaultInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    restakingConfig: TAccountMetas[0];
+    config: TAccountMetas[0];
     vaultRegistry: TAccountMetas[1];
     ncn: TAccountMetas[2];
     vault: TAccountMetas[3];
-    vaultNcnTicket: TAccountMetas[4];
-    ncnVaultTicket: TAccountMetas[5];
-    restakingProgramId: TAccountMetas[6];
-    vaultProgramId: TAccountMetas[7];
+    ncnVaultTicket: TAccountMetas[4];
   };
   data: RegisterVaultInstructionData;
 };
@@ -233,7 +188,7 @@ export function parseRegisterVaultInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedRegisterVaultInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -246,14 +201,11 @@ export function parseRegisterVaultInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      restakingConfig: getNextAccount(),
+      config: getNextAccount(),
       vaultRegistry: getNextAccount(),
       ncn: getNextAccount(),
       vault: getNextAccount(),
-      vaultNcnTicket: getNextAccount(),
       ncnVaultTicket: getNextAccount(),
-      restakingProgramId: getNextAccount(),
-      vaultProgramId: getNextAccount(),
     },
     data: getRegisterVaultInstructionDataDecoder().decode(instruction.data),
   };

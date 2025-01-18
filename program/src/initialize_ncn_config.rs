@@ -18,6 +18,7 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
+// TODO rename to admin_initialize_config
 pub fn process_initialize_ncn_config(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -27,7 +28,7 @@ pub fn process_initialize_ncn_config(
     epochs_before_stall: u64,
     valid_slots_after_consensus: u64,
 ) -> ProgramResult {
-    let [config, ncn_account, dao_fee_wallet, ncn_admin, tie_breaker_admin, restaking_program, system_program] =
+    let [config, ncn_account, dao_fee_wallet, ncn_admin, tie_breaker_admin, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -37,7 +38,7 @@ pub fn process_initialize_ncn_config(
     load_system_program(system_program)?;
     load_signer(ncn_admin, false)?;
 
-    Ncn::load(restaking_program.key, ncn_account, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
 
     let epoch = Clock::get()?.epoch;
 
@@ -55,7 +56,7 @@ pub fn process_initialize_ncn_config(
         return Err(ProgramError::InvalidSeeds);
     }
 
-    if block_engine_fee_bps as u64 >= MAX_FEE_BPS {
+    if block_engine_fee_bps as u64 > MAX_FEE_BPS {
         return Err(TipRouterError::FeeCapExceeded.into());
     }
     if dao_fee_bps as u64 > MAX_FEE_BPS {

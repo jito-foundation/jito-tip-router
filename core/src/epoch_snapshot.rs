@@ -370,6 +370,10 @@ impl OperatorSnapshot {
         Ok(())
     }
 
+    pub fn ncn_operator_index(&self) -> u64 {
+        self.ncn_operator_index.into()
+    }
+
     pub fn slot_finalized(&self) -> u64 {
         self.slot_finalized.into()
     }
@@ -414,6 +418,12 @@ impl OperatorSnapshot {
         self.vault_operator_stake_weight
             .iter()
             .any(|v| v.vault_index() == vault_index)
+    }
+
+    pub fn contains_vault(&self, vault: &Pubkey) -> bool {
+        self.vault_operator_stake_weight
+            .iter()
+            .any(|v| v.vault().eq(vault))
     }
 
     pub const fn vault_operator_stake_weight(&self) -> &[VaultOperatorStakeWeight] {
@@ -488,9 +498,10 @@ impl OperatorSnapshot {
         weight_table: &WeightTable,
         st_mint: &Pubkey,
     ) -> Result<u128, ProgramError> {
-        let total_security = vault_operator_delegation
-            .delegation_state
-            .total_security()?;
+        // With using `delegation_state.total_security()` there is a thin margin
+        // where stake can be double counted. For this reason, we'll use the
+        // delegation_state.staked_amount() instead.
+        let total_security = vault_operator_delegation.delegation_state.staked_amount();
 
         let precise_total_security = PreciseNumber::new(total_security as u128)
             .ok_or(TipRouterError::NewPreciseNumberError)?;

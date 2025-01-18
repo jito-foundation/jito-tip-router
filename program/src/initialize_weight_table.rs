@@ -5,7 +5,8 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    constants::MAX_REALLOC_BYTES, vault_registry::VaultRegistry, weight_table::WeightTable,
+    constants::MAX_REALLOC_BYTES, epoch_state::EpochState, vault_registry::VaultRegistry,
+    weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -19,18 +20,13 @@ pub fn process_initialize_weight_table(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [vault_registry, ncn, weight_table, payer, restaking_program, system_program] = accounts
-    else {
+    let [epoch_state, vault_registry, ncn, weight_table, payer, system_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
 
     load_system_account(weight_table, true)?;
     load_system_program(system_program)?;

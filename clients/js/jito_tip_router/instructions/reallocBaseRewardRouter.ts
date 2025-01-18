@@ -32,7 +32,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const REALLOC_BASE_REWARD_ROUTER_DISCRIMINATOR = 16;
+export const REALLOC_BASE_REWARD_ROUTER_DISCRIMINATOR = 18;
 
 export function getReallocBaseRewardRouterDiscriminatorBytes() {
   return getU8Encoder().encode(REALLOC_BASE_REWARD_ROUTER_DISCRIMINATOR);
@@ -40,6 +40,7 @@ export function getReallocBaseRewardRouterDiscriminatorBytes() {
 
 export type ReallocBaseRewardRouterInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
@@ -52,6 +53,9 @@ export type ReallocBaseRewardRouterInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? WritableAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
@@ -110,12 +114,14 @@ export function getReallocBaseRewardRouterInstructionDataCodec(): Codec<
 }
 
 export type ReallocBaseRewardRouterInput<
+  TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountBaseRewardRouter extends string = string,
   TAccountNcn extends string = string,
   TAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   ncn: Address<TAccountNcn>;
@@ -125,6 +131,7 @@ export type ReallocBaseRewardRouterInput<
 };
 
 export function getReallocBaseRewardRouterInstruction<
+  TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountBaseRewardRouter extends string,
   TAccountNcn extends string,
@@ -133,6 +140,7 @@ export function getReallocBaseRewardRouterInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: ReallocBaseRewardRouterInput<
+    TAccountEpochState,
     TAccountConfig,
     TAccountBaseRewardRouter,
     TAccountNcn,
@@ -142,6 +150,7 @@ export function getReallocBaseRewardRouterInstruction<
   config?: { programAddress?: TProgramAddress }
 ): ReallocBaseRewardRouterInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountConfig,
   TAccountBaseRewardRouter,
   TAccountNcn,
@@ -154,6 +163,7 @@ export function getReallocBaseRewardRouterInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     baseRewardRouter: {
       value: input.baseRewardRouter ?? null,
@@ -180,6 +190,7 @@ export function getReallocBaseRewardRouterInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.baseRewardRouter),
       getAccountMeta(accounts.ncn),
@@ -192,6 +203,7 @@ export function getReallocBaseRewardRouterInstruction<
     ),
   } as ReallocBaseRewardRouterInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountConfig,
     TAccountBaseRewardRouter,
     TAccountNcn,
@@ -208,11 +220,12 @@ export type ParsedReallocBaseRewardRouterInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    config: TAccountMetas[0];
-    baseRewardRouter: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    payer: TAccountMetas[3];
-    systemProgram: TAccountMetas[4];
+    epochState: TAccountMetas[0];
+    config: TAccountMetas[1];
+    baseRewardRouter: TAccountMetas[2];
+    ncn: TAccountMetas[3];
+    payer: TAccountMetas[4];
+    systemProgram: TAccountMetas[5];
   };
   data: ReallocBaseRewardRouterInstructionData;
 };
@@ -225,7 +238,7 @@ export function parseReallocBaseRewardRouterInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedReallocBaseRewardRouterInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -238,6 +251,7 @@ export function parseReallocBaseRewardRouterInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       config: getNextAccount(),
       baseRewardRouter: getNextAccount(),
       ncn: getNextAccount(),

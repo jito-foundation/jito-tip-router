@@ -6,6 +6,7 @@ pub mod config;
 pub mod constants;
 pub mod discriminators;
 pub mod epoch_snapshot;
+pub mod epoch_state;
 pub mod error;
 pub mod fees;
 pub mod instruction;

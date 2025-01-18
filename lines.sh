@@ -5,6 +5,7 @@ directories=(
     "./program"
     "./core"
     "./integration_tests"
+    "./cli"
 )
 
 total=0
