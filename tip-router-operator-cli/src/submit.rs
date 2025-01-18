@@ -1,13 +1,10 @@
-use std::{
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+use std::{path::PathBuf, str::FromStr};
 
 use anchor_lang::AccountDeserialize;
 use ellipsis_client::EllipsisClient;
 use jito_bytemuck::AccountDeserialize as JitoAccountDeserialize;
 use jito_tip_distribution_sdk::{derive_config_account_address, TipDistributionAccount};
-use jito_tip_router_core::{ballot_box::BallotBox, config::Config};
+use jito_tip_router_core::ballot_box::BallotBox;
 use log::info;
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use solana_account_decoder::UiAccountEncoding;

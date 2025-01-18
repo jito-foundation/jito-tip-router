@@ -8,13 +8,9 @@ use ellipsis_client::EllipsisClient;
 use log::info;
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_rpc_client::rpc_client::RpcClient;
-use solana_sdk::{pubkey::Pubkey, signer::keypair::Keypair};
+use solana_sdk::pubkey::Pubkey;
 
-use crate::{
-    get_meta_merkle_root,
-    tip_router::{cast_vote, get_ncn_config},
-    Cli,
-};
+use crate::{get_meta_merkle_root, tip_router::get_ncn_config, Cli};
 
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient) -> Result<()> {
     let current_epoch = rpc_client.get_epoch_info()?.epoch;
@@ -97,16 +93,24 @@ pub async fn process_epoch(
     ) {
         Ok(tree) => {
             datapoint_info!(
-                "tip_router_cli-process_epoch_success",
-                ("epoch", target_epoch, i64)
+                "tip_router_cli-process_epoch",
+                ("operator_address", operator_address.to_string(), String),
+                ("epoch", target_epoch, i64),
+                ("status", "success", String),
+                ("state", "merkle_root_generation", String),
+                ("duration_ms", start.elapsed().as_millis() as i64, i64)
             );
             tree
         }
         Err(e) => {
             datapoint_error!(
-                "tip_router_cli-process_epoch_error",
+                "tip_router_cli-process_epoch",
+                ("operator_address", operator_address.to_string(), String),
                 ("epoch", target_epoch, i64),
-                ("error", format!("{:?}", e), String)
+                ("status", "error", String),
+                ("error", format!("{:?}", e), String),
+                ("state", "merkle_root_generation", String),
+                ("duration_ms", start.elapsed().as_millis() as i64, i64)
             );
             return Err(anyhow::anyhow!("Failed to generate merkle root: {:?}", e));
         }
@@ -119,9 +123,13 @@ pub async fn process_epoch(
         Ok(json) => json,
         Err(e) => {
             datapoint_error!(
-                "tip_router_cli-process_epoch_error",
+                "tip_router_cli-process_epoch",
+                ("operator_address", operator_address.to_string(), String),
                 ("epoch", target_epoch, i64),
-                ("error", format!("{:?}", e), String)
+                ("status", "error", String),
+                ("error", format!("{:?}", e), String),
+                ("state", "merkle_root_generation", String),
+                ("duration_ms", start.elapsed().as_millis() as i64, i64)
             );
             return Err(anyhow::anyhow!(
                 "Failed to serialize meta merkle tree: {}",
@@ -132,9 +140,13 @@ pub async fn process_epoch(
 
     if let Err(e) = std::fs::write(&meta_merkle_tree_path, meta_merkle_tree_json) {
         datapoint_error!(
-            "tip_router_cli-process_epoch_error",
+            "tip_router_cli-process_epoch",
+            ("operator_address", operator_address.to_string(), String),
             ("epoch", target_epoch, i64),
-            ("error", format!("{:?}", e), String)
+            ("status", "error", String),
+            ("error", format!("{:?}", e), String),
+            ("state", "merkle_root_generation", String),
+            ("duration_ms", start.elapsed().as_millis() as i64, i64)
         );
         return Err(anyhow::anyhow!(
             "Failed to write meta merkle tree to file: {}",
@@ -142,12 +154,14 @@ pub async fn process_epoch(
         ));
     }
 
-    let elapsed_us = start.elapsed().as_micros();
     // Emit a datapoint for starting the epoch processing
     datapoint_info!(
-        "tip_router_cli-process_epoch_success",
+        "tip_router_cli.process_epoch",
+        ("operator_address", operator_address.to_string(), String),
         ("epoch", target_epoch, i64),
-        ("elapsed_us", elapsed_us, i64),
+        ("status", "success", String),
+        ("state", "epoch_processing_completed", String),
+        ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
 
     solana_metrics::flush();

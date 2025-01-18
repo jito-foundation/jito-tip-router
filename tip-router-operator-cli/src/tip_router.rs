@@ -11,7 +11,7 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
 };
-use log::{info, warn};
+use log::info;
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use solana_sdk::{
     pubkey::Pubkey,

@@ -34,7 +34,7 @@ pub fn get_bank_from_ledger(
 
     // Start validation
     datapoint_info!(
-        "tip_router_cli-get_bank",
+        "tip_router_cli.get_bank",
         ("operator", operator_address.to_string(), String),
         ("state", "validate_path_start", String),
         ("step", 0, i64),
@@ -43,7 +43,7 @@ pub fn get_bank_from_ledger(
     // STEP 1: Load genesis config //
 
     datapoint_info!(
-        "tip_router_cli-get_bank",
+        "tip_router_cli.get_bank",
         ("operator", operator_address.to_string(), String),
         ("state", "load_genesis_start", String),
         ("step", 1, i64),
@@ -54,9 +54,10 @@ pub fn get_bank_from_ledger(
         Ok(genesis_config) => genesis_config,
         Err(e) => {
             datapoint_error!(
-                "tip_router_cli-get_bank",
+                "tip_router_cli.get_bank",
                 ("operator", operator_address.to_string(), String),
-                ("state", "load_genesis_error", String),
+                ("status", "error", String),
+                ("state", "load_genesis", String),
                 ("step", 1, i64),
                 ("error", e.to_string(), String),
             );
@@ -67,7 +68,7 @@ pub fn get_bank_from_ledger(
     // STEP 2: Load blockstore //
 
     datapoint_info!(
-        "tip_router_cli-get_bank",
+        "tip_router_cli.get_bank",
         ("operator", operator_address.to_string(), String),
         ("state", "load_blockstore_start", String),
         ("step", 2, i64),
@@ -112,9 +113,10 @@ pub fn get_bank_from_ledger(
                 format!("Failed to open blockstore at {ledger_path:?}: {err:?}")
             };
             datapoint_error!(
-                "tip_router_cli-get_bank",
+                "tip_router_cli.get_bank",
                 ("operator", operator_address.to_string(), String),
-                ("state", "load_blockstore_error", String),
+                ("status", "error", String),
+                ("state", "load_blockstore", String),
                 ("step", 2, i64),
                 ("error", error_str, String),
                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -124,9 +126,10 @@ pub fn get_bank_from_ledger(
         Err(err) => {
             let error_str = format!("Failed to open blockstore at {ledger_path:?}: {err:?}");
             datapoint_error!(
-                "tip_router_cli-get_bank",
+                "tip_router_cli.get_bank",
                 ("operator", operator_address.to_string(), String),
-                ("state", "load_blockstore_error", String),
+                ("status", "error", String),
+                ("state", "load_blockstore", String),
                 ("step", 2, i64),
                 ("error", error_str, String),
                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -150,7 +153,7 @@ pub fn get_bank_from_ledger(
     // STEP 3: Load bank forks //
 
     datapoint_info!(
-        "tip_router_cli-get_bank",
+        "tip_router_cli.get_bank",
         ("operator", operator_address.to_string(), String),
         ("state", "load_snapshot_config_start", String),
         ("step", 3, i64),
@@ -186,9 +189,10 @@ pub fn get_bank_from_ledger(
             Ok(res) => res,
             Err(e) => {
                 datapoint_error!(
-                    "tip_router_cli-get_bank",
+                    "tip_router_cli.get_bank",
                     ("operator", operator_address.to_string(), String),
-                    ("state", "load_bank_forks_error", String),
+                    ("state", "load_bank_forks", String),
+                    ("status", "error", String),
                     ("step", 4, i64),
                     ("error", e.to_string(), String),
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -200,7 +204,7 @@ pub fn get_bank_from_ledger(
     // STEP 4: Process blockstore from root //
 
     datapoint_info!(
-        "tip_router_cli-get_bank",
+        "tip_router_cli.get_bank",
         ("operator", operator_address.to_string(), String),
         ("state", "process_blockstore_from_root_start", String),
         ("step", 4, i64),
@@ -220,9 +224,10 @@ pub fn get_bank_from_ledger(
         Ok(()) => (),
         Err(e) => {
             datapoint_error!(
-                "tip_router_cli-get_bank",
+                "tip_router_cli.get_bank",
                 ("operator", operator_address.to_string(), String),
-                ("state", "process_blockstore_from_root_error", String),
+                ("status", "error", String),
+                ("state", "process_blockstore_from_root", String),
                 ("step", 5, i64),
                 ("error", e.to_string(), String),
                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -234,7 +239,7 @@ pub fn get_bank_from_ledger(
     // STEP 5: Save snapshot //
 
     datapoint_info!(
-        "tip_router_cli-get_bank",
+        "tip_router_cli.get_bank",
         ("operator", operator_address.to_string(), String),
         ("state", "bank_to_full_snapshot_archive_start", String),
         ("step", 5, i64),
@@ -257,9 +262,10 @@ pub fn get_bank_from_ledger(
             Ok(res) => res,
             Err(e) => {
                 datapoint_error!(
-                    "tip_router_cli-get_bank",
+                    "tip_router_cli.get_bank",
                     ("operator", operator_address.to_string(), String),
-                    ("state", "bank_to_full_snapshot_archive_error", String),
+                    ("status", "error", String),
+                    ("state", "bank_to_full_snapshot_archive", String),
                     ("step", 6, i64),
                     ("error", e.to_string(), String),
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -286,7 +292,7 @@ pub fn get_bank_from_ledger(
     );
 
     datapoint_info!(
-        "tip_router_cli-get_bank",
+        "tip_router_cli.get_bank",
         ("operator", operator_address.to_string(), String),
         ("state", "get_bank_from_ledger_success", String),
         ("step", 6, i64),

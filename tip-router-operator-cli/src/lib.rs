@@ -88,8 +88,9 @@ pub fn get_meta_merkle_root(
     let start = Instant::now();
 
     datapoint_info!(
-        "tip_router_cli-get_meta_merkle_root",
-        ("state", "stake_meta_generation_started", String),
+        "tip_router_cli.get_meta_merkle_root",
+        ("operator_address", operator_address.to_string(), String),
+        ("state", "stake_meta_generation", String),
         ("step", 1, i64),
         ("epoch", epoch, i64),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
@@ -118,8 +119,9 @@ pub fn get_meta_merkle_root(
     );
 
     datapoint_info!(
-        "tip_router_cli-get_meta_merkle_root",
-        ("state", "generated_merkle_tree_collection_started", String),
+        "tip_router_cli.get_meta_merkle_root",
+        ("operator_address", operator_address.to_string(), String),
+        ("state", "generated_merkle_tree_collection", String),
         ("step", 2, i64),
         ("epoch", epoch, i64),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
@@ -145,8 +147,9 @@ pub fn get_meta_merkle_root(
     );
 
     datapoint_info!(
-        "tip_router_cli-get_meta_merkle_root",
-        ("state", "meta_merkle_tree_creation_started", String),
+        "tip_router_cli.get_meta_merkle_root",
+        ("operator_address", operator_address.to_string(), String),
+        ("state", "meta_merkle_tree_creation", String),
         ("step", 3, i64),
         ("epoch", epoch, i64),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
@@ -167,8 +170,9 @@ pub fn get_meta_merkle_root(
     );
 
     datapoint_info!(
-        "tip_router_cli-get_meta_merkle_root",
-        ("state", "meta_merkle_tree_creation_completed", String),
+        "tip_router_cli.get_meta_merkle_root",
+        ("operator_address", operator_address.to_string(), String),
+        ("state", "meta_merkle_tree_creation", String),
         ("step", 4, i64),
         ("epoch", epoch, i64),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
