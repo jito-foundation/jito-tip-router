@@ -13,10 +13,14 @@ import {
   decodeAccount,
   fetchEncodedAccount,
   fetchEncodedAccounts,
+  fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
+  getBytesDecoder,
+  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -33,6 +37,7 @@ import {
   type FetchAccountsConfig,
   type MaybeAccount,
   type MaybeEncodedAccount,
+  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
   getVaultEntryDecoder,
@@ -52,7 +57,7 @@ export type WeightTable = {
   slotCreated: bigint;
   vaultCount: bigint;
   bump: number;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
   vaultRegistry: Array<VaultEntry>;
   table: Array<WeightEntry>;
 };
@@ -64,7 +69,7 @@ export type WeightTableArgs = {
   slotCreated: number | bigint;
   vaultCount: number | bigint;
   bump: number;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
   vaultRegistry: Array<VaultEntryArgs>;
   table: Array<WeightEntryArgs>;
 };
@@ -77,7 +82,7 @@ export function getWeightTableEncoder(): Encoder<WeightTableArgs> {
     ['slotCreated', getU64Encoder()],
     ['vaultCount', getU64Encoder()],
     ['bump', getU8Encoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 128)],
     ['vaultRegistry', getArrayEncoder(getVaultEntryEncoder(), { size: 64 })],
     ['table', getArrayEncoder(getWeightEntryEncoder(), { size: 64 })],
   ]);
@@ -91,7 +96,7 @@ export function getWeightTableDecoder(): Decoder<WeightTable> {
     ['slotCreated', getU64Decoder()],
     ['vaultCount', getU64Decoder()],
     ['bump', getU8Decoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 128)],
     ['vaultRegistry', getArrayDecoder(getVaultEntryDecoder(), { size: 64 })],
     ['table', getArrayDecoder(getWeightEntryDecoder(), { size: 64 })],
   ]);

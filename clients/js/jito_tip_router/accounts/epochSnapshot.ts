@@ -13,10 +13,12 @@ import {
   decodeAccount,
   fetchEncodedAccount,
   fetchEncodedAccounts,
+  fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
-  getArrayDecoder,
-  getArrayEncoder,
+  getBytesDecoder,
+  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -33,6 +35,7 @@ import {
   type FetchAccountsConfig,
   type MaybeAccount,
   type MaybeEncodedAccount,
+  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
   getFeesDecoder,
@@ -58,7 +61,7 @@ export type EpochSnapshot = {
   operatorsRegistered: bigint;
   validOperatorVaultDelegations: bigint;
   stakeWeights: StakeWeights;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
 };
 
 export type EpochSnapshotArgs = {
@@ -74,7 +77,7 @@ export type EpochSnapshotArgs = {
   operatorsRegistered: number | bigint;
   validOperatorVaultDelegations: number | bigint;
   stakeWeights: StakeWeightsArgs;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
 };
 
 export function getEpochSnapshotEncoder(): Encoder<EpochSnapshotArgs> {
@@ -91,7 +94,7 @@ export function getEpochSnapshotEncoder(): Encoder<EpochSnapshotArgs> {
     ['operatorsRegistered', getU64Encoder()],
     ['validOperatorVaultDelegations', getU64Encoder()],
     ['stakeWeights', getStakeWeightsEncoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 128)],
   ]);
 }
 
@@ -109,7 +112,7 @@ export function getEpochSnapshotDecoder(): Decoder<EpochSnapshot> {
     ['operatorsRegistered', getU64Decoder()],
     ['validOperatorVaultDelegations', getU64Decoder()],
     ['stakeWeights', getStakeWeightsDecoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 128)],
   ]);
 }
 

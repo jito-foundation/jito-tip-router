@@ -13,12 +13,16 @@ import {
   decodeAccount,
   fetchEncodedAccount,
   fetchEncodedAccounts,
+  fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
   getBoolDecoder,
   getBoolEncoder,
+  getBytesDecoder,
+  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU16Decoder,
@@ -37,6 +41,7 @@ import {
   type FetchAccountsConfig,
   type MaybeAccount,
   type MaybeEncodedAccount,
+  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
   getStakeWeightsDecoder,
@@ -65,7 +70,7 @@ export type OperatorSnapshot = {
   vaultOperatorDelegationsRegistered: bigint;
   validOperatorVaultDelegations: bigint;
   stakeWeights: StakeWeights;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
   vaultOperatorStakeWeight: Array<VaultOperatorStakeWeight>;
 };
 
@@ -85,7 +90,7 @@ export type OperatorSnapshotArgs = {
   vaultOperatorDelegationsRegistered: number | bigint;
   validOperatorVaultDelegations: number | bigint;
   stakeWeights: StakeWeightsArgs;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
   vaultOperatorStakeWeight: Array<VaultOperatorStakeWeightArgs>;
 };
 
@@ -106,7 +111,7 @@ export function getOperatorSnapshotEncoder(): Encoder<OperatorSnapshotArgs> {
     ['vaultOperatorDelegationsRegistered', getU64Encoder()],
     ['validOperatorVaultDelegations', getU64Encoder()],
     ['stakeWeights', getStakeWeightsEncoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 256 })],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 256)],
     [
       'vaultOperatorStakeWeight',
       getArrayEncoder(getVaultOperatorStakeWeightEncoder(), { size: 64 }),
@@ -131,7 +136,7 @@ export function getOperatorSnapshotDecoder(): Decoder<OperatorSnapshot> {
     ['vaultOperatorDelegationsRegistered', getU64Decoder()],
     ['validOperatorVaultDelegations', getU64Decoder()],
     ['stakeWeights', getStakeWeightsDecoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 256 })],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 256)],
     [
       'vaultOperatorStakeWeight',
       getArrayDecoder(getVaultOperatorStakeWeightDecoder(), { size: 64 }),

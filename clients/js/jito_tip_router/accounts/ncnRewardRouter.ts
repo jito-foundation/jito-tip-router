@@ -13,10 +13,14 @@ import {
   decodeAccount,
   fetchEncodedAccount,
   fetchEncodedAccounts,
+  fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
+  getBytesDecoder,
+  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU16Decoder,
@@ -35,6 +39,7 @@ import {
   type FetchAccountsConfig,
   type MaybeAccount,
   type MaybeEncodedAccount,
+  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
   getNcnFeeGroupDecoder,
@@ -59,7 +64,7 @@ export type NcnRewardRouter = {
   rewardPool: bigint;
   rewardsProcessed: bigint;
   operatorRewards: bigint;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
   lastRewardsToProcess: bigint;
   lastVaultOperatorDelegationIndex: number;
   vaultRewardRoutes: Array<VaultRewardRoute>;
@@ -77,7 +82,7 @@ export type NcnRewardRouterArgs = {
   rewardPool: number | bigint;
   rewardsProcessed: number | bigint;
   operatorRewards: number | bigint;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
   lastRewardsToProcess: number | bigint;
   lastVaultOperatorDelegationIndex: number;
   vaultRewardRoutes: Array<VaultRewardRouteArgs>;
@@ -96,7 +101,7 @@ export function getNcnRewardRouterEncoder(): Encoder<NcnRewardRouterArgs> {
     ['rewardPool', getU64Encoder()],
     ['rewardsProcessed', getU64Encoder()],
     ['operatorRewards', getU64Encoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 128)],
     ['lastRewardsToProcess', getU64Encoder()],
     ['lastVaultOperatorDelegationIndex', getU16Encoder()],
     [
@@ -119,7 +124,7 @@ export function getNcnRewardRouterDecoder(): Decoder<NcnRewardRouter> {
     ['rewardPool', getU64Decoder()],
     ['rewardsProcessed', getU64Decoder()],
     ['operatorRewards', getU64Decoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 128)],
     ['lastRewardsToProcess', getU64Decoder()],
     ['lastVaultOperatorDelegationIndex', getU16Decoder()],
     [

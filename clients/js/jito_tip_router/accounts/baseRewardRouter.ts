@@ -13,10 +13,14 @@ import {
   decodeAccount,
   fetchEncodedAccount,
   fetchEncodedAccounts,
+  fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
+  getBytesDecoder,
+  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU16Decoder,
@@ -35,6 +39,7 @@ import {
   type FetchAccountsConfig,
   type MaybeAccount,
   type MaybeEncodedAccount,
+  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
   getBaseRewardRouterRewardsDecoder,
@@ -56,7 +61,7 @@ export type BaseRewardRouter = {
   totalRewards: bigint;
   rewardPool: bigint;
   rewardsProcessed: bigint;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
   lastNcnGroupIndex: number;
   lastVoteIndex: number;
   lastRewardsToProcess: bigint;
@@ -74,7 +79,7 @@ export type BaseRewardRouterArgs = {
   totalRewards: number | bigint;
   rewardPool: number | bigint;
   rewardsProcessed: number | bigint;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
   lastNcnGroupIndex: number;
   lastVoteIndex: number;
   lastRewardsToProcess: number | bigint;
@@ -93,7 +98,7 @@ export function getBaseRewardRouterEncoder(): Encoder<BaseRewardRouterArgs> {
     ['totalRewards', getU64Encoder()],
     ['rewardPool', getU64Encoder()],
     ['rewardsProcessed', getU64Encoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 128)],
     ['lastNcnGroupIndex', getU8Encoder()],
     ['lastVoteIndex', getU16Encoder()],
     ['lastRewardsToProcess', getU64Encoder()],
@@ -122,7 +127,7 @@ export function getBaseRewardRouterDecoder(): Decoder<BaseRewardRouter> {
     ['totalRewards', getU64Decoder()],
     ['rewardPool', getU64Decoder()],
     ['rewardsProcessed', getU64Decoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 128)],
     ['lastNcnGroupIndex', getU8Decoder()],
     ['lastVoteIndex', getU16Decoder()],
     ['lastRewardsToProcess', getU64Decoder()],

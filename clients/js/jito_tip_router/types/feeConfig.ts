@@ -8,27 +8,30 @@
 
 import {
   combineCodec,
+  fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
+  getBytesDecoder,
+  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU16Decoder,
   getU16Encoder,
-  getU8Decoder,
-  getU8Encoder,
   type Address,
   type Codec,
   type Decoder,
   type Encoder,
+  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import { getFeesDecoder, getFeesEncoder, type Fees, type FeesArgs } from '.';
 
 export type FeeConfig = {
   blockEngineFeeBps: number;
   baseFeeWallets: Array<Address>;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
   fee1: Fees;
   fee2: Fees;
 };
@@ -36,7 +39,7 @@ export type FeeConfig = {
 export type FeeConfigArgs = {
   blockEngineFeeBps: number;
   baseFeeWallets: Array<Address>;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
   fee1: FeesArgs;
   fee2: FeesArgs;
 };
@@ -45,7 +48,7 @@ export function getFeeConfigEncoder(): Encoder<FeeConfigArgs> {
   return getStructEncoder([
     ['blockEngineFeeBps', getU16Encoder()],
     ['baseFeeWallets', getArrayEncoder(getAddressEncoder(), { size: 8 })],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 128)],
     ['fee1', getFeesEncoder()],
     ['fee2', getFeesEncoder()],
   ]);
@@ -55,7 +58,7 @@ export function getFeeConfigDecoder(): Decoder<FeeConfig> {
   return getStructDecoder([
     ['blockEngineFeeBps', getU16Decoder()],
     ['baseFeeWallets', getArrayDecoder(getAddressDecoder(), { size: 8 })],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 128)],
     ['fee1', getFeesDecoder()],
     ['fee2', getFeesDecoder()],
   ]);

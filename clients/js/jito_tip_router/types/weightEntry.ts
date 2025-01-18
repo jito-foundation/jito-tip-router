@@ -8,19 +8,20 @@
 
 import {
   combineCodec,
-  getArrayDecoder,
-  getArrayEncoder,
+  fixDecoderSize,
+  fixEncoderSize,
+  getBytesDecoder,
+  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU128Decoder,
   getU128Encoder,
   getU64Decoder,
   getU64Encoder,
-  getU8Decoder,
-  getU8Encoder,
   type Codec,
   type Decoder,
   type Encoder,
+  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
   getStMintEntryDecoder,
@@ -34,7 +35,7 @@ export type WeightEntry = {
   weight: bigint;
   slotSet: bigint;
   slotUpdated: bigint;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
 };
 
 export type WeightEntryArgs = {
@@ -42,7 +43,7 @@ export type WeightEntryArgs = {
   weight: number | bigint;
   slotSet: number | bigint;
   slotUpdated: number | bigint;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
 };
 
 export function getWeightEntryEncoder(): Encoder<WeightEntryArgs> {
@@ -51,7 +52,7 @@ export function getWeightEntryEncoder(): Encoder<WeightEntryArgs> {
     ['weight', getU128Encoder()],
     ['slotSet', getU64Encoder()],
     ['slotUpdated', getU64Encoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 128)],
   ]);
 }
 
@@ -61,7 +62,7 @@ export function getWeightEntryDecoder(): Decoder<WeightEntry> {
     ['weight', getU128Decoder()],
     ['slotSet', getU64Decoder()],
     ['slotUpdated', getU64Decoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 128)],
   ]);
 }
 

@@ -13,10 +13,12 @@ import {
   decodeAccount,
   fetchEncodedAccount,
   fetchEncodedAccounts,
+  fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
-  getArrayDecoder,
-  getArrayEncoder,
+  getBytesDecoder,
+  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -33,6 +35,7 @@ import {
   type FetchAccountsConfig,
   type MaybeAccount,
   type MaybeEncodedAccount,
+  type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
   getFeeConfigDecoder,
@@ -50,7 +53,7 @@ export type Config = {
   epochsBeforeStall: bigint;
   feeConfig: FeeConfig;
   bump: number;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
 };
 
 export type ConfigArgs = {
@@ -62,7 +65,7 @@ export type ConfigArgs = {
   epochsBeforeStall: number | bigint;
   feeConfig: FeeConfigArgs;
   bump: number;
-  reserved: Array<number>;
+  reserved: ReadonlyUint8Array;
 };
 
 export function getConfigEncoder(): Encoder<ConfigArgs> {
@@ -75,7 +78,7 @@ export function getConfigEncoder(): Encoder<ConfigArgs> {
     ['epochsBeforeStall', getU64Encoder()],
     ['feeConfig', getFeeConfigEncoder()],
     ['bump', getU8Encoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 127 })],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 127)],
   ]);
 }
 
@@ -89,7 +92,7 @@ export function getConfigDecoder(): Decoder<Config> {
     ['epochsBeforeStall', getU64Decoder()],
     ['feeConfig', getFeeConfigDecoder()],
     ['bump', getU8Decoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 127 })],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 127)],
   ]);
 }
 
