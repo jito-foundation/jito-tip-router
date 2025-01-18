@@ -65,7 +65,6 @@ async fn main() -> Result<()> {
             info!("Running Tip Router...");
 
             // TODO turn into arc
-            let keypair_clone = keypair.insecure_clone();
             let rpc_client_clone = rpc_client.clone();
             let cli_clone = cli.clone();
 
@@ -74,7 +73,7 @@ async fn main() -> Result<()> {
                 loop {
                     if let Err(e) = submit_recent_epochs_to_ncn(
                         &rpc_client_clone,
-                        &keypair_clone,
+                        &keypair,
                         &ncn_address,
                         &tip_router_program_id,
                         &tip_distribution_program_id,
@@ -100,7 +99,6 @@ async fn main() -> Result<()> {
                     &rpc_client,
                     previous_epoch_slot,
                     previous_epoch,
-                    &keypair,
                     &tip_distribution_program_id,
                     &tip_payment_program_id,
                     &tip_router_program_id,
@@ -136,7 +134,6 @@ async fn main() -> Result<()> {
                 &rpc_client,
                 slot,
                 epoch,
-                &keypair,
                 &tip_distribution_program_id,
                 &tip_payment_program_id,
                 &tip_router_program_id,

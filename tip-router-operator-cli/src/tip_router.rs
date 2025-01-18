@@ -1,5 +1,5 @@
 use anyhow::Result;
-use ellipsis_client::{ClientSubset, EllipsisClient, EllipsisClientResult};
+use ellipsis_client::{ClientSubset, EllipsisClient, EllipsisClientError, EllipsisClientResult};
 use jito_bytemuck::AccountDeserialize;
 use jito_tip_distribution_sdk::{
     derive_config_account_address, jito_tip_distribution::accounts::TipDistributionAccount,
@@ -11,7 +11,7 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
 };
-use log::info;
+use log::{info, warn};
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use solana_sdk::{
     pubkey::Pubkey,
@@ -77,15 +77,19 @@ pub async fn cast_vote(
 pub async fn set_merkle_roots_batched(
     client: &EllipsisClient,
     ncn_address: &Pubkey,
+    keypair: &Keypair,
     tip_distribution_program: &Pubkey,
     epoch: u64,
     tip_distribution_accounts: Vec<(Pubkey, TipDistributionAccount)>,
     meta_merkle_tree: MetaMerkleTree,
-) -> Result<Vec<Signature>> {
+) -> Result<Vec<EllipsisClientResult<Signature>>> {
     let ballot_box =
         BallotBox::find_program_address(&jito_tip_router_program::id(), ncn_address, epoch).0;
 
     let config = Config::find_program_address(&jito_tip_router_program::id(), ncn_address).0;
+
+    let epoch_state =
+        EpochState::find_program_address(&jito_tip_router_program::id(), ncn_address, epoch).0;
 
     let tip_distribution_config =
         derive_config_account_address(&jito_tip_distribution_sdk::jito_tip_distribution::ID).0;
@@ -106,6 +110,7 @@ pub async fn set_merkle_roots_batched(
             let vote_account = tip_distribution_account.validator_vote_account;
 
             let ix = SetMerkleRootBuilder::new()
+                .epoch_state(epoch_state)
                 .config(config)
                 .ncn(*ncn_address)
                 .ballot_box(ballot_box)
@@ -113,7 +118,6 @@ pub async fn set_merkle_roots_batched(
                 .tip_distribution_account(*key)
                 .tip_distribution_config(tip_distribution_config)
                 .tip_distribution_program(*tip_distribution_program)
-                .restaking_program(jito_restaking_program::id())
                 .proof(proof)
                 .merkle_root(meta_merkle_node.validator_merkle_root)
                 .max_total_claim(meta_merkle_node.max_total_claim)
@@ -124,7 +128,26 @@ pub async fn set_merkle_roots_batched(
         })
         .collect::<Vec<_>>();
 
-    // Parallel submit instructions
+    let mut results = vec![];
+    for _ in 0..instructions.len() {
+        results.push(Err(EllipsisClientError::Other(anyhow::anyhow!(
+            "Default: Failed to submit instruction"
+        ))));
+    }
 
-    Ok(vec![])
+    // TODO Parallel submit instructions
+    for (i, ix) in instructions.into_iter().enumerate() {
+        let mut tx = Transaction::new_with_payer(&[ix], Some(&keypair.pubkey()));
+        // Simple retry logic
+        for _ in 0..5 {
+            let blockhash = client.fetch_latest_blockhash().await?;
+            tx.sign(&[keypair], blockhash);
+            results[i] = client.process_transaction(tx.clone(), &[keypair]).await;
+            if results[i].is_ok() {
+                break;
+            }
+        }
+    }
+
+    Ok(results)
 }

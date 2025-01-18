@@ -73,6 +73,7 @@ impl Display for StakeMetaGeneratorError {
 /// that slot. Optionally writing the result as JSON file to disk.
 #[allow(clippy::too_many_arguments)]
 pub fn generate_stake_meta(
+    operator_address: &Pubkey,
     ledger_path: &Path,
     account_paths: Vec<PathBuf>,
     full_snapshots_path: PathBuf,
@@ -84,6 +85,7 @@ pub fn generate_stake_meta(
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     info!("Creating bank from ledger path...");
     let bank = get_bank_from_ledger(
+        operator_address,
         ledger_path,
         account_paths,
         full_snapshots_path,

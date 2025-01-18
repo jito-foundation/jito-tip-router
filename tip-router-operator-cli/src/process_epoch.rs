@@ -54,7 +54,6 @@ pub async fn process_epoch(
     client: &EllipsisClient,
     target_slot: u64,
     target_epoch: u64,
-    payer: &Keypair,
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     ncn_address: &Pubkey,
@@ -69,7 +68,7 @@ pub async fn process_epoch(
     let ledger_path = cli_args.ledger_path.clone();
     let account_paths = cli_args.account_paths.clone();
     let full_snapshots_path = cli_args.full_snapshots_path.clone();
-    let operator = Pubkey::from_str(&cli_args.operator_address).unwrap();
+    let operator_address = Pubkey::from_str(&cli_args.operator_address).unwrap();
     let meta_merkle_tree_dir = cli_args.meta_merkle_tree_dir.clone();
 
     // Get the protocol fees
@@ -91,20 +90,21 @@ pub async fn process_epoch(
         "", // TODO out_path is not used, unsure what should be put here. Maybe `snapshot_output_dir` from cli args?
         tip_payment_program_id,
         ncn_address,
+        &operator_address,
         target_epoch,
         adjusted_total_fees,
         snapshots_enabled,
     ) {
         Ok(tree) => {
             datapoint_info!(
-                "tip_router_cli-merkle_root_generated",
+                "tip_router_cli-process_epoch_success",
                 ("epoch", target_epoch, i64)
             );
             tree
         }
         Err(e) => {
             datapoint_error!(
-                "tip_router_cli-merkle_root_error",
+                "tip_router_cli-process_epoch_error",
                 ("epoch", target_epoch, i64),
                 ("error", format!("{:?}", e), String)
             );
@@ -119,7 +119,7 @@ pub async fn process_epoch(
         Ok(json) => json,
         Err(e) => {
             datapoint_error!(
-                "tip_router_cli-merkle_root_error",
+                "tip_router_cli-process_epoch_error",
                 ("epoch", target_epoch, i64),
                 ("error", format!("{:?}", e), String)
             );
@@ -132,7 +132,7 @@ pub async fn process_epoch(
 
     if let Err(e) = std::fs::write(&meta_merkle_tree_path, meta_merkle_tree_json) {
         datapoint_error!(
-            "tip_router_cli-merkle_root_error",
+            "tip_router_cli-process_epoch_error",
             ("epoch", target_epoch, i64),
             ("error", format!("{:?}", e), String)
         );
@@ -142,45 +142,10 @@ pub async fn process_epoch(
         ));
     }
 
-    /////// TODO DELETE ////////
-
-    // Cast vote using the generated merkle root
-    let tx_sig = match cast_vote(
-        client,
-        payer,
-        tip_distribution_program_id, // not important
-        *ncn_address,
-        operator,
-        payer,
-        meta_merkle_tree.merkle_root,
-        target_epoch,
-    )
-    .await
-    {
-        Ok(sig) => {
-            datapoint_info!(
-                "tip_router_cli-vote_cast_success",
-                ("epoch", target_epoch, i64),
-                ("tx_sig", format!("{:?}", sig), String)
-            );
-            sig
-        }
-        Err(e) => {
-            datapoint_error!(
-                "tip_router_cli-vote_cast_error",
-                ("epoch", target_epoch, i64),
-                ("error", format!("{:?}", e), String)
-            );
-            return Err(anyhow::anyhow!("Failed to cast vote: {}", e)); // Convert the error
-        }
-    };
-
-    info!("Successfully cast vote at tx {:?}", tx_sig);
-
     let elapsed_us = start.elapsed().as_micros();
     // Emit a datapoint for starting the epoch processing
     datapoint_info!(
-        "tip_router_cli-process_epoch",
+        "tip_router_cli-process_epoch_success",
         ("epoch", target_epoch, i64),
         ("elapsed_us", elapsed_us, i64),
     );

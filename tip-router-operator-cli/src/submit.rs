@@ -8,6 +8,7 @@ use ellipsis_client::EllipsisClient;
 use jito_bytemuck::AccountDeserialize as JitoAccountDeserialize;
 use jito_tip_distribution_sdk::{derive_config_account_address, TipDistributionAccount};
 use jito_tip_router_core::{ballot_box::BallotBox, config::Config};
+use log::info;
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
@@ -108,7 +109,7 @@ pub async fn submit_to_ncn(
     };
 
     if should_cast_vote && is_voting_valid {
-        cast_vote(
+        let res = cast_vote(
             client,
             keypair,
             tip_router_program_id,
@@ -118,23 +119,84 @@ pub async fn submit_to_ncn(
             meta_merkle_tree.merkle_root,
             epoch,
         )
-        .await?;
+        .await;
+
+        match res {
+            Ok(signature) => info!(
+                "Cast vote for epoch {} with signature {:?}",
+                epoch, signature
+            ),
+            Err(e) => info!("Failed to cast vote for epoch {}: {:?}", epoch, e),
+        }
+
+        /* CONSIDER THIS FOR METRICS
+
+        // Cast vote using the generated merkle root
+        let tx_sig = match cast_vote(
+            client,
+            payer,
+            tip_distribution_program_id, // not important
+            *ncn_address,
+            operator,
+            payer,
+            meta_merkle_tree.merkle_root,
+            target_epoch,
+        )
+        .await
+        {
+            Ok(sig) => {
+                datapoint_info!(
+                    "tip_router_cli-vote_cast_success",
+                    ("epoch", target_epoch, i64),
+                    ("tx_sig", format!("{:?}", sig), String)
+                );
+                sig
+            }
+            Err(e) => {
+                datapoint_error!(
+                    "tip_router_cli-vote_cast_error",
+                    ("epoch", target_epoch, i64),
+                    ("error", format!("{:?}", e), String)
+                );
+                return Err(anyhow::anyhow!("Failed to cast vote: {}", e)); // Convert the error
+            }
+        };
+
+        info!("Successfully cast vote at tx {:?}", tx_sig);
+
+             */
     }
 
-    // Fetch TipDistributionAccounts filtered by epoch and upload authority
-    let tip_distribution_accounts =
-        get_tip_distribution_accounts_to_upload(client, epoch, tip_distribution_program_id).await?;
+    if ballot_box.is_consensus_reached() {
+        // Fetch TipDistributionAccounts filtered by epoch and upload authority
+        let tip_distribution_accounts =
+            get_tip_distribution_accounts_to_upload(client, epoch, tip_distribution_program_id)
+                .await?;
 
-    // For each TipDistributionAccount returned, if it has no root uploaded, upload root with set_merkle_root
-    let res = set_merkle_roots_batched(
-        client,
-        ncn_address,
-        tip_distribution_program_id,
-        epoch,
-        tip_distribution_accounts,
-        meta_merkle_tree,
-    )
-    .await?;
+        // For each TipDistributionAccount returned, if it has no root uploaded, upload root with set_merkle_root
+        let res = set_merkle_roots_batched(
+            client,
+            ncn_address,
+            keypair,
+            tip_distribution_program_id,
+            epoch,
+            tip_distribution_accounts,
+            meta_merkle_tree,
+        )
+        .await?;
+
+        let num_success = res.iter().filter(|r| r.is_ok()).count();
+        let num_failed = res.iter().filter(|r| r.is_err()).count();
+
+        info!(
+            "Set merkle root for {} tip distribution accounts",
+            num_success
+        );
+        info!(
+            "Failed to set merkle root for {} tip distribution accounts",
+            num_failed
+        );
+    }
 
     Ok(())
 }
@@ -145,8 +207,6 @@ async fn get_tip_distribution_accounts_to_upload(
 
     tip_distribution_program_id: &Pubkey,
 ) -> Result<Vec<(Pubkey, TipDistributionAccount)>, anyhow::Error> {
-    // Setup get_program_accounts_with_config
-
     let config_address = derive_config_account_address(tip_distribution_program_id).0;
 
     // Filters assume merkle root is None
@@ -183,7 +243,16 @@ async fn get_tip_distribution_accounts_to_upload(
             let tip_distribution_account =
                 TipDistributionAccount::try_deserialize(&mut account.data.as_slice());
             match tip_distribution_account {
-                Ok(tip_distribution_account) => Some((pubkey, tip_distribution_account)),
+                Ok(tip_distribution_account) => {
+                    // Double check that GPA filter worked
+                    if tip_distribution_account.epoch_created_at == epoch
+                        && tip_distribution_account.merkle_root_upload_authority == config_address
+                    {
+                        Some((pubkey, tip_distribution_account))
+                    } else {
+                        None
+                    }
+                }
                 Err(_) => None,
             }
         })
