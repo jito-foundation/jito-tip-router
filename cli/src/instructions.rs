@@ -109,7 +109,6 @@ pub async fn admin_create_config(
         .default_ncn_fee_bps(default_ncn_fee_bps)
         .tie_breaker_admin(keypair.pubkey())
         .fee_wallet(fee_wallet)
-        .restaking_program(handler.restaking_program_id)
         .instruction();
 
     let program = client.get_account(&handler.tip_router_program_id).await?;
@@ -236,7 +235,6 @@ pub async fn admin_register_st_mint(
         .ncn(ncn)
         .st_mint(vault_account.supported_mint)
         .ncn_fee_group(ncn_fee_group.group)
-        .restaking_program(handler.restaking_program_id)
         .reward_multiplier_bps(reward_multiplier_bps);
 
     if let Some(switchboard_feed) = switchboard_feed {
@@ -275,27 +273,21 @@ pub async fn register_vault(handler: &CliHandler, vault: &Pubkey) -> Result<()> 
     let ncn = *handler.ncn()?;
     let vault = *vault;
 
+    let (tip_router_config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
     let (vault_registry, _, _) =
         VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
-
-    let (restaking_config, _, _) =
-        RestakingConfig::find_program_address(&handler.restaking_program_id);
 
     let (ncn_vault_ticket, _, _) =
         NcnVaultTicket::find_program_address(&handler.restaking_program_id, &ncn, &vault);
 
-    let (vault_ncn_ticket, _, _) =
-        VaultNcnTicket::find_program_address(&handler.vault_program_id, &vault, &ncn);
-
     let register_vault_ix = RegisterVaultBuilder::new()
+        .config(tip_router_config)
         .vault_registry(vault_registry)
         .vault(vault)
         .ncn(ncn)
         .ncn_vault_ticket(ncn_vault_ticket)
-        .restaking_config(restaking_config)
-        .restaking_program_id(handler.restaking_program_id)
-        .vault_ncn_ticket(vault_ncn_ticket)
-        .vault_program_id(handler.vault_program_id)
         .vault_registry(vault_registry)
         .instruction();
 
@@ -409,7 +401,6 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
             .epoch_state(epoch_state)
             .weight_table(weight_table)
             .payer(keypair.pubkey())
-            .restaking_program(handler.restaking_program_id)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -493,7 +484,6 @@ pub async fn admin_set_weight_with_st_mint(
         .weight_table(weight_table)
         .epoch_state(epoch_state)
         .weight_table_admin(keypair.pubkey())
-        .restaking_program(handler.restaking_program_id)
         .st_mint(*st_mint)
         .weight(weight)
         .epoch(epoch)
@@ -590,7 +580,6 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
         .weight_table(weight_table)
         .epoch_snapshot(epoch_snapshot)
         .payer(keypair.pubkey())
-        .restaking_program(handler.restaking_program_id)
         .system_program(system_program::id())
         .epoch(epoch)
         .instruction();
@@ -651,7 +640,6 @@ pub async fn create_operator_snapshot(
             .epoch_snapshot(epoch_snapshot)
             .operator_snapshot(operator_snapshot)
             .payer(keypair.pubkey())
-            .restaking_program(handler.restaking_program_id)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -684,7 +672,6 @@ pub async fn create_operator_snapshot(
         .epoch_snapshot(epoch_snapshot)
         .operator_snapshot(operator_snapshot)
         .payer(keypair.pubkey())
-        .restaking_program(handler.restaking_program_id)
         .system_program(system_program::id())
         .epoch(epoch)
         .instruction();
@@ -766,8 +753,6 @@ pub async fn snapshot_vault_operator_delegation(
         .weight_table(weight_table)
         .epoch_snapshot(epoch_snapshot)
         .operator_snapshot(operator_snapshot)
-        .vault_program(handler.vault_program_id)
-        .restaking_program(handler.restaking_program_id)
         .epoch(epoch)
         .instruction();
 
@@ -903,7 +888,6 @@ pub async fn admin_cast_vote(
         .operator_snapshot(operator_snapshot)
         .operator(operator)
         .operator_admin(keypair.pubkey())
-        .restaking_program(handler.restaking_program_id)
         .meta_merkle_root(meta_merkle_root)
         .epoch(epoch)
         .instruction();
@@ -949,7 +933,6 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
             .base_reward_router(base_reward_router)
             .base_reward_receiver(base_reward_receiver)
             .payer(keypair.pubkey())
-            .restaking_program(handler.restaking_program_id)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -1045,7 +1028,6 @@ pub async fn create_ncn_reward_router(
         .ncn_reward_router(ncn_reward_router)
         .ncn_reward_receiver(ncn_reward_receiver)
         .payer(keypair.pubkey())
-        .restaking_program(handler.restaking_program_id)
         .system_program(system_program::id())
         .ncn_fee_group(ncn_fee_group.group)
         .epoch(epoch)
@@ -1074,6 +1056,8 @@ pub async fn route_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> 
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let config = TipRouterConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+
     let (epoch_snapshot, _, _) =
         EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
@@ -1093,12 +1077,12 @@ pub async fn route_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> 
     while still_routing {
         let route_base_rewards_ix = RouteBaseRewardsBuilder::new()
             .epoch_state(epoch_state)
+            .config(config)
             .ncn(ncn)
             .epoch_snapshot(epoch_snapshot)
             .ballot_box(ballot_box)
             .base_reward_router(base_reward_router)
             .base_reward_receiver(base_reward_receiver)
-            .restaking_program(handler.restaking_program_id)
             .max_iterations(max_iterations)
             .epoch(epoch)
             .instruction();
@@ -1177,7 +1161,6 @@ pub async fn route_ncn_rewards(
             .operator_snapshot(operator_snapshot)
             .ncn_reward_router(ncn_reward_router)
             .ncn_reward_receiver(ncn_reward_receiver)
-            .restaking_program(handler.restaking_program_id)
             .ncn_fee_group(ncn_fee_group.group)
             .max_iterations(max_iterations)
             .epoch(epoch)
@@ -1259,7 +1242,6 @@ pub async fn distribute_base_ncn_rewards(
         .base_reward_receiver(base_reward_receiver)
         .ncn_reward_router(ncn_reward_router)
         .ncn_reward_receiver(ncn_reward_receiver)
-        .restaking_program(handler.restaking_program_id)
         .system_program(system_program::id())
         .ncn_fee_group(ncn_fee_group.group)
         .epoch(epoch)
@@ -1326,7 +1308,6 @@ pub async fn distribute_base_rewards(
         .ncn(ncn)
         .base_reward_router(base_reward_router)
         .base_reward_receiver(base_reward_receiver)
-        .restaking_program(handler.restaking_program_id)
         .system_program(system_program::id())
         .epoch(epoch)
         .base_fee_wallet(*base_fee_wallet)
@@ -1522,7 +1503,6 @@ pub async fn distribute_ncn_operator_rewards(
         .stake_pool_program(stake_pool_accounts.stake_pool_program_id)
         .token_program(handler.token_program_id)
         .system_program(system_program::id())
-        .restaking_program(handler.restaking_program_id)
         .ncn_fee_group(ncn_fee_group.group)
         .epoch(epoch)
         .instruction();
@@ -1570,7 +1550,6 @@ pub async fn admin_set_tie_breaker(
         .tie_breaker_admin(keypair.pubkey())
         .meta_merkle_root(meta_merkle_root)
         .epoch(epoch)
-        .restaking_program(handler.restaking_program_id)
         .instruction();
 
     send_and_log_transaction(

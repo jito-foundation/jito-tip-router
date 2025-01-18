@@ -2,7 +2,6 @@
 mod tests {
     use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
     use jito_tip_router_core::{constants::JTO_SOL_FEED, ncn_fee_group::NcnFeeGroup};
-    use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
     use solana_sdk::{signature::Keypair, signer::Signer};
 
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
@@ -29,12 +28,6 @@ mod tests {
             .await?;
 
         let vault = vault_root.vault_pubkey;
-        let vault_ncn_ticket = VaultNcnTicket::find_program_address(
-            &jito_vault_program::id(),
-            &vault_root.vault_pubkey,
-            &ncn_root.ncn_pubkey,
-        )
-        .0;
         let ncn_vault_ticket = NcnVaultTicket::find_program_address(
             &jito_restaking_program::id(),
             &ncn_root.ncn_pubkey,
@@ -74,12 +67,7 @@ mod tests {
 
         // Register mint
         tip_router_client
-            .do_register_vault(
-                ncn_root.ncn_pubkey,
-                vault,
-                vault_ncn_ticket,
-                ncn_vault_ticket,
-            )
+            .do_register_vault(ncn_root.ncn_pubkey, vault, ncn_vault_ticket)
             .await?;
 
         // Verify mint was registered by checking tracked mints
@@ -99,14 +87,12 @@ mod tests {
 
         // Try to register mint without initialization
         let vault = Keypair::new();
-        let vault_ncn_ticket = Keypair::new();
         let ncn_vault_ticket = Keypair::new();
 
         let result = tip_router_client
             .do_register_vault(
                 ncn_root.ncn_pubkey,
                 vault.pubkey(),
-                vault_ncn_ticket.pubkey(),
                 ncn_vault_ticket.pubkey(),
             )
             .await;
@@ -139,12 +125,7 @@ mod tests {
             .await?;
 
         let vault = vault_root.vault_pubkey;
-        let vault_ncn_ticket = VaultNcnTicket::find_program_address(
-            &jito_vault_program::id(),
-            &vault_root.vault_pubkey,
-            &ncn_root.ncn_pubkey,
-        )
-        .0;
+
         let ncn_vault_ticket = NcnVaultTicket::find_program_address(
             &jito_restaking_program::id(),
             &ncn_root.ncn_pubkey,
@@ -184,24 +165,14 @@ mod tests {
 
         // Register mint first time
         tip_router_client
-            .do_register_vault(
-                ncn_root.ncn_pubkey,
-                vault,
-                vault_ncn_ticket,
-                ncn_vault_ticket,
-            )
+            .do_register_vault(ncn_root.ncn_pubkey, vault, ncn_vault_ticket)
             .await?;
 
         fixture.warp_slot_incremental(1).await?;
 
         // Register same mint again
         tip_router_client
-            .do_register_vault(
-                ncn_root.ncn_pubkey,
-                vault,
-                vault_ncn_ticket,
-                ncn_vault_ticket,
-            )
+            .do_register_vault(ncn_root.ncn_pubkey, vault, ncn_vault_ticket)
             .await?;
 
         // Verify mint was only registered once

@@ -24,8 +24,6 @@ pub struct DistributeBaseRewards {
 
     pub base_fee_wallet_ata: solana_program::pubkey::Pubkey,
 
-    pub restaking_program: solana_program::pubkey::Pubkey,
-
     pub stake_pool_program: solana_program::pubkey::Pubkey,
 
     pub stake_pool: solana_program::pubkey::Pubkey,
@@ -58,7 +56,7 @@ impl DistributeBaseRewards {
         args: DistributeBaseRewardsInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(17 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.epoch_state,
             false,
@@ -84,10 +82,6 @@ impl DistributeBaseRewards {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.base_fee_wallet_ata,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -176,16 +170,15 @@ pub struct DistributeBaseRewardsInstructionArgs {
 ///   4. `[writable]` base_reward_receiver
 ///   5. `[]` base_fee_wallet
 ///   6. `[writable]` base_fee_wallet_ata
-///   7. `[]` restaking_program
-///   8. `[]` stake_pool_program
-///   9. `[writable]` stake_pool
-///   10. `[]` stake_pool_withdraw_authority
-///   11. `[writable]` reserve_stake
-///   12. `[writable]` manager_fee_account
-///   13. `[writable]` referrer_pool_tokens_account
-///   14. `[writable]` pool_mint
-///   15. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   16. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   7. `[]` stake_pool_program
+///   8. `[writable]` stake_pool
+///   9. `[]` stake_pool_withdraw_authority
+///   10. `[writable]` reserve_stake
+///   11. `[writable]` manager_fee_account
+///   12. `[writable]` referrer_pool_tokens_account
+///   13. `[writable]` pool_mint
+///   14. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+///   15. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct DistributeBaseRewardsBuilder {
     epoch_state: Option<solana_program::pubkey::Pubkey>,
@@ -195,7 +188,6 @@ pub struct DistributeBaseRewardsBuilder {
     base_reward_receiver: Option<solana_program::pubkey::Pubkey>,
     base_fee_wallet: Option<solana_program::pubkey::Pubkey>,
     base_fee_wallet_ata: Option<solana_program::pubkey::Pubkey>,
-    restaking_program: Option<solana_program::pubkey::Pubkey>,
     stake_pool_program: Option<solana_program::pubkey::Pubkey>,
     stake_pool: Option<solana_program::pubkey::Pubkey>,
     stake_pool_withdraw_authority: Option<solana_program::pubkey::Pubkey>,
@@ -259,14 +251,6 @@ impl DistributeBaseRewardsBuilder {
         base_fee_wallet_ata: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
         self.base_fee_wallet_ata = Some(base_fee_wallet_ata);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -372,9 +356,6 @@ impl DistributeBaseRewardsBuilder {
             base_fee_wallet_ata: self
                 .base_fee_wallet_ata
                 .expect("base_fee_wallet_ata is not set"),
-            restaking_program: self
-                .restaking_program
-                .expect("restaking_program is not set"),
             stake_pool_program: self
                 .stake_pool_program
                 .expect("stake_pool_program is not set"),
@@ -425,8 +406,6 @@ pub struct DistributeBaseRewardsCpiAccounts<'a, 'b> {
 
     pub base_fee_wallet_ata: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub stake_pool_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub stake_pool: &'b solana_program::account_info::AccountInfo<'a>,
@@ -465,8 +444,6 @@ pub struct DistributeBaseRewardsCpi<'a, 'b> {
 
     pub base_fee_wallet_ata: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub stake_pool_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub stake_pool: &'b solana_program::account_info::AccountInfo<'a>,
@@ -503,7 +480,6 @@ impl<'a, 'b> DistributeBaseRewardsCpi<'a, 'b> {
             base_reward_receiver: accounts.base_reward_receiver,
             base_fee_wallet: accounts.base_fee_wallet,
             base_fee_wallet_ata: accounts.base_fee_wallet_ata,
-            restaking_program: accounts.restaking_program,
             stake_pool_program: accounts.stake_pool_program,
             stake_pool: accounts.stake_pool,
             stake_pool_withdraw_authority: accounts.stake_pool_withdraw_authority,
@@ -549,7 +525,7 @@ impl<'a, 'b> DistributeBaseRewardsCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(17 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.epoch_state.key,
             false,
@@ -576,10 +552,6 @@ impl<'a, 'b> DistributeBaseRewardsCpi<'a, 'b> {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.base_fee_wallet_ata.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -636,7 +608,7 @@ impl<'a, 'b> DistributeBaseRewardsCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(17 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(16 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.epoch_state.clone());
         account_infos.push(self.config.clone());
@@ -645,7 +617,6 @@ impl<'a, 'b> DistributeBaseRewardsCpi<'a, 'b> {
         account_infos.push(self.base_reward_receiver.clone());
         account_infos.push(self.base_fee_wallet.clone());
         account_infos.push(self.base_fee_wallet_ata.clone());
-        account_infos.push(self.restaking_program.clone());
         account_infos.push(self.stake_pool_program.clone());
         account_infos.push(self.stake_pool.clone());
         account_infos.push(self.stake_pool_withdraw_authority.clone());
@@ -678,16 +649,15 @@ impl<'a, 'b> DistributeBaseRewardsCpi<'a, 'b> {
 ///   4. `[writable]` base_reward_receiver
 ///   5. `[]` base_fee_wallet
 ///   6. `[writable]` base_fee_wallet_ata
-///   7. `[]` restaking_program
-///   8. `[]` stake_pool_program
-///   9. `[writable]` stake_pool
-///   10. `[]` stake_pool_withdraw_authority
-///   11. `[writable]` reserve_stake
-///   12. `[writable]` manager_fee_account
-///   13. `[writable]` referrer_pool_tokens_account
-///   14. `[writable]` pool_mint
-///   15. `[]` token_program
-///   16. `[]` system_program
+///   7. `[]` stake_pool_program
+///   8. `[writable]` stake_pool
+///   9. `[]` stake_pool_withdraw_authority
+///   10. `[writable]` reserve_stake
+///   11. `[writable]` manager_fee_account
+///   12. `[writable]` referrer_pool_tokens_account
+///   13. `[writable]` pool_mint
+///   14. `[]` token_program
+///   15. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct DistributeBaseRewardsCpiBuilder<'a, 'b> {
     instruction: Box<DistributeBaseRewardsCpiBuilderInstruction<'a, 'b>>,
@@ -704,7 +674,6 @@ impl<'a, 'b> DistributeBaseRewardsCpiBuilder<'a, 'b> {
             base_reward_receiver: None,
             base_fee_wallet: None,
             base_fee_wallet_ata: None,
-            restaking_program: None,
             stake_pool_program: None,
             stake_pool: None,
             stake_pool_withdraw_authority: None,
@@ -771,14 +740,6 @@ impl<'a, 'b> DistributeBaseRewardsCpiBuilder<'a, 'b> {
         base_fee_wallet_ata: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.base_fee_wallet_ata = Some(base_fee_wallet_ata);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     #[inline(always)]
@@ -944,11 +905,6 @@ impl<'a, 'b> DistributeBaseRewardsCpiBuilder<'a, 'b> {
                 .base_fee_wallet_ata
                 .expect("base_fee_wallet_ata is not set"),
 
-            restaking_program: self
-                .instruction
-                .restaking_program
-                .expect("restaking_program is not set"),
-
             stake_pool_program: self
                 .instruction
                 .stake_pool_program
@@ -1006,7 +962,6 @@ struct DistributeBaseRewardsCpiBuilderInstruction<'a, 'b> {
     base_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     base_fee_wallet: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     base_fee_wallet_ata: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     stake_pool_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     stake_pool: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     stake_pool_withdraw_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,

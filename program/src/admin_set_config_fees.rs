@@ -20,14 +20,14 @@ pub fn process_admin_set_config_fees(
     ncn_fee_group: Option<u8>,
     new_ncn_fee_bps: Option<u16>,
 ) -> ProgramResult {
-    let [config, ncn_account, fee_admin, restaking_program] = accounts else {
+    let [config, ncn_account, fee_admin] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     load_signer(fee_admin, true)?;
 
     Config::load(program_id, ncn_account.key, config, true)?;
-    Ncn::load(restaking_program.key, ncn_account, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
 
     let epoch = Clock::get()?.epoch;
 

@@ -31,11 +31,6 @@
           "isSigner": false
         },
         {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -142,7 +137,7 @@
       "name": "RegisterVault",
       "accounts": [
         {
-          "name": "restakingConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -162,22 +157,7 @@
           "isSigner": false
         },
         {
-          "name": "vaultNcnTicket",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "ncnVaultTicket",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgramId",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "vaultProgramId",
           "isMut": false,
           "isSigner": false
         }
@@ -295,11 +275,6 @@
           "name": "payer",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -441,11 +416,6 @@
           "isSigner": true
         },
         {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -492,7 +462,7 @@
         },
         {
           "name": "epochSnapshot",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -504,11 +474,6 @@
           "name": "payer",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -574,11 +539,6 @@
           "name": "payer",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -658,16 +618,6 @@
         {
           "name": "operatorSnapshot",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vaultProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
           "isSigner": false
         }
       ],
@@ -814,11 +764,6 @@
           "name": "operatorAdmin",
           "isMut": false,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -881,11 +826,6 @@
         },
         {
           "name": "tipDistributionProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -956,11 +896,6 @@
           "name": "payer",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -1063,11 +998,6 @@
           "isSigner": true
         },
         {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -1097,6 +1027,11 @@
           "isSigner": false
         },
         {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "ncn",
           "isMut": false,
           "isSigner": false
@@ -1119,11 +1054,6 @@
         {
           "name": "baseRewardReceiver",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
           "isSigner": false
         }
       ],
@@ -1173,11 +1103,6 @@
         {
           "name": "ncnRewardReceiver",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
           "isSigner": false
         }
       ],
@@ -1236,11 +1161,6 @@
         {
           "name": "baseFeeWalletAta",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -1339,17 +1259,12 @@
         },
         {
           "name": "ncnRewardRouter",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
           "name": "ncnRewardReceiver",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -1414,11 +1329,6 @@
         {
           "name": "ncnRewardReceiver",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -1507,7 +1417,7 @@
         },
         {
           "name": "vault",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -1673,11 +1583,6 @@
           "name": "ncnAdmin",
           "isMut": false,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1716,11 +1621,6 @@
           "name": "ncnAdmin",
           "isMut": false,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1788,11 +1688,6 @@
           "name": "newAdmin",
           "isMut": false,
           "isSigner": false
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1835,11 +1730,6 @@
           "name": "tieBreakerAdmin",
           "isMut": false,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1884,11 +1774,6 @@
           "name": "weightTableAdmin",
           "isMut": false,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1937,11 +1822,6 @@
           "name": "admin",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1993,11 +1873,6 @@
           "name": "admin",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "restakingProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -3510,238 +3385,253 @@
     },
     {
       "code": 8726,
+      "name": "TotalFeesCannotBeZero",
+      "msg": "Total fees cannot be 0"
+    },
+    {
+      "code": 8727,
       "name": "DefaultDaoWallet",
       "msg": "DAO wallet cannot be default"
     },
     {
-      "code": 8727,
+      "code": 8728,
       "name": "IncorrectNcnAdmin",
       "msg": "Incorrect NCN Admin"
     },
     {
-      "code": 8728,
+      "code": 8729,
       "name": "IncorrectNcn",
       "msg": "Incorrect NCN"
     },
     {
-      "code": 8729,
+      "code": 8730,
       "name": "IncorrectFeeAdmin",
       "msg": "Incorrect fee admin"
     },
     {
-      "code": 8730,
+      "code": 8731,
       "name": "WeightTableNotFinalized",
       "msg": "Weight table not finalized"
     },
     {
-      "code": 8731,
+      "code": 8732,
       "name": "WeightNotFound",
       "msg": "Weight not found"
     },
     {
-      "code": 8732,
+      "code": 8733,
       "name": "NoOperators",
       "msg": "No operators in ncn"
     },
     {
-      "code": 8733,
+      "code": 8734,
       "name": "VaultOperatorDelegationFinalized",
       "msg": "Vault operator delegation is already finalized - should not happen"
     },
     {
-      "code": 8734,
+      "code": 8735,
       "name": "OperatorFinalized",
       "msg": "Operator is already finalized - should not happen"
     },
     {
-      "code": 8735,
+      "code": 8736,
       "name": "TooManyVaultOperatorDelegations",
       "msg": "Too many vault operator delegations"
     },
     {
-      "code": 8736,
+      "code": 8737,
       "name": "DuplicateVaultOperatorDelegation",
       "msg": "Duplicate vault operator delegation"
     },
     {
-      "code": 8737,
+      "code": 8738,
       "name": "DuplicateVoteCast",
       "msg": "Duplicate Vote Cast"
     },
     {
-      "code": 8738,
+      "code": 8739,
       "name": "OperatorVotesFull",
       "msg": "Operator votes full"
     },
     {
-      "code": 8739,
+      "code": 8740,
       "name": "BallotTallyFull",
       "msg": "Merkle root tally full"
     },
     {
-      "code": 8740,
+      "code": 8741,
       "name": "BallotTallyNotFoundFull",
       "msg": "Ballot tally not found"
     },
     {
-      "code": 8741,
+      "code": 8742,
       "name": "BallotTallyNotEmpty",
       "msg": "Ballot tally not empty"
     },
     {
-      "code": 8742,
+      "code": 8743,
       "name": "ConsensusAlreadyReached",
       "msg": "Consensus already reached, cannot change vote"
     },
     {
-      "code": 8743,
+      "code": 8744,
       "name": "ConsensusNotReached",
       "msg": "Consensus not reached"
     },
     {
-      "code": 8744,
+      "code": 8745,
       "name": "EpochSnapshotNotFinalized",
       "msg": "Epoch snapshot not finalized"
     },
     {
-      "code": 8745,
+      "code": 8746,
       "name": "VotingNotValid",
       "msg": "Voting not valid, too many slots after consensus reached"
     },
     {
-      "code": 8746,
+      "code": 8747,
       "name": "TieBreakerAdminInvalid",
       "msg": "Tie breaker admin invalid"
     },
     {
-      "code": 8747,
+      "code": 8748,
       "name": "VotingNotFinalized",
       "msg": "Voting not finalized"
     },
     {
-      "code": 8748,
+      "code": 8749,
       "name": "TieBreakerNotInPriorVotes",
       "msg": "Tie breaking ballot must be one of the prior votes"
     },
     {
-      "code": 8749,
+      "code": 8750,
       "name": "InvalidMerkleProof",
       "msg": "Invalid merkle proof"
     },
     {
-      "code": 8750,
+      "code": 8751,
       "name": "OperatorAdminInvalid",
       "msg": "Operator admin needs to sign its vote"
     },
     {
-      "code": 8751,
+      "code": 8752,
       "name": "InvalidNcnFeeGroup",
       "msg": "Not a valid NCN fee group"
     },
     {
-      "code": 8752,
+      "code": 8753,
       "name": "InvalidBaseFeeGroup",
       "msg": "Not a valid base fee group"
     },
     {
-      "code": 8753,
+      "code": 8754,
       "name": "OperatorRewardListFull",
       "msg": "Operator reward list full"
     },
     {
-      "code": 8754,
+      "code": 8755,
       "name": "OperatorRewardNotFound",
       "msg": "Operator Reward not found"
     },
     {
-      "code": 8755,
+      "code": 8756,
       "name": "VaultRewardNotFound",
       "msg": "Vault Reward not found"
     },
     {
-      "code": 8756,
+      "code": 8757,
       "name": "DestinationMismatch",
       "msg": "Destination mismatch"
     },
     {
-      "code": 8757,
+      "code": 8758,
       "name": "NcnRewardRouteNotFound",
       "msg": "Ncn reward route not found"
     },
     {
-      "code": 8758,
+      "code": 8759,
       "name": "FeeNotActive",
       "msg": "Fee not active"
     },
     {
-      "code": 8759,
+      "code": 8760,
       "name": "NoRewards",
       "msg": "No rewards to distribute"
     },
     {
-      "code": 8760,
+      "code": 8761,
       "name": "NoFeedWeightNotSet",
       "msg": "No Feed Weight not set"
     },
     {
-      "code": 8761,
+      "code": 8762,
       "name": "SwitchboardNotRegistered",
       "msg": "Switchboard not registered"
     },
     {
-      "code": 8762,
+      "code": 8763,
       "name": "BadSwitchboardFeed",
       "msg": "Bad switchboard feed"
     },
     {
-      "code": 8763,
+      "code": 8764,
       "name": "BadSwitchboardValue",
       "msg": "Bad switchboard value"
     },
     {
-      "code": 8764,
+      "code": 8765,
       "name": "StaleSwitchboardFeed",
       "msg": "Stale switchboard feed"
     },
     {
-      "code": 8765,
+      "code": 8766,
       "name": "NoFeedWeightOrSwitchboardFeed",
       "msg": "Weight entry needs either a feed or a no feed weight"
     },
     {
-      "code": 8766,
+      "code": 8767,
       "name": "RouterStillRouting",
       "msg": "Router still routing"
     },
     {
-      "code": 8767,
+      "code": 8768,
       "name": "InvalidEpochsBeforeStall",
       "msg": "Invalid epochs before stall"
     },
     {
-      "code": 8768,
+      "code": 8769,
       "name": "InvalidSlotsAfterConsensus",
       "msg": "Invalid slots after consensus"
     },
     {
-      "code": 8769,
+      "code": 8770,
       "name": "VaultNeedsUpdate",
       "msg": "Vault needs to be updated"
     },
     {
-      "code": 8770,
+      "code": 8771,
       "name": "InvalidAccountStatus",
       "msg": "Invalid Account Status"
     },
     {
-      "code": 8771,
+      "code": 8772,
       "name": "AccountAlreadyInitialized",
       "msg": "Account already initialized"
     },
     {
-      "code": 8772,
+      "code": 8773,
       "name": "BadBallot",
       "msg": "Cannot vote with uninitialized account"
+    },
+    {
+      "code": 8774,
+      "name": "VotingIsNotOver",
+      "msg": "Cannot route until voting is over"
+    },
+    {
+      "code": 8775,
+      "name": "OperatorIsNotInSnapshot",
+      "msg": "Operator is not in snapshot"
     }
   ],
   "metadata": {

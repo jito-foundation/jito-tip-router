@@ -48,7 +48,6 @@ export type AdminSetNewAdminInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountNcnAdmin extends string | IAccountMeta<string> = string,
   TAccountNewAdmin extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -65,9 +64,6 @@ export type AdminSetNewAdminInstruction<
       TAccountNewAdmin extends string
         ? ReadonlyAccount<TAccountNewAdmin>
         : TAccountNewAdmin,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -111,13 +107,11 @@ export type AdminSetNewAdminInput<
   TAccountNcn extends string = string,
   TAccountNcnAdmin extends string = string,
   TAccountNewAdmin extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
   newAdmin: Address<TAccountNewAdmin>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   role: AdminSetNewAdminInstructionDataArgs['role'];
 };
 
@@ -126,15 +120,13 @@ export function getAdminSetNewAdminInstruction<
   TAccountNcn extends string,
   TAccountNcnAdmin extends string,
   TAccountNewAdmin extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: AdminSetNewAdminInput<
     TAccountConfig,
     TAccountNcn,
     TAccountNcnAdmin,
-    TAccountNewAdmin,
-    TAccountRestakingProgram
+    TAccountNewAdmin
   >,
   config?: { programAddress?: TProgramAddress }
 ): AdminSetNewAdminInstruction<
@@ -142,8 +134,7 @@ export function getAdminSetNewAdminInstruction<
   TAccountConfig,
   TAccountNcn,
   TAccountNcnAdmin,
-  TAccountNewAdmin,
-  TAccountRestakingProgram
+  TAccountNewAdmin
 > {
   // Program address.
   const programAddress =
@@ -155,10 +146,6 @@ export function getAdminSetNewAdminInstruction<
     ncn: { value: input.ncn ?? null, isWritable: false },
     ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
     newAdmin: { value: input.newAdmin ?? null, isWritable: false },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -175,7 +162,6 @@ export function getAdminSetNewAdminInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.ncnAdmin),
       getAccountMeta(accounts.newAdmin),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getAdminSetNewAdminInstructionDataEncoder().encode(
@@ -186,8 +172,7 @@ export function getAdminSetNewAdminInstruction<
     TAccountConfig,
     TAccountNcn,
     TAccountNcnAdmin,
-    TAccountNewAdmin,
-    TAccountRestakingProgram
+    TAccountNewAdmin
   >;
 
   return instruction;
@@ -203,7 +188,6 @@ export type ParsedAdminSetNewAdminInstruction<
     ncn: TAccountMetas[1];
     ncnAdmin: TAccountMetas[2];
     newAdmin: TAccountMetas[3];
-    restakingProgram: TAccountMetas[4];
   };
   data: AdminSetNewAdminInstructionData;
 };
@@ -216,7 +200,7 @@ export function parseAdminSetNewAdminInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminSetNewAdminInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+  if (instruction.accounts.length < 4) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -233,7 +217,6 @@ export function parseAdminSetNewAdminInstruction<
       ncn: getNextAccount(),
       ncnAdmin: getNextAccount(),
       newAdmin: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getAdminSetNewAdminInstructionDataDecoder().decode(instruction.data),
   };

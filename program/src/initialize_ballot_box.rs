@@ -2,6 +2,7 @@ use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
 };
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     ballot_box::BallotBox, config::Config as NcnConfig, constants::MAX_REALLOC_BYTES,
     epoch_state::EpochState,
@@ -26,6 +27,7 @@ pub fn process_initialize_ballot_box(
 
     load_signer(payer, false)?;
 
+    Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
     EpochState::load(program_id, ncn_account.key, epoch, epoch_state, false)?;
     NcnConfig::load(program_id, ncn_account.key, ncn_config, false)?;
 

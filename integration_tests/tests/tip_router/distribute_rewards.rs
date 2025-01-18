@@ -127,6 +127,15 @@ mod tests {
             .airdrop_lamports(&base_reward_receiver, 3000)
             .await?;
 
+        let valid_slots_after_consensus = {
+            let config = tip_router_client.get_ncn_config(ncn).await?;
+            config.valid_slots_after_consensus()
+        };
+
+        fixture
+            .warp_slot_incremental(valid_slots_after_consensus + 1)
+            .await?;
+
         // Route rewards
         tip_router_client.do_route_base_rewards(ncn, epoch).await?;
 

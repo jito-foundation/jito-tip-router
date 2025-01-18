@@ -66,6 +66,8 @@ pub enum TipRouterError {
     MintEntryNotFound,
     #[error("Fee cap exceeded")]
     FeeCapExceeded,
+    #[error("Total fees cannot be 0")]
+    TotalFeesCannotBeZero,
     #[error("DAO wallet cannot be default")]
     DefaultDaoWallet,
     #[error("Incorrect NCN Admin")]
@@ -161,6 +163,10 @@ pub enum TipRouterError {
     AccountAlreadyInitialized,
     #[error("Cannot vote with uninitialized account")]
     BadBallot,
+    #[error("Cannot route until voting is over")]
+    VotingIsNotOver,
+    #[error("Operator is not in snapshot")]
+    OperatorIsNotInSnapshot,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

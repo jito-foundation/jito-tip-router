@@ -25,35 +25,40 @@ pub fn process_snapshot_vault_operator_delegation(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot, vault_program, restaking_program] =
+    let [epoch_state, ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if vault_program.key.ne(&jito_vault_program::id()) {
-        msg!("Incorrect vault program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    Config::load(restaking_program.key, restaking_config, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
-    Operator::load(restaking_program.key, operator, false)?;
-    Vault::load(vault_program.key, vault, false)?;
+    Config::load(&jito_restaking_program::id(), restaking_config, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Operator::load(&jito_restaking_program::id(), operator, false)?;
+    Vault::load(&jito_vault_program::id(), vault, false)?;
 
-    VaultNcnTicket::load(vault_program.key, vault_ncn_ticket, vault, ncn, false)?;
-    NcnVaultTicket::load(restaking_program.key, ncn_vault_ticket, ncn, vault, false)?;
+    NcnVaultTicket::load(
+        &jito_restaking_program::id(),
+        ncn_vault_ticket,
+        ncn,
+        vault,
+        false,
+    )?;
+
+    if !vault_ncn_ticket.data_is_empty() {
+        VaultNcnTicket::load(
+            &jito_vault_program::id(),
+            vault_ncn_ticket,
+            vault,
+            ncn,
+            false,
+        )?;
+    }
 
     if !vault_operator_delegation.data_is_empty() {
         VaultOperatorDelegation::load(
-            vault_program.key,
+            &jito_vault_program::id(),
             vault_operator_delegation,
             vault,
             operator,
@@ -93,23 +98,34 @@ pub fn process_snapshot_vault_operator_delegation(
         (vault_account.vault_index(), vault_account.supported_mint)
     };
 
-    //TODO move to helper function
     let is_active: bool = {
-        let vault_ncn_ticket_data = vault_ncn_ticket.data.borrow();
-        let vault_ncn_ticket_account =
-            VaultNcnTicket::try_from_slice_unchecked(&vault_ncn_ticket_data)?;
+        let ncn_vault_okay = {
+            let ncn_vault_ticket_data = ncn_vault_ticket.data.borrow();
+            let ncn_vault_ticket_account =
+                NcnVaultTicket::try_from_slice_unchecked(&ncn_vault_ticket_data)?;
 
-        let ncn_vault_ticket_data = ncn_vault_ticket.data.borrow();
-        let ncn_vault_ticket_account =
-            NcnVaultTicket::try_from_slice_unchecked(&ncn_vault_ticket_data)?;
+            // If the NCN removes a vault, it should immediately be barred from the snapshot
+            ncn_vault_ticket_account
+                .state
+                .is_active(current_slot, ncn_epoch_length)
+        };
 
-        let vault_ncn_okay = vault_ncn_ticket_account
-            .state
-            .is_active(current_slot, ncn_epoch_length);
+        let vault_ncn_okay = {
+            if vault_ncn_ticket.data_is_empty() {
+                false
+            } else {
+                let vault_ncn_ticket_data = vault_ncn_ticket.data.borrow();
+                let vault_ncn_ticket_account =
+                    VaultNcnTicket::try_from_slice_unchecked(&vault_ncn_ticket_data)?;
 
-        let ncn_vault_okay = ncn_vault_ticket_account
-            .state
-            .is_active(current_slot, ncn_epoch_length);
+                // If a vault removes itself from the ncn, it should still be able to participate
+                // until it is finished cooling down - this is so the operators with delegation
+                // from this vault can still participate
+                vault_ncn_ticket_account
+                    .state
+                    .is_active_or_cooldown(current_slot, ncn_epoch_length)
+            }
+        };
 
         let delegation_dne = vault_operator_delegation.data_is_empty();
 

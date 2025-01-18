@@ -17,13 +17,13 @@ pub fn process_admin_register_st_mint(
     switchboard_feed: Option<Pubkey>,
     no_feed_weight: Option<u128>,
 ) -> ProgramResult {
-    let [config, ncn, st_mint, vault_registry, admin, restaking_program] = accounts else {
+    let [config, ncn, st_mint, vault_registry, admin] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     Config::load(program_id, ncn.key, config, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, true)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
 
     load_token_mint(st_mint)?;
 

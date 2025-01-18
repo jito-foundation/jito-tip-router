@@ -49,7 +49,6 @@ export type ReallocOperatorSnapshotInstruction<
   TAccountEpochSnapshot extends string | IAccountMeta<string> = string,
   TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
   TAccountPayer extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -84,9 +83,6 @@ export type ReallocOperatorSnapshotInstruction<
         ? WritableSignerAccount<TAccountPayer> &
             IAccountSignerMeta<TAccountPayer>
         : TAccountPayer,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -143,7 +139,6 @@ export type ReallocOperatorSnapshotInput<
   TAccountEpochSnapshot extends string = string,
   TAccountOperatorSnapshot extends string = string,
   TAccountPayer extends string = string,
-  TAccountRestakingProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
@@ -155,7 +150,6 @@ export type ReallocOperatorSnapshotInput<
   epochSnapshot: Address<TAccountEpochSnapshot>;
   operatorSnapshot: Address<TAccountOperatorSnapshot>;
   payer: TransactionSigner<TAccountPayer>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: ReallocOperatorSnapshotInstructionDataArgs['epoch'];
 };
@@ -170,7 +164,6 @@ export function getReallocOperatorSnapshotInstruction<
   TAccountEpochSnapshot extends string,
   TAccountOperatorSnapshot extends string,
   TAccountPayer extends string,
-  TAccountRestakingProgram extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
@@ -184,7 +177,6 @@ export function getReallocOperatorSnapshotInstruction<
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot,
     TAccountPayer,
-    TAccountRestakingProgram,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -199,7 +191,6 @@ export function getReallocOperatorSnapshotInstruction<
   TAccountEpochSnapshot,
   TAccountOperatorSnapshot,
   TAccountPayer,
-  TAccountRestakingProgram,
   TAccountSystemProgram
 > {
   // Program address.
@@ -226,10 +217,6 @@ export function getReallocOperatorSnapshotInstruction<
       isWritable: true,
     },
     payer: { value: input.payer ?? null, isWritable: true },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -258,7 +245,6 @@ export function getReallocOperatorSnapshotInstruction<
       getAccountMeta(accounts.epochSnapshot),
       getAccountMeta(accounts.operatorSnapshot),
       getAccountMeta(accounts.payer),
-      getAccountMeta(accounts.restakingProgram),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -276,7 +262,6 @@ export function getReallocOperatorSnapshotInstruction<
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot,
     TAccountPayer,
-    TAccountRestakingProgram,
     TAccountSystemProgram
   >;
 
@@ -298,8 +283,7 @@ export type ParsedReallocOperatorSnapshotInstruction<
     epochSnapshot: TAccountMetas[6];
     operatorSnapshot: TAccountMetas[7];
     payer: TAccountMetas[8];
-    restakingProgram: TAccountMetas[9];
-    systemProgram: TAccountMetas[10];
+    systemProgram: TAccountMetas[9];
   };
   data: ReallocOperatorSnapshotInstructionData;
 };
@@ -312,7 +296,7 @@ export function parseReallocOperatorSnapshotInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedReallocOperatorSnapshotInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 11) {
+  if (instruction.accounts.length < 10) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -334,7 +318,6 @@ export function parseReallocOperatorSnapshotInstruction<
       epochSnapshot: getNextAccount(),
       operatorSnapshot: getNextAccount(),
       payer: getNextAccount(),
-      restakingProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getReallocOperatorSnapshotInstructionDataDecoder().decode(
