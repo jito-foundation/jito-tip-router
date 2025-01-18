@@ -2,6 +2,7 @@ use jito_jsm_core::{
     create_account,
     loader::{load_signer, load_system_account, load_system_program},
 };
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     config::Config as NcnConfig, constants::MAX_REALLOC_BYTES, vault_registry::VaultRegistry,
 };
@@ -23,6 +24,7 @@ pub fn process_initialize_vault_registry(
     load_system_program(system_program)?;
     load_signer(payer, true)?;
 
+    Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
     NcnConfig::load(program_id, ncn_account.key, ncn_config, false)?;
 
     let (vault_registry_pda, vault_registry_bump, mut vault_registry_seeds) =

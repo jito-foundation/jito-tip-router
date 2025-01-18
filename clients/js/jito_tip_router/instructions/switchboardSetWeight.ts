@@ -31,7 +31,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const SWITCHBOARD_SET_WEIGHT_DISCRIMINATOR = 6;
+export const SWITCHBOARD_SET_WEIGHT_DISCRIMINATOR = 8;
 
 export function getSwitchboardSetWeightDiscriminatorBytes() {
   return getU8Encoder().encode(SWITCHBOARD_SET_WEIGHT_DISCRIMINATOR);
@@ -39,6 +39,7 @@ export function getSwitchboardSetWeightDiscriminatorBytes() {
 
 export type SwitchboardSetWeightInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountSwitchboardFeed extends string | IAccountMeta<string> = string,
@@ -47,6 +48,9 @@ export type SwitchboardSetWeightInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? WritableAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountWeightTable extends string
         ? WritableAccount<TAccountWeightTable>
@@ -102,10 +106,12 @@ export function getSwitchboardSetWeightInstructionDataCodec(): Codec<
 }
 
 export type SwitchboardSetWeightInput<
+  TAccountEpochState extends string = string,
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
   TAccountSwitchboardFeed extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   switchboardFeed: Address<TAccountSwitchboardFeed>;
@@ -114,12 +120,14 @@ export type SwitchboardSetWeightInput<
 };
 
 export function getSwitchboardSetWeightInstruction<
+  TAccountEpochState extends string,
   TAccountNcn extends string,
   TAccountWeightTable extends string,
   TAccountSwitchboardFeed extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: SwitchboardSetWeightInput<
+    TAccountEpochState,
     TAccountNcn,
     TAccountWeightTable,
     TAccountSwitchboardFeed
@@ -127,6 +135,7 @@ export function getSwitchboardSetWeightInstruction<
   config?: { programAddress?: TProgramAddress }
 ): SwitchboardSetWeightInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountNcn,
   TAccountWeightTable,
   TAccountSwitchboardFeed
@@ -137,6 +146,7 @@ export function getSwitchboardSetWeightInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     weightTable: { value: input.weightTable ?? null, isWritable: true },
     switchboardFeed: {
@@ -155,6 +165,7 @@ export function getSwitchboardSetWeightInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.switchboardFeed),
@@ -165,6 +176,7 @@ export function getSwitchboardSetWeightInstruction<
     ),
   } as SwitchboardSetWeightInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountNcn,
     TAccountWeightTable,
     TAccountSwitchboardFeed
@@ -179,9 +191,10 @@ export type ParsedSwitchboardSetWeightInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    ncn: TAccountMetas[0];
-    weightTable: TAccountMetas[1];
-    switchboardFeed: TAccountMetas[2];
+    epochState: TAccountMetas[0];
+    ncn: TAccountMetas[1];
+    weightTable: TAccountMetas[2];
+    switchboardFeed: TAccountMetas[3];
   };
   data: SwitchboardSetWeightInstructionData;
 };
@@ -194,7 +207,7 @@ export function parseSwitchboardSetWeightInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedSwitchboardSetWeightInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 3) {
+  if (instruction.accounts.length < 4) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -207,6 +220,7 @@ export function parseSwitchboardSetWeightInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
       switchboardFeed: getNextAccount(),

@@ -5,8 +5,8 @@ use jito_jsm_core::{
 };
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    config::Config, epoch_snapshot::EpochSnapshot, error::TipRouterError, fees,
-    weight_table::WeightTable,
+    config::Config, epoch_snapshot::EpochSnapshot, epoch_state::EpochState, error::TipRouterError,
+    fees, weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -19,19 +19,14 @@ pub fn process_initialize_epoch_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [config, ncn, weight_table, epoch_snapshot, payer, restaking_program, system_program] =
-        accounts
+    let [epoch_state, config, ncn, weight_table, epoch_snapshot, payer, system_program] = accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
+    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     Config::load(program_id, ncn.key, config, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
 
     load_system_account(epoch_snapshot, true)?;
     load_system_program(system_program)?;
@@ -114,6 +109,13 @@ pub fn process_initialize_epoch_snapshot(
         operator_count,
         vault_count,
     );
+
+    // Update Epoch State
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_initialize_epoch_snapshot(operator_count);
+    }
 
     Ok(())
 }

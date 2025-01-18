@@ -3,8 +3,10 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 use solana_program::pubkey::Pubkey;
 
 /// Accounts.
@@ -14,8 +16,6 @@ pub struct AdminSetConfigFees {
     pub ncn: solana_program::pubkey::Pubkey,
 
     pub ncn_admin: solana_program::pubkey::Pubkey,
-
-    pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
 impl AdminSetConfigFees {
@@ -31,7 +31,7 @@ impl AdminSetConfigFees {
         args: AdminSetConfigFeesInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.config,
             false,
@@ -42,10 +42,6 @@ impl AdminSetConfigFees {
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn_admin,
             true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program,
-            false,
         ));
         accounts.extend_from_slice(remaining_accounts);
         let mut data = AdminSetConfigFeesInstructionData::new()
@@ -69,7 +65,7 @@ pub struct AdminSetConfigFeesInstructionData {
 
 impl AdminSetConfigFeesInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 26 }
+        Self { discriminator: 28 }
     }
 }
 
@@ -97,13 +93,11 @@ pub struct AdminSetConfigFeesInstructionArgs {
 ///   0. `[writable]` config
 ///   1. `[]` ncn
 ///   2. `[signer]` ncn_admin
-///   3. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct AdminSetConfigFeesBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     ncn_admin: Option<solana_program::pubkey::Pubkey>,
-    restaking_program: Option<solana_program::pubkey::Pubkey>,
     new_block_engine_fee_bps: Option<u16>,
     base_fee_group: Option<u8>,
     new_base_fee_wallet: Option<Pubkey>,
@@ -130,14 +124,6 @@ impl AdminSetConfigFeesBuilder {
     #[inline(always)]
     pub fn ncn_admin(&mut self, ncn_admin: solana_program::pubkey::Pubkey) -> &mut Self {
         self.ncn_admin = Some(ncn_admin);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_program = Some(restaking_program);
         self
     }
     /// `[optional argument]`
@@ -200,9 +186,6 @@ impl AdminSetConfigFeesBuilder {
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             ncn_admin: self.ncn_admin.expect("ncn_admin is not set"),
-            restaking_program: self
-                .restaking_program
-                .expect("restaking_program is not set"),
         };
         let args = AdminSetConfigFeesInstructionArgs {
             new_block_engine_fee_bps: self.new_block_engine_fee_bps.clone(),
@@ -224,8 +207,6 @@ pub struct AdminSetConfigFeesCpiAccounts<'a, 'b> {
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `admin_set_config_fees` CPI instruction.
@@ -238,8 +219,6 @@ pub struct AdminSetConfigFeesCpi<'a, 'b> {
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AdminSetConfigFeesInstructionArgs,
 }
@@ -255,7 +234,6 @@ impl<'a, 'b> AdminSetConfigFeesCpi<'a, 'b> {
             config: accounts.config,
             ncn: accounts.ncn,
             ncn_admin: accounts.ncn_admin,
-            restaking_program: accounts.restaking_program,
             __args: args,
         }
     }
@@ -292,7 +270,7 @@ impl<'a, 'b> AdminSetConfigFeesCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.config.key,
             false,
@@ -304,10 +282,6 @@ impl<'a, 'b> AdminSetConfigFeesCpi<'a, 'b> {
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn_admin.key,
             true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program.key,
-            false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_program::instruction::AccountMeta {
@@ -327,12 +301,11 @@ impl<'a, 'b> AdminSetConfigFeesCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(4 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(3 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.ncn_admin.clone());
-        account_infos.push(self.restaking_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -352,7 +325,6 @@ impl<'a, 'b> AdminSetConfigFeesCpi<'a, 'b> {
 ///   0. `[writable]` config
 ///   1. `[]` ncn
 ///   2. `[signer]` ncn_admin
-///   3. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct AdminSetConfigFeesCpiBuilder<'a, 'b> {
     instruction: Box<AdminSetConfigFeesCpiBuilderInstruction<'a, 'b>>,
@@ -365,7 +337,6 @@ impl<'a, 'b> AdminSetConfigFeesCpiBuilder<'a, 'b> {
             config: None,
             ncn: None,
             ncn_admin: None,
-            restaking_program: None,
             new_block_engine_fee_bps: None,
             base_fee_group: None,
             new_base_fee_wallet: None,
@@ -395,14 +366,6 @@ impl<'a, 'b> AdminSetConfigFeesCpiBuilder<'a, 'b> {
         ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.ncn_admin = Some(ncn_admin);
-        self
-    }
-    #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_program = Some(restaking_program);
         self
     }
     /// `[optional argument]`
@@ -498,11 +461,6 @@ impl<'a, 'b> AdminSetConfigFeesCpiBuilder<'a, 'b> {
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
             ncn_admin: self.instruction.ncn_admin.expect("ncn_admin is not set"),
-
-            restaking_program: self
-                .instruction
-                .restaking_program
-                .expect("restaking_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -518,7 +476,6 @@ struct AdminSetConfigFeesCpiBuilderInstruction<'a, 'b> {
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     new_block_engine_fee_bps: Option<u16>,
     base_fee_group: Option<u8>,
     new_base_fee_wallet: Option<Pubkey>,

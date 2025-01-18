@@ -79,8 +79,9 @@ mod tests {
         let ncn_root = fixture.setup_ncn().await?;
 
         const NEW_BLOCK_ENGINE_FEE: u16 = 500;
-        const NEW_BASE_FEE: u16 = 600;
-        const NEW_NCN_FEE: u16 = 700;
+        // 10_000 total, base 5000 / 8 = 625
+        const NEW_BASE_FEE: u16 = 625;
+        const NEW_NCN_FEE: u16 = 625;
 
         let new_base_fee_wallet = Pubkey::new_unique();
 

@@ -20,7 +20,7 @@ pub fn process_admin_set_parameters(
     epochs_before_stall: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
 ) -> ProgramResult {
-    let [config, ncn_account, ncn_admin, restaking_program] = accounts else {
+    let [config, ncn_account, ncn_admin] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
@@ -28,7 +28,7 @@ pub fn process_admin_set_parameters(
 
     // Load and verify accounts
     Config::load(program_id, ncn_account.key, config, true)?;
-    Ncn::load(restaking_program.key, ncn_account, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
 
     {
         let ncn_data = ncn_account.data.borrow();

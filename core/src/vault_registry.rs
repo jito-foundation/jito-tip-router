@@ -118,6 +118,14 @@ impl VaultEntry {
         }
     }
 
+    pub const fn vault(&self) -> &Pubkey {
+        &self.vault
+    }
+
+    pub const fn st_mint(&self) -> &Pubkey {
+        &self.st_mint
+    }
+
     pub fn vault_index(&self) -> u64 {
         self.vault_index.into()
     }
@@ -329,6 +337,14 @@ impl VaultRegistry {
 
     pub fn vault_count(&self) -> u64 {
         self.vault_list.iter().filter(|m| !m.is_empty()).count() as u64
+    }
+
+    pub fn get_valid_vault_entries(&self) -> Vec<VaultEntry> {
+        self.vault_list
+            .iter()
+            .filter(|m| !m.is_empty())
+            .copied()
+            .collect()
     }
 
     pub fn get_valid_mint_entries(&self) -> Vec<StMintEntry> {

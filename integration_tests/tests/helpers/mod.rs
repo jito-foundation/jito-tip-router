@@ -1,1 +1,1 @@
-pub mod ballot_box;
+pub mod serialized_accounts;
