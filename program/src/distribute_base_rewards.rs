@@ -85,7 +85,7 @@ pub fn process_distribute_base_rewards(
             rewards,
         );
 
-        // Invoke the deposit instruction with base_reward_router as signer
+        // Invoke the deposit instruction with base_reward_receiver as signer
         invoke_signed(
             &deposit_ix,
             &[

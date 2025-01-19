@@ -21,7 +21,7 @@ use solana_ledger::{
     blockstore_processor::BlockstoreProcessorError,
 };
 use solana_program::{stake_history::StakeHistory, sysvar};
-use solana_runtime::{bank::Bank, stakes::StakeAccount};
+use solana_runtime::{bank::Bank, snapshot_utils::SnapshotError, stakes::StakeAccount};
 use solana_sdk::{
     account::{from_account, ReadableAccount, WritableAccount},
     clock::Slot,
@@ -61,6 +61,10 @@ pub enum StakeMetaGeneratorError {
     BankForksUtilsError(#[from] BankForksUtilsError),
 
     GenesisConfigError(#[from] OpenGenesisConfigError),
+
+    SnapshotError(#[from] SnapshotError),
+
+    PosionError(String),
 }
 
 impl Display for StakeMetaGeneratorError {
@@ -89,7 +93,7 @@ pub fn generate_stake_meta(
         full_snapshots_path,
         desired_slot,
         snapshots_enabled,
-    );
+    )?;
 
     info!("Generating stake_meta_collection object...");
     let stake_meta_coll =

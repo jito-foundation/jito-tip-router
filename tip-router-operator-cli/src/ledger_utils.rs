@@ -18,7 +18,8 @@ use solana_runtime::{
 };
 use solana_sdk::clock::Slot;
 
-// TODO: Use Result and propagate errors more gracefully
+use crate::stake_meta_generator::StakeMetaGeneratorError;
+
 /// Create the Bank for a desired slot for given file paths.
 pub fn get_bank_from_ledger(
     ledger_path: &Path,
@@ -26,9 +27,8 @@ pub fn get_bank_from_ledger(
     full_snapshots_path: PathBuf,
     desired_slot: &Slot,
     take_snapshot: bool,
-) -> Arc<Bank> {
-    let genesis_config =
-        open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE).unwrap();
+) -> Result<Arc<Bank>, StakeMetaGeneratorError> {
+    let genesis_config = open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE)?;
     let access_type = AccessType::Secondary;
     // Error handling is a modified copy pasta from ledger utils
     let blockstore = match Blockstore::open_with_options(
@@ -54,21 +54,27 @@ pub fn get_bank_from_ledger(
             let is_secondary = access_type == AccessType::Secondary;
 
             if missing_blockstore && is_secondary {
-                panic!(
+                log::error!(
                     "Failed to open blockstore at {ledger_path:?}, it is missing at least one \
                      critical file: {err:?}"
                 );
             } else if missing_column && is_secondary {
-                panic!(
+                log::error!(
                     "Failed to open blockstore at {ledger_path:?}, it does not have all necessary \
                      columns: {err:?}"
                 );
             } else {
-                panic!("Failed to open blockstore at {ledger_path:?}: {err:?}");
+                log::error!("Failed to open blockstore at {ledger_path:?}: {err:?}");
             }
+
+            return Err(StakeMetaGeneratorError::BlockstoreError(
+                BlockstoreError::RocksDb(err),
+            ));
         }
         Err(err) => {
-            panic!("Failed to open blockstore at {ledger_path:?}: {err:?}");
+            log::error!("Failed to open blockstore at {ledger_path:?}: {err:?}");
+
+            return Err(StakeMetaGeneratorError::BlockstoreError(err));
         }
     };
 
@@ -97,8 +103,7 @@ pub fn get_bank_from_ledger(
             None,
             exit,
             false,
-        )
-        .unwrap();
+        )?;
     blockstore_processor::process_blockstore_from_root(
         &blockstore,
         &bank_forks,
@@ -108,10 +113,14 @@ pub fn get_bank_from_ledger(
         None,
         None,
         &AbsRequestSender::default(),
-    )
-    .unwrap();
+    )?;
 
-    let working_bank = bank_forks.read().unwrap().working_bank();
+    let working_bank = bank_forks
+        .read()
+        .map_err(|e| {
+            StakeMetaGeneratorError::PosionError(format!("Failed to acquire read lock: {e}"))
+        })?
+        .working_bank();
 
     if take_snapshot {
         let full_snapshot_archive_info = snapshot_bank_utils::bank_to_full_snapshot_archive(
@@ -123,8 +132,7 @@ pub fn get_bank_from_ledger(
             snapshot_config.archive_format,
             snapshot_config.maximum_full_snapshot_archives_to_retain,
             snapshot_config.maximum_incremental_snapshot_archives_to_retain,
-        )
-        .unwrap();
+        )?;
 
         info!(
             "Successfully created snapshot for slot {}, hash {}: {}",
@@ -141,7 +149,8 @@ pub fn get_bank_from_ledger(
         desired_slot,
         working_bank.slot()
     );
-    working_bank
+
+    Ok(working_bank)
 }
 
 #[cfg(test)]
@@ -160,7 +169,8 @@ mod tests {
             full_snapshots_path.clone(),
             &desired_slot,
             true,
-        );
+        )
+        .unwrap();
         assert_eq!(res.slot(), desired_slot);
         // Assert that the snapshot was created
         let snapshot_path_str = format!(
