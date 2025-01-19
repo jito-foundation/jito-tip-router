@@ -66,7 +66,7 @@ impl DistributeBaseNcnRewardRoute {
             self.base_reward_receiver,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn_reward_router,
             false,
         ));
@@ -127,7 +127,7 @@ pub struct DistributeBaseNcnRewardRouteInstructionArgs {
 ///   3. `[]` operator
 ///   4. `[writable]` base_reward_router
 ///   5. `[writable]` base_reward_receiver
-///   6. `[writable]` ncn_reward_router
+///   6. `[]` ncn_reward_router
 ///   7. `[writable]` ncn_reward_receiver
 ///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
@@ -396,7 +396,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
             *self.base_reward_receiver.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn_reward_router.key,
             false,
         ));
@@ -459,7 +459,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
 ///   3. `[]` operator
 ///   4. `[writable]` base_reward_router
 ///   5. `[writable]` base_reward_receiver
-///   6. `[writable]` ncn_reward_router
+///   6. `[]` ncn_reward_router
 ///   7. `[writable]` ncn_reward_receiver
 ///   8. `[]` system_program
 #[derive(Clone, Debug)]

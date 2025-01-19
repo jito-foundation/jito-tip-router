@@ -62,7 +62,7 @@ impl InitializeOperatorSnapshot {
             self.ncn_operator_state,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.epoch_snapshot,
             false,
         ));
@@ -124,7 +124,7 @@ pub struct InitializeOperatorSnapshotInstructionArgs {
 ///   2. `[]` ncn
 ///   3. `[]` operator
 ///   4. `[]` ncn_operator_state
-///   5. `[writable]` epoch_snapshot
+///   5. `[]` epoch_snapshot
 ///   6. `[writable]` operator_snapshot
 ///   7. `[writable, signer]` payer
 ///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
@@ -370,7 +370,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
             *self.ncn_operator_state.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.epoch_snapshot.key,
             false,
         ));
@@ -436,7 +436,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
 ///   2. `[]` ncn
 ///   3. `[]` operator
 ///   4. `[]` ncn_operator_state
-///   5. `[writable]` epoch_snapshot
+///   5. `[]` epoch_snapshot
 ///   6. `[writable]` operator_snapshot
 ///   7. `[writable, signer]` payer
 ///   8. `[]` system_program

@@ -70,7 +70,7 @@ export type DistributeBaseNcnRewardRouteInstruction<
         ? WritableAccount<TAccountBaseRewardReceiver>
         : TAccountBaseRewardReceiver,
       TAccountNcnRewardRouter extends string
-        ? WritableAccount<TAccountNcnRewardRouter>
+        ? ReadonlyAccount<TAccountNcnRewardRouter>
         : TAccountNcnRewardRouter,
       TAccountNcnRewardReceiver extends string
         ? WritableAccount<TAccountNcnRewardReceiver>
@@ -203,7 +203,10 @@ export function getDistributeBaseNcnRewardRouteInstruction<
       value: input.baseRewardReceiver ?? null,
       isWritable: true,
     },
-    ncnRewardRouter: { value: input.ncnRewardRouter ?? null, isWritable: true },
+    ncnRewardRouter: {
+      value: input.ncnRewardRouter ?? null,
+      isWritable: false,
+    },
     ncnRewardReceiver: {
       value: input.ncnRewardReceiver ?? null,
       isWritable: true,

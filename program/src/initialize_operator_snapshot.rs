@@ -39,12 +39,11 @@ pub fn process_initialize_operator_snapshot(
         operator,
         false,
     )?;
-    EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, true)?;
+    EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;
 
     load_system_account(operator_snapshot, true)?;
     load_system_program(system_program)?;
-    //TODO check that it is not writable
-    load_signer(payer, false)?;
+    load_signer(payer, true)?;
 
     let (operator_snapshot_pubkey, operator_snapshot_bump, mut operator_snapshot_seeds) =
         OperatorSnapshot::find_program_address(program_id, operator.key, ncn.key, epoch);

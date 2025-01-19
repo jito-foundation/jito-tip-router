@@ -66,6 +66,8 @@ pub enum TipRouterError {
     MintEntryNotFound,
     #[error("Fee cap exceeded")]
     FeeCapExceeded,
+    #[error("Total fees cannot be 0")]
+    TotalFeesCannotBeZero,
     #[error("DAO wallet cannot be default")]
     DefaultDaoWallet,
     #[error("Incorrect NCN Admin")]
