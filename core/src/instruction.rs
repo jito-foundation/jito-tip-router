@@ -198,7 +198,7 @@ pub enum TipRouterInstruction {
     #[account(4, name = "epoch_snapshot")]
     #[account(5, name = "operator_snapshot")]
     #[account(6, name = "operator")]
-    #[account(7, signer, name = "operator_admin")]
+    #[account(7, signer, name = "operator_voter")]
     CastVote {
         meta_merkle_root: [u8; 32],
         epoch: u64,

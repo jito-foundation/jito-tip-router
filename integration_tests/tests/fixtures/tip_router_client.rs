@@ -1291,7 +1291,7 @@ impl TipRouterClient {
         epoch_snapshot: Pubkey,
         operator_snapshot: Pubkey,
         operator: Pubkey,
-        operator_admin: &Keypair,
+        operator_voter: &Keypair,
         meta_merkle_root: [u8; 32],
         epoch: u64,
     ) -> Result<(), TestError> {
@@ -1306,7 +1306,7 @@ impl TipRouterClient {
             .epoch_snapshot(epoch_snapshot)
             .operator_snapshot(operator_snapshot)
             .operator(operator)
-            .operator_admin(operator_admin.pubkey())
+            .operator_voter(operator_voter.pubkey())
             .meta_merkle_root(meta_merkle_root)
             .epoch(epoch)
             .instruction();
@@ -1315,7 +1315,7 @@ impl TipRouterClient {
         self.process_transaction(&Transaction::new_signed_with_payer(
             &[ix],
             Some(&self.payer.pubkey()),
-            &[&self.payer, operator_admin],
+            &[&self.payer, operator_voter],
             blockhash,
         ))
         .await

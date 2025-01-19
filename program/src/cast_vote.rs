@@ -46,8 +46,8 @@ pub fn process_cast_vote(
     let operator_data = operator.data.borrow();
     let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
 
-    if *operator_admin.key != operator_account.admin {
-        return Err(TipRouterError::OperatorAdminInvalid.into());
+    if *operator_admin.key != operator_account.voter {
+        return Err(TipRouterError::InvalidOperatorVoter.into());
     }
 
     let valid_slots_after_consensus = {

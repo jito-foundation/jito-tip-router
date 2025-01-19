@@ -175,9 +175,9 @@ pub enum JitoTipRouterError {
     /// 8749 - Invalid merkle proof
     #[error("Invalid merkle proof")]
     InvalidMerkleProof = 0x222D,
-    /// 8750 - Operator admin needs to sign its vote
-    #[error("Operator admin needs to sign its vote")]
-    OperatorAdminInvalid = 0x222E,
+    /// 8750 - Operator voter needs to sign its vote
+    #[error("Operator voter needs to sign its vote")]
+    InvalidOperatorVoter = 0x222E,
     /// 8751 - Not a valid NCN fee group
     #[error("Not a valid NCN fee group")]
     InvalidNcnFeeGroup = 0x222F,

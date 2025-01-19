@@ -115,8 +115,8 @@ pub enum TipRouterError {
     TieBreakerNotInPriorVotes,
     #[error("Invalid merkle proof")]
     InvalidMerkleProof,
-    #[error("Operator admin needs to sign its vote")]
-    OperatorAdminInvalid,
+    #[error("Operator voter needs to sign its vote")]
+    InvalidOperatorVoter,
     #[error("Not a valid NCN fee group")]
     InvalidNcnFeeGroup,
     #[error("Not a valid base fee group")]

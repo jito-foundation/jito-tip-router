@@ -761,7 +761,7 @@
           "isSigner": false
         },
         {
-          "name": "operatorAdmin",
+          "name": "operatorVoter",
           "isMut": false,
           "isSigner": true
         }
@@ -3505,8 +3505,8 @@
     },
     {
       "code": 8750,
-      "name": "OperatorAdminInvalid",
-      "msg": "Operator admin needs to sign its vote"
+      "name": "InvalidOperatorVoter",
+      "msg": "Operator voter needs to sign its vote"
     },
     {
       "code": 8751,

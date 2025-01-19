@@ -887,7 +887,7 @@ pub async fn admin_cast_vote(
         .epoch_snapshot(epoch_snapshot)
         .operator_snapshot(operator_snapshot)
         .operator(operator)
-        .operator_admin(keypair.pubkey())
+        .operator_voter(keypair.pubkey())
         .meta_merkle_root(meta_merkle_root)
         .epoch(epoch)
         .instruction();
