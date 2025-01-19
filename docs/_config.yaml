@@ -24,25 +24,21 @@ collections:
     output: true
     permalink: /:collection/:title/
     sort_by: weight
-  restaking:
+  onchain:
     output: true
     permalink: /:collection/:title/
     sort_by: weight
-  vault:
+  operator:
     output: true
     permalink: /:collection/:title/
     sort_by: weight
-  advanced:
+  cranker:
     output: true
     permalink: /:collection/:title/
     sort_by: weight
-  tools:
-    output: true
-    permalink: /:collection/:title/
 
 ordered_collections:
   - about
-  - restaking
-  - vault
-  - tools
-  - advanced
+  - onchain
+  - operator
+  - cranker

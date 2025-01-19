@@ -17,7 +17,7 @@ Jito Tip Router NCN is handling operation of distribution of MEV tips generated 
 Onchain NCN program has several components:
 
 - Pricing
-  - NCN Admin or Switchboard determines the relative weight of assets ( jitoSOL, JTO, ... ) deposited in all the Vaults linked to this Jito Tip Router NCN.
+  - Switchboard determines the relative weight of assets ( jitoSOL, JTO, ... ) deposited in all the Vaults linked to this Jito Tip Router NCN.
 
 - Snapshot
   - Take snapshots of Operator and Vault per epoch.

@@ -97,11 +97,9 @@ Validators can change their votes up until consensus is reached.
 
 ## Set Merkle Root
 
-Once a meta merkle root is decided, meaning consensus is reached, each validator’s TipDistributionAccount with the merkle_root_upload_authority set to the NcnConfig can have its own merkle_root set.
+Once a meta merkle root is decided, meaning consensus is reached, each validator’s `TipDistributionAccount` with the merkle_root_upload_authority set to the NcnConfig can have its own merkle_root set.
 The Cranker client will invoke SetMerkleRoot with the merkle proof, and all the arguments for the Tip Distribution Program UploadMerkleRoot instruction for a given validator.
 These arguments make up the leaf node of the tree, so the proof is verified against the meta_merkle_root, and a CPI sets the merkle root on the TipDistributionAccount.
 Claims for that validator and its stakers can now begin.
 
-The permissionless claim process for Tip Distribution claimants will remain the same, but the instructions can now be called with the claim_with_payer instruction, a simple pass through to the Claim instruction, which allows the ClaimStatusPayer PDA to fund the rent for all ClaimStatus accounts.
-It can reclaim this rent after 10 epochs. These rent funds were previously provided by Jito Labs and is now >15,000 SOL. They will now be managed by TipRouter and has been transferred from the DAO treasury in JIP-8.
 

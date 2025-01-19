@@ -14,7 +14,8 @@ Once an epoch completes, the operator client takes a snapshot of the Bank from t
 
 Using the Bank, the client constructs the StakeMetaCollection, which includes details about each validator, their tip distribution account, and the active delegations (stake accounts) on that validator.
 
-Based on the StakeMetaCollection, the client generates Merkle trees for each validator, resulting in the GeneratedMerkleTreeCollection. Each tree contains a set of "claimants," which include all the validator's stake accounts, an additional claimant representing the validator’s share of tips (calculated using their mev_commission_bps from the tip distribution account), and a claimant for the fee allocated to the TipRouter.
+Based on the StakeMetaCollection, the client generates Merkle trees for each validator, resulting in the GeneratedMerkleTreeCollection.
+Each tree contains a set of "claimants," which include all the validator's stake accounts, an additional claimant representing the validator’s share of tips (calculated using their mev_commission_bps from the tip distribution account), and a claimant for the fee allocated to the TipRouter.
 
 **Details about the `TipRouter` claimant**:
 
@@ -28,3 +29,6 @@ Finally, a MetaMerkleTree is created from the `GeneratedMerkleTreeCollection`.
 [`jito-solana/tip-distributor`]: https://github.com/jito-foundation/jito-programs/tree/master/mev-programs/
 
 ## Cast Vote
+
+Once the `meta_merkle_root` is created, the operator submits their vote by calling the cast_vote instruction, provided the BallotBox, EpochSnapshot, and OperatorSnapshot accounts have already been initialized.
+
