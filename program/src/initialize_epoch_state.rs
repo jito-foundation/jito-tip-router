@@ -1,12 +1,11 @@
-use jito_jsm_core::{
-    create_account,
-    loader::{load_signer, load_system_account, load_system_program},
-};
+use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
-use jito_tip_router_core::{config::Config, constants::MAX_REALLOC_BYTES, epoch_state::EpochState};
+use jito_tip_router_core::{
+    claim_status_payer::ClaimStatusPayer, config::Config, epoch_state::EpochState,
+};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
 pub fn process_initialize_epoch_state(
@@ -14,7 +13,7 @@ pub fn process_initialize_epoch_state(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, config, ncn_account, payer, system_program] = accounts else {
+    let [epoch_state, config, ncn_account, claim_status_payer, system_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
@@ -27,10 +26,9 @@ pub fn process_initialize_epoch_state(
     load_system_account(epoch_state, true)?;
     load_system_program(system_program)?;
 
-    load_signer(payer, false)?;
-
     Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
     Config::load(program_id, ncn_account.key, config, false)?;
+    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
 
     let (epoch_state_pda, epoch_state_bump, mut epoch_state_seeds) =
         EpochState::find_program_address(program_id, ncn_account.key, epoch);
@@ -40,13 +38,13 @@ pub fn process_initialize_epoch_state(
         return Err(ProgramError::InvalidSeeds);
     }
 
-    create_account(
-        payer,
+    ClaimStatusPayer::pay_and_create_account(
+        program_id,
+        claim_status_payer,
         epoch_state,
         system_program,
         program_id,
-        &Rent::get()?,
-        MAX_REALLOC_BYTES,
+        EpochState::SIZE,
         &epoch_state_seeds,
     )?;
 

@@ -20,14 +20,11 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -44,7 +41,7 @@ export type ReallocBallotBoxInstruction<
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountClaimStatusPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -63,10 +60,9 @@ export type ReallocBallotBoxInstruction<
         ? WritableAccount<TAccountBallotBox>
         : TAccountBallotBox,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
+      TAccountClaimStatusPayer extends string
+        ? WritableAccount<TAccountClaimStatusPayer>
+        : TAccountClaimStatusPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -113,14 +109,14 @@ export type ReallocBallotBoxInput<
   TAccountConfig extends string = string,
   TAccountBallotBox extends string = string,
   TAccountNcn extends string = string,
-  TAccountPayer extends string = string,
+  TAccountClaimStatusPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ballotBox: Address<TAccountBallotBox>;
   ncn: Address<TAccountNcn>;
-  payer: TransactionSigner<TAccountPayer>;
+  claimStatusPayer: Address<TAccountClaimStatusPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: ReallocBallotBoxInstructionDataArgs['epoch'];
 };
@@ -130,7 +126,7 @@ export function getReallocBallotBoxInstruction<
   TAccountConfig extends string,
   TAccountBallotBox extends string,
   TAccountNcn extends string,
-  TAccountPayer extends string,
+  TAccountClaimStatusPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
@@ -139,7 +135,7 @@ export function getReallocBallotBoxInstruction<
     TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
-    TAccountPayer,
+    TAccountClaimStatusPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -149,7 +145,7 @@ export function getReallocBallotBoxInstruction<
   TAccountConfig,
   TAccountBallotBox,
   TAccountNcn,
-  TAccountPayer,
+  TAccountClaimStatusPayer,
   TAccountSystemProgram
 > {
   // Program address.
@@ -162,7 +158,10 @@ export function getReallocBallotBoxInstruction<
     config: { value: input.config ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    payer: { value: input.payer ?? null, isWritable: true },
+    claimStatusPayer: {
+      value: input.claimStatusPayer ?? null,
+      isWritable: true,
+    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -186,7 +185,7 @@ export function getReallocBallotBoxInstruction<
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.claimStatusPayer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -199,7 +198,7 @@ export function getReallocBallotBoxInstruction<
     TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
-    TAccountPayer,
+    TAccountClaimStatusPayer,
     TAccountSystemProgram
   >;
 
@@ -216,7 +215,7 @@ export type ParsedReallocBallotBoxInstruction<
     config: TAccountMetas[1];
     ballotBox: TAccountMetas[2];
     ncn: TAccountMetas[3];
-    payer: TAccountMetas[4];
+    claimStatusPayer: TAccountMetas[4];
     systemProgram: TAccountMetas[5];
   };
   data: ReallocBallotBoxInstructionData;
@@ -247,7 +246,7 @@ export function parseReallocBallotBoxInstruction<
       config: getNextAccount(),
       ballotBox: getNextAccount(),
       ncn: getNextAccount(),
-      payer: getNextAccount(),
+      claimStatusPayer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getReallocBallotBoxInstructionDataDecoder().decode(instruction.data),

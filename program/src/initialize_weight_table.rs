@@ -1,16 +1,13 @@
 use jito_bytemuck::AccountDeserialize;
-use jito_jsm_core::{
-    create_account,
-    loader::{load_signer, load_system_account, load_system_program},
-};
+use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    constants::MAX_REALLOC_BYTES, epoch_state::EpochState, vault_registry::VaultRegistry,
+    claim_status_payer::ClaimStatusPayer, epoch_state::EpochState, vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    pubkey::Pubkey,
 };
 
 /// Initializes a Weight Table
@@ -20,17 +17,19 @@ pub fn process_initialize_weight_table(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, vault_registry, ncn, weight_table, payer, system_program] = accounts else {
+    let [epoch_state, vault_registry, ncn, weight_table, claim_status_payer, system_program] =
+        accounts
+    else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
 
     load_system_account(weight_table, true)?;
     load_system_program(system_program)?;
-    load_signer(payer, true)?;
 
     let vault_count = {
         let ncn_data = ncn.data.borrow();
@@ -64,13 +63,13 @@ pub fn process_initialize_weight_table(
         ncn.key,
         epoch
     );
-    create_account(
-        payer,
+    ClaimStatusPayer::pay_and_create_account(
+        program_id,
+        claim_status_payer,
         weight_table,
         system_program,
         program_id,
-        &Rent::get()?,
-        MAX_REALLOC_BYTES,
+        WeightTable::SIZE,
         &weight_table_seeds,
     )?;
 

@@ -3182,6 +3182,7 @@ dependencies = [
  "jito-jsm-core",
  "jito-restaking-core",
  "jito-restaking-sdk",
+ "jito-tip-distribution-sdk",
  "jito-vault-core",
  "jito-vault-sdk",
  "meta-merkle-tree",

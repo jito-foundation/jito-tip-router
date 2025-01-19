@@ -24,7 +24,7 @@ pub struct InitializeOperatorSnapshot {
 
     pub operator_snapshot: solana_program::pubkey::Pubkey,
 
-    pub payer: solana_program::pubkey::Pubkey,
+    pub claim_status_payer: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
@@ -71,7 +71,8 @@ impl InitializeOperatorSnapshot {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.payer, true,
+            self.claim_status_payer,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
@@ -126,7 +127,7 @@ pub struct InitializeOperatorSnapshotInstructionArgs {
 ///   4. `[]` ncn_operator_state
 ///   5. `[]` epoch_snapshot
 ///   6. `[writable]` operator_snapshot
-///   7. `[writable, signer]` payer
+///   7. `[writable]` claim_status_payer
 ///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeOperatorSnapshotBuilder {
@@ -137,7 +138,7 @@ pub struct InitializeOperatorSnapshotBuilder {
     ncn_operator_state: Option<solana_program::pubkey::Pubkey>,
     epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
     operator_snapshot: Option<solana_program::pubkey::Pubkey>,
-    payer: Option<solana_program::pubkey::Pubkey>,
+    claim_status_payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -189,8 +190,11 @@ impl InitializeOperatorSnapshotBuilder {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
+    pub fn claim_status_payer(
+        &mut self,
+        claim_status_payer: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.claim_status_payer = Some(claim_status_payer);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -236,7 +240,9 @@ impl InitializeOperatorSnapshotBuilder {
             operator_snapshot: self
                 .operator_snapshot
                 .expect("operator_snapshot is not set"),
-            payer: self.payer.expect("payer is not set"),
+            claim_status_payer: self
+                .claim_status_payer
+                .expect("claim_status_payer is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -265,7 +271,7 @@ pub struct InitializeOperatorSnapshotCpiAccounts<'a, 'b> {
 
     pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
@@ -289,7 +295,7 @@ pub struct InitializeOperatorSnapshotCpi<'a, 'b> {
 
     pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -311,7 +317,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
             ncn_operator_state: accounts.ncn_operator_state,
             epoch_snapshot: accounts.epoch_snapshot,
             operator_snapshot: accounts.operator_snapshot,
-            payer: accounts.payer,
+            claim_status_payer: accounts.claim_status_payer,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -379,8 +385,8 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.payer.key,
-            true,
+            *self.claim_status_payer.key,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
@@ -413,7 +419,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
         account_infos.push(self.ncn_operator_state.clone());
         account_infos.push(self.epoch_snapshot.clone());
         account_infos.push(self.operator_snapshot.clone());
-        account_infos.push(self.payer.clone());
+        account_infos.push(self.claim_status_payer.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -438,7 +444,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
 ///   4. `[]` ncn_operator_state
 ///   5. `[]` epoch_snapshot
 ///   6. `[writable]` operator_snapshot
-///   7. `[writable, signer]` payer
+///   7. `[writable]` claim_status_payer
 ///   8. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
@@ -456,7 +462,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
             ncn_operator_state: None,
             epoch_snapshot: None,
             operator_snapshot: None,
-            payer: None,
+            claim_status_payer: None,
             system_program: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
@@ -517,8 +523,11 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
+    pub fn claim_status_payer(
+        &mut self,
+        claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.claim_status_payer = Some(claim_status_payer);
         self
     }
     #[inline(always)]
@@ -607,7 +616,10 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
                 .operator_snapshot
                 .expect("operator_snapshot is not set"),
 
-            payer: self.instruction.payer.expect("payer is not set"),
+            claim_status_payer: self
+                .instruction
+                .claim_status_payer
+                .expect("claim_status_payer is not set"),
 
             system_program: self
                 .instruction
@@ -632,7 +644,7 @@ struct InitializeOperatorSnapshotCpiBuilderInstruction<'a, 'b> {
     ncn_operator_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    claim_status_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

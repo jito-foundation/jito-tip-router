@@ -31,6 +31,11 @@
           "isSigner": false
         },
         {
+          "name": "claimStatusPayer",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -82,9 +87,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -117,9 +122,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -187,9 +192,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -227,9 +232,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -272,9 +277,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -322,9 +327,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -411,9 +416,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -471,9 +476,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -536,9 +541,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -656,9 +661,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -701,9 +706,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -893,9 +898,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -938,9 +943,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -993,9 +998,9 @@
           "isSigner": false
         },
         {
-          "name": "payer",
+          "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -1507,11 +1512,6 @@
         {
           "name": "claimStatusPayer",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tipDistributionProgram",
-          "isMut": false,
           "isSigner": false
         },
         {

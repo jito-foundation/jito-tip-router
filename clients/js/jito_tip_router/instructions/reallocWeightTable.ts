@@ -20,14 +20,11 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -45,7 +42,7 @@ export type ReallocWeightTableInstruction<
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountVaultRegistry extends string | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountClaimStatusPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -67,10 +64,9 @@ export type ReallocWeightTableInstruction<
       TAccountVaultRegistry extends string
         ? ReadonlyAccount<TAccountVaultRegistry>
         : TAccountVaultRegistry,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
+      TAccountClaimStatusPayer extends string
+        ? WritableAccount<TAccountClaimStatusPayer>
+        : TAccountClaimStatusPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -118,7 +114,7 @@ export type ReallocWeightTableInput<
   TAccountWeightTable extends string = string,
   TAccountNcn extends string = string,
   TAccountVaultRegistry extends string = string,
-  TAccountPayer extends string = string,
+  TAccountClaimStatusPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
@@ -126,7 +122,7 @@ export type ReallocWeightTableInput<
   weightTable: Address<TAccountWeightTable>;
   ncn: Address<TAccountNcn>;
   vaultRegistry: Address<TAccountVaultRegistry>;
-  payer: TransactionSigner<TAccountPayer>;
+  claimStatusPayer: Address<TAccountClaimStatusPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: ReallocWeightTableInstructionDataArgs['epoch'];
 };
@@ -137,7 +133,7 @@ export function getReallocWeightTableInstruction<
   TAccountWeightTable extends string,
   TAccountNcn extends string,
   TAccountVaultRegistry extends string,
-  TAccountPayer extends string,
+  TAccountClaimStatusPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
@@ -147,7 +143,7 @@ export function getReallocWeightTableInstruction<
     TAccountWeightTable,
     TAccountNcn,
     TAccountVaultRegistry,
-    TAccountPayer,
+    TAccountClaimStatusPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -158,7 +154,7 @@ export function getReallocWeightTableInstruction<
   TAccountWeightTable,
   TAccountNcn,
   TAccountVaultRegistry,
-  TAccountPayer,
+  TAccountClaimStatusPayer,
   TAccountSystemProgram
 > {
   // Program address.
@@ -172,7 +168,10 @@ export function getReallocWeightTableInstruction<
     weightTable: { value: input.weightTable ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: false },
-    payer: { value: input.payer ?? null, isWritable: true },
+    claimStatusPayer: {
+      value: input.claimStatusPayer ?? null,
+      isWritable: true,
+    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -197,7 +196,7 @@ export function getReallocWeightTableInstruction<
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.vaultRegistry),
-      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.claimStatusPayer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -211,7 +210,7 @@ export function getReallocWeightTableInstruction<
     TAccountWeightTable,
     TAccountNcn,
     TAccountVaultRegistry,
-    TAccountPayer,
+    TAccountClaimStatusPayer,
     TAccountSystemProgram
   >;
 
@@ -229,7 +228,7 @@ export type ParsedReallocWeightTableInstruction<
     weightTable: TAccountMetas[2];
     ncn: TAccountMetas[3];
     vaultRegistry: TAccountMetas[4];
-    payer: TAccountMetas[5];
+    claimStatusPayer: TAccountMetas[5];
     systemProgram: TAccountMetas[6];
   };
   data: ReallocWeightTableInstructionData;
@@ -261,7 +260,7 @@ export function parseReallocWeightTableInstruction<
       weightTable: getNextAccount(),
       ncn: getNextAccount(),
       vaultRegistry: getNextAccount(),
-      payer: getNextAccount(),
+      claimStatusPayer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getReallocWeightTableInstructionDataDecoder().decode(

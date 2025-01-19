@@ -1,4 +1,4 @@
-use jito_tip_distribution_sdk::instruction::claim_ix;
+use jito_tip_distribution_sdk::{instruction::claim_ix, jito_tip_distribution};
 use jito_tip_router_core::claim_status_payer::ClaimStatusPayer;
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed,
@@ -12,22 +12,17 @@ pub fn process_claim_with_payer(
     amount: u64,
     bump: u8,
 ) -> ProgramResult {
-    let [claim_status_payer, tip_distribution_program, config, tip_distribution_account, claim_status, claimant, system_program] =
+    let [claim_status_payer, config, tip_distribution_account, claim_status, claimant, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     // Verify claim status address
-    ClaimStatusPayer::load(
-        program_id,
-        claim_status_payer,
-        tip_distribution_program.key,
-        true,
-    )?;
+    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
 
     let (_, claim_status_payer_bump, mut claim_status_payer_seeds) =
-        ClaimStatusPayer::find_program_address(program_id, tip_distribution_program.key);
+        ClaimStatusPayer::find_program_address(program_id, &jito_tip_distribution::ID);
     claim_status_payer_seeds.push(vec![claim_status_payer_bump]);
 
     // Invoke the claim instruction with our program as the payer

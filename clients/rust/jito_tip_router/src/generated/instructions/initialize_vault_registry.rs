@@ -16,7 +16,7 @@ pub struct InitializeVaultRegistry {
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub payer: solana_program::pubkey::Pubkey,
+    pub claim_status_payer: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
@@ -43,7 +43,8 @@ impl InitializeVaultRegistry {
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.payer, true,
+            self.claim_status_payer,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
@@ -86,14 +87,14 @@ impl Default for InitializeVaultRegistryInstructionData {
 ///   0. `[]` config
 ///   1. `[writable]` vault_registry
 ///   2. `[]` ncn
-///   3. `[writable, signer]` payer
+///   3. `[writable]` claim_status_payer
 ///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeVaultRegistryBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
     vault_registry: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    payer: Option<solana_program::pubkey::Pubkey>,
+    claim_status_payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -118,8 +119,11 @@ impl InitializeVaultRegistryBuilder {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
+    pub fn claim_status_payer(
+        &mut self,
+        claim_status_payer: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.claim_status_payer = Some(claim_status_payer);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -152,7 +156,9 @@ impl InitializeVaultRegistryBuilder {
             config: self.config.expect("config is not set"),
             vault_registry: self.vault_registry.expect("vault_registry is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            payer: self.payer.expect("payer is not set"),
+            claim_status_payer: self
+                .claim_status_payer
+                .expect("claim_status_payer is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -170,7 +176,7 @@ pub struct InitializeVaultRegistryCpiAccounts<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
@@ -186,7 +192,7 @@ pub struct InitializeVaultRegistryCpi<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
@@ -201,7 +207,7 @@ impl<'a, 'b> InitializeVaultRegistryCpi<'a, 'b> {
             config: accounts.config,
             vault_registry: accounts.vault_registry,
             ncn: accounts.ncn,
-            payer: accounts.payer,
+            claim_status_payer: accounts.claim_status_payer,
             system_program: accounts.system_program,
         }
     }
@@ -252,8 +258,8 @@ impl<'a, 'b> InitializeVaultRegistryCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.payer.key,
-            true,
+            *self.claim_status_payer.key,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
@@ -280,7 +286,7 @@ impl<'a, 'b> InitializeVaultRegistryCpi<'a, 'b> {
         account_infos.push(self.config.clone());
         account_infos.push(self.vault_registry.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.payer.clone());
+        account_infos.push(self.claim_status_payer.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -301,7 +307,7 @@ impl<'a, 'b> InitializeVaultRegistryCpi<'a, 'b> {
 ///   0. `[]` config
 ///   1. `[writable]` vault_registry
 ///   2. `[]` ncn
-///   3. `[writable, signer]` payer
+///   3. `[writable]` claim_status_payer
 ///   4. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeVaultRegistryCpiBuilder<'a, 'b> {
@@ -315,7 +321,7 @@ impl<'a, 'b> InitializeVaultRegistryCpiBuilder<'a, 'b> {
             config: None,
             vault_registry: None,
             ncn: None,
-            payer: None,
+            claim_status_payer: None,
             system_program: None,
             __remaining_accounts: Vec::new(),
         });
@@ -343,8 +349,11 @@ impl<'a, 'b> InitializeVaultRegistryCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
+    pub fn claim_status_payer(
+        &mut self,
+        claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.claim_status_payer = Some(claim_status_payer);
         self
     }
     #[inline(always)]
@@ -408,7 +417,10 @@ impl<'a, 'b> InitializeVaultRegistryCpiBuilder<'a, 'b> {
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            payer: self.instruction.payer.expect("payer is not set"),
+            claim_status_payer: self
+                .instruction
+                .claim_status_payer
+                .expect("claim_status_payer is not set"),
 
             system_program: self
                 .instruction
@@ -428,7 +440,7 @@ struct InitializeVaultRegistryCpiBuilderInstruction<'a, 'b> {
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    claim_status_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

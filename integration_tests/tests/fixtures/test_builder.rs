@@ -8,6 +8,7 @@ use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::BaseRewardReceiver,
+    claim_status_payer::ClaimStatusPayer,
     constants::{JITOSOL_MINT, JTO_SOL_FEED},
     ncn_fee_group::NcnFeeGroup,
 };
@@ -23,6 +24,7 @@ use solana_sdk::{
     epoch_schedule::EpochSchedule,
     native_token::lamports_to_sol,
     signature::{Keypair, Signer},
+    system_program,
     transaction::Transaction,
 };
 use spl_stake_pool::find_withdraw_authority_program_address;
@@ -152,6 +154,23 @@ impl TestBuilder {
         );
         // Needed to create JitoSOL mint since we don't have access to the original keypair in the tests
         program_test.add_account(JITOSOL_MINT, token_mint_account(&jitosol_mint_authority.0));
+
+        // Add ClaimStatusPayer
+        {
+            let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+                &jito_tip_router_program::id(),
+                &jito_tip_distribution::ID,
+            );
+            let claim_status_payer_account = Account {
+                lamports: sol_to_lamports(10_000.0),
+                owner: system_program::id(),
+                executable: false,
+                rent_epoch: 0,
+                data: vec![],
+            };
+
+            program_test.add_account(claim_status_payer, claim_status_payer_account);
+        }
 
         Self {
             context: program_test.start_with_context().await,
@@ -295,11 +314,15 @@ impl TestBuilder {
     // 1. Setup NCN
     pub async fn create_test_ncn(&mut self) -> TestResult<TestNcn> {
         let mut restaking_program_client = self.restaking_program_client();
+
         let mut vault_program_client = self.vault_program_client();
+
         let mut tip_router_client = self.tip_router_client();
 
         vault_program_client.do_initialize_config().await?;
+
         restaking_program_client.do_initialize_config().await?;
+
         let ncn_root = restaking_program_client
             .do_initialize_ncn(Some(self.context.payer.insecure_clone()))
             .await?;

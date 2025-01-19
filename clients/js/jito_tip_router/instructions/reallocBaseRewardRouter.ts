@@ -20,14 +20,11 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -44,7 +41,7 @@ export type ReallocBaseRewardRouterInstruction<
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountClaimStatusPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -63,10 +60,9 @@ export type ReallocBaseRewardRouterInstruction<
         ? WritableAccount<TAccountBaseRewardRouter>
         : TAccountBaseRewardRouter,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
+      TAccountClaimStatusPayer extends string
+        ? WritableAccount<TAccountClaimStatusPayer>
+        : TAccountClaimStatusPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -118,14 +114,14 @@ export type ReallocBaseRewardRouterInput<
   TAccountConfig extends string = string,
   TAccountBaseRewardRouter extends string = string,
   TAccountNcn extends string = string,
-  TAccountPayer extends string = string,
+  TAccountClaimStatusPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   ncn: Address<TAccountNcn>;
-  payer: TransactionSigner<TAccountPayer>;
+  claimStatusPayer: Address<TAccountClaimStatusPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: ReallocBaseRewardRouterInstructionDataArgs['epoch'];
 };
@@ -135,7 +131,7 @@ export function getReallocBaseRewardRouterInstruction<
   TAccountConfig extends string,
   TAccountBaseRewardRouter extends string,
   TAccountNcn extends string,
-  TAccountPayer extends string,
+  TAccountClaimStatusPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
@@ -144,7 +140,7 @@ export function getReallocBaseRewardRouterInstruction<
     TAccountConfig,
     TAccountBaseRewardRouter,
     TAccountNcn,
-    TAccountPayer,
+    TAccountClaimStatusPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -154,7 +150,7 @@ export function getReallocBaseRewardRouterInstruction<
   TAccountConfig,
   TAccountBaseRewardRouter,
   TAccountNcn,
-  TAccountPayer,
+  TAccountClaimStatusPayer,
   TAccountSystemProgram
 > {
   // Program address.
@@ -170,7 +166,10 @@ export function getReallocBaseRewardRouterInstruction<
       isWritable: true,
     },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    payer: { value: input.payer ?? null, isWritable: true },
+    claimStatusPayer: {
+      value: input.claimStatusPayer ?? null,
+      isWritable: true,
+    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -194,7 +193,7 @@ export function getReallocBaseRewardRouterInstruction<
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.baseRewardRouter),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.claimStatusPayer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -207,7 +206,7 @@ export function getReallocBaseRewardRouterInstruction<
     TAccountConfig,
     TAccountBaseRewardRouter,
     TAccountNcn,
-    TAccountPayer,
+    TAccountClaimStatusPayer,
     TAccountSystemProgram
   >;
 
@@ -224,7 +223,7 @@ export type ParsedReallocBaseRewardRouterInstruction<
     config: TAccountMetas[1];
     baseRewardRouter: TAccountMetas[2];
     ncn: TAccountMetas[3];
-    payer: TAccountMetas[4];
+    claimStatusPayer: TAccountMetas[4];
     systemProgram: TAccountMetas[5];
   };
   data: ReallocBaseRewardRouterInstructionData;
@@ -255,7 +254,7 @@ export function parseReallocBaseRewardRouterInstruction<
       config: getNextAccount(),
       baseRewardRouter: getNextAccount(),
       ncn: getNextAccount(),
-      payer: getNextAccount(),
+      claimStatusPayer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getReallocBaseRewardRouterInstructionDataDecoder().decode(

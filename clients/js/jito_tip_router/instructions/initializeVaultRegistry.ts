@@ -18,14 +18,11 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -41,7 +38,7 @@ export type InitializeVaultRegistryInstruction<
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountClaimStatusPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -57,10 +54,9 @@ export type InitializeVaultRegistryInstruction<
         ? WritableAccount<TAccountVaultRegistry>
         : TAccountVaultRegistry,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
+      TAccountClaimStatusPayer extends string
+        ? WritableAccount<TAccountClaimStatusPayer>
+        : TAccountClaimStatusPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -100,13 +96,13 @@ export type InitializeVaultRegistryInput<
   TAccountConfig extends string = string,
   TAccountVaultRegistry extends string = string,
   TAccountNcn extends string = string,
-  TAccountPayer extends string = string,
+  TAccountClaimStatusPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   config: Address<TAccountConfig>;
   vaultRegistry: Address<TAccountVaultRegistry>;
   ncn: Address<TAccountNcn>;
-  payer: TransactionSigner<TAccountPayer>;
+  claimStatusPayer: Address<TAccountClaimStatusPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
 };
 
@@ -114,7 +110,7 @@ export function getInitializeVaultRegistryInstruction<
   TAccountConfig extends string,
   TAccountVaultRegistry extends string,
   TAccountNcn extends string,
-  TAccountPayer extends string,
+  TAccountClaimStatusPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
@@ -122,7 +118,7 @@ export function getInitializeVaultRegistryInstruction<
     TAccountConfig,
     TAccountVaultRegistry,
     TAccountNcn,
-    TAccountPayer,
+    TAccountClaimStatusPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -131,7 +127,7 @@ export function getInitializeVaultRegistryInstruction<
   TAccountConfig,
   TAccountVaultRegistry,
   TAccountNcn,
-  TAccountPayer,
+  TAccountClaimStatusPayer,
   TAccountSystemProgram
 > {
   // Program address.
@@ -143,7 +139,10 @@ export function getInitializeVaultRegistryInstruction<
     config: { value: input.config ?? null, isWritable: false },
     vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    payer: { value: input.payer ?? null, isWritable: true },
+    claimStatusPayer: {
+      value: input.claimStatusPayer ?? null,
+      isWritable: true,
+    },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -163,7 +162,7 @@ export function getInitializeVaultRegistryInstruction<
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.claimStatusPayer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -173,7 +172,7 @@ export function getInitializeVaultRegistryInstruction<
     TAccountConfig,
     TAccountVaultRegistry,
     TAccountNcn,
-    TAccountPayer,
+    TAccountClaimStatusPayer,
     TAccountSystemProgram
   >;
 
@@ -189,7 +188,7 @@ export type ParsedInitializeVaultRegistryInstruction<
     config: TAccountMetas[0];
     vaultRegistry: TAccountMetas[1];
     ncn: TAccountMetas[2];
-    payer: TAccountMetas[3];
+    claimStatusPayer: TAccountMetas[3];
     systemProgram: TAccountMetas[4];
   };
   data: InitializeVaultRegistryInstructionData;
@@ -219,7 +218,7 @@ export function parseInitializeVaultRegistryInstruction<
       config: getNextAccount(),
       vaultRegistry: getNextAccount(),
       ncn: getNextAccount(),
-      payer: getNextAccount(),
+      claimStatusPayer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeVaultRegistryInstructionDataDecoder().decode(

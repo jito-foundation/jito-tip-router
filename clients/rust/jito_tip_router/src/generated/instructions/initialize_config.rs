@@ -20,6 +20,8 @@ pub struct InitializeConfig {
 
     pub tie_breaker_admin: solana_program::pubkey::Pubkey,
 
+    pub claim_status_payer: solana_program::pubkey::Pubkey,
+
     pub system_program: solana_program::pubkey::Pubkey,
 }
 
@@ -36,7 +38,7 @@ impl InitializeConfig {
         args: InitializeConfigInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.config,
             false,
@@ -54,6 +56,10 @@ impl InitializeConfig {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.tie_breaker_admin,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.claim_status_payer,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -109,7 +115,8 @@ pub struct InitializeConfigInstructionArgs {
 ///   2. `[]` fee_wallet
 ///   3. `[signer]` ncn_admin
 ///   4. `[]` tie_breaker_admin
-///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   5. `[writable]` claim_status_payer
+///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeConfigBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
@@ -117,6 +124,7 @@ pub struct InitializeConfigBuilder {
     fee_wallet: Option<solana_program::pubkey::Pubkey>,
     ncn_admin: Option<solana_program::pubkey::Pubkey>,
     tie_breaker_admin: Option<solana_program::pubkey::Pubkey>,
+    claim_status_payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     block_engine_fee_bps: Option<u16>,
     dao_fee_bps: Option<u16>,
@@ -156,6 +164,14 @@ impl InitializeConfigBuilder {
         tie_breaker_admin: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
         self.tie_breaker_admin = Some(tie_breaker_admin);
+        self
+    }
+    #[inline(always)]
+    pub fn claim_status_payer(
+        &mut self,
+        claim_status_payer: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.claim_status_payer = Some(claim_status_payer);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -217,6 +233,9 @@ impl InitializeConfigBuilder {
             tie_breaker_admin: self
                 .tie_breaker_admin
                 .expect("tie_breaker_admin is not set"),
+            claim_status_payer: self
+                .claim_status_payer
+                .expect("claim_status_payer is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -257,6 +276,8 @@ pub struct InitializeConfigCpiAccounts<'a, 'b> {
 
     pub tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
@@ -274,6 +295,8 @@ pub struct InitializeConfigCpi<'a, 'b> {
     pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -293,6 +316,7 @@ impl<'a, 'b> InitializeConfigCpi<'a, 'b> {
             fee_wallet: accounts.fee_wallet,
             ncn_admin: accounts.ncn_admin,
             tie_breaker_admin: accounts.tie_breaker_admin,
+            claim_status_payer: accounts.claim_status_payer,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -330,7 +354,7 @@ impl<'a, 'b> InitializeConfigCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.config.key,
             false,
@@ -349,6 +373,10 @@ impl<'a, 'b> InitializeConfigCpi<'a, 'b> {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.tie_breaker_admin.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.claim_status_payer.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -371,13 +399,14 @@ impl<'a, 'b> InitializeConfigCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.fee_wallet.clone());
         account_infos.push(self.ncn_admin.clone());
         account_infos.push(self.tie_breaker_admin.clone());
+        account_infos.push(self.claim_status_payer.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -400,7 +429,8 @@ impl<'a, 'b> InitializeConfigCpi<'a, 'b> {
 ///   2. `[]` fee_wallet
 ///   3. `[signer]` ncn_admin
 ///   4. `[]` tie_breaker_admin
-///   5. `[]` system_program
+///   5. `[writable]` claim_status_payer
+///   6. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeConfigCpiBuilder<'a, 'b> {
     instruction: Box<InitializeConfigCpiBuilderInstruction<'a, 'b>>,
@@ -415,6 +445,7 @@ impl<'a, 'b> InitializeConfigCpiBuilder<'a, 'b> {
             fee_wallet: None,
             ncn_admin: None,
             tie_breaker_admin: None,
+            claim_status_payer: None,
             system_program: None,
             block_engine_fee_bps: None,
             dao_fee_bps: None,
@@ -460,6 +491,14 @@ impl<'a, 'b> InitializeConfigCpiBuilder<'a, 'b> {
         tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.tie_breaker_admin = Some(tie_breaker_admin);
+        self
+    }
+    #[inline(always)]
+    pub fn claim_status_payer(
+        &mut self,
+        claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.claim_status_payer = Some(claim_status_payer);
         self
     }
     #[inline(always)]
@@ -579,6 +618,11 @@ impl<'a, 'b> InitializeConfigCpiBuilder<'a, 'b> {
                 .tie_breaker_admin
                 .expect("tie_breaker_admin is not set"),
 
+            claim_status_payer: self
+                .instruction
+                .claim_status_payer
+                .expect("claim_status_payer is not set"),
+
             system_program: self
                 .instruction
                 .system_program
@@ -600,6 +644,7 @@ struct InitializeConfigCpiBuilderInstruction<'a, 'b> {
     fee_wallet: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     tie_breaker_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    claim_status_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     block_engine_fee_bps: Option<u16>,
     dao_fee_bps: Option<u16>,

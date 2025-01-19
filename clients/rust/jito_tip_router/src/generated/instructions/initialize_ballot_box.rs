@@ -18,7 +18,7 @@ pub struct InitializeBallotBox {
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub payer: solana_program::pubkey::Pubkey,
+    pub claim_status_payer: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
@@ -53,7 +53,8 @@ impl InitializeBallotBox {
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.payer, true,
+            self.claim_status_payer,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
@@ -105,7 +106,7 @@ pub struct InitializeBallotBoxInstructionArgs {
 ///   1. `[]` config
 ///   2. `[writable]` ballot_box
 ///   3. `[]` ncn
-///   4. `[writable, signer]` payer
+///   4. `[writable]` claim_status_payer
 ///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeBallotBoxBuilder {
@@ -113,7 +114,7 @@ pub struct InitializeBallotBoxBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
     ballot_box: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    payer: Option<solana_program::pubkey::Pubkey>,
+    claim_status_payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -144,8 +145,11 @@ impl InitializeBallotBoxBuilder {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
+    pub fn claim_status_payer(
+        &mut self,
+        claim_status_payer: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.claim_status_payer = Some(claim_status_payer);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -184,7 +188,9 @@ impl InitializeBallotBoxBuilder {
             config: self.config.expect("config is not set"),
             ballot_box: self.ballot_box.expect("ballot_box is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            payer: self.payer.expect("payer is not set"),
+            claim_status_payer: self
+                .claim_status_payer
+                .expect("claim_status_payer is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -207,7 +213,7 @@ pub struct InitializeBallotBoxCpiAccounts<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
@@ -225,7 +231,7 @@ pub struct InitializeBallotBoxCpi<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -244,7 +250,7 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
             config: accounts.config,
             ballot_box: accounts.ballot_box,
             ncn: accounts.ncn,
-            payer: accounts.payer,
+            claim_status_payer: accounts.claim_status_payer,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -300,8 +306,8 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.payer.key,
-            true,
+            *self.claim_status_payer.key,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
@@ -331,7 +337,7 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
         account_infos.push(self.config.clone());
         account_infos.push(self.ballot_box.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.payer.clone());
+        account_infos.push(self.claim_status_payer.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -353,7 +359,7 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
 ///   1. `[]` config
 ///   2. `[writable]` ballot_box
 ///   3. `[]` ncn
-///   4. `[writable, signer]` payer
+///   4. `[writable]` claim_status_payer
 ///   5. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeBallotBoxCpiBuilder<'a, 'b> {
@@ -368,7 +374,7 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
             config: None,
             ballot_box: None,
             ncn: None,
-            payer: None,
+            claim_status_payer: None,
             system_program: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
@@ -405,8 +411,11 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
+    pub fn claim_status_payer(
+        &mut self,
+        claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.claim_status_payer = Some(claim_status_payer);
         self
     }
     #[inline(always)]
@@ -480,7 +489,10 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            payer: self.instruction.payer.expect("payer is not set"),
+            claim_status_payer: self
+                .instruction
+                .claim_status_payer
+                .expect("claim_status_payer is not set"),
 
             system_program: self
                 .instruction
@@ -502,7 +514,7 @@ struct InitializeBallotBoxCpiBuilderInstruction<'a, 'b> {
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    claim_status_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

@@ -18,7 +18,7 @@ pub struct InitializeBaseRewardRouter {
 
     pub base_reward_receiver: solana_program::pubkey::Pubkey,
 
-    pub payer: solana_program::pubkey::Pubkey,
+    pub claim_status_payer: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
@@ -53,7 +53,8 @@ impl InitializeBaseRewardRouter {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.payer, true,
+            self.claim_status_payer,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
@@ -105,7 +106,7 @@ pub struct InitializeBaseRewardRouterInstructionArgs {
 ///   1. `[]` ncn
 ///   2. `[writable]` base_reward_router
 ///   3. `[writable]` base_reward_receiver
-///   4. `[writable, signer]` payer
+///   4. `[writable]` claim_status_payer
 ///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeBaseRewardRouterBuilder {
@@ -113,7 +114,7 @@ pub struct InitializeBaseRewardRouterBuilder {
     ncn: Option<solana_program::pubkey::Pubkey>,
     base_reward_router: Option<solana_program::pubkey::Pubkey>,
     base_reward_receiver: Option<solana_program::pubkey::Pubkey>,
-    payer: Option<solana_program::pubkey::Pubkey>,
+    claim_status_payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -150,8 +151,11 @@ impl InitializeBaseRewardRouterBuilder {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
+    pub fn claim_status_payer(
+        &mut self,
+        claim_status_payer: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.claim_status_payer = Some(claim_status_payer);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -194,7 +198,9 @@ impl InitializeBaseRewardRouterBuilder {
             base_reward_receiver: self
                 .base_reward_receiver
                 .expect("base_reward_receiver is not set"),
-            payer: self.payer.expect("payer is not set"),
+            claim_status_payer: self
+                .claim_status_payer
+                .expect("claim_status_payer is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -217,7 +223,7 @@ pub struct InitializeBaseRewardRouterCpiAccounts<'a, 'b> {
 
     pub base_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
@@ -235,7 +241,7 @@ pub struct InitializeBaseRewardRouterCpi<'a, 'b> {
 
     pub base_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -254,7 +260,7 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
             ncn: accounts.ncn,
             base_reward_router: accounts.base_reward_router,
             base_reward_receiver: accounts.base_reward_receiver,
-            payer: accounts.payer,
+            claim_status_payer: accounts.claim_status_payer,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -310,8 +316,8 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.payer.key,
-            true,
+            *self.claim_status_payer.key,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
@@ -341,7 +347,7 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
         account_infos.push(self.ncn.clone());
         account_infos.push(self.base_reward_router.clone());
         account_infos.push(self.base_reward_receiver.clone());
-        account_infos.push(self.payer.clone());
+        account_infos.push(self.claim_status_payer.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -363,7 +369,7 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
 ///   1. `[]` ncn
 ///   2. `[writable]` base_reward_router
 ///   3. `[writable]` base_reward_receiver
-///   4. `[writable, signer]` payer
+///   4. `[writable]` claim_status_payer
 ///   5. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
@@ -378,7 +384,7 @@ impl<'a, 'b> InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
             ncn: None,
             base_reward_router: None,
             base_reward_receiver: None,
-            payer: None,
+            claim_status_payer: None,
             system_program: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
@@ -415,8 +421,11 @@ impl<'a, 'b> InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
+    pub fn claim_status_payer(
+        &mut self,
+        claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.claim_status_payer = Some(claim_status_payer);
         self
     }
     #[inline(always)]
@@ -496,7 +505,10 @@ impl<'a, 'b> InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
                 .base_reward_receiver
                 .expect("base_reward_receiver is not set"),
 
-            payer: self.instruction.payer.expect("payer is not set"),
+            claim_status_payer: self
+                .instruction
+                .claim_status_payer
+                .expect("claim_status_payer is not set"),
 
             system_program: self
                 .instruction
@@ -518,7 +530,7 @@ struct InitializeBaseRewardRouterCpiBuilderInstruction<'a, 'b> {
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     base_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     base_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    claim_status_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

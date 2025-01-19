@@ -1,8 +1,11 @@
+use jito_tip_distribution_sdk::jito_tip_distribution;
 use solana_program::{
-    account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, system_program,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction, system_program,
+    sysvar::Sysvar,
 };
 
-use crate::loaders::check_load;
+use crate::{constants::MAX_REALLOC_BYTES, loaders::check_load};
 
 /// Uninitialized, no-data account used to hold SOL for ClaimStatus rent
 /// Must be empty and uninitialized to be used as a payer or `transfer` instructions fail
@@ -32,11 +35,11 @@ impl ClaimStatusPayer {
     pub fn load(
         program_id: &Pubkey,
         account: &AccountInfo,
-        tip_distribution_program: &Pubkey,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let system_program_id = system_program::id();
-        let expected_pda = Self::find_program_address(program_id, tip_distribution_program).0;
+        let tip_distribution_program = jito_tip_distribution::ID;
+        let expected_pda = Self::find_program_address(program_id, &tip_distribution_program).0;
         check_load(
             &system_program_id,
             account,
@@ -44,6 +47,99 @@ impl ClaimStatusPayer {
             None,
             expect_writable,
         )
+    }
+
+    #[inline(always)]
+    pub fn pay_and_create_account<'a, 'info>(
+        program_id: &Pubkey,
+        claim_status_payer: &'a AccountInfo<'info>,
+        new_account: &'a AccountInfo<'info>,
+        system_program: &'a AccountInfo<'info>,
+        program_owner: &Pubkey,
+        space: usize,
+        new_account_seeds: &[Vec<u8>],
+    ) -> ProgramResult {
+        let rent = &Rent::get()?;
+        let minimum_balance = rent.minimum_balance(space);
+        let required_lamports = minimum_balance.saturating_sub(new_account.lamports());
+
+        // Transfer
+        if required_lamports > 0 {
+            Self::transfer(
+                program_id,
+                claim_status_payer,
+                new_account,
+                required_lamports,
+            )?;
+        }
+
+        // Allocate space.
+        let space: u64 = (space as u64).min(MAX_REALLOC_BYTES);
+        invoke_signed(
+            &system_instruction::allocate(new_account.key, space),
+            &[new_account.clone(), system_program.clone()],
+            &[new_account_seeds
+                .iter()
+                .map(|seed| seed.as_slice())
+                .collect::<Vec<&[u8]>>()
+                .as_slice()],
+        )?;
+
+        // Assign to the specified program
+        invoke_signed(
+            &system_instruction::assign(new_account.key, program_owner),
+            &[new_account.clone(), system_program.clone()],
+            &[new_account_seeds
+                .iter()
+                .map(|seed| seed.as_slice())
+                .collect::<Vec<&[u8]>>()
+                .as_slice()],
+        )
+    }
+
+    pub fn pay_and_realloc<'a, 'info>(
+        program_id: &Pubkey,
+        claim_status_payer: &'a AccountInfo<'info>,
+        account: &'a AccountInfo<'info>,
+        new_size: usize,
+    ) -> ProgramResult {
+        let rent = &Rent::get()?;
+        let new_minimum_balance = rent.minimum_balance(new_size);
+
+        let required_lamports = new_minimum_balance.saturating_sub(account.lamports());
+        if required_lamports > 0 {
+            Self::transfer(program_id, claim_status_payer, account, required_lamports)?;
+        }
+
+        account.realloc(new_size, false)?;
+        Ok(())
+    }
+
+    pub fn transfer<'a, 'info>(
+        program_id: &Pubkey,
+        claim_status_payer: &'a AccountInfo<'info>,
+        to: &'a AccountInfo<'info>,
+        lamports: u64,
+    ) -> ProgramResult {
+        let (claim_status_payer_address, claim_status_payer_bump, mut claim_status_payer_seeds) =
+            Self::find_program_address(program_id, &jito_tip_distribution::ID);
+        claim_status_payer_seeds.push(vec![claim_status_payer_bump]);
+
+        if claim_status_payer_address.ne(claim_status_payer.key) {
+            msg!("Incorrect claim status payer PDA");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        invoke_signed(
+            &system_instruction::transfer(&claim_status_payer_address, to.key, lamports),
+            &[claim_status_payer.clone(), to.clone()],
+            &[claim_status_payer_seeds
+                .iter()
+                .map(|seed| seed.as_slice())
+                .collect::<Vec<&[u8]>>()
+                .as_slice()],
+        )?;
+        Ok(())
     }
 }
 
