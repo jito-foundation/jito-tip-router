@@ -17,7 +17,7 @@ This section details the routing and distribution process, critical instructions
 
 ## Reward Payment Workflow Overview
 
-1. Rewards ( in lamports ) are sent to the PDA of the `BaseRewardReceiver`.
+1. Rewards ( in lamports ) are sent to the PDA of the `BaseRewardReceiver` (Permissionless cranker will claim the rewards).
 2. The `route_base_rewards` instruction is caleed *x* times until `still_routing` becomes `false`. (This is typically only once but may require multiple calls at higher levels of operators and vaults within the network due to CU limitations).
 3. Once routing is complete, rewards can be distributed:
     a. Use `distribute_base_rewards` instruction to allocate to the base reward recipients. (in JitoSOL).
@@ -38,6 +38,9 @@ It is important to highlight that the router does not consider the specific perc
 ### 1. Route Base Rewards
 
 It handles routing rewards from the `BaseRewardReceiver` to the `BaseRewardRouter` and further processes the allocation of base rewards (DAO, ...) and NCN fee group rewards (Operator).
+
+![alt text](/assets/images/route_base_rewards.png)
+*Figure: Overview of the Route Base Rewards
 
 ```rust
 pub fn route_reward_pool(&mut self, fee: &Fees) -> Result<(), TipRouterError> {
@@ -85,6 +88,9 @@ pub fn route_reward_pool(&mut self, fee: &Fees) -> Result<(), TipRouterError> {
 This ensures that all base reward recipients, such as DAO, receive their appropriate share of the rewards generated during the epoch.
 This instruction integrates with the Solana Stake Pool program to deposit rewards in JitoSOL and utilizes both on-chain accounts and external token accounts to manage distribution efficiently.
 
+![alt text](/assets/images/distribute_base_rewards.png)
+*Figure: Overview of the Distribute Base Rewards
+
 ```rust
 let deposit_ix = deposit_sol(
     stake_pool_program.key,
@@ -128,6 +134,9 @@ invoke_signed(
 It handles the distribution of rewards from the `BaseRewardReceiver` to the `NcnRewardReceiver` for a specific NCN fee group and operator.
 This instruction ensures that rewards are routed accurately to operators within the NCN fee groups (Operator), based on their contributions and stake weights.
 
+![alt text](/assets/images/distribute_base_ncn_reward_route.png)
+*Figure: Overview of the Distribute Base NCN Reward Route
+
 ```rust
 // Get rewards and update state
 let rewards = {
@@ -170,6 +179,9 @@ if rewards > 0 {
 
 Its primary function is to calculate and prepare reward allocations for operators and fee groups, without actually transferring rewards.
 This instruction is focused on determining how rewards should be distributed by processing operator snapshots, fee group configurations, and available rewards within the system.
+
+![alt text](/assets/images/route_ncn_rewards.png)
+*Figure: Overview of the Route NCN Rewards
 
 ```rust
 ...
@@ -236,6 +248,9 @@ This instruction is focused on determining how rewards should be distributed by 
 This instruction ensures that the calculated rewards for each operator within a specific NCN fee group are distributed appropriately.
 It moves rewards from the NcnRewardReceiver to the operator's associated token account, converting them into a JitoSOL.
 
+![alt text](/assets/images/distribute_ncn_operator_rewards.png)
+*Figure: Overview of the Distribute NCN Operator Rewards
+
 ```rust
 let (_, ncn_reward_receiver_bump, mut ncn_reward_receiver_seeds) =
     NcnRewardReceiver::find_program_address(
@@ -287,6 +302,9 @@ invoke_signed(
 ### 6. Distribute NCN Vault Rewards
 
 This instruction calculates the rewards for a vault within a particular NCN fee group and operator, transfers the rewards, and integrates them into the stake pool system (e.g., depositing them as JitoSOL).
+
+![alt text](/assets/images/distribute_ncn_vault_rewards.png)
+*Figure: Overview of the Distribute NCN Vault Rewards
 
 ```rust
 let (_, ncn_reward_receiver_bump, mut ncn_reward_receiver_seeds) =
