@@ -62,6 +62,7 @@ pub enum StakeMetaGeneratorError {
 
     GenesisConfigError(#[from] OpenGenesisConfigError),
 
+    #[error(transparent)]
     SnapshotError(#[from] SnapshotError),
 
     PosionError(String),
