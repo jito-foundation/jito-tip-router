@@ -365,13 +365,14 @@
           "name": "switchboardFeed",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "stMint",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": [
-        {
-          "name": "stMint",
-          "type": "publicKey"
-        },
         {
           "name": "epoch",
           "type": "u64"
@@ -1774,13 +1775,14 @@
           "name": "weightTableAdmin",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "stMint",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": [
-        {
-          "name": "stMint",
-          "type": "publicKey"
-        },
         {
           "name": "weight",
           "type": "u128"

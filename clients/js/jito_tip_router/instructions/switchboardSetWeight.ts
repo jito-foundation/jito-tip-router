@@ -8,8 +8,6 @@
 
 import {
   combineCodec,
-  getAddressDecoder,
-  getAddressEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -43,6 +41,7 @@ export type SwitchboardSetWeightInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountSwitchboardFeed extends string | IAccountMeta<string> = string,
+  TAccountStMint extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -58,18 +57,19 @@ export type SwitchboardSetWeightInstruction<
       TAccountSwitchboardFeed extends string
         ? ReadonlyAccount<TAccountSwitchboardFeed>
         : TAccountSwitchboardFeed,
+      TAccountStMint extends string
+        ? ReadonlyAccount<TAccountStMint>
+        : TAccountStMint,
       ...TRemainingAccounts,
     ]
   >;
 
 export type SwitchboardSetWeightInstructionData = {
   discriminator: number;
-  stMint: Address;
   epoch: bigint;
 };
 
 export type SwitchboardSetWeightInstructionDataArgs = {
-  stMint: Address;
   epoch: number | bigint;
 };
 
@@ -77,7 +77,6 @@ export function getSwitchboardSetWeightInstructionDataEncoder(): Encoder<Switchb
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['stMint', getAddressEncoder()],
       ['epoch', getU64Encoder()],
     ]),
     (value) => ({
@@ -90,7 +89,6 @@ export function getSwitchboardSetWeightInstructionDataEncoder(): Encoder<Switchb
 export function getSwitchboardSetWeightInstructionDataDecoder(): Decoder<SwitchboardSetWeightInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['stMint', getAddressDecoder()],
     ['epoch', getU64Decoder()],
   ]);
 }
@@ -110,12 +108,13 @@ export type SwitchboardSetWeightInput<
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
   TAccountSwitchboardFeed extends string = string,
+  TAccountStMint extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   switchboardFeed: Address<TAccountSwitchboardFeed>;
-  stMint: SwitchboardSetWeightInstructionDataArgs['stMint'];
+  stMint: Address<TAccountStMint>;
   epoch: SwitchboardSetWeightInstructionDataArgs['epoch'];
 };
 
@@ -124,13 +123,15 @@ export function getSwitchboardSetWeightInstruction<
   TAccountNcn extends string,
   TAccountWeightTable extends string,
   TAccountSwitchboardFeed extends string,
+  TAccountStMint extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: SwitchboardSetWeightInput<
     TAccountEpochState,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountSwitchboardFeed
+    TAccountSwitchboardFeed,
+    TAccountStMint
   >,
   config?: { programAddress?: TProgramAddress }
 ): SwitchboardSetWeightInstruction<
@@ -138,7 +139,8 @@ export function getSwitchboardSetWeightInstruction<
   TAccountEpochState,
   TAccountNcn,
   TAccountWeightTable,
-  TAccountSwitchboardFeed
+  TAccountSwitchboardFeed,
+  TAccountStMint
 > {
   // Program address.
   const programAddress =
@@ -153,6 +155,7 @@ export function getSwitchboardSetWeightInstruction<
       value: input.switchboardFeed ?? null,
       isWritable: false,
     },
+    stMint: { value: input.stMint ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -169,6 +172,7 @@ export function getSwitchboardSetWeightInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.switchboardFeed),
+      getAccountMeta(accounts.stMint),
     ],
     programAddress,
     data: getSwitchboardSetWeightInstructionDataEncoder().encode(
@@ -179,7 +183,8 @@ export function getSwitchboardSetWeightInstruction<
     TAccountEpochState,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountSwitchboardFeed
+    TAccountSwitchboardFeed,
+    TAccountStMint
   >;
 
   return instruction;
@@ -195,6 +200,7 @@ export type ParsedSwitchboardSetWeightInstruction<
     ncn: TAccountMetas[1];
     weightTable: TAccountMetas[2];
     switchboardFeed: TAccountMetas[3];
+    stMint: TAccountMetas[4];
   };
   data: SwitchboardSetWeightInstructionData;
 };
@@ -207,7 +213,7 @@ export function parseSwitchboardSetWeightInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedSwitchboardSetWeightInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -224,6 +230,7 @@ export function parseSwitchboardSetWeightInstruction<
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
       switchboardFeed: getNextAccount(),
+      stMint: getNextAccount(),
     },
     data: getSwitchboardSetWeightInstructionDataDecoder().decode(
       instruction.data

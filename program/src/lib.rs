@@ -159,9 +159,9 @@ pub fn process_instruction(
             msg!("Instruction: ReallocWeightTable");
             process_realloc_weight_table(program_id, accounts, epoch)
         }
-        TipRouterInstruction::SwitchboardSetWeight { epoch, st_mint } => {
+        TipRouterInstruction::SwitchboardSetWeight { epoch } => {
             msg!("Instruction: SwitchboardSetWeight");
-            process_switchboard_set_weight(program_id, accounts, &st_mint, epoch)
+            process_switchboard_set_weight(program_id, accounts, epoch)
         }
         TipRouterInstruction::InitializeEpochSnapshot { epoch } => {
             msg!("Instruction: InitializeEpochSnapshot");
@@ -333,13 +333,9 @@ pub fn process_instruction(
             msg!("Instruction: AdminSetTieBreaker");
             process_admin_set_tie_breaker(program_id, accounts, &meta_merkle_root, epoch)
         }
-        TipRouterInstruction::AdminSetWeight {
-            st_mint,
-            weight,
-            epoch,
-        } => {
+        TipRouterInstruction::AdminSetWeight { weight, epoch } => {
             msg!("Instruction: AdminSetWeight");
-            process_admin_set_weight(program_id, accounts, &st_mint, epoch, weight)
+            process_admin_set_weight(program_id, accounts, epoch, weight)
         }
         TipRouterInstruction::AdminRegisterStMint {
             ncn_fee_group,

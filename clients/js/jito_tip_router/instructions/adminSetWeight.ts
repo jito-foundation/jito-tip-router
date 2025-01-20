@@ -8,8 +8,6 @@
 
 import {
   combineCodec,
-  getAddressDecoder,
-  getAddressEncoder,
   getStructDecoder,
   getStructEncoder,
   getU128Decoder,
@@ -48,6 +46,7 @@ export type AdminSetWeightInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountWeightTableAdmin extends string | IAccountMeta<string> = string,
+  TAccountStMint extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -64,19 +63,20 @@ export type AdminSetWeightInstruction<
         ? ReadonlySignerAccount<TAccountWeightTableAdmin> &
             IAccountSignerMeta<TAccountWeightTableAdmin>
         : TAccountWeightTableAdmin,
+      TAccountStMint extends string
+        ? ReadonlyAccount<TAccountStMint>
+        : TAccountStMint,
       ...TRemainingAccounts,
     ]
   >;
 
 export type AdminSetWeightInstructionData = {
   discriminator: number;
-  stMint: Address;
   weight: bigint;
   epoch: bigint;
 };
 
 export type AdminSetWeightInstructionDataArgs = {
-  stMint: Address;
   weight: number | bigint;
   epoch: number | bigint;
 };
@@ -85,7 +85,6 @@ export function getAdminSetWeightInstructionDataEncoder(): Encoder<AdminSetWeigh
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['stMint', getAddressEncoder()],
       ['weight', getU128Encoder()],
       ['epoch', getU64Encoder()],
     ]),
@@ -96,7 +95,6 @@ export function getAdminSetWeightInstructionDataEncoder(): Encoder<AdminSetWeigh
 export function getAdminSetWeightInstructionDataDecoder(): Decoder<AdminSetWeightInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['stMint', getAddressDecoder()],
     ['weight', getU128Decoder()],
     ['epoch', getU64Decoder()],
   ]);
@@ -117,12 +115,13 @@ export type AdminSetWeightInput<
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
   TAccountWeightTableAdmin extends string = string,
+  TAccountStMint extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   weightTableAdmin: TransactionSigner<TAccountWeightTableAdmin>;
-  stMint: AdminSetWeightInstructionDataArgs['stMint'];
+  stMint: Address<TAccountStMint>;
   weight: AdminSetWeightInstructionDataArgs['weight'];
   epoch: AdminSetWeightInstructionDataArgs['epoch'];
 };
@@ -132,13 +131,15 @@ export function getAdminSetWeightInstruction<
   TAccountNcn extends string,
   TAccountWeightTable extends string,
   TAccountWeightTableAdmin extends string,
+  TAccountStMint extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: AdminSetWeightInput<
     TAccountEpochState,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountWeightTableAdmin
+    TAccountWeightTableAdmin,
+    TAccountStMint
   >,
   config?: { programAddress?: TProgramAddress }
 ): AdminSetWeightInstruction<
@@ -146,7 +147,8 @@ export function getAdminSetWeightInstruction<
   TAccountEpochState,
   TAccountNcn,
   TAccountWeightTable,
-  TAccountWeightTableAdmin
+  TAccountWeightTableAdmin,
+  TAccountStMint
 > {
   // Program address.
   const programAddress =
@@ -161,6 +163,7 @@ export function getAdminSetWeightInstruction<
       value: input.weightTableAdmin ?? null,
       isWritable: false,
     },
+    stMint: { value: input.stMint ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -177,6 +180,7 @@ export function getAdminSetWeightInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.weightTableAdmin),
+      getAccountMeta(accounts.stMint),
     ],
     programAddress,
     data: getAdminSetWeightInstructionDataEncoder().encode(
@@ -187,7 +191,8 @@ export function getAdminSetWeightInstruction<
     TAccountEpochState,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountWeightTableAdmin
+    TAccountWeightTableAdmin,
+    TAccountStMint
   >;
 
   return instruction;
@@ -203,6 +208,7 @@ export type ParsedAdminSetWeightInstruction<
     ncn: TAccountMetas[1];
     weightTable: TAccountMetas[2];
     weightTableAdmin: TAccountMetas[3];
+    stMint: TAccountMetas[4];
   };
   data: AdminSetWeightInstructionData;
 };
@@ -215,7 +221,7 @@ export function parseAdminSetWeightInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminSetWeightInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -232,6 +238,7 @@ export function parseAdminSetWeightInstruction<
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
       weightTableAdmin: getNextAccount(),
+      stMint: getNextAccount(),
     },
     data: getAdminSetWeightInstructionDataDecoder().decode(instruction.data),
   };

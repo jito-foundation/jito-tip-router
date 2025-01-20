@@ -7,7 +7,6 @@
 
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
-use solana_program::pubkey::Pubkey;
 
 /// Accounts.
 pub struct SwitchboardSetWeight {
@@ -18,6 +17,8 @@ pub struct SwitchboardSetWeight {
     pub weight_table: solana_program::pubkey::Pubkey,
 
     pub switchboard_feed: solana_program::pubkey::Pubkey,
+
+    pub st_mint: solana_program::pubkey::Pubkey,
 }
 
 impl SwitchboardSetWeight {
@@ -33,7 +34,7 @@ impl SwitchboardSetWeight {
         args: SwitchboardSetWeightInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.epoch_state,
             false,
@@ -47,6 +48,10 @@ impl SwitchboardSetWeight {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.switchboard_feed,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.st_mint,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -84,7 +89,6 @@ impl Default for SwitchboardSetWeightInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SwitchboardSetWeightInstructionArgs {
-    pub st_mint: Pubkey,
     pub epoch: u64,
 }
 
@@ -96,13 +100,14 @@ pub struct SwitchboardSetWeightInstructionArgs {
 ///   1. `[]` ncn
 ///   2. `[writable]` weight_table
 ///   3. `[]` switchboard_feed
+///   4. `[]` st_mint
 #[derive(Clone, Debug, Default)]
 pub struct SwitchboardSetWeightBuilder {
     epoch_state: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     weight_table: Option<solana_program::pubkey::Pubkey>,
     switchboard_feed: Option<solana_program::pubkey::Pubkey>,
-    st_mint: Option<Pubkey>,
+    st_mint: Option<solana_program::pubkey::Pubkey>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -135,7 +140,7 @@ impl SwitchboardSetWeightBuilder {
         self
     }
     #[inline(always)]
-    pub fn st_mint(&mut self, st_mint: Pubkey) -> &mut Self {
+    pub fn st_mint(&mut self, st_mint: solana_program::pubkey::Pubkey) -> &mut Self {
         self.st_mint = Some(st_mint);
         self
     }
@@ -169,9 +174,9 @@ impl SwitchboardSetWeightBuilder {
             ncn: self.ncn.expect("ncn is not set"),
             weight_table: self.weight_table.expect("weight_table is not set"),
             switchboard_feed: self.switchboard_feed.expect("switchboard_feed is not set"),
+            st_mint: self.st_mint.expect("st_mint is not set"),
         };
         let args = SwitchboardSetWeightInstructionArgs {
-            st_mint: self.st_mint.clone().expect("st_mint is not set"),
             epoch: self.epoch.clone().expect("epoch is not set"),
         };
 
@@ -188,6 +193,8 @@ pub struct SwitchboardSetWeightCpiAccounts<'a, 'b> {
     pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub switchboard_feed: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub st_mint: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `switchboard_set_weight` CPI instruction.
@@ -202,6 +209,8 @@ pub struct SwitchboardSetWeightCpi<'a, 'b> {
     pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub switchboard_feed: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub st_mint: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: SwitchboardSetWeightInstructionArgs,
 }
@@ -218,6 +227,7 @@ impl<'a, 'b> SwitchboardSetWeightCpi<'a, 'b> {
             ncn: accounts.ncn,
             weight_table: accounts.weight_table,
             switchboard_feed: accounts.switchboard_feed,
+            st_mint: accounts.st_mint,
             __args: args,
         }
     }
@@ -254,7 +264,7 @@ impl<'a, 'b> SwitchboardSetWeightCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.epoch_state.key,
             false,
@@ -269,6 +279,10 @@ impl<'a, 'b> SwitchboardSetWeightCpi<'a, 'b> {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.switchboard_feed.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.st_mint.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -289,12 +303,13 @@ impl<'a, 'b> SwitchboardSetWeightCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(4 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.epoch_state.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.weight_table.clone());
         account_infos.push(self.switchboard_feed.clone());
+        account_infos.push(self.st_mint.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -315,6 +330,7 @@ impl<'a, 'b> SwitchboardSetWeightCpi<'a, 'b> {
 ///   1. `[]` ncn
 ///   2. `[writable]` weight_table
 ///   3. `[]` switchboard_feed
+///   4. `[]` st_mint
 #[derive(Clone, Debug)]
 pub struct SwitchboardSetWeightCpiBuilder<'a, 'b> {
     instruction: Box<SwitchboardSetWeightCpiBuilderInstruction<'a, 'b>>,
@@ -364,7 +380,10 @@ impl<'a, 'b> SwitchboardSetWeightCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn st_mint(&mut self, st_mint: Pubkey) -> &mut Self {
+    pub fn st_mint(
+        &mut self,
+        st_mint: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
         self.instruction.st_mint = Some(st_mint);
         self
     }
@@ -415,11 +434,6 @@ impl<'a, 'b> SwitchboardSetWeightCpiBuilder<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
         let args = SwitchboardSetWeightInstructionArgs {
-            st_mint: self
-                .instruction
-                .st_mint
-                .clone()
-                .expect("st_mint is not set"),
             epoch: self.instruction.epoch.clone().expect("epoch is not set"),
         };
         let instruction = SwitchboardSetWeightCpi {
@@ -441,6 +455,8 @@ impl<'a, 'b> SwitchboardSetWeightCpiBuilder<'a, 'b> {
                 .instruction
                 .switchboard_feed
                 .expect("switchboard_feed is not set"),
+
+            st_mint: self.instruction.st_mint.expect("st_mint is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -457,7 +473,7 @@ struct SwitchboardSetWeightCpiBuilderInstruction<'a, 'b> {
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     switchboard_feed: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    st_mint: Option<Pubkey>,
+    st_mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

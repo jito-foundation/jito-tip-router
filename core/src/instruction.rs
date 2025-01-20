@@ -101,8 +101,8 @@ pub enum TipRouterInstruction {
     #[account(1, name = "ncn")]
     #[account(2, writable, name = "weight_table")]
     #[account(3, name = "switchboard_feed")]
+    #[account(4, name = "st_mint")]
     SwitchboardSetWeight{
-        st_mint: Pubkey,
         epoch: u64,
     },
 
@@ -438,8 +438,8 @@ pub enum TipRouterInstruction {
     #[account(1, name = "ncn")]
     #[account(2, writable, name = "weight_table")]
     #[account(3, signer, name = "weight_table_admin")]
+    #[account(4, name = "st_mint")]
     AdminSetWeight{
-        st_mint: Pubkey,
         weight: u128,
         epoch: u64,
     },
