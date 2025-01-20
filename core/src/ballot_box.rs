@@ -15,6 +15,7 @@ use spl_math::precise_number::PreciseNumber;
 use crate::{
     constants::{precise_consensus, DEFAULT_CONSENSUS_REACHED_SLOT, MAX_OPERATORS},
     discriminators::Discriminators,
+    epoch_state::EpochState,
     error::TipRouterError,
     loaders::check_load,
     stake_weight::StakeWeights,
@@ -293,6 +294,14 @@ impl BallotBox {
         self.operator_votes = [OperatorVote::default(); MAX_OPERATORS];
         self.ballot_tallies = [BallotTally::default(); MAX_OPERATORS];
         self.reserved = [0; 128];
+    }
+
+    pub fn check_can_close(
+        &self,
+        epoch_state: &EpochState,
+        epochs_before_claim: u64,
+    ) -> Result<(), TipRouterError> {
+        Ok(())
     }
 
     pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {

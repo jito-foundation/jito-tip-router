@@ -7,6 +7,7 @@ mod admin_set_tie_breaker;
 mod admin_set_weight;
 mod cast_vote;
 mod claim_with_payer;
+mod close_epoch_account;
 mod distribute_base_ncn_reward_route;
 mod distribute_base_rewards;
 mod distribute_ncn_operator_rewards;

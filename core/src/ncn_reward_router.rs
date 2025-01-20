@@ -92,6 +92,14 @@ impl NcnRewardRouter {
         }
     }
 
+    pub fn check_can_close(
+        &self,
+        epoch_state: &EpochState,
+        epochs_before_claim: u64,
+    ) -> Result<(), TipRouterError> {
+        Ok(())
+    }
+
     pub fn seeds(
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,

@@ -167,6 +167,8 @@ pub enum TipRouterError {
     VotingIsNotOver,
     #[error("Operator is not in snapshot")]
     OperatorIsNotInSnapshot,
+    #[error("Invalid account_to_close Discriminator")]
+    InvalidAccountToCloseDiscriminator,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

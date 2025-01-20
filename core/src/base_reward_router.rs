@@ -14,8 +14,8 @@ use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     ballot_box::BallotBox, base_fee_group::BaseFeeGroup, constants::MAX_OPERATORS,
-    discriminators::Discriminators, error::TipRouterError, fees::Fees, loaders::check_load,
-    ncn_fee_group::NcnFeeGroup,
+    discriminators::Discriminators, epoch_state::EpochState, error::TipRouterError, fees::Fees,
+    loaders::check_load, ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -105,6 +105,14 @@ impl BaseRewardRouter {
         self.ncn_fee_group_reward_routes = [NcnRewardRoute::default(); MAX_OPERATORS];
 
         self.reset_routing_state();
+    }
+
+    pub fn check_can_close(
+        &self,
+        epoch_state: &EpochState,
+        epochs_before_claim: u64,
+    ) -> Result<(), TipRouterError> {
+        Ok(())
     }
 
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {

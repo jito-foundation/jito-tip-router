@@ -27,6 +27,8 @@ pub struct Config {
     pub valid_slots_after_consensus: PodU64,
     /// Number of epochs before voting is considered stalled
     pub epochs_before_stall: PodU64,
+    /// Number of epochs until rent can be reclaimed
+    pub epochs_before_claim: PodU64,
     /// The fee config
     pub fee_config: FeeConfig,
     /// Bump seed for the PDA
@@ -48,6 +50,7 @@ impl Config {
         fee_admin: &Pubkey,
         fee_config: &FeeConfig,
         valid_slots_after_consensus: u64,
+        epochs_before_claim: u64,
         epochs_before_stall: u64,
         bump: u8,
     ) -> Self {
@@ -57,6 +60,7 @@ impl Config {
             fee_admin: *fee_admin,
             valid_slots_after_consensus: PodU64::from(valid_slots_after_consensus),
             epochs_before_stall: PodU64::from(epochs_before_stall),
+            epochs_before_claim: PodU64::from(epochs_before_claim),
             fee_config: *fee_config,
             bump,
             reserved: [0; 127],
@@ -108,5 +112,9 @@ impl Config {
 
     pub fn epochs_before_stall(&self) -> u64 {
         self.epochs_before_stall.into()
+    }
+
+    pub fn epochs_before_claim(&self) -> u64 {
+        self.epochs_before_claim.into()
     }
 }

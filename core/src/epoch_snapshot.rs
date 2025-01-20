@@ -11,8 +11,9 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    constants::MAX_VAULTS, discriminators::Discriminators, error::TipRouterError, fees::Fees,
-    ncn_fee_group::NcnFeeGroup, stake_weight::StakeWeights, weight_table::WeightTable,
+    constants::MAX_VAULTS, discriminators::Discriminators, epoch_state::EpochState,
+    error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup, stake_weight::StakeWeights,
+    weight_table::WeightTable,
 };
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
@@ -75,6 +76,14 @@ impl EpochSnapshot {
             stake_weights: StakeWeights::default(),
             reserved: [0; 128],
         }
+    }
+
+    pub fn check_can_close(
+        &self,
+        epoch_state: &EpochState,
+        epochs_before_claim: u64,
+    ) -> Result<(), TipRouterError> {
+        Ok(())
     }
 
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
@@ -308,6 +317,14 @@ impl OperatorSnapshot {
         self.reserved = [0; 256];
         self.vault_operator_stake_weight = [VaultOperatorStakeWeight::default(); MAX_VAULTS];
 
+        Ok(())
+    }
+
+    pub fn check_can_close(
+        &self,
+        epoch_state: &EpochState,
+        epochs_before_claim: u64,
+    ) -> Result<(), TipRouterError> {
         Ok(())
     }
 

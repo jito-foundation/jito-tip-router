@@ -9,6 +9,7 @@ use spl_math::precise_number::PreciseNumber;
 use crate::{
     constants::{MAX_ST_MINTS, MAX_VAULTS},
     discriminators::Discriminators,
+    epoch_state::EpochState,
     error::TipRouterError,
     loaders::check_load,
     vault_registry::{StMintEntry, VaultEntry},
@@ -54,6 +55,14 @@ impl WeightTable {
             vault_registry: [VaultEntry::default(); MAX_VAULTS],
             table: [WeightEntry::default(); MAX_ST_MINTS],
         }
+    }
+
+    pub fn check_can_close(
+        &self,
+        epoch_state: &EpochState,
+        epochs_before_claim: u64,
+    ) -> Result<(), TipRouterError> {
+        Ok(())
     }
 
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {

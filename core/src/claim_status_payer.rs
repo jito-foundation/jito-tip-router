@@ -115,6 +115,31 @@ impl ClaimStatusPayer {
         Ok(())
     }
 
+    /// Closes the program account
+    pub fn close_account<'a, 'info>(
+        program_id: &Pubkey,
+        claim_status_payer: &'a AccountInfo<'info>,
+        account_to_close: &'a AccountInfo<'info>,
+    ) -> ProgramResult {
+        // Check if the account is owned by the program
+        if account_to_close.owner != program_id {
+            return Err(ProgramError::IllegalOwner);
+        }
+
+        **claim_status_payer.lamports.borrow_mut() = claim_status_payer
+            .lamports()
+            .checked_add(account_to_close.lamports())
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        **account_to_close.lamports.borrow_mut() = 0;
+
+        account_to_close.assign(&solana_program::system_program::id());
+        let mut account_data = account_to_close.data.borrow_mut();
+        let data_len = account_data.len();
+        solana_program::program_memory::sol_memset(*account_data, 0, data_len);
+
+        Ok(())
+    }
+
     pub fn transfer<'a, 'info>(
         program_id: &Pubkey,
         claim_status_payer: &'a AccountInfo<'info>,

@@ -281,6 +281,10 @@ impl EpochState {
         }
     }
 
+    pub fn check_can_close(&self, epochs_before_claim: u64) -> Result<(), TipRouterError> {
+        Ok(())
+    }
+
     pub fn initialize(&mut self, ncn: &Pubkey, epoch: u64, bump: u8, slot_created: u64) {
         // Initializes field by field to avoid overflowing stack
         self.ncn = *ncn;

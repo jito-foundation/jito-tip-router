@@ -24,6 +24,7 @@ pub fn process_initialize_ncn_config(
     dao_fee_bps: u16,
     default_ncn_fee_bps: u16,
     epochs_before_stall: u64,
+    epochs_before_claim: u64,
     valid_slots_after_consensus: u64,
 ) -> ProgramResult {
     let [config, ncn_account, dao_fee_wallet, ncn_admin, tie_breaker_admin, claim_status_payer, system_program] =
