@@ -3,7 +3,7 @@ use std::mem::size_of;
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
 use crate::{
     constants::MAX_OPERATORS, discriminators::Discriminators, error::TipRouterError,
@@ -123,6 +123,38 @@ impl EpochAccountStatus {
         self.ncn_reward_router[EpochState::get_ncn_reward_router_index(index, group)?] =
             status as u8;
         Ok(())
+    }
+
+    pub fn are_all_closed(&self) -> bool {
+        if self.epoch_state != AccountStatus::Closed as u8 {
+            return false;
+        }
+        if self.weight_table != AccountStatus::Closed as u8 {
+            return false;
+        }
+        if self.epoch_snapshot != AccountStatus::Closed as u8 {
+            return false;
+        }
+        if self.ballot_box != AccountStatus::Closed as u8 {
+            return false;
+        }
+        if self.base_reward_router != AccountStatus::Closed as u8 {
+            return false;
+        }
+
+        for operator_snapshot in self.operator_snapshot.iter() {
+            if *operator_snapshot == AccountStatus::Created as u8 {
+                return false;
+            }
+        }
+
+        for ncn_reward_router in self.ncn_reward_router.iter() {
+            if *ncn_reward_router == AccountStatus::Created as u8 {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
@@ -281,7 +313,13 @@ impl EpochState {
         }
     }
 
-    pub fn check_can_close(&self, epochs_before_claim: u64) -> Result<(), TipRouterError> {
+    pub fn check_can_close(&self) -> Result<(), TipRouterError> {
+        // Check all other accounts are closed
+        if !self.account_status.are_all_closed() {
+            msg!("Cannot close Epoch State until all other accounts are closed");
+            return Err(TipRouterError::CannotCloseAccount.into());
+        }
+
         Ok(())
     }
 
@@ -336,10 +374,10 @@ impl EpochState {
 
     // ------------ HELPER FUNCTIONS ------------
     pub fn get_ncn_reward_router_index(
-        operator_index: usize,
+        ncn_operator_index: usize,
         group: NcnFeeGroup,
     ) -> Result<usize, TipRouterError> {
-        let mut index = operator_index
+        let mut index = ncn_operator_index
             .checked_mul(NcnFeeGroup::FEE_GROUP_COUNT)
             .ok_or(TipRouterError::ArithmeticOverflow)?;
         index = index
@@ -412,11 +450,11 @@ impl EpochState {
 
     pub fn ncn_distribution_progress(
         &self,
-        ncn_operator_index: usize,
+        ncn_ncn_operator_index: usize,
         group: NcnFeeGroup,
     ) -> Progress {
         self.ncn_distribution_progress
-            [Self::get_ncn_reward_router_index(ncn_operator_index, group).unwrap()]
+            [Self::get_ncn_reward_router_index(ncn_ncn_operator_index, group).unwrap()]
     }
 
     // ------------ UPDATERS ------------
@@ -445,18 +483,18 @@ impl EpochState {
 
     pub fn update_realloc_operator_snapshot(
         &mut self,
-        operator_index: usize,
+        ncn_operator_index: usize,
         is_active: bool,
     ) -> Result<(), TipRouterError> {
         self.account_status
-            .set_operator_snapshot(operator_index, AccountStatus::Created);
+            .set_operator_snapshot(ncn_operator_index, AccountStatus::Created);
 
         if is_active {
-            self.operator_snapshot_progress[operator_index] =
+            self.operator_snapshot_progress[ncn_operator_index] =
                 Progress::new(self.vault_count.into());
         } else {
-            self.operator_snapshot_progress[operator_index] = Progress::new(1);
-            self.operator_snapshot_progress[operator_index].increment_one()?;
+            self.operator_snapshot_progress[ncn_operator_index] = Progress::new(1);
+            self.operator_snapshot_progress[ncn_operator_index].increment_one()?;
             self.epoch_snapshot_progress.increment_one()?;
         }
 
@@ -465,10 +503,10 @@ impl EpochState {
 
     pub fn update_snapshot_vault_operator_delegation(
         &mut self,
-        operator_index: usize,
+        ncn_operator_index: usize,
         finalized: bool,
     ) -> Result<(), TipRouterError> {
-        self.operator_snapshot_progress[operator_index].increment_one()?;
+        self.operator_snapshot_progress[ncn_operator_index].increment_one()?;
         if finalized {
             self.epoch_snapshot_progress.increment_one()?;
         }
@@ -499,13 +537,16 @@ impl EpochState {
 
     pub fn update_realloc_ncn_reward_router(
         &mut self,
-        operator_index: usize,
+        ncn_operator_index: usize,
         group: NcnFeeGroup,
     ) -> Result<(), TipRouterError> {
-        self.account_status
-            .set_ncn_reward_router(operator_index, group, AccountStatus::Created)?;
-        self.ncn_distribution_progress[Self::get_ncn_reward_router_index(operator_index, group)?] =
-            Progress::new(0);
+        self.account_status.set_ncn_reward_router(
+            ncn_operator_index,
+            group,
+            AccountStatus::Created,
+        )?;
+        self.ncn_distribution_progress
+            [Self::get_ncn_reward_router_index(ncn_operator_index, group)?] = Progress::new(0);
 
         Ok(())
     }
@@ -517,12 +558,13 @@ impl EpochState {
 
     pub fn update_route_ncn_rewards(
         &mut self,
-        operator_index: usize,
+        ncn_operator_index: usize,
         group: NcnFeeGroup,
         total_rewards: u64,
     ) -> Result<(), TipRouterError> {
-        self.ncn_distribution_progress[Self::get_ncn_reward_router_index(operator_index, group)?]
-            .set_total(total_rewards);
+        self.ncn_distribution_progress
+            [Self::get_ncn_reward_router_index(ncn_operator_index, group)?]
+        .set_total(total_rewards);
         Ok(())
     }
 
@@ -542,14 +584,49 @@ impl EpochState {
 
     pub fn update_distribute_ncn_rewards(
         &mut self,
-        operator_index: usize,
+        ncn_operator_index: usize,
         group: NcnFeeGroup,
         rewards: u64,
     ) -> Result<(), TipRouterError> {
         self.total_distribution_progress.increment(rewards)?;
-        self.ncn_distribution_progress[Self::get_ncn_reward_router_index(operator_index, group)?]
-            .increment(rewards)?;
+        self.ncn_distribution_progress
+            [Self::get_ncn_reward_router_index(ncn_operator_index, group)?]
+        .increment(rewards)?;
         Ok(())
+    }
+
+    // ---------- CLOSERS ----------
+    pub fn close_epoch_state(&mut self) {
+        self.account_status.set_epoch_state(AccountStatus::Closed);
+    }
+
+    pub fn close_weight_table(&mut self) {
+        self.account_status.set_weight_table(AccountStatus::Closed);
+    }
+
+    pub fn close_epoch_snapshot(&mut self) {
+        self.account_status
+            .set_epoch_snapshot(AccountStatus::Closed);
+    }
+
+    pub fn close_operator_snapshot(&mut self, ncn_operator_index: usize) {
+        self.account_status
+            .set_operator_snapshot(ncn_operator_index, AccountStatus::Closed);
+    }
+
+    pub fn close_ballot_box(&mut self) {
+        self.account_status.set_ballot_box(AccountStatus::Closed);
+    }
+
+    pub fn close_base_reward_router(&mut self) {
+        self.account_status
+            .set_base_reward_router(AccountStatus::Closed);
+    }
+
+    pub fn close_ncn_reward_router(&mut self, ncn_operator_index: usize, group: NcnFeeGroup) {
+        self.account_status
+            .set_ncn_reward_router(ncn_operator_index, group, AccountStatus::Closed)
+            .unwrap();
     }
 
     // ------------ STATE ------------

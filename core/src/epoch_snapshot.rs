@@ -78,11 +78,12 @@ impl EpochSnapshot {
         }
     }
 
-    pub fn check_can_close(
-        &self,
-        epoch_state: &EpochState,
-        epochs_before_claim: u64,
-    ) -> Result<(), TipRouterError> {
+    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
+        if epoch_state.epoch().ne(&self.epoch()) {
+            msg!("Epoch Snapshot epoch does not match Epoch State");
+            return Err(TipRouterError::CannotCloseAccount.into());
+        }
+
         Ok(())
     }
 
@@ -140,6 +141,10 @@ impl EpochSnapshot {
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.epoch.into()
     }
 
     pub fn operator_count(&self) -> u64 {
@@ -320,11 +325,12 @@ impl OperatorSnapshot {
         Ok(())
     }
 
-    pub fn check_can_close(
-        &self,
-        epoch_state: &EpochState,
-        epochs_before_claim: u64,
-    ) -> Result<(), TipRouterError> {
+    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
+        if epoch_state.epoch().ne(&self.epoch()) {
+            msg!("Operator Snapshot epoch does not match Epoch State");
+            return Err(TipRouterError::CannotCloseAccount.into());
+        }
+
         Ok(())
     }
 
@@ -385,6 +391,10 @@ impl OperatorSnapshot {
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.ncn_epoch.into()
     }
 
     pub fn ncn_operator_index(&self) -> u64 {

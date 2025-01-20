@@ -13,8 +13,8 @@ use jito_tip_router_core::{
     weight_table::WeightTable,
 };
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
-    pubkey::Pubkey,
+    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
+    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
 /// Reallocates the ballot box account to its full size.
@@ -24,8 +24,7 @@ pub fn process_close_epoch_account(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, ncn, account_to_close, claim_status_payer, system_program] =
-        accounts
+    let [epoch_state, config, ncn, account_to_close, claim_status_payer, system_program] = accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -33,56 +32,104 @@ pub fn process_close_epoch_account(
     load_system_program(system_program)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
+    NcnConfig::load(program_id, ncn.key, config, false)?;
     ClaimStatusPayer::load(program_id, claim_status_payer, false)?;
 
     {
         let epochs_before_claim = {
-            let ncn_config_data = ncn_config.try_borrow_data()?;
-            let ncn_config = NcnConfig::try_from_slice_unchecked(&ncn_config_data)?;
-            ncn_config.epochs_before_claim()
+            let config_data = config.try_borrow_data()?;
+            let config_account = NcnConfig::try_from_slice_unchecked(&config_data)?;
+            config_account.epochs_before_claim()
         };
 
-        let epoch_state_data = epoch_state.try_borrow_data()?;
-        let epoch_state = EpochState::try_from_slice_unchecked(&epoch_state_data)?;
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        let epoch_state_epoch = epoch_state.epoch();
 
-        let account_to_close_data = account_to_close.try_borrow_data()?;
-        let discriminator = account_to_close_data[0];
+        // Epoch Check
+        {
+            let current_epoch = Clock::get()?.epoch;
+            let epoch_delta = current_epoch.saturating_sub(epoch_state_epoch);
+            if epoch_delta < epochs_before_claim {
+                msg!("Not enough epochs have passed since epoch state creation");
+                return Err(TipRouterError::CannotCloseAccount.into());
+            }
+        }
 
-        match discriminator {
-            EpochState::DISCRIMINATOR => {
-                epoch_state.check_can_close(epochs_before_claim)?;
+        // Progress Check
+        {
+            // Check upload progress is complete
+            if !epoch_state.upload_progress().is_complete() {
+                msg!("Cannot close account until upload is complete");
+                return Err(TipRouterError::CannotCloseAccount.into());
             }
-            WeightTable::DISCRIMINATOR => {
-                let weight_table = WeightTable::try_from_slice_unchecked(&account_to_close_data)?;
-                weight_table.check_can_close(&epoch_state, epochs_before_claim)?;
+
+            // Check distribution progress is complete
+            if !epoch_state.total_distribution_progress().is_complete() {
+                msg!("Cannot close account until distribution is complete");
+                return Err(TipRouterError::CannotCloseAccount.into());
             }
-            EpochSnapshot::DISCRIMINATOR => {
-                let epoch_snapshot =
-                    EpochSnapshot::try_from_slice_unchecked(&account_to_close_data)?;
-                epoch_snapshot.check_can_close(&epoch_state, epochs_before_claim)?;
-            }
-            OperatorSnapshot::DISCRIMINATOR => {
-                let operator_snapshot =
-                    OperatorSnapshot::try_from_slice_unchecked(&account_to_close_data)?;
-                operator_snapshot.check_can_close(&epoch_state, epochs_before_claim)?;
-            }
-            BallotBox::DISCRIMINATOR => {
-                let ballot_box = BallotBox::try_from_slice_unchecked(&account_to_close_data)?;
-                ballot_box.check_can_close(&epoch_state, epochs_before_claim)?;
-            }
-            BaseRewardRouter::DISCRIMINATOR => {
-                let base_reward_router =
-                    BaseRewardRouter::try_from_slice_unchecked(&account_to_close_data)?;
-                base_reward_router.check_can_close(&epoch_state, epochs_before_claim)?;
-            }
-            NcnRewardRouter::DISCRIMINATOR => {
-                let ncn_reward_router =
-                    NcnRewardRouter::try_from_slice_unchecked(&account_to_close_data)?;
-                ncn_reward_router.check_can_close(&epoch_state, epochs_before_claim)?;
-            }
-            _ => {
-                return Err(TipRouterError::InvalidAccountToCloseDiscriminator.into());
+        }
+
+        // Account Check
+        {
+            let account_to_close_data = account_to_close.try_borrow_data()?;
+            let discriminator = account_to_close_data[0];
+
+            match discriminator {
+                EpochState::DISCRIMINATOR => {
+                    epoch_state.check_can_close()?;
+
+                    epoch_state.close_epoch_state();
+                }
+                WeightTable::DISCRIMINATOR => {
+                    let weight_table =
+                        WeightTable::try_from_slice_unchecked(&account_to_close_data)?;
+                    weight_table.check_can_close(&epoch_state)?;
+
+                    epoch_state.close_weight_table();
+                }
+                EpochSnapshot::DISCRIMINATOR => {
+                    let epoch_snapshot =
+                        EpochSnapshot::try_from_slice_unchecked(&account_to_close_data)?;
+                    epoch_snapshot.check_can_close(&epoch_state)?;
+
+                    epoch_state.close_epoch_snapshot();
+                }
+                OperatorSnapshot::DISCRIMINATOR => {
+                    let operator_snapshot =
+                        OperatorSnapshot::try_from_slice_unchecked(&account_to_close_data)?;
+                    operator_snapshot.check_can_close(&epoch_state)?;
+
+                    let ncn_operator_index = operator_snapshot.ncn_operator_index() as usize;
+                    epoch_state.close_operator_snapshot(ncn_operator_index);
+                }
+                BallotBox::DISCRIMINATOR => {
+                    let ballot_box = BallotBox::try_from_slice_unchecked(&account_to_close_data)?;
+                    ballot_box.check_can_close(&epoch_state)?;
+
+                    epoch_state.close_ballot_box();
+                }
+                BaseRewardRouter::DISCRIMINATOR => {
+                    let base_reward_router =
+                        BaseRewardRouter::try_from_slice_unchecked(&account_to_close_data)?;
+                    base_reward_router.check_can_close(&epoch_state)?;
+
+                    epoch_state.close_base_reward_router();
+                }
+                NcnRewardRouter::DISCRIMINATOR => {
+                    let ncn_reward_router =
+                        NcnRewardRouter::try_from_slice_unchecked(&account_to_close_data)?;
+                    ncn_reward_router.check_can_close(&epoch_state)?;
+
+                    let ncn_operator_index = ncn_reward_router.ncn_operator_index() as usize;
+                    let group = ncn_reward_router.ncn_fee_group();
+
+                    epoch_state.close_ncn_reward_router(ncn_operator_index, group);
+                }
+                _ => {
+                    return Err(TipRouterError::InvalidAccountToCloseDiscriminator.into());
+                }
             }
         }
     }

@@ -24,6 +24,7 @@ pub enum TipRouterInstruction {
         dao_fee_bps: u16,
         default_ncn_fee_bps: u16,
         epochs_before_stall: u64,
+        epochs_before_claim: u64,
         valid_slots_after_consensus: u64,
     },
 
@@ -387,6 +388,16 @@ pub enum TipRouterInstruction {
         bump: u8,
     },
 
+    /// Close an epoch account
+    #[account(0, writable, name = "epoch_state")]
+    #[account(1, name = "config")]
+    #[account(2, name = "ncn")]
+    #[account(3, writable, name = "account_to_close")]
+    #[account(4, writable, name = "claim_status_payer")]
+    #[account(5, name = "system_program")]
+    CloseEpochAccount {
+        epoch: u64,
+    },
 
     // ---------------------------------------------------- //
     //                        ADMIN                         //

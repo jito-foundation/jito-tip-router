@@ -51,6 +51,13 @@ pub fn process_initialize_ncn_reward_router(
     load_system_program(system_program)?;
     ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
 
+    let operator_ncn_index = {
+        let operator_snapshot_data = operator_snapshot.try_borrow_data()?;
+        let operator_snapshot_account =
+            OperatorSnapshot::try_from_slice_unchecked(&operator_snapshot_data)?;
+        operator_snapshot_account.ncn_operator_index()
+    };
+
     let ncn_fee_group = NcnFeeGroup::try_from(ncn_fee_group)?;
 
     let current_slot = Clock::get()?.slot;
@@ -94,6 +101,7 @@ pub fn process_initialize_ncn_reward_router(
     *ncn_reward_router_account = NcnRewardRouter::new(
         ncn_fee_group,
         operator.key,
+        operator_ncn_index,
         ncn.key,
         epoch,
         ncn_reward_router_bump,
@@ -114,16 +122,10 @@ pub fn process_initialize_ncn_reward_router(
     )?;
 
     {
-        let operator_snapshot_data = operator_snapshot.try_borrow_data()?;
-        let operator_snapshot_account =
-            OperatorSnapshot::try_from_slice_unchecked(&operator_snapshot_data)?;
-
         let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
         let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
-        epoch_state_account.update_realloc_ncn_reward_router(
-            operator_snapshot_account.ncn_operator_index() as usize,
-            ncn_fee_group,
-        )?;
+        epoch_state_account
+            .update_realloc_ncn_reward_router(operator_ncn_index as usize, ncn_fee_group)?;
     }
 
     Ok(())

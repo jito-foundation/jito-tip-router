@@ -107,11 +107,12 @@ impl BaseRewardRouter {
         self.reset_routing_state();
     }
 
-    pub fn check_can_close(
-        &self,
-        epoch_state: &EpochState,
-        epochs_before_claim: u64,
-    ) -> Result<(), TipRouterError> {
+    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
+        if epoch_state.epoch().ne(&self.epoch()) {
+            msg!("Base Reward Router epoch does not match Epoch State");
+            return Err(TipRouterError::CannotCloseAccount.into());
+        }
+
         Ok(())
     }
 
@@ -459,7 +460,7 @@ impl BaseRewardRouter {
         &self.ncn
     }
 
-    pub fn ncn_epoch(&self) -> u64 {
+    pub fn epoch(&self) -> u64 {
         self.epoch.into()
     }
 

@@ -50,8 +50,8 @@ impl Config {
         fee_admin: &Pubkey,
         fee_config: &FeeConfig,
         valid_slots_after_consensus: u64,
-        epochs_before_claim: u64,
         epochs_before_stall: u64,
+        epochs_before_claim: u64,
         bump: u8,
     ) -> Self {
         Self {

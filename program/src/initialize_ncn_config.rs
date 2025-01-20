@@ -5,8 +5,8 @@ use jito_tip_router_core::{
     claim_status_payer::ClaimStatusPayer,
     config::Config,
     constants::{
-        MAX_EPOCHS_BEFORE_STALL, MAX_FEE_BPS, MAX_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_BEFORE_STALL,
-        MIN_SLOTS_AFTER_CONSENSUS,
+        MAX_EPOCHS_BEFORE_CLAIM, MAX_EPOCHS_BEFORE_STALL, MAX_FEE_BPS, MAX_SLOTS_AFTER_CONSENSUS,
+        MIN_EPOCHS_BEFORE_CLAIM, MIN_EPOCHS_BEFORE_STALL, MIN_SLOTS_AFTER_CONSENSUS,
     },
     error::TipRouterError,
     fees::FeeConfig,
@@ -54,6 +54,10 @@ pub fn process_initialize_ncn_config(
 
     if !(MIN_EPOCHS_BEFORE_STALL..=MAX_EPOCHS_BEFORE_STALL).contains(&epochs_before_stall) {
         return Err(TipRouterError::InvalidEpochsBeforeStall.into());
+    }
+
+    if !(MIN_EPOCHS_BEFORE_CLAIM..=MAX_EPOCHS_BEFORE_CLAIM).contains(&epochs_before_claim) {
+        return Err(TipRouterError::InvalidEpochsBeforeClaim.into());
     }
 
     if !(MIN_SLOTS_AFTER_CONSENSUS..=MAX_SLOTS_AFTER_CONSENSUS)
@@ -105,6 +109,7 @@ pub fn process_initialize_ncn_config(
         &fee_config,
         valid_slots_after_consensus,
         epochs_before_stall,
+        epochs_before_claim,
         config_bump,
     );
 

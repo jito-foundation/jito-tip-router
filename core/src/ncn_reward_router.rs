@@ -15,7 +15,8 @@ use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     constants::MAX_VAULTS, discriminators::Discriminators, epoch_snapshot::OperatorSnapshot,
-    error::TipRouterError, loaders::check_load, ncn_fee_group::NcnFeeGroup,
+    epoch_state::EpochState, error::TipRouterError, loaders::check_load,
+    ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -34,6 +35,8 @@ pub struct NcnRewardRouter {
     bump: u8,
     /// The slot the router was created
     slot_created: PodU64,
+    /// The operator ncn index
+    ncn_operator_index: PodU64,
     /// The total rewards that have been routed ( in lamports )
     total_rewards: PodU64,
     /// The rewards in the reward pool ( in lamports )
@@ -67,8 +70,9 @@ impl NcnRewardRouter {
     pub fn new(
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
+        operator_ncn_index: u64,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
         bump: u8,
         slot_created: u64,
     ) -> Self {
@@ -76,9 +80,10 @@ impl NcnRewardRouter {
             ncn_fee_group,
             operator: *operator,
             ncn: *ncn,
-            epoch: PodU64::from(ncn_epoch),
+            epoch: PodU64::from(epoch),
             bump,
             slot_created: PodU64::from(slot_created),
+            ncn_operator_index: PodU64::from(operator_ncn_index),
             total_rewards: PodU64::from(0),
             reward_pool: PodU64::from(0),
             rewards_processed: PodU64::from(0),
@@ -92,11 +97,12 @@ impl NcnRewardRouter {
         }
     }
 
-    pub fn check_can_close(
-        &self,
-        epoch_state: &EpochState,
-        epochs_before_claim: u64,
-    ) -> Result<(), TipRouterError> {
+    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
+        if epoch_state.epoch().ne(&self.epoch()) {
+            msg!("Ncn Reward Router epoch does not match Epoch State");
+            return Err(TipRouterError::CannotCloseAccount.into());
+        }
+
         Ok(())
     }
 
@@ -164,8 +170,12 @@ impl NcnRewardRouter {
         &self.ncn
     }
 
-    pub fn ncn_epoch(&self) -> u64 {
+    pub fn epoch(&self) -> u64 {
         self.epoch.into()
+    }
+
+    pub fn ncn_operator_index(&self) -> u64 {
+        self.ncn_operator_index.into()
     }
 
     pub fn slot_created(&self) -> u64 {
@@ -801,6 +811,7 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
             TEST_EPOCH,            // ncn_epoch
             1,                     // bump
@@ -847,6 +858,7 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
             TEST_EPOCH,            // ncn_epoch
             1,                     // bump
@@ -895,6 +907,7 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
             TEST_EPOCH,            // ncn_epoch
             1,                     // bump
@@ -943,6 +956,7 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
             TEST_EPOCH,            // ncn_epoch
             1,                     // bump
@@ -1011,6 +1025,7 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
             TEST_EPOCH,            // ncn_epoch
             1,                     // bump
@@ -1081,6 +1096,7 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
             TEST_EPOCH,            // ncn_epoch
             1,                     // bump
@@ -1146,6 +1162,7 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
             TEST_EPOCH,            // ncn_epoch
             1,                     // bump
@@ -1211,6 +1228,7 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
             TEST_EPOCH,            // ncn_epoch
             1,                     // bump

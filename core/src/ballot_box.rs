@@ -296,11 +296,12 @@ impl BallotBox {
         self.reserved = [0; 128];
     }
 
-    pub fn check_can_close(
-        &self,
-        epoch_state: &EpochState,
-        epochs_before_claim: u64,
-    ) -> Result<(), TipRouterError> {
+    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
+        if epoch_state.epoch().ne(&self.epoch()) {
+            msg!("Ballot Box epoch does not match Epoch State");
+            return Err(TipRouterError::CannotCloseAccount.into());
+        }
+
         Ok(())
     }
 

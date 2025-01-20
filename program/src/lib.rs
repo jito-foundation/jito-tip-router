@@ -54,7 +54,7 @@ use crate::{
     admin_set_st_mint::process_admin_set_st_mint,
     admin_set_tie_breaker::process_admin_set_tie_breaker,
     admin_set_weight::process_admin_set_weight, cast_vote::process_cast_vote,
-    claim_with_payer::process_claim_with_payer,
+    claim_with_payer::process_claim_with_payer, close_epoch_account::process_close_epoch_account,
     distribute_base_ncn_reward_route::process_distribute_base_ncn_reward_route,
     distribute_base_rewards::process_distribute_base_rewards,
     distribute_ncn_operator_rewards::process_distribute_ncn_operator_rewards,
@@ -115,6 +115,7 @@ pub fn process_instruction(
             dao_fee_bps,
             default_ncn_fee_bps,
             epochs_before_stall,
+            epochs_before_claim,
             valid_slots_after_consensus,
         } => {
             msg!("Instruction: InitializeConfig");
@@ -125,6 +126,7 @@ pub fn process_instruction(
                 dao_fee_bps,
                 default_ncn_fee_bps,
                 epochs_before_stall,
+                epochs_before_claim,
                 valid_slots_after_consensus,
             )
         }
@@ -286,6 +288,10 @@ pub fn process_instruction(
         } => {
             msg!("Instruction: ClaimWithPayer");
             process_claim_with_payer(program_id, accounts, proof, amount, bump)
+        }
+        TipRouterInstruction::CloseEpochAccount { epoch } => {
+            msg!("Instruction: CloseEpochAccount");
+            process_close_epoch_account(program_id, accounts, epoch)
         }
 
         // ---------------------------------------------------- //

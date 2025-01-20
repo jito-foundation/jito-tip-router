@@ -3,7 +3,7 @@ use std::mem::size_of;
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
@@ -57,11 +57,12 @@ impl WeightTable {
         }
     }
 
-    pub fn check_can_close(
-        &self,
-        epoch_state: &EpochState,
-        epochs_before_claim: u64,
-    ) -> Result<(), TipRouterError> {
+    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
+        if epoch_state.epoch().ne(&self.epoch()) {
+            msg!("Weight Table epoch does not match Epoch State");
+            return Err(TipRouterError::CannotCloseAccount.into());
+        }
+
         Ok(())
     }
 
@@ -191,6 +192,10 @@ impl WeightTable {
             .filter(|entry| !entry.is_empty())
             .map(|entry| *entry.st_mint())
             .collect()
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.epoch.into()
     }
 
     pub fn mint_count(&self) -> usize {
