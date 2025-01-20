@@ -52,6 +52,7 @@ export type AdminSetStMintInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountAdmin extends string | IAccountMeta<string> = string,
+  TAccountStMint extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -68,13 +69,15 @@ export type AdminSetStMintInstruction<
         ? WritableSignerAccount<TAccountAdmin> &
             IAccountSignerMeta<TAccountAdmin>
         : TAccountAdmin,
+      TAccountStMint extends string
+        ? ReadonlyAccount<TAccountStMint>
+        : TAccountStMint,
       ...TRemainingAccounts,
     ]
   >;
 
 export type AdminSetStMintInstructionData = {
   discriminator: number;
-  stMint: Address;
   ncnFeeGroup: Option<number>;
   rewardMultiplierBps: Option<bigint>;
   switchboardFeed: Option<Address>;
@@ -82,7 +85,6 @@ export type AdminSetStMintInstructionData = {
 };
 
 export type AdminSetStMintInstructionDataArgs = {
-  stMint: Address;
   ncnFeeGroup: OptionOrNullable<number>;
   rewardMultiplierBps: OptionOrNullable<number | bigint>;
   switchboardFeed: OptionOrNullable<Address>;
@@ -93,7 +95,6 @@ export function getAdminSetStMintInstructionDataEncoder(): Encoder<AdminSetStMin
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['stMint', getAddressEncoder()],
       ['ncnFeeGroup', getOptionEncoder(getU8Encoder())],
       ['rewardMultiplierBps', getOptionEncoder(getU64Encoder())],
       ['switchboardFeed', getOptionEncoder(getAddressEncoder())],
@@ -106,7 +107,6 @@ export function getAdminSetStMintInstructionDataEncoder(): Encoder<AdminSetStMin
 export function getAdminSetStMintInstructionDataDecoder(): Decoder<AdminSetStMintInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['stMint', getAddressDecoder()],
     ['ncnFeeGroup', getOptionDecoder(getU8Decoder())],
     ['rewardMultiplierBps', getOptionDecoder(getU64Decoder())],
     ['switchboardFeed', getOptionDecoder(getAddressDecoder())],
@@ -129,12 +129,13 @@ export type AdminSetStMintInput<
   TAccountNcn extends string = string,
   TAccountVaultRegistry extends string = string,
   TAccountAdmin extends string = string,
+  TAccountStMint extends string = string,
 > = {
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   vaultRegistry: Address<TAccountVaultRegistry>;
   admin: TransactionSigner<TAccountAdmin>;
-  stMint: AdminSetStMintInstructionDataArgs['stMint'];
+  stMint: Address<TAccountStMint>;
   ncnFeeGroup: AdminSetStMintInstructionDataArgs['ncnFeeGroup'];
   rewardMultiplierBps: AdminSetStMintInstructionDataArgs['rewardMultiplierBps'];
   switchboardFeed: AdminSetStMintInstructionDataArgs['switchboardFeed'];
@@ -146,13 +147,15 @@ export function getAdminSetStMintInstruction<
   TAccountNcn extends string,
   TAccountVaultRegistry extends string,
   TAccountAdmin extends string,
+  TAccountStMint extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: AdminSetStMintInput<
     TAccountConfig,
     TAccountNcn,
     TAccountVaultRegistry,
-    TAccountAdmin
+    TAccountAdmin,
+    TAccountStMint
   >,
   config?: { programAddress?: TProgramAddress }
 ): AdminSetStMintInstruction<
@@ -160,7 +163,8 @@ export function getAdminSetStMintInstruction<
   TAccountConfig,
   TAccountNcn,
   TAccountVaultRegistry,
-  TAccountAdmin
+  TAccountAdmin,
+  TAccountStMint
 > {
   // Program address.
   const programAddress =
@@ -172,6 +176,7 @@ export function getAdminSetStMintInstruction<
     ncn: { value: input.ncn ?? null, isWritable: false },
     vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: true },
     admin: { value: input.admin ?? null, isWritable: true },
+    stMint: { value: input.stMint ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -188,6 +193,7 @@ export function getAdminSetStMintInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.admin),
+      getAccountMeta(accounts.stMint),
     ],
     programAddress,
     data: getAdminSetStMintInstructionDataEncoder().encode(
@@ -198,7 +204,8 @@ export function getAdminSetStMintInstruction<
     TAccountConfig,
     TAccountNcn,
     TAccountVaultRegistry,
-    TAccountAdmin
+    TAccountAdmin,
+    TAccountStMint
   >;
 
   return instruction;
@@ -214,6 +221,7 @@ export type ParsedAdminSetStMintInstruction<
     ncn: TAccountMetas[1];
     vaultRegistry: TAccountMetas[2];
     admin: TAccountMetas[3];
+    stMint: TAccountMetas[4];
   };
   data: AdminSetStMintInstructionData;
 };
@@ -226,7 +234,7 @@ export function parseAdminSetStMintInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminSetStMintInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -243,6 +251,7 @@ export function parseAdminSetStMintInstruction<
       ncn: getNextAccount(),
       vaultRegistry: getNextAccount(),
       admin: getNextAccount(),
+      stMint: getNextAccount(),
     },
     data: getAdminSetStMintInstructionDataDecoder().decode(instruction.data),
   };

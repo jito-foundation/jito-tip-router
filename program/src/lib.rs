@@ -354,7 +354,6 @@ pub fn process_instruction(
             )
         }
         TipRouterInstruction::AdminSetStMint {
-            st_mint,
             ncn_fee_group,
             reward_multiplier_bps,
             switchboard_feed,
@@ -364,7 +363,6 @@ pub fn process_instruction(
             process_admin_set_st_mint(
                 program_id,
                 accounts,
-                &st_mint,
                 ncn_fee_group,
                 reward_multiplier_bps,
                 switchboard_feed,

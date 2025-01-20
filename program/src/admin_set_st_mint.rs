@@ -10,13 +10,12 @@ use solana_program::{
 pub fn process_admin_set_st_mint(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    st_mint: &Pubkey,
     ncn_fee_group: Option<u8>,
     reward_multiplier_bps: Option<u64>,
     switchboard_feed: Option<Pubkey>,
     no_feed_weight: Option<u128>,
 ) -> ProgramResult {
-    let [config, ncn, vault_registry, admin] = accounts else {
+    let [config, ncn, vault_registry, admin, st_mint] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
@@ -41,7 +40,7 @@ pub fn process_admin_set_st_mint(
         VaultRegistry::try_from_slice_unchecked_mut(&mut vault_registry_data)?;
 
     vault_registry_account.set_st_mint(
-        st_mint,
+        st_mint.key,
         ncn_fee_group,
         reward_multiplier_bps,
         switchboard_feed,

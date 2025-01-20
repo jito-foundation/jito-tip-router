@@ -18,6 +18,8 @@ pub struct AdminSetStMint {
     pub vault_registry: solana_program::pubkey::Pubkey,
 
     pub admin: solana_program::pubkey::Pubkey,
+
+    pub st_mint: solana_program::pubkey::Pubkey,
 }
 
 impl AdminSetStMint {
@@ -33,7 +35,7 @@ impl AdminSetStMint {
         args: AdminSetStMintInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.config,
             false,
@@ -47,6 +49,10 @@ impl AdminSetStMint {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.admin, true,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.st_mint,
+            false,
         ));
         accounts.extend_from_slice(remaining_accounts);
         let mut data = AdminSetStMintInstructionData::new().try_to_vec().unwrap();
@@ -81,7 +87,6 @@ impl Default for AdminSetStMintInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AdminSetStMintInstructionArgs {
-    pub st_mint: Pubkey,
     pub ncn_fee_group: Option<u8>,
     pub reward_multiplier_bps: Option<u64>,
     pub switchboard_feed: Option<Pubkey>,
@@ -96,13 +101,14 @@ pub struct AdminSetStMintInstructionArgs {
 ///   1. `[]` ncn
 ///   2. `[writable]` vault_registry
 ///   3. `[writable, signer]` admin
+///   4. `[]` st_mint
 #[derive(Clone, Debug, Default)]
 pub struct AdminSetStMintBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     vault_registry: Option<solana_program::pubkey::Pubkey>,
     admin: Option<solana_program::pubkey::Pubkey>,
-    st_mint: Option<Pubkey>,
+    st_mint: Option<solana_program::pubkey::Pubkey>,
     ncn_fee_group: Option<u8>,
     reward_multiplier_bps: Option<u64>,
     switchboard_feed: Option<Pubkey>,
@@ -135,7 +141,7 @@ impl AdminSetStMintBuilder {
         self
     }
     #[inline(always)]
-    pub fn st_mint(&mut self, st_mint: Pubkey) -> &mut Self {
+    pub fn st_mint(&mut self, st_mint: solana_program::pubkey::Pubkey) -> &mut Self {
         self.st_mint = Some(st_mint);
         self
     }
@@ -188,9 +194,9 @@ impl AdminSetStMintBuilder {
             ncn: self.ncn.expect("ncn is not set"),
             vault_registry: self.vault_registry.expect("vault_registry is not set"),
             admin: self.admin.expect("admin is not set"),
+            st_mint: self.st_mint.expect("st_mint is not set"),
         };
         let args = AdminSetStMintInstructionArgs {
-            st_mint: self.st_mint.clone().expect("st_mint is not set"),
             ncn_fee_group: self.ncn_fee_group.clone(),
             reward_multiplier_bps: self.reward_multiplier_bps.clone(),
             switchboard_feed: self.switchboard_feed.clone(),
@@ -210,6 +216,8 @@ pub struct AdminSetStMintCpiAccounts<'a, 'b> {
     pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub admin: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub st_mint: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `admin_set_st_mint` CPI instruction.
@@ -224,6 +232,8 @@ pub struct AdminSetStMintCpi<'a, 'b> {
     pub vault_registry: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub admin: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub st_mint: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AdminSetStMintInstructionArgs,
 }
@@ -240,6 +250,7 @@ impl<'a, 'b> AdminSetStMintCpi<'a, 'b> {
             ncn: accounts.ncn,
             vault_registry: accounts.vault_registry,
             admin: accounts.admin,
+            st_mint: accounts.st_mint,
             __args: args,
         }
     }
@@ -276,7 +287,7 @@ impl<'a, 'b> AdminSetStMintCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.config.key,
             false,
@@ -292,6 +303,10 @@ impl<'a, 'b> AdminSetStMintCpi<'a, 'b> {
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.admin.key,
             true,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.st_mint.key,
+            false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_program::instruction::AccountMeta {
@@ -309,12 +324,13 @@ impl<'a, 'b> AdminSetStMintCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(4 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(5 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.vault_registry.clone());
         account_infos.push(self.admin.clone());
+        account_infos.push(self.st_mint.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -335,6 +351,7 @@ impl<'a, 'b> AdminSetStMintCpi<'a, 'b> {
 ///   1. `[]` ncn
 ///   2. `[writable]` vault_registry
 ///   3. `[writable, signer]` admin
+///   4. `[]` st_mint
 #[derive(Clone, Debug)]
 pub struct AdminSetStMintCpiBuilder<'a, 'b> {
     instruction: Box<AdminSetStMintCpiBuilderInstruction<'a, 'b>>,
@@ -384,7 +401,10 @@ impl<'a, 'b> AdminSetStMintCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn st_mint(&mut self, st_mint: Pubkey) -> &mut Self {
+    pub fn st_mint(
+        &mut self,
+        st_mint: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
         self.instruction.st_mint = Some(st_mint);
         self
     }
@@ -454,11 +474,6 @@ impl<'a, 'b> AdminSetStMintCpiBuilder<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
         let args = AdminSetStMintInstructionArgs {
-            st_mint: self
-                .instruction
-                .st_mint
-                .clone()
-                .expect("st_mint is not set"),
             ncn_fee_group: self.instruction.ncn_fee_group.clone(),
             reward_multiplier_bps: self.instruction.reward_multiplier_bps.clone(),
             switchboard_feed: self.instruction.switchboard_feed.clone(),
@@ -477,6 +492,8 @@ impl<'a, 'b> AdminSetStMintCpiBuilder<'a, 'b> {
                 .expect("vault_registry is not set"),
 
             admin: self.instruction.admin.expect("admin is not set"),
+
+            st_mint: self.instruction.st_mint.expect("st_mint is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -493,7 +510,7 @@ struct AdminSetStMintCpiBuilderInstruction<'a, 'b> {
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    st_mint: Option<Pubkey>,
+    st_mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_fee_group: Option<u8>,
     reward_multiplier_bps: Option<u64>,
     switchboard_feed: Option<Pubkey>,
