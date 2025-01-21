@@ -51,9 +51,7 @@ pub struct TestNcn {
     pub vaults: Vec<VaultRoot>,
 }
 
-//TODO implement for more fine-grained relationship control
 #[allow(dead_code)]
-
 pub struct TestNcnNode {
     pub ncn_root: NcnRoot,
     pub operator_root: OperatorRoot,

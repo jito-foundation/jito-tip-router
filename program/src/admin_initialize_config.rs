@@ -5,8 +5,9 @@ use jito_tip_router_core::{
     account_payer::AccountPayer,
     config::Config,
     constants::{
-        MAX_EPOCHS_BEFORE_CLAIM, MAX_EPOCHS_BEFORE_STALL, MAX_FEE_BPS, MAX_SLOTS_AFTER_CONSENSUS,
-        MIN_EPOCHS_BEFORE_CLAIM, MIN_EPOCHS_BEFORE_STALL, MIN_SLOTS_AFTER_CONSENSUS,
+        MAX_EPOCHS_AFTER_CONSENSUS_BEFORE_CLAIM, MAX_EPOCHS_BEFORE_STALL, MAX_FEE_BPS,
+        MAX_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLAIM,
+        MIN_EPOCHS_BEFORE_STALL, MIN_SLOTS_AFTER_CONSENSUS,
     },
     error::TipRouterError,
     fees::FeeConfig,
@@ -56,7 +57,7 @@ pub fn process_admin_initialize_config(
         return Err(TipRouterError::InvalidEpochsBeforeStall.into());
     }
 
-    if !(MIN_EPOCHS_BEFORE_CLAIM..=MAX_EPOCHS_BEFORE_CLAIM)
+    if !(MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLAIM..=MAX_EPOCHS_AFTER_CONSENSUS_BEFORE_CLAIM)
         .contains(&epochs_after_consensus_before_claim)
     {
         return Err(TipRouterError::InvalidEpochsBeforeClaim.into());

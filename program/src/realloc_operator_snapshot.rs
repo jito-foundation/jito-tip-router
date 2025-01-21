@@ -76,7 +76,6 @@ pub fn process_realloc_operator_snapshot(
         let current_slot = Clock::get()?.slot;
         let (_, ncn_epoch_length) = load_ncn_epoch(restaking_config, current_slot, None)?;
 
-        //TODO move to helper function
         let (is_active, ncn_operator_index): (bool, u64) = {
             let ncn_operator_state_data = ncn_operator_state.data.borrow();
             let ncn_operator_state_account =

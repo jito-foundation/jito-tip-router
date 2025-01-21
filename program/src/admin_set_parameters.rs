@@ -4,8 +4,9 @@ use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     config::Config,
     constants::{
-        MAX_EPOCHS_BEFORE_CLAIM, MAX_EPOCHS_BEFORE_STALL, MAX_SLOTS_AFTER_CONSENSUS,
-        MIN_EPOCHS_BEFORE_CLAIM, MIN_EPOCHS_BEFORE_STALL, MIN_SLOTS_AFTER_CONSENSUS,
+        MAX_EPOCHS_AFTER_CONSENSUS_BEFORE_CLAIM, MAX_EPOCHS_BEFORE_STALL,
+        MAX_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLAIM,
+        MIN_EPOCHS_BEFORE_STALL, MIN_SLOTS_AFTER_CONSENSUS,
     },
     error::TipRouterError,
 };
@@ -55,7 +56,9 @@ pub fn process_admin_set_parameters(
     }
 
     if let Some(epochs) = epochs_after_consensus_before_claim {
-        if !(MIN_EPOCHS_BEFORE_CLAIM..=MAX_EPOCHS_BEFORE_CLAIM).contains(&epochs) {
+        if !(MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLAIM..=MAX_EPOCHS_AFTER_CONSENSUS_BEFORE_CLAIM)
+            .contains(&epochs)
+        {
             return Err(TipRouterError::InvalidEpochsBeforeClaim.into());
         }
         msg!("Updated epochs_after_consensus_before_claim to {}", epochs);
