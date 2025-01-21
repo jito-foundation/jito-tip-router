@@ -115,7 +115,7 @@ pub fn process_instruction(
             dao_fee_bps,
             default_ncn_fee_bps,
             epochs_before_stall,
-            epochs_after_consensus_before_claim,
+            epochs_after_consensus_before_close,
             valid_slots_after_consensus,
         } => {
             msg!("Instruction: InitializeConfig");
@@ -126,7 +126,7 @@ pub fn process_instruction(
                 dao_fee_bps,
                 default_ncn_fee_bps,
                 epochs_before_stall,
-                epochs_after_consensus_before_claim,
+                epochs_after_consensus_before_close,
                 valid_slots_after_consensus,
             )
         }
@@ -299,7 +299,7 @@ pub fn process_instruction(
         // ---------------------------------------------------- //
         TipRouterInstruction::AdminSetParameters {
             epochs_before_stall,
-            epochs_after_consensus_before_claim,
+            epochs_after_consensus_before_close,
             valid_slots_after_consensus,
         } => {
             msg!("Instruction: AdminSetParameters");
@@ -307,7 +307,7 @@ pub fn process_instruction(
                 program_id,
                 accounts,
                 epochs_before_stall,
-                epochs_after_consensus_before_claim,
+                epochs_after_consensus_before_close,
                 valid_slots_after_consensus,
             )
         }

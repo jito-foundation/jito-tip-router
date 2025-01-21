@@ -25,7 +25,6 @@ devnet = []
 localhost = []
 
 [dependencies]
-anchor-lang =  { workspace = true }
 borsh = { workspace = true }
 bytemuck = { workspace = true }
 cfg-if = { workspace = true }

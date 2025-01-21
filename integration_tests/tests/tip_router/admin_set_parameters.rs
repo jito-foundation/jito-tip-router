@@ -19,7 +19,7 @@ mod tests {
         tip_router_client
             .do_set_parameters(
                 Some(5),    // epochs_before_stall
-                Some(10),   // epochs_after_consensus_before_claim
+                Some(10),   // epochs_after_consensus_before_close
                 Some(1000), // valid_slots_after_consensus
                 &ncn_root,
             )
@@ -30,7 +30,7 @@ mod tests {
             .get_ncn_config(ncn_root.ncn_pubkey)
             .await?;
         assert_eq!(config.epochs_before_stall(), 5);
-        assert_eq!(config.epochs_after_consensus_before_claim(), 10);
+        assert_eq!(config.epochs_after_consensus_before_close(), 10);
         assert_eq!(config.valid_slots_after_consensus(), 1000);
 
         // Test invalid epochs_before_stall

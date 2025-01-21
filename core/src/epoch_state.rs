@@ -412,6 +412,10 @@ impl EpochState {
         self.slot_created.into()
     }
 
+    pub fn consensus_reached(&self) -> bool {
+        self.slot_consensus_reached != PodU64::from(u64::MAX)
+    }
+
     pub fn slot_consensus_reached(&self) -> Result<u64, TipRouterError> {
         if self.slot_consensus_reached == PodU64::from(u64::MAX) {
             Err(TipRouterError::ConsensusNotReached)
@@ -547,8 +551,12 @@ impl EpochState {
     }
 
     pub fn update_consensus_reached(&mut self, current_slot: u64) -> Result<(), TipRouterError> {
-        self.slot_consensus_reached = PodU64::from(current_slot);
-        self.voting_progress.increment_one()
+        if !self.consensus_reached() {
+            self.slot_consensus_reached = PodU64::from(current_slot);
+            self.voting_progress.increment_one()?;
+        }
+
+        Ok(())
     }
 
     // Just tracks the amount of times set_merkle_root is called

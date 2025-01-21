@@ -29,10 +29,11 @@ pub fn process_claim_with_payer(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    //NOTE: The Config will be signing as the merkle_root_upload_authority when the tip distribution program is upgraded
+
     // let (_, config_bump, mut config_seeds) =
     //     AccountPayer::find_program_address(program_id, &jito_tip_distribution::ID);
     // config_seeds.push(vec![config_bump]);
-
     let (_, account_payer_bump, mut account_payer_seeds) =
         AccountPayer::find_program_address(program_id, ncn.key);
     account_payer_seeds.push(vec![account_payer_bump]);
@@ -64,6 +65,8 @@ pub fn process_claim_with_payer(
                 .map(|s| s.as_slice())
                 .collect::<Vec<&[u8]>>()
                 .as_slice(),
+            //NOTE: The Config will be signing as the merkle_root_upload_authority when the tip distribution program is upgraded
+
             // config_seeds
             //     .iter()
             //     .map(|s| s.as_slice())

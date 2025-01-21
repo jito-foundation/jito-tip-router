@@ -59,7 +59,7 @@
           "type": "u64"
         },
         {
-          "name": "epochsAfterConsensusBeforeClaim",
+          "name": "epochsAfterConsensusBeforeClose",
           "type": "u64"
         },
         {
@@ -1668,7 +1668,7 @@
           }
         },
         {
-          "name": "epochsAfterConsensusBeforeClaim",
+          "name": "epochsAfterConsensusBeforeClose",
           "type": {
             "option": "u64"
           }
@@ -2210,12 +2210,6 @@
             }
           },
           {
-            "name": "epochsAfterConsensusBeforeClaim",
-            "type": {
-              "defined": "PodU64"
-            }
-          },
-          {
             "name": "feeConfig",
             "type": {
               "defined": "FeeConfig"
@@ -2226,11 +2220,17 @@
             "type": "u8"
           },
           {
+            "name": "epochsAfterConsensusBeforeClose",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                127
+                119
               ]
             }
           }

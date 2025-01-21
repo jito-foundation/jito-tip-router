@@ -1007,9 +1007,9 @@ impl TestBuilder {
         // Wait until we can close the accounts
         {
             let config = self.tip_router_client().get_ncn_config(ncn).await?;
-            let epochs_after_consensus_before_claim = config.epochs_after_consensus_before_claim();
+            let epochs_after_consensus_before_close = config.epochs_after_consensus_before_close();
 
-            self.warp_epoch_incremental(epochs_after_consensus_before_claim + 1)
+            self.warp_epoch_incremental(epochs_after_consensus_before_close + 1)
                 .await?;
         }
 

@@ -86,7 +86,7 @@ export type InitializeConfigInstructionData = {
   daoFeeBps: number;
   defaultNcnFeeBps: number;
   epochsBeforeStall: bigint;
-  epochsAfterConsensusBeforeClaim: bigint;
+  epochsAfterConsensusBeforeClose: bigint;
   validSlotsAfterConsensus: bigint;
 };
 
@@ -95,7 +95,7 @@ export type InitializeConfigInstructionDataArgs = {
   daoFeeBps: number;
   defaultNcnFeeBps: number;
   epochsBeforeStall: number | bigint;
-  epochsAfterConsensusBeforeClaim: number | bigint;
+  epochsAfterConsensusBeforeClose: number | bigint;
   validSlotsAfterConsensus: number | bigint;
 };
 
@@ -107,7 +107,7 @@ export function getInitializeConfigInstructionDataEncoder(): Encoder<InitializeC
       ['daoFeeBps', getU16Encoder()],
       ['defaultNcnFeeBps', getU16Encoder()],
       ['epochsBeforeStall', getU64Encoder()],
-      ['epochsAfterConsensusBeforeClaim', getU64Encoder()],
+      ['epochsAfterConsensusBeforeClose', getU64Encoder()],
       ['validSlotsAfterConsensus', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_CONFIG_DISCRIMINATOR })
@@ -121,7 +121,7 @@ export function getInitializeConfigInstructionDataDecoder(): Decoder<InitializeC
     ['daoFeeBps', getU16Decoder()],
     ['defaultNcnFeeBps', getU16Decoder()],
     ['epochsBeforeStall', getU64Decoder()],
-    ['epochsAfterConsensusBeforeClaim', getU64Decoder()],
+    ['epochsAfterConsensusBeforeClose', getU64Decoder()],
     ['validSlotsAfterConsensus', getU64Decoder()],
   ]);
 }
@@ -156,7 +156,7 @@ export type InitializeConfigInput<
   daoFeeBps: InitializeConfigInstructionDataArgs['daoFeeBps'];
   defaultNcnFeeBps: InitializeConfigInstructionDataArgs['defaultNcnFeeBps'];
   epochsBeforeStall: InitializeConfigInstructionDataArgs['epochsBeforeStall'];
-  epochsAfterConsensusBeforeClaim: InitializeConfigInstructionDataArgs['epochsAfterConsensusBeforeClaim'];
+  epochsAfterConsensusBeforeClose: InitializeConfigInstructionDataArgs['epochsAfterConsensusBeforeClose'];
   validSlotsAfterConsensus: InitializeConfigInstructionDataArgs['validSlotsAfterConsensus'];
 };
 

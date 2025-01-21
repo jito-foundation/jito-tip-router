@@ -48,9 +48,9 @@ export type Config = {
   feeAdmin: Address;
   validSlotsAfterConsensus: bigint;
   epochsBeforeStall: bigint;
-  epochsAfterConsensusBeforeClaim: bigint;
   feeConfig: FeeConfig;
   bump: number;
+  epochsAfterConsensusBeforeClose: bigint;
   reserved: Array<number>;
 };
 
@@ -61,9 +61,9 @@ export type ConfigArgs = {
   feeAdmin: Address;
   validSlotsAfterConsensus: number | bigint;
   epochsBeforeStall: number | bigint;
-  epochsAfterConsensusBeforeClaim: number | bigint;
   feeConfig: FeeConfigArgs;
   bump: number;
+  epochsAfterConsensusBeforeClose: number | bigint;
   reserved: Array<number>;
 };
 
@@ -75,10 +75,10 @@ export function getConfigEncoder(): Encoder<ConfigArgs> {
     ['feeAdmin', getAddressEncoder()],
     ['validSlotsAfterConsensus', getU64Encoder()],
     ['epochsBeforeStall', getU64Encoder()],
-    ['epochsAfterConsensusBeforeClaim', getU64Encoder()],
     ['feeConfig', getFeeConfigEncoder()],
     ['bump', getU8Encoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 127 })],
+    ['epochsAfterConsensusBeforeClose', getU64Encoder()],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 119 })],
   ]);
 }
 
@@ -90,10 +90,10 @@ export function getConfigDecoder(): Decoder<Config> {
     ['feeAdmin', getAddressDecoder()],
     ['validSlotsAfterConsensus', getU64Decoder()],
     ['epochsBeforeStall', getU64Decoder()],
-    ['epochsAfterConsensusBeforeClaim', getU64Decoder()],
     ['feeConfig', getFeeConfigDecoder()],
     ['bump', getU8Decoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 127 })],
+    ['epochsAfterConsensusBeforeClose', getU64Decoder()],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 119 })],
   ]);
 }
 
