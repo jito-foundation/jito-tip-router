@@ -43,7 +43,7 @@ impl SnapshotInfo {
     }
 }
 
-struct BackupSnapshotMonitor {
+pub struct BackupSnapshotMonitor {
     rpc_client: RpcClient,
     snapshots_dir: PathBuf,
     backup_dir: PathBuf,
@@ -56,13 +56,13 @@ impl BackupSnapshotMonitor {
         snapshots_dir: PathBuf,
         backup_dir: PathBuf,
         override_target_slot: Option<u64>,
-    ) -> Result<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             rpc_client: RpcClient::new(rpc_url.to_string()),
             snapshots_dir,
             backup_dir,
             override_target_slot,
-        })
+        }
     }
 
     /// Gets target slot for current epoch
@@ -196,8 +196,7 @@ mod tests {
             temp_dir.path().to_path_buf(),
             backup_dir.path().to_path_buf(),
             None,
-        )
-        .unwrap();
+        );
 
         // The test version will use the fixed slot from cfg(test) get_target_slot
         // TODO: Add test cases
@@ -234,8 +233,7 @@ mod tests {
             temp_dir.path().to_path_buf(),
             temp_dir.path().to_path_buf(),
             None,
-        )
-        .unwrap();
+        );
 
         // Create test snapshot files
         let snapshots = [
@@ -278,8 +276,7 @@ mod tests {
             source_dir.path().to_path_buf(),
             backup_dir.path().to_path_buf(),
             None,
-        )
-        .unwrap();
+        );
 
         // Create test snapshot with some content
         let snapshot_name = "incremental-snapshot-100-150-hash1.tar.zst";
@@ -317,8 +314,7 @@ mod tests {
             source_dir.path().to_path_buf(),
             backup_dir.path().to_path_buf(),
             None,
-        )
-        .unwrap();
+        );
 
         let missing_path = source_dir.path().join("nonexistent.tar.zst");
 

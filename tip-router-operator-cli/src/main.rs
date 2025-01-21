@@ -12,6 +12,7 @@ use ::{
     },
     std::{path::PathBuf, str::FromStr, time::Duration},
     tip_router_operator_cli::{
+        backup_snapshots::BackupSnapshotMonitor,
         cli::{Cli, Commands},
         process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
@@ -60,7 +61,7 @@ async fn main() -> Result<()> {
             tip_distribution_program_id,
             tip_payment_program_id,
             tip_router_program_id,
-            backup_snapshots_dir,
+            ref backup_snapshots_dir,
             enable_snapshots,
             num_monitored_epochs,
             start_next_epoch,
@@ -68,8 +69,10 @@ async fn main() -> Result<()> {
         } => {
             info!("Running Tip Router...");
 
-            // TODO turn into arc
             let rpc_client_clone = rpc_client.clone();
+            let full_snapshots_path = cli.full_snapshots_path.clone().unwrap();
+            let backup_snapshots_dir = backup_snapshots_dir.clone();
+            let rpc_url = cli.rpc_url.clone();
             let cli_clone = cli.clone();
 
             // Check for new meta merkle trees and submit to NCN periodically
@@ -93,14 +96,15 @@ async fn main() -> Result<()> {
             });
 
             tokio::spawn(async move {
+                // TODO log failure
                 BackupSnapshotMonitor::new(
-                    &cli.rpc_url,
-                    cli.full_snapshots_path,
+                    &rpc_url,
+                    full_snapshots_path,
                     backup_snapshots_dir,
                     override_target_slot,
                 )
                 .run()
-                .await?;
+                .await;
             });
 
             if start_next_epoch {
@@ -110,7 +114,7 @@ async fn main() -> Result<()> {
             loop {
                 // Get the last slot of the previous epoch
                 let (previous_epoch, previous_epoch_slot) =
-                    get_previous_epoch_last_slot(&rpc_client).await?;
+                    get_previous_epoch_last_slot(&rpc_client)?;
                 info!("Processing slot {} for previous epoch", previous_epoch_slot);
 
                 // Process the epoch
