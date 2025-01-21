@@ -167,7 +167,7 @@ impl BackupSnapshotMonitor {
                 oldest_snapshot.end_slot,
                 oldest_snapshot.path
             );
-            std::fs::remove_file(oldest_snapshot.path)?;
+            std::fs::remove_file(oldest_snapshot.path.as_path())?;
         }
 
         Ok(())
