@@ -2,7 +2,7 @@ use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::instruction::claim_ix;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
     program_error::ProgramError, pubkey::Pubkey,
 };
 
@@ -31,6 +31,8 @@ pub fn process_claim_with_payer(
     let (_, account_payer_bump, mut account_payer_seeds) =
         AccountPayer::find_program_address(program_id, &ncn.key);
     account_payer_seeds.push(vec![account_payer_bump]);
+
+    msg!("Claiming with payer");
 
     // Invoke the claim instruction with our program as the payer
     invoke_signed(
@@ -66,6 +68,8 @@ pub fn process_claim_with_payer(
             //     .as_slice(),
         ],
     )?;
+
+    msg!("Done Claiming with payer");
 
     Ok(())
 }
