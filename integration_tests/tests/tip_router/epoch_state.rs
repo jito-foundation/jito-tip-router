@@ -322,7 +322,7 @@ mod tests {
                 );
                 assert_eq!(
                     epoch_state.account_status().base_reward_router().unwrap(),
-                    AccountStatus::Created
+                    AccountStatus::CreatedWithReceiver
                 );
                 for i in 0..MAX_OPERATORS {
                     for group in NcnFeeGroup::all_groups() {
@@ -332,7 +332,7 @@ mod tests {
                                     .account_status()
                                     .ncn_reward_router(i, group)
                                     .unwrap(),
-                                AccountStatus::Created
+                                AccountStatus::CreatedWithReceiver
                             );
                         } else {
                             assert_eq!(

@@ -1020,7 +1020,6 @@ impl TestBuilder {
         for operator_root in test_ncn.operators.iter() {
             let operator = operator_root.operator_pubkey;
             for group in NcnFeeGroup::all_groups().iter() {
-                println!("Closing NCN Reward Router for operator: {}", operator);
                 let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
                     &jito_tip_router_program::id(),
                     *group,
@@ -1058,7 +1057,6 @@ impl TestBuilder {
 
         // Base Reward Router
         {
-            println!("Closing Base Reward Router");
             let (base_reward_router, _, _) = BaseRewardRouter::find_program_address(
                 &jito_tip_router_program::id(),
                 &ncn,
@@ -1093,7 +1091,6 @@ impl TestBuilder {
 
         // Ballot Box
         {
-            println!("Closing Ballot Box");
             let (ballot_box, _, _) = BallotBox::find_program_address(
                 &jito_tip_router_program::id(),
                 &ncn,
@@ -1110,10 +1107,6 @@ impl TestBuilder {
 
         // Operator Snapshots
         for operator_root in test_ncn.operators.iter() {
-            println!(
-                "Closing Operator Snapshot for operator: {}",
-                operator_root.operator_pubkey
-            );
             let operator = operator_root.operator_pubkey;
 
             let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
@@ -1133,7 +1126,6 @@ impl TestBuilder {
 
         // Epoch Snapshot
         {
-            println!("Closing Epoch Snapshot");
             let (epoch_snapshot, _, _) = EpochSnapshot::find_program_address(
                 &jito_tip_router_program::id(),
                 &ncn,
@@ -1150,7 +1142,6 @@ impl TestBuilder {
 
         // Weight Table
         {
-            println!("Closing Weight Table");
             let (weight_table, _, _) = WeightTable::find_program_address(
                 &jito_tip_router_program::id(),
                 &ncn,
@@ -1167,7 +1158,6 @@ impl TestBuilder {
 
         // Epoch State
         {
-            println!("Closing Epoch State");
             let (epoch_state, _, _) = EpochState::find_program_address(
                 &jito_tip_router_program::id(),
                 &ncn,
