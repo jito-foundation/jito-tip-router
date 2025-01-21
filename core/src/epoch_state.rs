@@ -4,13 +4,16 @@ use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
 use solana_program::{
-    account_info::AccountInfo, clock::DEFAULT_SLOTS_PER_EPOCH, msg, program_error::ProgramError,
+    account_info::AccountInfo, epoch_schedule::EpochSchedule, msg, program_error::ProgramError,
     pubkey::Pubkey,
 };
 
 use crate::{
-    constants::MAX_OPERATORS, discriminators::Discriminators, error::TipRouterError,
-    loaders::check_load, ncn_fee_group::NcnFeeGroup,
+    constants::{DEFAULT_CONSENSUS_REACHED_SLOT, MAX_OPERATORS},
+    discriminators::Discriminators,
+    error::TipRouterError,
+    loaders::check_load,
+    ncn_fee_group::NcnFeeGroup,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -303,7 +306,7 @@ impl EpochState {
             epoch: PodU64::from(epoch),
             bump,
             slot_created: PodU64::from(slot_created),
-            slot_consensus_reached: PodU64::from(u64::MAX),
+            slot_consensus_reached: PodU64::from(DEFAULT_CONSENSUS_REACHED_SLOT),
             operator_count: PodU64::from(0),
             vault_count: PodU64::from(0),
             account_status: EpochAccountStatus::default(),
@@ -337,6 +340,7 @@ impl EpochState {
         self.bump = bump;
         self.epoch = PodU64::from(epoch);
         self.slot_created = PodU64::from(slot_created);
+        self.slot_consensus_reached = PodU64::from(DEFAULT_CONSENSUS_REACHED_SLOT);
         self.reserved = [0; 1024];
     }
 
@@ -412,23 +416,28 @@ impl EpochState {
         self.slot_created.into()
     }
 
-    pub fn consensus_reached(&self) -> bool {
-        self.slot_consensus_reached != PodU64::from(u64::MAX)
+    pub fn is_consensus_reached(&self) -> bool {
+        self.slot_consensus_reached() != DEFAULT_CONSENSUS_REACHED_SLOT
     }
 
-    pub fn slot_consensus_reached(&self) -> Result<u64, TipRouterError> {
-        if self.slot_consensus_reached == PodU64::from(u64::MAX) {
+    pub fn slot_consensus_reached(&self) -> u64 {
+        self.slot_consensus_reached.into()
+    }
+
+    pub fn get_slot_consensus_reached(&self) -> Result<u64, TipRouterError> {
+        if self.slot_consensus_reached() == DEFAULT_CONSENSUS_REACHED_SLOT {
             Err(TipRouterError::ConsensusNotReached)
         } else {
             Ok(self.slot_consensus_reached.into())
         }
     }
 
-    pub fn epoch_consensus_reached(&self) -> Result<u64, TipRouterError> {
-        let slot_consensus_reached = self.slot_consensus_reached()?;
-        let epoch_consensus_reached = slot_consensus_reached
-            .checked_div(DEFAULT_SLOTS_PER_EPOCH)
-            .ok_or(TipRouterError::DenominatorIsZero)?;
+    pub fn get_epoch_consensus_reached(
+        &self,
+        epoch_schedule: &EpochSchedule,
+    ) -> Result<u64, ProgramError> {
+        let slot_consensus_reached = self.get_slot_consensus_reached()?;
+        let epoch_consensus_reached = epoch_schedule.get_epoch(slot_consensus_reached);
 
         Ok(epoch_consensus_reached)
     }
@@ -550,8 +559,12 @@ impl EpochState {
         self.upload_progress = Progress::new(1);
     }
 
-    pub fn update_consensus_reached(&mut self, current_slot: u64) -> Result<(), TipRouterError> {
-        if !self.consensus_reached() {
+    pub fn update_cast_vote(
+        &mut self,
+        is_consensus_reached: bool,
+        current_slot: u64,
+    ) -> Result<(), TipRouterError> {
+        if is_consensus_reached && !self.is_consensus_reached() {
             self.slot_consensus_reached = PodU64::from(current_slot);
             self.voting_progress.increment_one()?;
         }

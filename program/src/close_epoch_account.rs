@@ -14,8 +14,9 @@ use jito_tip_router_core::{
     weight_table::WeightTable,
 };
 use solana_program::{
-    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
+    account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
+    epoch_schedule::EpochSchedule, msg, program_error::ProgramError, pubkey::Pubkey,
+    sysvar::Sysvar,
 };
 
 /// Crank Closes all accounts associated with an epoch
@@ -66,7 +67,9 @@ pub fn process_close_epoch_account(
         // Epoch Check - epochs after consensus is reached
         {
             let current_epoch = Clock::get()?.epoch;
-            let epoch_consensus_reached = epoch_state_account.epoch_consensus_reached()?;
+            let epoch_schedule = EpochSchedule::get()?;
+            let epoch_consensus_reached =
+                epoch_state_account.get_epoch_consensus_reached(&epoch_schedule)?;
 
             let epoch_delta = current_epoch.saturating_sub(epoch_consensus_reached);
             if epoch_delta < epochs_after_consensus_before_close {

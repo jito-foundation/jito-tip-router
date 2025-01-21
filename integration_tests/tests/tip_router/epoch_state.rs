@@ -138,6 +138,19 @@ mod tests {
             fixture.cast_votes_for_test_ncn(&test_ncn).await?;
             let epoch_state = tip_router_client.get_epoch_state(ncn, epoch).await?;
 
+            let clock = fixture.clock().await;
+            let epoch_schedule = fixture.epoch_schedule().await;
+
+            assert_eq!(
+                epoch_state.get_slot_consensus_reached().unwrap(),
+                clock.slot
+            );
+            assert_eq!(
+                epoch_state
+                    .get_epoch_consensus_reached(&epoch_schedule)
+                    .unwrap(),
+                clock.epoch
+            );
             assert!(epoch_state.voting_progress().is_complete());
         }
 

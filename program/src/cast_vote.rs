@@ -98,14 +98,13 @@ pub fn process_cast_vote(
             epoch,
             ballot_box.get_winning_ballot_tally()?
         );
+    }
 
-        // Update Epoch State
-        {
-            let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
-            let epoch_state_account =
-                EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
-            epoch_state_account.update_consensus_reached(slot)?;
-        }
+    // Update Epoch State
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_cast_vote(ballot_box.is_consensus_reached(), slot)?;
     }
 
     Ok(())
