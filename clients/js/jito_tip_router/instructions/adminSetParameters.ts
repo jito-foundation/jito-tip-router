@@ -36,7 +36,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ADMIN_SET_PARAMETERS_DISCRIMINATOR = 27;
+export const ADMIN_SET_PARAMETERS_DISCRIMINATOR = 28;
 
 export function getAdminSetParametersDiscriminatorBytes() {
   return getU8Encoder().encode(ADMIN_SET_PARAMETERS_DISCRIMINATOR);
@@ -67,11 +67,13 @@ export type AdminSetParametersInstruction<
 export type AdminSetParametersInstructionData = {
   discriminator: number;
   epochsBeforeStall: Option<bigint>;
+  epochsBeforeClaim: Option<bigint>;
   validSlotsAfterConsensus: Option<bigint>;
 };
 
 export type AdminSetParametersInstructionDataArgs = {
   epochsBeforeStall: OptionOrNullable<number | bigint>;
+  epochsBeforeClaim: OptionOrNullable<number | bigint>;
   validSlotsAfterConsensus: OptionOrNullable<number | bigint>;
 };
 
@@ -80,6 +82,7 @@ export function getAdminSetParametersInstructionDataEncoder(): Encoder<AdminSetP
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['epochsBeforeStall', getOptionEncoder(getU64Encoder())],
+      ['epochsBeforeClaim', getOptionEncoder(getU64Encoder())],
       ['validSlotsAfterConsensus', getOptionEncoder(getU64Encoder())],
     ]),
     (value) => ({ ...value, discriminator: ADMIN_SET_PARAMETERS_DISCRIMINATOR })
@@ -90,6 +93,7 @@ export function getAdminSetParametersInstructionDataDecoder(): Decoder<AdminSetP
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['epochsBeforeStall', getOptionDecoder(getU64Decoder())],
+    ['epochsBeforeClaim', getOptionDecoder(getU64Decoder())],
     ['validSlotsAfterConsensus', getOptionDecoder(getU64Decoder())],
   ]);
 }
@@ -113,6 +117,7 @@ export type AdminSetParametersInput<
   ncn: Address<TAccountNcn>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
   epochsBeforeStall: AdminSetParametersInstructionDataArgs['epochsBeforeStall'];
+  epochsBeforeClaim: AdminSetParametersInstructionDataArgs['epochsBeforeClaim'];
   validSlotsAfterConsensus: AdminSetParametersInstructionDataArgs['validSlotsAfterConsensus'];
 };
 

@@ -44,8 +44,10 @@ export function getClaimWithPayerDiscriminatorBytes() {
 
 export type ClaimWithPayerInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
-  TAccountClaimStatusPayer extends string | IAccountMeta<string> = string,
+  TAccountAccountPayer extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
+  TAccountNcn extends string | IAccountMeta<string> = string,
+  TAccountTipDistributionConfig extends string | IAccountMeta<string> = string,
   TAccountTipDistributionAccount extends string | IAccountMeta<string> = string,
   TAccountClaimStatus extends string | IAccountMeta<string> = string,
   TAccountClaimant extends string | IAccountMeta<string> = string,
@@ -57,12 +59,16 @@ export type ClaimWithPayerInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountClaimStatusPayer extends string
-        ? WritableAccount<TAccountClaimStatusPayer>
-        : TAccountClaimStatusPayer,
+      TAccountAccountPayer extends string
+        ? WritableAccount<TAccountAccountPayer>
+        : TAccountAccountPayer,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
+      TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
+      TAccountTipDistributionConfig extends string
+        ? ReadonlyAccount<TAccountTipDistributionConfig>
+        : TAccountTipDistributionConfig,
       TAccountTipDistributionAccount extends string
         ? WritableAccount<TAccountTipDistributionAccount>
         : TAccountTipDistributionAccount,
@@ -124,15 +130,19 @@ export function getClaimWithPayerInstructionDataCodec(): Codec<
 }
 
 export type ClaimWithPayerInput<
-  TAccountClaimStatusPayer extends string = string,
+  TAccountAccountPayer extends string = string,
   TAccountConfig extends string = string,
+  TAccountNcn extends string = string,
+  TAccountTipDistributionConfig extends string = string,
   TAccountTipDistributionAccount extends string = string,
   TAccountClaimStatus extends string = string,
   TAccountClaimant extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  claimStatusPayer: Address<TAccountClaimStatusPayer>;
+  accountPayer: Address<TAccountAccountPayer>;
   config: Address<TAccountConfig>;
+  ncn: Address<TAccountNcn>;
+  tipDistributionConfig: Address<TAccountTipDistributionConfig>;
   tipDistributionAccount: Address<TAccountTipDistributionAccount>;
   claimStatus: Address<TAccountClaimStatus>;
   claimant: Address<TAccountClaimant>;
@@ -143,8 +153,10 @@ export type ClaimWithPayerInput<
 };
 
 export function getClaimWithPayerInstruction<
-  TAccountClaimStatusPayer extends string,
+  TAccountAccountPayer extends string,
   TAccountConfig extends string,
+  TAccountNcn extends string,
+  TAccountTipDistributionConfig extends string,
   TAccountTipDistributionAccount extends string,
   TAccountClaimStatus extends string,
   TAccountClaimant extends string,
@@ -152,8 +164,10 @@ export function getClaimWithPayerInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: ClaimWithPayerInput<
-    TAccountClaimStatusPayer,
+    TAccountAccountPayer,
     TAccountConfig,
+    TAccountNcn,
+    TAccountTipDistributionConfig,
     TAccountTipDistributionAccount,
     TAccountClaimStatus,
     TAccountClaimant,
@@ -162,8 +176,10 @@ export function getClaimWithPayerInstruction<
   config?: { programAddress?: TProgramAddress }
 ): ClaimWithPayerInstruction<
   TProgramAddress,
-  TAccountClaimStatusPayer,
+  TAccountAccountPayer,
   TAccountConfig,
+  TAccountNcn,
+  TAccountTipDistributionConfig,
   TAccountTipDistributionAccount,
   TAccountClaimStatus,
   TAccountClaimant,
@@ -175,11 +191,13 @@ export function getClaimWithPayerInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    claimStatusPayer: {
-      value: input.claimStatusPayer ?? null,
-      isWritable: true,
-    },
+    accountPayer: { value: input.accountPayer ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
+    ncn: { value: input.ncn ?? null, isWritable: false },
+    tipDistributionConfig: {
+      value: input.tipDistributionConfig ?? null,
+      isWritable: false,
+    },
     tipDistributionAccount: {
       value: input.tipDistributionAccount ?? null,
       isWritable: true,
@@ -205,8 +223,10 @@ export function getClaimWithPayerInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.claimStatusPayer),
+      getAccountMeta(accounts.accountPayer),
       getAccountMeta(accounts.config),
+      getAccountMeta(accounts.ncn),
+      getAccountMeta(accounts.tipDistributionConfig),
       getAccountMeta(accounts.tipDistributionAccount),
       getAccountMeta(accounts.claimStatus),
       getAccountMeta(accounts.claimant),
@@ -218,8 +238,10 @@ export function getClaimWithPayerInstruction<
     ),
   } as ClaimWithPayerInstruction<
     TProgramAddress,
-    TAccountClaimStatusPayer,
+    TAccountAccountPayer,
     TAccountConfig,
+    TAccountNcn,
+    TAccountTipDistributionConfig,
     TAccountTipDistributionAccount,
     TAccountClaimStatus,
     TAccountClaimant,
@@ -235,12 +257,14 @@ export type ParsedClaimWithPayerInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    claimStatusPayer: TAccountMetas[0];
+    accountPayer: TAccountMetas[0];
     config: TAccountMetas[1];
-    tipDistributionAccount: TAccountMetas[2];
-    claimStatus: TAccountMetas[3];
-    claimant: TAccountMetas[4];
-    systemProgram: TAccountMetas[5];
+    ncn: TAccountMetas[2];
+    tipDistributionConfig: TAccountMetas[3];
+    tipDistributionAccount: TAccountMetas[4];
+    claimStatus: TAccountMetas[5];
+    claimant: TAccountMetas[6];
+    systemProgram: TAccountMetas[7];
   };
   data: ClaimWithPayerInstructionData;
 };
@@ -253,7 +277,7 @@ export function parseClaimWithPayerInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedClaimWithPayerInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -266,8 +290,10 @@ export function parseClaimWithPayerInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      claimStatusPayer: getNextAccount(),
+      accountPayer: getNextAccount(),
       config: getNextAccount(),
+      ncn: getNextAccount(),
+      tipDistributionConfig: getNextAccount(),
       tipDistributionAccount: getNextAccount(),
       claimStatus: getNextAccount(),
       claimant: getNextAccount(),

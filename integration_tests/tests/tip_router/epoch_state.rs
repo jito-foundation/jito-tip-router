@@ -142,7 +142,7 @@ mod tests {
         }
 
         {
-            fixture.add_routers_for_tests_ncn(&test_ncn).await?;
+            fixture.add_routers_for_test_ncn(&test_ncn).await?;
             stake_pool_client
                 .update_stake_pool_balance(&pool_root)
                 .await?;
@@ -216,7 +216,7 @@ mod tests {
         fixture.add_ballot_box_to_test_ncn(&test_ncn).await?;
         fixture.cast_votes_for_test_ncn(&test_ncn).await?;
 
-        fixture.add_routers_for_tests_ncn(&test_ncn).await?;
+        fixture.add_routers_for_test_ncn(&test_ncn).await?;
         stake_pool_client
             .update_stake_pool_balance(&pool_root)
             .await?;

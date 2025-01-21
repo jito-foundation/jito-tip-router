@@ -2,7 +2,7 @@ use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::loader::load_system_program;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    claim_status_payer::ClaimStatusPayer, config::Config as NcnConfig, epoch_state::EpochState,
+    account_payer::AccountPayer, config::Config as NcnConfig, epoch_state::EpochState,
     utils::get_new_size, vault_registry::VaultRegistry, weight_table::WeightTable,
 };
 use solana_program::{
@@ -15,7 +15,7 @@ pub fn process_realloc_weight_table(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, weight_table, ncn, vault_registry, claim_status_payer, system_program] =
+    let [epoch_state, ncn_config, weight_table, ncn, vault_registry, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -26,7 +26,7 @@ pub fn process_realloc_weight_table(
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
-    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     let (weight_table_pda, weight_table_bump, _) =
         WeightTable::find_program_address(program_id, ncn.key, epoch);
@@ -43,7 +43,7 @@ pub fn process_realloc_weight_table(
             weight_table.data_len(),
             new_size
         );
-        ClaimStatusPayer::pay_and_realloc(program_id, claim_status_payer, weight_table, new_size)?;
+        AccountPayer::pay_and_realloc(program_id, ncn.key, account_payer, weight_table, new_size)?;
     }
 
     let should_initialize = weight_table.data_len() >= WeightTable::SIZE

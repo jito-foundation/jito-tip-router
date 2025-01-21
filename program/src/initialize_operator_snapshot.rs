@@ -2,7 +2,7 @@ use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::{ncn::Ncn, ncn_operator_state::NcnOperatorState, operator::Operator};
 use jito_tip_router_core::{
-    claim_status_payer::ClaimStatusPayer,
+    account_payer::AccountPayer,
     config::Config,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
@@ -19,7 +19,7 @@ pub fn process_initialize_operator_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, claim_status_payer, system_program] =
+    let [epoch_state, config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -40,7 +40,7 @@ pub fn process_initialize_operator_snapshot(
 
     load_system_account(operator_snapshot, true)?;
     load_system_program(system_program)?;
-    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     let (operator_snapshot_pubkey, operator_snapshot_bump, mut operator_snapshot_seeds) =
         OperatorSnapshot::find_program_address(program_id, operator.key, ncn.key, epoch);
@@ -75,9 +75,10 @@ pub fn process_initialize_operator_snapshot(
         ncn.key,
         epoch
     );
-    ClaimStatusPayer::pay_and_create_account(
+    AccountPayer::pay_and_create_account(
         program_id,
-        claim_status_payer,
+        ncn.key,
+        account_payer,
         operator_snapshot,
         system_program,
         program_id,

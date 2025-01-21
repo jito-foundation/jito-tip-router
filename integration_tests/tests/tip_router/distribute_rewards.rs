@@ -82,7 +82,7 @@ mod tests {
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
         // Initialize the routers
-        fixture.add_routers_for_tests_ncn(&test_ncn).await?;
+        fixture.add_routers_for_test_ncn(&test_ncn).await?;
 
         // Get initial balances
         let ncn_config = tip_router_client.get_ncn_config(ncn).await?;
@@ -404,7 +404,7 @@ mod tests {
         fixture.vote_test_ncn(&test_ncn).await?;
 
         // Initialize the routers
-        fixture.add_routers_for_tests_ncn(&test_ncn).await?;
+        fixture.add_routers_for_test_ncn(&test_ncn).await?;
 
         // Get initial balances
         let epoch = fixture.clock().await.epoch;

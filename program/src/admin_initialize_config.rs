@@ -2,7 +2,7 @@ use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::loader::{load_signer, load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    claim_status_payer::ClaimStatusPayer,
+    account_payer::AccountPayer,
     config::Config,
     constants::{
         MAX_EPOCHS_BEFORE_CLAIM, MAX_EPOCHS_BEFORE_STALL, MAX_FEE_BPS, MAX_SLOTS_AFTER_CONSENSUS,
@@ -16,8 +16,8 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
-// TODO rename to admin_initialize_config
-pub fn process_initialize_ncn_config(
+#[allow(clippy::too_many_arguments)]
+pub fn process_admin_initialize_config(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     block_engine_fee_bps: u16,
@@ -27,7 +27,7 @@ pub fn process_initialize_ncn_config(
     epochs_before_claim: u64,
     valid_slots_after_consensus: u64,
 ) -> ProgramResult {
-    let [config, ncn_account, dao_fee_wallet, ncn_admin, tie_breaker_admin, claim_status_payer, system_program] =
+    let [config, ncn, dao_fee_wallet, ncn_admin, tie_breaker_admin, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -37,8 +37,8 @@ pub fn process_initialize_ncn_config(
     load_system_program(system_program)?;
     load_signer(ncn_admin, false)?;
 
-    Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
-    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     let epoch = Clock::get()?.epoch;
 
@@ -66,23 +66,24 @@ pub fn process_initialize_ncn_config(
         return Err(TipRouterError::InvalidSlotsAfterConsensus.into());
     }
 
-    let ncn_data = ncn_account.data.borrow();
-    let ncn = Ncn::try_from_slice_unchecked(&ncn_data)?;
-    if ncn.admin != *ncn_admin.key {
+    let ncn_data = ncn.data.borrow();
+    let ncn_account = Ncn::try_from_slice_unchecked(&ncn_data)?;
+    if ncn_account.admin != *ncn_admin.key {
         return Err(TipRouterError::IncorrectNcnAdmin.into());
     }
 
     let (config_pda, config_bump, mut config_seeds) =
-        Config::find_program_address(program_id, ncn_account.key);
+        Config::find_program_address(program_id, ncn.key);
     config_seeds.push(vec![config_bump]);
 
     if config_pda != *config.key {
         return Err(ProgramError::InvalidSeeds);
     }
 
-    ClaimStatusPayer::pay_and_create_account(
+    AccountPayer::pay_and_create_account(
         program_id,
-        claim_status_payer,
+        ncn.key,
+        account_payer,
         config,
         system_program,
         program_id,
@@ -103,7 +104,7 @@ pub fn process_initialize_ncn_config(
     )?;
 
     *config = Config::new(
-        ncn_account.key,
+        ncn.key,
         tie_breaker_admin.key,
         ncn_admin.key,
         &fee_config,

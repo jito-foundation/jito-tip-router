@@ -47,7 +47,7 @@ export type InitializeConfigInstruction<
   TAccountFeeWallet extends string | IAccountMeta<string> = string,
   TAccountNcnAdmin extends string | IAccountMeta<string> = string,
   TAccountTieBreakerAdmin extends string | IAccountMeta<string> = string,
-  TAccountClaimStatusPayer extends string | IAccountMeta<string> = string,
+  TAccountAccountPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -70,9 +70,9 @@ export type InitializeConfigInstruction<
       TAccountTieBreakerAdmin extends string
         ? ReadonlyAccount<TAccountTieBreakerAdmin>
         : TAccountTieBreakerAdmin,
-      TAccountClaimStatusPayer extends string
-        ? WritableAccount<TAccountClaimStatusPayer>
-        : TAccountClaimStatusPayer,
+      TAccountAccountPayer extends string
+        ? WritableAccount<TAccountAccountPayer>
+        : TAccountAccountPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -86,6 +86,7 @@ export type InitializeConfigInstructionData = {
   daoFeeBps: number;
   defaultNcnFeeBps: number;
   epochsBeforeStall: bigint;
+  epochsBeforeClaim: bigint;
   validSlotsAfterConsensus: bigint;
 };
 
@@ -94,6 +95,7 @@ export type InitializeConfigInstructionDataArgs = {
   daoFeeBps: number;
   defaultNcnFeeBps: number;
   epochsBeforeStall: number | bigint;
+  epochsBeforeClaim: number | bigint;
   validSlotsAfterConsensus: number | bigint;
 };
 
@@ -105,6 +107,7 @@ export function getInitializeConfigInstructionDataEncoder(): Encoder<InitializeC
       ['daoFeeBps', getU16Encoder()],
       ['defaultNcnFeeBps', getU16Encoder()],
       ['epochsBeforeStall', getU64Encoder()],
+      ['epochsBeforeClaim', getU64Encoder()],
       ['validSlotsAfterConsensus', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_CONFIG_DISCRIMINATOR })
@@ -118,6 +121,7 @@ export function getInitializeConfigInstructionDataDecoder(): Decoder<InitializeC
     ['daoFeeBps', getU16Decoder()],
     ['defaultNcnFeeBps', getU16Decoder()],
     ['epochsBeforeStall', getU64Decoder()],
+    ['epochsBeforeClaim', getU64Decoder()],
     ['validSlotsAfterConsensus', getU64Decoder()],
   ]);
 }
@@ -138,7 +142,7 @@ export type InitializeConfigInput<
   TAccountFeeWallet extends string = string,
   TAccountNcnAdmin extends string = string,
   TAccountTieBreakerAdmin extends string = string,
-  TAccountClaimStatusPayer extends string = string,
+  TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   config: Address<TAccountConfig>;
@@ -146,12 +150,13 @@ export type InitializeConfigInput<
   feeWallet: Address<TAccountFeeWallet>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
   tieBreakerAdmin: Address<TAccountTieBreakerAdmin>;
-  claimStatusPayer: Address<TAccountClaimStatusPayer>;
+  accountPayer: Address<TAccountAccountPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
   blockEngineFeeBps: InitializeConfigInstructionDataArgs['blockEngineFeeBps'];
   daoFeeBps: InitializeConfigInstructionDataArgs['daoFeeBps'];
   defaultNcnFeeBps: InitializeConfigInstructionDataArgs['defaultNcnFeeBps'];
   epochsBeforeStall: InitializeConfigInstructionDataArgs['epochsBeforeStall'];
+  epochsBeforeClaim: InitializeConfigInstructionDataArgs['epochsBeforeClaim'];
   validSlotsAfterConsensus: InitializeConfigInstructionDataArgs['validSlotsAfterConsensus'];
 };
 
@@ -161,7 +166,7 @@ export function getInitializeConfigInstruction<
   TAccountFeeWallet extends string,
   TAccountNcnAdmin extends string,
   TAccountTieBreakerAdmin extends string,
-  TAccountClaimStatusPayer extends string,
+  TAccountAccountPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
@@ -171,7 +176,7 @@ export function getInitializeConfigInstruction<
     TAccountFeeWallet,
     TAccountNcnAdmin,
     TAccountTieBreakerAdmin,
-    TAccountClaimStatusPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -182,7 +187,7 @@ export function getInitializeConfigInstruction<
   TAccountFeeWallet,
   TAccountNcnAdmin,
   TAccountTieBreakerAdmin,
-  TAccountClaimStatusPayer,
+  TAccountAccountPayer,
   TAccountSystemProgram
 > {
   // Program address.
@@ -199,10 +204,7 @@ export function getInitializeConfigInstruction<
       value: input.tieBreakerAdmin ?? null,
       isWritable: false,
     },
-    claimStatusPayer: {
-      value: input.claimStatusPayer ?? null,
-      isWritable: true,
-    },
+    accountPayer: { value: input.accountPayer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -227,7 +229,7 @@ export function getInitializeConfigInstruction<
       getAccountMeta(accounts.feeWallet),
       getAccountMeta(accounts.ncnAdmin),
       getAccountMeta(accounts.tieBreakerAdmin),
-      getAccountMeta(accounts.claimStatusPayer),
+      getAccountMeta(accounts.accountPayer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -241,7 +243,7 @@ export function getInitializeConfigInstruction<
     TAccountFeeWallet,
     TAccountNcnAdmin,
     TAccountTieBreakerAdmin,
-    TAccountClaimStatusPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >;
 
@@ -259,7 +261,7 @@ export type ParsedInitializeConfigInstruction<
     feeWallet: TAccountMetas[2];
     ncnAdmin: TAccountMetas[3];
     tieBreakerAdmin: TAccountMetas[4];
-    claimStatusPayer: TAccountMetas[5];
+    accountPayer: TAccountMetas[5];
     systemProgram: TAccountMetas[6];
   };
   data: InitializeConfigInstructionData;
@@ -291,7 +293,7 @@ export function parseInitializeConfigInstruction<
       feeWallet: getNextAccount(),
       ncnAdmin: getNextAccount(),
       tieBreakerAdmin: getNextAccount(),
-      claimStatusPayer: getNextAccount(),
+      accountPayer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeConfigInstructionDataDecoder().decode(instruction.data),

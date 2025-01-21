@@ -2,8 +2,7 @@ use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::loader::load_system_program;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    claim_status_payer::ClaimStatusPayer, config::Config, epoch_state::EpochState,
-    utils::get_new_size,
+    account_payer::AccountPayer, config::Config, epoch_state::EpochState, utils::get_new_size,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -17,14 +16,14 @@ pub fn process_realloc_epoch_state(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, config, ncn, claim_status_payer, system_program] = accounts else {
+    let [epoch_state, config, ncn, account_payer, system_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     load_system_program(system_program)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     Config::load(program_id, ncn.key, config, false)?;
-    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     let (epoch_state_pda, epoch_state_bump, _) =
         EpochState::find_program_address(program_id, ncn.key, epoch);
@@ -41,7 +40,7 @@ pub fn process_realloc_epoch_state(
             epoch_state.data_len(),
             new_size
         );
-        ClaimStatusPayer::pay_and_realloc(program_id, claim_status_payer, epoch_state, new_size)?;
+        AccountPayer::pay_and_realloc(program_id, ncn.key, account_payer, epoch_state, new_size)?;
     }
 
     let should_initialize = epoch_state.data_len() >= EpochState::SIZE

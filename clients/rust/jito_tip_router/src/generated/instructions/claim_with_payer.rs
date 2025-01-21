@@ -10,9 +10,13 @@ use borsh::BorshSerialize;
 
 /// Accounts.
 pub struct ClaimWithPayer {
-    pub claim_status_payer: solana_program::pubkey::Pubkey,
+    pub account_payer: solana_program::pubkey::Pubkey,
 
     pub config: solana_program::pubkey::Pubkey,
+
+    pub ncn: solana_program::pubkey::Pubkey,
+
+    pub tip_distribution_config: solana_program::pubkey::Pubkey,
 
     pub tip_distribution_account: solana_program::pubkey::Pubkey,
 
@@ -36,13 +40,20 @@ impl ClaimWithPayer {
         args: ClaimWithPayerInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.claim_status_payer,
+            self.account_payer,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.config,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.ncn, false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.tip_distribution_config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -103,16 +114,20 @@ pub struct ClaimWithPayerInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[writable]` claim_status_payer
+///   0. `[writable]` account_payer
 ///   1. `[]` config
-///   2. `[writable]` tip_distribution_account
-///   3. `[writable]` claim_status
-///   4. `[writable]` claimant
-///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   2. `[]` ncn
+///   3. `[]` tip_distribution_config
+///   4. `[writable]` tip_distribution_account
+///   5. `[writable]` claim_status
+///   6. `[writable]` claimant
+///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct ClaimWithPayerBuilder {
-    claim_status_payer: Option<solana_program::pubkey::Pubkey>,
+    account_payer: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
+    ncn: Option<solana_program::pubkey::Pubkey>,
+    tip_distribution_config: Option<solana_program::pubkey::Pubkey>,
     tip_distribution_account: Option<solana_program::pubkey::Pubkey>,
     claim_status: Option<solana_program::pubkey::Pubkey>,
     claimant: Option<solana_program::pubkey::Pubkey>,
@@ -128,16 +143,26 @@ impl ClaimWithPayerBuilder {
         Self::default()
     }
     #[inline(always)]
-    pub fn claim_status_payer(
-        &mut self,
-        claim_status_payer: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.claim_status_payer = Some(claim_status_payer);
+    pub fn account_payer(&mut self, account_payer: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.account_payer = Some(account_payer);
         self
     }
     #[inline(always)]
     pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
         self.config = Some(config);
+        self
+    }
+    #[inline(always)]
+    pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.ncn = Some(ncn);
+        self
+    }
+    #[inline(always)]
+    pub fn tip_distribution_config(
+        &mut self,
+        tip_distribution_config: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.tip_distribution_config = Some(tip_distribution_config);
         self
     }
     #[inline(always)]
@@ -200,10 +225,12 @@ impl ClaimWithPayerBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = ClaimWithPayer {
-            claim_status_payer: self
-                .claim_status_payer
-                .expect("claim_status_payer is not set"),
+            account_payer: self.account_payer.expect("account_payer is not set"),
             config: self.config.expect("config is not set"),
+            ncn: self.ncn.expect("ncn is not set"),
+            tip_distribution_config: self
+                .tip_distribution_config
+                .expect("tip_distribution_config is not set"),
             tip_distribution_account: self
                 .tip_distribution_account
                 .expect("tip_distribution_account is not set"),
@@ -225,9 +252,13 @@ impl ClaimWithPayerBuilder {
 
 /// `claim_with_payer` CPI accounts.
 pub struct ClaimWithPayerCpiAccounts<'a, 'b> {
-    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub tip_distribution_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub tip_distribution_account: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -243,9 +274,13 @@ pub struct ClaimWithPayerCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub tip_distribution_config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub tip_distribution_account: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -266,8 +301,10 @@ impl<'a, 'b> ClaimWithPayerCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            claim_status_payer: accounts.claim_status_payer,
+            account_payer: accounts.account_payer,
             config: accounts.config,
+            ncn: accounts.ncn,
+            tip_distribution_config: accounts.tip_distribution_config,
             tip_distribution_account: accounts.tip_distribution_account,
             claim_status: accounts.claim_status,
             claimant: accounts.claimant,
@@ -308,13 +345,21 @@ impl<'a, 'b> ClaimWithPayerCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.claim_status_payer.key,
+            *self.account_payer.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.config.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.ncn.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.tip_distribution_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
@@ -349,10 +394,12 @@ impl<'a, 'b> ClaimWithPayerCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.claim_status_payer.clone());
+        account_infos.push(self.account_payer.clone());
         account_infos.push(self.config.clone());
+        account_infos.push(self.ncn.clone());
+        account_infos.push(self.tip_distribution_config.clone());
         account_infos.push(self.tip_distribution_account.clone());
         account_infos.push(self.claim_status.clone());
         account_infos.push(self.claimant.clone());
@@ -373,12 +420,14 @@ impl<'a, 'b> ClaimWithPayerCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[writable]` claim_status_payer
+///   0. `[writable]` account_payer
 ///   1. `[]` config
-///   2. `[writable]` tip_distribution_account
-///   3. `[writable]` claim_status
-///   4. `[writable]` claimant
-///   5. `[]` system_program
+///   2. `[]` ncn
+///   3. `[]` tip_distribution_config
+///   4. `[writable]` tip_distribution_account
+///   5. `[writable]` claim_status
+///   6. `[writable]` claimant
+///   7. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct ClaimWithPayerCpiBuilder<'a, 'b> {
     instruction: Box<ClaimWithPayerCpiBuilderInstruction<'a, 'b>>,
@@ -388,8 +437,10 @@ impl<'a, 'b> ClaimWithPayerCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(ClaimWithPayerCpiBuilderInstruction {
             __program: program,
-            claim_status_payer: None,
+            account_payer: None,
             config: None,
+            ncn: None,
+            tip_distribution_config: None,
             tip_distribution_account: None,
             claim_status: None,
             claimant: None,
@@ -402,11 +453,11 @@ impl<'a, 'b> ClaimWithPayerCpiBuilder<'a, 'b> {
         Self { instruction }
     }
     #[inline(always)]
-    pub fn claim_status_payer(
+    pub fn account_payer(
         &mut self,
-        claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+        account_payer: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.claim_status_payer = Some(claim_status_payer);
+        self.instruction.account_payer = Some(account_payer);
         self
     }
     #[inline(always)]
@@ -415,6 +466,19 @@ impl<'a, 'b> ClaimWithPayerCpiBuilder<'a, 'b> {
         config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.config = Some(config);
+        self
+    }
+    #[inline(always)]
+    pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.ncn = Some(ncn);
+        self
+    }
+    #[inline(always)]
+    pub fn tip_distribution_config(
+        &mut self,
+        tip_distribution_config: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.tip_distribution_config = Some(tip_distribution_config);
         self
     }
     #[inline(always)]
@@ -513,12 +577,19 @@ impl<'a, 'b> ClaimWithPayerCpiBuilder<'a, 'b> {
         let instruction = ClaimWithPayerCpi {
             __program: self.instruction.__program,
 
-            claim_status_payer: self
+            account_payer: self
                 .instruction
-                .claim_status_payer
-                .expect("claim_status_payer is not set"),
+                .account_payer
+                .expect("account_payer is not set"),
 
             config: self.instruction.config.expect("config is not set"),
+
+            ncn: self.instruction.ncn.expect("ncn is not set"),
+
+            tip_distribution_config: self
+                .instruction
+                .tip_distribution_config
+                .expect("tip_distribution_config is not set"),
 
             tip_distribution_account: self
                 .instruction
@@ -548,8 +619,10 @@ impl<'a, 'b> ClaimWithPayerCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct ClaimWithPayerCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    claim_status_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    account_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    tip_distribution_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     tip_distribution_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     claim_status: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     claimant: Option<&'b solana_program::account_info::AccountInfo<'a>>,

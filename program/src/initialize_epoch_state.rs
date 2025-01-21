@@ -1,8 +1,6 @@
 use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
-use jito_tip_router_core::{
-    claim_status_payer::ClaimStatusPayer, config::Config, epoch_state::EpochState,
-};
+use jito_tip_router_core::{account_payer::AccountPayer, config::Config, epoch_state::EpochState};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
@@ -13,7 +11,7 @@ pub fn process_initialize_epoch_state(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, config, ncn_account, claim_status_payer, system_program] = accounts else {
+    let [epoch_state, config, ncn, account_payer, system_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
@@ -26,21 +24,22 @@ pub fn process_initialize_epoch_state(
     load_system_account(epoch_state, true)?;
     load_system_program(system_program)?;
 
-    Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
-    Config::load(program_id, ncn_account.key, config, false)?;
-    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Config::load(program_id, ncn.key, config, false)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     let (epoch_state_pda, epoch_state_bump, mut epoch_state_seeds) =
-        EpochState::find_program_address(program_id, ncn_account.key, epoch);
+        EpochState::find_program_address(program_id, ncn.key, epoch);
     epoch_state_seeds.push(vec![epoch_state_bump]);
 
     if epoch_state_pda != *epoch_state.key {
         return Err(ProgramError::InvalidSeeds);
     }
 
-    ClaimStatusPayer::pay_and_create_account(
+    AccountPayer::pay_and_create_account(
         program_id,
-        claim_status_payer,
+        ncn.key,
+        account_payer,
         epoch_state,
         system_program,
         program_id,

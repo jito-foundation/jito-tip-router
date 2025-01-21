@@ -18,7 +18,7 @@ pub struct InitializeWeightTable {
 
     pub weight_table: solana_program::pubkey::Pubkey,
 
-    pub claim_status_payer: solana_program::pubkey::Pubkey,
+    pub account_payer: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
@@ -53,7 +53,7 @@ impl InitializeWeightTable {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.claim_status_payer,
+            self.account_payer,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -106,7 +106,7 @@ pub struct InitializeWeightTableInstructionArgs {
 ///   1. `[]` vault_registry
 ///   2. `[]` ncn
 ///   3. `[writable]` weight_table
-///   4. `[writable]` claim_status_payer
+///   4. `[writable]` account_payer
 ///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeWeightTableBuilder {
@@ -114,7 +114,7 @@ pub struct InitializeWeightTableBuilder {
     vault_registry: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     weight_table: Option<solana_program::pubkey::Pubkey>,
-    claim_status_payer: Option<solana_program::pubkey::Pubkey>,
+    account_payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -145,11 +145,8 @@ impl InitializeWeightTableBuilder {
         self
     }
     #[inline(always)]
-    pub fn claim_status_payer(
-        &mut self,
-        claim_status_payer: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.claim_status_payer = Some(claim_status_payer);
+    pub fn account_payer(&mut self, account_payer: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.account_payer = Some(account_payer);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -188,9 +185,7 @@ impl InitializeWeightTableBuilder {
             vault_registry: self.vault_registry.expect("vault_registry is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             weight_table: self.weight_table.expect("weight_table is not set"),
-            claim_status_payer: self
-                .claim_status_payer
-                .expect("claim_status_payer is not set"),
+            account_payer: self.account_payer.expect("account_payer is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -213,7 +208,7 @@ pub struct InitializeWeightTableCpiAccounts<'a, 'b> {
 
     pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
@@ -231,7 +226,7 @@ pub struct InitializeWeightTableCpi<'a, 'b> {
 
     pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -250,7 +245,7 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
             vault_registry: accounts.vault_registry,
             ncn: accounts.ncn,
             weight_table: accounts.weight_table,
-            claim_status_payer: accounts.claim_status_payer,
+            account_payer: accounts.account_payer,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -306,7 +301,7 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.claim_status_payer.key,
+            *self.account_payer.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -337,7 +332,7 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
         account_infos.push(self.vault_registry.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.weight_table.clone());
-        account_infos.push(self.claim_status_payer.clone());
+        account_infos.push(self.account_payer.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -359,7 +354,7 @@ impl<'a, 'b> InitializeWeightTableCpi<'a, 'b> {
 ///   1. `[]` vault_registry
 ///   2. `[]` ncn
 ///   3. `[writable]` weight_table
-///   4. `[writable]` claim_status_payer
+///   4. `[writable]` account_payer
 ///   5. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeWeightTableCpiBuilder<'a, 'b> {
@@ -374,7 +369,7 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
             vault_registry: None,
             ncn: None,
             weight_table: None,
-            claim_status_payer: None,
+            account_payer: None,
             system_program: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
@@ -411,11 +406,11 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn claim_status_payer(
+    pub fn account_payer(
         &mut self,
-        claim_status_payer: &'b solana_program::account_info::AccountInfo<'a>,
+        account_payer: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.claim_status_payer = Some(claim_status_payer);
+        self.instruction.account_payer = Some(account_payer);
         self
     }
     #[inline(always)]
@@ -495,10 +490,10 @@ impl<'a, 'b> InitializeWeightTableCpiBuilder<'a, 'b> {
                 .weight_table
                 .expect("weight_table is not set"),
 
-            claim_status_payer: self
+            account_payer: self
                 .instruction
-                .claim_status_payer
-                .expect("claim_status_payer is not set"),
+                .account_payer
+                .expect("account_payer is not set"),
 
             system_program: self
                 .instruction
@@ -520,7 +515,7 @@ struct InitializeWeightTableCpiBuilderInstruction<'a, 'b> {
     vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    claim_status_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    account_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

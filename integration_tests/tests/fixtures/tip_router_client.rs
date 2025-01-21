@@ -7,7 +7,7 @@ use jito_tip_router_client::{
     instructions::{
         AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
         AdminSetParametersBuilder, AdminSetStMintBuilder, AdminSetTieBreakerBuilder,
-        AdminSetWeightBuilder, CastVoteBuilder, ClaimWithPayerBuilder,
+        AdminSetWeightBuilder, CastVoteBuilder, ClaimWithPayerBuilder, CloseEpochAccountBuilder,
         DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
         DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
         InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder, InitializeConfigBuilder,
@@ -22,10 +22,10 @@ use jito_tip_router_client::{
     types::ConfigAdminRole,
 };
 use jito_tip_router_core::{
+    account_payer::AccountPayer,
     ballot_box::BallotBox,
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
-    claim_status_payer::ClaimStatusPayer,
     config::Config as NcnConfig,
     constants::{JITOSOL_MINT, MAX_REALLOC_BYTES},
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
@@ -256,14 +256,14 @@ impl TipRouterClient {
         ncn_fee_group: NcnFeeGroup,
         operator: Pubkey,
         ncn: Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> TestResult<NcnRewardRouter> {
         let address = NcnRewardRouter::find_program_address(
             &jito_tip_router_program::id(),
             ncn_fee_group,
             &operator,
             &ncn,
-            ncn_epoch,
+            epoch,
         )
         .0;
 
@@ -280,7 +280,13 @@ impl TipRouterClient {
         ncn: Pubkey,
         ncn_admin: &Keypair,
     ) -> TestResult<()> {
+        // Setup Payer
         self.airdrop(&self.payer.pubkey(), 1.0).await?;
+
+        // Setup account payer
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
+        self.airdrop(&account_payer, 10.0).await?;
 
         let ncn_admin_pubkey = ncn_admin.pubkey();
         self.initialize_config(
@@ -292,6 +298,7 @@ impl TipRouterClient {
             100,
             100,
             3,
+            10,
             10000,
         )
         .await
@@ -307,26 +314,26 @@ impl TipRouterClient {
         dao_fee_bps: u16,
         default_ncn_fee_bps: u16,
         epochs_before_stall: u64,
+        epochs_before_claim: u64,
         valid_slots_after_consensus: u64,
     ) -> TestResult<()> {
-        let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+        let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = InitializeConfigBuilder::new()
-            .config(ncn_config)
+            .config(config)
             .ncn(ncn)
             .ncn_admin(ncn_admin.pubkey())
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .fee_wallet(*fee_wallet)
             .tie_breaker_admin(*tie_breaker_admin)
             .dao_fee_bps(dao_fee_bps)
             .default_ncn_fee_bps(default_ncn_fee_bps)
             .block_engine_fee_bps(block_engine_fee_bps)
             .epochs_before_stall(epochs_before_stall)
+            .epochs_before_claim(epochs_before_claim)
             .valid_slots_after_consensus(valid_slots_after_consensus)
             .instruction();
 
@@ -481,16 +488,14 @@ impl TipRouterClient {
 
         let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = InitializeEpochStateBuilder::new()
             .epoch_state(epoch_state)
             .config(config)
             .ncn(ncn)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -525,16 +530,14 @@ impl TipRouterClient {
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
         let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = ReallocEpochStateBuilder::new()
             .epoch_state(epoch_state)
             .config(config)
             .ncn(ncn)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -575,17 +578,15 @@ impl TipRouterClient {
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = InitializeWeightTableBuilder::new()
             .epoch_state(epoch_state)
             .vault_registry(vault_registry)
             .ncn(ncn)
             .weight_table(weight_table)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -710,16 +711,14 @@ impl TipRouterClient {
         vault_registry: &Pubkey,
         ncn: &Pubkey,
     ) -> TestResult<()> {
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = InitializeVaultRegistryBuilder::new()
             .config(*ncn_config)
             .vault_registry(*vault_registry)
             .ncn(*ncn)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .instruction();
 
@@ -752,14 +751,12 @@ impl TipRouterClient {
         vault_registry: &Pubkey,
         num_reallocations: u64,
     ) -> TestResult<()> {
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = ReallocVaultRegistryBuilder::new()
             .ncn(*ncn)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .config(*config)
             .vault_registry(*vault_registry)
             .system_program(system_program::id())
@@ -992,10 +989,8 @@ impl TipRouterClient {
         let epoch_snapshot =
             EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = InitializeEpochSnapshotBuilder::new()
             .epoch_state(epoch_state)
@@ -1003,7 +998,7 @@ impl TipRouterClient {
             .ncn(ncn)
             .weight_table(weight_table)
             .epoch_snapshot(epoch_snapshot)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -1065,10 +1060,8 @@ impl TipRouterClient {
         )
         .0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = InitializeOperatorSnapshotBuilder::new()
             .epoch_state(epoch_state)
@@ -1078,7 +1071,7 @@ impl TipRouterClient {
             .ncn_operator_state(ncn_operator_state)
             .epoch_snapshot(epoch_snapshot)
             .operator_snapshot(operator_snapshot)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -1208,10 +1201,8 @@ impl TipRouterClient {
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = InitializeBallotBoxBuilder::new()
             .epoch_state(epoch_state)
@@ -1219,7 +1210,7 @@ impl TipRouterClient {
             .ballot_box(ballot_box)
             .ncn(ncn)
             .epoch(epoch)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .instruction();
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;
@@ -1262,10 +1253,8 @@ impl TipRouterClient {
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = ReallocBallotBoxBuilder::new()
             .epoch_state(epoch_state)
@@ -1273,7 +1262,7 @@ impl TipRouterClient {
             .ballot_box(ballot_box)
             .ncn(ncn)
             .epoch(epoch)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .instruction();
 
         let ixs = vec![ix; num_reallocations as usize];
@@ -1384,7 +1373,7 @@ impl TipRouterClient {
         max_num_nodes: u64,
         epoch: u64,
     ) -> Result<(), TestError> {
-        let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+        let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let ballot_box =
             BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
@@ -1401,7 +1390,7 @@ impl TipRouterClient {
                 .0;
 
         self.set_merkle_root(
-            ncn_config,
+            config,
             ncn,
             ballot_box,
             vote_account,
@@ -1419,7 +1408,7 @@ impl TipRouterClient {
 
     pub async fn set_merkle_root(
         &mut self,
-        ncn_config: Pubkey,
+        config: Pubkey,
         ncn: Pubkey,
         ballot_box: Pubkey,
         vote_account: Pubkey,
@@ -1437,7 +1426,7 @@ impl TipRouterClient {
 
         let ix = SetMerkleRootBuilder::new()
             .epoch_state(epoch_state)
-            .config(ncn_config)
+            .config(config)
             .ncn(ncn)
             .ballot_box(ballot_box)
             .vote_account(vote_account)
@@ -1554,17 +1543,15 @@ impl TipRouterClient {
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = InitializeBaseRewardRouterBuilder::new()
             .epoch_state(epoch_state)
             .ncn(ncn)
             .base_reward_router(base_reward_router)
             .base_reward_receiver(base_reward_receiver)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -1634,10 +1621,8 @@ impl TipRouterClient {
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = InitializeNcnRewardRouterBuilder::new()
             .epoch_state(epoch_state)
@@ -1646,7 +1631,7 @@ impl TipRouterClient {
             .operator_snapshot(operator_snapshot)
             .ncn_reward_router(ncn_reward_router)
             .ncn_reward_receiver(ncn_reward_receiver)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .ncn_fee_group(ncn_fee_group.group)
             .epoch(epoch)
@@ -2169,7 +2154,7 @@ impl TipRouterClient {
         epoch: u64,
         num_reallocations: u64,
     ) -> Result<(), TestError> {
-        let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
+        let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
         let ncn_operator_state =
             NcnOperatorState::find_program_address(&jito_restaking_program::id(), &ncn, &operator)
@@ -2185,7 +2170,7 @@ impl TipRouterClient {
         .0;
 
         self.realloc_operator_snapshot(
-            ncn_config,
+            config,
             restaking_config,
             ncn,
             operator,
@@ -2200,7 +2185,7 @@ impl TipRouterClient {
 
     pub async fn realloc_operator_snapshot(
         &mut self,
-        ncn_config: Pubkey,
+        config: Pubkey,
         restaking_config: Pubkey,
         ncn: Pubkey,
         operator: Pubkey,
@@ -2213,21 +2198,19 @@ impl TipRouterClient {
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = ReallocOperatorSnapshotBuilder::new()
             .epoch_state(epoch_state)
-            .ncn_config(ncn_config)
+            .config(config)
             .restaking_config(restaking_config)
             .ncn(ncn)
             .operator(operator)
             .ncn_operator_state(ncn_operator_state)
             .epoch_snapshot(epoch_snapshot)
             .operator_snapshot(operator_snapshot)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -2275,10 +2258,8 @@ impl TipRouterClient {
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = ReallocBaseRewardRouterBuilder::new()
             .epoch_state(epoch_state)
@@ -2286,7 +2267,7 @@ impl TipRouterClient {
             .base_reward_router(base_reward_router)
             .ncn(ncn)
             .epoch(epoch)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .instruction();
 
@@ -2337,10 +2318,8 @@ impl TipRouterClient {
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let ix = ReallocWeightTableBuilder::new()
             .epoch_state(epoch_state)
@@ -2349,7 +2328,7 @@ impl TipRouterClient {
             .ncn(ncn)
             .vault_registry(vault_registry)
             .epoch(epoch)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .instruction();
 
@@ -2367,15 +2346,16 @@ impl TipRouterClient {
 
     pub async fn do_claim_with_payer(
         &mut self,
+        ncn: Pubkey,
         claimant: Pubkey,
         tip_distribution_account: Pubkey,
         proof: Vec<[u8; 32]>,
         amount: u64,
     ) -> TestResult<()> {
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
+
+        let (config, _, _) = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
 
         let tip_distribution_program_id = jito_tip_distribution::ID;
         let tip_distribution_config =
@@ -2390,9 +2370,11 @@ impl TipRouterClient {
             );
 
         self.claim_with_payer(
-            claim_status_payer,
-            tip_distribution_program_id,
+            ncn,
+            config,
+            account_payer,
             tip_distribution_config,
+            tip_distribution_account,
             claim_status,
             claimant,
             proof,
@@ -2404,7 +2386,9 @@ impl TipRouterClient {
 
     pub async fn claim_with_payer(
         &mut self,
-        claim_status_payer: Pubkey,
+        ncn: Pubkey,
+        config: Pubkey,
+        account_payer: Pubkey,
         tip_distribution_config: Pubkey,
         tip_distribution_account: Pubkey,
         claim_status: Pubkey,
@@ -2414,8 +2398,10 @@ impl TipRouterClient {
         bump: u8,
     ) -> TestResult<()> {
         let ix = ClaimWithPayerBuilder::new()
-            .claim_status_payer(claim_status_payer)
-            .config(tip_distribution_config)
+            .account_payer(account_payer)
+            .ncn(ncn)
+            .config(config)
+            .tip_distribution_config(tip_distribution_config)
             .tip_distribution_account(tip_distribution_account)
             .claim_status(claim_status)
             .claimant(claimant)
@@ -2436,9 +2422,83 @@ impl TipRouterClient {
         self.process_transaction(&tx).await
     }
 
+    pub async fn do_close_epoch_account(
+        &mut self,
+        ncn: Pubkey,
+        epoch: u64,
+        account_to_close: Pubkey,
+        receiver_to_close: Option<Pubkey>,
+    ) -> TestResult<()> {
+        let epoch_state =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
+
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
+
+        let (config, _, _) = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
+
+        let config_account = self.get_ncn_config(ncn).await?;
+        let dao_wallet = *config_account
+            .fee_config
+            .base_fee_wallet(BaseFeeGroup::dao())
+            .expect("No DAO wallet ( do_close_epoch_account )");
+
+        self.close_epoch_account(
+            epoch_state,
+            ncn,
+            config,
+            account_to_close,
+            receiver_to_close,
+            account_payer,
+            dao_wallet,
+            epoch,
+        )
+        .await
+    }
+
+    pub async fn close_epoch_account(
+        &mut self,
+        epoch_state: Pubkey,
+        ncn: Pubkey,
+        config: Pubkey,
+        account_to_close: Pubkey,
+        receiver_to_close: Option<Pubkey>,
+        account_payer: Pubkey,
+        dao_wallet: Pubkey,
+        epoch: u64,
+    ) -> TestResult<()> {
+        let mut ix = CloseEpochAccountBuilder::new();
+
+        ix.account_payer(account_payer)
+            .config(config)
+            .account_to_close(account_to_close)
+            .epoch_state(epoch_state)
+            .ncn(ncn)
+            .dao_wallet(dao_wallet)
+            .system_program(system_program::id())
+            .epoch(epoch);
+
+        if let Some(receiver_to_close) = receiver_to_close {
+            ix.receiver_to_close(Some(receiver_to_close));
+        }
+
+        let ix = ix.instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        let tx = Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        );
+
+        self.process_transaction(&tx).await
+    }
+
     pub async fn do_set_parameters(
         &mut self,
         epochs_before_stall: Option<u64>,
+        epochs_before_claim: Option<u64>,
         valid_slots_after_consensus: Option<u64>,
         ncn_root: &NcnRoot,
     ) -> TestResult<()> {
@@ -2452,6 +2512,10 @@ impl TipRouterClient {
 
         if let Some(epochs) = epochs_before_stall {
             ix.epochs_before_stall(epochs);
+        }
+
+        if let Some(epochs) = epochs_before_claim {
+            ix.epochs_before_claim(epochs);
         }
 
         if let Some(slots) = valid_slots_after_consensus {

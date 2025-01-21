@@ -45,7 +45,7 @@ mod tests {
 
         fixture.cast_votes_for_test_ncn(&test_ncn).await?;
 
-        fixture.add_routers_for_tests_ncn(&test_ncn).await?;
+        fixture.add_routers_for_test_ncn(&test_ncn).await?;
 
         stake_pool_client
             .update_stake_pool_balance(&pool_root)
@@ -58,6 +58,8 @@ mod tests {
         fixture
             .route_in_ncn_rewards_for_test_ncn(&test_ncn, &pool_root)
             .await?;
+
+        fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
 
         Ok(())
     }

@@ -41,7 +41,7 @@ export type InitializeBaseRewardRouterInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
   TAccountBaseRewardReceiver extends string | IAccountMeta<string> = string,
-  TAccountClaimStatusPayer extends string | IAccountMeta<string> = string,
+  TAccountAccountPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -60,9 +60,9 @@ export type InitializeBaseRewardRouterInstruction<
       TAccountBaseRewardReceiver extends string
         ? WritableAccount<TAccountBaseRewardReceiver>
         : TAccountBaseRewardReceiver,
-      TAccountClaimStatusPayer extends string
-        ? WritableAccount<TAccountClaimStatusPayer>
-        : TAccountClaimStatusPayer,
+      TAccountAccountPayer extends string
+        ? WritableAccount<TAccountAccountPayer>
+        : TAccountAccountPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -114,14 +114,14 @@ export type InitializeBaseRewardRouterInput<
   TAccountNcn extends string = string,
   TAccountBaseRewardRouter extends string = string,
   TAccountBaseRewardReceiver extends string = string,
-  TAccountClaimStatusPayer extends string = string,
+  TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   ncn: Address<TAccountNcn>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   baseRewardReceiver: Address<TAccountBaseRewardReceiver>;
-  claimStatusPayer: Address<TAccountClaimStatusPayer>;
+  accountPayer: Address<TAccountAccountPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: InitializeBaseRewardRouterInstructionDataArgs['epoch'];
 };
@@ -131,7 +131,7 @@ export function getInitializeBaseRewardRouterInstruction<
   TAccountNcn extends string,
   TAccountBaseRewardRouter extends string,
   TAccountBaseRewardReceiver extends string,
-  TAccountClaimStatusPayer extends string,
+  TAccountAccountPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
@@ -140,7 +140,7 @@ export function getInitializeBaseRewardRouterInstruction<
     TAccountNcn,
     TAccountBaseRewardRouter,
     TAccountBaseRewardReceiver,
-    TAccountClaimStatusPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -150,7 +150,7 @@ export function getInitializeBaseRewardRouterInstruction<
   TAccountNcn,
   TAccountBaseRewardRouter,
   TAccountBaseRewardReceiver,
-  TAccountClaimStatusPayer,
+  TAccountAccountPayer,
   TAccountSystemProgram
 > {
   // Program address.
@@ -169,10 +169,7 @@ export function getInitializeBaseRewardRouterInstruction<
       value: input.baseRewardReceiver ?? null,
       isWritable: true,
     },
-    claimStatusPayer: {
-      value: input.claimStatusPayer ?? null,
-      isWritable: true,
-    },
+    accountPayer: { value: input.accountPayer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -196,7 +193,7 @@ export function getInitializeBaseRewardRouterInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.baseRewardRouter),
       getAccountMeta(accounts.baseRewardReceiver),
-      getAccountMeta(accounts.claimStatusPayer),
+      getAccountMeta(accounts.accountPayer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -209,7 +206,7 @@ export function getInitializeBaseRewardRouterInstruction<
     TAccountNcn,
     TAccountBaseRewardRouter,
     TAccountBaseRewardReceiver,
-    TAccountClaimStatusPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >;
 
@@ -226,7 +223,7 @@ export type ParsedInitializeBaseRewardRouterInstruction<
     ncn: TAccountMetas[1];
     baseRewardRouter: TAccountMetas[2];
     baseRewardReceiver: TAccountMetas[3];
-    claimStatusPayer: TAccountMetas[4];
+    accountPayer: TAccountMetas[4];
     systemProgram: TAccountMetas[5];
   };
   data: InitializeBaseRewardRouterInstructionData;
@@ -257,7 +254,7 @@ export function parseInitializeBaseRewardRouterInstruction<
       ncn: getNextAccount(),
       baseRewardRouter: getNextAccount(),
       baseRewardReceiver: getNextAccount(),
-      claimStatusPayer: getNextAccount(),
+      accountPayer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeBaseRewardRouterInstructionDataDecoder().decode(

@@ -2,7 +2,7 @@ use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    claim_status_payer::ClaimStatusPayer, config::Config, epoch_snapshot::EpochSnapshot,
+    account_payer::AccountPayer, config::Config, epoch_snapshot::EpochSnapshot,
     epoch_state::EpochState, error::TipRouterError, fees, weight_table::WeightTable,
 };
 use solana_program::{
@@ -16,7 +16,7 @@ pub fn process_initialize_epoch_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, config, ncn, weight_table, epoch_snapshot, claim_status_payer, system_program] =
+    let [epoch_state, config, ncn, weight_table, epoch_snapshot, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -25,7 +25,7 @@ pub fn process_initialize_epoch_snapshot(
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     Config::load(program_id, ncn.key, config, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     load_system_account(epoch_snapshot, true)?;
     load_system_program(system_program)?;
@@ -63,9 +63,10 @@ pub fn process_initialize_epoch_snapshot(
         ncn.key,
         ncn_epoch
     );
-    ClaimStatusPayer::pay_and_create_account(
+    AccountPayer::pay_and_create_account(
         program_id,
-        claim_status_payer,
+        ncn.key,
+        account_payer,
         epoch_snapshot,
         system_program,
         program_id,

@@ -17,7 +17,7 @@ pub enum TipRouterInstruction {
     #[account(2, name = "fee_wallet")]
     #[account(3, signer, name = "ncn_admin")]
     #[account(4, name = "tie_breaker_admin")]
-    #[account(5, writable, name = "claim_status_payer")]
+    #[account(5, writable, name = "account_payer")]
     #[account(6, name = "system_program")]
     InitializeConfig {
         block_engine_fee_bps: u16,
@@ -32,7 +32,7 @@ pub enum TipRouterInstruction {
     #[account(0, name = "config")]
     #[account(1, writable, name = "vault_registry")]
     #[account(2, name = "ncn")]
-    #[account(3, writable, name = "claim_status_payer")]
+    #[account(3, writable, name = "account_payer")]
     #[account(4, name = "system_program")]
     InitializeVaultRegistry,
 
@@ -40,7 +40,7 @@ pub enum TipRouterInstruction {
     #[account(0, name = "config")]
     #[account(1, writable, name = "vault_registry")]
     #[account(2, name = "ncn")]
-    #[account(3, writable, name = "claim_status_payer")]
+    #[account(3, writable, name = "account_payer")]
     #[account(4, name = "system_program")]
     ReallocVaultRegistry,
 
@@ -59,7 +59,7 @@ pub enum TipRouterInstruction {
     #[account(0, writable, name = "epoch_state")]
     #[account(1, name = "config")]
     #[account(2, name = "ncn")]
-    #[account(3, writable, name = "claim_status_payer")]
+    #[account(3, writable, name = "account_payer")]
     #[account(4, name = "system_program")]
     InitializeEpochState {
         epoch: u64,
@@ -69,7 +69,7 @@ pub enum TipRouterInstruction {
     #[account(0, writable, name = "epoch_state")]
     #[account(1, name = "config")]
     #[account(2, name = "ncn")]
-    #[account(3, writable, name = "claim_status_payer")]
+    #[account(3, writable, name = "account_payer")]
     #[account(4, name = "system_program")]
     ReallocEpochState {
         epoch: u64,
@@ -80,7 +80,7 @@ pub enum TipRouterInstruction {
     #[account(1, name = "vault_registry")]
     #[account(2, name = "ncn")]
     #[account(3, writable, name = "weight_table")]
-    #[account(4, writable, name = "claim_status_payer")]
+    #[account(4, writable, name = "account_payer")]
     #[account(5, name = "system_program")]
     InitializeWeightTable{
         epoch: u64,
@@ -92,7 +92,7 @@ pub enum TipRouterInstruction {
     #[account(2, writable, name = "weight_table")]
     #[account(3, name = "ncn")]
     #[account(4, name = "vault_registry")]
-    #[account(5, writable, name = "claim_status_payer")]
+    #[account(5, writable, name = "account_payer")]
     #[account(6, name = "system_program")]
     ReallocWeightTable {
         epoch: u64,
@@ -115,7 +115,7 @@ pub enum TipRouterInstruction {
     #[account(2, name = "ncn")]
     #[account(3, name = "weight_table")]
     #[account(4, writable, name = "epoch_snapshot")]
-    #[account(5, writable, name = "claim_status_payer")]
+    #[account(5, writable, name = "account_payer")]
     #[account(6, name = "system_program")]
     InitializeEpochSnapshot{
         epoch: u64,
@@ -129,7 +129,7 @@ pub enum TipRouterInstruction {
     #[account(4, name = "ncn_operator_state")]
     #[account(5, name = "epoch_snapshot")]
     #[account(6, writable, name = "operator_snapshot")]
-    #[account(7, writable, name = "claim_status_payer")]
+    #[account(7, writable, name = "account_payer")]
     #[account(8, name = "system_program")]
     InitializeOperatorSnapshot{
         epoch: u64,
@@ -137,14 +137,14 @@ pub enum TipRouterInstruction {
 
     /// Resizes the operator snapshot account
     #[account(0, writable, name = "epoch_state")]
-    #[account(1, name = "ncn_config")]
+    #[account(1, name = "config")]
     #[account(2, name = "restaking_config")]
     #[account(3, name = "ncn")]
     #[account(4, name = "operator")]
     #[account(5, name = "ncn_operator_state")]
     #[account(6, writable, name = "epoch_snapshot")]
     #[account(7, writable, name = "operator_snapshot")]
-    #[account(8, writable, name = "claim_status_payer")]
+    #[account(8, writable, name = "account_payer")]
     #[account(9, name = "system_program")]
     ReallocOperatorSnapshot {
         epoch: u64,
@@ -175,7 +175,7 @@ pub enum TipRouterInstruction {
     #[account(1, name = "config")]
     #[account(2, writable, name = "ballot_box")]
     #[account(3, name = "ncn")]
-    #[account(4, writable, name = "claim_status_payer")]
+    #[account(4, writable, name = "account_payer")]
     #[account(5, name = "system_program")]
     InitializeBallotBox {
         epoch: u64,
@@ -186,7 +186,7 @@ pub enum TipRouterInstruction {
     #[account(1, name = "config")]
     #[account(2, writable, name = "ballot_box")]
     #[account(3, name = "ncn")]
-    #[account(4, writable, name = "claim_status_payer")]
+    #[account(4, writable, name = "account_payer")]
     #[account(5, name = "system_program")]
     ReallocBallotBox {
         epoch: u64,
@@ -231,7 +231,7 @@ pub enum TipRouterInstruction {
     #[account(1, name = "ncn")]
     #[account(2, writable, name = "base_reward_router")]
     #[account(3, writable, name = "base_reward_receiver")]
-    #[account(4, writable, name = "claim_status_payer")]
+    #[account(4, writable, name = "account_payer")]
     #[account(5, name = "system_program")]
     InitializeBaseRewardRouter{
         epoch: u64,
@@ -242,7 +242,7 @@ pub enum TipRouterInstruction {
     #[account(1, name = "config")]
     #[account(2, writable, name = "base_reward_router")]
     #[account(3, name = "ncn")]
-    #[account(4, writable, name = "claim_status_payer")]
+    #[account(4, writable, name = "account_payer")]
     #[account(5, name = "system_program")]
     ReallocBaseRewardRouter {
         epoch: u64,
@@ -255,7 +255,7 @@ pub enum TipRouterInstruction {
     #[account(3, name = "operator_snapshot")]
     #[account(4, writable, name = "ncn_reward_router")]
     #[account(5, writable, name = "ncn_reward_receiver")]
-    #[account(6, writable, name = "claim_status_payer")]
+    #[account(6, writable, name = "account_payer")]
     #[account(7, name = "system_program")]
     InitializeNcnRewardRouter{
         ncn_fee_group: u8,
@@ -376,12 +376,14 @@ pub enum TipRouterInstruction {
     },
 
     /// Claim tips with the program as the payer
-    #[account(0, writable, name = "claim_status_payer")]
+    #[account(0, writable, name = "account_payer")]
     #[account(1, name = "config")]
-    #[account(2, writable, name = "tip_distribution_account")]
-    #[account(3, writable, name = "claim_status")]
-    #[account(4, writable, name = "claimant")]
-    #[account(5, name = "system_program")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "tip_distribution_config")]
+    #[account(4, writable, name = "tip_distribution_account")]
+    #[account(5, writable, name = "claim_status")]
+    #[account(6, writable, name = "claimant")]
+    #[account(7, name = "system_program")]
     ClaimWithPayer {
         proof: Vec<[u8; 32]>,
         amount: u64,
@@ -393,8 +395,10 @@ pub enum TipRouterInstruction {
     #[account(1, name = "config")]
     #[account(2, name = "ncn")]
     #[account(3, writable, name = "account_to_close")]
-    #[account(4, writable, name = "claim_status_payer")]
-    #[account(5, name = "system_program")]
+    #[account(4, writable, name = "account_payer")]
+    #[account(5, writable, name = "dao_wallet")]
+    #[account(6, name = "system_program")]
+    #[account(7, writable, optional, name = "receiver_to_close")]
     CloseEpochAccount {
         epoch: u64,
     },
@@ -408,6 +412,7 @@ pub enum TipRouterInstruction {
     #[account(2, signer, name = "ncn_admin")]
     AdminSetParameters {
         epochs_before_stall: Option<u64>,
+        epochs_before_claim: Option<u64>,
         valid_slots_after_consensus: Option<u64>,
     },
 

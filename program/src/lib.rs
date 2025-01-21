@@ -1,3 +1,4 @@
+mod admin_initialize_config;
 mod admin_register_st_mint;
 mod admin_set_config_fees;
 mod admin_set_new_admin;
@@ -16,7 +17,6 @@ mod initialize_ballot_box;
 mod initialize_base_reward_router;
 mod initialize_epoch_snapshot;
 mod initialize_epoch_state;
-mod initialize_ncn_config;
 mod initialize_ncn_reward_router;
 mod initialize_operator_snapshot;
 mod initialize_vault_registry;
@@ -48,6 +48,7 @@ use solana_program::{
 use solana_security_txt::security_txt;
 
 use crate::{
+    admin_initialize_config::process_admin_initialize_config,
     admin_register_st_mint::process_admin_register_st_mint,
     admin_set_config_fees::process_admin_set_config_fees,
     admin_set_parameters::process_admin_set_parameters,
@@ -62,7 +63,6 @@ use crate::{
     initialize_ballot_box::process_initialize_ballot_box,
     initialize_base_reward_router::process_initialize_base_reward_router,
     initialize_epoch_snapshot::process_initialize_epoch_snapshot,
-    initialize_ncn_config::process_initialize_ncn_config,
     initialize_ncn_reward_router::process_initialize_ncn_reward_router,
     initialize_operator_snapshot::process_initialize_operator_snapshot,
     initialize_vault_registry::process_initialize_vault_registry,
@@ -119,7 +119,7 @@ pub fn process_instruction(
             valid_slots_after_consensus,
         } => {
             msg!("Instruction: InitializeConfig");
-            process_initialize_ncn_config(
+            process_admin_initialize_config(
                 program_id,
                 accounts,
                 block_engine_fee_bps,
@@ -299,6 +299,7 @@ pub fn process_instruction(
         // ---------------------------------------------------- //
         TipRouterInstruction::AdminSetParameters {
             epochs_before_stall,
+            epochs_before_claim,
             valid_slots_after_consensus,
         } => {
             msg!("Instruction: AdminSetParameters");
@@ -306,6 +307,7 @@ pub fn process_instruction(
                 program_id,
                 accounts,
                 epochs_before_stall,
+                epochs_before_claim,
                 valid_slots_after_consensus,
             )
         }

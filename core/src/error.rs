@@ -173,6 +173,8 @@ pub enum TipRouterError {
     InvalidAccountToCloseDiscriminator,
     #[error("Cannot close account")]
     CannotCloseAccount,
+    #[error("Invalid DAO wallet")]
+    InvalidDaoWallet,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

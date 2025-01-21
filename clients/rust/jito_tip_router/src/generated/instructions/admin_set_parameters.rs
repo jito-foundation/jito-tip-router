@@ -64,7 +64,7 @@ pub struct AdminSetParametersInstructionData {
 
 impl AdminSetParametersInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 27 }
+        Self { discriminator: 28 }
     }
 }
 
@@ -78,6 +78,7 @@ impl Default for AdminSetParametersInstructionData {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AdminSetParametersInstructionArgs {
     pub epochs_before_stall: Option<u64>,
+    pub epochs_before_claim: Option<u64>,
     pub valid_slots_after_consensus: Option<u64>,
 }
 
@@ -94,6 +95,7 @@ pub struct AdminSetParametersBuilder {
     ncn: Option<solana_program::pubkey::Pubkey>,
     ncn_admin: Option<solana_program::pubkey::Pubkey>,
     epochs_before_stall: Option<u64>,
+    epochs_before_claim: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -121,6 +123,12 @@ impl AdminSetParametersBuilder {
     #[inline(always)]
     pub fn epochs_before_stall(&mut self, epochs_before_stall: u64) -> &mut Self {
         self.epochs_before_stall = Some(epochs_before_stall);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn epochs_before_claim(&mut self, epochs_before_claim: u64) -> &mut Self {
+        self.epochs_before_claim = Some(epochs_before_claim);
         self
     }
     /// `[optional argument]`
@@ -156,6 +164,7 @@ impl AdminSetParametersBuilder {
         };
         let args = AdminSetParametersInstructionArgs {
             epochs_before_stall: self.epochs_before_stall.clone(),
+            epochs_before_claim: self.epochs_before_claim.clone(),
             valid_slots_after_consensus: self.valid_slots_after_consensus.clone(),
         };
 
@@ -301,6 +310,7 @@ impl<'a, 'b> AdminSetParametersCpiBuilder<'a, 'b> {
             ncn: None,
             ncn_admin: None,
             epochs_before_stall: None,
+            epochs_before_claim: None,
             valid_slots_after_consensus: None,
             __remaining_accounts: Vec::new(),
         });
@@ -331,6 +341,12 @@ impl<'a, 'b> AdminSetParametersCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn epochs_before_stall(&mut self, epochs_before_stall: u64) -> &mut Self {
         self.instruction.epochs_before_stall = Some(epochs_before_stall);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn epochs_before_claim(&mut self, epochs_before_claim: u64) -> &mut Self {
+        self.instruction.epochs_before_claim = Some(epochs_before_claim);
         self
     }
     /// `[optional argument]`
@@ -382,6 +398,7 @@ impl<'a, 'b> AdminSetParametersCpiBuilder<'a, 'b> {
     ) -> solana_program::entrypoint::ProgramResult {
         let args = AdminSetParametersInstructionArgs {
             epochs_before_stall: self.instruction.epochs_before_stall.clone(),
+            epochs_before_claim: self.instruction.epochs_before_claim.clone(),
             valid_slots_after_consensus: self.instruction.valid_slots_after_consensus.clone(),
         };
         let instruction = AdminSetParametersCpi {
@@ -408,6 +425,7 @@ struct AdminSetParametersCpiBuilderInstruction<'a, 'b> {
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epochs_before_stall: Option<u64>,
+    epochs_before_claim: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

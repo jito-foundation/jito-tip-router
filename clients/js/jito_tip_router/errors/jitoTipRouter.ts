@@ -162,20 +162,28 @@ export const JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_OR_SWITCHBOARD_FEED = 0x223e;
 export const JITO_TIP_ROUTER_ERROR__ROUTER_STILL_ROUTING = 0x223f; // 8767
 /** InvalidEpochsBeforeStall: Invalid epochs before stall */
 export const JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL = 0x2240; // 8768
+/** InvalidEpochsBeforeClaim: Invalid epochs before claim */
+export const JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLAIM = 0x2241; // 8769
 /** InvalidSlotsAfterConsensus: Invalid slots after consensus */
-export const JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS = 0x2241; // 8769
+export const JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS = 0x2242; // 8770
 /** VaultNeedsUpdate: Vault needs to be updated */
-export const JITO_TIP_ROUTER_ERROR__VAULT_NEEDS_UPDATE = 0x2242; // 8770
+export const JITO_TIP_ROUTER_ERROR__VAULT_NEEDS_UPDATE = 0x2243; // 8771
 /** InvalidAccountStatus: Invalid Account Status */
-export const JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS = 0x2243; // 8771
+export const JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS = 0x2244; // 8772
 /** AccountAlreadyInitialized: Account already initialized */
-export const JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED = 0x2244; // 8772
+export const JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED = 0x2245; // 8773
 /** BadBallot: Cannot vote with uninitialized account */
-export const JITO_TIP_ROUTER_ERROR__BAD_BALLOT = 0x2245; // 8773
+export const JITO_TIP_ROUTER_ERROR__BAD_BALLOT = 0x2246; // 8774
 /** VotingIsNotOver: Cannot route until voting is over */
-export const JITO_TIP_ROUTER_ERROR__VOTING_IS_NOT_OVER = 0x2246; // 8774
+export const JITO_TIP_ROUTER_ERROR__VOTING_IS_NOT_OVER = 0x2247; // 8775
 /** OperatorIsNotInSnapshot: Operator is not in snapshot */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_IS_NOT_IN_SNAPSHOT = 0x2247; // 8775
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_IS_NOT_IN_SNAPSHOT = 0x2248; // 8776
+/** InvalidAccountToCloseDiscriminator: Invalid account_to_close Discriminator */
+export const JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_TO_CLOSE_DISCRIMINATOR = 0x2249; // 8777
+/** CannotCloseAccount: Cannot close account */
+export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT = 0x224a; // 8778
+/** InvalidDaoWallet: Invalid DAO wallet */
+export const JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET = 0x224b; // 8779
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED
@@ -188,6 +196,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_EMPTY
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL
+  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR
@@ -210,7 +219,10 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_TO_CLOSE_DISCRIMINATOR
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLAIM
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE
@@ -273,6 +285,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL]: `Merkle root tally full`,
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_EMPTY]: `Ballot tally not empty`,
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL]: `Ballot tally not found`,
+    [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT]: `Cannot close account`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR]: `Cast to u128 error`,
@@ -295,7 +308,10 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN]: `Incorrect NCN Admin`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN]: `Incorrect weight table admin`,
     [JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS]: `Invalid Account Status`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_TO_CLOSE_DISCRIMINATOR]: `Invalid account_to_close Discriminator`,
     [JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP]: `Not a valid base fee group`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET]: `Invalid DAO wallet`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLAIM]: `Invalid epochs before claim`,
     [JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL]: `Invalid epochs before stall`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF]: `Invalid merkle proof`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE]: `Invalid mint for weight table`,

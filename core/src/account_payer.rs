@@ -1,4 +1,3 @@
-use jito_tip_distribution_sdk::jito_tip_distribution;
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
     program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction, system_program,
@@ -9,22 +8,16 @@ use crate::{constants::MAX_REALLOC_BYTES, loaders::check_load};
 
 /// Uninitialized, no-data account used to hold SOL for ClaimStatus rent
 /// Must be empty and uninitialized to be used as a payer or `transfer` instructions fail
-pub struct ClaimStatusPayer {}
+pub struct AccountPayer {}
 
-impl ClaimStatusPayer {
-    pub fn seeds(tip_distribution_program: &Pubkey) -> Vec<Vec<u8>> {
-        vec![
-            b"claim_status_payer".to_vec(),
-            tip_distribution_program.to_bytes().to_vec(),
-        ]
+impl AccountPayer {
+    pub fn seeds(ncn: &Pubkey) -> Vec<Vec<u8>> {
+        vec![b"account_payer".to_vec(), ncn.to_bytes().to_vec()]
     }
 
-    pub fn find_program_address(
-        program_id: &Pubkey,
-        tip_distribution_program: &Pubkey,
-    ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let mut seeds = Self::seeds(tip_distribution_program);
-        seeds.push(tip_distribution_program.to_bytes().to_vec());
+    pub fn find_program_address(program_id: &Pubkey, ncn: &Pubkey) -> (Pubkey, u8, Vec<Vec<u8>>) {
+        let mut seeds = Self::seeds(ncn);
+        seeds.push(ncn.to_bytes().to_vec());
         let (address, bump) = Pubkey::find_program_address(
             &seeds.iter().map(|s| s.as_slice()).collect::<Vec<_>>(),
             program_id,
@@ -34,12 +27,12 @@ impl ClaimStatusPayer {
 
     pub fn load(
         program_id: &Pubkey,
+        ncn: &Pubkey,
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let system_program_id = system_program::id();
-        let tip_distribution_program = jito_tip_distribution::ID;
-        let expected_pda = Self::find_program_address(program_id, &tip_distribution_program).0;
+        let expected_pda = Self::find_program_address(program_id, ncn).0;
         check_load(
             &system_program_id,
             account,
@@ -50,9 +43,11 @@ impl ClaimStatusPayer {
     }
 
     #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
     pub fn pay_and_create_account<'a, 'info>(
         program_id: &Pubkey,
-        claim_status_payer: &'a AccountInfo<'info>,
+        ncn: &Pubkey,
+        account_payer: &'a AccountInfo<'info>,
         new_account: &'a AccountInfo<'info>,
         system_program: &'a AccountInfo<'info>,
         program_owner: &Pubkey,
@@ -67,7 +62,8 @@ impl ClaimStatusPayer {
         if required_lamports > 0 {
             Self::transfer(
                 program_id,
-                claim_status_payer,
+                ncn,
+                account_payer,
                 new_account,
                 required_lamports,
             )?;
@@ -97,9 +93,11 @@ impl ClaimStatusPayer {
         )
     }
 
+    #[inline(always)]
     pub fn pay_and_realloc<'a, 'info>(
         program_id: &Pubkey,
-        claim_status_payer: &'a AccountInfo<'info>,
+        ncn: &Pubkey,
+        account_payer: &'a AccountInfo<'info>,
         account: &'a AccountInfo<'info>,
         new_size: usize,
     ) -> ProgramResult {
@@ -108,7 +106,7 @@ impl ClaimStatusPayer {
 
         let required_lamports = new_minimum_balance.saturating_sub(account.lamports());
         if required_lamports > 0 {
-            Self::transfer(program_id, claim_status_payer, account, required_lamports)?;
+            Self::transfer(program_id, ncn, account_payer, account, required_lamports)?;
         }
 
         account.realloc(new_size, false)?;
@@ -116,9 +114,10 @@ impl ClaimStatusPayer {
     }
 
     /// Closes the program account
+    #[inline(always)]
     pub fn close_account<'a, 'info>(
         program_id: &Pubkey,
-        claim_status_payer: &'a AccountInfo<'info>,
+        account_payer: &'a AccountInfo<'info>,
         account_to_close: &'a AccountInfo<'info>,
     ) -> ProgramResult {
         // Check if the account is owned by the program
@@ -126,7 +125,7 @@ impl ClaimStatusPayer {
             return Err(ProgramError::IllegalOwner);
         }
 
-        **claim_status_payer.lamports.borrow_mut() = claim_status_payer
+        **account_payer.lamports.borrow_mut() = account_payer
             .lamports()
             .checked_add(account_to_close.lamports())
             .ok_or(ProgramError::ArithmeticOverflow)?;
@@ -140,25 +139,27 @@ impl ClaimStatusPayer {
         Ok(())
     }
 
+    #[inline(always)]
     pub fn transfer<'a, 'info>(
         program_id: &Pubkey,
-        claim_status_payer: &'a AccountInfo<'info>,
+        ncn: &Pubkey,
+        account_payer: &'a AccountInfo<'info>,
         to: &'a AccountInfo<'info>,
         lamports: u64,
     ) -> ProgramResult {
-        let (claim_status_payer_address, claim_status_payer_bump, mut claim_status_payer_seeds) =
-            Self::find_program_address(program_id, &jito_tip_distribution::ID);
-        claim_status_payer_seeds.push(vec![claim_status_payer_bump]);
+        let (account_payer_address, account_payer_bump, mut account_payer_seeds) =
+            Self::find_program_address(program_id, ncn);
+        account_payer_seeds.push(vec![account_payer_bump]);
 
-        if claim_status_payer_address.ne(claim_status_payer.key) {
-            msg!("Incorrect claim status payer PDA");
+        if account_payer_address.ne(account_payer.key) {
+            msg!("Incorrect account payer PDA");
             return Err(ProgramError::InvalidAccountData);
         }
 
         invoke_signed(
-            &system_instruction::transfer(&claim_status_payer_address, to.key, lamports),
-            &[claim_status_payer.clone(), to.clone()],
-            &[claim_status_payer_seeds
+            &system_instruction::transfer(&account_payer_address, to.key, lamports),
+            &[account_payer.clone(), to.clone()],
+            &[account_payer_seeds
                 .iter()
                 .map(|seed| seed.as_slice())
                 .collect::<Vec<&[u8]>>()
@@ -175,32 +176,31 @@ mod tests {
 
     #[test]
     fn test_seeds() {
-        let tip_distribution_program = Pubkey::new_unique();
-        let seeds = ClaimStatusPayer::seeds(&tip_distribution_program);
+        let ncn = Pubkey::new_unique();
+        let seeds = AccountPayer::seeds(&ncn);
 
         // Verify we get exactly 2 seeds
         assert_eq!(seeds.len(), 2);
 
         // Verify first seed is the string literal
-        assert_eq!(seeds[0], b"claim_status_payer".to_vec());
+        assert_eq!(seeds[0], b"account_payer".to_vec());
 
         // Verify second seed is the pubkey bytes
-        assert_eq!(seeds[1], tip_distribution_program.to_bytes().to_vec());
+        assert_eq!(seeds[1], ncn.to_bytes().to_vec());
     }
 
     #[test]
     fn test_find_program_address() {
         let program_id = Pubkey::new_unique();
-        let tip_distribution_program = Pubkey::new_unique();
+        let ncn = Pubkey::new_unique();
 
-        let (pda, bump, seeds) =
-            ClaimStatusPayer::find_program_address(&program_id, &tip_distribution_program);
+        let (pda, bump, seeds) = AccountPayer::find_program_address(&program_id, &ncn);
 
-        // Verify we get 3 seeds (original 2 plus the tip_distribution_program bytes)
+        // Verify we get 3 seeds (original 2 plus the ncn bytes)
         assert_eq!(seeds.len(), 3);
-        assert_eq!(seeds[0], b"claim_status_payer".to_vec());
-        assert_eq!(seeds[1], tip_distribution_program.to_bytes().to_vec());
-        assert_eq!(seeds[2], tip_distribution_program.to_bytes().to_vec());
+        assert_eq!(seeds[0], b"account_payer".to_vec());
+        assert_eq!(seeds[1], ncn.to_bytes().to_vec());
+        assert_eq!(seeds[2], ncn.to_bytes().to_vec());
 
         // Verify we can recreate the same PDA
         let seeds_slice: Vec<&[u8]> = seeds.iter().map(|s| s.as_slice()).collect();

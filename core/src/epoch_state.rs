@@ -3,7 +3,10 @@ use std::mem::size_of;
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{
+    account_info::AccountInfo, clock::DEFAULT_SLOTS_PER_EPOCH, msg, program_error::ProgramError,
+    pubkey::Pubkey,
+};
 
 use crate::{
     constants::MAX_OPERATORS, discriminators::Discriminators, error::TipRouterError,
@@ -15,7 +18,8 @@ use crate::{
 pub enum AccountStatus {
     DNE = 0,
     Created = 1,
-    Closed = 2,
+    CreatedWithReceiver = 2,
+    Closed = 3,
 }
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
@@ -51,7 +55,8 @@ impl EpochAccountStatus {
         match u {
             0 => Ok(AccountStatus::DNE),
             1 => Ok(AccountStatus::Created),
-            2 => Ok(AccountStatus::Closed),
+            2 => Ok(AccountStatus::CreatedWithReceiver),
+            3 => Ok(AccountStatus::Closed),
             _ => Err(TipRouterError::InvalidAccountStatus),
         }
     }
@@ -126,9 +131,8 @@ impl EpochAccountStatus {
     }
 
     pub fn are_all_closed(&self) -> bool {
-        if self.epoch_state != AccountStatus::Closed as u8 {
-            return false;
-        }
+        // We don't need to check epoch state since it's the account we are closing
+
         if self.weight_table != AccountStatus::Closed as u8 {
             return false;
         }
@@ -149,7 +153,7 @@ impl EpochAccountStatus {
         }
 
         for ncn_reward_router in self.ncn_reward_router.iter() {
-            if *ncn_reward_router == AccountStatus::Created as u8 {
+            if *ncn_reward_router == AccountStatus::CreatedWithReceiver as u8 {
                 return false;
             }
         }
@@ -243,6 +247,9 @@ pub struct EpochState {
     /// The time this snapshot was created
     slot_created: PodU64,
 
+    /// The time consensus was reached
+    slot_consensus_reached: PodU64,
+
     /// The number of operators
     operator_count: PodU64,
 
@@ -296,6 +303,7 @@ impl EpochState {
             epoch: PodU64::from(epoch),
             bump,
             slot_created: PodU64::from(slot_created),
+            slot_consensus_reached: PodU64::from(u64::MAX),
             operator_count: PodU64::from(0),
             vault_count: PodU64::from(0),
             account_status: EpochAccountStatus::default(),
@@ -317,7 +325,7 @@ impl EpochState {
         // Check all other accounts are closed
         if !self.account_status.are_all_closed() {
             msg!("Cannot close Epoch State until all other accounts are closed");
-            return Err(TipRouterError::CannotCloseAccount.into());
+            return Err(TipRouterError::CannotCloseAccount);
         }
 
         Ok(())
@@ -402,6 +410,23 @@ impl EpochState {
 
     pub fn slot_created(&self) -> u64 {
         self.slot_created.into()
+    }
+
+    pub fn slot_consensus_reached(&self) -> Result<u64, TipRouterError> {
+        if self.slot_consensus_reached == PodU64::from(u64::MAX) {
+            Err(TipRouterError::ConsensusNotReached)
+        } else {
+            Ok(self.slot_consensus_reached.into())
+        }
+    }
+
+    pub fn epoch_consensus_reached(&self) -> Result<u64, TipRouterError> {
+        let slot_consensus_reached = self.slot_consensus_reached()?;
+        let epoch_consensus_reached = slot_consensus_reached
+            .checked_div(DEFAULT_SLOTS_PER_EPOCH)
+            .ok_or(TipRouterError::DenominatorIsZero)?;
+
+        Ok(epoch_consensus_reached)
     }
 
     pub fn operator_count(&self) -> u64 {
@@ -521,17 +546,21 @@ impl EpochState {
         self.upload_progress = Progress::new(1);
     }
 
-    pub fn update_cast_vote(&mut self) -> Result<(), TipRouterError> {
+    pub fn update_consensus_reached(&mut self, current_slot: u64) -> Result<(), TipRouterError> {
+        self.slot_consensus_reached = PodU64::from(current_slot);
         self.voting_progress.increment_one()
     }
 
+    // Just tracks the amount of times set_merkle_root is called
     pub fn update_set_merkle_root(&mut self) -> Result<(), TipRouterError> {
-        self.upload_progress.increment_one()
+        self.upload_progress.increment_one()?;
+        self.upload_progress.set_total(self.upload_progress.tally());
+        Ok(())
     }
 
     pub fn update_realloc_base_reward_router(&mut self) {
         self.account_status
-            .set_base_reward_router(AccountStatus::Created);
+            .set_base_reward_router(AccountStatus::CreatedWithReceiver);
         self.base_distribution_progress = Progress::new(0);
     }
 
@@ -543,7 +572,7 @@ impl EpochState {
         self.account_status.set_ncn_reward_router(
             ncn_operator_index,
             group,
-            AccountStatus::Created,
+            AccountStatus::CreatedWithReceiver,
         )?;
         self.ncn_distribution_progress
             [Self::get_ncn_reward_router_index(ncn_operator_index, group)?] = Progress::new(0);
@@ -653,10 +682,7 @@ impl EpochState {
             return Ok(State::SetupRouter);
         }
 
-        //TODO set back when upload is implemented
-        // if !self.upload_progress.is_complete() {
-        //     return Ok(State::Upload);
-        // }
+        // The upload state is not required to progress to the next state
 
         if !self.total_distribution_progress.is_complete()
             || self.total_distribution_progress.total() == 0

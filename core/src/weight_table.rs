@@ -60,7 +60,7 @@ impl WeightTable {
     pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
         if epoch_state.epoch().ne(&self.epoch()) {
             msg!("Weight Table epoch does not match Epoch State");
-            return Err(TipRouterError::CannotCloseAccount.into());
+            return Err(TipRouterError::CannotCloseAccount);
         }
 
         Ok(())

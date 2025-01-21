@@ -232,27 +232,39 @@ pub enum JitoTipRouterError {
     /// 8768 - Invalid epochs before stall
     #[error("Invalid epochs before stall")]
     InvalidEpochsBeforeStall = 0x2240,
-    /// 8769 - Invalid slots after consensus
+    /// 8769 - Invalid epochs before claim
+    #[error("Invalid epochs before claim")]
+    InvalidEpochsBeforeClaim = 0x2241,
+    /// 8770 - Invalid slots after consensus
     #[error("Invalid slots after consensus")]
-    InvalidSlotsAfterConsensus = 0x2241,
-    /// 8770 - Vault needs to be updated
+    InvalidSlotsAfterConsensus = 0x2242,
+    /// 8771 - Vault needs to be updated
     #[error("Vault needs to be updated")]
-    VaultNeedsUpdate = 0x2242,
-    /// 8771 - Invalid Account Status
+    VaultNeedsUpdate = 0x2243,
+    /// 8772 - Invalid Account Status
     #[error("Invalid Account Status")]
-    InvalidAccountStatus = 0x2243,
-    /// 8772 - Account already initialized
+    InvalidAccountStatus = 0x2244,
+    /// 8773 - Account already initialized
     #[error("Account already initialized")]
-    AccountAlreadyInitialized = 0x2244,
-    /// 8773 - Cannot vote with uninitialized account
+    AccountAlreadyInitialized = 0x2245,
+    /// 8774 - Cannot vote with uninitialized account
     #[error("Cannot vote with uninitialized account")]
-    BadBallot = 0x2245,
-    /// 8774 - Cannot route until voting is over
+    BadBallot = 0x2246,
+    /// 8775 - Cannot route until voting is over
     #[error("Cannot route until voting is over")]
-    VotingIsNotOver = 0x2246,
-    /// 8775 - Operator is not in snapshot
+    VotingIsNotOver = 0x2247,
+    /// 8776 - Operator is not in snapshot
     #[error("Operator is not in snapshot")]
-    OperatorIsNotInSnapshot = 0x2247,
+    OperatorIsNotInSnapshot = 0x2248,
+    /// 8777 - Invalid account_to_close Discriminator
+    #[error("Invalid account_to_close Discriminator")]
+    InvalidAccountToCloseDiscriminator = 0x2249,
+    /// 8778 - Cannot close account
+    #[error("Cannot close account")]
+    CannotCloseAccount = 0x224A,
+    /// 8779 - Invalid DAO wallet
+    #[error("Invalid DAO wallet")]
+    InvalidDaoWallet = 0x224B,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

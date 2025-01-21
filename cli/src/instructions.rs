@@ -36,10 +36,10 @@ use jito_tip_router_client::instructions::{
     RouteNcnRewardsBuilder, SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
 };
 use jito_tip_router_core::{
+    account_payer::AccountPayer,
     ballot_box::BallotBox,
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
-    claim_status_payer::ClaimStatusPayer,
     config::Config as TipRouterConfig,
     constants::MAX_REALLOC_BYTES,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
@@ -97,7 +97,7 @@ pub async fn admin_create_config(
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
-    let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+    let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
     );
@@ -109,7 +109,7 @@ pub async fn admin_create_config(
         .config(config)
         .ncn_admin(keypair.pubkey())
         .ncn(ncn)
-        .claim_status_payer(claim_status_payer)
+        .account_payer(account_payer)
         .epochs_before_stall(epochs_before_stall)
         .valid_slots_after_consensus(valid_slots_after_consensus)
         .dao_fee_bps(dao_fee_bps)
@@ -159,7 +159,7 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
     let (vault_registry, _, _) =
         VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
 
-    let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+    let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
     );
@@ -170,7 +170,7 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
     if vault_registry_account.is_none() {
         let initialize_vault_registry_ix = InitializeVaultRegistryBuilder::new()
             .config(config)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .ncn(ncn)
             .vault_registry(vault_registry)
             .instruction();
@@ -192,7 +192,7 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
         .config(config)
         .vault_registry(vault_registry)
         .ncn(ncn)
-        .claim_status_payer(claim_status_payer)
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
 
@@ -323,7 +323,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+    let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
     );
@@ -338,7 +338,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
             .epoch_state(epoch_state)
             .ncn(ncn)
             .epoch(epoch)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .instruction();
 
@@ -361,7 +361,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
         .epoch_state(epoch_state)
         .ncn(ncn)
         .epoch(epoch)
-        .claim_status_payer(claim_status_payer)
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
 
@@ -402,7 +402,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+    let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
     );
@@ -417,7 +417,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
             .ncn(ncn)
             .epoch_state(epoch_state)
             .weight_table(weight_table)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -443,7 +443,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
         .epoch_state(epoch_state)
         .vault_registry(vault_registry)
         .epoch(epoch)
-        .claim_status_payer(claim_status_payer)
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
 
@@ -588,7 +588,7 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
     let (epoch_snapshot, _, _) =
         EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+    let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
     );
@@ -599,7 +599,7 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
         .epoch_state(epoch_state)
         .weight_table(weight_table)
         .epoch_snapshot(epoch_snapshot)
-        .claim_status_payer(claim_status_payer)
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .epoch(epoch)
         .instruction();
@@ -644,7 +644,7 @@ pub async fn create_operator_snapshot(
         epoch,
     );
 
-    let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+    let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
     );
@@ -662,7 +662,7 @@ pub async fn create_operator_snapshot(
             .ncn_operator_state(ncn_operator_state)
             .epoch_snapshot(epoch_snapshot)
             .operator_snapshot(operator_snapshot)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -686,7 +686,7 @@ pub async fn create_operator_snapshot(
 
     // Realloc operator snapshot
     let realloc_operator_snapshot_ix = ReallocOperatorSnapshotBuilder::new()
-        .ncn_config(config)
+        .config(config)
         .restaking_config(RestakingConfig::find_program_address(&handler.restaking_program_id).0)
         .ncn(ncn)
         .operator(operator)
@@ -694,7 +694,7 @@ pub async fn create_operator_snapshot(
         .ncn_operator_state(ncn_operator_state)
         .epoch_snapshot(epoch_snapshot)
         .operator_snapshot(operator_snapshot)
-        .claim_status_payer(claim_status_payer)
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .epoch(epoch)
         .instruction();
@@ -808,7 +808,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (ballot_box, _, _) =
         BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+    let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
     );
@@ -824,7 +824,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
             .ballot_box(ballot_box)
             .ncn(ncn)
             .epoch(epoch)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .instruction();
 
@@ -848,7 +848,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
         .ballot_box(ballot_box)
         .ncn(ncn)
         .epoch(epoch)
-        .claim_status_payer(claim_status_payer)
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
 
@@ -947,7 +947,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
     let (base_reward_receiver, _, _) =
         BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+    let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
     );
@@ -961,7 +961,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
             .epoch_state(epoch_state)
             .base_reward_router(base_reward_router)
             .base_reward_receiver(base_reward_receiver)
-            .claim_status_payer(claim_status_payer)
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -985,7 +985,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
         .base_reward_router(base_reward_router)
         .ncn(ncn)
         .epoch(epoch)
-        .claim_status_payer(claim_status_payer)
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
 
@@ -1047,7 +1047,7 @@ pub async fn create_ncn_reward_router(
         epoch,
     );
 
-    let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
+    let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
     );
@@ -1059,7 +1059,7 @@ pub async fn create_ncn_reward_router(
         .operator_snapshot(operator_snapshot)
         .ncn_reward_router(ncn_reward_router)
         .ncn_reward_receiver(ncn_reward_receiver)
-        .claim_status_payer(claim_status_payer)
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .ncn_fee_group(ncn_fee_group.group)
         .epoch(epoch)

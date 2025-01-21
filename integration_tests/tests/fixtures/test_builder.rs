@@ -6,11 +6,15 @@ use std::{
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
 use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
+    ballot_box::BallotBox,
     base_fee_group::BaseFeeGroup,
-    base_reward_router::BaseRewardReceiver,
-    claim_status_payer::ClaimStatusPayer,
+    base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     constants::{JITOSOL_MINT, JTO_SOL_FEED},
+    epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
+    ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
+    weight_table::WeightTable,
 };
 use solana_program::{
     clock::Clock, native_token::sol_to_lamports, program_pack::Pack, pubkey::Pubkey,
@@ -24,7 +28,6 @@ use solana_sdk::{
     epoch_schedule::EpochSchedule,
     native_token::lamports_to_sol,
     signature::{Keypair, Signer},
-    system_program,
     transaction::Transaction,
 };
 use spl_stake_pool::find_withdraw_authority_program_address;
@@ -154,23 +157,6 @@ impl TestBuilder {
         );
         // Needed to create JitoSOL mint since we don't have access to the original keypair in the tests
         program_test.add_account(JITOSOL_MINT, token_mint_account(&jitosol_mint_authority.0));
-
-        // Add ClaimStatusPayer
-        {
-            let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-                &jito_tip_router_program::id(),
-                &jito_tip_distribution::ID,
-            );
-            let claim_status_payer_account = Account {
-                lamports: sol_to_lamports(10_000.0),
-                owner: system_program::id(),
-                executable: false,
-                rent_epoch: 0,
-                data: vec![],
-            };
-
-            program_test.add_account(claim_status_payer, claim_status_payer_account);
-        }
 
         Self {
             context: program_test.start_with_context().await,
@@ -838,7 +824,7 @@ impl TestBuilder {
     }
 
     // 12 - Create Routers
-    pub async fn add_routers_for_tests_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+    pub async fn add_routers_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
 
         let ncn: Pubkey = test_ncn.ncn_root.ncn_pubkey;
@@ -997,7 +983,7 @@ impl TestBuilder {
     ) -> TestResult<()> {
         let mut stake_pool_client = self.stake_pool_client();
 
-        self.add_routers_for_tests_ncn(test_ncn).await?;
+        self.add_routers_for_test_ncn(test_ncn).await?;
 
         stake_pool_client
             .update_stake_pool_balance(pool_root)
@@ -1007,6 +993,194 @@ impl TestBuilder {
             .await?;
         self.route_in_ncn_rewards_for_test_ncn(test_ncn, pool_root)
             .await?;
+
+        Ok(())
+    }
+
+    pub async fn close_epoch_accounts_for_test_ncn(
+        &mut self,
+        test_ncn: &TestNcn,
+    ) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+
+        let epoch_to_close = self.clock().await.epoch;
+        let ncn: Pubkey = test_ncn.ncn_root.ncn_pubkey;
+
+        // Wait until we can close the accounts
+        {
+            let config = self.tip_router_client().get_ncn_config(ncn).await?;
+            let epochs_before_claim = config.epochs_before_claim();
+
+            self.warp_epoch_incremental(epochs_before_claim + 1).await?;
+        }
+
+        // Close Accounts in reverse order of creation
+
+        // NCN Reward Routers
+        for operator_root in test_ncn.operators.iter() {
+            let operator = operator_root.operator_pubkey;
+            for group in NcnFeeGroup::all_groups().iter() {
+                println!("Closing NCN Reward Router for operator: {}", operator);
+                let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+                    &jito_tip_router_program::id(),
+                    *group,
+                    &operator,
+                    &ncn,
+                    epoch_to_close,
+                );
+
+                let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+                    &jito_tip_router_program::id(),
+                    *group,
+                    &operator,
+                    &ncn,
+                    epoch_to_close,
+                );
+
+                tip_router_client.airdrop(&ncn_reward_receiver, 0.1).await?;
+
+                tip_router_client
+                    .do_close_epoch_account(
+                        ncn,
+                        epoch_to_close,
+                        ncn_reward_router,
+                        Some(ncn_reward_receiver),
+                    )
+                    .await?;
+
+                let result = self.get_account(&ncn_reward_router).await?;
+                assert!(result.is_none());
+
+                let result = self.get_account(&ncn_reward_receiver).await?;
+                assert!(result.is_none());
+            }
+        }
+
+        // Base Reward Router
+        {
+            println!("Closing Base Reward Router");
+            let (base_reward_router, _, _) = BaseRewardRouter::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            let (base_reward_receiver, _, _) = BaseRewardReceiver::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .airdrop(&base_reward_receiver, 0.1)
+                .await?;
+
+            tip_router_client
+                .do_close_epoch_account(
+                    ncn,
+                    epoch_to_close,
+                    base_reward_router,
+                    Some(base_reward_receiver),
+                )
+                .await?;
+
+            let result = self.get_account(&base_reward_router).await?;
+            assert!(result.is_none());
+
+            let result = self.get_account(&base_reward_receiver).await?;
+            assert!(result.is_none());
+        }
+
+        // Ballot Box
+        {
+            println!("Closing Ballot Box");
+            let (ballot_box, _, _) = BallotBox::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, ballot_box, None)
+                .await?;
+
+            let result = self.get_account(&ballot_box).await?;
+            assert!(result.is_none());
+        }
+
+        // Operator Snapshots
+        for operator_root in test_ncn.operators.iter() {
+            println!(
+                "Closing Operator Snapshot for operator: {}",
+                operator_root.operator_pubkey
+            );
+            let operator = operator_root.operator_pubkey;
+
+            let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+                &jito_tip_router_program::id(),
+                &operator,
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, operator_snapshot, None)
+                .await?;
+
+            let result = self.get_account(&operator_snapshot).await?;
+            assert!(result.is_none());
+        }
+
+        // Epoch Snapshot
+        {
+            println!("Closing Epoch Snapshot");
+            let (epoch_snapshot, _, _) = EpochSnapshot::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, epoch_snapshot, None)
+                .await?;
+
+            let result = self.get_account(&epoch_snapshot).await?;
+            assert!(result.is_none());
+        }
+
+        // Weight Table
+        {
+            println!("Closing Weight Table");
+            let (weight_table, _, _) = WeightTable::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, weight_table, None)
+                .await?;
+
+            let result = self.get_account(&weight_table).await?;
+            assert!(result.is_none());
+        }
+
+        // Epoch State
+        {
+            println!("Closing Epoch State");
+            let (epoch_state, _, _) = EpochState::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, epoch_state, None)
+                .await?;
+
+            let result = self.get_account(&epoch_state).await?;
+            assert!(result.is_none());
+        }
 
         Ok(())
     }

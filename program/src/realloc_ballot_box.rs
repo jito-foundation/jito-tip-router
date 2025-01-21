@@ -2,7 +2,7 @@ use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::loader::load_system_program;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    ballot_box::BallotBox, claim_status_payer::ClaimStatusPayer, config::Config as NcnConfig,
+    account_payer::AccountPayer, ballot_box::BallotBox, config::Config as NcnConfig,
     epoch_state::EpochState, utils::get_new_size,
 };
 use solana_program::{
@@ -17,8 +17,7 @@ pub fn process_realloc_ballot_box(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, ballot_box, ncn, claim_status_payer, system_program] = accounts
-    else {
+    let [epoch_state, ncn_config, ballot_box, ncn, account_payer, system_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
@@ -26,7 +25,7 @@ pub fn process_realloc_ballot_box(
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     let (ballot_box_pda, ballot_box_bump, _) =
         BallotBox::find_program_address(program_id, ncn.key, epoch);
@@ -44,7 +43,7 @@ pub fn process_realloc_ballot_box(
             new_size
         );
 
-        ClaimStatusPayer::pay_and_realloc(program_id, claim_status_payer, ballot_box, new_size)?;
+        AccountPayer::pay_and_realloc(program_id, ncn.key, account_payer, ballot_box, new_size)?;
     }
 
     let should_initialize = ballot_box.data_len() >= BallotBox::SIZE

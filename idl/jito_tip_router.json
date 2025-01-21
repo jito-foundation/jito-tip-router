@@ -31,7 +31,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -56,6 +56,10 @@
         },
         {
           "name": "epochsBeforeStall",
+          "type": "u64"
+        },
+        {
+          "name": "epochsBeforeClaim",
           "type": "u64"
         },
         {
@@ -87,7 +91,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -122,7 +126,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -192,7 +196,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -232,7 +236,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -277,7 +281,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -327,7 +331,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -416,7 +420,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -476,7 +480,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -506,7 +510,7 @@
           "isSigner": false
         },
         {
-          "name": "ncnConfig",
+          "name": "config",
           "isMut": false,
           "isSigner": false
         },
@@ -541,7 +545,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -661,7 +665,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -706,7 +710,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -898,7 +902,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -943,7 +947,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -998,7 +1002,7 @@
           "isSigner": false
         },
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
@@ -1510,12 +1514,22 @@
       "name": "ClaimWithPayer",
       "accounts": [
         {
-          "name": "claimStatusPayer",
+          "name": "accountPayer",
           "isMut": true,
           "isSigner": false
         },
         {
           "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionConfig",
           "isMut": false,
           "isSigner": false
         },
@@ -1567,6 +1581,62 @@
       }
     },
     {
+      "name": "CloseEpochAccount",
+      "accounts": [
+        {
+          "name": "epochState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "accountToClose",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "accountPayer",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "daoWallet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "receiverToClose",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true
+        }
+      ],
+      "args": [
+        {
+          "name": "epoch",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 27
+      }
+    },
+    {
       "name": "AdminSetParameters",
       "accounts": [
         {
@@ -1593,6 +1663,12 @@
           }
         },
         {
+          "name": "epochsBeforeClaim",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
           "name": "validSlotsAfterConsensus",
           "type": {
             "option": "u64"
@@ -1601,7 +1677,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 27
+        "value": 28
       }
     },
     {
@@ -1663,7 +1739,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 28
+        "value": 29
       }
     },
     {
@@ -1700,7 +1776,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 29
+        "value": 30
       }
     },
     {
@@ -1749,7 +1825,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 30
+        "value": 31
       }
     },
     {
@@ -1792,7 +1868,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 31
+        "value": 32
       }
     },
     {
@@ -1848,7 +1924,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 32
+        "value": 33
       }
     },
     {
@@ -1907,7 +1983,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 33
+        "value": 34
       }
     }
   ],
@@ -2124,6 +2200,12 @@
           },
           {
             "name": "epochsBeforeStall",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "epochsBeforeClaim",
             "type": {
               "defined": "PodU64"
             }
@@ -2361,6 +2443,12 @@
             }
           },
           {
+            "name": "slotConsensusReached",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
             "name": "operatorCount",
             "type": {
               "defined": "PodU64"
@@ -2485,6 +2573,12 @@
           },
           {
             "name": "slotCreated",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "ncnOperatorIndex",
             "type": {
               "defined": "PodU64"
             }
@@ -2677,7 +2771,7 @@
             }
           },
           {
-            "name": "isInitialized",
+            "name": "isValid",
             "type": {
               "defined": "PodBool"
             }
@@ -3600,38 +3694,58 @@
     },
     {
       "code": 8769,
+      "name": "InvalidEpochsBeforeClaim",
+      "msg": "Invalid epochs before claim"
+    },
+    {
+      "code": 8770,
       "name": "InvalidSlotsAfterConsensus",
       "msg": "Invalid slots after consensus"
     },
     {
-      "code": 8770,
+      "code": 8771,
       "name": "VaultNeedsUpdate",
       "msg": "Vault needs to be updated"
     },
     {
-      "code": 8771,
+      "code": 8772,
       "name": "InvalidAccountStatus",
       "msg": "Invalid Account Status"
     },
     {
-      "code": 8772,
+      "code": 8773,
       "name": "AccountAlreadyInitialized",
       "msg": "Account already initialized"
     },
     {
-      "code": 8773,
+      "code": 8774,
       "name": "BadBallot",
       "msg": "Cannot vote with uninitialized account"
     },
     {
-      "code": 8774,
+      "code": 8775,
       "name": "VotingIsNotOver",
       "msg": "Cannot route until voting is over"
     },
     {
-      "code": 8775,
+      "code": 8776,
       "name": "OperatorIsNotInSnapshot",
       "msg": "Operator is not in snapshot"
+    },
+    {
+      "code": 8777,
+      "name": "InvalidAccountToCloseDiscriminator",
+      "msg": "Invalid account_to_close Discriminator"
+    },
+    {
+      "code": 8778,
+      "name": "CannotCloseAccount",
+      "msg": "Cannot close account"
+    },
+    {
+      "code": 8779,
+      "name": "InvalidDaoWallet",
+      "msg": "Invalid DAO wallet"
     }
   ],
   "metadata": {

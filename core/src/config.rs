@@ -44,6 +44,7 @@ impl Discriminator for Config {
 impl Config {
     pub const SIZE: usize = 8 + size_of::<Self>();
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         ncn: &Pubkey,
         tie_breaker_admin: &Pubkey,

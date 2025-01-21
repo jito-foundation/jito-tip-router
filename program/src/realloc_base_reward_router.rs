@@ -2,8 +2,8 @@ use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::loader::load_system_program;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    base_reward_router::BaseRewardRouter, claim_status_payer::ClaimStatusPayer,
-    config::Config as NcnConfig, epoch_state::EpochState, utils::get_new_size,
+    account_payer::AccountPayer, base_reward_router::BaseRewardRouter, config::Config as NcnConfig,
+    epoch_state::EpochState, utils::get_new_size,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -15,7 +15,7 @@ pub fn process_realloc_base_reward_router(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, base_reward_router, ncn, claim_status_payer, system_program] =
+    let [epoch_state, ncn_config, base_reward_router, ncn, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -25,7 +25,7 @@ pub fn process_realloc_base_reward_router(
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     let (base_reward_router_pda, base_reward_router_bump, _) =
         BaseRewardRouter::find_program_address(program_id, ncn.key, epoch);
@@ -42,9 +42,10 @@ pub fn process_realloc_base_reward_router(
             base_reward_router.data_len(),
             new_size
         );
-        ClaimStatusPayer::pay_and_realloc(
+        AccountPayer::pay_and_realloc(
             program_id,
-            claim_status_payer,
+            ncn.key,
+            account_payer,
             base_reward_router,
             new_size,
         )?;

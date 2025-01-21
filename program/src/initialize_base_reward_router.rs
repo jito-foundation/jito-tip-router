@@ -1,8 +1,8 @@
 use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
+    account_payer::AccountPayer,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
-    claim_status_payer::ClaimStatusPayer,
     epoch_state::EpochState,
 };
 use solana_program::{
@@ -16,7 +16,7 @@ pub fn process_initialize_base_reward_router(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn, base_reward_router, base_reward_receiver, claim_status_payer, system_program] =
+    let [epoch_state, ncn, base_reward_router, base_reward_receiver, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -25,7 +25,7 @@ pub fn process_initialize_base_reward_router(
     EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
-    ClaimStatusPayer::load(program_id, claim_status_payer, true)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     load_system_account(base_reward_router, true)?;
     load_system_program(system_program)?;
@@ -45,9 +45,10 @@ pub fn process_initialize_base_reward_router(
         ncn.key,
         epoch
     );
-    ClaimStatusPayer::pay_and_create_account(
+    AccountPayer::pay_and_create_account(
         program_id,
-        claim_status_payer,
+        ncn.key,
+        account_payer,
         base_reward_router,
         system_program,
         program_id,
@@ -61,9 +62,10 @@ pub fn process_initialize_base_reward_router(
         min_rent,
         base_reward_receiver.key
     );
-    ClaimStatusPayer::transfer(
+    AccountPayer::transfer(
         program_id,
-        claim_status_payer,
+        ncn.key,
+        account_payer,
         base_reward_receiver,
         min_rent,
     )?;

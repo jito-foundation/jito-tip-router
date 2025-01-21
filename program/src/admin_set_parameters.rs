@@ -4,8 +4,8 @@ use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     config::Config,
     constants::{
-        MAX_EPOCHS_BEFORE_STALL, MAX_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_BEFORE_STALL,
-        MIN_SLOTS_AFTER_CONSENSUS,
+        MAX_EPOCHS_BEFORE_CLAIM, MAX_EPOCHS_BEFORE_STALL, MAX_SLOTS_AFTER_CONSENSUS,
+        MIN_EPOCHS_BEFORE_CLAIM, MIN_EPOCHS_BEFORE_STALL, MIN_SLOTS_AFTER_CONSENSUS,
     },
     error::TipRouterError,
 };
@@ -18,6 +18,7 @@ pub fn process_admin_set_parameters(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     epochs_before_stall: Option<u64>,
+    epochs_before_claim: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
 ) -> ProgramResult {
     let [config, ncn_account, ncn_admin] = accounts else {
@@ -51,6 +52,14 @@ pub fn process_admin_set_parameters(
         }
         msg!("Updated epochs_before_stall to {}", epochs);
         config.epochs_before_stall = PodU64::from(epochs);
+    }
+
+    if let Some(epochs) = epochs_before_claim {
+        if !(MIN_EPOCHS_BEFORE_CLAIM..=MAX_EPOCHS_BEFORE_CLAIM).contains(&epochs) {
+            return Err(TipRouterError::InvalidEpochsBeforeClaim.into());
+        }
+        msg!("Updated epochs_before_claim to {}", epochs);
+        config.epochs_before_claim = PodU64::from(epochs);
     }
 
     if let Some(slots) = valid_slots_after_consensus {
