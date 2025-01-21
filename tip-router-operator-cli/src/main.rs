@@ -60,9 +60,11 @@ async fn main() -> Result<()> {
             tip_distribution_program_id,
             tip_payment_program_id,
             tip_router_program_id,
+            backup_snapshots_dir,
             enable_snapshots,
             num_monitored_epochs,
             start_next_epoch,
+            override_target_slot,
         } => {
             info!("Running Tip Router...");
 
@@ -88,6 +90,17 @@ async fn main() -> Result<()> {
                     }
                     sleep(Duration::from_secs(60)).await;
                 }
+            });
+
+            tokio::spawn(async move {
+                BackupSnapshotMonitor::new(
+                    &cli.rpc_url,
+                    cli.full_snapshots_path,
+                    backup_snapshots_dir,
+                    override_target_slot,
+                )
+                .run()
+                .await?;
             });
 
             if start_next_epoch {

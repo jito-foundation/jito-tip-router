@@ -49,6 +49,9 @@ pub enum Commands {
         #[arg(long, env)]
         tip_router_program_id: Pubkey,
 
+        #[arg(long, env)]
+        backup_snapshots_dir: PathBuf,
+
         #[arg(long, env, default_value = "false")]
         enable_snapshots: bool,
 
@@ -57,6 +60,9 @@ pub enum Commands {
 
         #[arg(long, env, default_value = "false")]
         start_next_epoch: bool,
+
+        #[arg(long, env)]
+        override_target_slot: Option<u64>,
     },
     SnapshotSlot {
         #[arg(short, long, env)]

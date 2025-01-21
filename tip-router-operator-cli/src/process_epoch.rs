@@ -26,7 +26,7 @@ pub async fn wait_for_next_epoch(rpc_client: &RpcClient) -> Result<()> {
     }
 }
 
-pub async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<(u64, u64)> {
+pub fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<(u64, u64)> {
     let epoch_info = rpc_client.get_epoch_info()?;
     let current_slot = epoch_info.absolute_slot;
     let slot_index = epoch_info.slot_index;
