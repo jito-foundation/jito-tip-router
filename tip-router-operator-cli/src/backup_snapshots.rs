@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use solana_client::rpc_client::RpcClient;
+use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::time;
@@ -10,7 +11,7 @@ use crate::process_epoch::get_previous_epoch_last_slot;
 #[derive(Debug)]
 struct SnapshotInfo {
     path: PathBuf,
-    start_slot: u64,
+    _start_slot: u64,
     end_slot: u64,
 }
 
@@ -37,7 +38,7 @@ impl SnapshotInfo {
 
         Some(SnapshotInfo {
             path,
-            start_slot,
+            _start_slot: start_slot,
             end_slot,
         })
     }
@@ -71,8 +72,9 @@ impl BackupSnapshotMonitor {
             return Ok(target_slot);
         }
 
+        // Get the last slot of the current epoch
         let (_, last_slot) = get_previous_epoch_last_slot(&self.rpc_client)?;
-        Ok(last_slot)
+        Ok(last_slot + DEFAULT_SLOTS_PER_EPOCH)
     }
 
     /// Finds the most recent incremental snapshot that's before our target slot

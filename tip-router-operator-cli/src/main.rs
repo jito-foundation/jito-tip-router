@@ -3,6 +3,7 @@ use ::{
     clap::Parser,
     ellipsis_client::{ClientSubset, EllipsisClient},
     log::{error, info},
+    solana_metrics::set_host_id,
     solana_rpc_client::rpc_client::RpcClient,
     solana_sdk::{
         clock::DEFAULT_SLOTS_PER_EPOCH,
@@ -29,6 +30,8 @@ async fn main() -> Result<()> {
         RpcClient::new(cli.rpc_url.clone()),
         &read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
     )?;
+
+    set_host_id(cli.operator_address.to_string());
 
     let test_meta_merkle_root = [1; 32];
     let ix = spl_memo::build_memo(&test_meta_merkle_root.to_vec(), &[&keypair.pubkey()]);
@@ -94,16 +97,21 @@ async fn main() -> Result<()> {
                 }
             });
 
+            // Track incremental snapshots and backup to `backup_snapshots_dir`
             tokio::spawn(async move {
-                // TODO log failure
-                BackupSnapshotMonitor::new(
-                    &rpc_url,
-                    full_snapshots_path,
-                    backup_snapshots_dir,
-                    override_target_slot,
-                )
-                .run()
-                .await;
+                loop {
+                    if let Err(e) = BackupSnapshotMonitor::new(
+                        &rpc_url,
+                        full_snapshots_path.clone(),
+                        backup_snapshots_dir.clone(),
+                        override_target_slot,
+                    )
+                    .run()
+                    .await
+                    {
+                        error!("Error running backup snapshot monitor: {}", e);
+                    }
+                }
             });
 
             if start_next_epoch {
@@ -113,7 +121,13 @@ async fn main() -> Result<()> {
             loop {
                 // Get the last slot of the previous epoch
                 let (previous_epoch, previous_epoch_slot) =
-                    get_previous_epoch_last_slot(&rpc_client)?;
+                    if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client) {
+                        (epoch, slot)
+                    } else {
+                        error!("Error getting previous epoch slot");
+                        continue;
+                    };
+
                 info!("Processing slot {} for previous epoch", previous_epoch_slot);
 
                 // Process the epoch
@@ -133,12 +147,14 @@ async fn main() -> Result<()> {
                     Ok(_) => info!("Successfully processed epoch"),
                     Err(e) => {
                         error!("Error processing epoch: {}", e);
-                        // Continue to next epoch even if this one failed
                     }
                 }
 
                 // Wait for epoch change
-                wait_for_next_epoch(&rpc_client).await?;
+                if let Err(e) = wait_for_next_epoch(&rpc_client).await {
+                    error!("Error waiting for next epoch: {}", e);
+                    sleep(Duration::from_secs(60)).await;
+                }
             }
         }
         Commands::SnapshotSlot {
