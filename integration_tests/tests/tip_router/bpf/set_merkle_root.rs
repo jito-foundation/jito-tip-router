@@ -5,7 +5,6 @@ mod set_merkle_root {
     };
     use jito_tip_router_core::{
         ballot_box::{Ballot, BallotBox},
-        claim_status_payer::ClaimStatusPayer,
         config::Config as NcnConfig,
         epoch_state::EpochState,
         error::TipRouterError,
@@ -316,13 +315,6 @@ mod set_merkle_root {
         assert_eq!(merkle_root.max_num_nodes, node.max_num_nodes);
         assert_eq!(merkle_root.max_total_claim, node.max_total_claim);
 
-        //// Test claiming for a node ////
-        let (claim_status_payer, _, _) = ClaimStatusPayer::find_program_address(
-            &jito_tip_router_program::id(),
-            &jito_tip_distribution::ID,
-        );
-        tip_router_client.airdrop(&claim_status_payer, 10.0).await?;
-
         let tip_distribution_account = meta_merkle_tree_fixture
             .generated_merkle_tree_fixture
             .test_generated_merkle_tree
@@ -343,6 +335,7 @@ mod set_merkle_root {
         // Run passthrough claim
         tip_router_client
             .do_claim_with_payer(
+                ncn_address,
                 target_claimant,
                 tip_distribution_account,
                 target_claimant_node_proof.clone(),

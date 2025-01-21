@@ -22,7 +22,7 @@ pub struct InitializeNcnRewardRouter {
 
     pub ncn_reward_receiver: solana_program::pubkey::Pubkey,
 
-    pub payer: solana_program::pubkey::Pubkey,
+    pub account_payer: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
@@ -65,7 +65,8 @@ impl InitializeNcnRewardRouter {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.payer, true,
+            self.account_payer,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
@@ -120,7 +121,7 @@ pub struct InitializeNcnRewardRouterInstructionArgs {
 ///   3. `[]` operator_snapshot
 ///   4. `[writable]` ncn_reward_router
 ///   5. `[writable]` ncn_reward_receiver
-///   6. `[writable, signer]` payer
+///   6. `[writable]` account_payer
 ///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeNcnRewardRouterBuilder {
@@ -130,7 +131,7 @@ pub struct InitializeNcnRewardRouterBuilder {
     operator_snapshot: Option<solana_program::pubkey::Pubkey>,
     ncn_reward_router: Option<solana_program::pubkey::Pubkey>,
     ncn_reward_receiver: Option<solana_program::pubkey::Pubkey>,
-    payer: Option<solana_program::pubkey::Pubkey>,
+    account_payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     ncn_fee_group: Option<u8>,
     epoch: Option<u64>,
@@ -181,8 +182,8 @@ impl InitializeNcnRewardRouterBuilder {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
+    pub fn account_payer(&mut self, account_payer: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.account_payer = Some(account_payer);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -234,7 +235,7 @@ impl InitializeNcnRewardRouterBuilder {
             ncn_reward_receiver: self
                 .ncn_reward_receiver
                 .expect("ncn_reward_receiver is not set"),
-            payer: self.payer.expect("payer is not set"),
+            account_payer: self.account_payer.expect("account_payer is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -265,7 +266,7 @@ pub struct InitializeNcnRewardRouterCpiAccounts<'a, 'b> {
 
     pub ncn_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
@@ -287,7 +288,7 @@ pub struct InitializeNcnRewardRouterCpi<'a, 'b> {
 
     pub ncn_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -308,7 +309,7 @@ impl<'a, 'b> InitializeNcnRewardRouterCpi<'a, 'b> {
             operator_snapshot: accounts.operator_snapshot,
             ncn_reward_router: accounts.ncn_reward_router,
             ncn_reward_receiver: accounts.ncn_reward_receiver,
-            payer: accounts.payer,
+            account_payer: accounts.account_payer,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -372,8 +373,8 @@ impl<'a, 'b> InitializeNcnRewardRouterCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.payer.key,
-            true,
+            *self.account_payer.key,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
@@ -405,7 +406,7 @@ impl<'a, 'b> InitializeNcnRewardRouterCpi<'a, 'b> {
         account_infos.push(self.operator_snapshot.clone());
         account_infos.push(self.ncn_reward_router.clone());
         account_infos.push(self.ncn_reward_receiver.clone());
-        account_infos.push(self.payer.clone());
+        account_infos.push(self.account_payer.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -429,7 +430,7 @@ impl<'a, 'b> InitializeNcnRewardRouterCpi<'a, 'b> {
 ///   3. `[]` operator_snapshot
 ///   4. `[writable]` ncn_reward_router
 ///   5. `[writable]` ncn_reward_receiver
-///   6. `[writable, signer]` payer
+///   6. `[writable]` account_payer
 ///   7. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeNcnRewardRouterCpiBuilder<'a, 'b> {
@@ -446,7 +447,7 @@ impl<'a, 'b> InitializeNcnRewardRouterCpiBuilder<'a, 'b> {
             operator_snapshot: None,
             ncn_reward_router: None,
             ncn_reward_receiver: None,
-            payer: None,
+            account_payer: None,
             system_program: None,
             ncn_fee_group: None,
             epoch: None,
@@ -500,8 +501,11 @@ impl<'a, 'b> InitializeNcnRewardRouterCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
+    pub fn account_payer(
+        &mut self,
+        account_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.account_payer = Some(account_payer);
         self
     }
     #[inline(always)]
@@ -598,7 +602,10 @@ impl<'a, 'b> InitializeNcnRewardRouterCpiBuilder<'a, 'b> {
                 .ncn_reward_receiver
                 .expect("ncn_reward_receiver is not set"),
 
-            payer: self.instruction.payer.expect("payer is not set"),
+            account_payer: self
+                .instruction
+                .account_payer
+                .expect("account_payer is not set"),
 
             system_program: self
                 .instruction
@@ -622,7 +629,7 @@ struct InitializeNcnRewardRouterCpiBuilderInstruction<'a, 'b> {
     operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    account_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_fee_group: Option<u8>,
     epoch: Option<u64>,

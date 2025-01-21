@@ -637,10 +637,6 @@ mod tests {
         // ADJUSTED FEE ERROR
         let error = FeeConfig::new(&ok_wallet, MAX_FEE_BPS, OK_FEE, OK_FEE, OK_EPOCH);
         assert_eq!(error.err().unwrap(), TipRouterError::DenominatorIsZero);
-
-        //TODO should it be an error if adjusted fee is 0?
-        // let error = FeeConfig::new(ok_wallet, MAX_FEE_BPS - 1, 1000, OK_FEE, OK_EPOCH);
-        // assert_eq!(error.err().unwrap(), TipRouterError::DenominatorIsZero);
     }
 
     #[test]

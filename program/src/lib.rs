@@ -1,3 +1,4 @@
+mod admin_initialize_config;
 mod admin_register_st_mint;
 mod admin_set_config_fees;
 mod admin_set_new_admin;
@@ -7,6 +8,7 @@ mod admin_set_tie_breaker;
 mod admin_set_weight;
 mod cast_vote;
 mod claim_with_payer;
+mod close_epoch_account;
 mod distribute_base_ncn_reward_route;
 mod distribute_base_rewards;
 mod distribute_ncn_operator_rewards;
@@ -15,7 +17,6 @@ mod initialize_ballot_box;
 mod initialize_base_reward_router;
 mod initialize_epoch_snapshot;
 mod initialize_epoch_state;
-mod initialize_ncn_config;
 mod initialize_ncn_reward_router;
 mod initialize_operator_snapshot;
 mod initialize_vault_registry;
@@ -47,13 +48,14 @@ use solana_program::{
 use solana_security_txt::security_txt;
 
 use crate::{
+    admin_initialize_config::process_admin_initialize_config,
     admin_register_st_mint::process_admin_register_st_mint,
     admin_set_config_fees::process_admin_set_config_fees,
     admin_set_parameters::process_admin_set_parameters,
     admin_set_st_mint::process_admin_set_st_mint,
     admin_set_tie_breaker::process_admin_set_tie_breaker,
     admin_set_weight::process_admin_set_weight, cast_vote::process_cast_vote,
-    claim_with_payer::process_claim_with_payer,
+    claim_with_payer::process_claim_with_payer, close_epoch_account::process_close_epoch_account,
     distribute_base_ncn_reward_route::process_distribute_base_ncn_reward_route,
     distribute_base_rewards::process_distribute_base_rewards,
     distribute_ncn_operator_rewards::process_distribute_ncn_operator_rewards,
@@ -61,7 +63,6 @@ use crate::{
     initialize_ballot_box::process_initialize_ballot_box,
     initialize_base_reward_router::process_initialize_base_reward_router,
     initialize_epoch_snapshot::process_initialize_epoch_snapshot,
-    initialize_ncn_config::process_initialize_ncn_config,
     initialize_ncn_reward_router::process_initialize_ncn_reward_router,
     initialize_operator_snapshot::process_initialize_operator_snapshot,
     initialize_vault_registry::process_initialize_vault_registry,
@@ -114,16 +115,18 @@ pub fn process_instruction(
             dao_fee_bps,
             default_ncn_fee_bps,
             epochs_before_stall,
+            epochs_after_consensus_before_close,
             valid_slots_after_consensus,
         } => {
             msg!("Instruction: InitializeConfig");
-            process_initialize_ncn_config(
+            process_admin_initialize_config(
                 program_id,
                 accounts,
                 block_engine_fee_bps,
                 dao_fee_bps,
                 default_ncn_fee_bps,
                 epochs_before_stall,
+                epochs_after_consensus_before_close,
                 valid_slots_after_consensus,
             )
         }
@@ -286,12 +289,17 @@ pub fn process_instruction(
             msg!("Instruction: ClaimWithPayer");
             process_claim_with_payer(program_id, accounts, proof, amount, bump)
         }
+        TipRouterInstruction::CloseEpochAccount { epoch } => {
+            msg!("Instruction: CloseEpochAccount");
+            process_close_epoch_account(program_id, accounts, epoch)
+        }
 
         // ---------------------------------------------------- //
         //                        ADMIN                         //
         // ---------------------------------------------------- //
         TipRouterInstruction::AdminSetParameters {
             epochs_before_stall,
+            epochs_after_consensus_before_close,
             valid_slots_after_consensus,
         } => {
             msg!("Instruction: AdminSetParameters");
@@ -299,6 +307,7 @@ pub fn process_instruction(
                 program_id,
                 accounts,
                 epochs_before_stall,
+                epochs_after_consensus_before_close,
                 valid_slots_after_consensus,
             )
         }

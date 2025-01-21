@@ -1,16 +1,13 @@
 use jito_bytemuck::{AccountDeserialize, Discriminator};
-use jito_jsm_core::{
-    create_account,
-    loader::{load_signer, load_system_account, load_system_program},
-};
+use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    config::Config, epoch_snapshot::EpochSnapshot, epoch_state::EpochState, error::TipRouterError,
-    fees, weight_table::WeightTable,
+    account_payer::AccountPayer, config::Config, epoch_snapshot::EpochSnapshot,
+    epoch_state::EpochState, error::TipRouterError, fees, weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
 /// Initializes an Epoch Snapshot
@@ -19,7 +16,8 @@ pub fn process_initialize_epoch_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, config, ncn, weight_table, epoch_snapshot, payer, system_program] = accounts
+    let [epoch_state, config, ncn, weight_table, epoch_snapshot, account_payer, system_program] =
+        accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -27,10 +25,10 @@ pub fn process_initialize_epoch_snapshot(
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     Config::load(program_id, ncn.key, config, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     load_system_account(epoch_snapshot, true)?;
     load_system_program(system_program)?;
-    load_signer(payer, true)?;
 
     let current_slot = Clock::get()?.slot;
     let ncn_epoch = epoch;
@@ -65,15 +63,14 @@ pub fn process_initialize_epoch_snapshot(
         ncn.key,
         ncn_epoch
     );
-    create_account(
-        payer,
+    AccountPayer::pay_and_create_account(
+        program_id,
+        ncn.key,
+        account_payer,
         epoch_snapshot,
         system_program,
         program_id,
-        &Rent::get()?,
-        8_u64
-            .checked_add(std::mem::size_of::<EpochSnapshot>() as u64)
-            .unwrap(),
+        EpochSnapshot::SIZE,
         &epoch_snapshot_seeds,
     )?;
 

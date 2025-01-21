@@ -7,15 +7,16 @@ use jito_bytemuck::{
 };
 use shank::{ShankAccount, ShankType};
 use solana_program::{
-    account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
-    system_program,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction, system_program,
+    sysvar::Sysvar,
 };
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     ballot_box::BallotBox, base_fee_group::BaseFeeGroup, constants::MAX_OPERATORS,
-    discriminators::Discriminators, error::TipRouterError, fees::Fees, loaders::check_load,
-    ncn_fee_group::NcnFeeGroup,
+    discriminators::Discriminators, epoch_state::EpochState, error::TipRouterError, fees::Fees,
+    loaders::check_load, ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -105,6 +106,15 @@ impl BaseRewardRouter {
         self.ncn_fee_group_reward_routes = [NcnRewardRoute::default(); MAX_OPERATORS];
 
         self.reset_routing_state();
+    }
+
+    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
+        if epoch_state.epoch().ne(&self.epoch()) {
+            msg!("Base Reward Router epoch does not match Epoch State");
+            return Err(TipRouterError::CannotCloseAccount);
+        }
+
+        Ok(())
     }
 
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
@@ -451,7 +461,7 @@ impl BaseRewardRouter {
         &self.ncn
     }
 
-    pub fn ncn_epoch(&self) -> u64 {
+    pub fn epoch(&self) -> u64 {
         self.epoch.into()
     }
 
@@ -793,20 +803,20 @@ impl NcnRewardRoute {
 pub struct BaseRewardReceiver {}
 
 impl BaseRewardReceiver {
-    pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
+    pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {
         vec![
             b"base_reward_receiver".to_vec(),
             ncn.to_bytes().to_vec(),
-            ncn_epoch.to_le_bytes().to_vec(),
+            epoch.to_le_bytes().to_vec(),
         ]
     }
 
     pub fn find_program_address(
         program_id: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(ncn, ncn_epoch);
+        let seeds = Self::seeds(ncn, epoch);
         let (address, bump) = Pubkey::find_program_address(
             &seeds.iter().map(|s| s.as_slice()).collect::<Vec<_>>(),
             program_id,
@@ -818,11 +828,11 @@ impl BaseRewardReceiver {
         program_id: &Pubkey,
         account: &AccountInfo,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let system_program_id = system_program::id();
-        let expected_pda = Self::find_program_address(program_id, ncn, ncn_epoch).0;
+        let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
         check_load(
             &system_program_id,
             account,
@@ -830,6 +840,72 @@ impl BaseRewardReceiver {
             None,
             expect_writable,
         )
+    }
+
+    #[inline(always)]
+    pub fn close<'a, 'info>(
+        program_id: &Pubkey,
+        ncn: &Pubkey,
+        epoch: u64,
+        base_reward_receiver: &'a AccountInfo<'info>,
+        dao_wallet: &'a AccountInfo<'info>,
+        account_payer: &'a AccountInfo<'info>,
+    ) -> ProgramResult {
+        let min_rent = Rent::get()?.minimum_balance(0);
+
+        let delta_lamports = base_reward_receiver.lamports().saturating_sub(min_rent);
+        if delta_lamports > 0 {
+            Self::transfer(
+                program_id,
+                ncn,
+                epoch,
+                base_reward_receiver,
+                dao_wallet,
+                delta_lamports,
+            )?;
+        }
+
+        Self::transfer(
+            program_id,
+            ncn,
+            epoch,
+            base_reward_receiver,
+            account_payer,
+            min_rent,
+        )
+    }
+
+    #[inline(always)]
+    pub fn transfer<'a, 'info>(
+        program_id: &Pubkey,
+        ncn: &Pubkey,
+        epoch: u64,
+        base_reward_receiver: &'a AccountInfo<'info>,
+        to: &'a AccountInfo<'info>,
+        lamports: u64,
+    ) -> ProgramResult {
+        let (
+            base_reward_receiver_address,
+            base_reward_receiver_bump,
+            mut base_reward_receiver_seeds,
+        ) = Self::find_program_address(program_id, ncn, epoch);
+        base_reward_receiver_seeds.push(vec![base_reward_receiver_bump]);
+
+        if base_reward_receiver_address.ne(base_reward_receiver.key) {
+            msg!("Incorrect base reward receiver PDA");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        invoke_signed(
+            &system_instruction::transfer(&base_reward_receiver_address, to.key, lamports),
+            &[base_reward_receiver.clone(), to.clone()],
+            &[base_reward_receiver_seeds
+                .iter()
+                .map(|seed| seed.as_slice())
+                .collect::<Vec<&[u8]>>()
+                .as_slice()],
+        )?;
+        Ok(())
     }
 }
 

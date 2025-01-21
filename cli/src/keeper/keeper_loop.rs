@@ -123,9 +123,11 @@ pub async fn run_keeper(handler: &CliHandler) {
                 State::SetupRouter => crank_setup_router(handler, state.epoch).await,
                 State::Upload => crank_upload(handler, state.epoch).await,
                 State::Distribute => crank_distribute(handler, state.epoch).await,
-                State::Done => {
+                State::Close => {
+                    //TODO this
                     info!("Epoch Complete");
                     current_epoch += 1;
+
                     Ok(())
                 }
             };

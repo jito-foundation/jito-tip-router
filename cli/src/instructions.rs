@@ -21,6 +21,7 @@ use jito_restaking_core::{
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
 };
+use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_client::instructions::{
     AdminRegisterStMintBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder, CastVoteBuilder,
     DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
@@ -35,6 +36,7 @@ use jito_tip_router_client::instructions::{
     RouteNcnRewardsBuilder, SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
 };
 use jito_tip_router_core::{
+    account_payer::AccountPayer,
     ballot_box::BallotBox,
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
@@ -95,6 +97,11 @@ pub async fn admin_create_config(
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
+    let (account_payer, _, _) = AccountPayer::find_program_address(
+        &handler.tip_router_program_id,
+        &jito_tip_distribution::ID,
+    );
+
     let fee_wallet = fee_wallet.unwrap_or_else(|| keypair.pubkey());
     let tie_breaker_admin = tie_breaker_admin.unwrap_or_else(|| keypair.pubkey());
 
@@ -102,6 +109,7 @@ pub async fn admin_create_config(
         .config(config)
         .ncn_admin(keypair.pubkey())
         .ncn(ncn)
+        .account_payer(account_payer)
         .epochs_before_stall(epochs_before_stall)
         .valid_slots_after_consensus(valid_slots_after_consensus)
         .dao_fee_bps(dao_fee_bps)
@@ -143,8 +151,6 @@ pub async fn admin_create_config(
 }
 
 pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
-    let keypair = handler.keypair()?;
-
     let ncn = *handler.ncn()?;
 
     let (config, _, _) =
@@ -153,13 +159,18 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
     let (vault_registry, _, _) =
         VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
 
+    let (account_payer, _, _) = AccountPayer::find_program_address(
+        &handler.tip_router_program_id,
+        &jito_tip_distribution::ID,
+    );
+
     let vault_registry_account = get_account(handler, &vault_registry).await?;
 
     // Skip if vault registry already exists
     if vault_registry_account.is_none() {
         let initialize_vault_registry_ix = InitializeVaultRegistryBuilder::new()
             .config(config)
-            .payer(keypair.pubkey())
+            .account_payer(account_payer)
             .ncn(ncn)
             .vault_registry(vault_registry)
             .instruction();
@@ -181,7 +192,7 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
         .config(config)
         .vault_registry(vault_registry)
         .ncn(ncn)
-        .payer(keypair.pubkey())
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
 
@@ -304,8 +315,6 @@ pub async fn register_vault(handler: &CliHandler, vault: &Pubkey) -> Result<()> 
 }
 
 pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let keypair = handler.keypair()?;
-
     let ncn = *handler.ncn()?;
 
     let (config, _, _) =
@@ -313,6 +322,11 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
 
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (account_payer, _, _) = AccountPayer::find_program_address(
+        &handler.tip_router_program_id,
+        &jito_tip_distribution::ID,
+    );
 
     let epoch_state_account = get_account(handler, &epoch_state).await?;
 
@@ -324,7 +338,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
             .epoch_state(epoch_state)
             .ncn(ncn)
             .epoch(epoch)
-            .payer(keypair.pubkey())
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .instruction();
 
@@ -347,7 +361,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
         .epoch_state(epoch_state)
         .ncn(ncn)
         .epoch(epoch)
-        .payer(keypair.pubkey())
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
 
@@ -374,8 +388,6 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
 }
 
 pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let keypair = handler.keypair()?;
-
     let ncn = *handler.ncn()?;
 
     let (config, _, _) =
@@ -390,6 +402,11 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (account_payer, _, _) = AccountPayer::find_program_address(
+        &handler.tip_router_program_id,
+        &jito_tip_distribution::ID,
+    );
+
     let weight_table_account = get_account(handler, &weight_table).await?;
 
     // Skip if weight table already exists
@@ -400,7 +417,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
             .ncn(ncn)
             .epoch_state(epoch_state)
             .weight_table(weight_table)
-            .payer(keypair.pubkey())
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -426,7 +443,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
         .epoch_state(epoch_state)
         .vault_registry(vault_registry)
         .epoch(epoch)
-        .payer(keypair.pubkey())
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
 
@@ -557,8 +574,6 @@ pub async fn set_weight_with_st_mint(
 }
 
 pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let keypair = handler.keypair()?;
-
     let ncn = *handler.ncn()?;
 
     let (config, _, _) =
@@ -573,13 +588,18 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
     let (epoch_snapshot, _, _) =
         EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (account_payer, _, _) = AccountPayer::find_program_address(
+        &handler.tip_router_program_id,
+        &jito_tip_distribution::ID,
+    );
+
     let initialize_epoch_snapshot_ix = InitializeEpochSnapshotBuilder::new()
         .config(config)
         .ncn(ncn)
         .epoch_state(epoch_state)
         .weight_table(weight_table)
         .epoch_snapshot(epoch_snapshot)
-        .payer(keypair.pubkey())
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .epoch(epoch)
         .instruction();
@@ -601,8 +621,6 @@ pub async fn create_operator_snapshot(
     operator: &Pubkey,
     epoch: u64,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
-
     let ncn = *handler.ncn()?;
 
     let operator = *operator;
@@ -626,6 +644,11 @@ pub async fn create_operator_snapshot(
         epoch,
     );
 
+    let (account_payer, _, _) = AccountPayer::find_program_address(
+        &handler.tip_router_program_id,
+        &jito_tip_distribution::ID,
+    );
+
     let operator_snapshot_account = get_account(handler, &operator_snapshot).await?;
 
     // Skip if operator snapshot already exists
@@ -639,7 +662,7 @@ pub async fn create_operator_snapshot(
             .ncn_operator_state(ncn_operator_state)
             .epoch_snapshot(epoch_snapshot)
             .operator_snapshot(operator_snapshot)
-            .payer(keypair.pubkey())
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -663,7 +686,7 @@ pub async fn create_operator_snapshot(
 
     // Realloc operator snapshot
     let realloc_operator_snapshot_ix = ReallocOperatorSnapshotBuilder::new()
-        .ncn_config(config)
+        .config(config)
         .restaking_config(RestakingConfig::find_program_address(&handler.restaking_program_id).0)
         .ncn(ncn)
         .operator(operator)
@@ -671,7 +694,7 @@ pub async fn create_operator_snapshot(
         .ncn_operator_state(ncn_operator_state)
         .epoch_snapshot(epoch_snapshot)
         .operator_snapshot(operator_snapshot)
-        .payer(keypair.pubkey())
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .epoch(epoch)
         .instruction();
@@ -774,8 +797,6 @@ pub async fn snapshot_vault_operator_delegation(
 }
 
 pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let keypair = handler.keypair()?;
-
     let ncn = *handler.ncn()?;
 
     let (config, _, _) =
@@ -786,6 +807,11 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
 
     let (ballot_box, _, _) =
         BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (account_payer, _, _) = AccountPayer::find_program_address(
+        &handler.tip_router_program_id,
+        &jito_tip_distribution::ID,
+    );
 
     let ballot_box_account = get_account(handler, &ballot_box).await?;
 
@@ -798,7 +824,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
             .ballot_box(ballot_box)
             .ncn(ncn)
             .epoch(epoch)
-            .payer(keypair.pubkey())
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .instruction();
 
@@ -822,7 +848,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
         .ballot_box(ballot_box)
         .ncn(ncn)
         .epoch(epoch)
-        .payer(keypair.pubkey())
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
 
@@ -887,7 +913,7 @@ pub async fn admin_cast_vote(
         .epoch_snapshot(epoch_snapshot)
         .operator_snapshot(operator_snapshot)
         .operator(operator)
-        .operator_admin(keypair.pubkey())
+        .operator_voter(keypair.pubkey())
         .meta_merkle_root(meta_merkle_root)
         .epoch(epoch)
         .instruction();
@@ -910,8 +936,6 @@ pub async fn admin_cast_vote(
 }
 
 pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let keypair = handler.keypair()?;
-
     let ncn = *handler.ncn()?;
 
     let (epoch_state, _, _) =
@@ -923,6 +947,11 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
     let (base_reward_receiver, _, _) =
         BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (account_payer, _, _) = AccountPayer::find_program_address(
+        &handler.tip_router_program_id,
+        &jito_tip_distribution::ID,
+    );
+
     let base_reward_router_account = get_account(handler, &base_reward_router).await?;
 
     // Skip if base reward router already exists
@@ -932,7 +961,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
             .epoch_state(epoch_state)
             .base_reward_router(base_reward_router)
             .base_reward_receiver(base_reward_receiver)
-            .payer(keypair.pubkey())
+            .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
@@ -956,7 +985,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
         .base_reward_router(base_reward_router)
         .ncn(ncn)
         .epoch(epoch)
-        .payer(keypair.pubkey())
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
 
@@ -988,8 +1017,6 @@ pub async fn create_ncn_reward_router(
     operator: &Pubkey,
     epoch: u64,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
-
     let ncn = *handler.ncn()?;
 
     let operator = *operator;
@@ -1020,6 +1047,11 @@ pub async fn create_ncn_reward_router(
         epoch,
     );
 
+    let (account_payer, _, _) = AccountPayer::find_program_address(
+        &handler.tip_router_program_id,
+        &jito_tip_distribution::ID,
+    );
+
     let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
         .epoch_state(epoch_state)
         .ncn(ncn)
@@ -1027,7 +1059,7 @@ pub async fn create_ncn_reward_router(
         .operator_snapshot(operator_snapshot)
         .ncn_reward_router(ncn_reward_router)
         .ncn_reward_receiver(ncn_reward_receiver)
-        .payer(keypair.pubkey())
+        .account_payer(account_payer)
         .system_program(system_program::id())
         .ncn_fee_group(ncn_fee_group.group)
         .epoch(epoch)

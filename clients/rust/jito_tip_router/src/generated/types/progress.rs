@@ -13,4 +13,5 @@ use borsh::BorshSerialize;
 pub struct Progress {
     pub tally: u64,
     pub total: u64,
+    pub reserved: [u8; 32],
 }

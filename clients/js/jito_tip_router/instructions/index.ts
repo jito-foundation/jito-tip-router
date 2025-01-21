@@ -15,6 +15,7 @@ export * from './adminSetTieBreaker';
 export * from './adminSetWeight';
 export * from './castVote';
 export * from './claimWithPayer';
+export * from './closeEpochAccount';
 export * from './distributeBaseNcnRewardRoute';
 export * from './distributeBaseRewards';
 export * from './distributeNcnOperatorRewards';

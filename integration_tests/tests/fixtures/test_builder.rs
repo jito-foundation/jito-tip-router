@@ -6,10 +6,16 @@ use std::{
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
 use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
+    account_payer::AccountPayer,
+    ballot_box::BallotBox,
     base_fee_group::BaseFeeGroup,
-    base_reward_router::BaseRewardReceiver,
+    base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     constants::{JITOSOL_MINT, JTO_SOL_FEED},
+    epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
+    ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
+    weight_table::WeightTable,
 };
 use solana_program::{
     clock::Clock, native_token::sol_to_lamports, program_pack::Pack, pubkey::Pubkey,
@@ -46,9 +52,7 @@ pub struct TestNcn {
     pub vaults: Vec<VaultRoot>,
 }
 
-//TODO implement for more fine-grained relationship control
 #[allow(dead_code)]
-
 pub struct TestNcnNode {
     pub ncn_root: NcnRoot,
     pub operator_root: OperatorRoot,
@@ -295,11 +299,15 @@ impl TestBuilder {
     // 1. Setup NCN
     pub async fn create_test_ncn(&mut self) -> TestResult<TestNcn> {
         let mut restaking_program_client = self.restaking_program_client();
+
         let mut vault_program_client = self.vault_program_client();
+
         let mut tip_router_client = self.tip_router_client();
 
         vault_program_client.do_initialize_config().await?;
+
         restaking_program_client.do_initialize_config().await?;
+
         let ncn_root = restaking_program_client
             .do_initialize_ncn(Some(self.context.payer.insecure_clone()))
             .await?;
@@ -815,7 +823,7 @@ impl TestBuilder {
     }
 
     // 12 - Create Routers
-    pub async fn add_routers_for_tests_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+    pub async fn add_routers_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
 
         let ncn: Pubkey = test_ncn.ncn_root.ncn_pubkey;
@@ -974,7 +982,7 @@ impl TestBuilder {
     ) -> TestResult<()> {
         let mut stake_pool_client = self.stake_pool_client();
 
-        self.add_routers_for_tests_ncn(test_ncn).await?;
+        self.add_routers_for_test_ncn(test_ncn).await?;
 
         stake_pool_client
             .update_stake_pool_balance(pool_root)
@@ -984,6 +992,268 @@ impl TestBuilder {
             .await?;
         self.route_in_ncn_rewards_for_test_ncn(test_ncn, pool_root)
             .await?;
+
+        Ok(())
+    }
+
+    pub async fn close_epoch_accounts_for_test_ncn(
+        &mut self,
+        test_ncn: &TestNcn,
+    ) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+
+        const EXTRA_SOL_TO_AIRDROP: f64 = 0.25;
+        const LAMPORTS_PER_SIGNATURE: u64 = 5_000;
+
+        let epoch_to_close = self.clock().await.epoch;
+        let ncn: Pubkey = test_ncn.ncn_root.ncn_pubkey;
+
+        let config_account = tip_router_client.get_ncn_config(ncn).await?;
+        let dao_wallet = *config_account
+            .fee_config
+            .base_fee_wallet(BaseFeeGroup::dao())
+            .expect("No DAO wallet ( do_close_epoch_account )");
+
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
+        let rent = self.context.banks_client.get_rent().await?;
+
+        // Wait until we can close the accounts
+        {
+            let epochs_after_consensus_before_close =
+                config_account.epochs_after_consensus_before_close();
+
+            self.warp_epoch_incremental(epochs_after_consensus_before_close + 1)
+                .await?;
+        }
+
+        // Close Accounts in reverse order of creation
+
+        // NCN Reward Routers
+        for operator_root in test_ncn.operators.iter() {
+            let operator = operator_root.operator_pubkey;
+            for group in NcnFeeGroup::all_groups().iter() {
+                let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+                    &jito_tip_router_program::id(),
+                    *group,
+                    &operator,
+                    &ncn,
+                    epoch_to_close,
+                );
+
+                let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+                    &jito_tip_router_program::id(),
+                    *group,
+                    &operator,
+                    &ncn,
+                    epoch_to_close,
+                );
+
+                tip_router_client
+                    .airdrop(&ncn_reward_receiver, EXTRA_SOL_TO_AIRDROP)
+                    .await?;
+
+                let dao_wallet_balance_before = {
+                    let account = self.get_account(&dao_wallet).await?;
+                    account.unwrap().lamports
+                };
+
+                let account_payer_balance_before = {
+                    let account = self.get_account(&account_payer).await?;
+                    account.unwrap().lamports
+                };
+
+                tip_router_client
+                    .do_close_epoch_account(
+                        ncn,
+                        epoch_to_close,
+                        ncn_reward_router,
+                        Some(ncn_reward_receiver),
+                    )
+                    .await?;
+
+                let dao_wallet_balance_after = {
+                    let account = self.get_account(&dao_wallet).await?;
+                    account.unwrap().lamports
+                };
+
+                let account_payer_balance_after = {
+                    let account = self.get_account(&account_payer).await?;
+                    account.unwrap().lamports
+                };
+
+                let router_rent = rent.minimum_balance(NcnRewardRouter::SIZE);
+                let receiver_rent = rent.minimum_balance(0);
+                assert_eq!(
+                    account_payer_balance_before + router_rent + receiver_rent,
+                    account_payer_balance_after
+                );
+
+                // DAO wallet is also the payer wallet
+                assert_eq!(
+                    dao_wallet_balance_before + sol_to_lamports(EXTRA_SOL_TO_AIRDROP)
+                        - LAMPORTS_PER_SIGNATURE,
+                    dao_wallet_balance_after
+                );
+
+                let result = self.get_account(&ncn_reward_router).await?;
+                assert!(result.is_none());
+
+                let result = self.get_account(&ncn_reward_receiver).await?;
+                assert!(result.is_none());
+            }
+        }
+
+        // Base Reward Router
+        {
+            let (base_reward_router, _, _) = BaseRewardRouter::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            let (base_reward_receiver, _, _) = BaseRewardReceiver::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .airdrop(&base_reward_receiver, EXTRA_SOL_TO_AIRDROP)
+                .await?;
+
+            let dao_wallet_balance_before = {
+                let account = self.get_account(&dao_wallet).await?;
+                account.unwrap().lamports
+            };
+
+            let account_payer_balance_before = {
+                let account = self.get_account(&account_payer).await?;
+                account.unwrap().lamports
+            };
+
+            tip_router_client
+                .do_close_epoch_account(
+                    ncn,
+                    epoch_to_close,
+                    base_reward_router,
+                    Some(base_reward_receiver),
+                )
+                .await?;
+
+            let dao_wallet_balance_after = {
+                let account = self.get_account(&dao_wallet).await?;
+                account.unwrap().lamports
+            };
+
+            let account_payer_balance_after = {
+                let account = self.get_account(&account_payer).await?;
+                account.unwrap().lamports
+            };
+
+            let router_rent = rent.minimum_balance(BaseRewardRouter::SIZE);
+            let receiver_rent = rent.minimum_balance(0);
+            assert_eq!(
+                account_payer_balance_before + router_rent + receiver_rent,
+                account_payer_balance_after
+            );
+
+            // DAO wallet is also the payer wallet
+            assert_eq!(
+                dao_wallet_balance_before + sol_to_lamports(EXTRA_SOL_TO_AIRDROP)
+                    - LAMPORTS_PER_SIGNATURE,
+                dao_wallet_balance_after
+            );
+
+            let result = self.get_account(&base_reward_router).await?;
+            assert!(result.is_none());
+
+            let result = self.get_account(&base_reward_receiver).await?;
+            assert!(result.is_none());
+        }
+
+        // Ballot Box
+        {
+            let (ballot_box, _, _) = BallotBox::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, ballot_box, None)
+                .await?;
+
+            let result = self.get_account(&ballot_box).await?;
+            assert!(result.is_none());
+        }
+
+        // Operator Snapshots
+        for operator_root in test_ncn.operators.iter() {
+            let operator = operator_root.operator_pubkey;
+
+            let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+                &jito_tip_router_program::id(),
+                &operator,
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, operator_snapshot, None)
+                .await?;
+
+            let result = self.get_account(&operator_snapshot).await?;
+            assert!(result.is_none());
+        }
+
+        // Epoch Snapshot
+        {
+            let (epoch_snapshot, _, _) = EpochSnapshot::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, epoch_snapshot, None)
+                .await?;
+
+            let result = self.get_account(&epoch_snapshot).await?;
+            assert!(result.is_none());
+        }
+
+        // Weight Table
+        {
+            let (weight_table, _, _) = WeightTable::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, weight_table, None)
+                .await?;
+
+            let result = self.get_account(&weight_table).await?;
+            assert!(result.is_none());
+        }
+
+        // Epoch State
+        {
+            let (epoch_state, _, _) = EpochState::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, epoch_state, None)
+                .await?;
+
+            let result = self.get_account(&epoch_state).await?;
+            assert!(result.is_none());
+        }
 
         Ok(())
     }

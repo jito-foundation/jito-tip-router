@@ -20,14 +20,11 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -44,7 +41,7 @@ export type InitializeBaseRewardRouterInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountBaseRewardRouter extends string | IAccountMeta<string> = string,
   TAccountBaseRewardReceiver extends string | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountAccountPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -63,10 +60,9 @@ export type InitializeBaseRewardRouterInstruction<
       TAccountBaseRewardReceiver extends string
         ? WritableAccount<TAccountBaseRewardReceiver>
         : TAccountBaseRewardReceiver,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
+      TAccountAccountPayer extends string
+        ? WritableAccount<TAccountAccountPayer>
+        : TAccountAccountPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -118,14 +114,14 @@ export type InitializeBaseRewardRouterInput<
   TAccountNcn extends string = string,
   TAccountBaseRewardRouter extends string = string,
   TAccountBaseRewardReceiver extends string = string,
-  TAccountPayer extends string = string,
+  TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   ncn: Address<TAccountNcn>;
   baseRewardRouter: Address<TAccountBaseRewardRouter>;
   baseRewardReceiver: Address<TAccountBaseRewardReceiver>;
-  payer: TransactionSigner<TAccountPayer>;
+  accountPayer: Address<TAccountAccountPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: InitializeBaseRewardRouterInstructionDataArgs['epoch'];
 };
@@ -135,7 +131,7 @@ export function getInitializeBaseRewardRouterInstruction<
   TAccountNcn extends string,
   TAccountBaseRewardRouter extends string,
   TAccountBaseRewardReceiver extends string,
-  TAccountPayer extends string,
+  TAccountAccountPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
@@ -144,7 +140,7 @@ export function getInitializeBaseRewardRouterInstruction<
     TAccountNcn,
     TAccountBaseRewardRouter,
     TAccountBaseRewardReceiver,
-    TAccountPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -154,7 +150,7 @@ export function getInitializeBaseRewardRouterInstruction<
   TAccountNcn,
   TAccountBaseRewardRouter,
   TAccountBaseRewardReceiver,
-  TAccountPayer,
+  TAccountAccountPayer,
   TAccountSystemProgram
 > {
   // Program address.
@@ -173,7 +169,7 @@ export function getInitializeBaseRewardRouterInstruction<
       value: input.baseRewardReceiver ?? null,
       isWritable: true,
     },
-    payer: { value: input.payer ?? null, isWritable: true },
+    accountPayer: { value: input.accountPayer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -197,7 +193,7 @@ export function getInitializeBaseRewardRouterInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.baseRewardRouter),
       getAccountMeta(accounts.baseRewardReceiver),
-      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.accountPayer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -210,7 +206,7 @@ export function getInitializeBaseRewardRouterInstruction<
     TAccountNcn,
     TAccountBaseRewardRouter,
     TAccountBaseRewardReceiver,
-    TAccountPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >;
 
@@ -227,7 +223,7 @@ export type ParsedInitializeBaseRewardRouterInstruction<
     ncn: TAccountMetas[1];
     baseRewardRouter: TAccountMetas[2];
     baseRewardReceiver: TAccountMetas[3];
-    payer: TAccountMetas[4];
+    accountPayer: TAccountMetas[4];
     systemProgram: TAccountMetas[5];
   };
   data: InitializeBaseRewardRouterInstructionData;
@@ -258,7 +254,7 @@ export function parseInitializeBaseRewardRouterInstruction<
       ncn: getNextAccount(),
       baseRewardRouter: getNextAccount(),
       baseRewardReceiver: getNextAccount(),
-      payer: getNextAccount(),
+      accountPayer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeBaseRewardRouterInstructionDataDecoder().decode(

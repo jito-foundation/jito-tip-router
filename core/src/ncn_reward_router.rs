@@ -8,14 +8,16 @@ use jito_bytemuck::{
 use jito_vault_core::MAX_BPS;
 use shank::{ShankAccount, ShankType};
 use solana_program::{
-    account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
-    system_program,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction, system_program,
+    sysvar::Sysvar,
 };
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     constants::MAX_VAULTS, discriminators::Discriminators, epoch_snapshot::OperatorSnapshot,
-    error::TipRouterError, loaders::check_load, ncn_fee_group::NcnFeeGroup,
+    epoch_state::EpochState, error::TipRouterError, loaders::check_load,
+    ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -34,6 +36,8 @@ pub struct NcnRewardRouter {
     bump: u8,
     /// The slot the router was created
     slot_created: PodU64,
+    /// The operator ncn index
+    ncn_operator_index: PodU64,
     /// The total rewards that have been routed ( in lamports )
     total_rewards: PodU64,
     /// The rewards in the reward pool ( in lamports )
@@ -67,8 +71,9 @@ impl NcnRewardRouter {
     pub fn new(
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
+        operator_ncn_index: u64,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
         bump: u8,
         slot_created: u64,
     ) -> Self {
@@ -76,9 +81,10 @@ impl NcnRewardRouter {
             ncn_fee_group,
             operator: *operator,
             ncn: *ncn,
-            epoch: PodU64::from(ncn_epoch),
+            epoch: PodU64::from(epoch),
             bump,
             slot_created: PodU64::from(slot_created),
+            ncn_operator_index: PodU64::from(operator_ncn_index),
             total_rewards: PodU64::from(0),
             reward_pool: PodU64::from(0),
             rewards_processed: PodU64::from(0),
@@ -92,11 +98,20 @@ impl NcnRewardRouter {
         }
     }
 
+    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
+        if epoch_state.epoch().ne(&self.epoch()) {
+            msg!("Ncn Reward Router epoch does not match Epoch State");
+            return Err(TipRouterError::CannotCloseAccount);
+        }
+
+        Ok(())
+    }
+
     pub fn seeds(
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -104,7 +119,7 @@ impl NcnRewardRouter {
                 vec![ncn_fee_group.group],
                 operator.to_bytes().to_vec(),
                 ncn.to_bytes().to_vec(),
-                ncn_epoch.to_le_bytes().to_vec(),
+                epoch.to_le_bytes().to_vec(),
             ]
             .iter()
             .cloned(),
@@ -116,9 +131,9 @@ impl NcnRewardRouter {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(ncn_fee_group, operator, ncn, ncn_epoch);
+        let seeds = Self::seeds(ncn_fee_group, operator, ncn, epoch);
         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
         (pda, bump, seeds)
@@ -129,12 +144,12 @@ impl NcnRewardRouter {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda =
-            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, ncn_epoch).0;
+            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, epoch).0;
         check_load(
             program_id,
             account,
@@ -156,8 +171,12 @@ impl NcnRewardRouter {
         &self.ncn
     }
 
-    pub fn ncn_epoch(&self) -> u64 {
+    pub fn epoch(&self) -> u64 {
         self.epoch.into()
+    }
+
+    pub fn ncn_operator_index(&self) -> u64 {
+        self.ncn_operator_index.into()
     }
 
     pub fn slot_created(&self) -> u64 {
@@ -582,7 +601,7 @@ impl NcnRewardRouter {
     }
 }
 
-/// Uninitiatilized, no-data account used to hold SOL for routing rewards to NcnRewardRouter
+/// Uninitialized, no-data account used to hold SOL for routing rewards to NcnRewardRouter
 /// Must be empty and uninitialized to be used as a payer or `transfer` instructions fail
 pub struct NcnRewardReceiver {}
 
@@ -591,14 +610,14 @@ impl NcnRewardReceiver {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> Vec<Vec<u8>> {
         vec![
             b"ncn_reward_receiver".to_vec(),
             vec![ncn_fee_group.group],
             operator.to_bytes().to_vec(),
             ncn.to_bytes().to_vec(),
-            ncn_epoch.to_le_bytes().to_vec(),
+            epoch.to_le_bytes().to_vec(),
         ]
     }
 
@@ -607,9 +626,9 @@ impl NcnRewardReceiver {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(ncn_fee_group, operator, ncn, ncn_epoch);
+        let seeds = Self::seeds(ncn_fee_group, operator, ncn, epoch);
         let (address, bump) = Pubkey::find_program_address(
             &seeds.iter().map(|s| s.as_slice()).collect::<Vec<_>>(),
             program_id,
@@ -623,12 +642,12 @@ impl NcnRewardReceiver {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let system_program_id = system_program::id();
         let expected_pda =
-            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, ncn_epoch).0;
+            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, epoch).0;
         check_load(
             &system_program_id,
             account,
@@ -636,6 +655,79 @@ impl NcnRewardReceiver {
             None,
             expect_writable,
         )
+    }
+
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn close<'a, 'info>(
+        program_id: &Pubkey,
+        ncn_fee_group: NcnFeeGroup,
+        operator: &Pubkey,
+        ncn: &Pubkey,
+        epoch: u64,
+        ncn_reward_receiver: &'a AccountInfo<'info>,
+        dao_wallet: &'a AccountInfo<'info>,
+        account_payer: &'a AccountInfo<'info>,
+    ) -> ProgramResult {
+        let min_rent = Rent::get()?.minimum_balance(0);
+
+        let delta_lamports = ncn_reward_receiver.lamports().saturating_sub(min_rent);
+        if delta_lamports > 0 {
+            Self::transfer(
+                program_id,
+                ncn_fee_group,
+                operator,
+                ncn,
+                epoch,
+                ncn_reward_receiver,
+                dao_wallet,
+                delta_lamports,
+            )?;
+        }
+
+        Self::transfer(
+            program_id,
+            ncn_fee_group,
+            operator,
+            ncn,
+            epoch,
+            ncn_reward_receiver,
+            account_payer,
+            min_rent,
+        )
+    }
+
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn transfer<'a, 'info>(
+        program_id: &Pubkey,
+        ncn_fee_group: NcnFeeGroup,
+        operator: &Pubkey,
+        ncn: &Pubkey,
+        epoch: u64,
+        ncn_reward_receiver: &'a AccountInfo<'info>,
+        to: &'a AccountInfo<'info>,
+        lamports: u64,
+    ) -> ProgramResult {
+        let (ncn_reward_receiver_address, ncn_reward_receiver_bump, mut ncn_reward_receiver_seeds) =
+            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, epoch);
+        ncn_reward_receiver_seeds.push(vec![ncn_reward_receiver_bump]);
+
+        if ncn_reward_receiver_address.ne(ncn_reward_receiver.key) {
+            msg!("Incorrect NCN reward receiver PDA");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        invoke_signed(
+            &system_instruction::transfer(&ncn_reward_receiver_address, to.key, lamports),
+            &[ncn_reward_receiver.clone(), to.clone()],
+            &[ncn_reward_receiver_seeds
+                .iter()
+                .map(|seed| seed.as_slice())
+                .collect::<Vec<&[u8]>>()
+                .as_slice()],
+        )?;
+        Ok(())
     }
 }
 
@@ -714,7 +806,7 @@ mod tests {
     ) -> OperatorSnapshot {
         let operator = Pubkey::new_unique();
         let ncn = Pubkey::new_unique();
-        let ncn_epoch = TEST_EPOCH;
+        let epoch = TEST_EPOCH;
         let bump = 1;
         let current_slot = TEST_CURRENT_SLOT;
         let is_active = true;
@@ -724,7 +816,7 @@ mod tests {
         OperatorSnapshot::new(
             &operator,
             &ncn,
-            ncn_epoch,
+            epoch,
             bump,
             current_slot,
             is_active,
@@ -773,9 +865,10 @@ mod tests {
         let expected_total = size_of::<NcnFeeGroup>() // ncn_fee_group
             + size_of::<Pubkey>() // operator
             + size_of::<Pubkey>() // ncn
-            + size_of::<PodU64>() // ncn_epoch
+            + size_of::<PodU64>() // epoch
             + 1 // bump
             + size_of::<PodU64>() // slot_created
+            + size_of::<PodU64>() // operator_ncn_index
             + size_of::<PodU64>() // total_rewards
             + size_of::<PodU64>() // reward_pool
             + size_of::<PodU64>() // rewards_processed
@@ -793,8 +886,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -839,8 +933,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -887,8 +982,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -935,8 +1031,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1003,8 +1100,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1073,8 +1171,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1138,8 +1237,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1203,8 +1303,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );

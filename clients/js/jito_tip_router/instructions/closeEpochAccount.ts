@@ -29,127 +29,142 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_BALLOT_BOX_DISCRIMINATOR = 13;
+export const CLOSE_EPOCH_ACCOUNT_DISCRIMINATOR = 27;
 
-export function getInitializeBallotBoxDiscriminatorBytes() {
-  return getU8Encoder().encode(INITIALIZE_BALLOT_BOX_DISCRIMINATOR);
+export function getCloseEpochAccountDiscriminatorBytes() {
+  return getU8Encoder().encode(CLOSE_EPOCH_ACCOUNT_DISCRIMINATOR);
 }
 
-export type InitializeBallotBoxInstruction<
+export type CloseEpochAccountInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
-  TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
+  TAccountAccountToClose extends string | IAccountMeta<string> = string,
   TAccountAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountDaoWallet extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
+  TAccountReceiverToClose extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
       TAccountEpochState extends string
-        ? ReadonlyAccount<TAccountEpochState>
+        ? WritableAccount<TAccountEpochState>
         : TAccountEpochState,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
-      TAccountBallotBox extends string
-        ? WritableAccount<TAccountBallotBox>
-        : TAccountBallotBox,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
+      TAccountAccountToClose extends string
+        ? WritableAccount<TAccountAccountToClose>
+        : TAccountAccountToClose,
       TAccountAccountPayer extends string
         ? WritableAccount<TAccountAccountPayer>
         : TAccountAccountPayer,
+      TAccountDaoWallet extends string
+        ? WritableAccount<TAccountDaoWallet>
+        : TAccountDaoWallet,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
+      TAccountReceiverToClose extends string
+        ? WritableAccount<TAccountReceiverToClose>
+        : TAccountReceiverToClose,
       ...TRemainingAccounts,
     ]
   >;
 
-export type InitializeBallotBoxInstructionData = {
+export type CloseEpochAccountInstructionData = {
   discriminator: number;
   epoch: bigint;
 };
 
-export type InitializeBallotBoxInstructionDataArgs = { epoch: number | bigint };
+export type CloseEpochAccountInstructionDataArgs = { epoch: number | bigint };
 
-export function getInitializeBallotBoxInstructionDataEncoder(): Encoder<InitializeBallotBoxInstructionDataArgs> {
+export function getCloseEpochAccountInstructionDataEncoder(): Encoder<CloseEpochAccountInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['epoch', getU64Encoder()],
     ]),
-    (value) => ({
-      ...value,
-      discriminator: INITIALIZE_BALLOT_BOX_DISCRIMINATOR,
-    })
+    (value) => ({ ...value, discriminator: CLOSE_EPOCH_ACCOUNT_DISCRIMINATOR })
   );
 }
 
-export function getInitializeBallotBoxInstructionDataDecoder(): Decoder<InitializeBallotBoxInstructionData> {
+export function getCloseEpochAccountInstructionDataDecoder(): Decoder<CloseEpochAccountInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['epoch', getU64Decoder()],
   ]);
 }
 
-export function getInitializeBallotBoxInstructionDataCodec(): Codec<
-  InitializeBallotBoxInstructionDataArgs,
-  InitializeBallotBoxInstructionData
+export function getCloseEpochAccountInstructionDataCodec(): Codec<
+  CloseEpochAccountInstructionDataArgs,
+  CloseEpochAccountInstructionData
 > {
   return combineCodec(
-    getInitializeBallotBoxInstructionDataEncoder(),
-    getInitializeBallotBoxInstructionDataDecoder()
+    getCloseEpochAccountInstructionDataEncoder(),
+    getCloseEpochAccountInstructionDataDecoder()
   );
 }
 
-export type InitializeBallotBoxInput<
+export type CloseEpochAccountInput<
   TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
-  TAccountBallotBox extends string = string,
   TAccountNcn extends string = string,
+  TAccountAccountToClose extends string = string,
   TAccountAccountPayer extends string = string,
+  TAccountDaoWallet extends string = string,
   TAccountSystemProgram extends string = string,
+  TAccountReceiverToClose extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
-  ballotBox: Address<TAccountBallotBox>;
   ncn: Address<TAccountNcn>;
+  accountToClose: Address<TAccountAccountToClose>;
   accountPayer: Address<TAccountAccountPayer>;
+  daoWallet: Address<TAccountDaoWallet>;
   systemProgram?: Address<TAccountSystemProgram>;
-  epoch: InitializeBallotBoxInstructionDataArgs['epoch'];
+  receiverToClose?: Address<TAccountReceiverToClose>;
+  epoch: CloseEpochAccountInstructionDataArgs['epoch'];
 };
 
-export function getInitializeBallotBoxInstruction<
+export function getCloseEpochAccountInstruction<
   TAccountEpochState extends string,
   TAccountConfig extends string,
-  TAccountBallotBox extends string,
   TAccountNcn extends string,
+  TAccountAccountToClose extends string,
   TAccountAccountPayer extends string,
+  TAccountDaoWallet extends string,
   TAccountSystemProgram extends string,
+  TAccountReceiverToClose extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: InitializeBallotBoxInput<
+  input: CloseEpochAccountInput<
     TAccountEpochState,
     TAccountConfig,
-    TAccountBallotBox,
     TAccountNcn,
+    TAccountAccountToClose,
     TAccountAccountPayer,
-    TAccountSystemProgram
+    TAccountDaoWallet,
+    TAccountSystemProgram,
+    TAccountReceiverToClose
   >,
   config?: { programAddress?: TProgramAddress }
-): InitializeBallotBoxInstruction<
+): CloseEpochAccountInstruction<
   TProgramAddress,
   TAccountEpochState,
   TAccountConfig,
-  TAccountBallotBox,
   TAccountNcn,
+  TAccountAccountToClose,
   TAccountAccountPayer,
-  TAccountSystemProgram
+  TAccountDaoWallet,
+  TAccountSystemProgram,
+  TAccountReceiverToClose
 > {
   // Program address.
   const programAddress =
@@ -157,12 +172,14 @@ export function getInitializeBallotBoxInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    epochState: { value: input.epochState ?? null, isWritable: false },
+    epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
-    ballotBox: { value: input.ballotBox ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
+    accountToClose: { value: input.accountToClose ?? null, isWritable: true },
     accountPayer: { value: input.accountPayer ?? null, isWritable: true },
+    daoWallet: { value: input.daoWallet ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    receiverToClose: { value: input.receiverToClose ?? null, isWritable: true },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -183,29 +200,33 @@ export function getInitializeBallotBoxInstruction<
     accounts: [
       getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
-      getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncn),
+      getAccountMeta(accounts.accountToClose),
       getAccountMeta(accounts.accountPayer),
+      getAccountMeta(accounts.daoWallet),
       getAccountMeta(accounts.systemProgram),
+      getAccountMeta(accounts.receiverToClose),
     ],
     programAddress,
-    data: getInitializeBallotBoxInstructionDataEncoder().encode(
-      args as InitializeBallotBoxInstructionDataArgs
+    data: getCloseEpochAccountInstructionDataEncoder().encode(
+      args as CloseEpochAccountInstructionDataArgs
     ),
-  } as InitializeBallotBoxInstruction<
+  } as CloseEpochAccountInstruction<
     TProgramAddress,
     TAccountEpochState,
     TAccountConfig,
-    TAccountBallotBox,
     TAccountNcn,
+    TAccountAccountToClose,
     TAccountAccountPayer,
-    TAccountSystemProgram
+    TAccountDaoWallet,
+    TAccountSystemProgram,
+    TAccountReceiverToClose
   >;
 
   return instruction;
 }
 
-export type ParsedInitializeBallotBoxInstruction<
+export type ParsedCloseEpochAccountInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -213,23 +234,25 @@ export type ParsedInitializeBallotBoxInstruction<
   accounts: {
     epochState: TAccountMetas[0];
     config: TAccountMetas[1];
-    ballotBox: TAccountMetas[2];
-    ncn: TAccountMetas[3];
+    ncn: TAccountMetas[2];
+    accountToClose: TAccountMetas[3];
     accountPayer: TAccountMetas[4];
-    systemProgram: TAccountMetas[5];
+    daoWallet: TAccountMetas[5];
+    systemProgram: TAccountMetas[6];
+    receiverToClose?: TAccountMetas[7] | undefined;
   };
-  data: InitializeBallotBoxInstructionData;
+  data: CloseEpochAccountInstructionData;
 };
 
-export function parseInitializeBallotBoxInstruction<
+export function parseCloseEpochAccountInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedInitializeBallotBoxInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+): ParsedCloseEpochAccountInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -239,18 +262,24 @@ export function parseInitializeBallotBoxInstruction<
     accountIndex += 1;
     return accountMeta;
   };
+  const getNextOptionalAccount = () => {
+    const accountMeta = getNextAccount();
+    return accountMeta.address === JITO_TIP_ROUTER_PROGRAM_ADDRESS
+      ? undefined
+      : accountMeta;
+  };
   return {
     programAddress: instruction.programAddress,
     accounts: {
       epochState: getNextAccount(),
       config: getNextAccount(),
-      ballotBox: getNextAccount(),
       ncn: getNextAccount(),
+      accountToClose: getNextAccount(),
       accountPayer: getNextAccount(),
+      daoWallet: getNextAccount(),
       systemProgram: getNextAccount(),
+      receiverToClose: getNextOptionalAccount(),
     },
-    data: getInitializeBallotBoxInstructionDataDecoder().decode(
-      instruction.data
-    ),
+    data: getCloseEpochAccountInstructionDataDecoder().decode(instruction.data),
   };
 }

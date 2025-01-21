@@ -9,41 +9,39 @@ use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 
 /// Accounts.
-pub struct InitializeOperatorSnapshot {
+pub struct CloseEpochAccount {
     pub epoch_state: solana_program::pubkey::Pubkey,
 
     pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub operator: solana_program::pubkey::Pubkey,
-
-    pub ncn_operator_state: solana_program::pubkey::Pubkey,
-
-    pub epoch_snapshot: solana_program::pubkey::Pubkey,
-
-    pub operator_snapshot: solana_program::pubkey::Pubkey,
+    pub account_to_close: solana_program::pubkey::Pubkey,
 
     pub account_payer: solana_program::pubkey::Pubkey,
 
+    pub dao_wallet: solana_program::pubkey::Pubkey,
+
     pub system_program: solana_program::pubkey::Pubkey,
+
+    pub receiver_to_close: Option<solana_program::pubkey::Pubkey>,
 }
 
-impl InitializeOperatorSnapshot {
+impl CloseEpochAccount {
     pub fn instruction(
         &self,
-        args: InitializeOperatorSnapshotInstructionArgs,
+        args: CloseEpochAccountInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: InitializeOperatorSnapshotInstructionArgs,
+        args: CloseEpochAccountInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new(
             self.epoch_state,
             false,
         ));
@@ -54,32 +52,35 @@ impl InitializeOperatorSnapshot {
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.operator,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_operator_state,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.epoch_snapshot,
-            false,
-        ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.operator_snapshot,
+            self.account_to_close,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.account_payer,
             false,
         ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.dao_wallet,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
             false,
         ));
+        if let Some(receiver_to_close) = self.receiver_to_close {
+            accounts.push(solana_program::instruction::AccountMeta::new(
+                receiver_to_close,
+                false,
+            ));
+        } else {
+            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+                crate::JITO_TIP_ROUTER_ID,
+                false,
+            ));
+        }
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = InitializeOperatorSnapshotInstructionData::new()
+        let mut data = CloseEpochAccountInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -94,17 +95,17 @@ impl InitializeOperatorSnapshot {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct InitializeOperatorSnapshotInstructionData {
+pub struct CloseEpochAccountInstructionData {
     discriminator: u8,
 }
 
-impl InitializeOperatorSnapshotInstructionData {
+impl CloseEpochAccountInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 10 }
+        Self { discriminator: 27 }
     }
 }
 
-impl Default for InitializeOperatorSnapshotInstructionData {
+impl Default for CloseEpochAccountInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -112,39 +113,37 @@ impl Default for InitializeOperatorSnapshotInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct InitializeOperatorSnapshotInstructionArgs {
+pub struct CloseEpochAccountInstructionArgs {
     pub epoch: u64,
 }
 
-/// Instruction builder for `InitializeOperatorSnapshot`.
+/// Instruction builder for `CloseEpochAccount`.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` epoch_state
+///   0. `[writable]` epoch_state
 ///   1. `[]` config
 ///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[]` ncn_operator_state
-///   5. `[]` epoch_snapshot
-///   6. `[writable]` operator_snapshot
-///   7. `[writable]` account_payer
-///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   3. `[writable]` account_to_close
+///   4. `[writable]` account_payer
+///   5. `[writable]` dao_wallet
+///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   7. `[writable, optional]` receiver_to_close
 #[derive(Clone, Debug, Default)]
-pub struct InitializeOperatorSnapshotBuilder {
+pub struct CloseEpochAccountBuilder {
     epoch_state: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    operator: Option<solana_program::pubkey::Pubkey>,
-    ncn_operator_state: Option<solana_program::pubkey::Pubkey>,
-    epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
-    operator_snapshot: Option<solana_program::pubkey::Pubkey>,
+    account_to_close: Option<solana_program::pubkey::Pubkey>,
     account_payer: Option<solana_program::pubkey::Pubkey>,
+    dao_wallet: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
+    receiver_to_close: Option<solana_program::pubkey::Pubkey>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl InitializeOperatorSnapshotBuilder {
+impl CloseEpochAccountBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -164,29 +163,11 @@ impl InitializeOperatorSnapshotBuilder {
         self
     }
     #[inline(always)]
-    pub fn operator(&mut self, operator: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.operator = Some(operator);
-        self
-    }
-    #[inline(always)]
-    pub fn ncn_operator_state(
+    pub fn account_to_close(
         &mut self,
-        ncn_operator_state: solana_program::pubkey::Pubkey,
+        account_to_close: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.ncn_operator_state = Some(ncn_operator_state);
-        self
-    }
-    #[inline(always)]
-    pub fn epoch_snapshot(&mut self, epoch_snapshot: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.epoch_snapshot = Some(epoch_snapshot);
-        self
-    }
-    #[inline(always)]
-    pub fn operator_snapshot(
-        &mut self,
-        operator_snapshot: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.operator_snapshot = Some(operator_snapshot);
+        self.account_to_close = Some(account_to_close);
         self
     }
     #[inline(always)]
@@ -194,10 +175,24 @@ impl InitializeOperatorSnapshotBuilder {
         self.account_payer = Some(account_payer);
         self
     }
+    #[inline(always)]
+    pub fn dao_wallet(&mut self, dao_wallet: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.dao_wallet = Some(dao_wallet);
+        self
+    }
     /// `[optional account, default to '11111111111111111111111111111111']`
     #[inline(always)]
     pub fn system_program(&mut self, system_program: solana_program::pubkey::Pubkey) -> &mut Self {
         self.system_program = Some(system_program);
+        self
+    }
+    /// `[optional account]`
+    #[inline(always)]
+    pub fn receiver_to_close(
+        &mut self,
+        receiver_to_close: Option<solana_program::pubkey::Pubkey>,
+    ) -> &mut Self {
+        self.receiver_to_close = receiver_to_close;
         self
     }
     #[inline(always)]
@@ -225,24 +220,19 @@ impl InitializeOperatorSnapshotBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = InitializeOperatorSnapshot {
+        let accounts = CloseEpochAccount {
             epoch_state: self.epoch_state.expect("epoch_state is not set"),
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            operator: self.operator.expect("operator is not set"),
-            ncn_operator_state: self
-                .ncn_operator_state
-                .expect("ncn_operator_state is not set"),
-            epoch_snapshot: self.epoch_snapshot.expect("epoch_snapshot is not set"),
-            operator_snapshot: self
-                .operator_snapshot
-                .expect("operator_snapshot is not set"),
+            account_to_close: self.account_to_close.expect("account_to_close is not set"),
             account_payer: self.account_payer.expect("account_payer is not set"),
+            dao_wallet: self.dao_wallet.expect("dao_wallet is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
+            receiver_to_close: self.receiver_to_close,
         };
-        let args = InitializeOperatorSnapshotInstructionArgs {
+        let args = CloseEpochAccountInstructionArgs {
             epoch: self.epoch.clone().expect("epoch is not set"),
         };
 
@@ -250,29 +240,27 @@ impl InitializeOperatorSnapshotBuilder {
     }
 }
 
-/// `initialize_operator_snapshot` CPI accounts.
-pub struct InitializeOperatorSnapshotCpiAccounts<'a, 'b> {
+/// `close_epoch_account` CPI accounts.
+pub struct CloseEpochAccountCpiAccounts<'a, 'b> {
     pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub ncn_operator_state: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_to_close: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub dao_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub receiver_to_close: Option<&'b solana_program::account_info::AccountInfo<'a>>,
 }
 
-/// `initialize_operator_snapshot` CPI instruction.
-pub struct InitializeOperatorSnapshotCpi<'a, 'b> {
+/// `close_epoch_account` CPI instruction.
+pub struct CloseEpochAccountCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -282,38 +270,35 @@ pub struct InitializeOperatorSnapshotCpi<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub ncn_operator_state: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_to_close: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub dao_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub receiver_to_close: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     /// The arguments for the instruction.
-    pub __args: InitializeOperatorSnapshotInstructionArgs,
+    pub __args: CloseEpochAccountInstructionArgs,
 }
 
-impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
+impl<'a, 'b> CloseEpochAccountCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: InitializeOperatorSnapshotCpiAccounts<'a, 'b>,
-        args: InitializeOperatorSnapshotInstructionArgs,
+        accounts: CloseEpochAccountCpiAccounts<'a, 'b>,
+        args: CloseEpochAccountInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
             epoch_state: accounts.epoch_state,
             config: accounts.config,
             ncn: accounts.ncn,
-            operator: accounts.operator,
-            ncn_operator_state: accounts.ncn_operator_state,
-            epoch_snapshot: accounts.epoch_snapshot,
-            operator_snapshot: accounts.operator_snapshot,
+            account_to_close: accounts.account_to_close,
             account_payer: accounts.account_payer,
+            dao_wallet: accounts.dao_wallet,
             system_program: accounts.system_program,
+            receiver_to_close: accounts.receiver_to_close,
             __args: args,
         }
     }
@@ -350,8 +335,8 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new(
             *self.epoch_state.key,
             false,
         ));
@@ -363,30 +348,33 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
             *self.ncn.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.operator.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_operator_state.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.epoch_snapshot.key,
-            false,
-        ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.operator_snapshot.key,
+            *self.account_to_close.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.account_payer.key,
             false,
         ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.dao_wallet.key,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
             false,
         ));
+        if let Some(receiver_to_close) = self.receiver_to_close {
+            accounts.push(solana_program::instruction::AccountMeta::new(
+                *receiver_to_close.key,
+                false,
+            ));
+        } else {
+            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+                crate::JITO_TIP_ROUTER_ID,
+                false,
+            ));
+        }
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_program::instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -394,7 +382,7 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = InitializeOperatorSnapshotInstructionData::new()
+        let mut data = CloseEpochAccountInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
@@ -405,17 +393,18 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(9 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.epoch_state.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.operator.clone());
-        account_infos.push(self.ncn_operator_state.clone());
-        account_infos.push(self.epoch_snapshot.clone());
-        account_infos.push(self.operator_snapshot.clone());
+        account_infos.push(self.account_to_close.clone());
         account_infos.push(self.account_payer.clone());
+        account_infos.push(self.dao_wallet.clone());
         account_infos.push(self.system_program.clone());
+        if let Some(receiver_to_close) = self.receiver_to_close {
+            account_infos.push(receiver_to_close.clone());
+        }
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -428,37 +417,35 @@ impl<'a, 'b> InitializeOperatorSnapshotCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `InitializeOperatorSnapshot` via CPI.
+/// Instruction builder for `CloseEpochAccount` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` epoch_state
+///   0. `[writable]` epoch_state
 ///   1. `[]` config
 ///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[]` ncn_operator_state
-///   5. `[]` epoch_snapshot
-///   6. `[writable]` operator_snapshot
-///   7. `[writable]` account_payer
-///   8. `[]` system_program
+///   3. `[writable]` account_to_close
+///   4. `[writable]` account_payer
+///   5. `[writable]` dao_wallet
+///   6. `[]` system_program
+///   7. `[writable, optional]` receiver_to_close
 #[derive(Clone, Debug)]
-pub struct InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
-    instruction: Box<InitializeOperatorSnapshotCpiBuilderInstruction<'a, 'b>>,
+pub struct CloseEpochAccountCpiBuilder<'a, 'b> {
+    instruction: Box<CloseEpochAccountCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
+impl<'a, 'b> CloseEpochAccountCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(InitializeOperatorSnapshotCpiBuilderInstruction {
+        let instruction = Box::new(CloseEpochAccountCpiBuilderInstruction {
             __program: program,
             epoch_state: None,
             config: None,
             ncn: None,
-            operator: None,
-            ncn_operator_state: None,
-            epoch_snapshot: None,
-            operator_snapshot: None,
+            account_to_close: None,
             account_payer: None,
+            dao_wallet: None,
             system_program: None,
+            receiver_to_close: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
         });
@@ -486,35 +473,11 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn operator(
+    pub fn account_to_close(
         &mut self,
-        operator: &'b solana_program::account_info::AccountInfo<'a>,
+        account_to_close: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.operator = Some(operator);
-        self
-    }
-    #[inline(always)]
-    pub fn ncn_operator_state(
-        &mut self,
-        ncn_operator_state: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.ncn_operator_state = Some(ncn_operator_state);
-        self
-    }
-    #[inline(always)]
-    pub fn epoch_snapshot(
-        &mut self,
-        epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.epoch_snapshot = Some(epoch_snapshot);
-        self
-    }
-    #[inline(always)]
-    pub fn operator_snapshot(
-        &mut self,
-        operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.operator_snapshot = Some(operator_snapshot);
+        self.instruction.account_to_close = Some(account_to_close);
         self
     }
     #[inline(always)]
@@ -526,11 +489,28 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
+    pub fn dao_wallet(
+        &mut self,
+        dao_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.dao_wallet = Some(dao_wallet);
+        self
+    }
+    #[inline(always)]
     pub fn system_program(
         &mut self,
         system_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.system_program = Some(system_program);
+        self
+    }
+    /// `[optional account]`
+    #[inline(always)]
+    pub fn receiver_to_close(
+        &mut self,
+        receiver_to_close: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    ) -> &mut Self {
+        self.instruction.receiver_to_close = receiver_to_close;
         self
     }
     #[inline(always)]
@@ -579,10 +559,10 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = InitializeOperatorSnapshotInstructionArgs {
+        let args = CloseEpochAccountInstructionArgs {
             epoch: self.instruction.epoch.clone().expect("epoch is not set"),
         };
-        let instruction = InitializeOperatorSnapshotCpi {
+        let instruction = CloseEpochAccountCpi {
             __program: self.instruction.__program,
 
             epoch_state: self
@@ -594,32 +574,24 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            operator: self.instruction.operator.expect("operator is not set"),
-
-            ncn_operator_state: self
+            account_to_close: self
                 .instruction
-                .ncn_operator_state
-                .expect("ncn_operator_state is not set"),
-
-            epoch_snapshot: self
-                .instruction
-                .epoch_snapshot
-                .expect("epoch_snapshot is not set"),
-
-            operator_snapshot: self
-                .instruction
-                .operator_snapshot
-                .expect("operator_snapshot is not set"),
+                .account_to_close
+                .expect("account_to_close is not set"),
 
             account_payer: self
                 .instruction
                 .account_payer
                 .expect("account_payer is not set"),
 
+            dao_wallet: self.instruction.dao_wallet.expect("dao_wallet is not set"),
+
             system_program: self
                 .instruction
                 .system_program
                 .expect("system_program is not set"),
+
+            receiver_to_close: self.instruction.receiver_to_close,
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -630,17 +602,16 @@ impl<'a, 'b> InitializeOperatorSnapshotCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct InitializeOperatorSnapshotCpiBuilderInstruction<'a, 'b> {
+struct CloseEpochAccountCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_operator_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    account_to_close: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     account_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    dao_wallet: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    receiver_to_close: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

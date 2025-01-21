@@ -74,6 +74,7 @@ mod tests {
                 10_001,
                 0,
                 0,
+                0,
             )
             .await;
         assert_tip_router_error(transaction_error, TipRouterError::FeeCapExceeded);
@@ -97,10 +98,28 @@ mod tests {
                 0,
                 0,
                 0, // Invalid - too low
+                0,
                 10001,
             )
             .await;
         assert_tip_router_error(result, TipRouterError::InvalidEpochsBeforeStall);
+
+        // Test invalid epochs_before_stall
+        let result = tip_router_client
+            .initialize_config(
+                ncn_root.ncn_pubkey,
+                &ncn_root.ncn_admin,
+                &ncn_root.ncn_admin.pubkey(),
+                &ncn_root.ncn_admin.pubkey(),
+                0,
+                0,
+                0,
+                10,
+                0, // Invalid - too low
+                10001,
+            )
+            .await;
+        assert_tip_router_error(result, TipRouterError::InvalidEpochsBeforeClaim);
 
         // Test invalid valid_slots_after_consensus
         let result = tip_router_client
@@ -113,6 +132,7 @@ mod tests {
                 0,
                 0,
                 5,
+                10,
                 50, // Invalid - too low
             )
             .await;

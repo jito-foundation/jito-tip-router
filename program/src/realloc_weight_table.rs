@@ -1,16 +1,13 @@
 use jito_bytemuck::{AccountDeserialize, Discriminator};
-use jito_jsm_core::{
-    loader::{load_signer, load_system_program},
-    realloc,
-};
+use jito_jsm_core::loader::load_system_program;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    config::Config as NcnConfig, epoch_state::EpochState, utils::get_new_size,
-    vault_registry::VaultRegistry, weight_table::WeightTable,
+    account_payer::AccountPayer, config::Config as NcnConfig, epoch_state::EpochState,
+    utils::get_new_size, vault_registry::VaultRegistry, weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
 pub fn process_realloc_weight_table(
@@ -18,18 +15,18 @@ pub fn process_realloc_weight_table(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, weight_table, ncn, vault_registry, payer, system_program] =
+    let [epoch_state, ncn_config, weight_table, ncn, vault_registry, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     load_system_program(system_program)?;
-    load_signer(payer, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     let (weight_table_pda, weight_table_bump, _) =
         WeightTable::find_program_address(program_id, ncn.key, epoch);
@@ -46,7 +43,7 @@ pub fn process_realloc_weight_table(
             weight_table.data_len(),
             new_size
         );
-        realloc(weight_table, new_size, payer, &Rent::get()?)?;
+        AccountPayer::pay_and_realloc(program_id, ncn.key, account_payer, weight_table, new_size)?;
     }
 
     let should_initialize = weight_table.data_len() >= WeightTable::SIZE

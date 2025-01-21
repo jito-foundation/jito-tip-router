@@ -11,8 +11,9 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    constants::MAX_VAULTS, discriminators::Discriminators, error::TipRouterError, fees::Fees,
-    ncn_fee_group::NcnFeeGroup, stake_weight::StakeWeights, weight_table::WeightTable,
+    constants::MAX_VAULTS, discriminators::Discriminators, epoch_state::EpochState,
+    error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup, stake_weight::StakeWeights,
+    weight_table::WeightTable,
 };
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
@@ -77,6 +78,15 @@ impl EpochSnapshot {
         }
     }
 
+    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
+        if epoch_state.epoch().ne(&self.epoch()) {
+            msg!("Epoch Snapshot epoch does not match Epoch State");
+            return Err(TipRouterError::CannotCloseAccount);
+        }
+
+        Ok(())
+    }
+
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -131,6 +141,10 @@ impl EpochSnapshot {
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.epoch.into()
     }
 
     pub fn operator_count(&self) -> u64 {
@@ -311,6 +325,15 @@ impl OperatorSnapshot {
         Ok(())
     }
 
+    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
+        if epoch_state.epoch().ne(&self.epoch()) {
+            msg!("Operator Snapshot epoch does not match Epoch State");
+            return Err(TipRouterError::CannotCloseAccount);
+        }
+
+        Ok(())
+    }
+
     pub fn seeds(operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -368,6 +391,10 @@ impl OperatorSnapshot {
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(())
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.ncn_epoch.into()
     }
 
     pub fn ncn_operator_index(&self) -> u64 {

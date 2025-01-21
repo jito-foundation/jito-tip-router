@@ -27,7 +27,7 @@ pub async fn cast_vote(
     payer: &Keypair,
     ncn: Pubkey,
     operator: Pubkey,
-    operator_admin: &Keypair,
+    operator_voter: &Keypair,
     meta_merkle_root: [u8; 32],
     epoch: u64,
 ) -> EllipsisClientResult<Signature> {
@@ -53,13 +53,13 @@ pub async fn cast_vote(
         .epoch_snapshot(epoch_snapshot)
         .operator_snapshot(operator_snapshot)
         .operator(operator)
-        .operator_admin(operator_admin.pubkey())
+        .operator_voter(operator_voter.pubkey())
         .meta_merkle_root(meta_merkle_root)
         .epoch(epoch)
         .instruction();
 
     let tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
     client
-        .process_transaction(tx, &[payer, operator_admin])
+        .process_transaction(tx, &[payer, operator_voter])
         .await
 }

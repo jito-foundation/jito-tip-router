@@ -20,14 +20,11 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -44,7 +41,7 @@ export type InitializeWeightTableInstruction<
   TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountAccountPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -63,10 +60,9 @@ export type InitializeWeightTableInstruction<
       TAccountWeightTable extends string
         ? WritableAccount<TAccountWeightTable>
         : TAccountWeightTable,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
+      TAccountAccountPayer extends string
+        ? WritableAccount<TAccountAccountPayer>
+        : TAccountAccountPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -118,14 +114,14 @@ export type InitializeWeightTableInput<
   TAccountVaultRegistry extends string = string,
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
-  TAccountPayer extends string = string,
+  TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
   vaultRegistry: Address<TAccountVaultRegistry>;
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
-  payer: TransactionSigner<TAccountPayer>;
+  accountPayer: Address<TAccountAccountPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: InitializeWeightTableInstructionDataArgs['epoch'];
 };
@@ -135,7 +131,7 @@ export function getInitializeWeightTableInstruction<
   TAccountVaultRegistry extends string,
   TAccountNcn extends string,
   TAccountWeightTable extends string,
-  TAccountPayer extends string,
+  TAccountAccountPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
@@ -144,7 +140,7 @@ export function getInitializeWeightTableInstruction<
     TAccountVaultRegistry,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -154,7 +150,7 @@ export function getInitializeWeightTableInstruction<
   TAccountVaultRegistry,
   TAccountNcn,
   TAccountWeightTable,
-  TAccountPayer,
+  TAccountAccountPayer,
   TAccountSystemProgram
 > {
   // Program address.
@@ -167,7 +163,7 @@ export function getInitializeWeightTableInstruction<
     vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
     weightTable: { value: input.weightTable ?? null, isWritable: true },
-    payer: { value: input.payer ?? null, isWritable: true },
+    accountPayer: { value: input.accountPayer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -191,7 +187,7 @@ export function getInitializeWeightTableInstruction<
       getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
-      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.accountPayer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -204,7 +200,7 @@ export function getInitializeWeightTableInstruction<
     TAccountVaultRegistry,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >;
 
@@ -221,7 +217,7 @@ export type ParsedInitializeWeightTableInstruction<
     vaultRegistry: TAccountMetas[1];
     ncn: TAccountMetas[2];
     weightTable: TAccountMetas[3];
-    payer: TAccountMetas[4];
+    accountPayer: TAccountMetas[4];
     systemProgram: TAccountMetas[5];
   };
   data: InitializeWeightTableInstructionData;
@@ -252,7 +248,7 @@ export function parseInitializeWeightTableInstruction<
       vaultRegistry: getNextAccount(),
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
-      payer: getNextAccount(),
+      accountPayer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeWeightTableInstructionDataDecoder().decode(

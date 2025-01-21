@@ -12,7 +12,7 @@ use borsh::BorshSerialize;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ballot {
     pub meta_merkle_root: [u8; 32],
-    pub is_initialized: bool,
+    pub is_valid: bool,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 63],
 }

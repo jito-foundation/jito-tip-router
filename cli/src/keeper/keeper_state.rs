@@ -292,13 +292,15 @@ impl KeeperState {
     }
 
     pub fn current_state(&self) -> Result<State> {
-        self.epoch_state
-            .as_ref()
-            .ok_or_else(|| anyhow!("Epoch state does not exist"))
-            .and_then(|epoch_state| {
-                epoch_state
-                    .current_state()
-                    .map_or_else(|_| Err(anyhow!("Could not get current state")), Ok)
-            })
+        todo!("this function is not implemented yet");
+
+        // self.epoch_state
+        //     .as_ref()
+        //     .ok_or_else(|| anyhow!("Epoch state does not exist"))
+        //     .and_then(|epoch_state| {
+        //         epoch_state
+        //             .current_state()
+        //             .map_or_else(|_| Err(anyhow!("Could not get current state")), Ok)
+        //     })
     }
 }

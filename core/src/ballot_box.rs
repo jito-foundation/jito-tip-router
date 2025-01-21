@@ -15,6 +15,7 @@ use spl_math::precise_number::PreciseNumber;
 use crate::{
     constants::{precise_consensus, DEFAULT_CONSENSUS_REACHED_SLOT, MAX_OPERATORS},
     discriminators::Discriminators,
+    epoch_state::EpochState,
     error::TipRouterError,
     loaders::check_load,
     stake_weight::StakeWeights,
@@ -25,15 +26,15 @@ use crate::{
 pub struct Ballot {
     /// The merkle root of the meta merkle tree
     meta_merkle_root: [u8; 32],
-    /// Whether the ballot is initialized
-    is_initialized: PodBool,
+    /// Whether the ballot is valid
+    is_valid: PodBool,
     /// Reserved space
     reserved: [u8; 63],
 }
 
 impl PartialEq for Ballot {
     fn eq(&self, other: &Self) -> bool {
-        if !self.is_initialized() || !other.is_initialized() {
+        if !self.is_valid() || !other.is_valid() {
             return false;
         }
         self.meta_merkle_root == other.meta_merkle_root
@@ -46,7 +47,7 @@ impl Default for Ballot {
     fn default() -> Self {
         Self {
             meta_merkle_root: [0; 32],
-            is_initialized: PodBool::from(false),
+            is_valid: PodBool::from(false),
             reserved: [0; 63],
         }
     }
@@ -62,13 +63,13 @@ impl Ballot {
     pub fn new(merkle_root: &[u8; 32]) -> Self {
         let mut ballot = Self {
             meta_merkle_root: *merkle_root,
-            is_initialized: PodBool::from(false),
+            is_valid: PodBool::from(false),
             reserved: [0; 63],
         };
 
         for byte in ballot.meta_merkle_root.iter() {
             if *byte != 0 {
-                ballot.is_initialized = PodBool::from(true);
+                ballot.is_valid = PodBool::from(true);
                 break;
             }
         }
@@ -80,8 +81,8 @@ impl Ballot {
         self.meta_merkle_root
     }
 
-    pub fn is_initialized(&self) -> bool {
-        self.is_initialized.into()
+    pub fn is_valid(&self) -> bool {
+        self.is_valid.into()
     }
 }
 
@@ -139,7 +140,7 @@ impl BallotTally {
     }
 
     pub fn is_valid(&self) -> bool {
-        self.ballot.is_initialized()
+        self.ballot.is_valid()
     }
 
     pub fn increment_tally(&mut self, stake_weights: &StakeWeights) -> Result<(), TipRouterError> {
@@ -295,6 +296,15 @@ impl BallotBox {
         self.reserved = [0; 128];
     }
 
+    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
+        if epoch_state.epoch().ne(&self.epoch()) {
+            msg!("Ballot Box epoch does not match Epoch State");
+            return Err(TipRouterError::CannotCloseAccount);
+        }
+
+        Ok(())
+    }
+
     pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -357,16 +367,16 @@ impl BallotBox {
 
     pub fn is_consensus_reached(&self) -> bool {
         self.slot_consensus_reached() != DEFAULT_CONSENSUS_REACHED_SLOT
-            || self.winning_ballot.is_initialized()
+            || self.winning_ballot.is_valid()
     }
 
     pub fn tie_breaker_set(&self) -> bool {
         self.slot_consensus_reached() == DEFAULT_CONSENSUS_REACHED_SLOT
-            && self.winning_ballot.is_initialized()
+            && self.winning_ballot.is_valid()
     }
 
     pub fn get_winning_ballot(&self) -> Result<&Ballot, TipRouterError> {
-        if !self.winning_ballot.is_initialized() {
+        if !self.winning_ballot.is_valid() {
             Err(TipRouterError::ConsensusNotReached)
         } else {
             Ok(&self.winning_ballot)
@@ -374,7 +384,7 @@ impl BallotBox {
     }
 
     pub fn get_winning_ballot_tally(&self) -> Result<&BallotTally, TipRouterError> {
-        if !self.winning_ballot.is_initialized() {
+        if !self.winning_ballot.is_valid() {
             Err(TipRouterError::ConsensusNotReached)
         } else {
             let winning_ballot_tally = self
@@ -388,7 +398,7 @@ impl BallotBox {
     }
 
     pub fn has_winning_ballot(&self) -> bool {
-        self.winning_ballot.is_initialized()
+        self.winning_ballot.is_valid()
     }
 
     pub const fn operator_votes(&self) -> &[OperatorVote; MAX_OPERATORS] {
@@ -444,7 +454,7 @@ impl BallotBox {
             return Err(TipRouterError::VotingNotValid);
         }
 
-        if !ballot.is_initialized() {
+        if !ballot.is_valid() {
             return Err(TipRouterError::BadBallot);
         }
 
@@ -529,7 +539,7 @@ impl BallotBox {
         let consensus_reached =
             ballot_percentage_of_total.greater_than_or_equal(&target_precise_percentage);
 
-        if consensus_reached && !self.winning_ballot.is_initialized() {
+        if consensus_reached && !self.winning_ballot.is_valid() {
             self.slot_consensus_reached = PodU64::from(current_slot);
             let winning_ballot = *max_tally.ballot();
 

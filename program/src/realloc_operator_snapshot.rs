@@ -1,12 +1,10 @@
 use jito_bytemuck::{AccountDeserialize, Discriminator};
-use jito_jsm_core::{
-    loader::{load_signer, load_system_program},
-    realloc,
-};
+use jito_jsm_core::loader::load_system_program;
 use jito_restaking_core::{
     config::Config, ncn::Ncn, ncn_operator_state::NcnOperatorState, operator::Operator,
 };
 use jito_tip_router_core::{
+    account_payer::AccountPayer,
     config::Config as NcnConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
@@ -16,7 +14,7 @@ use jito_tip_router_core::{
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
 pub fn process_realloc_operator_snapshot(
@@ -24,7 +22,7 @@ pub fn process_realloc_operator_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, restaking_config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, payer, system_program] =
+    let [epoch_state, ncn_config, restaking_config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -43,9 +41,9 @@ pub fn process_realloc_operator_snapshot(
         false,
     )?;
     EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, true)?;
+    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
 
     load_system_program(system_program)?;
-    load_signer(payer, false)?;
 
     let (operator_snapshot_pda, operator_snapshot_bump, _) =
         OperatorSnapshot::find_program_address(program_id, operator.key, ncn.key, epoch);
@@ -62,7 +60,13 @@ pub fn process_realloc_operator_snapshot(
             operator_snapshot.data_len(),
             new_size
         );
-        realloc(operator_snapshot, new_size, payer, &Rent::get()?)?;
+        AccountPayer::pay_and_realloc(
+            program_id,
+            ncn.key,
+            account_payer,
+            operator_snapshot,
+            new_size,
+        )?;
     }
 
     let should_initialize = operator_snapshot.data_len() >= OperatorSnapshot::SIZE
@@ -72,7 +76,6 @@ pub fn process_realloc_operator_snapshot(
         let current_slot = Clock::get()?.slot;
         let (_, ncn_epoch_length) = load_ncn_epoch(restaking_config, current_slot, None)?;
 
-        //TODO move to helper function
         let (is_active, ncn_operator_index): (bool, u64) = {
             let ncn_operator_state_data = ncn_operator_state.data.borrow();
             let ncn_operator_state_account =
