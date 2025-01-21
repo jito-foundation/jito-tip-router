@@ -190,12 +190,13 @@ async fn test_meta_merkle_creation_from_ledger() {
         PathBuf::from("tests/fixtures/accounts"),
         PathBuf::from("path/to/account2"),
     ];
-    let full_snapshots_path = PathBuf::from("path/to/full_snapshots");
+    let full_snapshots_path = PathBuf::from("tests/fixtures/test-ledger");
     let desired_slot = &144;
     let tip_distribution_program_id = &TIP_DISTRIBUTION_ID;
     let out_path = "tests/fixtures/output.json";
     let tip_payment_program_id = &TIP_PAYMENT_ID;
     let ncn_address = Pubkey::new_unique();
+    let operator_address = Pubkey::new_unique();
     let epoch = 0u64;
     const PROTOCOL_FEE_BPS: u64 = 300;
 
@@ -209,6 +210,7 @@ async fn test_meta_merkle_creation_from_ledger() {
         out_path,
         tip_payment_program_id,
         &ncn_address,
+        &operator_address,
         epoch,
         PROTOCOL_FEE_BPS,
         false,
@@ -245,6 +247,10 @@ async fn test_meta_merkle_creation_from_ledger() {
         );
         assert!(node.proof.is_some(), "Node should have a proof");
     }
+
+    println!("Meta merkle tree root: {:?}", meta_merkle_tree.merkle_root);
+
+    assert!(false);
 
     // Verify the proofs are valid
     meta_merkle_tree.verify_proof().unwrap();
@@ -373,3 +379,5 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
 
     Ok(())
 }
+
+

@@ -6,14 +6,15 @@ use ::{
     solana_rpc_client::rpc_client::RpcClient,
     solana_sdk::{
         clock::DEFAULT_SLOTS_PER_EPOCH,
+        pubkey::Pubkey,
         signer::{keypair::read_keypair_file, Signer},
         transaction::Transaction,
     },
-    std::time::Duration,
+    std::{path::PathBuf, str::FromStr, time::Duration},
     tip_router_operator_cli::{
         cli::{Cli, Commands},
         process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
-        submit::submit_recent_epochs_to_ncn,
+        submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
     },
     tokio::time::sleep,
 };
@@ -61,6 +62,7 @@ async fn main() -> Result<()> {
             tip_router_program_id,
             enable_snapshots,
             num_monitored_epochs,
+            start_next_epoch,
         } => {
             info!("Running Tip Router...");
 
@@ -87,6 +89,10 @@ async fn main() -> Result<()> {
                     sleep(Duration::from_secs(60)).await;
                 }
             });
+
+            if start_next_epoch {
+                wait_for_next_epoch(&rpc_client).await?;
+            }
 
             loop {
                 // Get the last slot of the previous epoch
@@ -146,9 +152,37 @@ async fn main() -> Result<()> {
                 Ok(_) => info!("Successfully processed slot"),
                 Err(e) => {
                     error!("Error processing epoch: {}", e);
-                    // Continue to next epoch even if this one failed
                 }
             }
+        }
+        Commands::SubmitEpoch {
+            ncn_address,
+            tip_distribution_program_id,
+            tip_router_program_id,
+            epoch,
+        } => {
+            let meta_merkle_tree_path = PathBuf::from(format!(
+                "{}/meta_merkle_tree_{}.json",
+                cli.meta_merkle_tree_dir.display(),
+                epoch
+            ));
+            info!(
+                "Submitting epoch {} from {}...",
+                epoch,
+                meta_merkle_tree_path.display()
+            );
+            let operator_address = Pubkey::from_str(&cli.operator_address)?;
+            submit_to_ncn(
+                &rpc_client,
+                &keypair,
+                &operator_address,
+                &meta_merkle_tree_path,
+                epoch,
+                &ncn_address,
+                &tip_router_program_id,
+                &tip_distribution_program_id,
+            )
+            .await?;
         }
     }
     Ok(())

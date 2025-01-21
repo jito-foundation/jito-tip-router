@@ -52,8 +52,8 @@ pub async fn process_epoch(
     target_epoch: u64,
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
-    ncn_address: &Pubkey,
     tip_router_program_id: &Pubkey,
+    ncn_address: &Pubkey,
     snapshots_enabled: bool,
     cli_args: &Cli,
 ) -> Result<()> {
@@ -93,7 +93,7 @@ pub async fn process_epoch(
     ) {
         Ok(tree) => {
             datapoint_info!(
-                "tip_router_cli-process_epoch",
+                "tip_router_cli.process_epoch",
                 ("operator_address", operator_address.to_string(), String),
                 ("epoch", target_epoch, i64),
                 ("status", "success", String),
@@ -104,7 +104,7 @@ pub async fn process_epoch(
         }
         Err(e) => {
             datapoint_error!(
-                "tip_router_cli-process_epoch",
+                "tip_router_cli.process_epoch",
                 ("operator_address", operator_address.to_string(), String),
                 ("epoch", target_epoch, i64),
                 ("status", "error", String),
@@ -123,12 +123,12 @@ pub async fn process_epoch(
         Ok(json) => json,
         Err(e) => {
             datapoint_error!(
-                "tip_router_cli-process_epoch",
+                "tip_router_cli.process_epoch",
                 ("operator_address", operator_address.to_string(), String),
                 ("epoch", target_epoch, i64),
                 ("status", "error", String),
                 ("error", format!("{:?}", e), String),
-                ("state", "merkle_root_generation", String),
+                ("state", "merkle_root_serialization", String),
                 ("duration_ms", start.elapsed().as_millis() as i64, i64)
             );
             return Err(anyhow::anyhow!(
@@ -140,12 +140,12 @@ pub async fn process_epoch(
 
     if let Err(e) = std::fs::write(&meta_merkle_tree_path, meta_merkle_tree_json) {
         datapoint_error!(
-            "tip_router_cli-process_epoch",
+            "tip_router_cli.process_epoch",
             ("operator_address", operator_address.to_string(), String),
             ("epoch", target_epoch, i64),
             ("status", "error", String),
             ("error", format!("{:?}", e), String),
-            ("state", "merkle_root_generation", String),
+            ("state", "merkle_root_file_write", String),
             ("duration_ms", start.elapsed().as_millis() as i64, i64)
         );
         return Err(anyhow::anyhow!(

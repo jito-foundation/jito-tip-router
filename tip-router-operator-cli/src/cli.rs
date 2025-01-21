@@ -54,6 +54,9 @@ pub enum Commands {
 
         #[arg(long, env, default_value = "3")]
         num_monitored_epochs: u64,
+
+        #[arg(long, env, default_value = "false")]
+        start_next_epoch: bool,
     },
     SnapshotSlot {
         #[arg(short, long, env)]
@@ -73,5 +76,18 @@ pub enum Commands {
 
         #[arg(long, env)]
         slot: u64,
+    },
+    SubmitEpoch {
+        #[arg(short, long, env)]
+        ncn_address: Pubkey,
+
+        #[arg(long, env)]
+        tip_distribution_program_id: Pubkey,
+
+        #[arg(long, env)]
+        tip_router_program_id: Pubkey,
+
+        #[arg(long, env)]
+        epoch: u64,
     },
 }

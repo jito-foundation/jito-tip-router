@@ -12,6 +12,7 @@ use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, RpcFilterType},
 };
+use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer};
 
 use crate::{
@@ -76,7 +77,10 @@ pub async fn submit_to_ncn(
         BallotBox::find_program_address(tip_router_program_id, ncn_address, epoch).0;
     let ballot_box_account = match client.get_account(&ballot_box_address).await {
         Ok(account) => account,
-        Err(e) => return Err(anyhow::anyhow!("Ballot box not found: {}", e)),
+        Err(e) => {
+            info!("Ballot box not created yet for epoch {}: {}", epoch, e);
+            return Ok(());
+        }
     };
 
     let ballot_box = BallotBox::try_from_slice_unchecked(&ballot_box_account.data)?;
@@ -119,49 +123,39 @@ pub async fn submit_to_ncn(
         .await;
 
         match res {
-            Ok(signature) => info!(
-                "Cast vote for epoch {} with signature {:?}",
-                epoch, signature
-            ),
-            Err(e) => info!("Failed to cast vote for epoch {}: {:?}", epoch, e),
-        }
-
-        /* CONSIDER THIS FOR METRICS
-
-        // Cast vote using the generated merkle root
-        let tx_sig = match cast_vote(
-            client,
-            payer,
-            tip_distribution_program_id, // not important
-            *ncn_address,
-            operator,
-            payer,
-            meta_merkle_tree.merkle_root,
-            target_epoch,
-        )
-        .await
-        {
-            Ok(sig) => {
+            Ok(signature) => {
                 datapoint_info!(
-                    "tip_router_cli-vote_cast_success",
-                    ("epoch", target_epoch, i64),
-                    ("tx_sig", format!("{:?}", sig), String)
+                    "tip_router_cli.vote_cast",
+                    ("operator_address", operator_address.to_string(), String),
+                    ("epoch", epoch, i64),
+                    (
+                        "merkle_root",
+                        format!("{:?}", meta_merkle_tree.merkle_root),
+                        String
+                    ),
+                    ("tx_sig", format!("{:?}", signature), String)
                 );
-                sig
+                info!(
+                    "Cast vote for epoch {} with signature {:?}",
+                    epoch, signature
+                )
             }
             Err(e) => {
                 datapoint_error!(
-                    "tip_router_cli-vote_cast_error",
-                    ("epoch", target_epoch, i64),
+                    "tip_router_cli.vote_cast",
+                    ("operator_address", operator_address.to_string(), String),
+                    ("epoch", epoch, i64),
+                    (
+                        "merkle_root",
+                        format!("{:?}", meta_merkle_tree.merkle_root),
+                        String
+                    ),
+                    ("status", "error", String),
                     ("error", format!("{:?}", e), String)
                 );
-                return Err(anyhow::anyhow!("Failed to cast vote: {}", e)); // Convert the error
+                info!("Failed to cast vote for epoch {}: {:?}", epoch, e)
             }
-        };
-
-        info!("Successfully cast vote at tx {:?}", tx_sig);
-
-             */
+        }
     }
 
     if ballot_box.is_consensus_reached() {
@@ -185,6 +179,13 @@ pub async fn submit_to_ncn(
         let num_success = res.iter().filter(|r| r.is_ok()).count();
         let num_failed = res.iter().filter(|r| r.is_err()).count();
 
+        datapoint_info!(
+            "tip_router_cli.set_merkle_root",
+            ("operator_address", operator_address.to_string(), String),
+            ("epoch", epoch, i64),
+            ("num_success", num_success, i64),
+            ("num_failed", num_failed, i64)
+        );
         info!(
             "Set merkle root for {} tip distribution accounts",
             num_success
