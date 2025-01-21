@@ -25,6 +25,9 @@ pub struct Cli {
     pub full_snapshots_path: Option<PathBuf>,
 
     #[arg(short, long, env)]
+    pub backup_snapshots_dir: PathBuf,
+
+    #[arg(short, long, env)]
     pub snapshot_output_dir: PathBuf,
 
     #[arg(short, long, env)]
@@ -48,9 +51,6 @@ pub enum Commands {
 
         #[arg(long, env)]
         tip_router_program_id: Pubkey,
-
-        #[arg(long, env)]
-        backup_snapshots_dir: PathBuf,
 
         #[arg(long, env, default_value = "false")]
         enable_snapshots: bool,

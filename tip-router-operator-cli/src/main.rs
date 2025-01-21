@@ -61,7 +61,6 @@ async fn main() -> Result<()> {
             tip_distribution_program_id,
             tip_payment_program_id,
             tip_router_program_id,
-            ref backup_snapshots_dir,
             enable_snapshots,
             num_monitored_epochs,
             start_next_epoch,
@@ -71,7 +70,7 @@ async fn main() -> Result<()> {
 
             let rpc_client_clone = rpc_client.clone();
             let full_snapshots_path = cli.full_snapshots_path.clone().unwrap();
-            let backup_snapshots_dir = backup_snapshots_dir.clone();
+            let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
             let rpc_url = cli.rpc_url.clone();
             let cli_clone = cli.clone();
 

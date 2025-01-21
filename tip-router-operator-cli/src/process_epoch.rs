@@ -64,6 +64,7 @@ pub async fn process_epoch(
     let ledger_path = cli_args.ledger_path.clone();
     let account_paths = cli_args.account_paths.clone();
     let full_snapshots_path = cli_args.full_snapshots_path.clone();
+    let incremental_snapshots_path = cli_args.backup_snapshots_dir.clone();
     let operator_address = Pubkey::from_str(&cli_args.operator_address).unwrap();
     let meta_merkle_tree_dir = cli_args.meta_merkle_tree_dir.clone();
 
@@ -81,6 +82,7 @@ pub async fn process_epoch(
         cli_args.ledger_path.as_path(),
         account_paths,
         full_snapshots_path,
+        incremental_snapshots_path,
         &target_slot,
         tip_distribution_program_id,
         "", // TODO out_path is not used, unsure what should be put here. Maybe `snapshot_output_dir` from cli args?

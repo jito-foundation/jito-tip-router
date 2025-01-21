@@ -27,6 +27,7 @@ pub fn get_bank_from_ledger(
     ledger_path: &Path,
     account_paths: Vec<PathBuf>,
     full_snapshots_path: PathBuf,
+    incremental_snapshots_path: PathBuf,
     desired_slot: &Slot,
     take_snapshot: bool,
 ) -> Arc<Bank> {
@@ -162,7 +163,7 @@ pub fn get_bank_from_ledger(
 
     let snapshot_config = SnapshotConfig {
         full_snapshot_archives_dir: full_snapshots_path.clone(),
-        incremental_snapshot_archives_dir: full_snapshots_path.clone(),
+        incremental_snapshot_archives_dir: incremental_snapshots_path.clone(),
         bank_snapshots_dir: full_snapshots_path,
         ..SnapshotConfig::new_load_only()
     };
@@ -316,6 +317,7 @@ mod tests {
             &operator_address,
             &ledger_path,
             account_paths,
+            full_snapshots_path.clone(),
             full_snapshots_path.clone(),
             &desired_slot,
             true,

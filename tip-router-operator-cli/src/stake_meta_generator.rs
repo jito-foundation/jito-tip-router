@@ -77,6 +77,7 @@ pub fn generate_stake_meta(
     ledger_path: &Path,
     account_paths: Vec<PathBuf>,
     full_snapshots_path: PathBuf,
+    incremental_snapshots_path: PathBuf,
     desired_slot: &Slot,
     tip_distribution_program_id: &Pubkey,
     _out_path: &str,
@@ -89,6 +90,7 @@ pub fn generate_stake_meta(
         ledger_path,
         account_paths,
         full_snapshots_path,
+        incremental_snapshots_path,
         desired_slot,
         snapshots_enabled,
     );
