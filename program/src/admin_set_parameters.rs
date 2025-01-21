@@ -18,7 +18,7 @@ pub fn process_admin_set_parameters(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     epochs_before_stall: Option<u64>,
-    epochs_before_claim: Option<u64>,
+    epochs_after_consensus_before_claim: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
 ) -> ProgramResult {
     let [config, ncn_account, ncn_admin] = accounts else {
@@ -54,12 +54,12 @@ pub fn process_admin_set_parameters(
         config.epochs_before_stall = PodU64::from(epochs);
     }
 
-    if let Some(epochs) = epochs_before_claim {
+    if let Some(epochs) = epochs_after_consensus_before_claim {
         if !(MIN_EPOCHS_BEFORE_CLAIM..=MAX_EPOCHS_BEFORE_CLAIM).contains(&epochs) {
             return Err(TipRouterError::InvalidEpochsBeforeClaim.into());
         }
-        msg!("Updated epochs_before_claim to {}", epochs);
-        config.epochs_before_claim = PodU64::from(epochs);
+        msg!("Updated epochs_after_consensus_before_claim to {}", epochs);
+        config.epochs_after_consensus_before_claim = PodU64::from(epochs);
     }
 
     if let Some(slots) = valid_slots_after_consensus {

@@ -58,7 +58,8 @@ pub fn process_close_epoch_account(
             return Err(TipRouterError::InvalidDaoWallet.into());
         }
 
-        let epochs_before_claim = config_account.epochs_before_claim();
+        let epochs_after_consensus_before_claim =
+            config_account.epochs_after_consensus_before_claim();
 
         let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
         let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
@@ -69,7 +70,7 @@ pub fn process_close_epoch_account(
             let epoch_consensus_reached = epoch_state_account.epoch_consensus_reached()?;
 
             let epoch_delta = current_epoch.saturating_sub(epoch_consensus_reached);
-            if epoch_delta < epochs_before_claim {
+            if epoch_delta < epochs_after_consensus_before_claim {
                 msg!("Not enough epochs have passed since epoch state creation");
                 return Err(TipRouterError::CannotCloseAccount.into());
             }

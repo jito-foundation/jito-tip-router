@@ -24,7 +24,7 @@ pub enum TipRouterInstruction {
         dao_fee_bps: u16,
         default_ncn_fee_bps: u16,
         epochs_before_stall: u64,
-        epochs_before_claim: u64,
+        epochs_after_consensus_before_claim: u64,
         valid_slots_after_consensus: u64,
     },
 
@@ -412,7 +412,7 @@ pub enum TipRouterInstruction {
     #[account(2, signer, name = "ncn_admin")]
     AdminSetParameters {
         epochs_before_stall: Option<u64>,
-        epochs_before_claim: Option<u64>,
+        epochs_after_consensus_before_claim: Option<u64>,
         valid_slots_after_consensus: Option<u64>,
     },
 

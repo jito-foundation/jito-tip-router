@@ -24,7 +24,7 @@ pub fn process_admin_initialize_config(
     dao_fee_bps: u16,
     default_ncn_fee_bps: u16,
     epochs_before_stall: u64,
-    epochs_before_claim: u64,
+    epochs_after_consensus_before_claim: u64,
     valid_slots_after_consensus: u64,
 ) -> ProgramResult {
     let [config, ncn, dao_fee_wallet, ncn_admin, tie_breaker_admin, account_payer, system_program] =
@@ -56,7 +56,9 @@ pub fn process_admin_initialize_config(
         return Err(TipRouterError::InvalidEpochsBeforeStall.into());
     }
 
-    if !(MIN_EPOCHS_BEFORE_CLAIM..=MAX_EPOCHS_BEFORE_CLAIM).contains(&epochs_before_claim) {
+    if !(MIN_EPOCHS_BEFORE_CLAIM..=MAX_EPOCHS_BEFORE_CLAIM)
+        .contains(&epochs_after_consensus_before_claim)
+    {
         return Err(TipRouterError::InvalidEpochsBeforeClaim.into());
     }
 
@@ -110,7 +112,7 @@ pub fn process_admin_initialize_config(
         &fee_config,
         valid_slots_after_consensus,
         epochs_before_stall,
-        epochs_before_claim,
+        epochs_after_consensus_before_claim,
         config_bump,
     );
 

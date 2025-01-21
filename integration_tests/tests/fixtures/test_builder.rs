@@ -1009,9 +1009,10 @@ impl TestBuilder {
         // Wait until we can close the accounts
         {
             let config = self.tip_router_client().get_ncn_config(ncn).await?;
-            let epochs_before_claim = config.epochs_before_claim();
+            let epochs_after_consensus_before_claim = config.epochs_after_consensus_before_claim();
 
-            self.warp_epoch_incremental(epochs_before_claim + 1).await?;
+            self.warp_epoch_incremental(epochs_after_consensus_before_claim + 1)
+                .await?;
         }
 
         // Close Accounts in reverse order of creation

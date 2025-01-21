@@ -59,7 +59,7 @@
           "type": "u64"
         },
         {
-          "name": "epochsBeforeClaim",
+          "name": "epochsAfterConsensusBeforeClaim",
           "type": "u64"
         },
         {
@@ -1663,7 +1663,7 @@
           }
         },
         {
-          "name": "epochsBeforeClaim",
+          "name": "epochsAfterConsensusBeforeClaim",
           "type": {
             "option": "u64"
           }
@@ -2205,7 +2205,7 @@
             }
           },
           {
-            "name": "epochsBeforeClaim",
+            "name": "epochsAfterConsensusBeforeClaim",
             "type": {
               "defined": "PodU64"
             }

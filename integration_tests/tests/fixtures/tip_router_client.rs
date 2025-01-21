@@ -314,7 +314,7 @@ impl TipRouterClient {
         dao_fee_bps: u16,
         default_ncn_fee_bps: u16,
         epochs_before_stall: u64,
-        epochs_before_claim: u64,
+        epochs_after_consensus_before_claim: u64,
         valid_slots_after_consensus: u64,
     ) -> TestResult<()> {
         let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
@@ -333,7 +333,7 @@ impl TipRouterClient {
             .default_ncn_fee_bps(default_ncn_fee_bps)
             .block_engine_fee_bps(block_engine_fee_bps)
             .epochs_before_stall(epochs_before_stall)
-            .epochs_before_claim(epochs_before_claim)
+            .epochs_after_consensus_before_claim(epochs_after_consensus_before_claim)
             .valid_slots_after_consensus(valid_slots_after_consensus)
             .instruction();
 
@@ -2498,7 +2498,7 @@ impl TipRouterClient {
     pub async fn do_set_parameters(
         &mut self,
         epochs_before_stall: Option<u64>,
-        epochs_before_claim: Option<u64>,
+        epochs_after_consensus_before_claim: Option<u64>,
         valid_slots_after_consensus: Option<u64>,
         ncn_root: &NcnRoot,
     ) -> TestResult<()> {
@@ -2514,8 +2514,8 @@ impl TipRouterClient {
             ix.epochs_before_stall(epochs);
         }
 
-        if let Some(epochs) = epochs_before_claim {
-            ix.epochs_before_claim(epochs);
+        if let Some(epochs) = epochs_after_consensus_before_claim {
+            ix.epochs_after_consensus_before_claim(epochs);
         }
 
         if let Some(slots) = valid_slots_after_consensus {

@@ -31,7 +31,7 @@ pub struct Config {
     pub fee_admin: Pubkey,
     pub valid_slots_after_consensus: u64,
     pub epochs_before_stall: u64,
-    pub epochs_before_claim: u64,
+    pub epochs_after_consensus_before_claim: u64,
     pub fee_config: FeeConfig,
     pub bump: u8,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]

@@ -103,7 +103,7 @@ pub struct InitializeConfigInstructionArgs {
     pub dao_fee_bps: u16,
     pub default_ncn_fee_bps: u16,
     pub epochs_before_stall: u64,
-    pub epochs_before_claim: u64,
+    pub epochs_after_consensus_before_claim: u64,
     pub valid_slots_after_consensus: u64,
 }
 
@@ -131,7 +131,7 @@ pub struct InitializeConfigBuilder {
     dao_fee_bps: Option<u16>,
     default_ncn_fee_bps: Option<u16>,
     epochs_before_stall: Option<u64>,
-    epochs_before_claim: Option<u64>,
+    epochs_after_consensus_before_claim: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -200,8 +200,11 @@ impl InitializeConfigBuilder {
         self
     }
     #[inline(always)]
-    pub fn epochs_before_claim(&mut self, epochs_before_claim: u64) -> &mut Self {
-        self.epochs_before_claim = Some(epochs_before_claim);
+    pub fn epochs_after_consensus_before_claim(
+        &mut self,
+        epochs_after_consensus_before_claim: u64,
+    ) -> &mut Self {
+        self.epochs_after_consensus_before_claim = Some(epochs_after_consensus_before_claim);
         self
     }
     #[inline(always)]
@@ -256,10 +259,10 @@ impl InitializeConfigBuilder {
                 .epochs_before_stall
                 .clone()
                 .expect("epochs_before_stall is not set"),
-            epochs_before_claim: self
-                .epochs_before_claim
+            epochs_after_consensus_before_claim: self
+                .epochs_after_consensus_before_claim
                 .clone()
-                .expect("epochs_before_claim is not set"),
+                .expect("epochs_after_consensus_before_claim is not set"),
             valid_slots_after_consensus: self
                 .valid_slots_after_consensus
                 .clone()
@@ -457,7 +460,7 @@ impl<'a, 'b> InitializeConfigCpiBuilder<'a, 'b> {
             dao_fee_bps: None,
             default_ncn_fee_bps: None,
             epochs_before_stall: None,
-            epochs_before_claim: None,
+            epochs_after_consensus_before_claim: None,
             valid_slots_after_consensus: None,
             __remaining_accounts: Vec::new(),
         });
@@ -537,8 +540,12 @@ impl<'a, 'b> InitializeConfigCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn epochs_before_claim(&mut self, epochs_before_claim: u64) -> &mut Self {
-        self.instruction.epochs_before_claim = Some(epochs_before_claim);
+    pub fn epochs_after_consensus_before_claim(
+        &mut self,
+        epochs_after_consensus_before_claim: u64,
+    ) -> &mut Self {
+        self.instruction.epochs_after_consensus_before_claim =
+            Some(epochs_after_consensus_before_claim);
         self
     }
     #[inline(always)]
@@ -608,11 +615,11 @@ impl<'a, 'b> InitializeConfigCpiBuilder<'a, 'b> {
                 .epochs_before_stall
                 .clone()
                 .expect("epochs_before_stall is not set"),
-            epochs_before_claim: self
+            epochs_after_consensus_before_claim: self
                 .instruction
-                .epochs_before_claim
+                .epochs_after_consensus_before_claim
                 .clone()
-                .expect("epochs_before_claim is not set"),
+                .expect("epochs_after_consensus_before_claim is not set"),
             valid_slots_after_consensus: self
                 .instruction
                 .valid_slots_after_consensus
@@ -667,7 +674,7 @@ struct InitializeConfigCpiBuilderInstruction<'a, 'b> {
     dao_fee_bps: Option<u16>,
     default_ncn_fee_bps: Option<u16>,
     epochs_before_stall: Option<u64>,
-    epochs_before_claim: Option<u64>,
+    epochs_after_consensus_before_claim: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
