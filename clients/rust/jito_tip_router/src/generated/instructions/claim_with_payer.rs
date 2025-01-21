@@ -24,6 +24,8 @@ pub struct ClaimWithPayer {
 
     pub claimant: solana_program::pubkey::Pubkey,
 
+    pub tip_distribution_program: solana_program::pubkey::Pubkey,
+
     pub system_program: solana_program::pubkey::Pubkey,
 }
 
@@ -40,7 +42,7 @@ impl ClaimWithPayer {
         args: ClaimWithPayerInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.account_payer,
             false,
@@ -66,6 +68,10 @@ impl ClaimWithPayer {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.claimant,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.tip_distribution_program,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -121,7 +127,8 @@ pub struct ClaimWithPayerInstructionArgs {
 ///   4. `[writable]` tip_distribution_account
 ///   5. `[writable]` claim_status
 ///   6. `[writable]` claimant
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   7. `[]` tip_distribution_program
+///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct ClaimWithPayerBuilder {
     account_payer: Option<solana_program::pubkey::Pubkey>,
@@ -131,6 +138,7 @@ pub struct ClaimWithPayerBuilder {
     tip_distribution_account: Option<solana_program::pubkey::Pubkey>,
     claim_status: Option<solana_program::pubkey::Pubkey>,
     claimant: Option<solana_program::pubkey::Pubkey>,
+    tip_distribution_program: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     proof: Option<Vec<[u8; 32]>>,
     amount: Option<u64>,
@@ -181,6 +189,14 @@ impl ClaimWithPayerBuilder {
     #[inline(always)]
     pub fn claimant(&mut self, claimant: solana_program::pubkey::Pubkey) -> &mut Self {
         self.claimant = Some(claimant);
+        self
+    }
+    #[inline(always)]
+    pub fn tip_distribution_program(
+        &mut self,
+        tip_distribution_program: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.tip_distribution_program = Some(tip_distribution_program);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -236,6 +252,9 @@ impl ClaimWithPayerBuilder {
                 .expect("tip_distribution_account is not set"),
             claim_status: self.claim_status.expect("claim_status is not set"),
             claimant: self.claimant.expect("claimant is not set"),
+            tip_distribution_program: self
+                .tip_distribution_program
+                .expect("tip_distribution_program is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -266,6 +285,8 @@ pub struct ClaimWithPayerCpiAccounts<'a, 'b> {
 
     pub claimant: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub tip_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
@@ -288,6 +309,8 @@ pub struct ClaimWithPayerCpi<'a, 'b> {
 
     pub claimant: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub tip_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: ClaimWithPayerInstructionArgs,
@@ -308,6 +331,7 @@ impl<'a, 'b> ClaimWithPayerCpi<'a, 'b> {
             tip_distribution_account: accounts.tip_distribution_account,
             claim_status: accounts.claim_status,
             claimant: accounts.claimant,
+            tip_distribution_program: accounts.tip_distribution_program,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -345,7 +369,7 @@ impl<'a, 'b> ClaimWithPayerCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.account_payer.key,
             false,
@@ -375,6 +399,10 @@ impl<'a, 'b> ClaimWithPayerCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.tip_distribution_program.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
             false,
         ));
@@ -394,7 +422,7 @@ impl<'a, 'b> ClaimWithPayerCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(9 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.account_payer.clone());
         account_infos.push(self.config.clone());
@@ -403,6 +431,7 @@ impl<'a, 'b> ClaimWithPayerCpi<'a, 'b> {
         account_infos.push(self.tip_distribution_account.clone());
         account_infos.push(self.claim_status.clone());
         account_infos.push(self.claimant.clone());
+        account_infos.push(self.tip_distribution_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -427,7 +456,8 @@ impl<'a, 'b> ClaimWithPayerCpi<'a, 'b> {
 ///   4. `[writable]` tip_distribution_account
 ///   5. `[writable]` claim_status
 ///   6. `[writable]` claimant
-///   7. `[]` system_program
+///   7. `[]` tip_distribution_program
+///   8. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct ClaimWithPayerCpiBuilder<'a, 'b> {
     instruction: Box<ClaimWithPayerCpiBuilderInstruction<'a, 'b>>,
@@ -444,6 +474,7 @@ impl<'a, 'b> ClaimWithPayerCpiBuilder<'a, 'b> {
             tip_distribution_account: None,
             claim_status: None,
             claimant: None,
+            tip_distribution_program: None,
             system_program: None,
             proof: None,
             amount: None,
@@ -503,6 +534,14 @@ impl<'a, 'b> ClaimWithPayerCpiBuilder<'a, 'b> {
         claimant: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.claimant = Some(claimant);
+        self
+    }
+    #[inline(always)]
+    pub fn tip_distribution_program(
+        &mut self,
+        tip_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.tip_distribution_program = Some(tip_distribution_program);
         self
     }
     #[inline(always)]
@@ -603,6 +642,11 @@ impl<'a, 'b> ClaimWithPayerCpiBuilder<'a, 'b> {
 
             claimant: self.instruction.claimant.expect("claimant is not set"),
 
+            tip_distribution_program: self
+                .instruction
+                .tip_distribution_program
+                .expect("tip_distribution_program is not set"),
+
             system_program: self
                 .instruction
                 .system_program
@@ -626,6 +670,7 @@ struct ClaimWithPayerCpiBuilderInstruction<'a, 'b> {
     tip_distribution_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     claim_status: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     claimant: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    tip_distribution_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     proof: Option<Vec<[u8; 32]>>,
     amount: Option<u64>,

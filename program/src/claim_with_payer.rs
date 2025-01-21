@@ -1,8 +1,8 @@
 use jito_restaking_core::ncn::Ncn;
-use jito_tip_distribution_sdk::instruction::claim_ix;
+use jito_tip_distribution_sdk::{instruction::claim_ix, jito_tip_distribution};
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
     program_error::ProgramError, pubkey::Pubkey,
 };
 
@@ -13,7 +13,7 @@ pub fn process_claim_with_payer(
     amount: u64,
     bump: u8,
 ) -> ProgramResult {
-    let [account_payer, config, ncn, tip_distribution_config, tip_distribution_account, claim_status, claimant, system_program] =
+    let [account_payer, config, ncn, tip_distribution_config, tip_distribution_account, claim_status, claimant, tip_distribution_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -23,6 +23,11 @@ pub fn process_claim_with_payer(
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     Config::load(program_id, ncn.key, config, false)?;
     AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+
+    if tip_distribution_program.key.ne(&jito_tip_distribution::ID) {
+        msg!("Incorrect tip distribution program");
+        return Err(ProgramError::InvalidAccountData);
+    }
 
     // let (_, config_bump, mut config_seeds) =
     //     AccountPayer::find_program_address(program_id, &jito_tip_distribution::ID);

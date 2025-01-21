@@ -383,7 +383,8 @@ pub enum TipRouterInstruction {
     #[account(4, writable, name = "tip_distribution_account")]
     #[account(5, writable, name = "claim_status")]
     #[account(6, writable, name = "claimant")]
-    #[account(7, name = "system_program")]
+    #[account(7, name = "tip_distribution_program")]
+    #[account(8, name = "system_program")]
     ClaimWithPayer {
         proof: Vec<[u8; 32]>,
         amount: u64,

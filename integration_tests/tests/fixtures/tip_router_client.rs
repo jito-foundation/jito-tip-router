@@ -1377,17 +1377,16 @@ impl TipRouterClient {
         let ballot_box =
             BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let tip_distribution_program_id = jito_tip_distribution::ID;
+        let tip_distribution_program = jito_tip_distribution::ID;
         let tip_distribution_account = derive_tip_distribution_account_address(
-            &tip_distribution_program_id,
+            &tip_distribution_program,
             &vote_account,
             epoch,
         )
         .0;
 
         let tip_distribution_config =
-            jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program_id)
-                .0;
+            jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program).0;
 
         self.set_merkle_root(
             config,
@@ -1396,7 +1395,7 @@ impl TipRouterClient {
             vote_account,
             tip_distribution_account,
             tip_distribution_config,
-            tip_distribution_program_id,
+            tip_distribution_program,
             proof,
             merkle_root,
             max_total_claim,
@@ -1414,7 +1413,7 @@ impl TipRouterClient {
         vote_account: Pubkey,
         tip_distribution_account: Pubkey,
         tip_distribution_config: Pubkey,
-        tip_distribution_program_id: Pubkey,
+        tip_distribution_program: Pubkey,
         proof: Vec<[u8; 32]>,
         merkle_root: [u8; 32],
         max_total_claim: u64,
@@ -1432,7 +1431,7 @@ impl TipRouterClient {
             .vote_account(vote_account)
             .tip_distribution_account(tip_distribution_account)
             .tip_distribution_config(tip_distribution_config)
-            .tip_distribution_program(tip_distribution_program_id)
+            .tip_distribution_program(tip_distribution_program)
             .proof(proof)
             .merkle_root(merkle_root)
             .max_total_claim(max_total_claim)
@@ -2357,14 +2356,13 @@ impl TipRouterClient {
 
         let (config, _, _) = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
 
-        let tip_distribution_program_id = jito_tip_distribution::ID;
+        let tip_distribution_program = jito_tip_distribution::ID;
         let tip_distribution_config =
-            jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program_id)
-                .0;
+            jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program).0;
 
         let (claim_status, claim_status_bump) =
             jito_tip_distribution_sdk::derive_claim_status_account_address(
-                &tip_distribution_program_id,
+                &tip_distribution_program,
                 &claimant,
                 &tip_distribution_account,
             );
@@ -2375,6 +2373,7 @@ impl TipRouterClient {
             account_payer,
             tip_distribution_config,
             tip_distribution_account,
+            tip_distribution_program,
             claim_status,
             claimant,
             proof,
@@ -2391,6 +2390,7 @@ impl TipRouterClient {
         account_payer: Pubkey,
         tip_distribution_config: Pubkey,
         tip_distribution_account: Pubkey,
+        tip_distribution_program: Pubkey,
         claim_status: Pubkey,
         claimant: Pubkey,
         proof: Vec<[u8; 32]>,
@@ -2403,6 +2403,7 @@ impl TipRouterClient {
             .config(config)
             .tip_distribution_config(tip_distribution_config)
             .tip_distribution_account(tip_distribution_account)
+            .tip_distribution_program(tip_distribution_program)
             .claim_status(claim_status)
             .claimant(claimant)
             .system_program(system_program::id())
