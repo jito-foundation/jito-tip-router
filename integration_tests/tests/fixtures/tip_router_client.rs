@@ -472,7 +472,7 @@ impl TipRouterClient {
         epoch: u64,
     ) -> TestResult<()> {
         self.do_intialize_epoch_state(ncn, epoch).await?;
-        let num_reallocs = (WeightTable::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
+        let num_reallocs = (EpochState::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
         self.do_realloc_epoch_state(ncn, epoch, num_reallocs)
             .await?;
         Ok(())

@@ -18,47 +18,32 @@ mod tests {
         fixture
             .add_operators_to_test_ncn(&mut test_ncn, OPERATOR_COUNT, None)
             .await?;
-
         fixture
             .add_vaults_to_test_ncn(&mut test_ncn, VAULT_COUNT)
             .await?;
-
         fixture.add_delegation_in_test_ncn(&test_ncn, 100).await?;
-
         fixture.add_vault_registry_to_test_ncn(&test_ncn).await?;
-
         fixture.add_epoch_state_for_test_ncn(&test_ncn).await?;
-
         fixture.add_admin_weights_for_test_ncn(&test_ncn).await?;
-
         fixture.add_epoch_snapshot_to_test_ncn(&test_ncn).await?;
-
         fixture
             .add_operator_snapshots_to_test_ncn(&test_ncn)
             .await?;
-
         fixture
             .add_vault_operator_delegation_snapshots_to_test_ncn(&test_ncn)
             .await?;
-
         fixture.add_ballot_box_to_test_ncn(&test_ncn).await?;
-
         fixture.cast_votes_for_test_ncn(&test_ncn).await?;
-
         fixture.add_routers_for_test_ncn(&test_ncn).await?;
-
         stake_pool_client
             .update_stake_pool_balance(&pool_root)
             .await?;
-
         fixture
             .route_in_base_rewards_for_test_ncn(&test_ncn, 10_000, &pool_root)
             .await?;
-
         fixture
             .route_in_ncn_rewards_for_test_ncn(&test_ncn, &pool_root)
             .await?;
-
         fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
 
         Ok(())
@@ -138,6 +123,8 @@ mod tests {
             .reward_test_ncn(&test_ncn, 10_000, &pool_root)
             .await?;
 
+        fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
+
         Ok(())
     }
 
@@ -176,6 +163,8 @@ mod tests {
         fixture
             .reward_test_ncn(&test_ncn, 10_000, &pool_root)
             .await?;
+
+        fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
 
         Ok(())
     }
@@ -219,6 +208,8 @@ mod tests {
         fixture
             .reward_test_ncn(&test_ncn, 10_000, &pool_root)
             .await?;
+
+        fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
 
         Ok(())
     }

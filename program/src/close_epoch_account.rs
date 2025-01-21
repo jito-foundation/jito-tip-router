@@ -42,39 +42,44 @@ pub fn process_close_epoch_account(
     // Empty Account Check
     if account_to_close.data_is_empty() {
         msg!("Account already closed");
-        return Err(TipRouterError::CannotCloseAccount.into());
+        return Err(TipRouterError::CannotCloseAccountAlreadyClosed.into());
     }
 
     {
         let config_data = config.try_borrow_data()?;
         let config_account = NcnConfig::try_from_slice_unchecked(&config_data)?;
 
-        // Check correct DAO wallet
-        if config_account
-            .fee_config
-            .base_fee_wallet(BaseFeeGroup::dao())?
-            .ne(dao_wallet.key)
-        {
-            return Err(TipRouterError::InvalidDaoWallet.into());
-        }
-
-        let epochs_after_consensus_before_close =
-            config_account.epochs_after_consensus_before_close();
-
         let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
         let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
 
+        // Check correct DAO wallet
+        {
+            if config_account
+                .fee_config
+                .base_fee_wallet(BaseFeeGroup::dao())?
+                .ne(dao_wallet.key)
+            {
+                return Err(TipRouterError::InvalidDaoWallet.into());
+            }
+        }
+
         // Epoch Check - epochs after consensus is reached
         {
+            let epochs_after_consensus_before_close =
+                config_account.epochs_after_consensus_before_close();
+
             let current_epoch = Clock::get()?.epoch;
             let epoch_schedule = EpochSchedule::get()?;
-            let epoch_consensus_reached =
-                epoch_state_account.get_epoch_consensus_reached(&epoch_schedule)?;
 
-            let epoch_delta = current_epoch.saturating_sub(epoch_consensus_reached);
-            if epoch_delta < epochs_after_consensus_before_close {
+            let can_close_epoch_accounts = epoch_state_account.can_close_epoch_accounts(
+                &epoch_schedule,
+                epochs_after_consensus_before_close,
+                current_epoch,
+            )?;
+
+            if !can_close_epoch_accounts {
                 msg!("Not enough epochs have passed since consensus reached");
-                return Err(TipRouterError::CannotCloseAccount.into());
+                return Err(TipRouterError::CannotCloseAccountNotEnoughEpochs.into());
             }
         }
 
@@ -135,8 +140,15 @@ pub fn process_close_epoch_account(
 
                     let [base_reward_receiver] = optional_accounts else {
                         msg!("Base reward receiver account is missing");
-                        return Err(ProgramError::NotEnoughAccountKeys);
+                        return Err(TipRouterError::CannotCloseAccountNoReceiverProvided.into());
                     };
+                    BaseRewardReceiver::load(
+                        program_id,
+                        base_reward_receiver,
+                        ncn.key,
+                        epoch,
+                        true,
+                    )?;
 
                     BaseRewardReceiver::close(
                         program_id,
@@ -161,8 +173,18 @@ pub fn process_close_epoch_account(
 
                     let [ncn_reward_receiver] = optional_accounts else {
                         msg!("NCN reward receiver account is missing");
-                        return Err(ProgramError::NotEnoughAccountKeys);
+                        return Err(TipRouterError::CannotCloseAccountNoReceiverProvided.into());
                     };
+
+                    NcnRewardReceiver::load(
+                        program_id,
+                        ncn_reward_receiver,
+                        ncn_fee_group,
+                        operator,
+                        ncn.key,
+                        epoch,
+                        true,
+                    )?;
 
                     NcnRewardReceiver::close(
                         program_id,
@@ -175,7 +197,8 @@ pub fn process_close_epoch_account(
                         account_payer,
                     )?;
 
-                    epoch_state_account.close_ncn_reward_router(ncn_operator_index, ncn_fee_group);
+                    epoch_state_account
+                        .close_ncn_reward_router(ncn_operator_index, ncn_fee_group)?;
                 }
                 _ => {
                     return Err(TipRouterError::InvalidAccountToCloseDiscriminator.into());

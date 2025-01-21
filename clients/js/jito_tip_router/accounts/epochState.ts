@@ -17,6 +17,8 @@ import {
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
+  getBoolDecoder,
+  getBoolEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -51,6 +53,7 @@ export type EpochState = {
   epoch: bigint;
   bump: number;
   slotCreated: bigint;
+  wasTieBreakerSet: number;
   slotConsensusReached: bigint;
   operatorCount: bigint;
   vaultCount: bigint;
@@ -73,6 +76,7 @@ export type EpochStateArgs = {
   epoch: number | bigint;
   bump: number;
   slotCreated: number | bigint;
+  wasTieBreakerSet: number;
   slotConsensusReached: number | bigint;
   operatorCount: number | bigint;
   vaultCount: number | bigint;
@@ -96,6 +100,7 @@ export function getEpochStateEncoder(): Encoder<EpochStateArgs> {
     ['epoch', getU64Encoder()],
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
+    ['wasTieBreakerSet', getBoolEncoder()],
     ['slotConsensusReached', getU64Encoder()],
     ['operatorCount', getU64Encoder()],
     ['vaultCount', getU64Encoder()],
@@ -126,6 +131,7 @@ export function getEpochStateDecoder(): Decoder<EpochState> {
     ['epoch', getU64Decoder()],
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
+    ['wasTieBreakerSet', getBoolDecoder()],
     ['slotConsensusReached', getU64Decoder()],
     ['operatorCount', getU64Decoder()],
     ['vaultCount', getU64Decoder()],

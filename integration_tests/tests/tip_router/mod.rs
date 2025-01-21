@@ -3,6 +3,7 @@ mod admin_set_st_mint;
 mod admin_update_weight_table;
 mod bpf;
 mod cast_vote;
+mod close_epoch_accounts;
 mod distribute_rewards;
 mod epoch_state;
 mod initialize_ballot_box;

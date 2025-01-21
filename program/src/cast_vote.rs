@@ -104,7 +104,11 @@ pub fn process_cast_vote(
     {
         let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
         let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
-        epoch_state_account.update_cast_vote(ballot_box.is_consensus_reached(), slot)?;
+        epoch_state_account.update_cast_vote(
+            ballot_box.operators_voted(),
+            ballot_box.is_consensus_reached(),
+            slot,
+        )?;
     }
 
     Ok(())

@@ -144,12 +144,12 @@ impl NcnRewardRouter {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda =
-            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, ncn_epoch).0;
+            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, epoch).0;
         check_load(
             program_id,
             account,
@@ -610,14 +610,14 @@ impl NcnRewardReceiver {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> Vec<Vec<u8>> {
         vec![
             b"ncn_reward_receiver".to_vec(),
             vec![ncn_fee_group.group],
             operator.to_bytes().to_vec(),
             ncn.to_bytes().to_vec(),
-            ncn_epoch.to_le_bytes().to_vec(),
+            epoch.to_le_bytes().to_vec(),
         ]
     }
 
@@ -642,12 +642,12 @@ impl NcnRewardReceiver {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let system_program_id = system_program::id();
         let expected_pda =
-            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, ncn_epoch).0;
+            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, epoch).0;
         check_load(
             &system_program_id,
             account,
@@ -806,7 +806,7 @@ mod tests {
     ) -> OperatorSnapshot {
         let operator = Pubkey::new_unique();
         let ncn = Pubkey::new_unique();
-        let ncn_epoch = TEST_EPOCH;
+        let epoch = TEST_EPOCH;
         let bump = 1;
         let current_slot = TEST_CURRENT_SLOT;
         let is_active = true;
@@ -816,7 +816,7 @@ mod tests {
         OperatorSnapshot::new(
             &operator,
             &ncn,
-            ncn_epoch,
+            epoch,
             bump,
             current_slot,
             is_active,
@@ -865,7 +865,7 @@ mod tests {
         let expected_total = size_of::<NcnFeeGroup>() // ncn_fee_group
             + size_of::<Pubkey>() // operator
             + size_of::<Pubkey>() // ncn
-            + size_of::<PodU64>() // ncn_epoch
+            + size_of::<PodU64>() // epoch
             + 1 // bump
             + size_of::<PodU64>() // slot_created
             + size_of::<PodU64>() // operator_ncn_index
@@ -888,7 +888,7 @@ mod tests {
             &Pubkey::new_unique(), // ncn
             0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -935,7 +935,7 @@ mod tests {
             &Pubkey::new_unique(), // ncn
             0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -984,7 +984,7 @@ mod tests {
             &Pubkey::new_unique(), // ncn
             0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1033,7 +1033,7 @@ mod tests {
             &Pubkey::new_unique(), // ncn
             0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1102,7 +1102,7 @@ mod tests {
             &Pubkey::new_unique(), // ncn
             0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1173,7 +1173,7 @@ mod tests {
             &Pubkey::new_unique(), // ncn
             0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1239,7 +1239,7 @@ mod tests {
             &Pubkey::new_unique(), // ncn
             0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1305,7 +1305,7 @@ mod tests {
             &Pubkey::new_unique(), // ncn
             0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );

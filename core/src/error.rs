@@ -173,6 +173,14 @@ pub enum TipRouterError {
     InvalidAccountToCloseDiscriminator,
     #[error("Cannot close account")]
     CannotCloseAccount,
+    #[error("Cannot close account - Already closed")]
+    CannotCloseAccountAlreadyClosed,
+    #[error("Cannot close account - Not enough epochs have passed since consensus reached")]
+    CannotCloseAccountNotEnoughEpochs,
+    #[error("Cannot close account - No receiver provided")]
+    CannotCloseAccountNoReceiverProvided,
+    #[error("Cannot close epoch state account - Epoch state needs all other accounts to be closed first")]
+    CannotCloseEpochStateAccount,
     #[error("Invalid DAO wallet")]
     InvalidDaoWallet,
 }

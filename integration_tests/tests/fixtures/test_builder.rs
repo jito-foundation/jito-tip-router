@@ -6,6 +6,7 @@ use std::{
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
 use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
+    account_payer::AccountPayer,
     ballot_box::BallotBox,
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
@@ -1001,13 +1002,26 @@ impl TestBuilder {
     ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
 
+        const EXTRA_SOL_TO_AIRDROP: f64 = 0.25;
+        const LAMPORTS_PER_SIGNATURE: u64 = 5_000;
+
         let epoch_to_close = self.clock().await.epoch;
         let ncn: Pubkey = test_ncn.ncn_root.ncn_pubkey;
 
+        let config_account = tip_router_client.get_ncn_config(ncn).await?;
+        let dao_wallet = *config_account
+            .fee_config
+            .base_fee_wallet(BaseFeeGroup::dao())
+            .expect("No DAO wallet ( do_close_epoch_account )");
+
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
+        let rent = self.context.banks_client.get_rent().await?;
+
         // Wait until we can close the accounts
         {
-            let config = self.tip_router_client().get_ncn_config(ncn).await?;
-            let epochs_after_consensus_before_close = config.epochs_after_consensus_before_close();
+            let epochs_after_consensus_before_close =
+                config_account.epochs_after_consensus_before_close();
 
             self.warp_epoch_incremental(epochs_after_consensus_before_close + 1)
                 .await?;
@@ -1035,7 +1049,19 @@ impl TestBuilder {
                     epoch_to_close,
                 );
 
-                tip_router_client.airdrop(&ncn_reward_receiver, 0.1).await?;
+                tip_router_client
+                    .airdrop(&ncn_reward_receiver, EXTRA_SOL_TO_AIRDROP)
+                    .await?;
+
+                let dao_wallet_balance_before = {
+                    let account = self.get_account(&dao_wallet).await?;
+                    account.unwrap().lamports
+                };
+
+                let account_payer_balance_before = {
+                    let account = self.get_account(&account_payer).await?;
+                    account.unwrap().lamports
+                };
 
                 tip_router_client
                     .do_close_epoch_account(
@@ -1045,6 +1071,30 @@ impl TestBuilder {
                         Some(ncn_reward_receiver),
                     )
                     .await?;
+
+                let dao_wallet_balance_after = {
+                    let account = self.get_account(&dao_wallet).await?;
+                    account.unwrap().lamports
+                };
+
+                let account_payer_balance_after = {
+                    let account = self.get_account(&account_payer).await?;
+                    account.unwrap().lamports
+                };
+
+                let router_rent = rent.minimum_balance(NcnRewardRouter::SIZE);
+                let receiver_rent = rent.minimum_balance(0);
+                assert_eq!(
+                    account_payer_balance_before + router_rent + receiver_rent,
+                    account_payer_balance_after
+                );
+
+                // DAO wallet is also the payer wallet
+                assert_eq!(
+                    dao_wallet_balance_before + sol_to_lamports(EXTRA_SOL_TO_AIRDROP)
+                        - LAMPORTS_PER_SIGNATURE,
+                    dao_wallet_balance_after
+                );
 
                 let result = self.get_account(&ncn_reward_router).await?;
                 assert!(result.is_none());
@@ -1069,8 +1119,18 @@ impl TestBuilder {
             );
 
             tip_router_client
-                .airdrop(&base_reward_receiver, 0.1)
+                .airdrop(&base_reward_receiver, EXTRA_SOL_TO_AIRDROP)
                 .await?;
+
+            let dao_wallet_balance_before = {
+                let account = self.get_account(&dao_wallet).await?;
+                account.unwrap().lamports
+            };
+
+            let account_payer_balance_before = {
+                let account = self.get_account(&account_payer).await?;
+                account.unwrap().lamports
+            };
 
             tip_router_client
                 .do_close_epoch_account(
@@ -1080,6 +1140,30 @@ impl TestBuilder {
                     Some(base_reward_receiver),
                 )
                 .await?;
+
+            let dao_wallet_balance_after = {
+                let account = self.get_account(&dao_wallet).await?;
+                account.unwrap().lamports
+            };
+
+            let account_payer_balance_after = {
+                let account = self.get_account(&account_payer).await?;
+                account.unwrap().lamports
+            };
+
+            let router_rent = rent.minimum_balance(BaseRewardRouter::SIZE);
+            let receiver_rent = rent.minimum_balance(0);
+            assert_eq!(
+                account_payer_balance_before + router_rent + receiver_rent,
+                account_payer_balance_after
+            );
+
+            // DAO wallet is also the payer wallet
+            assert_eq!(
+                dao_wallet_balance_before + sol_to_lamports(EXTRA_SOL_TO_AIRDROP)
+                    - LAMPORTS_PER_SIGNATURE,
+                dao_wallet_balance_after
+            );
 
             let result = self.get_account(&base_reward_router).await?;
             assert!(result.is_none());

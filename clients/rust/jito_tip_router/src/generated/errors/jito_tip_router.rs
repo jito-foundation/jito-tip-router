@@ -262,9 +262,21 @@ pub enum JitoTipRouterError {
     /// 8778 - Cannot close account
     #[error("Cannot close account")]
     CannotCloseAccount = 0x224A,
-    /// 8779 - Invalid DAO wallet
+    /// 8779 - Cannot close account - Already closed
+    #[error("Cannot close account - Already closed")]
+    CannotCloseAccountAlreadyClosed = 0x224B,
+    /// 8780 - Cannot close account - Not enough epochs have passed since consensus reached
+    #[error("Cannot close account - Not enough epochs have passed since consensus reached")]
+    CannotCloseAccountNotEnoughEpochs = 0x224C,
+    /// 8781 - Cannot close account - No receiver provided
+    #[error("Cannot close account - No receiver provided")]
+    CannotCloseAccountNoReceiverProvided = 0x224D,
+    /// 8782 - Cannot close epoch state account - Epoch state needs all other accounts to be closed first
+    #[error("Cannot close epoch state account - Epoch state needs all other accounts to be closed first")]
+    CannotCloseEpochStateAccount = 0x224E,
+    /// 8783 - Invalid DAO wallet
     #[error("Invalid DAO wallet")]
-    InvalidDaoWallet = 0x224B,
+    InvalidDaoWallet = 0x224F,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

@@ -182,8 +182,16 @@ export const JITO_TIP_ROUTER_ERROR__OPERATOR_IS_NOT_IN_SNAPSHOT = 0x2248; // 877
 export const JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_TO_CLOSE_DISCRIMINATOR = 0x2249; // 8777
 /** CannotCloseAccount: Cannot close account */
 export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT = 0x224a; // 8778
+/** CannotCloseAccountAlreadyClosed: Cannot close account - Already closed */
+export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_ALREADY_CLOSED = 0x224b; // 8779
+/** CannotCloseAccountNotEnoughEpochs: Cannot close account - Not enough epochs have passed since consensus reached */
+export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NOT_ENOUGH_EPOCHS = 0x224c; // 8780
+/** CannotCloseAccountNoReceiverProvided: Cannot close account - No receiver provided */
+export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NO_RECEIVER_PROVIDED = 0x224d; // 8781
+/** CannotCloseEpochStateAccount: Cannot close epoch state account - Epoch state needs all other accounts to be closed first */
+export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT = 0x224e; // 8782
 /** InvalidDaoWallet: Invalid DAO wallet */
-export const JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET = 0x224b; // 8779
+export const JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET = 0x224f; // 8783
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED
@@ -197,6 +205,10 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_EMPTY
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT
+  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_ALREADY_CLOSED
+  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NO_RECEIVER_PROVIDED
+  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NOT_ENOUGH_EPOCHS
+  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR
@@ -286,6 +298,10 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_EMPTY]: `Ballot tally not empty`,
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL]: `Ballot tally not found`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT]: `Cannot close account`,
+    [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_ALREADY_CLOSED]: `Cannot close account - Already closed`,
+    [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NO_RECEIVER_PROVIDED]: `Cannot close account - No receiver provided`,
+    [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NOT_ENOUGH_EPOCHS]: `Cannot close account - Not enough epochs have passed since consensus reached`,
+    [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT]: `Cannot close epoch state account - Epoch state needs all other accounts to be closed first`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR]: `Cast to u128 error`,

@@ -2448,6 +2448,12 @@
             }
           },
           {
+            "name": "wasTieBreakerSet",
+            "type": {
+              "defined": "PodBool"
+            }
+          },
+          {
             "name": "slotConsensusReached",
             "type": {
               "defined": "PodU64"
@@ -3013,6 +3019,15 @@
             "name": "total",
             "type": {
               "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
             }
           }
         ]
@@ -3749,6 +3764,26 @@
     },
     {
       "code": 8779,
+      "name": "CannotCloseAccountAlreadyClosed",
+      "msg": "Cannot close account - Already closed"
+    },
+    {
+      "code": 8780,
+      "name": "CannotCloseAccountNotEnoughEpochs",
+      "msg": "Cannot close account - Not enough epochs have passed since consensus reached"
+    },
+    {
+      "code": 8781,
+      "name": "CannotCloseAccountNoReceiverProvided",
+      "msg": "Cannot close account - No receiver provided"
+    },
+    {
+      "code": 8782,
+      "name": "CannotCloseEpochStateAccount",
+      "msg": "Cannot close epoch state account - Epoch state needs all other accounts to be closed first"
+    },
+    {
+      "code": 8783,
       "name": "InvalidDaoWallet",
       "msg": "Invalid DAO wallet"
     }
