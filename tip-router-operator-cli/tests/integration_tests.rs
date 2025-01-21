@@ -204,6 +204,7 @@ async fn test_meta_merkle_creation_from_ledger() {
     let meta_merkle_tree = get_meta_merkle_root(
         ledger_path,
         account_paths,
+        full_snapshots_path.clone(),
         full_snapshots_path,
         desired_slot,
         tip_distribution_program_id,
@@ -379,5 +380,3 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
 
     Ok(())
 }
-
-

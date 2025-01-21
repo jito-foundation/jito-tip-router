@@ -169,6 +169,14 @@ impl BackupSnapshotMonitor {
                             log::error!("Failed to backup snapshot: {}", e);
                             continue;
                         }
+
+                        // Remove old backup path
+                        if let Some(old_backup_path) = last_backup_path {
+                            if let Err(e) = std::fs::remove_file(old_backup_path) {
+                                log::error!("Failed to remove old backup snapshot: {}", e);
+                            }
+                        }
+
                         last_backup_path = Some(snapshot);
                     }
                 }
