@@ -18,8 +18,7 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
-/// Reallocates the ballot box account to its full size.
-/// This is needed due to Solana's account size limits during initialization.
+/// Crank Closes all accounts associated with an epoch
 #[allow(clippy::cognitive_complexity)]
 pub fn process_close_epoch_account(
     program_id: &Pubkey,
@@ -71,15 +70,7 @@ pub fn process_close_epoch_account(
 
             let epoch_delta = current_epoch.saturating_sub(epoch_consensus_reached);
             if epoch_delta < epochs_after_consensus_before_close {
-                msg!("Not enough epochs have passed since epoch state creation");
-                return Err(TipRouterError::CannotCloseAccount.into());
-            }
-        }
-
-        // Progress Check
-        {
-            if !epoch_state_account.voting_progress().is_complete() {
-                msg!("Cannot close account until voting is complete");
+                msg!("Not enough epochs have passed since consensus reached");
                 return Err(TipRouterError::CannotCloseAccount.into());
             }
         }

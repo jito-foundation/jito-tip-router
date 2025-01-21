@@ -2,8 +2,8 @@ use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    account_payer::AccountPayer, epoch_state::EpochState, vault_registry::VaultRegistry,
-    weight_table::WeightTable,
+    account_payer::AccountPayer, constants::MAX_REALLOC_BYTES, epoch_state::EpochState,
+    vault_registry::VaultRegistry, weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -69,7 +69,7 @@ pub fn process_initialize_weight_table(
         weight_table,
         system_program,
         program_id,
-        WeightTable::SIZE,
+        MAX_REALLOC_BYTES as usize,
         &weight_table_seeds,
     )?;
 

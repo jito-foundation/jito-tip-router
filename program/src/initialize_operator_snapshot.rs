@@ -4,6 +4,7 @@ use jito_restaking_core::{ncn::Ncn, ncn_operator_state::NcnOperatorState, operat
 use jito_tip_router_core::{
     account_payer::AccountPayer,
     config::Config,
+    constants::MAX_REALLOC_BYTES,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
     error::TipRouterError,
@@ -82,7 +83,7 @@ pub fn process_initialize_operator_snapshot(
         operator_snapshot,
         system_program,
         program_id,
-        OperatorSnapshot::SIZE,
+        MAX_REALLOC_BYTES as usize,
         &operator_snapshot_seeds,
     )?;
 

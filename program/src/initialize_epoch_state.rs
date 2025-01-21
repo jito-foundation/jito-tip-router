@@ -1,6 +1,9 @@
 use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
-use jito_tip_router_core::{account_payer::AccountPayer, config::Config, epoch_state::EpochState};
+use jito_tip_router_core::{
+    account_payer::AccountPayer, config::Config, constants::MAX_REALLOC_BYTES,
+    epoch_state::EpochState,
+};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult,
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
@@ -43,7 +46,7 @@ pub fn process_initialize_epoch_state(
         epoch_state,
         system_program,
         program_id,
-        EpochState::SIZE,
+        MAX_REALLOC_BYTES as usize,
         &epoch_state_seeds,
     )?;
 

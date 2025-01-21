@@ -3,6 +3,7 @@ use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     account_payer::AccountPayer,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
+    constants::MAX_REALLOC_BYTES,
     epoch_state::EpochState,
 };
 use solana_program::{
@@ -52,7 +53,7 @@ pub fn process_initialize_base_reward_router(
         base_reward_router,
         system_program,
         program_id,
-        BaseRewardRouter::SIZE,
+        MAX_REALLOC_BYTES as usize,
         &base_reward_router_seeds,
     )?;
 

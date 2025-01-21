@@ -1,7 +1,8 @@
 use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    account_payer::AccountPayer, config::Config as NcnConfig, vault_registry::VaultRegistry,
+    account_payer::AccountPayer, config::Config as NcnConfig, constants::MAX_REALLOC_BYTES,
+    vault_registry::VaultRegistry,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
@@ -39,7 +40,7 @@ pub fn process_initialize_vault_registry(
         vault_registry,
         system_program,
         program_id,
-        VaultRegistry::SIZE,
+        MAX_REALLOC_BYTES as usize,
         &vault_registry_seeds,
     )?;
 

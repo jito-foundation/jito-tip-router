@@ -61,17 +61,20 @@ impl std::fmt::Display for Ballot {
 
 impl Ballot {
     pub fn new(merkle_root: &[u8; 32]) -> Self {
-        let is_valid = merkle_root.iter().any(|byte| *byte != 0);
-
-        if !is_valid {
-            return Self::default();
-        }
-
-        Self {
+        let mut ballot = Self {
             meta_merkle_root: *merkle_root,
-            is_valid: PodBool::from(true),
+            is_valid: PodBool::from(false),
             reserved: [0; 63],
+        };
+
+        for byte in ballot.meta_merkle_root.iter() {
+            if *byte != 0 {
+                ballot.is_valid = PodBool::from(true);
+                break;
+            }
         }
+
+        ballot
     }
 
     pub const fn root(&self) -> [u8; 32] {
