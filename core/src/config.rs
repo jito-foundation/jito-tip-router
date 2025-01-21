@@ -119,3 +119,26 @@ impl Config {
         self.epochs_after_consensus_before_claim.into()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_len() {
+        use std::mem::size_of;
+
+        let expected_total = size_of::<Pubkey>() // ncn
+            + size_of::<Pubkey>() // tie_breaker_admin 
+            + size_of::<Pubkey>() // fee_admin
+            + size_of::<PodU64>() // valid_slots_after_consensus
+            + size_of::<PodU64>() // epochs_before_stall
+            + size_of::<PodU64>() // epochs_after_consensus_before_claim
+            + size_of::<FeeConfig>() // fee_config
+            + 1 // bump
+            + 127; // reserved
+
+        assert_eq!(size_of::<Config>(), expected_total);
+        assert_eq!(size_of::<Config>() + 8, Config::SIZE);
+    }
+}
