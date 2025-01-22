@@ -298,6 +298,7 @@ pub fn process_instruction(
         //                        ADMIN                         //
         // ---------------------------------------------------- //
         TipRouterInstruction::AdminSetParameters {
+            starting_valid_epoch,
             epochs_before_stall,
             epochs_after_consensus_before_close,
             valid_slots_after_consensus,
@@ -306,6 +307,7 @@ pub fn process_instruction(
             process_admin_set_parameters(
                 program_id,
                 accounts,
+                starting_valid_epoch,
                 epochs_before_stall,
                 epochs_after_consensus_before_close,
                 valid_slots_after_consensus,

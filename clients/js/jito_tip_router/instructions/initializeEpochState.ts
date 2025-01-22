@@ -37,6 +37,7 @@ export function getInitializeEpochStateDiscriminatorBytes() {
 
 export type InitializeEpochStateInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochMarker extends string | IAccountMeta<string> = string,
   TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
@@ -49,6 +50,9 @@ export type InitializeEpochStateInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochMarker extends string
+        ? ReadonlyAccount<TAccountEpochMarker>
+        : TAccountEpochMarker,
       TAccountEpochState extends string
         ? WritableAccount<TAccountEpochState>
         : TAccountEpochState,
@@ -106,12 +110,14 @@ export function getInitializeEpochStateInstructionDataCodec(): Codec<
 }
 
 export type InitializeEpochStateInput<
+  TAccountEpochMarker extends string = string,
   TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochMarker: Address<TAccountEpochMarker>;
   epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
@@ -121,6 +127,7 @@ export type InitializeEpochStateInput<
 };
 
 export function getInitializeEpochStateInstruction<
+  TAccountEpochMarker extends string,
   TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
@@ -129,6 +136,7 @@ export function getInitializeEpochStateInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeEpochStateInput<
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
@@ -138,6 +146,7 @@ export function getInitializeEpochStateInstruction<
   config?: { programAddress?: TProgramAddress }
 ): InitializeEpochStateInstruction<
   TProgramAddress,
+  TAccountEpochMarker,
   TAccountEpochState,
   TAccountConfig,
   TAccountNcn,
@@ -150,6 +159,7 @@ export function getInitializeEpochStateInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochMarker: { value: input.epochMarker ?? null, isWritable: false },
     epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
@@ -173,6 +183,7 @@ export function getInitializeEpochStateInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochMarker),
       getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
@@ -185,6 +196,7 @@ export function getInitializeEpochStateInstruction<
     ),
   } as InitializeEpochStateInstruction<
     TProgramAddress,
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
@@ -201,11 +213,12 @@ export type ParsedInitializeEpochStateInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    epochState: TAccountMetas[0];
-    config: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    accountPayer: TAccountMetas[3];
-    systemProgram: TAccountMetas[4];
+    epochMarker: TAccountMetas[0];
+    epochState: TAccountMetas[1];
+    config: TAccountMetas[2];
+    ncn: TAccountMetas[3];
+    accountPayer: TAccountMetas[4];
+    systemProgram: TAccountMetas[5];
   };
   data: InitializeEpochStateInstructionData;
 };
@@ -218,7 +231,7 @@ export function parseInitializeEpochStateInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeEpochStateInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -231,6 +244,7 @@ export function parseInitializeEpochStateInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochMarker: getNextAccount(),
       epochState: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),

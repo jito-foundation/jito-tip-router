@@ -42,6 +42,7 @@ use jito_tip_router_core::{
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
     constants::MAX_REALLOC_BYTES,
+    epoch_marker::EpochMarker,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
@@ -323,6 +324,9 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+
     let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
@@ -334,6 +338,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
     if epoch_state_account.is_none() {
         // Initialize ballot box
         let initialize_ballot_box_ix = InitializeEpochStateBuilder::new()
+            .epoch_marker(epoch_marker)
             .config(config)
             .epoch_state(epoch_state)
             .ncn(ncn)
@@ -402,6 +407,9 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+
     let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
@@ -413,6 +421,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     if weight_table_account.is_none() {
         // Initialize weight table
         let initialize_weight_table_ix = InitializeWeightTableBuilder::new()
+            .epoch_marker(epoch_marker)
             .vault_registry(vault_registry)
             .ncn(ncn)
             .epoch_state(epoch_state)
@@ -588,12 +597,16 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
     let (epoch_snapshot, _, _) =
         EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+
     let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
     );
 
     let initialize_epoch_snapshot_ix = InitializeEpochSnapshotBuilder::new()
+        .epoch_marker(epoch_marker)
         .config(config)
         .ncn(ncn)
         .epoch_state(epoch_state)
@@ -644,6 +657,9 @@ pub async fn create_operator_snapshot(
         epoch,
     );
 
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+
     let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
@@ -655,6 +671,7 @@ pub async fn create_operator_snapshot(
     if operator_snapshot_account.is_none() {
         // Initialize operator snapshot
         let initialize_operator_snapshot_ix = InitializeOperatorSnapshotBuilder::new()
+            .epoch_marker(epoch_marker)
             .config(config)
             .ncn(ncn)
             .operator(operator)
@@ -808,6 +825,9 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (ballot_box, _, _) =
         BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+
     let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
@@ -819,6 +839,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     if ballot_box_account.is_none() {
         // Initialize ballot box
         let initialize_ballot_box_ix = InitializeBallotBoxBuilder::new()
+            .epoch_marker(epoch_marker)
             .config(config)
             .epoch_state(epoch_state)
             .ballot_box(ballot_box)
@@ -947,6 +968,9 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
     let (base_reward_receiver, _, _) =
         BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+
     let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
@@ -957,6 +981,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
     // Skip if base reward router already exists
     if base_reward_router_account.is_none() {
         let initialize_base_reward_router_ix = InitializeBaseRewardRouterBuilder::new()
+            .epoch_marker(epoch_marker)
             .ncn(ncn)
             .epoch_state(epoch_state)
             .base_reward_router(base_reward_router)
@@ -1047,12 +1072,16 @@ pub async fn create_ncn_reward_router(
         epoch,
     );
 
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+
     let (account_payer, _, _) = AccountPayer::find_program_address(
         &handler.tip_router_program_id,
         &jito_tip_distribution::ID,
     );
 
     let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
+        .epoch_marker(epoch_marker)
         .epoch_state(epoch_state)
         .ncn(ncn)
         .operator(operator)

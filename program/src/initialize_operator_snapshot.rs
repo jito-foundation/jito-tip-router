@@ -5,6 +5,7 @@ use jito_tip_router_core::{
     account_payer::AccountPayer,
     config::Config,
     constants::MAX_REALLOC_BYTES,
+    epoch_marker::EpochMarker,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
     error::TipRouterError,
@@ -20,7 +21,7 @@ pub fn process_initialize_operator_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, account_payer, system_program] =
+    let [epoch_marker, epoch_state, config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -42,6 +43,7 @@ pub fn process_initialize_operator_snapshot(
     load_system_account(operator_snapshot, true)?;
     load_system_program(system_program)?;
     AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
 
     let (operator_snapshot_pubkey, operator_snapshot_bump, mut operator_snapshot_seeds) =
         OperatorSnapshot::find_program_address(program_id, operator.key, ncn.key, epoch);

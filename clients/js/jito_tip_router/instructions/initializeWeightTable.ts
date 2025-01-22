@@ -37,6 +37,7 @@ export function getInitializeWeightTableDiscriminatorBytes() {
 
 export type InitializeWeightTableInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochMarker extends string | IAccountMeta<string> = string,
   TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountVaultRegistry extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
@@ -50,6 +51,9 @@ export type InitializeWeightTableInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochMarker extends string
+        ? ReadonlyAccount<TAccountEpochMarker>
+        : TAccountEpochMarker,
       TAccountEpochState extends string
         ? ReadonlyAccount<TAccountEpochState>
         : TAccountEpochState,
@@ -110,6 +114,7 @@ export function getInitializeWeightTableInstructionDataCodec(): Codec<
 }
 
 export type InitializeWeightTableInput<
+  TAccountEpochMarker extends string = string,
   TAccountEpochState extends string = string,
   TAccountVaultRegistry extends string = string,
   TAccountNcn extends string = string,
@@ -117,6 +122,7 @@ export type InitializeWeightTableInput<
   TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochMarker: Address<TAccountEpochMarker>;
   epochState: Address<TAccountEpochState>;
   vaultRegistry: Address<TAccountVaultRegistry>;
   ncn: Address<TAccountNcn>;
@@ -127,6 +133,7 @@ export type InitializeWeightTableInput<
 };
 
 export function getInitializeWeightTableInstruction<
+  TAccountEpochMarker extends string,
   TAccountEpochState extends string,
   TAccountVaultRegistry extends string,
   TAccountNcn extends string,
@@ -136,6 +143,7 @@ export function getInitializeWeightTableInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeWeightTableInput<
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountVaultRegistry,
     TAccountNcn,
@@ -146,6 +154,7 @@ export function getInitializeWeightTableInstruction<
   config?: { programAddress?: TProgramAddress }
 ): InitializeWeightTableInstruction<
   TProgramAddress,
+  TAccountEpochMarker,
   TAccountEpochState,
   TAccountVaultRegistry,
   TAccountNcn,
@@ -159,6 +168,7 @@ export function getInitializeWeightTableInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochMarker: { value: input.epochMarker ?? null, isWritable: false },
     epochState: { value: input.epochState ?? null, isWritable: false },
     vaultRegistry: { value: input.vaultRegistry ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
@@ -183,6 +193,7 @@ export function getInitializeWeightTableInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochMarker),
       getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.vaultRegistry),
       getAccountMeta(accounts.ncn),
@@ -196,6 +207,7 @@ export function getInitializeWeightTableInstruction<
     ),
   } as InitializeWeightTableInstruction<
     TProgramAddress,
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountVaultRegistry,
     TAccountNcn,
@@ -213,12 +225,13 @@ export type ParsedInitializeWeightTableInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    epochState: TAccountMetas[0];
-    vaultRegistry: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    weightTable: TAccountMetas[3];
-    accountPayer: TAccountMetas[4];
-    systemProgram: TAccountMetas[5];
+    epochMarker: TAccountMetas[0];
+    epochState: TAccountMetas[1];
+    vaultRegistry: TAccountMetas[2];
+    ncn: TAccountMetas[3];
+    weightTable: TAccountMetas[4];
+    accountPayer: TAccountMetas[5];
+    systemProgram: TAccountMetas[6];
   };
   data: InitializeWeightTableInstructionData;
 };
@@ -231,7 +244,7 @@ export function parseInitializeWeightTableInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeWeightTableInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -244,6 +257,7 @@ export function parseInitializeWeightTableInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochMarker: getNextAccount(),
       epochState: getNextAccount(),
       vaultRegistry: getNextAccount(),
       ncn: getNextAccount(),
