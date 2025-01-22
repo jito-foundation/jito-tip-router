@@ -249,10 +249,6 @@ async fn test_meta_merkle_creation_from_ledger() {
         assert!(node.proof.is_some(), "Node should have a proof");
     }
 
-    println!("Meta merkle tree root: {:?}", meta_merkle_tree.merkle_root);
-
-    assert!(false);
-
     // Verify the proofs are valid
     meta_merkle_tree.verify_proof().unwrap();
 }

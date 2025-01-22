@@ -203,7 +203,7 @@ impl BackupSnapshotMonitor {
 
                     last_backup_path = Some(snapshot);
 
-                    // After saving best snapshot, evict old ones from same epoch
+                    // After saving best snapshot, evict oldest one from same epoch
                     if let Err(e) = self.evict_same_epoch_incremental(target_slot) {
                         log::error!("Failed to evict old snapshots: {}", e);
                     }

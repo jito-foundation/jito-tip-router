@@ -163,6 +163,11 @@ pub async fn process_epoch(
         ("epoch", target_epoch, i64),
         ("status", "success", String),
         ("state", "epoch_processing_completed", String),
+        (
+            "meta_merkle_root",
+            format!("{:?}", meta_merkle_tree.merkle_root),
+            String
+        ),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
 

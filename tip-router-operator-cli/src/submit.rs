@@ -5,7 +5,7 @@ use ellipsis_client::EllipsisClient;
 use jito_bytemuck::AccountDeserialize as JitoAccountDeserialize;
 use jito_tip_distribution_sdk::{derive_config_account_address, TipDistributionAccount};
 use jito_tip_router_core::ballot_box::BallotBox;
-use log::info;
+use log::{debug, info};
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
@@ -78,7 +78,7 @@ pub async fn submit_to_ncn(
     let ballot_box_account = match client.get_account(&ballot_box_address).await {
         Ok(account) => account,
         Err(e) => {
-            info!("Ballot box not created yet for epoch {}: {}", epoch, e);
+            debug!("Ballot box not created yet for epoch {}: {}", epoch, e);
             return Ok(());
         }
     };
