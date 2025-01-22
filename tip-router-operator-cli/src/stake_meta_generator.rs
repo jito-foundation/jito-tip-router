@@ -20,6 +20,7 @@ use solana_ledger::{
     bank_forks_utils::BankForksUtilsError, blockstore::BlockstoreError,
     blockstore_processor::BlockstoreProcessorError,
 };
+use solana_metrics::datapoint_error;
 use solana_program::{stake_history::StakeHistory, sysvar};
 use solana_runtime::{bank::Bank, stakes::StakeAccount};
 use solana_sdk::{
@@ -61,6 +62,8 @@ pub enum StakeMetaGeneratorError {
     BankForksUtilsError(#[from] BankForksUtilsError),
 
     GenesisConfigError(#[from] OpenGenesisConfigError),
+
+    PanicError,
 }
 
 impl Display for StakeMetaGeneratorError {
@@ -73,9 +76,11 @@ impl Display for StakeMetaGeneratorError {
 /// that slot. Optionally writing the result as JSON file to disk.
 #[allow(clippy::too_many_arguments)]
 pub fn generate_stake_meta(
+    operator_address: &Pubkey,
     ledger_path: &Path,
     account_paths: Vec<PathBuf>,
     full_snapshots_path: PathBuf,
+    incremental_snapshots_path: PathBuf,
     desired_slot: &Slot,
     tip_distribution_program_id: &Pubkey,
     _out_path: &str,
@@ -83,13 +88,32 @@ pub fn generate_stake_meta(
     snapshots_enabled: bool,
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     info!("Creating bank from ledger path...");
-    let bank = get_bank_from_ledger(
-        ledger_path,
-        account_paths,
-        full_snapshots_path,
-        desired_slot,
-        snapshots_enabled,
-    );
+    let res = std::panic::catch_unwind(|| {
+        get_bank_from_ledger(
+            operator_address,
+            ledger_path,
+            account_paths,
+            full_snapshots_path,
+            incremental_snapshots_path,
+            desired_slot,
+            snapshots_enabled,
+        )
+    });
+    let bank = match res {
+        Ok(bank) => bank,
+        Err(e) => {
+            error!("Panicked while creating bank from ledger: {:?}", e);
+            let error_str = format!("{:?}", e);
+            datapoint_error!(
+                "tip_router_cli.get_bank",
+                ("operator", operator_address.to_string(), String),
+                ("status", "error", String),
+                ("state", "get_bank_from_ledger", String),
+                ("error", error_str, String),
+            );
+            return Err(StakeMetaGeneratorError::PanicError);
+        }
+    };
 
     info!("Generating stake_meta_collection object...");
     let stake_meta_coll =

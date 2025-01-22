@@ -190,12 +190,13 @@ async fn test_meta_merkle_creation_from_ledger() {
         PathBuf::from("tests/fixtures/accounts"),
         PathBuf::from("path/to/account2"),
     ];
-    let full_snapshots_path = PathBuf::from("path/to/full_snapshots");
+    let full_snapshots_path = PathBuf::from("tests/fixtures/test-ledger");
     let desired_slot = &144;
     let tip_distribution_program_id = &TIP_DISTRIBUTION_ID;
     let out_path = "tests/fixtures/output.json";
     let tip_payment_program_id = &TIP_PAYMENT_ID;
     let ncn_address = Pubkey::new_unique();
+    let operator_address = Pubkey::new_unique();
     let epoch = 0u64;
     const PROTOCOL_FEE_BPS: u64 = 300;
 
@@ -203,12 +204,14 @@ async fn test_meta_merkle_creation_from_ledger() {
     let meta_merkle_tree = get_meta_merkle_root(
         ledger_path,
         account_paths,
+        full_snapshots_path.clone(),
         full_snapshots_path,
         desired_slot,
         tip_distribution_program_id,
         out_path,
         tip_payment_program_id,
         &ncn_address,
+        &operator_address,
         epoch,
         PROTOCOL_FEE_BPS,
         false,
