@@ -68,13 +68,13 @@ pub fn process_close_epoch_account(
             let epochs_after_consensus_before_close =
                 config_account.epochs_after_consensus_before_close();
 
-            let current_epoch = Clock::get()?.epoch;
+            let current_slot = Clock::get()?.slot;
             let epoch_schedule = EpochSchedule::get()?;
 
             let can_close_epoch_accounts = epoch_state_account.can_close_epoch_accounts(
                 &epoch_schedule,
                 epochs_after_consensus_before_close,
-                current_epoch,
+                current_slot,
             )?;
 
             if !can_close_epoch_accounts {

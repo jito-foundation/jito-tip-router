@@ -1,52 +1,64 @@
 use crate::{
     handler::CliHandler,
     instructions::{
-        crank_distribute, crank_register_vaults, crank_set_weight, crank_setup_router,
-        crank_snapshot, crank_test_vote, crank_upload, create_epoch_state,
+        crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
+        crank_setup_router, crank_snapshot, crank_test_vote, crank_upload, create_epoch_state,
     },
     keeper::keeper_state::KeeperState,
-    log::progress_bar,
+    log::{boring_progress_bar, progress_bar},
 };
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use jito_tip_router_core::epoch_state::State;
 use log::info;
 
-pub async fn wait_for_epoch(handler: &CliHandler, target_epoch: u64) {
+pub async fn progress_epoch(
+    handler: &CliHandler,
+    starting_epoch: u64,
+    last_current_epoch: u64,
+    keeper_epoch: u64,
+    current_loop_done: bool,
+) -> Result<u64> {
     let client = handler.rpc_client();
+    let current_epoch = client.get_epoch_info().await?.epoch;
 
-    loop {
-        let result = client.get_epoch_info().await.map_err(Into::into);
-
-        if check_and_timeout_error("Waiting for epoch".to_string(), &result).await {
-            continue;
-        }
-
-        let current_epoch = result.unwrap().epoch;
-        if current_epoch >= target_epoch {
-            break;
-        }
-
-        info!("Waiting for epoch {}/{}", current_epoch, target_epoch);
-        timeout_keeper(1000 * 60 * 15).await;
+    if current_epoch > last_current_epoch {
+        // Automatically go to new epoch
+        return Ok(current_epoch);
     }
+
+    if current_loop_done {
+        // Reset to starting epoch
+        if keeper_epoch == current_epoch {
+            return Ok(starting_epoch);
+        }
+
+        // Increment keeper epoch
+        return Ok(keeper_epoch + 1);
+    }
+
+    Ok(keeper_epoch)
 }
 
 #[allow(clippy::future_not_send)]
 pub async fn check_and_timeout_error<T>(title: String, result: &Result<T>) -> bool {
     if let Err(e) = result {
         log::error!("Error: [{}] \n{:?}\n\n", title, e);
-        timeout_keeper(5000).await;
+        timeout_error(5000).await;
         true
     } else {
         false
     }
 }
 
-pub async fn timeout_keeper(duration_ms: u64) {
-    // boring_progress_bar(duration_ms).await;
+pub async fn timeout_error(duration_ms: u64) {
     progress_bar(duration_ms).await;
 }
 
+pub async fn timeout_keeper(duration_ms: u64) {
+    boring_progress_bar(duration_ms).await;
+}
+
+#[allow(clippy::large_stack_frames)]
 pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
     run_keeper(handler).await;
 
@@ -58,25 +70,16 @@ pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
 pub async fn run_keeper(handler: &CliHandler) {
     let mut state: KeeperState = KeeperState::default();
     let mut current_epoch = handler.epoch;
+    let mut last_current_epoch = handler.epoch;
 
     loop {
         {
-            info!("-3. Start snapshot");
-            // wait_for_epoch(handler, current_epoch).await;
-        }
-
-        {
-            info!("-2. Register Vaults");
+            info!("-1. Register Vaults");
             let result = crank_register_vaults(handler).await;
 
             if check_and_timeout_error("Register Vaults".to_string(), &result).await {
                 continue;
             }
-        }
-
-        {
-            info!("-1. Wait for epoch");
-            wait_for_epoch(handler, current_epoch).await;
         }
 
         {
@@ -112,8 +115,27 @@ pub async fn run_keeper(handler: &CliHandler) {
         }
 
         {
+            info!("3. Progress Epoch");
+            let starting_epoch = handler.epoch;
+            let keeper_epoch = state.epoch;
+            let current_loop_done = state.current_loop_done().unwrap();
+
+            current_epoch = progress_epoch(
+                handler,
+                starting_epoch,
+                last_current_epoch,
+                keeper_epoch,
+                current_loop_done,
+            )
+            .await
+            .unwrap();
+
+            last_current_epoch = current_epoch;
+        }
+
+        {
             let current_state = state.current_state().unwrap();
-            info!("3. Crank State: {:?}", current_state);
+            info!("4. Crank State: {:?}", current_state);
 
             let result = match current_state {
                 State::SetWeight => crank_set_weight(handler, state.epoch).await,
@@ -123,18 +145,10 @@ pub async fn run_keeper(handler: &CliHandler) {
                 State::SetupRouter => crank_setup_router(handler, state.epoch).await,
                 State::Upload => crank_upload(handler, state.epoch).await,
                 State::Distribute => crank_distribute(handler, state.epoch).await,
-                State::Close => {
-                    //TODO this
-                    info!("Epoch Complete");
-                    current_epoch += 1;
-
-                    Ok(())
-                }
+                State::Close => crank_close_epoch_accounts(handler, state.epoch).await,
             };
 
-            if check_and_timeout_error(format!("Managing State: {:?}", current_state), &result)
-                .await
-            {
+            if check_and_timeout_error(format!("Crank State: {:?}", current_state), &result).await {
                 continue;
             }
         }

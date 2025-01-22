@@ -1,8 +1,10 @@
 use crate::{
-    getters::{get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn},
+    getters::{
+        get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn, get_tip_router_config,
+    },
     handler::CliHandler,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Ok, Result};
 use jito_bytemuck::AccountDeserialize;
 
 use jito_tip_router_core::{
@@ -36,6 +38,7 @@ pub struct KeeperState {
     pub ncn_reward_routers_address: Vec<Vec<Pubkey>>,
     pub ncn_reward_receivers_address: Vec<Vec<Pubkey>>,
     pub epoch_state: Option<Box<EpochState>>,
+    pub current_state: Option<State>,
 }
 
 impl KeeperState {
@@ -136,13 +139,22 @@ impl KeeperState {
 
         if raw_account.is_none() {
             self.epoch_state = None;
-        } else {
-            let raw_account = raw_account.unwrap();
-            let account = Box::new(*EpochState::try_from_slice_unchecked(
-                raw_account.data.as_slice(),
-            )?);
-            self.epoch_state = Some(account);
+            return Ok(());
         }
+
+        let raw_account = raw_account.unwrap();
+
+        if raw_account.data.len() < EpochState::SIZE {
+            self.epoch_state = None;
+            return Ok(());
+        }
+
+        let account = Box::new(*EpochState::try_from_slice_unchecked(
+            raw_account.data.as_slice(),
+        )?);
+        self.epoch_state = Some(account);
+
+        self.update_current_state(handler).await?;
 
         Ok(())
     }
@@ -291,16 +303,41 @@ impl KeeperState {
             .ok_or_else(|| anyhow!("Epoch state does not exist"))
     }
 
-    pub fn current_state(&self) -> Result<State> {
-        todo!("this function is not implemented yet");
+    pub async fn update_current_state(&mut self, handler: &CliHandler) -> Result<()> {
+        let rpc_client = handler.rpc_client();
+        let current_slot = rpc_client.get_epoch_info().await?.absolute_slot;
+        let epoch_schedule = rpc_client.get_epoch_schedule().await?;
 
-        // self.epoch_state
-        //     .as_ref()
-        //     .ok_or_else(|| anyhow!("Epoch state does not exist"))
-        //     .and_then(|epoch_state| {
-        //         epoch_state
-        //             .current_state()
-        //             .map_or_else(|_| Err(anyhow!("Could not get current state")), Ok)
-        //     })
+        let (valid_slots_after_consensus, epochs_after_consensus_before_close) = {
+            let config = get_tip_router_config(handler).await?;
+            (
+                config.valid_slots_after_consensus(),
+                config.epochs_after_consensus_before_close(),
+            )
+        };
+
+        let epoch_state = self.epoch_state()?;
+        let state = epoch_state.current_state(
+            &epoch_schedule,
+            valid_slots_after_consensus,
+            epochs_after_consensus_before_close,
+            current_slot,
+        )?;
+
+        self.current_state = Some(state);
+
+        Ok(())
+    }
+
+    pub fn current_state(&self) -> Result<&State> {
+        self.current_state
+            .as_ref()
+            .ok_or_else(|| anyhow!("Current state does not exist"))
+    }
+
+    pub fn current_loop_done(&self) -> Result<bool> {
+        let epoch_state = self.epoch_state()?;
+        let current_loop_done = epoch_state.account_status().are_all_closed();
+        Ok(current_loop_done)
     }
 }

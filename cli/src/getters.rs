@@ -11,6 +11,7 @@ use jito_restaking_core::{
     operator_vault_ticket::OperatorVaultTicket,
 };
 use jito_tip_router_core::{
+    account_payer::AccountPayer,
     ballot_box::BallotBox,
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
@@ -234,6 +235,20 @@ pub async fn get_ncn_reward_reciever(
         handler.ncn()?,
         epoch,
     );
+
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
+    Ok(account)
+}
+
+pub async fn get_account_payer(handler: &CliHandler) -> Result<Account> {
+    let (address, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, handler.ncn()?);
 
     let account = get_account(handler, &address).await?;
 
@@ -518,6 +533,62 @@ pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> 
         .collect::<Vec<Pubkey>>();
 
     Ok(vaults)
+}
+
+pub async fn get_total_epoch_rent_cost(handler: &CliHandler) -> Result<u64> {
+    let current_epoch = handler.epoch;
+    let client = handler.rpc_client();
+
+    let operator_count = {
+        let all_operators = get_all_operators_in_ncn(handler).await?;
+        all_operators.len() as u64
+    };
+
+    let fee_group_count = {
+        let config = get_tip_router_config(handler).await?;
+        let current_fees = config.fee_config.current_fees(current_epoch);
+        let mut fee_group_count = 0;
+        for group in NcnFeeGroup::all_groups() {
+            let fee = current_fees.ncn_fee_bps(group)?;
+            if fee > 0 {
+                fee_group_count += 1;
+            }
+        }
+        fee_group_count as u64
+    };
+
+    let mut rent_cost = 0;
+
+    rent_cost += client
+        .get_minimum_balance_for_rent_exemption(EpochState::SIZE)
+        .await?;
+    rent_cost += client
+        .get_minimum_balance_for_rent_exemption(WeightTable::SIZE)
+        .await?;
+    rent_cost += client
+        .get_minimum_balance_for_rent_exemption(EpochSnapshot::SIZE)
+        .await?;
+    rent_cost += client
+        .get_minimum_balance_for_rent_exemption(OperatorSnapshot::SIZE)
+        .await?
+        * operator_count;
+    rent_cost += client
+        .get_minimum_balance_for_rent_exemption(BallotBox::SIZE)
+        .await?;
+    rent_cost += client
+        .get_minimum_balance_for_rent_exemption(BaseRewardRouter::SIZE)
+        .await?;
+    // Base Reward Receiver
+    rent_cost += client.get_minimum_balance_for_rent_exemption(0).await?;
+    rent_cost += client
+        .get_minimum_balance_for_rent_exemption(NcnRewardRouter::SIZE)
+        .await?
+        * operator_count
+        * fee_group_count;
+    rent_cost +=
+        client.get_minimum_balance_for_rent_exemption(0).await? * operator_count * fee_group_count;
+
+    Ok(rent_cost)
 }
 
 pub async fn get_all_tickets(handler: &CliHandler) -> Result<Vec<NcnTickets>> {

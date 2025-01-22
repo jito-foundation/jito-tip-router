@@ -6,6 +6,7 @@ use dotenv::dotenv;
 use jito_tip_router_cli::{args::Args, handler::CliHandler, log::init_logger};
 
 #[tokio::main]
+#[allow(clippy::large_stack_frames)]
 async fn main() -> Result<()> {
     dotenv().ok();
     init_logger();

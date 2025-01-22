@@ -6,8 +6,8 @@ use jito_tip_router_core::{
     config::Config,
     constants::{
         MAX_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE, MAX_EPOCHS_BEFORE_STALL, MAX_FEE_BPS,
-        MAX_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE,
-        MIN_EPOCHS_BEFORE_STALL, MIN_SLOTS_AFTER_CONSENSUS,
+        MAX_VALID_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE,
+        MIN_EPOCHS_BEFORE_STALL, MIN_VALID_SLOTS_AFTER_CONSENSUS,
     },
     error::TipRouterError,
     fees::FeeConfig,
@@ -63,7 +63,7 @@ pub fn process_admin_initialize_config(
         return Err(TipRouterError::InvalidEpochsBeforeClaim.into());
     }
 
-    if !(MIN_SLOTS_AFTER_CONSENSUS..=MAX_SLOTS_AFTER_CONSENSUS)
+    if !(MIN_VALID_SLOTS_AFTER_CONSENSUS..=MAX_VALID_SLOTS_AFTER_CONSENSUS)
         .contains(&valid_slots_after_consensus)
     {
         return Err(TipRouterError::InvalidSlotsAfterConsensus.into());

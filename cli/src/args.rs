@@ -116,7 +116,7 @@ pub enum ProgramCommand {
     /// Keeper
     Keeper,
 
-    /// Instructions
+    /// Admin
     AdminCreateConfig {
         #[arg(long, default_value_t = 10 as u64, help = "Epochs before tie breaker can set consensus")]
         epochs_before_stall: u64,
@@ -133,9 +133,6 @@ pub enum ProgramCommand {
         #[arg(long, help = "Tie breaker admin address")]
         tie_breaker_admin: Option<String>,
     },
-
-    CreateVaultRegistry,
-
     AdminRegisterStMint {
         #[arg(long, help = "Vault address")]
         vault: String,
@@ -152,6 +149,31 @@ pub enum ProgramCommand {
         #[arg(long, help = "Weight when no feed is available")]
         no_feed_weight: Option<u128>,
     },
+    AdminSetWeight {
+        #[arg(long, help = "Vault address")]
+        vault: String,
+        #[arg(long, help = "Weight value")]
+        weight: u128,
+    },
+    AdminSetTieBreaker {
+        #[arg(long, help = "Meta merkle root")]
+        meta_merkle_root: String,
+    },
+    AdminSetParameters {
+        #[arg(long, help = "Epochs before tie breaker can set consensus")]
+        epochs_before_stall: Option<u64>,
+        #[arg(long, help = "Epochs after consensus before accounts can be closed")]
+        epochs_after_consensus_before_close: Option<u64>,
+        #[arg(long, help = "Slots to which voting is allowed after consensus")]
+        valid_slots_after_consensus: Option<u64>,
+    },
+    AdminFundAccountPayer {
+        #[arg(long, help = "Amount of SOL to fund")]
+        amount_in_sol: f64,
+    },
+
+    /// Instructions
+    CreateVaultRegistry,
 
     RegisterVault {
         #[arg(long, help = "Vault address")]
@@ -161,13 +183,6 @@ pub enum ProgramCommand {
     CreateEpochState,
 
     CreateWeightTable,
-
-    AdminSetWeight {
-        #[arg(long, help = "Vault address")]
-        vault: String,
-        #[arg(long, help = "Weight value")]
-        weight: u128,
-    },
 
     SetWeight {
         #[arg(long, help = "Vault address")]
@@ -190,7 +205,7 @@ pub enum ProgramCommand {
 
     CreateBallotBox,
 
-    AdminCastVote {
+    OperatorCastVote {
         #[arg(long, help = "Operator address")]
         operator: String,
         #[arg(long, help = "Meta merkle root")]
@@ -220,11 +235,6 @@ pub enum ProgramCommand {
         operator: String,
         #[arg(long, default_value_t = 0, help = "NCN fee group")]
         ncn_fee_group: u8,
-    },
-
-    AdminSetTieBreaker {
-        #[arg(long, help = "Meta merkle root")]
-        meta_merkle_root: String,
     },
 
     /// Getters
@@ -257,6 +267,8 @@ pub enum ProgramCommand {
     GetBallotBox,
     GetBaseRewardRouter,
     GetBaseRewardReceiver,
+    GetAccountPayer,
+    GetTotalEpochRentCost,
 
     /// TESTS
     Test,
