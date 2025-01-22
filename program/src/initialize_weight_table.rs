@@ -2,8 +2,8 @@ use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    account_payer::AccountPayer, constants::MAX_REALLOC_BYTES, epoch_state::EpochState,
-    vault_registry::VaultRegistry, weight_table::WeightTable,
+    account_payer::AccountPayer, constants::MAX_REALLOC_BYTES, epoch_marker::EpochMarker,
+    epoch_state::EpochState, vault_registry::VaultRegistry, weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
@@ -17,7 +17,8 @@ pub fn process_initialize_weight_table(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, vault_registry, ncn, weight_table, account_payer, system_program] = accounts
+    let [epoch_marker, epoch_state, vault_registry, ncn, weight_table, account_payer, system_program] =
+        accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -26,6 +27,7 @@ pub fn process_initialize_weight_table(
     VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
 
     load_system_account(weight_table, true)?;
     load_system_program(system_program)?;

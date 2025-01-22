@@ -37,6 +37,7 @@ export function getInitializeNcnRewardRouterDiscriminatorBytes() {
 
 export type InitializeNcnRewardRouterInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochMarker extends string | IAccountMeta<string> = string,
   TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
@@ -52,6 +53,9 @@ export type InitializeNcnRewardRouterInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochMarker extends string
+        ? ReadonlyAccount<TAccountEpochMarker>
+        : TAccountEpochMarker,
       TAccountEpochState extends string
         ? WritableAccount<TAccountEpochState>
         : TAccountEpochState,
@@ -122,6 +126,7 @@ export function getInitializeNcnRewardRouterInstructionDataCodec(): Codec<
 }
 
 export type InitializeNcnRewardRouterInput<
+  TAccountEpochMarker extends string = string,
   TAccountEpochState extends string = string,
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
@@ -131,6 +136,7 @@ export type InitializeNcnRewardRouterInput<
   TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochMarker: Address<TAccountEpochMarker>;
   epochState: Address<TAccountEpochState>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
@@ -144,6 +150,7 @@ export type InitializeNcnRewardRouterInput<
 };
 
 export function getInitializeNcnRewardRouterInstruction<
+  TAccountEpochMarker extends string,
   TAccountEpochState extends string,
   TAccountNcn extends string,
   TAccountOperator extends string,
@@ -155,6 +162,7 @@ export function getInitializeNcnRewardRouterInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeNcnRewardRouterInput<
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountNcn,
     TAccountOperator,
@@ -167,6 +175,7 @@ export function getInitializeNcnRewardRouterInstruction<
   config?: { programAddress?: TProgramAddress }
 ): InitializeNcnRewardRouterInstruction<
   TProgramAddress,
+  TAccountEpochMarker,
   TAccountEpochState,
   TAccountNcn,
   TAccountOperator,
@@ -182,6 +191,7 @@ export function getInitializeNcnRewardRouterInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochMarker: { value: input.epochMarker ?? null, isWritable: false },
     epochState: { value: input.epochState ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     operator: { value: input.operator ?? null, isWritable: false },
@@ -214,6 +224,7 @@ export function getInitializeNcnRewardRouterInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochMarker),
       getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
@@ -229,6 +240,7 @@ export function getInitializeNcnRewardRouterInstruction<
     ),
   } as InitializeNcnRewardRouterInstruction<
     TProgramAddress,
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountNcn,
     TAccountOperator,
@@ -248,14 +260,15 @@ export type ParsedInitializeNcnRewardRouterInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    epochState: TAccountMetas[0];
-    ncn: TAccountMetas[1];
-    operator: TAccountMetas[2];
-    operatorSnapshot: TAccountMetas[3];
-    ncnRewardRouter: TAccountMetas[4];
-    ncnRewardReceiver: TAccountMetas[5];
-    accountPayer: TAccountMetas[6];
-    systemProgram: TAccountMetas[7];
+    epochMarker: TAccountMetas[0];
+    epochState: TAccountMetas[1];
+    ncn: TAccountMetas[2];
+    operator: TAccountMetas[3];
+    operatorSnapshot: TAccountMetas[4];
+    ncnRewardRouter: TAccountMetas[5];
+    ncnRewardReceiver: TAccountMetas[6];
+    accountPayer: TAccountMetas[7];
+    systemProgram: TAccountMetas[8];
   };
   data: InitializeNcnRewardRouterInstructionData;
 };
@@ -268,7 +281,7 @@ export function parseInitializeNcnRewardRouterInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeNcnRewardRouterInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 9) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -281,6 +294,7 @@ export function parseInitializeNcnRewardRouterInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochMarker: getNextAccount(),
       epochState: getNextAccount(),
       ncn: getNextAccount(),
       operator: getNextAccount(),

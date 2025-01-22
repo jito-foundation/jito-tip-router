@@ -5,41 +5,24 @@
 //! <https://github.com/kinobi-so/kinobi>
 //!
 
-use crate::generated::types::FeeConfig;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 use solana_program::pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Config {
+pub struct EpochMarker {
     pub discriminator: u64,
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub ncn: Pubkey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub tie_breaker_admin: Pubkey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub fee_admin: Pubkey,
-    pub valid_slots_after_consensus: u64,
-    pub epochs_before_stall: u64,
-    pub fee_config: FeeConfig,
-    pub bump: u8,
-    pub epochs_after_consensus_before_close: u64,
-    pub starting_valid_epoch: u64,
-    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-    pub reserved: [u8; 111],
+    pub epoch: u64,
+    pub slot_closed: u64,
 }
 
-impl Config {
+impl EpochMarker {
     #[inline(always)]
     pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
         let mut data = data;
@@ -47,7 +30,7 @@ impl Config {
     }
 }
 
-impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for Config {
+impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for EpochMarker {
     type Error = std::io::Error;
 
     fn try_from(
@@ -59,26 +42,26 @@ impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for Config {
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountDeserialize for Config {
+impl anchor_lang::AccountDeserialize for EpochMarker {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         Ok(Self::deserialize(buf)?)
     }
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountSerialize for Config {}
+impl anchor_lang::AccountSerialize for EpochMarker {}
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::Owner for Config {
+impl anchor_lang::Owner for EpochMarker {
     fn owner() -> Pubkey {
         crate::JITO_TIP_ROUTER_ID
     }
 }
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::IdlBuild for Config {}
+impl anchor_lang::IdlBuild for EpochMarker {}
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::Discriminator for Config {
+impl anchor_lang::Discriminator for EpochMarker {
     const DISCRIMINATOR: [u8; 8] = [0; 8];
 }

@@ -176,7 +176,7 @@ pub struct Progress {
     /// total
     total: PodU64,
     /// Slot Completed
-    reserved: [u8; 32],
+    reserved: [u8; 8],
 }
 
 impl Default for Progress {
@@ -184,7 +184,7 @@ impl Default for Progress {
         Self {
             tally: PodU64::from(Self::INVALID),
             total: PodU64::from(Self::INVALID),
-            reserved: [0; 32],
+            reserved: [0; 8],
         }
     }
 }
@@ -197,7 +197,7 @@ impl Progress {
         Self {
             tally: PodU64::from(0),
             total: PodU64::from(total),
-            reserved: [0; 32],
+            reserved: [0; 8],
         }
     }
 

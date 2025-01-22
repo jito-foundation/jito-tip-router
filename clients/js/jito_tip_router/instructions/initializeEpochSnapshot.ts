@@ -37,6 +37,7 @@ export function getInitializeEpochSnapshotDiscriminatorBytes() {
 
 export type InitializeEpochSnapshotInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochMarker extends string | IAccountMeta<string> = string,
   TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
@@ -51,6 +52,9 @@ export type InitializeEpochSnapshotInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochMarker extends string
+        ? ReadonlyAccount<TAccountEpochMarker>
+        : TAccountEpochMarker,
       TAccountEpochState extends string
         ? WritableAccount<TAccountEpochState>
         : TAccountEpochState,
@@ -114,6 +118,7 @@ export function getInitializeEpochSnapshotInstructionDataCodec(): Codec<
 }
 
 export type InitializeEpochSnapshotInput<
+  TAccountEpochMarker extends string = string,
   TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
@@ -122,6 +127,7 @@ export type InitializeEpochSnapshotInput<
   TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochMarker: Address<TAccountEpochMarker>;
   epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
@@ -133,6 +139,7 @@ export type InitializeEpochSnapshotInput<
 };
 
 export function getInitializeEpochSnapshotInstruction<
+  TAccountEpochMarker extends string,
   TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
@@ -143,6 +150,7 @@ export function getInitializeEpochSnapshotInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeEpochSnapshotInput<
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
@@ -154,6 +162,7 @@ export function getInitializeEpochSnapshotInstruction<
   config?: { programAddress?: TProgramAddress }
 ): InitializeEpochSnapshotInstruction<
   TProgramAddress,
+  TAccountEpochMarker,
   TAccountEpochState,
   TAccountConfig,
   TAccountNcn,
@@ -168,6 +177,7 @@ export function getInitializeEpochSnapshotInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochMarker: { value: input.epochMarker ?? null, isWritable: false },
     epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
@@ -193,6 +203,7 @@ export function getInitializeEpochSnapshotInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochMarker),
       getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
@@ -207,6 +218,7 @@ export function getInitializeEpochSnapshotInstruction<
     ),
   } as InitializeEpochSnapshotInstruction<
     TProgramAddress,
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
@@ -225,13 +237,14 @@ export type ParsedInitializeEpochSnapshotInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    epochState: TAccountMetas[0];
-    config: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    weightTable: TAccountMetas[3];
-    epochSnapshot: TAccountMetas[4];
-    accountPayer: TAccountMetas[5];
-    systemProgram: TAccountMetas[6];
+    epochMarker: TAccountMetas[0];
+    epochState: TAccountMetas[1];
+    config: TAccountMetas[2];
+    ncn: TAccountMetas[3];
+    weightTable: TAccountMetas[4];
+    epochSnapshot: TAccountMetas[5];
+    accountPayer: TAccountMetas[6];
+    systemProgram: TAccountMetas[7];
   };
   data: InitializeEpochSnapshotInstructionData;
 };
@@ -244,7 +257,7 @@ export function parseInitializeEpochSnapshotInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeEpochSnapshotInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -257,6 +270,7 @@ export function parseInitializeEpochSnapshotInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochMarker: getNextAccount(),
       epochState: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),

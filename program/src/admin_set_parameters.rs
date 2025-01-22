@@ -18,6 +18,7 @@ use solana_program::{
 pub fn process_admin_set_parameters(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
+    starting_valid_epoch: Option<u64>,
     epochs_before_stall: Option<u64>,
     epochs_after_consensus_before_close: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
@@ -45,6 +46,11 @@ pub fn process_admin_set_parameters(
 
     if config.ncn != *ncn_account.key {
         return Err(TipRouterError::IncorrectNcn.into());
+    }
+
+    if let Some(epoch) = starting_valid_epoch {
+        msg!("Updated valid_starting_epoch to {}", epoch);
+        config.starting_valid_epoch = PodU64::from(epoch);
     }
 
     if let Some(epochs) = epochs_before_stall {

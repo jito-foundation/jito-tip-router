@@ -2,8 +2,9 @@ use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    account_payer::AccountPayer, config::Config, epoch_snapshot::EpochSnapshot,
-    epoch_state::EpochState, error::TipRouterError, fees, weight_table::WeightTable,
+    account_payer::AccountPayer, config::Config, epoch_marker::EpochMarker,
+    epoch_snapshot::EpochSnapshot, epoch_state::EpochState, error::TipRouterError, fees,
+    weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -16,7 +17,7 @@ pub fn process_initialize_epoch_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, config, ncn, weight_table, epoch_snapshot, account_payer, system_program] =
+    let [epoch_marker, epoch_state, config, ncn, weight_table, epoch_snapshot, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -26,6 +27,7 @@ pub fn process_initialize_epoch_snapshot(
     Config::load(program_id, ncn.key, config, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
 
     load_system_account(epoch_snapshot, true)?;
     load_system_program(system_program)?;

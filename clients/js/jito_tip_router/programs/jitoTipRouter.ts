@@ -57,6 +57,7 @@ export enum JitoTipRouterAccount {
   BallotBox,
   BaseRewardRouter,
   Config,
+  EpochMarker,
   EpochSnapshot,
   OperatorSnapshot,
   EpochState,

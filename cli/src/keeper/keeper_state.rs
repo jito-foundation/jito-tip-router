@@ -334,10 +334,4 @@ impl KeeperState {
             .as_ref()
             .ok_or_else(|| anyhow!("Current state does not exist"))
     }
-
-    pub fn current_loop_done(&self) -> Result<bool> {
-        let epoch_state = self.epoch_state()?;
-        let current_loop_done = epoch_state.account_status().are_all_closed();
-        Ok(current_loop_done)
-    }
 }

@@ -5,6 +5,7 @@ pub mod base_reward_router;
 pub mod config;
 pub mod constants;
 pub mod discriminators;
+pub mod epoch_marker;
 pub mod epoch_snapshot;
 pub mod epoch_state;
 pub mod error;

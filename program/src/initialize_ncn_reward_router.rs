@@ -3,6 +3,7 @@ use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     account_payer::AccountPayer,
+    epoch_marker::EpochMarker,
     epoch_snapshot::OperatorSnapshot,
     epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
@@ -20,7 +21,7 @@ pub fn process_initialize_ncn_reward_router(
     ncn_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn, operator, operator_snapshot, ncn_reward_router, ncn_reward_receiver, account_payer, system_program] =
+    let [epoch_marker, epoch_state, ncn, operator, operator_snapshot, ncn_reward_router, ncn_reward_receiver, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -50,6 +51,7 @@ pub fn process_initialize_ncn_reward_router(
     load_system_account(ncn_reward_router, true)?;
     load_system_program(system_program)?;
     AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
 
     let operator_ncn_index = {
         let operator_snapshot_data = operator_snapshot.try_borrow_data()?;

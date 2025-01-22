@@ -17,6 +17,7 @@ use jito_tip_router_core::{
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
     constants::JITOSOL_POOL_ADDRESS,
+    epoch_marker::EpochMarker,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
@@ -46,6 +47,12 @@ pub async fn get_account(handler: &CliHandler, account: &Pubkey) -> Result<Optio
         .await?;
 
     Ok(account.value)
+}
+
+pub async fn get_current_epoch(handler: &CliHandler) -> Result<u64> {
+    let client = handler.rpc_client();
+    let epoch = client.get_epoch_info().await?.epoch;
+    Ok(epoch)
 }
 
 // ---------------------- TIP ROUTER ----------------------
@@ -258,6 +265,30 @@ pub async fn get_account_payer(handler: &CliHandler) -> Result<Account> {
     let account = account.unwrap();
 
     Ok(account)
+}
+
+pub async fn get_epoch_marker(handler: &CliHandler, epoch: u64) -> Result<EpochMarker> {
+    let (address, _, _) =
+        EpochMarker::find_program_address(&handler.tip_router_program_id, handler.ncn()?, epoch);
+
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
+    let account = EpochMarker::try_from_slice_unchecked(account.data.as_slice())?;
+    Ok(*account)
+}
+
+pub async fn get_is_epoch_completed(handler: &CliHandler, epoch: u64) -> Result<bool> {
+    let (address, _, _) =
+        EpochMarker::find_program_address(&handler.tip_router_program_id, handler.ncn()?, epoch);
+
+    let account = get_account(handler, &address).await?;
+
+    Ok(account.is_some())
 }
 
 // ---------------------- RESTAKING ----------------------

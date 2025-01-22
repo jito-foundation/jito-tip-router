@@ -6,6 +6,70 @@ mod tests {
     };
 
     #[tokio::test]
+    async fn cannot_create_epoch_before_starting_valid_epoch() -> TestResult<()> {
+        let mut fixture = TestBuilder::new().await;
+        let mut tip_router_client = fixture.tip_router_client();
+
+        fixture.warp_epoch_incremental(1000).await?;
+
+        const OPERATOR_COUNT: usize = 1;
+        const VAULT_COUNT: usize = 1;
+
+        let test_ncn = fixture
+            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, Some(100))
+            .await?;
+
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+        let config = tip_router_client.get_ncn_config(ncn).await?;
+        let starting_valid_epoch = config.starting_valid_epoch();
+
+        let bad_epoch = starting_valid_epoch - 1;
+
+        let result = tip_router_client
+            .do_full_initialize_epoch_state(ncn, bad_epoch)
+            .await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cannot_create_after_epoch_marker() -> TestResult<()> {
+        let mut fixture = TestBuilder::new().await;
+        let mut tip_router_client = fixture.tip_router_client();
+        let mut stake_pool_client = fixture.stake_pool_client();
+        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
+        const OPERATOR_COUNT: usize = 1;
+        const VAULT_COUNT: usize = 1;
+
+        let test_ncn = fixture
+            .create_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, None)
+            .await?;
+
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+        let epoch = fixture.clock().await.epoch;
+
+        fixture.snapshot_test_ncn(&test_ncn).await?;
+        fixture.vote_test_ncn(&test_ncn).await?;
+        fixture
+            .reward_test_ncn(&test_ncn, 10_000, &pool_root)
+            .await?;
+        fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
+
+        let epoch_marker = tip_router_client.get_epoch_marker(ncn, epoch).await?;
+        assert_eq!(epoch_marker.epoch(), epoch);
+
+        let result = tip_router_client
+            .do_full_initialize_epoch_state(ncn, epoch)
+            .await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_all_test_ncn_functions_pt1() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();

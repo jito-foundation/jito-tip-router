@@ -105,10 +105,6 @@ impl CliHandler {
         Ok(handler)
     }
 
-    pub fn set_epoch(&mut self, epoch: u64) {
-        self.epoch = epoch;
-    }
-
     pub const fn rpc_client(&self) -> &RpcClient {
         &self.rpc_client
     }
@@ -131,6 +127,7 @@ impl CliHandler {
             ProgramCommand::AdminCreateConfig {
                 epochs_before_stall,
                 valid_slots_after_consensus,
+                epochs_after_consensus_before_close,
                 dao_fee_bps,
                 block_engine_fee_bps,
                 default_ncn_fee_bps,
@@ -145,6 +142,7 @@ impl CliHandler {
                     self,
                     epochs_before_stall,
                     valid_slots_after_consensus,
+                    epochs_after_consensus_before_close,
                     dao_fee_bps,
                     block_engine_fee_bps,
                     default_ncn_fee_bps,

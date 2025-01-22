@@ -122,6 +122,12 @@ pub enum ProgramCommand {
         epochs_before_stall: u64,
         #[arg(long, default_value_t = (DEFAULT_SLOTS_PER_EPOCH as f64 * 0.1) as u64, help = "Valid slots after consensus")]
         valid_slots_after_consensus: u64,
+        #[arg(
+            long,
+            default_value_t = 10,
+            help = "Epochs after consensus before accounts can be closed"
+        )]
+        epochs_after_consensus_before_close: u64,
         #[arg(long, default_value_t = 300, help = "DAO fee in basis points")]
         dao_fee_bps: u16,
         #[arg(long, default_value_t = 100, help = "Block engine fee in basis points")]

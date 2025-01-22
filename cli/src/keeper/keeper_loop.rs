@@ -1,4 +1,5 @@
 use crate::{
+    getters::{get_current_epoch, get_is_epoch_completed},
     handler::CliHandler,
     instructions::{
         crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
@@ -16,17 +17,16 @@ pub async fn progress_epoch(
     starting_epoch: u64,
     last_current_epoch: u64,
     keeper_epoch: u64,
-    current_loop_done: bool,
 ) -> Result<u64> {
-    let client = handler.rpc_client();
-    let current_epoch = client.get_epoch_info().await?.epoch;
+    let current_epoch = get_current_epoch(handler).await?;
+    let is_epoch_completed = get_is_epoch_completed(handler, keeper_epoch).await?;
 
     if current_epoch > last_current_epoch {
         // Automatically go to new epoch
         return Ok(current_epoch);
     }
 
-    if current_loop_done {
+    if is_epoch_completed {
         // Reset to starting epoch
         if keeper_epoch == current_epoch {
             return Ok(starting_epoch);
@@ -70,7 +70,9 @@ pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
 pub async fn run_keeper(handler: &CliHandler) {
     let mut state: KeeperState = KeeperState::default();
     let mut current_epoch = handler.epoch;
-    let mut last_current_epoch = handler.epoch;
+    let mut last_current_epoch = get_current_epoch(handler)
+        .await
+        .expect("Could not get epoch");
 
     loop {
         {
@@ -83,7 +85,23 @@ pub async fn run_keeper(handler: &CliHandler) {
         }
 
         {
-            info!("0. Update Keeper State");
+            info!("0. Progress Epoch");
+            let starting_epoch = handler.epoch;
+            let keeper_epoch = current_epoch;
+
+            let result =
+                progress_epoch(handler, starting_epoch, last_current_epoch, keeper_epoch).await;
+
+            if check_and_timeout_error("Progress Epoch".to_string(), &result).await {
+                continue;
+            }
+
+            current_epoch = result.unwrap();
+            last_current_epoch = last_current_epoch.max(current_epoch)
+        }
+
+        {
+            info!("1. Update Keeper State");
             if state.epoch != current_epoch {
                 let result = state.fetch(handler, current_epoch).await;
 
@@ -94,7 +112,7 @@ pub async fn run_keeper(handler: &CliHandler) {
         }
 
         {
-            info!("1. Update the epoch state");
+            info!("2. Update the epoch state");
             let result = state.update_epoch_state(handler).await;
 
             if check_and_timeout_error("Update Epoch State".to_string(), &result).await {
@@ -103,7 +121,7 @@ pub async fn run_keeper(handler: &CliHandler) {
         }
 
         {
-            info!("2. If epoch state DNE, create it");
+            info!("3. If epoch state DNE, create it");
             if state.epoch_state.is_none() {
                 let result = create_epoch_state(handler, state.epoch).await;
 
@@ -112,25 +130,6 @@ pub async fn run_keeper(handler: &CliHandler) {
                 // Go back either way
                 continue;
             }
-        }
-
-        {
-            info!("3. Progress Epoch");
-            let starting_epoch = handler.epoch;
-            let keeper_epoch = state.epoch;
-            let current_loop_done = state.current_loop_done().unwrap();
-
-            current_epoch = progress_epoch(
-                handler,
-                starting_epoch,
-                last_current_epoch,
-                keeper_epoch,
-                current_loop_done,
-            )
-            .await
-            .unwrap();
-
-            last_current_epoch = current_epoch;
         }
 
         {

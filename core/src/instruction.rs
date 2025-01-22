@@ -56,11 +56,12 @@ pub enum TipRouterInstruction {
     //                       SNAPSHOT                       //
     // ---------------------------------------------------- //
     /// Initializes the Epoch State
-    #[account(0, writable, name = "epoch_state")]
-    #[account(1, name = "config")]
-    #[account(2, name = "ncn")]
-    #[account(3, writable, name = "account_payer")]
-    #[account(4, name = "system_program")]
+    #[account(0, name = "epoch_marker")]
+    #[account(1, writable, name = "epoch_state")]
+    #[account(2, name = "config")]
+    #[account(3, name = "ncn")]
+    #[account(4, writable, name = "account_payer")]
+    #[account(5, name = "system_program")]
     InitializeEpochState {
         epoch: u64,
     },
@@ -76,12 +77,13 @@ pub enum TipRouterInstruction {
     },
 
     /// Initializes the weight table for a given epoch
-    #[account(0, name = "epoch_state")]
-    #[account(1, name = "vault_registry")]
-    #[account(2, name = "ncn")]
-    #[account(3, writable, name = "weight_table")]
-    #[account(4, writable, name = "account_payer")]
-    #[account(5, name = "system_program")]
+    #[account(0, name = "epoch_marker")]
+    #[account(1, name = "epoch_state")]
+    #[account(2, name = "vault_registry")]
+    #[account(3, name = "ncn")]
+    #[account(4, writable, name = "weight_table")]
+    #[account(5, writable, name = "account_payer")]
+    #[account(6, name = "system_program")]
     InitializeWeightTable{
         epoch: u64,
     },
@@ -110,27 +112,29 @@ pub enum TipRouterInstruction {
 
 
     /// Initializes the Epoch Snapshot
-    #[account(0, writable, name = "epoch_state")]
-    #[account(1, name = "config")]
-    #[account(2, name = "ncn")]
-    #[account(3, name = "weight_table")]
-    #[account(4, writable, name = "epoch_snapshot")]
-    #[account(5, writable, name = "account_payer")]
-    #[account(6, name = "system_program")]
+    #[account(0, name = "epoch_marker")]
+    #[account(1, writable, name = "epoch_state")]
+    #[account(2, name = "config")]
+    #[account(3, name = "ncn")]
+    #[account(4, name = "weight_table")]
+    #[account(5, writable, name = "epoch_snapshot")]
+    #[account(6, writable, name = "account_payer")]
+    #[account(7, name = "system_program")]
     InitializeEpochSnapshot{
         epoch: u64,
     },
 
     /// Initializes the Operator Snapshot
-    #[account(0, name = "epoch_state")]
-    #[account(1, name = "config")]
-    #[account(2, name = "ncn")]
-    #[account(3, name = "operator")]
-    #[account(4, name = "ncn_operator_state")]
-    #[account(5, name = "epoch_snapshot")]
-    #[account(6, writable, name = "operator_snapshot")]
-    #[account(7, writable, name = "account_payer")]
-    #[account(8, name = "system_program")]
+    #[account(0, name = "epoch_marker")]
+    #[account(1, name = "epoch_state")]
+    #[account(2, name = "config")]
+    #[account(3, name = "ncn")]
+    #[account(4, name = "operator")]
+    #[account(5, name = "ncn_operator_state")]
+    #[account(6, name = "epoch_snapshot")]
+    #[account(7, writable, name = "operator_snapshot")]
+    #[account(8, writable, name = "account_payer")]
+    #[account(9, name = "system_program")]
     InitializeOperatorSnapshot{
         epoch: u64,
     },
@@ -171,12 +175,13 @@ pub enum TipRouterInstruction {
     //                         VOTE                         //
     // ---------------------------------------------------- //
     /// Initializes the ballot box for an NCN
-    #[account(0, name = "epoch_state")]
-    #[account(1, name = "config")]
-    #[account(2, writable, name = "ballot_box")]
-    #[account(3, name = "ncn")]
-    #[account(4, writable, name = "account_payer")]
-    #[account(5, name = "system_program")]
+    #[account(0, name = "epoch_marker")]
+    #[account(1, name = "epoch_state")]
+    #[account(2, name = "config")]
+    #[account(3, writable, name = "ballot_box")]
+    #[account(4, name = "ncn")]
+    #[account(5, writable, name = "account_payer")]
+    #[account(6, name = "system_program")]
     InitializeBallotBox {
         epoch: u64,
     },
@@ -227,12 +232,13 @@ pub enum TipRouterInstruction {
     //                ROUTE AND DISTRIBUTE                  //
     // ---------------------------------------------------- //
     /// Initializes the base reward router
-    #[account(0, name = "epoch_state")]
-    #[account(1, name = "ncn")]
-    #[account(2, writable, name = "base_reward_router")]
-    #[account(3, writable, name = "base_reward_receiver")]
-    #[account(4, writable, name = "account_payer")]
-    #[account(5, name = "system_program")]
+    #[account(0, name = "epoch_marker")]
+    #[account(1, name = "epoch_state")]
+    #[account(2, name = "ncn")]
+    #[account(3, writable, name = "base_reward_router")]
+    #[account(4, writable, name = "base_reward_receiver")]
+    #[account(5, writable, name = "account_payer")]
+    #[account(6, name = "system_program")]
     InitializeBaseRewardRouter{
         epoch: u64,
     },
@@ -249,14 +255,15 @@ pub enum TipRouterInstruction {
     },
 
     /// Initializes the ncn reward router
-    #[account(0, writable, name = "epoch_state")]
-    #[account(1, name = "ncn")]
-    #[account(2, name = "operator")]
-    #[account(3, name = "operator_snapshot")]
-    #[account(4, writable, name = "ncn_reward_router")]
-    #[account(5, writable, name = "ncn_reward_receiver")]
-    #[account(6, writable, name = "account_payer")]
-    #[account(7, name = "system_program")]
+    #[account(0, name = "epoch_marker")]
+    #[account(1, writable, name = "epoch_state")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "operator")]
+    #[account(4, name = "operator_snapshot")]
+    #[account(5, writable, name = "ncn_reward_router")]
+    #[account(6, writable, name = "ncn_reward_receiver")]
+    #[account(7, writable, name = "account_payer")]
+    #[account(8, name = "system_program")]
     InitializeNcnRewardRouter{
         ncn_fee_group: u8,
         epoch: u64,
@@ -392,14 +399,15 @@ pub enum TipRouterInstruction {
     },
 
     /// Close an epoch account
-    #[account(0, writable, name = "epoch_state")]
-    #[account(1, name = "config")]
-    #[account(2, name = "ncn")]
-    #[account(3, writable, name = "account_to_close")]
-    #[account(4, writable, name = "account_payer")]
-    #[account(5, writable, name = "dao_wallet")]
-    #[account(6, name = "system_program")]
-    #[account(7, writable, optional, name = "receiver_to_close")]
+    #[account(0, writable, name = "epoch_marker")]
+    #[account(1, writable, name = "epoch_state")]
+    #[account(2, name = "config")]
+    #[account(3, name = "ncn")]
+    #[account(4, writable, name = "account_to_close")]
+    #[account(5, writable, name = "account_payer")]
+    #[account(6, writable, name = "dao_wallet")]
+    #[account(7, name = "system_program")]
+    #[account(8, writable, optional, name = "receiver_to_close")]
     CloseEpochAccount {
         epoch: u64,
     },
@@ -412,6 +420,7 @@ pub enum TipRouterInstruction {
     #[account(1, name = "ncn")]
     #[account(2, signer, name = "ncn_admin")]
     AdminSetParameters {
+        starting_valid_epoch: Option<u64>,
         epochs_before_stall: Option<u64>,
         epochs_after_consensus_before_close: Option<u64>,
         valid_slots_after_consensus: Option<u64>,
