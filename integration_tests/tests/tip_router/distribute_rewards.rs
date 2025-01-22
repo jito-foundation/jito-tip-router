@@ -12,6 +12,72 @@ mod tests {
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
 
     #[tokio::test]
+    async fn test_remainder_rewards() -> TestResult<()> {
+        let mut fixture = TestBuilder::new().await;
+        let mut tip_router_client = fixture.tip_router_client();
+
+        const AMOUNT_TO_ROUTE_SUCH_THAT_REMAINDER: u64 = 10_000;
+
+        // Setup with 2 operators for interesting reward splits
+        // 10% Operator fee
+        let test_ncn = fixture.create_initial_test_ncn(3, 2, Some(1000)).await?;
+
+        ///// TipRouter Setup /////
+        fixture.warp_slot_incremental(1000).await?;
+
+        let dao_wallet = Keypair::new();
+        let dao_wallet_address = dao_wallet.pubkey();
+        tip_router_client.airdrop(&dao_wallet_address, 1.0).await?;
+
+        // Configure fees: 30% block engine, 27% DAO fee, 1.5% NCN fee
+        tip_router_client
+            .do_set_config_fees(
+                Some(300), // block engine fee = 3%
+                None,
+                Some(dao_wallet_address), // DAO wallet
+                Some(270),                // DAO fee = 2.7%
+                None,
+                Some(15), // NCN fee = .15%
+                &test_ncn.ncn_root,
+            )
+            .await?;
+
+        fixture
+            .warp_slot_incremental(DEFAULT_SLOTS_PER_EPOCH * 2)
+            .await?;
+
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+        let epoch = fixture.clock().await.epoch;
+
+        fixture.snapshot_test_ncn(&test_ncn).await?;
+        fixture.vote_test_ncn(&test_ncn).await?;
+
+        let valid_slots_after_consensus = {
+            let config = tip_router_client.get_ncn_config(ncn).await?;
+            config.valid_slots_after_consensus()
+        };
+
+        fixture
+            .warp_slot_incremental(valid_slots_after_consensus + 1)
+            .await?;
+
+        fixture.add_routers_for_test_ncn(&test_ncn).await?;
+
+        let (base_reward_receiver, _, _) =
+            BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+
+        tip_router_client
+            .airdrop_lamports(&base_reward_receiver, AMOUNT_TO_ROUTE_SUCH_THAT_REMAINDER)
+            .await?;
+
+        //Run twice, if there is an accounting issue it will fail
+        tip_router_client.do_route_base_rewards(ncn, epoch).await?;
+        tip_router_client.do_route_base_rewards(ncn, epoch).await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_route_and_distribute_base_rewards() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
