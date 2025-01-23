@@ -60,7 +60,7 @@ pub fn get_bank_from_ledger(
                 ("status", "error", String),
                 ("state", "load_genesis", String),
                 ("step", 1, i64),
-                ("error", e.to_string(), String),
+                ("error", format!("{:?}", e), String),
             );
             panic!("Failed to load genesis config: {}", e); // TODO should panic here?
         }
@@ -195,7 +195,7 @@ pub fn get_bank_from_ledger(
                     ("state", "load_bank_forks", String),
                     ("status", "error", String),
                     ("step", 4, i64),
-                    ("error", e.to_string(), String),
+                    ("error", format!("{:?}", e), String),
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
                 );
                 panic!("Failed to load bank forks: {}", e);
@@ -230,7 +230,7 @@ pub fn get_bank_from_ledger(
                 ("status", "error", String),
                 ("state", "process_blockstore_from_root", String),
                 ("step", 5, i64),
-                ("error", e.to_string(), String),
+                ("error", format!("{:?}", e), String),
                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
             );
             panic!("Failed to process blockstore from root: {}", e);
@@ -268,7 +268,7 @@ pub fn get_bank_from_ledger(
                     ("status", "error", String),
                     ("state", "bank_to_full_snapshot_archive", String),
                     ("step", 6, i64),
-                    ("error", e.to_string(), String),
+                    ("error", format!("{:?}", e), String),
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
                 );
                 panic!("Failed to create snapshot: {}", e);

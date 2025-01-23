@@ -63,7 +63,7 @@ pub enum StakeMetaGeneratorError {
 
     GenesisConfigError(#[from] OpenGenesisConfigError),
 
-    PanicError,
+    PanicError(String),
 }
 
 impl Display for StakeMetaGeneratorError {
@@ -102,8 +102,18 @@ pub fn generate_stake_meta(
     let bank = match res {
         Ok(bank) => bank,
         Err(e) => {
-            error!("Panicked while creating bank from ledger: {:?}", e);
-            let error_str = format!("{:?}", e);
+            let error_str = if let Some(s) = e.downcast_ref::<String>() {
+                s.as_str()
+            } else if let Some(s) = e.downcast_ref::<&'static str>() {
+                s
+            } else {
+                // If we can't get a string, try to get any Debug implementation
+                match e.downcast_ref::<Box<dyn std::fmt::Debug + Send>>() {
+                    Some(debug_val) => format!("{:?}", debug_val).as_str(),
+                    None => "Unknown panic payload",
+                }
+            };
+            error!("Panicked while creating bank from ledger: {}", error_str);
             datapoint_error!(
                 "tip_router_cli.get_bank",
                 ("operator", operator_address.to_string(), String),
@@ -111,7 +121,7 @@ pub fn generate_stake_meta(
                 ("state", "get_bank_from_ledger", String),
                 ("error", error_str, String),
             );
-            return Err(StakeMetaGeneratorError::PanicError);
+            return Err(StakeMetaGeneratorError::PanicError(error_str.to_string()));
         }
     };
 

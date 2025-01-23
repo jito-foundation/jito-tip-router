@@ -111,7 +111,11 @@ pub fn get_meta_merkle_root(
         tip_payment_program_id,
         snapshots_enabled,
     )
-    .map_err(|_| MerkleRootError::StakeMetaGeneratorError("Failed to generate stake meta"))?;
+    .map_err(|e| {
+        MerkleRootError::StakeMetaGeneratorError(
+            format!("Failed to generate stake meta: {:?}", e).as_str(),
+        )
+    })?;
 
     info!(
         "Created StakeMetaCollection:\n - epoch: {:?}\n - slot: {:?}\n - num stake metas: {:?}\n - bank_hash: {:?}",
