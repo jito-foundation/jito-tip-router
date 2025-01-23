@@ -7,7 +7,7 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 
 use crate::discriminators::Discriminators;
 
-/// Uninitialized, 56-byte account to mark that an epoch is complete
+/// 56-byte account to mark that an epoch's accounts have all been closed
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct EpochMarker {

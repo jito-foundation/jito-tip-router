@@ -2044,35 +2044,58 @@ pub async fn crank_upload(_: &CliHandler, _: u64) -> Result<()> {
     Ok(())
 }
 
+//TODO Multi-thread sending the TXs
 pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
     let operators = get_all_operators_in_ncn(handler).await?;
 
-    let config = get_tip_router_config(handler).await?;
-    let fee_config = config.fee_config;
+    let epoch_snapshot = get_or_create_epoch_snapshot(handler, epoch).await?;
+    let fees = epoch_snapshot.fees();
+
+    let base_reward_router = get_base_reward_router(handler, epoch).await?;
 
     route_base_rewards(handler, epoch).await?;
 
     for group in BaseFeeGroup::all_groups() {
-        if fee_config.base_fee_bps(group, epoch)? == 0 {
+        if fees.base_fee_bps(group)? == 0 {
             continue;
         }
 
-        let result = distribute_base_rewards(handler, group, epoch).await;
+        if base_reward_router.rewards_processed() != 0 {
+            let result = distribute_base_rewards(handler, group, epoch).await;
 
-        if let Err(err) = result {
-            log::error!(
+            if let Err(err) = result {
+                log::error!(
                 "Failed to distribute base rewards for group: {:?} in epoch: {:?} with error: {:?}",
                 group,
                 epoch,
                 err
             );
+            }
         }
     }
 
     for operator in operators.iter() {
         for group in NcnFeeGroup::all_groups() {
-            if fee_config.ncn_fee_bps(group, epoch)? == 0 {
+            if fees.ncn_fee_bps(group)? == 0 {
                 continue;
+            }
+
+            if base_reward_router
+                .ncn_fee_group_reward_route(operator)?
+                .rewards(group)?
+                != 0
+            {
+                let result = distribute_base_ncn_rewards(handler, operator, group, epoch).await;
+
+                if let Err(err) = result {
+                    log::error!(
+                    "Failed to distribute base ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
+                    operator,
+                    epoch,
+                    err
+                );
+                    continue;
+                }
             }
 
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
@@ -2080,19 +2103,6 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
             if let Err(err) = result {
                 log::error!(
                     "Failed to get or create ncn reward router: {:?} in epoch: {:?} with error: {:?}",
-                    operator,
-                    epoch,
-                    err
-                );
-                continue;
-            }
-            let ncn_reward_router = result?;
-
-            let result = distribute_base_ncn_rewards(handler, operator, group, epoch).await;
-
-            if let Err(err) = result {
-                log::error!(
-                    "Failed to distribute base ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
                     operator,
                     epoch,
                     err
@@ -2112,22 +2122,41 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
                 continue;
             }
 
-            let result = distribute_ncn_operator_rewards(handler, operator, group, epoch).await;
+            let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
 
             if let Err(err) = result {
                 log::error!(
-                    "Failed to distribute ncn operator rewards for operator: {:?} in epoch: {:?} with error: {:?}",
+                    "Failed to get or create ncn reward router: {:?} in epoch: {:?} with error: {:?}",
                     operator,
                     epoch,
                     err
                 );
                 continue;
             }
+            let ncn_reward_router = result?;
+
+            if ncn_reward_router.rewards_processed() == 0 {
+                continue;
+            }
+
+            if ncn_reward_router.operator_rewards() != 0 {
+                let result = distribute_ncn_operator_rewards(handler, operator, group, epoch).await;
+
+                if let Err(err) = result {
+                    log::error!(
+                    "Failed to distribute ncn operator rewards for operator: {:?} in epoch: {:?} with error: {:?}",
+                    operator,
+                    epoch,
+                    err
+                );
+                    continue;
+                }
+            }
 
             let vaults_to_route = ncn_reward_router
                 .vault_reward_routes()
                 .iter()
-                .filter(|route| !route.is_empty())
+                .filter(|route| !route.is_empty() && route.has_rewards())
                 .map(|route| route.vault())
                 .collect::<Vec<Pubkey>>();
 

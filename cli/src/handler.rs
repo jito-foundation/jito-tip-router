@@ -4,10 +4,11 @@ use crate::{
     args::{Args, ProgramCommand},
     getters::{
         get_account_payer, get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn,
-        get_ballot_box, get_base_reward_receiver, get_base_reward_router, get_epoch_state, get_ncn,
-        get_ncn_operator_state, get_ncn_vault_ticket, get_stake_pool, get_tip_router_config,
-        get_total_epoch_rent_cost, get_vault_ncn_ticket, get_vault_operator_delegation,
-        get_vault_registry,
+        get_ballot_box, get_base_reward_receiver, get_base_reward_router, get_epoch_snapshot,
+        get_epoch_state, get_ncn, get_ncn_operator_state, get_ncn_reward_receiver,
+        get_ncn_reward_router, get_ncn_vault_ticket, get_stake_pool, get_tip_router_config,
+        get_total_epoch_rent_cost, get_total_rewards_to_be_distributed, get_vault_ncn_ticket,
+        get_vault_operator_delegation, get_vault_registry,
     },
     instructions::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
@@ -21,7 +22,7 @@ use crate::{
     keeper::keeper_loop::startup_keeper,
 };
 use anyhow::{anyhow, Result};
-use jito_tip_router_core::ncn_fee_group::NcnFeeGroup;
+use jito_tip_router_core::{base_fee_group::BaseFeeGroup, ncn_fee_group::NcnFeeGroup};
 use log::info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -362,7 +363,12 @@ impl CliHandler {
             }
             ProgramCommand::GetEpochState {} => {
                 let epoch_state = get_epoch_state(self, self.epoch).await?;
-                info!("Epoch State: {:?}", epoch_state);
+                info!(
+                    "\n\n--- Epoch State ---\nEpoch: {}\nDistribute Progress: {:?}",
+                    epoch_state.epoch(),
+                    epoch_state.total_distribution_progress()
+                );
+                // info!("Epoch State: {:?}", epoch_state);
                 Ok(())
             }
             ProgramCommand::GetStakePool {} => {
@@ -376,18 +382,75 @@ impl CliHandler {
                 Ok(())
             }
             ProgramCommand::GetBaseRewardRouter {} => {
+                let total_rewards_to_be_distributed =
+                    get_total_rewards_to_be_distributed(self, self.epoch).await?;
                 let base_reward_router = get_base_reward_router(self, self.epoch).await?;
-                info!("Base Reward Router: {:?}", base_reward_router);
-                Ok(())
-            }
-            ProgramCommand::GetBaseRewardReceiver {} => {
-                let base_reward_receiver = get_base_reward_receiver(self, self.epoch).await?;
+                let (base_reward_receiver_address, base_reward_receiver_account) =
+                    get_base_reward_receiver(self, self.epoch).await?;
                 let rent = self
                     .rpc_client
                     .get_minimum_balance_for_rent_exemption(0)
                     .await?;
+                // info!("Base Reward Router: {:?}", base_reward_router);
+                info!(
+                    "\n\n --- Base Reward Router ---\ntotal to distribute: {}\nreceiver: {}: {}\nrewards in receiver: {}\nrewards processed: {}\nbase fee group reward: {}\nncn fee group reward: {}\n",
+                    total_rewards_to_be_distributed,
+                    base_reward_receiver_address,
+                    base_reward_receiver_account.lamports,
+                    base_reward_receiver_account.lamports - rent,
+                    base_reward_router.rewards_processed(),
+                    base_reward_router.base_fee_group_reward(BaseFeeGroup::default()).unwrap(),
+                    base_reward_router.ncn_fee_group_rewards(NcnFeeGroup::default()).unwrap()
+                );
+                Ok(())
+            }
+            ProgramCommand::GetNcnRewardRouters {} => {
+                let all_operators = get_all_operators_in_ncn(self).await?;
+                let rent = self
+                    .rpc_client
+                    .get_minimum_balance_for_rent_exemption(0)
+                    .await?;
+                let epoch_snapshot = get_epoch_snapshot(self, self.epoch).await?;
+                let fees = epoch_snapshot.fees();
 
-                info!("Base Reward Receiver: {} {:?}", rent, base_reward_receiver);
+                let mut valid_ncn_groups: Vec<NcnFeeGroup> = Vec::new();
+                for group in NcnFeeGroup::all_groups() {
+                    if fees.ncn_fee_bps(group)? > 0 {
+                        valid_ncn_groups.push(group);
+                    }
+                }
+
+                for operator in all_operators.iter() {
+                    for group in valid_ncn_groups.iter() {
+                        let ncn_reward_router =
+                            get_ncn_reward_router(self, *group, operator, self.epoch).await?;
+                        let (ncn_reward_receiver_address, ncn_reward_receiver_account) =
+                            get_ncn_reward_receiver(self, *group, operator, self.epoch).await?;
+
+                        let mut routes = String::new();
+                        for vault_route in ncn_reward_router.vault_reward_routes() {
+                            if !vault_route.is_empty() {
+                                routes.push_str(&format!(
+                                    "{:?}: {}\n",
+                                    vault_route.vault(),
+                                    vault_route.rewards()
+                                ));
+                            }
+                        }
+
+                        info!(
+                            "\n\n --- NCN Reward Router ---\noperator: {}\ngroup: {:?}\nreceiver: {} {}\nrewards in receiver: {}\nrewards processed: {}\noperator rewards: {}\n{}\n",
+                            operator,
+                            group,
+                            ncn_reward_receiver_address,
+                            ncn_reward_receiver_account.lamports,
+                            ncn_reward_receiver_account.lamports - rent,
+                            ncn_reward_router.rewards_processed(),
+                            ncn_reward_router.operator_rewards(),
+                            routes
+                        );
+                    }
+                }
 
                 Ok(())
             }

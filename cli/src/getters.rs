@@ -187,7 +187,10 @@ pub async fn get_base_reward_router(handler: &CliHandler, epoch: u64) -> Result<
     Ok(*account)
 }
 
-pub async fn get_base_reward_receiver(handler: &CliHandler, epoch: u64) -> Result<Account> {
+pub async fn get_base_reward_receiver(
+    handler: &CliHandler,
+    epoch: u64,
+) -> Result<(Pubkey, Account)> {
     let (address, _, _) = BaseRewardReceiver::find_program_address(
         &handler.tip_router_program_id,
         handler.ncn()?,
@@ -201,7 +204,7 @@ pub async fn get_base_reward_receiver(handler: &CliHandler, epoch: u64) -> Resul
     }
     let account = account.unwrap();
 
-    Ok(account)
+    Ok((address, account))
 }
 
 pub async fn get_ncn_reward_router(
@@ -229,12 +232,12 @@ pub async fn get_ncn_reward_router(
     Ok(*account)
 }
 
-pub async fn get_ncn_reward_reciever(
+pub async fn get_ncn_reward_receiver(
     handler: &CliHandler,
     ncn_fee_group: NcnFeeGroup,
     operator: &Pubkey,
     epoch: u64,
-) -> Result<Account> {
+) -> Result<(Pubkey, Account)> {
     let (address, _, _) = NcnRewardReceiver::find_program_address(
         &handler.tip_router_program_id,
         ncn_fee_group,
@@ -250,7 +253,74 @@ pub async fn get_ncn_reward_reciever(
     }
     let account = account.unwrap();
 
-    Ok(account)
+    Ok((address, account))
+}
+
+#[allow(clippy::large_stack_frames)]
+pub async fn get_total_rewards_to_be_distributed(handler: &CliHandler, epoch: u64) -> Result<u64> {
+    let all_operators = {
+        let ballot_box = get_ballot_box(handler, epoch).await?;
+        let winning_ballot = ballot_box.get_winning_ballot_tally()?;
+        let winning_ballot_index = winning_ballot.index();
+
+        ballot_box
+            .operator_votes()
+            .iter()
+            .filter_map(|vote| {
+                if vote.ballot_index() == winning_ballot_index {
+                    Some(*vote.operator())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<Pubkey>>()
+    };
+
+    let all_ncn_groups = {
+        let epoch_snapshot = get_epoch_snapshot(handler, epoch).await?;
+        let fees = *epoch_snapshot.fees();
+        NcnFeeGroup::all_groups()
+            .iter()
+            .filter_map(|group| {
+                if fees.ncn_fee_bps(*group).unwrap() > 0 {
+                    Some(*group)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<NcnFeeGroup>>()
+    };
+
+    let rent = handler
+        .rpc_client()
+        .get_minimum_balance_for_rent_exemption(0)
+        .await?;
+
+    let mut total_amount_to_distribute = 0;
+    {
+        let result = get_base_reward_receiver(handler, epoch).await;
+        if result.is_err() {
+            return Ok(0);
+        }
+
+        let (_, receiver) = result.unwrap();
+        total_amount_to_distribute += receiver.lamports - rent;
+    }
+
+    for operator in all_operators.iter() {
+        for group in all_ncn_groups.iter() {
+            let result = get_ncn_reward_receiver(handler, *group, operator, epoch).await;
+
+            if result.is_err() {
+                continue;
+            }
+
+            let (_, receiver) = result.unwrap();
+            total_amount_to_distribute += receiver.lamports - rent;
+        }
+    }
+
+    Ok(total_amount_to_distribute)
 }
 
 pub async fn get_account_payer(handler: &CliHandler) -> Result<Account> {

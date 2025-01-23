@@ -272,9 +272,9 @@ pub enum ProgramCommand {
     GetStakePool,
     GetBallotBox,
     GetBaseRewardRouter,
-    GetBaseRewardReceiver,
     GetAccountPayer,
     GetTotalEpochRentCost,
+    GetNcnRewardRouters,
 
     /// TESTS
     Test,

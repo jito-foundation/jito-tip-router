@@ -1,6 +1,7 @@
 use crate::{
     getters::{
         get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn, get_tip_router_config,
+        get_total_rewards_to_be_distributed,
     },
     handler::CliHandler,
 };
@@ -329,9 +330,32 @@ impl KeeperState {
         Ok(())
     }
 
-    pub fn current_state(&self) -> Result<&State> {
-        self.current_state
+    pub fn current_state(&self) -> Result<State> {
+        let state = self
+            .current_state
             .as_ref()
-            .ok_or_else(|| anyhow!("Current state does not exist"))
+            .ok_or_else(|| anyhow!("Current state does not exist"))?;
+
+        Ok(*state)
+    }
+
+    pub async fn detect_stall(&mut self, handler: &CliHandler) -> Result<bool> {
+        let current_state = self.current_state()?;
+
+        if current_state == State::Vote {
+            return Ok(true);
+        }
+
+        if current_state == State::Distribute {
+            let total_rewards_to_be_distributed =
+                get_total_rewards_to_be_distributed(handler, self.epoch).await?;
+
+            // If dust rewards, then stall
+            if total_rewards_to_be_distributed < 10_000 {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 }

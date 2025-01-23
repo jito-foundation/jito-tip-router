@@ -17,6 +17,7 @@ pub async fn progress_epoch(
     starting_epoch: u64,
     last_current_epoch: u64,
     keeper_epoch: u64,
+    epoch_stall: bool,
 ) -> Result<u64> {
     let current_epoch = get_current_epoch(handler).await?;
     let is_epoch_completed = get_is_epoch_completed(handler, keeper_epoch).await?;
@@ -26,7 +27,7 @@ pub async fn progress_epoch(
         return Ok(current_epoch);
     }
 
-    if is_epoch_completed {
+    if is_epoch_completed || epoch_stall {
         // Reset to starting epoch
         if keeper_epoch == current_epoch {
             return Ok(starting_epoch);
@@ -69,6 +70,7 @@ pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
 #[allow(clippy::large_stack_frames)]
 pub async fn run_keeper(handler: &CliHandler) {
     let mut state: KeeperState = KeeperState::default();
+    let mut epoch_stall = false;
     let mut current_epoch = handler.epoch;
     let mut last_current_epoch = get_current_epoch(handler)
         .await
@@ -89,19 +91,26 @@ pub async fn run_keeper(handler: &CliHandler) {
             let starting_epoch = handler.epoch;
             let keeper_epoch = current_epoch;
 
-            let result =
-                progress_epoch(handler, starting_epoch, last_current_epoch, keeper_epoch).await;
+            let result = progress_epoch(
+                handler,
+                starting_epoch,
+                last_current_epoch,
+                keeper_epoch,
+                epoch_stall,
+            )
+            .await;
 
             if check_and_timeout_error("Progress Epoch".to_string(), &result).await {
                 continue;
             }
 
             current_epoch = result.unwrap();
-            last_current_epoch = last_current_epoch.max(current_epoch)
+            last_current_epoch = last_current_epoch.max(current_epoch);
+            epoch_stall = false;
         }
 
         {
-            info!("1. Update Keeper State");
+            info!("1. Update Keeper State - {}", current_epoch);
             if state.epoch != current_epoch {
                 let result = state.fetch(handler, current_epoch).await;
 
@@ -112,7 +121,7 @@ pub async fn run_keeper(handler: &CliHandler) {
         }
 
         {
-            info!("2. Update the epoch state");
+            info!("2. Update the epoch state - {}", current_epoch);
             let result = state.update_epoch_state(handler).await;
 
             if check_and_timeout_error("Update Epoch State".to_string(), &result).await {
@@ -121,11 +130,11 @@ pub async fn run_keeper(handler: &CliHandler) {
         }
 
         {
-            info!("3. If epoch state DNE, create it");
+            info!("3. If epoch state DNE, create it - {}", current_epoch);
             if state.epoch_state.is_none() {
                 let result = create_epoch_state(handler, state.epoch).await;
 
-                let _ = check_and_timeout_error("Create Epoch State".to_string(), &result).await;
+                check_and_timeout_error("Create Epoch State".to_string(), &result).await;
 
                 // Go back either way
                 continue;
@@ -134,7 +143,7 @@ pub async fn run_keeper(handler: &CliHandler) {
 
         {
             let current_state = state.current_state().unwrap();
-            info!("4. Crank State: {:?}", current_state);
+            info!("5. Crank State [{:?}] - {}", current_state, current_epoch);
 
             let result = match current_state {
                 State::SetWeight => crank_set_weight(handler, state.epoch).await,
@@ -150,6 +159,18 @@ pub async fn run_keeper(handler: &CliHandler) {
             if check_and_timeout_error(format!("Crank State: {:?}", current_state), &result).await {
                 continue;
             }
+        }
+
+        {
+            info!("5. Detect Stall - {}", current_epoch);
+
+            let result = state.detect_stall(handler).await;
+
+            if check_and_timeout_error("Detect Stall".to_string(), &result).await {
+                continue;
+            }
+
+            epoch_stall = result.unwrap();
         }
 
         {

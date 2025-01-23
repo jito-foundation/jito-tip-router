@@ -142,24 +142,35 @@ impl EpochAccountStatus {
         if self.weight_table != AccountStatus::Closed as u8 {
             return false;
         }
+
         if self.epoch_snapshot != AccountStatus::Closed as u8 {
             return false;
         }
-        if self.ballot_box != AccountStatus::Closed as u8 {
-            return false;
-        }
-        if self.base_reward_router != AccountStatus::Closed as u8 {
-            return false;
-        }
 
-        for operator_snapshot in self.operator_snapshot.iter() {
-            if *operator_snapshot == AccountStatus::Created as u8 {
+        for operator_snapshot_ref in self.operator_snapshot.iter() {
+            let operator_snapshot = *operator_snapshot_ref;
+            let is_dne = operator_snapshot == AccountStatus::DNE as u8;
+            let is_closed = operator_snapshot == AccountStatus::Closed as u8;
+
+            if !is_dne && !is_closed {
                 return false;
             }
         }
 
-        for ncn_reward_router in self.ncn_reward_router.iter() {
-            if *ncn_reward_router == AccountStatus::CreatedWithReceiver as u8 {
+        if self.ballot_box != AccountStatus::Closed as u8 {
+            return false;
+        }
+
+        if self.base_reward_router != AccountStatus::Closed as u8 {
+            return false;
+        }
+
+        for ncn_reward_router_ref in self.ncn_reward_router.iter() {
+            let ncn_reward_router = *ncn_reward_router_ref;
+            let is_dne = ncn_reward_router == AccountStatus::DNE as u8;
+            let is_closed = ncn_reward_router == AccountStatus::Closed as u8;
+
+            if !is_dne && !is_closed {
                 return false;
             }
         }
@@ -239,7 +250,7 @@ impl Progress {
         if self.is_invalid() {
             false
         } else {
-            self.tally.eq(&self.total)
+            self.tally() >= self.total()
         }
     }
 }
@@ -669,6 +680,7 @@ impl EpochState {
         rewards: u64,
     ) -> Result<(), TipRouterError> {
         self.total_distribution_progress.increment(rewards)?;
+
         self.ncn_distribution_progress
             [Self::get_ncn_reward_router_index(ncn_operator_index, group)?]
         .increment(rewards)?;
@@ -787,7 +799,8 @@ impl EpochState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
 pub enum State {
     SetWeight,
     Snapshot,
@@ -797,13 +810,3 @@ pub enum State {
     Distribute,
     Close,
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     pub fn size() {
-
-//     }
-// }
