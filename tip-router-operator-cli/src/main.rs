@@ -251,8 +251,8 @@ async fn main() -> Result<()> {
             match claim_mev_tips(
                 &merkle_tree_coll,
                 cli.rpc_url.clone(),
-                // TODO: Review if we should offer separate send_url. This may be used if sending
-                //  via block engine.
+                // TODO: Review if we should offer separate rpc_send_url in CLI. This may be used 
+                //  if sending via block engine.
                 cli.rpc_url,
                 tip_distribution_program_id,
                 arc_keypair,
