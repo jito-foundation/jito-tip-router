@@ -488,9 +488,6 @@ pub async fn register_vault(handler: &CliHandler, vault: &Pubkey) -> Result<()> 
 pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> {
     let ncn = *handler.ncn()?;
 
-    let (epoch_marker, _, _) =
-        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
@@ -499,6 +496,8 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
 
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
     let epoch_state_account = get_account(handler, &epoch_state).await?;
 
@@ -563,9 +562,6 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
 pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()> {
     let ncn = *handler.ncn()?;
 
-    let (epoch_marker, _, _) =
-        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
@@ -580,6 +576,8 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
 
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
     let weight_table_account = get_account(handler, &weight_table).await?;
 
@@ -697,9 +695,6 @@ pub async fn set_weight_with_st_mint(
 pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
     let ncn = *handler.ncn()?;
 
-    let (epoch_marker, _, _) =
-        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
@@ -714,6 +709,8 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
 
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
     let initialize_epoch_snapshot_ix = InitializeEpochSnapshotBuilder::new()
         .epoch_marker(epoch_marker)
@@ -748,9 +745,6 @@ pub async fn create_operator_snapshot(
 
     let operator = *operator;
 
-    let (epoch_marker, _, _) =
-        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
@@ -772,6 +766,8 @@ pub async fn create_operator_snapshot(
 
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
     let operator_snapshot_account = get_account(handler, &operator_snapshot).await?;
 
@@ -924,9 +920,6 @@ pub async fn snapshot_vault_operator_delegation(
 pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     let ncn = *handler.ncn()?;
 
-    let (epoch_marker, _, _) =
-        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
@@ -938,6 +931,8 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
 
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
     let ballot_box_account = get_account(handler, &ballot_box).await?;
 
@@ -1065,9 +1060,6 @@ pub async fn operator_cast_vote(
 pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Result<()> {
     let ncn = *handler.ncn()?;
 
-    let (epoch_marker, _, _) =
-        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
@@ -1079,6 +1071,8 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
 
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
     let base_reward_router_account = get_account(handler, &base_reward_router).await?;
 
@@ -1150,9 +1144,6 @@ pub async fn create_ncn_reward_router(
 
     let operator = *operator;
 
-    let (epoch_marker, _, _) =
-        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
@@ -1181,6 +1172,8 @@ pub async fn create_ncn_reward_router(
 
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
     let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
         .epoch_marker(epoch_marker)
