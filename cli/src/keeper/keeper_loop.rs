@@ -157,7 +157,7 @@ pub async fn run_keeper(
         }
 
         {
-            info!("3. Create or Complete State {}", current_epoch);
+            info!("3. Create or Complete State - {}", current_epoch);
 
             // If complete, reset loop
             if state.is_epoch_completed {
