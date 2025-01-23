@@ -161,8 +161,8 @@ pub fn get_meta_merkle_root(
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
 
-    // REVIEW: Determine if this should be behind a flag for when operator intends to run the
-    //  claim process.
+    // TODO: Hide this behind a flag when the process gets split up into the various stages and
+    //  checkpoints.
 
     // Write GeneratedMerkleTreeCollection to disk. Required for Claiming
     let merkle_tree_coll_path =
