@@ -257,7 +257,7 @@ pub async fn get_ncn_reward_receiver(
 }
 
 pub async fn get_receiver_rewards(handler: &CliHandler, address: &Pubkey) -> Result<u64> {
-    let account = get_account(handler, &address).await?;
+    let account = get_account(handler, address).await?;
 
     let rent = handler
         .rpc_client()
