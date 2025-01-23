@@ -2,10 +2,12 @@ pub mod ledger_utils;
 pub mod stake_meta_generator;
 pub mod tip_router;
 pub use crate::cli::{Cli, Commands};
+pub mod claim;
 pub mod cli;
 pub use crate::process_epoch::process_epoch;
 pub mod backup_snapshots;
 pub mod process_epoch;
+pub mod rpc_utils;
 pub mod submit;
 
 use std::path::{Path, PathBuf};
