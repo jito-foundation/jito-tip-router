@@ -3790,8 +3790,8 @@
     },
     {
       "code": 8769,
-      "name": "InvalidEpochsBeforeClaim",
-      "msg": "Invalid epochs before claim"
+      "name": "InvalidEpochsBeforeClose",
+      "msg": "Invalid epochs before accounts can close"
     },
     {
       "code": 8770,

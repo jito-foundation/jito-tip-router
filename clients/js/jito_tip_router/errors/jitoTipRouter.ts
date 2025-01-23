@@ -162,8 +162,8 @@ export const JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_OR_SWITCHBOARD_FEED = 0x223e;
 export const JITO_TIP_ROUTER_ERROR__ROUTER_STILL_ROUTING = 0x223f; // 8767
 /** InvalidEpochsBeforeStall: Invalid epochs before stall */
 export const JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL = 0x2240; // 8768
-/** InvalidEpochsBeforeClaim: Invalid epochs before claim */
-export const JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLAIM = 0x2241; // 8769
+/** InvalidEpochsBeforeClose: Invalid epochs before accounts can close */
+export const JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLOSE = 0x2241; // 8769
 /** InvalidSlotsAfterConsensus: Invalid slots after consensus */
 export const JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS = 0x2242; // 8770
 /** VaultNeedsUpdate: Vault needs to be updated */
@@ -234,7 +234,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_TO_CLOSE_DISCRIMINATOR
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET
-  | typeof JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLAIM
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLOSE
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE
@@ -327,7 +327,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_TO_CLOSE_DISCRIMINATOR]: `Invalid account_to_close Discriminator`,
     [JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP]: `Not a valid base fee group`,
     [JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET]: `Invalid DAO wallet`,
-    [JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLAIM]: `Invalid epochs before claim`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLOSE]: `Invalid epochs before accounts can close`,
     [JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL]: `Invalid epochs before stall`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF]: `Invalid merkle proof`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE]: `Invalid mint for weight table`,

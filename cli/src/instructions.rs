@@ -1688,8 +1688,11 @@ pub async fn close_epoch_account(
     account_to_close: Pubkey,
     receiver_to_close: Option<Pubkey>,
 ) -> Result<()> {
-    let epoch_state =
-        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch).0;
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
@@ -1716,6 +1719,7 @@ pub async fn close_epoch_account(
     let mut ix = CloseEpochAccountBuilder::new();
 
     ix.account_payer(account_payer)
+        .epoch_marker(epoch_marker)
         .config(config)
         .account_to_close(account_to_close)
         .epoch_state(epoch_state)

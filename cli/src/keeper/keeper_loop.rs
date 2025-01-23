@@ -1,5 +1,5 @@
 use crate::{
-    getters::{get_current_epoch, get_is_epoch_completed},
+    getters::get_current_epoch,
     handler::CliHandler,
     instructions::{
         crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
@@ -14,13 +14,13 @@ use log::info;
 
 pub async fn progress_epoch(
     handler: &CliHandler,
+    is_epoch_completed: bool,
     starting_epoch: u64,
     last_current_epoch: u64,
     keeper_epoch: u64,
     epoch_stall: bool,
 ) -> Result<u64> {
     let current_epoch = get_current_epoch(handler).await?;
-    let is_epoch_completed = get_is_epoch_completed(handler, keeper_epoch).await?;
 
     if current_epoch > last_current_epoch {
         // Automatically go to new epoch
@@ -103,6 +103,7 @@ pub async fn run_keeper(handler: &CliHandler, loop_timeout_ms: u64, error_timeou
 
             let result = progress_epoch(
                 handler,
+                state.is_epoch_completed,
                 starting_epoch,
                 last_current_epoch,
                 keeper_epoch,
@@ -150,7 +151,14 @@ pub async fn run_keeper(handler: &CliHandler, loop_timeout_ms: u64, error_timeou
         }
 
         {
-            info!("3. If epoch state DNE, create it - {}", current_epoch);
+            info!("3. Create or Complete State {}", current_epoch);
+
+            // If complete, reset loop
+            if state.is_epoch_completed {
+                continue;
+            }
+
+            // Else, if no epoch state, create it
             if state.epoch_state.is_none() {
                 let result = create_epoch_state(handler, state.epoch).await;
 

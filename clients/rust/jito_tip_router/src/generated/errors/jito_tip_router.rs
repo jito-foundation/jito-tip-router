@@ -232,9 +232,9 @@ pub enum JitoTipRouterError {
     /// 8768 - Invalid epochs before stall
     #[error("Invalid epochs before stall")]
     InvalidEpochsBeforeStall = 0x2240,
-    /// 8769 - Invalid epochs before claim
-    #[error("Invalid epochs before claim")]
-    InvalidEpochsBeforeClaim = 0x2241,
+    /// 8769 - Invalid epochs before accounts can close
+    #[error("Invalid epochs before accounts can close")]
+    InvalidEpochsBeforeClose = 0x2241,
     /// 8770 - Invalid slots after consensus
     #[error("Invalid slots after consensus")]
     InvalidSlotsAfterConsensus = 0x2242,

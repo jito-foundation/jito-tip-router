@@ -153,8 +153,8 @@ pub enum TipRouterError {
     RouterStillRouting,
     #[error("Invalid epochs before stall")]
     InvalidEpochsBeforeStall,
-    #[error("Invalid epochs before claim")]
-    InvalidEpochsBeforeClaim,
+    #[error("Invalid epochs before accounts can close")]
+    InvalidEpochsBeforeClose,
     #[error("Invalid slots after consensus")]
     InvalidSlotsAfterConsensus,
     #[error("Vault needs to be updated")]

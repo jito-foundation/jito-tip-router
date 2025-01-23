@@ -119,7 +119,7 @@ mod tests {
                 10001,
             )
             .await;
-        assert_tip_router_error(result, TipRouterError::InvalidEpochsBeforeClaim);
+        assert_tip_router_error(result, TipRouterError::InvalidEpochsBeforeClose);
 
         // Test invalid valid_slots_after_consensus
         let result = tip_router_client

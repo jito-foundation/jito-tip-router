@@ -65,7 +65,7 @@ pub fn process_admin_set_parameters(
         if !(MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE..=MAX_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE)
             .contains(&epochs)
         {
-            return Err(TipRouterError::InvalidEpochsBeforeClaim.into());
+            return Err(TipRouterError::InvalidEpochsBeforeClose.into());
         }
         msg!("Updated epochs_after_consensus_before_close to {}", epochs);
         config.epochs_after_consensus_before_close = PodU64::from(epochs);

@@ -60,7 +60,7 @@ pub fn process_admin_initialize_config(
     if !(MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE..=MAX_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE)
         .contains(&epochs_after_consensus_before_close)
     {
-        return Err(TipRouterError::InvalidEpochsBeforeClaim.into());
+        return Err(TipRouterError::InvalidEpochsBeforeClose.into());
     }
 
     if !(MIN_VALID_SLOTS_AFTER_CONSENSUS..=MAX_VALID_SLOTS_AFTER_CONSENSUS)
