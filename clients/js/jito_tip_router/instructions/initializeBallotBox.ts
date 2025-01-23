@@ -37,6 +37,7 @@ export function getInitializeBallotBoxDiscriminatorBytes() {
 
 export type InitializeBallotBoxInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochMarker extends string | IAccountMeta<string> = string,
   TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountBallotBox extends string | IAccountMeta<string> = string,
@@ -50,6 +51,9 @@ export type InitializeBallotBoxInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochMarker extends string
+        ? ReadonlyAccount<TAccountEpochMarker>
+        : TAccountEpochMarker,
       TAccountEpochState extends string
         ? ReadonlyAccount<TAccountEpochState>
         : TAccountEpochState,
@@ -108,6 +112,7 @@ export function getInitializeBallotBoxInstructionDataCodec(): Codec<
 }
 
 export type InitializeBallotBoxInput<
+  TAccountEpochMarker extends string = string,
   TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountBallotBox extends string = string,
@@ -115,6 +120,7 @@ export type InitializeBallotBoxInput<
   TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochMarker: Address<TAccountEpochMarker>;
   epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ballotBox: Address<TAccountBallotBox>;
@@ -125,6 +131,7 @@ export type InitializeBallotBoxInput<
 };
 
 export function getInitializeBallotBoxInstruction<
+  TAccountEpochMarker extends string,
   TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountBallotBox extends string,
@@ -134,6 +141,7 @@ export function getInitializeBallotBoxInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeBallotBoxInput<
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountConfig,
     TAccountBallotBox,
@@ -144,6 +152,7 @@ export function getInitializeBallotBoxInstruction<
   config?: { programAddress?: TProgramAddress }
 ): InitializeBallotBoxInstruction<
   TProgramAddress,
+  TAccountEpochMarker,
   TAccountEpochState,
   TAccountConfig,
   TAccountBallotBox,
@@ -157,6 +166,7 @@ export function getInitializeBallotBoxInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochMarker: { value: input.epochMarker ?? null, isWritable: false },
     epochState: { value: input.epochState ?? null, isWritable: false },
     config: { value: input.config ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: true },
@@ -181,6 +191,7 @@ export function getInitializeBallotBoxInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochMarker),
       getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ballotBox),
@@ -194,6 +205,7 @@ export function getInitializeBallotBoxInstruction<
     ),
   } as InitializeBallotBoxInstruction<
     TProgramAddress,
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountConfig,
     TAccountBallotBox,
@@ -211,12 +223,13 @@ export type ParsedInitializeBallotBoxInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    epochState: TAccountMetas[0];
-    config: TAccountMetas[1];
-    ballotBox: TAccountMetas[2];
-    ncn: TAccountMetas[3];
-    accountPayer: TAccountMetas[4];
-    systemProgram: TAccountMetas[5];
+    epochMarker: TAccountMetas[0];
+    epochState: TAccountMetas[1];
+    config: TAccountMetas[2];
+    ballotBox: TAccountMetas[3];
+    ncn: TAccountMetas[4];
+    accountPayer: TAccountMetas[5];
+    systemProgram: TAccountMetas[6];
   };
   data: InitializeBallotBoxInstructionData;
 };
@@ -229,7 +242,7 @@ export function parseInitializeBallotBoxInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeBallotBoxInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -242,6 +255,7 @@ export function parseInitializeBallotBoxInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochMarker: getNextAccount(),
       epochState: getNextAccount(),
       config: getNextAccount(),
       ballotBox: getNextAccount(),

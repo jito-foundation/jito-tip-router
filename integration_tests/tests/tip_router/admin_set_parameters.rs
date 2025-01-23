@@ -18,6 +18,7 @@ mod tests {
         // Test setting valid parameters
         tip_router_client
             .do_set_parameters(
+                None,
                 Some(5),    // epochs_before_stall
                 Some(10),   // epochs_after_consensus_before_close
                 Some(1000), // valid_slots_after_consensus
@@ -36,6 +37,7 @@ mod tests {
         // Test invalid epochs_before_stall
         let result = tip_router_client
             .do_set_parameters(
+                None,
                 Some(0), // Invalid - too low
                 None,
                 None,
@@ -48,6 +50,7 @@ mod tests {
         let result = tip_router_client
             .do_set_parameters(
                 None,
+                None,
                 Some(0), // Invalid - too low
                 None,
                 &ncn_root,
@@ -58,6 +61,7 @@ mod tests {
         // Test invalid valid_slots_after_consensus
         let result = tip_router_client
             .do_set_parameters(
+                None,
                 None,
                 None,
                 Some(99), // Invalid - too low

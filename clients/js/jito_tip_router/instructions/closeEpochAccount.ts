@@ -37,6 +37,7 @@ export function getCloseEpochAccountDiscriminatorBytes() {
 
 export type CloseEpochAccountInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochMarker extends string | IAccountMeta<string> = string,
   TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
@@ -52,6 +53,9 @@ export type CloseEpochAccountInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochMarker extends string
+        ? WritableAccount<TAccountEpochMarker>
+        : TAccountEpochMarker,
       TAccountEpochState extends string
         ? WritableAccount<TAccountEpochState>
         : TAccountEpochState,
@@ -113,6 +117,7 @@ export function getCloseEpochAccountInstructionDataCodec(): Codec<
 }
 
 export type CloseEpochAccountInput<
+  TAccountEpochMarker extends string = string,
   TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
@@ -122,6 +127,7 @@ export type CloseEpochAccountInput<
   TAccountSystemProgram extends string = string,
   TAccountReceiverToClose extends string = string,
 > = {
+  epochMarker: Address<TAccountEpochMarker>;
   epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
@@ -134,6 +140,7 @@ export type CloseEpochAccountInput<
 };
 
 export function getCloseEpochAccountInstruction<
+  TAccountEpochMarker extends string,
   TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
@@ -145,6 +152,7 @@ export function getCloseEpochAccountInstruction<
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: CloseEpochAccountInput<
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
@@ -157,6 +165,7 @@ export function getCloseEpochAccountInstruction<
   config?: { programAddress?: TProgramAddress }
 ): CloseEpochAccountInstruction<
   TProgramAddress,
+  TAccountEpochMarker,
   TAccountEpochState,
   TAccountConfig,
   TAccountNcn,
@@ -172,6 +181,7 @@ export function getCloseEpochAccountInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochMarker: { value: input.epochMarker ?? null, isWritable: true },
     epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
@@ -198,6 +208,7 @@ export function getCloseEpochAccountInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochMarker),
       getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
@@ -213,6 +224,7 @@ export function getCloseEpochAccountInstruction<
     ),
   } as CloseEpochAccountInstruction<
     TProgramAddress,
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
@@ -232,14 +244,15 @@ export type ParsedCloseEpochAccountInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    epochState: TAccountMetas[0];
-    config: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    accountToClose: TAccountMetas[3];
-    accountPayer: TAccountMetas[4];
-    daoWallet: TAccountMetas[5];
-    systemProgram: TAccountMetas[6];
-    receiverToClose?: TAccountMetas[7] | undefined;
+    epochMarker: TAccountMetas[0];
+    epochState: TAccountMetas[1];
+    config: TAccountMetas[2];
+    ncn: TAccountMetas[3];
+    accountToClose: TAccountMetas[4];
+    accountPayer: TAccountMetas[5];
+    daoWallet: TAccountMetas[6];
+    systemProgram: TAccountMetas[7];
+    receiverToClose?: TAccountMetas[8] | undefined;
   };
   data: CloseEpochAccountInstructionData;
 };
@@ -252,7 +265,7 @@ export function parseCloseEpochAccountInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedCloseEpochAccountInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 9) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -271,6 +284,7 @@ export function parseCloseEpochAccountInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochMarker: getNextAccount(),
       epochState: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),

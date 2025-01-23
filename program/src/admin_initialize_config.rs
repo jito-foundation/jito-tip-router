@@ -106,11 +106,14 @@ pub fn process_admin_initialize_config(
         epoch,
     )?;
 
+    let starting_valid_epoch = epoch;
+
     *config = Config::new(
         ncn.key,
         tie_breaker_admin.key,
         ncn_admin.key,
         &fee_config,
+        starting_valid_epoch,
         valid_slots_after_consensus,
         epochs_before_stall,
         epochs_after_consensus_before_close,

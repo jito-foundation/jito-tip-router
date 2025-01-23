@@ -2,7 +2,7 @@ use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     account_payer::AccountPayer, ballot_box::BallotBox, config::Config as NcnConfig,
-    constants::MAX_REALLOC_BYTES, epoch_state::EpochState,
+    constants::MAX_REALLOC_BYTES, epoch_marker::EpochMarker, epoch_state::EpochState,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
@@ -14,7 +14,9 @@ pub fn process_initialize_ballot_box(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, ballot_box, ncn, account_payer, system_program] = accounts else {
+    let [epoch_marker, epoch_state, ncn_config, ballot_box, ncn, account_payer, system_program] =
+        accounts
+    else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
@@ -26,6 +28,7 @@ pub fn process_initialize_ballot_box(
     EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
     AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
 
     let (ballot_box_pda, ballot_box_bump, mut ballot_box_seeds) =
         BallotBox::find_program_address(program_id, ncn.key, epoch);

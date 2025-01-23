@@ -10,6 +10,8 @@ use borsh::BorshSerialize;
 
 /// Accounts.
 pub struct InitializeBaseRewardRouter {
+    pub epoch_marker: solana_program::pubkey::Pubkey,
+
     pub epoch_state: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
@@ -36,7 +38,11 @@ impl InitializeBaseRewardRouter {
         args: InitializeBaseRewardRouterInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.epoch_marker,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.epoch_state,
             false,
@@ -102,14 +108,16 @@ pub struct InitializeBaseRewardRouterInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` epoch_state
-///   1. `[]` ncn
-///   2. `[writable]` base_reward_router
-///   3. `[writable]` base_reward_receiver
-///   4. `[writable]` account_payer
-///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   0. `[]` epoch_marker
+///   1. `[]` epoch_state
+///   2. `[]` ncn
+///   3. `[writable]` base_reward_router
+///   4. `[writable]` base_reward_receiver
+///   5. `[writable]` account_payer
+///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeBaseRewardRouterBuilder {
+    epoch_marker: Option<solana_program::pubkey::Pubkey>,
     epoch_state: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     base_reward_router: Option<solana_program::pubkey::Pubkey>,
@@ -123,6 +131,11 @@ pub struct InitializeBaseRewardRouterBuilder {
 impl InitializeBaseRewardRouterBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+    #[inline(always)]
+    pub fn epoch_marker(&mut self, epoch_marker: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.epoch_marker = Some(epoch_marker);
+        self
     }
     #[inline(always)]
     pub fn epoch_state(&mut self, epoch_state: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -187,6 +200,7 @@ impl InitializeBaseRewardRouterBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = InitializeBaseRewardRouter {
+            epoch_marker: self.epoch_marker.expect("epoch_marker is not set"),
             epoch_state: self.epoch_state.expect("epoch_state is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             base_reward_router: self
@@ -210,6 +224,8 @@ impl InitializeBaseRewardRouterBuilder {
 
 /// `initialize_base_reward_router` CPI accounts.
 pub struct InitializeBaseRewardRouterCpiAccounts<'a, 'b> {
+    pub epoch_marker: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
@@ -227,6 +243,8 @@ pub struct InitializeBaseRewardRouterCpiAccounts<'a, 'b> {
 pub struct InitializeBaseRewardRouterCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub epoch_marker: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -251,6 +269,7 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
+            epoch_marker: accounts.epoch_marker,
             epoch_state: accounts.epoch_state,
             ncn: accounts.ncn,
             base_reward_router: accounts.base_reward_router,
@@ -293,7 +312,11 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.epoch_marker.key,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.epoch_state.key,
             false,
@@ -336,8 +359,9 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
+        account_infos.push(self.epoch_marker.clone());
         account_infos.push(self.epoch_state.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.base_reward_router.clone());
@@ -360,12 +384,13 @@ impl<'a, 'b> InitializeBaseRewardRouterCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` epoch_state
-///   1. `[]` ncn
-///   2. `[writable]` base_reward_router
-///   3. `[writable]` base_reward_receiver
-///   4. `[writable]` account_payer
-///   5. `[]` system_program
+///   0. `[]` epoch_marker
+///   1. `[]` epoch_state
+///   2. `[]` ncn
+///   3. `[writable]` base_reward_router
+///   4. `[writable]` base_reward_receiver
+///   5. `[writable]` account_payer
+///   6. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
     instruction: Box<InitializeBaseRewardRouterCpiBuilderInstruction<'a, 'b>>,
@@ -375,6 +400,7 @@ impl<'a, 'b> InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(InitializeBaseRewardRouterCpiBuilderInstruction {
             __program: program,
+            epoch_marker: None,
             epoch_state: None,
             ncn: None,
             base_reward_router: None,
@@ -385,6 +411,14 @@ impl<'a, 'b> InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
+    }
+    #[inline(always)]
+    pub fn epoch_marker(
+        &mut self,
+        epoch_marker: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.epoch_marker = Some(epoch_marker);
+        self
     }
     #[inline(always)]
     pub fn epoch_state(
@@ -483,6 +517,11 @@ impl<'a, 'b> InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
         let instruction = InitializeBaseRewardRouterCpi {
             __program: self.instruction.__program,
 
+            epoch_marker: self
+                .instruction
+                .epoch_marker
+                .expect("epoch_marker is not set"),
+
             epoch_state: self
                 .instruction
                 .epoch_state
@@ -521,6 +560,7 @@ impl<'a, 'b> InitializeBaseRewardRouterCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct InitializeBaseRewardRouterCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
+    epoch_marker: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     base_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,

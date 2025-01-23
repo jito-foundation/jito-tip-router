@@ -485,6 +485,7 @@ impl BaseRewardRouter {
                 .checked_add(rewards)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
+
         Ok(())
     }
 
@@ -498,6 +499,8 @@ impl BaseRewardRouter {
                 .checked_sub(rewards)
                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
         );
+
+        self.increment_rewards_processed(rewards)?;
 
         Ok(())
     }
@@ -556,8 +559,6 @@ impl BaseRewardRouter {
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
 
-        self.increment_rewards_processed(rewards)?;
-
         Ok(())
     }
 
@@ -601,8 +602,6 @@ impl BaseRewardRouter {
                 .checked_add(rewards)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
-
-        self.increment_rewards_processed(rewards)?;
 
         Ok(())
     }

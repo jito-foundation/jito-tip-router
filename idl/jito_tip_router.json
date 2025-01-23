@@ -181,6 +181,11 @@
       "name": "InitializeEpochState",
       "accounts": [
         {
+          "name": "epochMarker",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "epochState",
           "isMut": true,
           "isSigner": false
@@ -260,6 +265,11 @@
     {
       "name": "InitializeWeightTable",
       "accounts": [
+        {
+          "name": "epochMarker",
+          "isMut": false,
+          "isSigner": false
+        },
         {
           "name": "epochState",
           "isMut": false,
@@ -395,6 +405,11 @@
       "name": "InitializeEpochSnapshot",
       "accounts": [
         {
+          "name": "epochMarker",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "epochState",
           "isMut": true,
           "isSigner": false
@@ -444,6 +459,11 @@
     {
       "name": "InitializeOperatorSnapshot",
       "accounts": [
+        {
+          "name": "epochMarker",
+          "isMut": false,
+          "isSigner": false
+        },
         {
           "name": "epochState",
           "isMut": false,
@@ -644,6 +664,11 @@
     {
       "name": "InitializeBallotBox",
       "accounts": [
+        {
+          "name": "epochMarker",
+          "isMut": false,
+          "isSigner": false
+        },
         {
           "name": "epochState",
           "isMut": false,
@@ -882,6 +907,11 @@
       "name": "InitializeBaseRewardRouter",
       "accounts": [
         {
+          "name": "epochMarker",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "epochState",
           "isMut": false,
           "isSigner": false
@@ -971,6 +1001,11 @@
     {
       "name": "InitializeNcnRewardRouter",
       "accounts": [
+        {
+          "name": "epochMarker",
+          "isMut": false,
+          "isSigner": false
+        },
         {
           "name": "epochState",
           "isMut": true,
@@ -1589,6 +1624,11 @@
       "name": "CloseEpochAccount",
       "accounts": [
         {
+          "name": "epochMarker",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "epochState",
           "isMut": true,
           "isSigner": false
@@ -1661,6 +1701,12 @@
         }
       ],
       "args": [
+        {
+          "name": "startingValidEpoch",
+          "type": {
+            "option": "u64"
+          }
+        },
         {
           "name": "epochsBeforeStall",
           "type": {
@@ -2226,12 +2272,42 @@
             }
           },
           {
+            "name": "startingValidEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                119
+                111
               ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EpochMarker",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "epoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slotClosed",
+            "type": {
+              "defined": "PodU64"
             }
           }
         ]
@@ -3026,7 +3102,7 @@
             "type": {
               "array": [
                 "u8",
-                32
+                8
               ]
             }
           }

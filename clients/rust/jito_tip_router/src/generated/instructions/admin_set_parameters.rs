@@ -77,6 +77,7 @@ impl Default for AdminSetParametersInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AdminSetParametersInstructionArgs {
+    pub starting_valid_epoch: Option<u64>,
     pub epochs_before_stall: Option<u64>,
     pub epochs_after_consensus_before_close: Option<u64>,
     pub valid_slots_after_consensus: Option<u64>,
@@ -94,6 +95,7 @@ pub struct AdminSetParametersBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     ncn_admin: Option<solana_program::pubkey::Pubkey>,
+    starting_valid_epoch: Option<u64>,
     epochs_before_stall: Option<u64>,
     epochs_after_consensus_before_close: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
@@ -117,6 +119,12 @@ impl AdminSetParametersBuilder {
     #[inline(always)]
     pub fn ncn_admin(&mut self, ncn_admin: solana_program::pubkey::Pubkey) -> &mut Self {
         self.ncn_admin = Some(ncn_admin);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn starting_valid_epoch(&mut self, starting_valid_epoch: u64) -> &mut Self {
+        self.starting_valid_epoch = Some(starting_valid_epoch);
         self
     }
     /// `[optional argument]`
@@ -166,6 +174,7 @@ impl AdminSetParametersBuilder {
             ncn_admin: self.ncn_admin.expect("ncn_admin is not set"),
         };
         let args = AdminSetParametersInstructionArgs {
+            starting_valid_epoch: self.starting_valid_epoch.clone(),
             epochs_before_stall: self.epochs_before_stall.clone(),
             epochs_after_consensus_before_close: self.epochs_after_consensus_before_close.clone(),
             valid_slots_after_consensus: self.valid_slots_after_consensus.clone(),
@@ -312,6 +321,7 @@ impl<'a, 'b> AdminSetParametersCpiBuilder<'a, 'b> {
             config: None,
             ncn: None,
             ncn_admin: None,
+            starting_valid_epoch: None,
             epochs_before_stall: None,
             epochs_after_consensus_before_close: None,
             valid_slots_after_consensus: None,
@@ -338,6 +348,12 @@ impl<'a, 'b> AdminSetParametersCpiBuilder<'a, 'b> {
         ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.ncn_admin = Some(ncn_admin);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn starting_valid_epoch(&mut self, starting_valid_epoch: u64) -> &mut Self {
+        self.instruction.starting_valid_epoch = Some(starting_valid_epoch);
         self
     }
     /// `[optional argument]`
@@ -404,6 +420,7 @@ impl<'a, 'b> AdminSetParametersCpiBuilder<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
         let args = AdminSetParametersInstructionArgs {
+            starting_valid_epoch: self.instruction.starting_valid_epoch.clone(),
             epochs_before_stall: self.instruction.epochs_before_stall.clone(),
             epochs_after_consensus_before_close: self
                 .instruction
@@ -434,6 +451,7 @@ struct AdminSetParametersCpiBuilderInstruction<'a, 'b> {
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    starting_valid_epoch: Option<u64>,
     epochs_before_stall: Option<u64>,
     epochs_after_consensus_before_close: Option<u64>,
     valid_slots_after_consensus: Option<u64>,

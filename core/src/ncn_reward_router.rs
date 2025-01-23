@@ -480,6 +480,8 @@ impl NcnRewardRouter {
                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
         );
 
+        self.increment_rewards_processed(rewards)?;
+
         Ok(())
     }
 
@@ -525,13 +527,12 @@ impl NcnRewardRouter {
             return Ok(());
         }
 
-        self.increment_rewards_processed(rewards)?;
-
         self.operator_rewards = PodU64::from(
             self.operator_rewards()
                 .checked_add(rewards)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
+
         Ok(())
     }
 
@@ -567,8 +568,6 @@ impl NcnRewardRouter {
         if rewards == 0 {
             return Ok(());
         }
-
-        self.increment_rewards_processed(rewards)?;
 
         for vault_reward in self.vault_reward_routes.iter_mut() {
             if vault_reward.vault().eq(vault) {

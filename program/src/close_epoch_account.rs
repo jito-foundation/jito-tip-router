@@ -7,6 +7,7 @@ use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as NcnConfig,
+    epoch_marker::EpochMarker,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
     error::TipRouterError,
@@ -26,8 +27,8 @@ pub fn process_close_epoch_account(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let (required_accounts, optional_accounts) = accounts.split_at(7);
-    let [epoch_state, config, ncn, account_to_close, account_payer, dao_wallet, system_program] =
+    let (required_accounts, optional_accounts) = accounts.split_at(8);
+    let [epoch_marker, epoch_state, config, ncn, account_to_close, account_payer, dao_wallet, system_program] =
         required_accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -38,6 +39,9 @@ pub fn process_close_epoch_account(
     EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
     NcnConfig::load(program_id, ncn.key, config, false)?;
     AccountPayer::load(program_id, ncn.key, account_payer, false)?;
+    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
+
+    let closing_epoch_state = account_to_close.key.eq(epoch_state.key);
 
     // Empty Account Check
     if account_to_close.data_is_empty() {
@@ -86,7 +90,7 @@ pub fn process_close_epoch_account(
         // Account Check
         {
             let discriminator = {
-                if account_to_close.key.eq(epoch_state.key) {
+                if closing_epoch_state {
                     // Cannot borrow the data again
                     EpochState::DISCRIMINATOR
                 } else {
@@ -205,6 +209,34 @@ pub fn process_close_epoch_account(
                 }
             }
         }
+    }
+
+    if closing_epoch_state {
+        let (epoch_marker_pda, epoch_marker_bump, mut epoch_marker_seeds) =
+            EpochMarker::find_program_address(program_id, ncn.key, epoch);
+        epoch_marker_seeds.push(vec![epoch_marker_bump]);
+
+        if epoch_marker_pda != *epoch_marker.key {
+            return Err(ProgramError::InvalidSeeds);
+        }
+
+        AccountPayer::pay_and_create_account(
+            program_id,
+            ncn.key,
+            account_payer,
+            epoch_marker,
+            system_program,
+            program_id,
+            EpochMarker::SIZE,
+            &epoch_marker_seeds,
+        )?;
+
+        let mut epoch_marker_data = epoch_marker.try_borrow_mut_data()?;
+        epoch_marker_data[0] = EpochMarker::DISCRIMINATOR;
+        let epoch_marker = EpochMarker::try_from_slice_unchecked_mut(&mut epoch_marker_data)?;
+
+        let slot_closed = Clock::get()?.slot;
+        *epoch_marker = EpochMarker::new(ncn.key, epoch, slot_closed);
     }
 
     AccountPayer::close_account(program_id, account_payer, account_to_close)

@@ -66,12 +66,14 @@ export type AdminSetParametersInstruction<
 
 export type AdminSetParametersInstructionData = {
   discriminator: number;
+  startingValidEpoch: Option<bigint>;
   epochsBeforeStall: Option<bigint>;
   epochsAfterConsensusBeforeClose: Option<bigint>;
   validSlotsAfterConsensus: Option<bigint>;
 };
 
 export type AdminSetParametersInstructionDataArgs = {
+  startingValidEpoch: OptionOrNullable<number | bigint>;
   epochsBeforeStall: OptionOrNullable<number | bigint>;
   epochsAfterConsensusBeforeClose: OptionOrNullable<number | bigint>;
   validSlotsAfterConsensus: OptionOrNullable<number | bigint>;
@@ -81,6 +83,7 @@ export function getAdminSetParametersInstructionDataEncoder(): Encoder<AdminSetP
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
+      ['startingValidEpoch', getOptionEncoder(getU64Encoder())],
       ['epochsBeforeStall', getOptionEncoder(getU64Encoder())],
       ['epochsAfterConsensusBeforeClose', getOptionEncoder(getU64Encoder())],
       ['validSlotsAfterConsensus', getOptionEncoder(getU64Encoder())],
@@ -92,6 +95,7 @@ export function getAdminSetParametersInstructionDataEncoder(): Encoder<AdminSetP
 export function getAdminSetParametersInstructionDataDecoder(): Decoder<AdminSetParametersInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
+    ['startingValidEpoch', getOptionDecoder(getU64Decoder())],
     ['epochsBeforeStall', getOptionDecoder(getU64Decoder())],
     ['epochsAfterConsensusBeforeClose', getOptionDecoder(getU64Decoder())],
     ['validSlotsAfterConsensus', getOptionDecoder(getU64Decoder())],
@@ -116,6 +120,7 @@ export type AdminSetParametersInput<
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
+  startingValidEpoch: AdminSetParametersInstructionDataArgs['startingValidEpoch'];
   epochsBeforeStall: AdminSetParametersInstructionDataArgs['epochsBeforeStall'];
   epochsAfterConsensusBeforeClose: AdminSetParametersInstructionDataArgs['epochsAfterConsensusBeforeClose'];
   validSlotsAfterConsensus: AdminSetParametersInstructionDataArgs['validSlotsAfterConsensus'];

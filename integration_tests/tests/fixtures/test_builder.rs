@@ -879,6 +879,8 @@ impl TestBuilder {
 
         // route rewards
         tip_router_client.do_route_base_rewards(ncn, epoch).await?;
+        // Should be able to route twice
+        tip_router_client.do_route_base_rewards(ncn, epoch).await?;
 
         let base_reward_router = tip_router_client.get_base_reward_router(ncn, epoch).await?;
 
@@ -934,6 +936,10 @@ impl TestBuilder {
             let operator = operator_root.operator_pubkey;
 
             for group in NcnFeeGroup::all_groups().iter() {
+                tip_router_client
+                    .do_route_ncn_rewards(*group, ncn, operator, epoch)
+                    .await?;
+                // Should be able to route twice
                 tip_router_client
                     .do_route_ncn_rewards(*group, ncn, operator, epoch)
                     .await?;
