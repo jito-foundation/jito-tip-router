@@ -12,6 +12,9 @@ use anyhow::{Ok, Result};
 use jito_tip_router_core::epoch_state::State;
 use log::info;
 
+pub const ERROR_TIMEOUT_MS: u64 = 10_000; // 10 seconds
+pub const KEEPER_TIMEOUT_MS: u64 = 60_000 * 10; // 10 minutes
+
 pub async fn progress_epoch(
     handler: &CliHandler,
     starting_epoch: u64,
@@ -44,7 +47,7 @@ pub async fn progress_epoch(
 pub async fn check_and_timeout_error<T>(title: String, result: &Result<T>) -> bool {
     if let Err(e) = result {
         log::error!("Error: [{}] \n{:?}\n\n", title, e);
-        timeout_error(5000).await;
+        timeout_error(ERROR_TIMEOUT_MS).await;
         true
     } else {
         false
@@ -172,7 +175,7 @@ pub async fn run_keeper(handler: &CliHandler) {
         }
 
         {
-            timeout_keeper(10_000).await;
+            timeout_keeper(KEEPER_TIMEOUT_MS).await;
         }
     }
 }

@@ -31,7 +31,7 @@ pub struct Args {
         long,
         global = true,
         env = "PRIORITY_FEE_MICRO_LAMPORTS",
-        default_value_t = 10_000,
+        default_value_t = 1,
         help = "Priority fee in micro lamports"
     )]
     pub priority_fee_micro_lamports: u64,
