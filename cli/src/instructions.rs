@@ -2198,6 +2198,16 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Result<()> {
     let ncn = *handler.ncn()?;
 
+    // One last distribution crank
+    let result = crank_distribute(handler, epoch).await;
+    if result.is_err() {
+        log::error!(
+            "Failed to distribute rewards before closing for epoch: {:?} with error: {:?}",
+            epoch,
+            result.err().unwrap()
+        );
+    }
+
     // Close NCN Reward Routers
     let all_operators = get_all_operators_in_ncn(handler).await?;
     for operator in all_operators.iter() {
