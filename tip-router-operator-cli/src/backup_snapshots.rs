@@ -107,7 +107,7 @@ impl BackupSnapshotMonitor {
             return Ok(());
         }
 
-        log::info!(
+        log::debug!(
             "Copying incremental snapshot from {:?} to {:?}",
             snapshot_path,
             dest_path
@@ -161,7 +161,7 @@ impl BackupSnapshotMonitor {
 
         // Remove oldest snapshot
         if let Some(oldest_snapshot) = same_epoch_snapshots.first() {
-            log::info!(
+            log::debug!(
                 "Removing old snapshot from epoch {} with slot {}: {:?}",
                 target_epoch,
                 oldest_snapshot.end_slot,
@@ -190,7 +190,7 @@ impl BackupSnapshotMonitor {
 
             if let Some(snapshot) = self.find_closest_incremental(target_slot) {
                 if last_backup_path.as_ref() != Some(&snapshot) {
-                    log::info!(
+                    log::debug!(
                         "Found new best snapshot for slot {}: {:?}",
                         target_slot,
                         snapshot
@@ -229,7 +229,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let backup_dir = TempDir::new().unwrap();
 
-        let monitor = BackupSnapshotMonitor::new(
+        let _monitor = BackupSnapshotMonitor::new(
             "http://localhost:8899",
             temp_dir.path().to_path_buf(),
             backup_dir.path().to_path_buf(),
@@ -251,7 +251,7 @@ mod tests {
             .join("incremental-snapshot-100-150-hash1.tar.zst");
 
         let info = SnapshotInfo::from_path(path.clone()).unwrap();
-        assert_eq!(info.start_slot, 100);
+        assert_eq!(info._start_slot, 100);
         assert_eq!(info.end_slot, 150);
         assert_eq!(info.path, path);
 
