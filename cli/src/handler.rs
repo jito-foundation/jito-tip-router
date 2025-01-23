@@ -363,9 +363,12 @@ impl CliHandler {
             }
             ProgramCommand::GetEpochState {} => {
                 let epoch_state = get_epoch_state(self, self.epoch).await?;
+                let current_slot = self.rpc_client.get_slot().await?;
                 info!(
-                    "\n\n--- Epoch State ---\nEpoch: {}\nDistribute Progress: {:?}",
+                    "\n\n--- Epoch State ---\nEpoch: {}\nSlot consensus {} {}\nDistribute Progress: {:?}",
                     epoch_state.epoch(),
+                    epoch_state.slot_consensus_reached(),
+                    current_slot,
                     epoch_state.total_distribution_progress()
                 );
                 // info!("Epoch State: {:?}", epoch_state);

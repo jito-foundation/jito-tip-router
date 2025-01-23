@@ -780,12 +780,7 @@ impl EpochState {
             return Ok(State::Vote);
         }
 
-        if self.account_status.base_reward_router()? == AccountStatus::DNE {
-            return Ok(State::SetupRouter);
-        }
-
         // The upload state is not required to progress to the next state
-
         let can_close_epoch_accounts = self.can_close_epoch_accounts(
             epoch_schedule,
             epochs_after_consensus_before_close,
@@ -805,8 +800,6 @@ pub enum State {
     SetWeight,
     Snapshot,
     Vote,
-    SetupRouter,
-    Upload,
     Distribute,
     Close,
 }

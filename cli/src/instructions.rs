@@ -1818,6 +1818,23 @@ pub async fn get_or_create_ballot_box(handler: &CliHandler, epoch: u64) -> Resul
     get_ballot_box(handler, epoch).await
 }
 
+pub async fn get_or_create_base_reward_router(
+    handler: &CliHandler,
+    epoch: u64,
+) -> Result<BaseRewardRouter> {
+    let ncn = *handler.ncn()?;
+    let (base_reward_router, _, _) =
+        BaseRewardRouter::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    if get_account(handler, &base_reward_router)
+        .await?
+        .map_or(true, |router| router.data.len() < BaseRewardRouter::SIZE)
+    {
+        create_base_reward_router(handler, epoch).await?;
+    }
+    get_base_reward_router(handler, epoch).await
+}
+
 pub async fn get_or_create_ncn_reward_router(
     handler: &CliHandler,
     ncn_fee_group: NcnFeeGroup,
@@ -2028,15 +2045,6 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
     Ok(())
 }
 
-pub async fn crank_setup_router(handler: &CliHandler, epoch: u64) -> Result<()> {
-    create_base_reward_router(handler, epoch).await
-}
-
-pub async fn crank_upload(_: &CliHandler, _: u64) -> Result<()> {
-    info!("TODO crank upload");
-    Ok(())
-}
-
 //TODO Multi-thread sending the TXs
 pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
     let operators = get_all_operators_in_ncn(handler).await?;
@@ -2044,7 +2052,7 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
     let epoch_snapshot = get_or_create_epoch_snapshot(handler, epoch).await?;
     let fees = epoch_snapshot.fees();
 
-    let base_reward_router = get_base_reward_router(handler, epoch).await?;
+    let base_reward_router = get_or_create_base_reward_router(handler, epoch).await?;
 
     route_base_rewards(handler, epoch).await?;
 
@@ -2053,7 +2061,7 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
             continue;
         }
 
-        if base_reward_router.rewards_processed() != 0 {
+        if base_reward_router.base_fee_group_reward(group)? != 0 {
             let result = distribute_base_rewards(handler, group, epoch).await;
 
             if let Err(err) = result {
@@ -2073,6 +2081,18 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
                 continue;
             }
 
+            let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
+
+            if let Err(err) = result {
+                log::error!(
+                    "Failed to get or create ncn reward router: {:?} in epoch: {:?} with error: {:?}",
+                    operator,
+                    epoch,
+                    err
+                );
+                continue;
+            }
+
             if base_reward_router
                 .ncn_fee_group_reward_route(operator)?
                 .rewards(group)?
@@ -2089,18 +2109,6 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
                 );
                     continue;
                 }
-            }
-
-            let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
-
-            if let Err(err) = result {
-                log::error!(
-                    "Failed to get or create ncn reward router: {:?} in epoch: {:?} with error: {:?}",
-                    operator,
-                    epoch,
-                    err
-                );
-                continue;
             }
 
             let result = route_ncn_rewards(handler, operator, group, epoch).await;
@@ -2127,10 +2135,6 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
                 continue;
             }
             let ncn_reward_router = result?;
-
-            if ncn_reward_router.rewards_processed() == 0 {
-                continue;
-            }
 
             if ncn_reward_router.operator_rewards() != 0 {
                 let result = distribute_ncn_operator_rewards(handler, operator, group, epoch).await;
@@ -2307,20 +2311,20 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
         );
     }
 
-    //TODO Close Epoch State
-    // let (epoch_state, _, _) =
-    //     EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+    // Close Epoch State
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    // let result = close_epoch_account(handler, ncn, epoch, epoch_state, None).await;
+    let result = close_epoch_account(handler, ncn, epoch, epoch_state, None).await;
 
-    // if let Err(err) = result {
-    //     log::error!(
-    //         "Failed to close epoch state: {:?} in epoch: {:?} with error: {:?}",
-    //         epoch_state,
-    //         epoch,
-    //         err
-    //     );
-    // }
+    if let Err(err) = result {
+        log::error!(
+            "Failed to close epoch state: {:?} in epoch: {:?} with error: {:?}",
+            epoch_state,
+            epoch,
+            err
+        );
+    }
 
     Ok(())
 }

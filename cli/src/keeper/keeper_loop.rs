@@ -3,7 +3,7 @@ use crate::{
     handler::CliHandler,
     instructions::{
         crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
-        crank_setup_router, crank_snapshot, crank_test_vote, crank_upload, create_epoch_state,
+        crank_snapshot, crank_test_vote, create_epoch_state,
     },
     keeper::keeper_state::KeeperState,
     log::{boring_progress_bar, progress_bar},
@@ -150,8 +150,6 @@ pub async fn run_keeper(handler: &CliHandler) {
                 State::Snapshot => crank_snapshot(handler, state.epoch).await,
                 // State::Vote => crank_vote(handler, state.epoch).await,
                 State::Vote => crank_test_vote(handler, state.epoch).await,
-                State::SetupRouter => crank_setup_router(handler, state.epoch).await,
-                State::Upload => crank_upload(handler, state.epoch).await,
                 State::Distribute => crank_distribute(handler, state.epoch).await,
                 State::Close => crank_close_epoch_accounts(handler, state.epoch).await,
             };

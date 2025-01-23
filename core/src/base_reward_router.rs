@@ -132,9 +132,9 @@ impl BaseRewardRouter {
     pub fn find_program_address(
         program_id: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds: Vec<Vec<u8>> = Self::seeds(ncn, ncn_epoch);
+        let seeds: Vec<Vec<u8>> = Self::seeds(ncn, epoch);
         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
         (pda, bump, seeds)
@@ -143,11 +143,11 @@ impl BaseRewardRouter {
     pub fn load(
         program_id: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
         account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        let expected_pda = Self::find_program_address(program_id, ncn, ncn_epoch).0;
+        let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
         check_load(
             program_id,
             account,
