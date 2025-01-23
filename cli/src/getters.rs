@@ -256,6 +256,37 @@ pub async fn get_ncn_reward_receiver(
     Ok((address, account))
 }
 
+pub async fn get_receiver_rewards(handler: &CliHandler, address: &Pubkey) -> Result<u64> {
+    let account = get_account(handler, &address).await?;
+
+    let rent = handler
+        .rpc_client()
+        .get_minimum_balance_for_rent_exemption(0)
+        .await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
+    Ok(account.lamports - rent)
+}
+
+pub async fn get_base_reward_receiver_rewards(handler: &CliHandler, epoch: u64) -> Result<u64> {
+    let (address, _) = get_base_reward_receiver(handler, epoch).await?;
+    get_receiver_rewards(handler, &address).await
+}
+
+pub async fn get_ncn_reward_receiver_rewards(
+    handler: &CliHandler,
+    ncn_fee_group: NcnFeeGroup,
+    operator: &Pubkey,
+    epoch: u64,
+) -> Result<u64> {
+    let (address, _) = get_ncn_reward_receiver(handler, ncn_fee_group, operator, epoch).await?;
+    get_receiver_rewards(handler, &address).await
+}
+
 #[allow(clippy::large_stack_frames)]
 pub async fn get_total_rewards_to_be_distributed(handler: &CliHandler, epoch: u64) -> Result<u64> {
     let all_operators = {
@@ -291,32 +322,25 @@ pub async fn get_total_rewards_to_be_distributed(handler: &CliHandler, epoch: u6
             .collect::<Vec<NcnFeeGroup>>()
     };
 
-    let rent = handler
-        .rpc_client()
-        .get_minimum_balance_for_rent_exemption(0)
-        .await?;
-
     let mut total_amount_to_distribute = 0;
     {
-        let result = get_base_reward_receiver(handler, epoch).await;
+        let result = get_base_reward_receiver_rewards(handler, epoch).await;
         if result.is_err() {
             return Ok(0);
         }
 
-        let (_, receiver) = result.unwrap();
-        total_amount_to_distribute += receiver.lamports - rent;
+        total_amount_to_distribute += result.unwrap();
     }
 
     for operator in all_operators.iter() {
         for group in all_ncn_groups.iter() {
-            let result = get_ncn_reward_receiver(handler, *group, operator, epoch).await;
+            let result = get_ncn_reward_receiver_rewards(handler, *group, operator, epoch).await;
 
             if result.is_err() {
                 continue;
             }
 
-            let (_, receiver) = result.unwrap();
-            total_amount_to_distribute += receiver.lamports - rent;
+            total_amount_to_distribute += result.unwrap();
         }
     }
 

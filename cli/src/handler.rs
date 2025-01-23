@@ -122,7 +122,10 @@ impl CliHandler {
     pub async fn handle(&self, action: ProgramCommand) -> Result<()> {
         match action {
             // Keeper
-            ProgramCommand::Keeper {} => startup_keeper(self).await,
+            ProgramCommand::Keeper {
+                loop_timeout_ms,
+                error_timeout_ms,
+            } => startup_keeper(self, loop_timeout_ms, error_timeout_ms).await,
 
             // Admin
             ProgramCommand::AdminCreateConfig {

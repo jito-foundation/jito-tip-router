@@ -12,9 +12,6 @@ use anyhow::{Ok, Result};
 use jito_tip_router_core::epoch_state::State;
 use log::info;
 
-pub const ERROR_TIMEOUT_MS: u64 = 10_000; // 10 seconds
-pub const KEEPER_TIMEOUT_MS: u64 = 60_000 * 10; // 10 minutes
-
 pub async fn progress_epoch(
     handler: &CliHandler,
     starting_epoch: u64,
@@ -44,10 +41,14 @@ pub async fn progress_epoch(
 }
 
 #[allow(clippy::future_not_send)]
-pub async fn check_and_timeout_error<T>(title: String, result: &Result<T>) -> bool {
+pub async fn check_and_timeout_error<T>(
+    title: String,
+    result: &Result<T>,
+    error_timeout_ms: u64,
+) -> bool {
     if let Err(e) = result {
         log::error!("Error: [{}] \n{:?}\n\n", title, e);
-        timeout_error(ERROR_TIMEOUT_MS).await;
+        timeout_error(error_timeout_ms).await;
         true
     } else {
         false
@@ -63,15 +64,19 @@ pub async fn timeout_keeper(duration_ms: u64) {
 }
 
 #[allow(clippy::large_stack_frames)]
-pub async fn startup_keeper(handler: &CliHandler) -> Result<()> {
-    run_keeper(handler).await;
+pub async fn startup_keeper(
+    handler: &CliHandler,
+    loop_timeout_ms: u64,
+    error_timeout_ms: u64,
+) -> Result<()> {
+    run_keeper(handler, loop_timeout_ms, error_timeout_ms).await;
 
     // Will never reach
     Ok(())
 }
 
 #[allow(clippy::large_stack_frames)]
-pub async fn run_keeper(handler: &CliHandler) {
+pub async fn run_keeper(handler: &CliHandler, loop_timeout_ms: u64, error_timeout_ms: u64) {
     let mut state: KeeperState = KeeperState::default();
     let mut epoch_stall = false;
     let mut current_epoch = handler.epoch;
@@ -84,7 +89,9 @@ pub async fn run_keeper(handler: &CliHandler) {
             info!("-1. Register Vaults");
             let result = crank_register_vaults(handler).await;
 
-            if check_and_timeout_error("Register Vaults".to_string(), &result).await {
+            if check_and_timeout_error("Register Vaults".to_string(), &result, error_timeout_ms)
+                .await
+            {
                 continue;
             }
         }
@@ -103,7 +110,9 @@ pub async fn run_keeper(handler: &CliHandler) {
             )
             .await;
 
-            if check_and_timeout_error("Progress Epoch".to_string(), &result).await {
+            if check_and_timeout_error("Progress Epoch".to_string(), &result, error_timeout_ms)
+                .await
+            {
                 continue;
             }
 
@@ -117,7 +126,13 @@ pub async fn run_keeper(handler: &CliHandler) {
             if state.epoch != current_epoch {
                 let result = state.fetch(handler, current_epoch).await;
 
-                if check_and_timeout_error("Update Keeper State".to_string(), &result).await {
+                if check_and_timeout_error(
+                    "Update Keeper State".to_string(),
+                    &result,
+                    error_timeout_ms,
+                )
+                .await
+                {
                     continue;
                 }
             }
@@ -127,7 +142,9 @@ pub async fn run_keeper(handler: &CliHandler) {
             info!("2. Update the epoch state - {}", current_epoch);
             let result = state.update_epoch_state(handler).await;
 
-            if check_and_timeout_error("Update Epoch State".to_string(), &result).await {
+            if check_and_timeout_error("Update Epoch State".to_string(), &result, error_timeout_ms)
+                .await
+            {
                 continue;
             }
         }
@@ -137,7 +154,12 @@ pub async fn run_keeper(handler: &CliHandler) {
             if state.epoch_state.is_none() {
                 let result = create_epoch_state(handler, state.epoch).await;
 
-                check_and_timeout_error("Create Epoch State".to_string(), &result).await;
+                check_and_timeout_error(
+                    "Create Epoch State".to_string(),
+                    &result,
+                    error_timeout_ms,
+                )
+                .await;
 
                 // Go back either way
                 continue;
@@ -157,7 +179,13 @@ pub async fn run_keeper(handler: &CliHandler) {
                 State::Close => crank_close_epoch_accounts(handler, state.epoch).await,
             };
 
-            if check_and_timeout_error(format!("Crank State: {:?}", current_state), &result).await {
+            if check_and_timeout_error(
+                format!("Crank State: {:?}", current_state),
+                &result,
+                error_timeout_ms,
+            )
+            .await
+            {
                 continue;
             }
         }
@@ -167,7 +195,8 @@ pub async fn run_keeper(handler: &CliHandler) {
 
             let result = state.detect_stall(handler).await;
 
-            if check_and_timeout_error("Detect Stall".to_string(), &result).await {
+            if check_and_timeout_error("Detect Stall".to_string(), &result, error_timeout_ms).await
+            {
                 continue;
             }
 
@@ -175,7 +204,7 @@ pub async fn run_keeper(handler: &CliHandler) {
         }
 
         {
-            timeout_keeper(KEEPER_TIMEOUT_MS).await;
+            timeout_keeper(loop_timeout_ms).await;
         }
     }
 }

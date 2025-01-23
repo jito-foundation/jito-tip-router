@@ -114,7 +114,20 @@ pub struct Args {
 #[derive(Subcommand)]
 pub enum ProgramCommand {
     /// Keeper
-    Keeper,
+    Keeper {
+        #[arg(
+            long,
+            default_value_t = 600_000, // 10 minutes
+            help = "Keeper error timeout in milliseconds"
+        )]
+        loop_timeout_ms: u64,
+        #[arg(
+            long,
+            default_value_t = 10_000, // 10 seconds
+            help = "Keeper error timeout in milliseconds"
+        )]
+        error_timeout_ms: u64,
+    },
 
     /// Admin
     AdminCreateConfig {

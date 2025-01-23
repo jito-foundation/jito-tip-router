@@ -3,7 +3,8 @@ use std::time::Duration;
 use crate::{
     getters::{
         get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn, get_ballot_box,
-        get_base_reward_router, get_epoch_snapshot, get_ncn_reward_router, get_operator_snapshot,
+        get_base_reward_receiver_rewards, get_base_reward_router, get_epoch_snapshot,
+        get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator_snapshot,
         get_stake_pool_accounts, get_tip_router_config, get_vault, get_vault_registry,
         get_weight_table,
     },
@@ -2054,7 +2055,10 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
     let base_reward_router = get_or_create_base_reward_router(handler, epoch).await?;
 
-    route_base_rewards(handler, epoch).await?;
+    let base_reward_receiver_rewards = get_base_reward_receiver_rewards(handler, epoch).await?;
+    if base_reward_receiver_rewards > 0 {
+        route_base_rewards(handler, epoch).await?;
+    }
 
     for group in BaseFeeGroup::all_groups() {
         if fees.base_fee_bps(group)? == 0 {
@@ -2111,16 +2115,21 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
                 }
             }
 
-            let result = route_ncn_rewards(handler, operator, group, epoch).await;
+            let ncn_reward_receiver_rewards =
+                get_ncn_reward_receiver_rewards(handler, group, operator, epoch).await?;
 
-            if let Err(err) = result {
-                log::error!(
+            if ncn_reward_receiver_rewards > 0 {
+                let result = route_ncn_rewards(handler, operator, group, epoch).await;
+
+                if let Err(err) = result {
+                    log::error!(
                     "Failed to route ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
                     operator,
                     epoch,
                     err
                 );
-                continue;
+                    continue;
+                }
             }
 
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
