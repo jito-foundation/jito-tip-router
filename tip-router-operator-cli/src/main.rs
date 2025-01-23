@@ -77,6 +77,14 @@ async fn main() -> Result<()> {
             let rpc_url = cli.rpc_url.clone();
             let cli_clone = cli.clone();
 
+            if !backup_snapshots_dir.exists() {
+                info!(
+                    "Creating backup snapshots directory at {}",
+                    backup_snapshots_dir.display()
+                );
+                std::fs::create_dir_all(&backup_snapshots_dir)?;
+            }
+
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
                 loop {

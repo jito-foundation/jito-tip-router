@@ -147,7 +147,7 @@ impl BackupSnapshotMonitor {
         let slots_per_epoch = DEFAULT_SLOTS_PER_EPOCH;
         let target_epoch = target_slot / slots_per_epoch;
 
-        let dir_entries = std::fs::read_dir(&self.snapshots_dir)?;
+        let dir_entries = std::fs::read_dir(&self.backup_dir)?;
 
         // Find the snapshot that ends closest to but not after target_slot
         let mut same_epoch_snapshots: Vec<SnapshotInfo> = dir_entries
