@@ -195,19 +195,22 @@ impl CliHandler {
                 epochs_before_stall,
                 epochs_after_consensus_before_close,
                 valid_slots_after_consensus,
+                starting_valid_epoch,
             } => {
                 admin_set_parameters(
                     self,
                     epochs_before_stall,
                     epochs_after_consensus_before_close,
                     valid_slots_after_consensus,
+                    starting_valid_epoch,
                 )
                 .await?;
                 let config = get_tip_router_config(self).await?;
-                info!("\n\n--- Parameters Set ---\nepochs_before_stall: {}\nepochs_after_consensus_before_close: {}\nvalid_slots_after_consensus: {}\n",
+                info!("\n\n--- Parameters Set ---\nepochs_before_stall: {}\nepochs_after_consensus_before_close: {}\nvalid_slots_after_consensus: {}\nstarting_valid_epoch: {}\n",
                     config.epochs_before_stall(),
                     config.epochs_after_consensus_before_close(),
-                    config.valid_slots_after_consensus()
+                    config.valid_slots_after_consensus(),
+                    config.starting_valid_epoch()
                 );
 
                 Ok(())

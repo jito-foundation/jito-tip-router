@@ -317,6 +317,7 @@ pub async fn admin_set_parameters(
     epochs_before_stall: Option<u64>,
     epochs_after_consensus_before_close: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
+    starting_valid_epoch: Option<u64>,
 ) -> Result<()> {
     let keypair = handler.keypair()?;
     let ncn = *handler.ncn()?;
@@ -336,6 +337,10 @@ pub async fn admin_set_parameters(
 
     if let Some(slots) = valid_slots_after_consensus {
         ix.valid_slots_after_consensus(slots);
+    }
+
+    if let Some(epoch) = starting_valid_epoch {
+        ix.starting_valid_epoch(epoch);
     }
 
     send_and_log_transaction(

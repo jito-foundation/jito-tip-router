@@ -185,6 +185,8 @@ pub enum ProgramCommand {
         epochs_after_consensus_before_close: Option<u64>,
         #[arg(long, help = "Slots to which voting is allowed after consensus")]
         valid_slots_after_consensus: Option<u64>,
+        #[arg(long, help = "Starting valid epoch")]
+        starting_valid_epoch: Option<u64>,
     },
     AdminFundAccountPayer {
         #[arg(long, help = "Amount of SOL to fund")]
