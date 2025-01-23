@@ -3,7 +3,8 @@ use ::{
     clap::Parser,
     ellipsis_client::{ClientSubset, EllipsisClient},
     log::{error, info},
-    solana_metrics::set_host_id,
+    meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection,
+    solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::rpc_client::RpcClient,
     solana_sdk::{
         clock::DEFAULT_SLOTS_PER_EPOCH,
@@ -11,9 +12,15 @@ use ::{
         signer::{keypair::read_keypair_file, Signer},
         transaction::Transaction,
     },
-    std::{path::PathBuf, str::FromStr, time::Duration},
+    std::{
+        path::PathBuf,
+        str::FromStr,
+        sync::Arc,
+        time::{Duration, Instant},
+    },
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
+        claim::claim_mev_tips,
         cli::{Cli, Commands},
         process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
@@ -223,6 +230,54 @@ async fn main() -> Result<()> {
                 &tip_distribution_program_id,
             )
             .await?;
+        }
+        Commands::ClaimTips {
+            tip_distribution_program_id,
+            micro_lamports,
+            epoch,
+        } => {
+            let start = Instant::now();
+            info!("Claiming tips...");
+
+            let arc_keypair = Arc::new(keypair);
+            // Load the GeneratedMerkleTreeCollection, which should have been previously generated
+            let merkle_tree_coll_path = PathBuf::from(format!(
+                "{}/merkle_tree_coll_{}.json",
+                cli.meta_merkle_tree_dir.display(),
+                epoch
+            ));
+            let merkle_tree_coll =
+                GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)?;
+            match claim_mev_tips(
+                &merkle_tree_coll,
+                cli.rpc_url.clone(),
+                // TODO: Review if we should offer separate send_url. This may be used if sending
+                //  via block engine.
+                cli.rpc_url,
+                tip_distribution_program_id,
+                arc_keypair,
+                Duration::from_secs(3600),
+                micro_lamports,
+            )
+            .await
+            {
+                Err(e) => {
+                    datapoint_error!(
+                        "claim_mev_workflow-claim_error",
+                        ("epoch", epoch, i64),
+                        ("error", 1, i64),
+                        ("err_str", e.to_string(), String),
+                        ("elapsed_us", start.elapsed().as_micros(), i64),
+                    );
+                }
+                Ok(()) => {
+                    datapoint_info!(
+                        "claim_mev_workflow-claim_completion",
+                        ("epoch", epoch, i64),
+                        ("elapsed_us", start.elapsed().as_micros(), i64),
+                    );
+                }
+            }
         }
     }
     Ok(())

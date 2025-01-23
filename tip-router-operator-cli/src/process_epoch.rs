@@ -92,6 +92,7 @@ pub async fn process_epoch(
         target_epoch,
         adjusted_total_fees,
         snapshots_enabled,
+        &meta_merkle_tree_dir,
     ) {
         Ok(tree) => {
             datapoint_info!(
