@@ -125,7 +125,8 @@ impl CliHandler {
             ProgramCommand::Keeper {
                 loop_timeout_ms,
                 error_timeout_ms,
-            } => startup_keeper(self, loop_timeout_ms, error_timeout_ms).await,
+                test_vote,
+            } => startup_keeper(self, loop_timeout_ms, error_timeout_ms, test_vote).await,
 
             // Admin
             ProgramCommand::AdminCreateConfig {

@@ -3,7 +3,7 @@ use crate::{
     handler::CliHandler,
     instructions::{
         crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
-        crank_snapshot, crank_test_vote, create_epoch_state,
+        crank_snapshot, crank_vote, create_epoch_state,
     },
     keeper::keeper_state::KeeperState,
     log::{boring_progress_bar, progress_bar},
@@ -68,15 +68,21 @@ pub async fn startup_keeper(
     handler: &CliHandler,
     loop_timeout_ms: u64,
     error_timeout_ms: u64,
+    test_vote: bool,
 ) -> Result<()> {
-    run_keeper(handler, loop_timeout_ms, error_timeout_ms).await;
+    run_keeper(handler, loop_timeout_ms, error_timeout_ms, test_vote).await;
 
     // Will never reach
     Ok(())
 }
 
 #[allow(clippy::large_stack_frames)]
-pub async fn run_keeper(handler: &CliHandler, loop_timeout_ms: u64, error_timeout_ms: u64) {
+pub async fn run_keeper(
+    handler: &CliHandler,
+    loop_timeout_ms: u64,
+    error_timeout_ms: u64,
+    test_vote: bool,
+) {
     let mut state: KeeperState = KeeperState::default();
     let mut epoch_stall = false;
     let mut current_epoch = handler.epoch;
@@ -181,8 +187,7 @@ pub async fn run_keeper(handler: &CliHandler, loop_timeout_ms: u64, error_timeou
             let result = match current_state {
                 State::SetWeight => crank_set_weight(handler, state.epoch).await,
                 State::Snapshot => crank_snapshot(handler, state.epoch).await,
-                // State::Vote => crank_vote(handler, state.epoch).await,
-                State::Vote => crank_test_vote(handler, state.epoch).await,
+                State::Vote => crank_vote(handler, state.epoch, test_vote).await,
                 State::Distribute => crank_distribute(handler, state.epoch).await,
                 State::Close => crank_close_epoch_accounts(handler, state.epoch).await,
             };

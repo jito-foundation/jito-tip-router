@@ -4,9 +4,9 @@ use crate::{
     getters::{
         get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn, get_ballot_box,
         get_base_reward_receiver_rewards, get_base_reward_router, get_epoch_snapshot,
-        get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator_snapshot,
-        get_stake_pool_accounts, get_tip_router_config, get_vault, get_vault_registry,
-        get_weight_table,
+        get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator,
+        get_operator_snapshot, get_stake_pool_accounts, get_tip_router_config, get_vault,
+        get_vault_registry, get_weight_table,
     },
     handler::CliHandler,
     log::boring_progress_bar,
@@ -1989,17 +1989,8 @@ pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
 }
 
 #[allow(clippy::large_stack_frames)]
-pub async fn crank_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let _ballot_box = get_or_create_ballot_box(handler, epoch).await?;
-
-    info!("TODO crank vote");
-    Ok(())
-}
-
-#[allow(clippy::large_stack_frames)]
-pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let meta_merkle_root = [8; 32];
-    let operators = get_all_operators_in_ncn(handler).await?;
+pub async fn crank_vote(handler: &CliHandler, epoch: u64, test_vote: bool) -> Result<()> {
+    // VOTE
 
     let ballot_box = get_or_create_ballot_box(handler, epoch).await?;
     if ballot_box.is_consensus_reached() {
@@ -2010,7 +2001,26 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
         return Ok(());
     }
 
+    if test_vote {
+        crank_test_vote(handler, epoch).await?;
+    }
+
+    Ok(())
+}
+
+#[allow(clippy::large_stack_frames)]
+pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
+    let voter = handler.keypair()?.pubkey();
+    let meta_merkle_root = [8; 32];
+    let operators = get_all_operators_in_ncn(handler).await?;
+
     for operator in operators.iter() {
+        let operator_account = get_operator(handler, operator).await?;
+
+        if operator_account.voter.ne(&voter) {
+            continue;
+        }
+
         let result = operator_cast_vote(handler, operator, epoch, meta_merkle_root).await;
 
         if let Err(err) = result {

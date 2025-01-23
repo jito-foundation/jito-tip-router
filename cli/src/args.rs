@@ -127,6 +127,8 @@ pub enum ProgramCommand {
             help = "Keeper error timeout in milliseconds"
         )]
         error_timeout_ms: u64,
+        #[arg(long, help = "calls test vote, instead of waiting for a real vote")]
+        test_vote: bool,
     },
 
     /// Admin
