@@ -16,7 +16,7 @@ use crate::{
     backup_snapshots::SnapshotInfo, get_meta_merkle_root, tip_router::get_ncn_config, Cli,
 };
 
-const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200;
+const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
 const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined
 
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient) -> Result<()> {
@@ -67,7 +67,7 @@ pub async fn wait_for_optimal_incremental_snapshot(
         for entry in dir_entries {
             if let Some(snapshot_info) = SnapshotInfo::from_path(entry?.path()) {
                 if target_slot - OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE < snapshot_info.end_slot
-                    && snapshot_info.end_slot < target_slot
+                    && snapshot_info.end_slot <= target_slot
                 {
                     return Ok(());
                 }

@@ -90,7 +90,7 @@ impl BackupSnapshotMonitor {
             .filter_map(Result::ok)
             .filter_map(|entry| SnapshotInfo::from_path(entry.path()))
             .filter(|snap| {
-                let before_target_slot = snap.end_slot < target_slot;
+                let before_target_slot = snap.end_slot <= target_slot;
                 let in_same_epoch = (snap.end_slot / DEFAULT_SLOTS_PER_EPOCH)
                     == (target_slot / DEFAULT_SLOTS_PER_EPOCH);
                 before_target_slot && in_same_epoch
@@ -199,6 +199,7 @@ impl BackupSnapshotMonitor {
                     oldest_snapshot.path
                 );
                 std::fs::remove_file(oldest_snapshot.path.as_path())?;
+                same_epoch_snapshots.remove(0);
             }
         }
 
@@ -209,7 +210,7 @@ impl BackupSnapshotMonitor {
         &self,
         mut current_backup_path: Option<PathBuf>,
         target_slot: u64,
-    ) -> Result<Option<PathBuf>> {
+    ) -> Option<PathBuf> {
         if let Some(snapshot) = self.find_closest_incremental(target_slot) {
             if current_backup_path.as_ref() != Some(&snapshot) {
                 log::info!(
@@ -220,8 +221,9 @@ impl BackupSnapshotMonitor {
 
                 if let Err(e) = self.backup_incremental_snapshot(&snapshot).await {
                     log::error!("Failed to backup snapshot: {}", e);
-                    return Err(e);
+                    return current_backup_path;
                 }
+
                 current_backup_path = Some(snapshot);
 
                 // After saving best snapshot, evict oldest one from same epoch
@@ -231,7 +233,7 @@ impl BackupSnapshotMonitor {
             }
         }
 
-        Ok(current_backup_path)
+        current_backup_path
     }
 
     /// Runs the snapshot backup process to continually back up the latest incremental snapshot for the previous epoch and the current epoch
@@ -262,10 +264,10 @@ impl BackupSnapshotMonitor {
             // Backup latest snapshot for last epoch and this epoch
             last_epoch_backup_path = self
                 .backup_latest_for_target_slot(last_epoch_backup_path, last_epoch_target_slot)
-                .await?;
+                .await;
             this_epoch_backup_path = self
                 .backup_latest_for_target_slot(this_epoch_backup_path, this_epoch_target_slot)
-                .await?;
+                .await;
 
             current_target_slot = Some(this_epoch_target_slot);
         }
