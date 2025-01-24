@@ -65,21 +65,6 @@ pub enum Commands {
         override_target_slot: Option<u64>,
     },
     SnapshotSlot {
-        #[arg(short, long, env)]
-        ncn_address: Pubkey,
-
-        #[arg(long, env)]
-        tip_distribution_program_id: Pubkey,
-
-        #[arg(long, env)]
-        tip_payment_program_id: Pubkey,
-
-        #[arg(long, env)]
-        tip_router_program_id: Pubkey,
-
-        #[arg(long, env, default_value = "false")]
-        enable_snapshots: bool,
-
         #[arg(long, env)]
         slot: u64,
     },

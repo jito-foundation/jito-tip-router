@@ -19,11 +19,7 @@ use ::{
         time::{Duration, Instant},
     },
     tip_router_operator_cli::{
-        backup_snapshots::BackupSnapshotMonitor,
-        claim::claim_mev_tips,
-        cli::{Cli, Commands},
-        process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
-        submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
+        backup_snapshots::BackupSnapshotMonitor, claim::claim_mev_tips, cli::{Cli, Commands}, ledger_utils::get_bank_from_ledger, process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch}, submit::{submit_recent_epochs_to_ncn, submit_to_ncn}
     },
     tokio::time::sleep,
 };
@@ -173,34 +169,20 @@ async fn main() -> Result<()> {
             }
         }
         Commands::SnapshotSlot {
-            ncn_address,
-            tip_distribution_program_id,
-            tip_payment_program_id,
-            tip_router_program_id,
-            enable_snapshots,
             slot,
         } => {
             info!("Snapshotting slot...");
-            let epoch = slot / DEFAULT_SLOTS_PER_EPOCH;
-            // Process the epoch
-            match process_epoch(
-                &rpc_client,
-                slot,
-                epoch,
-                &tip_distribution_program_id,
-                &tip_payment_program_id,
-                &tip_router_program_id,
-                &ncn_address,
-                enable_snapshots,
-                &cli,
-            )
-            .await
-            {
-                Ok(_) => info!("Successfully processed slot"),
-                Err(e) => {
-                    error!("Error processing epoch: {}", e);
-                }
-            }
+            let account_paths = cli.account_paths.map_or_else(|| vec![cli.ledger_path.clone()], |paths| paths);
+
+            get_bank_from_ledger(
+                &keypair.pubkey(),
+                &cli.ledger_path,
+                account_paths,
+                cli.full_snapshots_path.unwrap(),
+                cli.backup_snapshots_dir,
+                &slot,
+                true,
+            );
         }
         Commands::SubmitEpoch {
             ncn_address,
