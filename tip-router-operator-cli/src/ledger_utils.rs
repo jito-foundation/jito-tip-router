@@ -14,9 +14,12 @@ use solana_ledger::{
 };
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::{
-    accounts_background_service::AbsRequestSender, bank::Bank,
-    snapshot_archive_info::SnapshotArchiveInfoGetter, snapshot_bank_utils,
-    snapshot_config::SnapshotConfig, snapshot_utils::SnapshotVersion,
+    accounts_background_service::AbsRequestSender,
+    bank::Bank,
+    snapshot_archive_info::SnapshotArchiveInfoGetter,
+    snapshot_bank_utils,
+    snapshot_config::SnapshotConfig,
+    snapshot_utils::{self, SnapshotVersion},
 };
 use solana_sdk::{clock::Slot, pubkey::Pubkey};
 
@@ -164,7 +167,7 @@ pub fn get_bank_from_ledger(
     let snapshot_config = SnapshotConfig {
         full_snapshot_archives_dir: full_snapshots_path.clone(),
         incremental_snapshot_archives_dir: incremental_snapshots_path.clone(),
-        bank_snapshots_dir: full_snapshots_path,
+        bank_snapshots_dir: full_snapshots_path.clone(),
         ..SnapshotConfig::new_load_only()
     };
 
@@ -172,6 +175,40 @@ pub fn get_bank_from_ledger(
         halt_at_slot: Some(desired_slot.to_owned()),
         ..Default::default()
     };
+
+    let mut starting_slot = 0; // default start check with genesis
+    if let Some(full_snapshot_slot) = snapshot_utils::get_highest_full_snapshot_archive_slot(
+        &full_snapshots_path,
+        process_options.halt_at_slot,
+    ) {
+        let incremental_snapshot_slot =
+            snapshot_utils::get_highest_incremental_snapshot_archive_slot(
+                &incremental_snapshots_path,
+                full_snapshot_slot,
+                process_options.halt_at_slot,
+            )
+            .unwrap_or_default();
+        starting_slot = std::cmp::max(full_snapshot_slot, incremental_snapshot_slot);
+    }
+    info!("Starting slot {}", starting_slot);
+
+    match process_options.halt_at_slot {
+        // Skip the following checks for sentinel values of Some(0) and None.
+        // For Some(0), no slots will be be replayed after starting_slot.
+        // For None, all available children of starting_slot will be replayed.
+        None | Some(0) => {}
+        Some(halt_slot) => {
+            if halt_slot < starting_slot {
+                // TODO: Clean this up and emit datapoint
+                panic!("halt_slot < starting_slot");
+            }
+            // Check if we have the slot data necessary to replay from starting_slot to >= halt_slot.
+            if !blockstore.slot_range_connected(starting_slot, halt_slot) {
+                // TODO: Clean this up and emit datapoint
+                panic!("!blockstore.slot_range_connected");
+            }
+        }
+    }
     let exit = Arc::new(AtomicBool::new(false));
     let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
         match bank_forks_utils::load_bank_forks(
