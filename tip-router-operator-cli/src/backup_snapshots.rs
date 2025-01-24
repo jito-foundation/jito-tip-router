@@ -116,7 +116,7 @@ impl BackupSnapshotMonitor {
             return Ok(());
         }
 
-        log::info!(
+        log::debug!(
             "Copying incremental snapshot from {:?} to {:?}",
             snapshot_path,
             dest_path
@@ -161,7 +161,7 @@ impl BackupSnapshotMonitor {
             .filter_map(|entry| SnapshotInfo::from_path(entry.path()))
             .filter(|snap| snap.end_slot / DEFAULT_SLOTS_PER_EPOCH == epoch)
             .try_for_each(|snapshot| {
-                log::info!(
+                log::debug!(
                     "Removing old snapshot from epoch {} with slot {}: {:?}",
                     epoch,
                     snapshot.end_slot,
@@ -192,7 +192,7 @@ impl BackupSnapshotMonitor {
         // Remove oldest snapshots if we have more than MAXIMUM_BACKUP_INCREMENTAL_SNAPSHOTS_PER_EPOCH
         while same_epoch_snapshots.len() > MAXIMUM_BACKUP_INCREMENTAL_SNAPSHOTS_PER_EPOCH {
             if let Some(oldest_snapshot) = same_epoch_snapshots.first() {
-                log::info!(
+                log::debug!(
                     "Removing old snapshot from epoch {} with slot {}: {:?}",
                     target_epoch,
                     oldest_snapshot.end_slot,
@@ -213,7 +213,7 @@ impl BackupSnapshotMonitor {
     ) -> Option<PathBuf> {
         if let Some(snapshot) = self.find_closest_incremental(target_slot) {
             if current_backup_path.as_ref() != Some(&snapshot) {
-                log::info!(
+                log::debug!(
                     "Found new best snapshot for slot {}: {:?}",
                     target_slot,
                     snapshot
