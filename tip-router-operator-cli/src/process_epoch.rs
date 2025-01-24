@@ -1,4 +1,5 @@
 use std::{
+    path::PathBuf,
     str::FromStr,
     time::{Duration, Instant},
 };
@@ -9,8 +10,14 @@ use log::info;
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::pubkey::Pubkey;
+use tokio::time;
 
-use crate::{get_meta_merkle_root, tip_router::get_ncn_config, Cli};
+use crate::{
+    backup_snapshots::SnapshotInfo, get_meta_merkle_root, tip_router::get_ncn_config, Cli,
+};
+
+const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200;
+const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined
 
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient) -> Result<()> {
     let current_epoch = rpc_client.get_epoch_info()?.epoch;
@@ -45,6 +52,35 @@ pub fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<(u64, u64)
     Ok((previous_epoch, previous_epoch_final_slot))
 }
 
+/// Wait for the optimal incremental snapshot to be available to speed up full snapshot generation
+/// Automatically returns after MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS seconds
+pub async fn wait_for_optimal_incremental_snapshot(
+    incremental_snapshots_dir: PathBuf,
+    target_slot: u64,
+) -> Result<()> {
+    let mut interval = time::interval(Duration::from_secs(1));
+    let mut ticks = 0;
+
+    while ticks < MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS {
+        let dir_entries = std::fs::read_dir(&incremental_snapshots_dir)?;
+
+        for entry in dir_entries {
+            if let Some(snapshot_info) = SnapshotInfo::from_path(entry?.path()) {
+                if target_slot - OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE < snapshot_info.end_slot
+                    && snapshot_info.end_slot < target_slot
+                {
+                    return Ok(());
+                }
+            }
+        }
+
+        interval.tick().await;
+        ticks += 1;
+    }
+
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn process_epoch(
     client: &EllipsisClient,
@@ -55,6 +91,7 @@ pub async fn process_epoch(
     tip_router_program_id: &Pubkey,
     ncn_address: &Pubkey,
     snapshots_enabled: bool,
+    new_epoch_rollover: bool,
     cli_args: &Cli,
 ) -> Result<()> {
     info!("Processing epoch {:?}", target_epoch);
@@ -76,6 +113,12 @@ pub async fn process_epoch(
 
     let account_paths = account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
     let full_snapshots_path = full_snapshots_path.map_or(ledger_path, |path| path);
+
+    // Wait for optimal incremental snapshot to be available since they can be delayed in a new epoch
+    if new_epoch_rollover {
+        wait_for_optimal_incremental_snapshot(incremental_snapshots_path.clone(), target_slot)
+            .await?;
+    }
 
     // Generate merkle root from ledger
     let meta_merkle_tree = match get_meta_merkle_root(

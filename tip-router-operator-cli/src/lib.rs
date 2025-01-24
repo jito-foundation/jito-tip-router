@@ -27,9 +27,9 @@ use solana_sdk::{account::AccountSharedData, pubkey::Pubkey, slot_history::Slot}
 
 #[derive(Debug)]
 pub enum MerkleRootError {
-    StakeMetaGeneratorError(&'static str),
-    MerkleRootGeneratorError(&'static str),
-    MerkleTreeError(&'static str),
+    StakeMetaGeneratorError(String),
+    MerkleRootGeneratorError(String),
+    MerkleTreeError(String),
 }
 
 // TODO where did these come from?
@@ -112,9 +112,7 @@ pub fn get_meta_merkle_root(
         snapshots_enabled,
     )
     .map_err(|e| {
-        MerkleRootError::StakeMetaGeneratorError(
-            format!("Failed to generate stake meta: {:?}", e).as_str(),
-        )
+        MerkleRootError::StakeMetaGeneratorError(format!("Failed to generate stake meta: {:?}", e))
     })?;
 
     info!(
@@ -142,7 +140,9 @@ pub fn get_meta_merkle_root(
         protocol_fee_bps,
     )
     .map_err(|_| {
-        MerkleRootError::MerkleRootGeneratorError("Failed to generate merkle tree collection")
+        MerkleRootError::MerkleRootGeneratorError(
+            "Failed to generate merkle tree collection".to_string(),
+        )
     })?;
 
     info!(
@@ -167,8 +167,7 @@ pub fn get_meta_merkle_root(
         merkle_tree_coll,
     )
     .map_err(|e| {
-        info!("Meta merkle tree creation error: {:?}", e);
-        MerkleRootError::MerkleTreeError("Failed to create meta merkle tree")
+        MerkleRootError::MerkleTreeError(format!("Failed to create meta merkle tree: {:?}", e))
     })?;
 
     info!(

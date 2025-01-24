@@ -7,17 +7,19 @@ use tokio::time;
 
 use crate::process_epoch::get_previous_epoch_last_slot;
 
+const MAXIMUM_BACKUP_INCREMENTAL_SNAPSHOTS_PER_EPOCH: usize = 3;
+
 /// Represents a parsed incremental snapshot filename
 #[derive(Debug)]
-struct SnapshotInfo {
+pub struct SnapshotInfo {
     path: PathBuf,
     _start_slot: u64,
-    end_slot: u64,
+    pub end_slot: u64,
 }
 
 impl SnapshotInfo {
     /// Try to parse a snapshot filename into slot information
-    fn from_path(path: PathBuf) -> Option<Self> {
+    pub fn from_path(path: PathBuf) -> Option<Self> {
         let file_name = path.file_name()?.to_str()?;
 
         // Only try to parse if it's an incremental snapshot
@@ -67,25 +69,32 @@ impl BackupSnapshotMonitor {
     }
 
     /// Gets target slot for current epoch
-    fn get_target_slot(&self) -> Result<u64> {
+    fn get_target_slots(&self) -> Result<(u64, u64)> {
+        // Get the last slot of the current epoch
+        let (_, last_epoch_target_slot) = get_previous_epoch_last_slot(&self.rpc_client)?;
+        let next_epoch_target_slot = last_epoch_target_slot + DEFAULT_SLOTS_PER_EPOCH;
+
         if let Some(target_slot) = self.override_target_slot {
-            return Ok(target_slot);
+            return Ok((last_epoch_target_slot, target_slot));
         }
 
-        // Get the last slot of the current epoch
-        let (_, last_slot) = get_previous_epoch_last_slot(&self.rpc_client)?;
-        Ok(last_slot + DEFAULT_SLOTS_PER_EPOCH)
+        Ok((last_epoch_target_slot, next_epoch_target_slot))
     }
 
     /// Finds the most recent incremental snapshot that's before our target slot
     fn find_closest_incremental(&self, target_slot: u64) -> Option<PathBuf> {
         let dir_entries = std::fs::read_dir(&self.snapshots_dir).ok()?;
 
-        // Find the snapshot that ends closest to but not after target_slot
+        // Find the snapshot that ends closest to but not after target_slot, in the same epoch
         dir_entries
             .filter_map(Result::ok)
             .filter_map(|entry| SnapshotInfo::from_path(entry.path()))
-            .filter(|snap| snap.end_slot <= target_slot)
+            .filter(|snap| {
+                let before_target_slot = snap.end_slot < target_slot;
+                let in_same_epoch = (snap.end_slot / DEFAULT_SLOTS_PER_EPOCH)
+                    == (target_slot / DEFAULT_SLOTS_PER_EPOCH);
+                before_target_slot && in_same_epoch
+            })
             .max_by_key(|snap| snap.end_slot)
             .map(|snap| snap.path)
     }
@@ -143,13 +152,34 @@ impl BackupSnapshotMonitor {
         Ok(())
     }
 
+    fn evict_all_epoch_snapshots(&self, epoch: u64) -> Result<()> {
+        let dir_entries = std::fs::read_dir(&self.backup_dir)?;
+
+        // Find all snapshots for the given epoch and remove them
+        dir_entries
+            .filter_map(Result::ok)
+            .filter_map(|entry| SnapshotInfo::from_path(entry.path()))
+            .filter(|snap| snap.end_slot / DEFAULT_SLOTS_PER_EPOCH == epoch)
+            .try_for_each(|snapshot| {
+                log::debug!(
+                    "Removing old snapshot from epoch {} with slot {}: {:?}",
+                    epoch,
+                    snapshot.end_slot,
+                    snapshot.path
+                );
+                std::fs::remove_file(snapshot.path.as_path())
+            })?;
+
+        Ok(())
+    }
+
     fn evict_same_epoch_incremental(&self, target_slot: u64) -> Result<()> {
         let slots_per_epoch = DEFAULT_SLOTS_PER_EPOCH;
         let target_epoch = target_slot / slots_per_epoch;
 
         let dir_entries = std::fs::read_dir(&self.backup_dir)?;
 
-        // Find the snapshot that ends closest to but not after target_slot
+        // Find all snapshots for the given epoch
         let mut same_epoch_snapshots: Vec<SnapshotInfo> = dir_entries
             .filter_map(Result::ok)
             .filter_map(|entry| SnapshotInfo::from_path(entry.path()))
@@ -159,58 +189,85 @@ impl BackupSnapshotMonitor {
         // Sort by end_slot ascending so we can remove oldest
         same_epoch_snapshots.sort_by_key(|snap| snap.end_slot);
 
-        // Remove oldest snapshot
-        if let Some(oldest_snapshot) = same_epoch_snapshots.first() {
-            log::debug!(
-                "Removing old snapshot from epoch {} with slot {}: {:?}",
-                target_epoch,
-                oldest_snapshot.end_slot,
-                oldest_snapshot.path
-            );
-            std::fs::remove_file(oldest_snapshot.path.as_path())?;
+        // Remove oldest snapshots if we have more than MAXIMUM_BACKUP_INCREMENTAL_SNAPSHOTS_PER_EPOCH
+        while same_epoch_snapshots.len() > MAXIMUM_BACKUP_INCREMENTAL_SNAPSHOTS_PER_EPOCH {
+            if let Some(oldest_snapshot) = same_epoch_snapshots.first() {
+                log::debug!(
+                    "Removing old snapshot from epoch {} with slot {}: {:?}",
+                    target_epoch,
+                    oldest_snapshot.end_slot,
+                    oldest_snapshot.path
+                );
+                std::fs::remove_file(oldest_snapshot.path.as_path())?;
+            }
         }
 
         Ok(())
     }
 
+    async fn backup_latest_for_target_slot(
+        &self,
+        mut current_backup_path: Option<PathBuf>,
+        target_slot: u64,
+    ) -> Result<Option<PathBuf>> {
+        if let Some(snapshot) = self.find_closest_incremental(target_slot) {
+            if current_backup_path.as_ref() != Some(&snapshot) {
+                log::debug!(
+                    "Found new best snapshot for slot {}: {:?}",
+                    target_slot,
+                    snapshot
+                );
+
+                if let Err(e) = self.backup_incremental_snapshot(&snapshot).await {
+                    log::error!("Failed to backup snapshot: {}", e);
+                    return Err(e);
+                }
+                current_backup_path = Some(snapshot);
+
+                // After saving best snapshot, evict oldest one from same epoch
+                if let Err(e) = self.evict_same_epoch_incremental(target_slot) {
+                    log::error!("Failed to evict old snapshots: {}", e);
+                }
+            }
+        }
+
+        Ok(current_backup_path)
+    }
+
+    /// Runs the snapshot backup process to continually back up the latest incremental snapshot for the previous epoch and the current epoch
+    /// Keeps at most MAXIMUM_BACKUP_INCREMENTAL_SNAPSHOTS_PER_EPOCH snapshots per epoch in the backup
+    /// Purges old incremental snapshots in the backup after 2 epochs
     pub async fn run(&self) -> Result<()> {
         let mut interval = time::interval(Duration::from_secs(10));
-        let mut last_target_slot = None;
-        let mut last_backup_path = None;
+        let mut current_target_slot = None;
+        let mut last_epoch_backup_path = None;
+        let mut this_epoch_backup_path = None;
 
         loop {
             interval.tick().await;
 
-            let target_slot = self.get_target_slot()?;
+            let (last_epoch_target_slot, this_epoch_target_slot) = self.get_target_slots()?;
 
-            // Only search for new snapshot if target slot has changed
-            if last_target_slot != Some(target_slot) {
-                log::info!("New target slot: {}", target_slot);
-            }
-
-            if let Some(snapshot) = self.find_closest_incremental(target_slot) {
-                if last_backup_path.as_ref() != Some(&snapshot) {
-                    log::debug!(
-                        "Found new best snapshot for slot {}: {:?}",
-                        target_slot,
-                        snapshot
-                    );
-
-                    if let Err(e) = self.backup_incremental_snapshot(&snapshot).await {
-                        log::error!("Failed to backup snapshot: {}", e);
-                        continue;
-                    }
-
-                    last_backup_path = Some(snapshot);
-
-                    // After saving best snapshot, evict oldest one from same epoch
-                    if let Err(e) = self.evict_same_epoch_incremental(target_slot) {
-                        log::error!("Failed to evict old snapshots: {}", e);
-                    }
+            // Detect new epoch
+            if current_target_slot != Some(this_epoch_target_slot) {
+                log::info!("New target slot: {}", this_epoch_target_slot);
+                last_epoch_backup_path = this_epoch_backup_path;
+                this_epoch_backup_path = None;
+                let current_epoch = this_epoch_target_slot / DEFAULT_SLOTS_PER_EPOCH;
+                if let Err(e) = self.evict_all_epoch_snapshots(current_epoch - 2) {
+                    log::error!("Failed to evict old snapshots: {}", e);
                 }
             }
 
-            last_target_slot = Some(target_slot);
+            // Backup latest snapshot for last epoch and this epoch
+            last_epoch_backup_path = self
+                .backup_latest_for_target_slot(last_epoch_backup_path, last_epoch_target_slot)
+                .await?;
+            this_epoch_backup_path = self
+                .backup_latest_for_target_slot(this_epoch_backup_path, this_epoch_target_slot)
+                .await?;
+
+            current_target_slot = Some(this_epoch_target_slot);
         }
     }
 }

@@ -103,14 +103,14 @@ pub fn generate_stake_meta(
         Ok(bank) => bank,
         Err(e) => {
             let error_str = if let Some(s) = e.downcast_ref::<String>() {
-                s.as_str()
+                s.to_string()
             } else if let Some(s) = e.downcast_ref::<&'static str>() {
-                s
+                s.to_string()
             } else {
                 // If we can't get a string, try to get any Debug implementation
                 match e.downcast_ref::<Box<dyn std::fmt::Debug + Send>>() {
-                    Some(debug_val) => format!("{:?}", debug_val).as_str(),
-                    None => "Unknown panic payload",
+                    Some(debug_val) => format!("{:?}", debug_val),
+                    None => "Unknown panic payload".to_string(),
                 }
             };
             error!("Panicked while creating bank from ledger: {}", error_str);
@@ -121,7 +121,7 @@ pub fn generate_stake_meta(
                 ("state", "get_bank_from_ledger", String),
                 ("error", error_str, String),
             );
-            return Err(StakeMetaGeneratorError::PanicError(error_str.to_string()));
+            return Err(StakeMetaGeneratorError::PanicError(error_str));
         }
     };
 
