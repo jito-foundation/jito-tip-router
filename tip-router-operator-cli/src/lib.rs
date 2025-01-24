@@ -167,7 +167,7 @@ pub fn get_meta_merkle_root(
     // Write GeneratedMerkleTreeCollection to disk. Required for Claiming
     let merkle_tree_coll_path =
         meta_merkle_tree_dir.join(format!("merkle_tree_coll_{}.json", epoch));
-    let generated_merkle_tree_col_json = match serde_json::to_string(&merkle_tree_coll_path) {
+    let generated_merkle_tree_col_json = match serde_json::to_string(&merkle_tree_coll) {
         Ok(json) => json,
         Err(e) => {
             datapoint_error!(
