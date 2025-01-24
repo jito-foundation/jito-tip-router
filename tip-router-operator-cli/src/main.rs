@@ -101,7 +101,7 @@ async fn main() -> Result<()> {
                     {
                         error!("Error submitting to NCN: {}", e);
                     }
-                    sleep(Duration::from_secs(60)).await;
+                    sleep(Duration::from_secs(600)).await;
                 }
             });
 
