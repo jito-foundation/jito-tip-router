@@ -144,7 +144,7 @@ impl BackupSnapshotMonitor {
             );
         }
 
-        log::info!(
+        log::debug!(
             "Successfully backed up incremental snapshot ({} bytes)",
             source_size
         );
