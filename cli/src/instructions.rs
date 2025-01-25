@@ -53,7 +53,8 @@ use jito_tip_router_core::{
 };
 use jito_vault_client::instructions::{
     AddDelegationBuilder, InitializeVaultBuilder, InitializeVaultNcnTicketBuilder,
-    InitializeVaultOperatorDelegationBuilder, MintToBuilder, WarmupVaultNcnTicketBuilder,
+    InitializeVaultOperatorDelegationBuilder, MintToBuilder, UpdateVaultBalanceBuilder,
+    WarmupVaultNcnTicketBuilder,
 };
 use jito_vault_core::{
     config::Config as VaultConfig, vault::Vault, vault_ncn_ticket::VaultNcnTicket,
@@ -1578,9 +1579,33 @@ pub async fn distribute_ncn_vault_rewards(
         .epoch(epoch)
         .instruction();
 
+    let vault_account = get_vault(handler, &vault).await?;
+    let st_mint = vault_account.supported_mint;
+    let vrt_mint = vault_account.vrt_mint;
+    let vault_fee_wallet = vault_account.fee_wallet;
+
+    let vault_fee_token_account = get_associated_token_address(&vault_fee_wallet, &vrt_mint);
+    let vault_token_account = get_associated_token_address(&vault, &st_mint);
+
+    let (vault_config, _, _) = VaultConfig::find_program_address(&handler.vault_program_id);
+
+    let update_vault_balance_ix = UpdateVaultBalanceBuilder::new()
+        .config(vault_config)
+        .vault(vault)
+        .token_program(spl_token::id())
+        .vault_fee_token_account(vault_fee_token_account)
+        .vault_token_account(vault_token_account)
+        .vrt_mint(vrt_mint)
+        .instruction();
+
     send_and_log_transaction(
         handler,
-        &[create_vault_ata_ix, distribute_ncn_vault_rewards_ix],
+        &[
+            ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+            create_vault_ata_ix,
+            distribute_ncn_vault_rewards_ix,
+            update_vault_balance_ix,
+        ],
         &[],
         "Distributed NCN Vault Rewards",
         &[
