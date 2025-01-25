@@ -26,8 +26,9 @@ use jito_tip_router_core::{
     weight_table::WeightTable,
 };
 use jito_vault_core::{
-    vault::Vault, vault_ncn_ticket::VaultNcnTicket,
+    config::Config as VaultConfig, vault::Vault, vault_ncn_ticket::VaultNcnTicket,
     vault_operator_delegation::VaultOperatorDelegation,
+    vault_update_state_tracker::VaultUpdateStateTracker,
 };
 use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
 use solana_client::{
@@ -53,6 +54,19 @@ pub async fn get_current_epoch(handler: &CliHandler) -> Result<u64> {
     let client = handler.rpc_client();
     let epoch = client.get_epoch_info().await?.epoch;
     Ok(epoch)
+}
+
+pub async fn get_current_slot(handler: &CliHandler) -> Result<u64> {
+    let client = handler.rpc_client();
+    let slot = client.get_slot().await?;
+    Ok(slot)
+}
+
+pub async fn get_current_slot_and_epoch(handler: &CliHandler) -> Result<(u64, u64)> {
+    let client = handler.rpc_client();
+    let slot = client.get_slot().await?;
+    let epoch = client.get_epoch_info().await?.epoch;
+    Ok((slot, epoch))
 }
 
 // ---------------------- TIP ROUTER ----------------------
@@ -400,6 +414,19 @@ pub async fn get_restaking_config(handler: &CliHandler) -> Result<RestakingConfi
     Ok(*account)
 }
 
+pub async fn get_vault_config(handler: &CliHandler) -> Result<VaultConfig> {
+    let (address, _, _) = VaultConfig::find_program_address(&handler.vault_program_id);
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Account not found"));
+    }
+    let account = account.unwrap();
+
+    let account = VaultConfig::try_from_slice_unchecked(account.data.as_slice())?;
+    Ok(*account)
+}
+
 pub async fn get_ncn(handler: &CliHandler) -> Result<Ncn> {
     let account = get_account(handler, handler.ncn()?).await?;
 
@@ -417,6 +444,21 @@ pub async fn get_vault(handler: &CliHandler, vault: &Pubkey) -> Result<Vault> {
         .await?
         .expect("Account not found");
     let account = Vault::try_from_slice_unchecked(account.data.as_slice())?;
+    Ok(*account)
+}
+
+pub async fn get_vault_update_state_tracker(
+    handler: &CliHandler,
+    vault: &Pubkey,
+    ncn_epoch: u64,
+) -> Result<VaultUpdateStateTracker> {
+    let (vault_update_state_tracker, _, _) =
+        VaultUpdateStateTracker::find_program_address(&handler.vault_program_id, vault, ncn_epoch);
+
+    let account = get_account(handler, &vault_update_state_tracker)
+        .await?
+        .expect("Account not found");
+    let account = VaultUpdateStateTracker::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
 
@@ -564,6 +606,68 @@ pub async fn get_stake_pool_accounts(handler: &CliHandler) -> Result<StakePoolAc
     };
 
     Ok(accounts)
+}
+
+pub async fn get_all_sorted_operators_for_vault(
+    handler: &CliHandler,
+    vault: &Pubkey,
+) -> Result<Vec<Pubkey>> {
+    let client = handler.rpc_client();
+
+    let vault_operator_delegation_size = size_of::<VaultOperatorDelegation>() + 8;
+
+    let size_filter = RpcFilterType::DataSize(vault_operator_delegation_size as u64);
+
+    let vault_filter = RpcFilterType::Memcmp(Memcmp::new(
+        8,                                                  // offset
+        MemcmpEncodedBytes::Bytes(vault.to_bytes().into()), // encoded bytes
+    ));
+
+    let config = RpcProgramAccountsConfig {
+        filters: Some(vec![size_filter, vault_filter]),
+        account_config: RpcAccountInfoConfig {
+            encoding: Some(UiAccountEncoding::Base64),
+            data_slice: Some(UiDataSliceConfig {
+                offset: 0,
+                length: vault_operator_delegation_size,
+            }),
+            commitment: Some(handler.commitment),
+            min_context_slot: None,
+        },
+        with_context: Some(false),
+    };
+
+    let results = client
+        .get_program_accounts_with_config(&handler.vault_program_id, config)
+        .await?;
+
+    let accounts: Vec<(Pubkey, VaultOperatorDelegation)> = results
+        .iter()
+        .filter_map(|result| {
+            VaultOperatorDelegation::try_from_slice_unchecked(result.1.data.as_slice())
+                .map(|account| (result.0, *account))
+                .ok()
+        })
+        .collect();
+
+    let mut index_and_operator = accounts
+        .iter()
+        .map(|(_, vault_operator_delegation)| {
+            (
+                vault_operator_delegation.index(),
+                vault_operator_delegation.operator,
+            )
+        })
+        .collect::<Vec<(u64, Pubkey)>>();
+
+    index_and_operator.sort_by_cached_key(|(index, _pubkey)| *index);
+
+    let sorted_operators = index_and_operator
+        .iter()
+        .map(|(_index, pubkey)| *pubkey)
+        .collect::<Vec<Pubkey>>();
+
+    Ok(sorted_operators)
 }
 
 pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
