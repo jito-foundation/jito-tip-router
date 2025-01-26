@@ -525,10 +525,9 @@ impl OperatorSnapshot {
         weight_table: &WeightTable,
         st_mint: &Pubkey,
     ) -> Result<u128, ProgramError> {
-        // With using `delegation_state.total_security()` there is a thin margin
-        // where stake can be double counted. For this reason, we'll use the
-        // delegation_state.staked_amount() instead.
-        let total_security = vault_operator_delegation.delegation_state.staked_amount();
+        let total_security = vault_operator_delegation
+            .delegation_state
+            .total_security()?;
 
         let precise_total_security = PreciseNumber::new(total_security as u128)
             .ok_or(TipRouterError::NewPreciseNumberError)?;
