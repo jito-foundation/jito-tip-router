@@ -3,7 +3,12 @@ use clap::Parser;
 use clap_markdown::MarkdownOptions;
 use dotenv::dotenv;
 
-use jito_tip_router_cli::{args::Args, handler::CliHandler, log::init_logger};
+use jito_tip_router_cli::{
+    args::{Args, ProgramCommand},
+    handler::CliHandler,
+    log::init_logger,
+};
+use log::info;
 
 #[tokio::main]
 #[allow(clippy::large_stack_frames)]
@@ -28,7 +33,12 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    // info!("{}\n", args);
+    match args.command {
+        ProgramCommand::Keeper { .. } => {
+            info!("\n{}", args);
+        }
+        _ => {}
+    }
 
     let handler = CliHandler::from_args(&args).await?;
     handler.handle(args.command).await?;

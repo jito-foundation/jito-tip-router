@@ -16,7 +16,7 @@ WORKDIR /usr/src/app
 
 COPY . .
 
-RUN cargo build --release
+RUN cargo build --release --bin jito-tip-router-cli
 
 ##### Final image
 FROM debian:bullseye-slim
