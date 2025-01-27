@@ -12,12 +12,12 @@ use crate::{
     },
     instructions::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
-        admin_set_parameters, admin_set_weight, create_and_add_test_operator,
-        create_and_add_test_vault, create_ballot_box, create_base_reward_router,
-        create_epoch_snapshot, create_epoch_state, create_ncn_reward_router,
-        create_operator_snapshot, create_test_ncn, create_vault_registry, create_weight_table,
-        distribute_base_ncn_rewards, register_vault, route_base_rewards, route_ncn_rewards,
-        set_weight, snapshot_vault_operator_delegation,
+        admin_set_config_fees, admin_set_parameters, admin_set_weight,
+        create_and_add_test_operator, create_and_add_test_vault, create_ballot_box,
+        create_base_reward_router, create_epoch_snapshot, create_epoch_state,
+        create_ncn_reward_router, create_operator_snapshot, create_test_ncn, create_vault_registry,
+        create_weight_table, distribute_base_ncn_rewards, register_vault, route_base_rewards,
+        route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
     },
     keeper::keeper_loop::startup_keeper,
 };
@@ -215,6 +215,25 @@ impl CliHandler {
                 );
 
                 Ok(())
+            }
+            ProgramCommand::AdminSetConfigFees {
+                new_block_engine_fee_bps,
+                base_fee_group,
+                new_base_fee_wallet,
+                new_base_fee_bps,
+                ncn_fee_group,
+                new_ncn_fee_bps,
+            } => {
+                admin_set_config_fees(
+                    self,
+                    new_block_engine_fee_bps,
+                    base_fee_group,
+                    new_base_fee_wallet,
+                    new_base_fee_bps,
+                    ncn_fee_group,
+                    new_ncn_fee_bps,
+                )
+                .await
             }
             ProgramCommand::AdminFundAccountPayer { amount_in_sol } => {
                 admin_fund_account_payer(self, amount_in_sol).await

@@ -190,6 +190,20 @@ pub enum ProgramCommand {
         #[arg(long, help = "Starting valid epoch")]
         starting_valid_epoch: Option<u64>,
     },
+    AdminSetConfigFees {
+        #[arg(long, help = "New block engine fee in basis points")]
+        new_block_engine_fee_bps: Option<u16>,
+        #[arg(long, help = "Base fee group")]
+        base_fee_group: Option<u8>,
+        #[arg(long, help = "New base fee wallet")]
+        new_base_fee_wallet: Option<String>,
+        #[arg(long, help = "New base fee in basis points")]
+        new_base_fee_bps: Option<u16>,
+        #[arg(long, help = "NCN fee group")]
+        ncn_fee_group: Option<u8>,
+        #[arg(long, help = "New NCN fee in basis points")]
+        new_ncn_fee_bps: Option<u16>,
+    },
     AdminFundAccountPayer {
         #[arg(long, help = "Amount of SOL to fund")]
         amount_in_sol: f64,
