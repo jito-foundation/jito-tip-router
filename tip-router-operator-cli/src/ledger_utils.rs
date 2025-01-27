@@ -4,6 +4,7 @@ use std::{
     time::Instant,
 };
 
+use clap_old::ArgMatches;
 use log::{info, warn};
 use solana_accounts_db::hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE};
 use solana_ledger::{
@@ -19,6 +20,8 @@ use solana_runtime::{
     snapshot_config::SnapshotConfig, snapshot_utils::SnapshotVersion,
 };
 use solana_sdk::{clock::Slot, pubkey::Pubkey};
+
+use crate::{arg_matches, load_and_process_ledger};
 
 // TODO: Use Result and propagate errors more gracefully
 /// Create the Bank for a desired slot for given file paths.
@@ -174,53 +177,59 @@ pub fn get_bank_from_ledger(
     };
     let exit = Arc::new(AtomicBool::new(false));
 
-    // Call ledger_utils::load_and_process_ledger here
-    // let LoadAndProcessLedgerOutput {
-    //     bank_forks,
-    //     starting_snapshot_hashes,
-    //     accounts_background_service,
-    //     ..
-    // } = match solana_ledger_tool::ledger_utils::load_and_process_ledger(
-    //     &genesis_config,
-    //     &blockstore,
-    //     account_paths,
-    //     None,
-    //     Some(&snapshot_config),
-    // ) {
-    //     Ok(res) => res,
-    //     Err(e) => {
-    //         panic!("Failed to load bank forks: {}", e);
-    //     }
-    // };
+    let mut arg_matches = ArgMatches::new();
+    arg_matches::set_ledger_tool_arg_matches(
+        &mut arg_matches,
+        snapshot_config.full_snapshot_archives_dir.clone(),
+        snapshot_config.incremental_snapshot_archives_dir.clone(),
+        account_paths,
+    );
 
-    let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
-        match bank_forks_utils::load_bank_forks(
+    // Call ledger_utils::load_and_process_ledger here
+    let (bank_forks, starting_snapshot_hashes) =
+        match crate::load_and_process_ledger::load_and_process_ledger(
+            &arg_matches,
             &genesis_config,
-            &blockstore,
-            account_paths,
-            None,
-            Some(&snapshot_config),
-            &process_options,
-            None,
-            None, // Maybe support this later, though
-            None,
-            exit,
-            false,
+            Arc::new(blockstore),
+            process_options,
+            Some(snapshot_config.full_snapshot_archives_dir),
+            Some(snapshot_config.incremental_snapshot_archives_dir),
         ) {
             Ok(res) => res,
             Err(e) => {
-                datapoint_error!(
-                    "tip_router_cli.get_bank",
-                    ("operator", operator_address.to_string(), String),
-                    ("state", "load_bank_forks", String),
-                    ("status", "error", String),
-                    ("step", 4, i64),
-                    ("error", format!("{:?}", e), String),
-                    ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
-                );
+                // TODO datapoint_error!
                 panic!("Failed to load bank forks: {}", e);
             }
         };
+
+    // let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
+    //     match bank_forks_utils::load_bank_forks(
+    //         &genesis_config,
+    //         &blockstore,
+    //         account_paths,
+    //         None,
+    //         Some(&snapshot_config),
+    //         &process_options,
+    //         None,
+    //         None, // Maybe support this later, though
+    //         None,
+    //         exit,
+    //         false,
+    //     ) {
+    //         Ok(res) => res,
+    //         Err(e) => {
+    //             datapoint_error!(
+    //                 "tip_router_cli.get_bank",
+    //                 ("operator", operator_address.to_string(), String),
+    //                 ("state", "load_bank_forks", String),
+    //                 ("status", "error", String),
+    //                 ("step", 4, i64),
+    //                 ("error", format!("{:?}", e), String),
+    //                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    //             );
+    //             panic!("Failed to load bank forks: {}", e);
+    //         }
+    //     };
 
     // STEP 4: Process blockstore from root //
 

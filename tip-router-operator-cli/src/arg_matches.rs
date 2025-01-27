@@ -40,7 +40,7 @@ use solana_stake_program::stake_state::StakeStateV2;
 //     app.get_matches_from(args)
 // }
 
-pub fn ledger_tool_arg_matches<'a>(
+pub fn set_ledger_tool_arg_matches<'a>(
     arg_matches: &mut ArgMatches<'a>,
     full_snapshots_archives_dir: PathBuf,
     incremental_snapshots_archives_dir: PathBuf,
