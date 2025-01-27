@@ -4,15 +4,11 @@ pub mod tip_router;
 pub use crate::cli::{Cli, Commands};
 pub mod cli;
 pub use crate::process_epoch::process_epoch;
-pub mod arg_matches;
 pub mod backup_snapshots;
-mod load_and_process_ledger;
 pub mod process_epoch;
 pub mod submit;
 
-use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::Instant;
 
 use anchor_lang::prelude::*;
@@ -189,110 +185,4 @@ pub fn get_meta_merkle_root(
     );
 
     Ok(meta_merkle_tree)
-}
-
-fn get_validator_cmdline() -> Result<String> {
-    let output = Command::new("pgrep").arg("solana-validator").output()?;
-
-    let pid = String::from_utf8_lossy(&output.stdout).trim().to_string();
-
-    let cmdline = fs::read_to_string(format!("/proc/{}/cmdline", pid))?;
-
-    Ok(cmdline.replace('\0', " "))
-}
-
-pub fn emit_solana_validator_args() -> std::result::Result<(), anyhow::Error> {
-    // Find solana-validator process and get its command line args
-    let validator_cmdline = match get_validator_cmdline() {
-        Ok(cmdline) => cmdline,
-        Err(_) => return Err(anyhow::anyhow!("Validator process not found")),
-    };
-
-    let validator_config: Vec<String> = validator_cmdline
-        .split_whitespace()
-        .map(String::from)
-        .collect();
-
-    if validator_config.is_empty() {
-        return Err(anyhow::anyhow!("Validator process not found"));
-    }
-
-    let mut limit_ledger_size = None;
-    let mut full_snapshot_interval = None;
-    let mut max_full_snapshots = None;
-    let mut incremental_snapshot_path = None;
-    let mut incremental_snapshot_interval = None;
-    let mut max_incremental_snapshots = None;
-
-    for (i, arg) in validator_config.iter().enumerate() {
-        match arg.as_str() {
-            "--limit-ledger-size" => {
-                if let Some(value) = validator_config.get(i + 1) {
-                    limit_ledger_size = Some(value.clone());
-                }
-            }
-            "--full-snapshot-interval-slots" => {
-                if let Some(value) = validator_config.get(i + 1) {
-                    full_snapshot_interval = Some(value.clone());
-                }
-            }
-            "--maximum-full-snapshots-to-retain" => {
-                if let Some(value) = validator_config.get(i + 1) {
-                    max_full_snapshots = Some(value.clone());
-                }
-            }
-            "--incremental-snapshot-archive-path" => {
-                if let Some(value) = validator_config.get(i + 1) {
-                    incremental_snapshot_path = Some(value.clone());
-                }
-            }
-            "--incremental-snapshot-interval-slots" => {
-                if let Some(value) = validator_config.get(i + 1) {
-                    incremental_snapshot_interval = Some(value.clone());
-                }
-            }
-            "--maximum-incremental-snapshots-to-retain" => {
-                if let Some(value) = validator_config.get(i + 1) {
-                    max_incremental_snapshots = Some(value.clone());
-                }
-            }
-            _ => {}
-        }
-    }
-
-    datapoint_info!(
-        "tip_router_cli.validator_config",
-        (
-            "limit_ledger_size",
-            limit_ledger_size.unwrap_or_default(),
-            String
-        ),
-        (
-            "full_snapshot_interval",
-            full_snapshot_interval.unwrap_or_default(),
-            String
-        ),
-        (
-            "max_full_snapshots",
-            max_full_snapshots.unwrap_or_default(),
-            String
-        ),
-        (
-            "incremental_snapshot_path",
-            incremental_snapshot_path.unwrap_or_default(),
-            String
-        ),
-        (
-            "incremental_snapshot_interval",
-            incremental_snapshot_interval.unwrap_or_default(),
-            String
-        ),
-        (
-            "max_incremental_snapshots",
-            max_incremental_snapshots.unwrap_or_default(),
-            String
-        )
-    );
-
-    Ok(())
 }

@@ -173,26 +173,6 @@ pub fn get_bank_from_ledger(
         ..Default::default()
     };
     let exit = Arc::new(AtomicBool::new(false));
-
-    // Call ledger_utils::load_and_process_ledger here
-    // let LoadAndProcessLedgerOutput {
-    //     bank_forks,
-    //     starting_snapshot_hashes,
-    //     accounts_background_service,
-    //     ..
-    // } = match solana_ledger_tool::ledger_utils::load_and_process_ledger(
-    //     &genesis_config,
-    //     &blockstore,
-    //     account_paths,
-    //     None,
-    //     Some(&snapshot_config),
-    // ) {
-    //     Ok(res) => res,
-    //     Err(e) => {
-    //         panic!("Failed to load bank forks: {}", e);
-    //     }
-    // };
-
     let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
         match bank_forks_utils::load_bank_forks(
             &genesis_config,
