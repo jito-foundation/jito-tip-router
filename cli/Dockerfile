@@ -17,6 +17,7 @@ WORKDIR /usr/src/app
 COPY . .
 
 RUN cargo build --release --bin jito-tip-router-cli
+RUN cargo install --path ./cli --bin jito-tip-router-cli --locked
 
 ##### Final image
 FROM debian:bullseye-slim
