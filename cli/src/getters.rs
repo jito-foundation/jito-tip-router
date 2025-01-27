@@ -55,6 +55,25 @@ pub async fn get_current_epoch(handler: &CliHandler) -> Result<u64> {
     Ok(epoch)
 }
 
+pub async fn get_current_slot(handler: &CliHandler) -> Result<u64> {
+    let client = handler.rpc_client();
+    let slot = client.get_slot().await?;
+    Ok(slot)
+}
+
+pub async fn get_current_epoch_and_slot(handler: &CliHandler) -> Result<(u64, u64)> {
+    let epoch = get_current_epoch(handler).await?;
+    let slot = get_current_slot(handler).await?;
+    Ok((epoch, slot))
+}
+
+pub async fn get_current_epoch_and_slot_unsafe(handler: &CliHandler) -> (u64, u64) {
+    let epoch_slot = get_current_epoch_and_slot(handler)
+        .await
+        .expect("Failed to get epoch and slot");
+    epoch_slot
+}
+
 // ---------------------- TIP ROUTER ----------------------
 pub async fn get_tip_router_config(handler: &CliHandler) -> Result<TipRouterConfig> {
     let (address, _, _) =

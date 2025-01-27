@@ -359,6 +359,10 @@ impl VaultRegistry {
         &self.st_mint_list
     }
 
+    pub fn st_mint_count(&self) -> usize {
+        self.st_mint_list.iter().filter(|m| !m.is_empty()).count()
+    }
+
     pub fn get_mint_entry(&self, st_mint: &Pubkey) -> Result<StMintEntry, ProgramError> {
         let mint_entry = self
             .st_mint_list

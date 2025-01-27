@@ -5,7 +5,10 @@ use crate::{
         crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
         crank_snapshot, crank_vote, create_epoch_state,
     },
-    keeper::keeper_state::KeeperState,
+    keeper::{
+        keeper_metrics::{emit_epoch_metrics, emit_error},
+        keeper_state::KeeperState,
+    },
     log::{boring_progress_bar, progress_bar},
 };
 use anyhow::{Ok, Result};
@@ -45,9 +48,14 @@ pub async fn check_and_timeout_error<T>(
     title: String,
     result: &Result<T>,
     error_timeout_ms: u64,
+    keeper_epoch: u64,
 ) -> bool {
     if let Err(e) = result {
-        log::error!("Error: [{}] \n{:?}\n\n", title, e);
+        let error = format!("{:?}", e);
+        let message = format!("Error: [{}] \n{}\n\n", title, error);
+
+        log::error!("{}", message);
+        emit_error(title, error, message, keeper_epoch).await;
         timeout_error(error_timeout_ms).await;
         true
     } else {
@@ -92,11 +100,28 @@ pub async fn run_keeper(
 
     loop {
         {
+            info!("A. Emit NCN Metrics");
+            let result = emit_epoch_metrics(handler, state.epoch).await;
+
+            let _ = check_and_timeout_error(
+                "Emit NCN Metrics".to_string(),
+                &result,
+                error_timeout_ms,
+                state.epoch,
+            );
+        }
+
+        {
             info!("-1. Register Vaults");
             let result = crank_register_vaults(handler).await;
 
-            if check_and_timeout_error("Register Vaults".to_string(), &result, error_timeout_ms)
-                .await
+            if check_and_timeout_error(
+                "Register Vaults".to_string(),
+                &result,
+                error_timeout_ms,
+                state.epoch,
+            )
+            .await
             {
                 continue;
             }
@@ -117,8 +142,13 @@ pub async fn run_keeper(
             )
             .await;
 
-            if check_and_timeout_error("Progress Epoch".to_string(), &result, error_timeout_ms)
-                .await
+            if check_and_timeout_error(
+                "Progress Epoch".to_string(),
+                &result,
+                error_timeout_ms,
+                state.epoch,
+            )
+            .await
             {
                 continue;
             }
@@ -137,6 +167,7 @@ pub async fn run_keeper(
                     "Update Keeper State".to_string(),
                     &result,
                     error_timeout_ms,
+                    state.epoch,
                 )
                 .await
                 {
@@ -149,8 +180,13 @@ pub async fn run_keeper(
             info!("2. Update the epoch state - {}", current_epoch);
             let result = state.update_epoch_state(handler).await;
 
-            if check_and_timeout_error("Update Epoch State".to_string(), &result, error_timeout_ms)
-                .await
+            if check_and_timeout_error(
+                "Update Epoch State".to_string(),
+                &result,
+                error_timeout_ms,
+                state.epoch,
+            )
+            .await
             {
                 continue;
             }
@@ -172,12 +208,25 @@ pub async fn run_keeper(
                     "Create Epoch State".to_string(),
                     &result,
                     error_timeout_ms,
+                    state.epoch,
                 )
                 .await;
 
                 // Go back either way
                 continue;
             }
+        }
+
+        {
+            info!("B. Emit Epoch Metrics ( Before Crank )");
+            let result = emit_epoch_metrics(handler, state.epoch).await;
+
+            let _ = check_and_timeout_error(
+                "Emit NCN Metrics ( Before Crank )".to_string(),
+                &result,
+                error_timeout_ms,
+                state.epoch,
+            );
         }
 
         {
@@ -196,6 +245,7 @@ pub async fn run_keeper(
                 format!("Crank State: {:?}", current_state),
                 &result,
                 error_timeout_ms,
+                state.epoch,
             )
             .await
             {
@@ -204,11 +254,29 @@ pub async fn run_keeper(
         }
 
         {
+            info!("B. Emit Epoch Metrics ( After Crank )");
+            let result = emit_epoch_metrics(handler, state.epoch).await;
+
+            let _ = check_and_timeout_error(
+                "Emit NCN Metrics ( After Crank )".to_string(),
+                &result,
+                error_timeout_ms,
+                state.epoch,
+            );
+        }
+
+        {
             info!("5. Detect Stall - {}", current_epoch);
 
             let result = state.detect_stall(handler).await;
 
-            if check_and_timeout_error("Detect Stall".to_string(), &result, error_timeout_ms).await
+            if check_and_timeout_error(
+                "Detect Stall".to_string(),
+                &result,
+                error_timeout_ms,
+                state.epoch,
+            )
+            .await
             {
                 continue;
             }
