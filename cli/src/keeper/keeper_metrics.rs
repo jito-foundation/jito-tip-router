@@ -15,7 +15,7 @@ use crate::{
 
 pub async fn emit_error(title: String, error: String, message: String, keeper_epoch: u64) {
     datapoint_info!(
-        "trk-error",
+        "beta-trk-error",
         ("command-title", title, String),
         ("error", error, String),
         ("message", message, String),
@@ -39,7 +39,7 @@ pub async fn emit_epoch_metrics_vault_tickets(handler: &CliHandler) -> Result<()
 
     for ticket in all_tickets {
         datapoint_info!(
-            "trk-em-vault-ticket",
+            "beta-trk-em-vault-ticket",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("operator", ticket.operator.to_string(), String),
@@ -68,7 +68,7 @@ pub async fn emit_epoch_metrics_vault_operator_delegation(handler: &CliHandler) 
 
             //TODO add delegation?
             datapoint_info!(
-                "trk-em-vault-operator-delegation",
+                "beta-trk-em-vault-operator-delegation",
                 ("current-epoch", current_epoch, i64),
                 ("current-slot", current_slot, i64),
                 ("vault", vault.to_string(), String),
@@ -95,7 +95,7 @@ pub async fn emit_epoch_metrics_operators(handler: &CliHandler) -> Result<()> {
         let operator_account = get_operator(handler, &operator).await?;
 
         datapoint_info!(
-            "trk-em-operator",
+            "beta-trk-em-operator",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("operator", operator.to_string(), String),
@@ -117,7 +117,7 @@ pub async fn emit_epoch_metrics_vault_registry(handler: &CliHandler) -> Result<(
     let vault_registry = get_vault_registry(handler).await?;
 
     datapoint_info!(
-        "trk-em-vault-registry",
+        "beta-trk-em-vault-registry",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         ("st-mints", vault_registry.st_mint_count(), i64),
@@ -128,7 +128,7 @@ pub async fn emit_epoch_metrics_vault_registry(handler: &CliHandler) -> Result<(
         let vault_account = get_vault(handler, vault.vault()).await?;
 
         datapoint_info!(
-            "trk-em-vault-registry-vault",
+            "beta-trk-em-vault-registry-vault",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("vault", vault.vault().to_string(), String),
@@ -143,7 +143,7 @@ pub async fn emit_epoch_metrics_vault_registry(handler: &CliHandler) -> Result<(
 
     for st_mint in vault_registry.st_mint_list {
         datapoint_info!(
-            "trk-em-vault-registry-st-mint",
+            "beta-trk-em-vault-registry-st-mint",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("st-mint", st_mint.st_mint().to_string(), String),
@@ -174,7 +174,7 @@ pub async fn emit_epoch_metrics_config(handler: &CliHandler) -> Result<()> {
     let config = get_tip_router_config(handler).await?;
 
     datapoint_info!(
-        "trk-em-config",
+        "beta-trk-em-config",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         (
@@ -207,7 +207,7 @@ pub async fn emit_epoch_metrics(handler: &CliHandler, epoch: u64) -> Result<()> 
 
     if is_epoch_completed {
         datapoint_info!(
-            "trk-ee-state",
+            "beta-trk-ee-state",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("keeper-epoch", epoch, i64),
@@ -244,7 +244,7 @@ pub async fn emit_epoch_metrics(handler: &CliHandler, epoch: u64) -> Result<()> 
     }
 
     datapoint_info!(
-        "trk-ee-state",
+        "beta-trk-ee-state",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         ("keeper-epoch", epoch, i64),
