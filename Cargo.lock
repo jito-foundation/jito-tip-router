@@ -8866,7 +8866,6 @@ dependencies = [
  "im",
  "itertools 0.11.0",
  "jito-bytemuck",
- "jito-restaking-program",
  "jito-tip-distribution-sdk",
  "jito-tip-payment-sdk",
  "jito-tip-router-client",

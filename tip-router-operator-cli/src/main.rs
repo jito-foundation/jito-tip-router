@@ -40,13 +40,6 @@ async fn main() -> Result<()> {
 
     set_host_id(cli.operator_address.to_string());
 
-    let test_meta_merkle_root = [1; 32];
-    let ix = spl_memo::build_memo(&test_meta_merkle_root.to_vec(), &[&keypair.pubkey()]);
-    info!("Submitting test memo {:?}", test_meta_merkle_root);
-
-    let tx = Transaction::new_with_payer(&[ix], Some(&keypair.pubkey()));
-    rpc_client.process_transaction(tx, &[&keypair]).await?;
-
     info!(
         "CLI Arguments:
         keypair_path: {}
