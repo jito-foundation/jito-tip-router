@@ -3,7 +3,7 @@ use ::{
     clap::Parser,
     ellipsis_client::{ClientSubset, EllipsisClient},
     log::{error, info},
-    solana_metrics::set_host_id,
+    solana_metrics::{datapoint_info, set_host_id},
     solana_rpc_client::rpc_client::RpcClient,
     solana_sdk::{
         clock::DEFAULT_SLOTS_PER_EPOCH,
@@ -40,23 +40,7 @@ async fn main() -> Result<()> {
     let tx = Transaction::new_with_payer(&[ix], Some(&keypair.pubkey()));
     rpc_client.process_transaction(tx, &[&keypair]).await?;
 
-    info!(
-        "CLI Arguments:
-        keypair_path: {}
-        operator_address: {}
-        rpc_url: {}
-        ledger_path: {}
-        account_paths: {:?}
-        full_snapshots_path: {:?}
-        snapshot_output_dir: {}",
-        cli.keypair_path,
-        cli.operator_address,
-        cli.rpc_url,
-        cli.ledger_path.display(),
-        cli.account_paths,
-        cli.full_snapshots_path,
-        cli.snapshot_output_dir.display()
-    );
+    info!("CLI Arguments: {:?}", cli);
 
     match cli.command {
         Commands::Run {

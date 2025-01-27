@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 
 use clap::Parser;
 use solana_sdk::pubkey::Pubkey;
 
-#[derive(Clone, Parser)]
+#[derive(Clone, Parser, Debug)]
 #[command(author, version, about)]
 pub struct Cli {
     #[arg(short, long, env)]
@@ -37,7 +37,7 @@ pub struct Cli {
     pub command: Commands,
 }
 
-#[derive(clap::Subcommand, Clone)]
+#[derive(clap::Subcommand, Clone, Debug)]
 pub enum Commands {
     Run {
         #[arg(short, long, env)]
