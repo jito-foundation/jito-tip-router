@@ -64,7 +64,7 @@ pub async fn emit_epoch_metrics_vault_operator_delegation(handler: &CliHandler) 
     for operator in all_operators.iter() {
         for vault in all_vaults.iter() {
             let vault_operator_delegation =
-                get_vault_operator_delegation(handler, &vault, &operator).await?;
+                get_vault_operator_delegation(handler, vault, operator).await?;
 
             //TODO add delegation?
             datapoint_info!(

@@ -103,12 +103,13 @@ pub async fn run_keeper(
             info!("A. Emit NCN Metrics");
             let result = emit_epoch_metrics(handler, state.epoch).await;
 
-            let _ = check_and_timeout_error(
+            check_and_timeout_error(
                 "Emit NCN Metrics".to_string(),
                 &result,
                 error_timeout_ms,
                 state.epoch,
-            );
+            )
+            .await;
         }
 
         {
@@ -221,12 +222,13 @@ pub async fn run_keeper(
             info!("B. Emit Epoch Metrics ( Before Crank )");
             let result = emit_epoch_metrics(handler, state.epoch).await;
 
-            let _ = check_and_timeout_error(
+            check_and_timeout_error(
                 "Emit NCN Metrics ( Before Crank )".to_string(),
                 &result,
                 error_timeout_ms,
                 state.epoch,
-            );
+            )
+            .await;
         }
 
         {
@@ -257,12 +259,13 @@ pub async fn run_keeper(
             info!("B. Emit Epoch Metrics ( After Crank )");
             let result = emit_epoch_metrics(handler, state.epoch).await;
 
-            let _ = check_and_timeout_error(
+            check_and_timeout_error(
                 "Emit NCN Metrics ( After Crank )".to_string(),
                 &result,
                 error_timeout_ms,
                 state.epoch,
-            );
+            )
+            .await;
         }
 
         {

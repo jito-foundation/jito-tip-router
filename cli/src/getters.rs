@@ -68,10 +68,9 @@ pub async fn get_current_epoch_and_slot(handler: &CliHandler) -> Result<(u64, u6
 }
 
 pub async fn get_current_epoch_and_slot_unsafe(handler: &CliHandler) -> (u64, u64) {
-    let epoch_slot = get_current_epoch_and_slot(handler)
+    get_current_epoch_and_slot(handler)
         .await
-        .expect("Failed to get epoch and slot");
-    epoch_slot
+        .expect("Failed to get epoch and slot")
 }
 
 // ---------------------- TIP ROUTER ----------------------
