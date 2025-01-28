@@ -627,6 +627,23 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
     }
 
     let state = get_epoch_state(handler, epoch).await?;
+    let current_state = {
+        let (valid_slots_after_consensus, epochs_after_consensus_before_close) = {
+            let config = get_tip_router_config(handler).await?;
+            (
+                config.valid_slots_after_consensus(),
+                config.epochs_after_consensus_before_close(),
+            )
+        };
+        let epoch_schedule = handler.rpc_client().get_epoch_schedule().await?;
+
+        state.current_state(
+            &epoch_schedule,
+            valid_slots_after_consensus,
+            epochs_after_consensus_before_close,
+            current_slot,
+        )?
+    };
 
     let mut operator_snapshot_dne = 0;
     let mut operator_snapshot_open = 0;
@@ -660,6 +677,12 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
         ("current-slot", current_slot, i64),
         ("keeper-epoch", epoch, i64),
         ("is-complete", false, bool),
+        (
+            "current-state-string",
+            format!("{:?}", current_state),
+            String
+        ),
+        ("current-state", current_state as u8, i64),
         ("operator-count", state.operator_count(), i64),
         ("vault-count", state.vault_count(), i64),
         (

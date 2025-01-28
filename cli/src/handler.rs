@@ -4,11 +4,11 @@ use crate::{
     args::{Args, ProgramCommand},
     getters::{
         get_account_payer, get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn,
-        get_ballot_box, get_base_reward_receiver, get_base_reward_router, get_epoch_snapshot,
-        get_epoch_state, get_ncn, get_ncn_operator_state, get_ncn_reward_receiver,
-        get_ncn_reward_router, get_ncn_vault_ticket, get_stake_pool, get_tip_router_config,
-        get_total_epoch_rent_cost, get_total_rewards_to_be_distributed, get_vault_ncn_ticket,
-        get_vault_operator_delegation, get_vault_registry,
+        get_ballot_box, get_base_reward_receiver, get_base_reward_router, get_current_slot,
+        get_epoch_snapshot, get_epoch_state, get_ncn, get_ncn_operator_state,
+        get_ncn_reward_receiver, get_ncn_reward_router, get_ncn_vault_ticket, get_stake_pool,
+        get_tip_router_config, get_total_epoch_rent_cost, get_total_rewards_to_be_distributed,
+        get_vault_ncn_ticket, get_vault_operator_delegation, get_vault_registry,
     },
     instructions::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
@@ -389,9 +389,29 @@ impl CliHandler {
             }
             ProgramCommand::GetEpochState {} => {
                 let epoch_state = get_epoch_state(self, self.epoch).await?;
+                let current_slot = get_current_slot(self).await?;
+                let current_state = {
+                    let (valid_slots_after_consensus, epochs_after_consensus_before_close) = {
+                        let config = get_tip_router_config(self).await?;
+                        (
+                            config.valid_slots_after_consensus(),
+                            config.epochs_after_consensus_before_close(),
+                        )
+                    };
+                    let epoch_schedule = self.rpc_client().get_epoch_schedule().await?;
+
+                    epoch_state.current_state(
+                        &epoch_schedule,
+                        valid_slots_after_consensus,
+                        epochs_after_consensus_before_close,
+                        current_slot,
+                    )?
+                };
+
                 let current_slot = self.rpc_client.get_slot().await?;
                 info!(
-                    "\n\n--- Epoch State ---\nEpoch: {}\nSlot consensus {} {}\nDistribute Progress: {:?}",
+                    "\n\n--- Epoch State ---\nState: {:?}\nEpoch: {}\nSlot consensus {} {}\nDistribute Progress: {:?}",
+                    current_state,
                     epoch_state.epoch(),
                     epoch_state.slot_consensus_reached(),
                     current_slot,
