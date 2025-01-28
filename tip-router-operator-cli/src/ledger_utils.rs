@@ -199,13 +199,31 @@ pub fn get_bank_from_ledger(
         None | Some(0) => {}
         Some(halt_slot) => {
             if halt_slot < starting_slot {
-                // TODO: Clean this up and emit datapoint
-                panic!("halt_slot < starting_slot");
+                let error_str = String::from("halt_slot < starting_slot");
+                datapoint_error!(
+                    "tip_router_cli.get_bank",
+                    ("operator", operator_address.to_string(), String),
+                    ("status", "error", String),
+                    ("state", "load_blockstore", String),
+                    ("step", 2, i64),
+                    ("error", error_str, String),
+                    ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                );
+                panic!("{}", error_str);
             }
             // Check if we have the slot data necessary to replay from starting_slot to >= halt_slot.
             if !blockstore.slot_range_connected(starting_slot, halt_slot) {
-                // TODO: Clean this up and emit datapoint
-                panic!("!blockstore.slot_range_connected");
+                let error_str = format!("Blockstore missing data to replay to slot {}", desired_slot);
+                datapoint_error!(
+                    "tip_router_cli.get_bank",
+                    ("operator", operator_address.to_string(), String),
+                    ("status", "error", String),
+                    ("state", "load_blockstore", String),
+                    ("step", 2, i64),
+                    ("error", error_str, String),
+                    ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                );
+                panic!("{}", error_str);
             }
         }
     }
