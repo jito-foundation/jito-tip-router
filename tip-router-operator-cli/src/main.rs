@@ -108,7 +108,7 @@ async fn main() -> Result<()> {
                     {
                         error!("Error submitting to NCN: {}", e);
                     }
-                    sleep(Duration::from_secs(60)).await;
+                    sleep(Duration::from_secs(600)).await;
                 }
             });
 
@@ -133,6 +133,9 @@ async fn main() -> Result<()> {
                 wait_for_next_epoch(&rpc_client).await?;
             }
 
+            // Track runs that are starting right at the beginning of a new epoch
+            let mut new_epoch_rollover = start_next_epoch;
+
             loop {
                 // Get the last slot of the previous epoch
                 let (previous_epoch, previous_epoch_slot) =
@@ -155,6 +158,7 @@ async fn main() -> Result<()> {
                     &tip_router_program_id,
                     &ncn_address,
                     enable_snapshots,
+                    new_epoch_rollover,
                     &cli,
                 )
                 .await
@@ -170,6 +174,8 @@ async fn main() -> Result<()> {
                     error!("Error waiting for next epoch: {}", e);
                     sleep(Duration::from_secs(60)).await;
                 }
+
+                new_epoch_rollover = true;
             }
         }
         Commands::SnapshotSlot {
@@ -192,6 +198,7 @@ async fn main() -> Result<()> {
                 &tip_router_program_id,
                 &ncn_address,
                 enable_snapshots,
+                false,
                 &cli,
             )
             .await
