@@ -21,6 +21,7 @@ use ::{
         backup_snapshots::BackupSnapshotMonitor,
         claim::claim_mev_tips,
         cli::{Cli, Commands},
+        create_stake_meta,
         ledger_utils::get_bank_from_ledger,
         process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
@@ -264,6 +265,35 @@ async fn main() -> Result<()> {
                     );
                 }
             }
+        }
+        Commands::CreateStakeMeta {
+            epoch,
+            slot,
+            tip_distribution_program_id,
+            tip_payment_program_id,
+        } => {
+            let operator_address = Pubkey::from_str(&cli.operator_address)?;
+            let account_paths = cli
+                .account_paths
+                .map_or_else(|| vec![cli.ledger_path.clone()], |paths| paths);
+            let bank = get_bank_from_ledger(
+                &operator_address,
+                &cli.ledger_path,
+                account_paths,
+                cli.full_snapshots_path.unwrap(),
+                cli.backup_snapshots_dir,
+                &slot,
+                true,
+            );
+
+            create_stake_meta(
+                cli.operator_address,
+                epoch,
+                bank,
+                &tip_distribution_program_id,
+                &tip_payment_program_id,
+                &cli.save_path,
+            );
         }
     }
     Ok(())

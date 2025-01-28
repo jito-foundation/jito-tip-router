@@ -40,6 +40,7 @@ pub enum OperatorState {
     CreateMerkleTreeCollection,
     CreateMetaMerkleTree,
     SubmitToNcn,
+    WaitForNextEpoch,
 }
 // STAGE 1 LoadBankFromSnapshot
 pub fn load_bank_from_snapshot(cli: Cli, slot: u64, store_snapshot: bool) -> Arc<Bank> {
@@ -62,12 +63,12 @@ pub fn load_bank_from_snapshot(cli: Cli, slot: u64, store_snapshot: bool) -> Arc
 
 // STAGE 2 CreateStakeMeta
 pub fn create_stake_meta(
-    cli: Cli,
+    operator_address: String,
     epoch: u64,
     bank: Arc<Bank>,
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
-    save_path: Option<PathBuf>,
+    save_path: &Option<PathBuf>,
 ) {
     let start = Instant::now();
 
@@ -82,7 +83,7 @@ pub fn create_stake_meta(
             let error_str = format!("{:?}", e);
             datapoint_error!(
                 "tip_router_cli.process_epoch",
-                ("operator_address", cli.operator_address, String),
+                ("operator_address", operator_address, String),
                 ("epoch", epoch, i64),
                 ("status", "error", String),
                 ("error", error_str, String),
@@ -109,7 +110,7 @@ pub fn create_stake_meta(
 
     datapoint_info!(
         "tip_router_cli.get_meta_merkle_root",
-        ("operator_address", cli.operator_address, String),
+        ("operator_address", operator_address, String),
         ("state", "create_stake_meta", String),
         ("step", 2, i64),
         ("epoch", stake_meta_coll.epoch, i64),
