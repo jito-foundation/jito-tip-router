@@ -96,7 +96,7 @@ pub async fn get_vault_registry(handler: &CliHandler) -> Result<VaultRegistry> {
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("VR Account not found"));
     }
     let account = account.unwrap();
 

@@ -1,3 +1,4 @@
+use core::fmt;
 use std::mem::size_of;
 
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -125,6 +126,42 @@ impl Config {
 
     pub fn epochs_after_consensus_before_close(&self) -> u64 {
         self.epochs_after_consensus_before_close.into()
+    }
+}
+
+impl fmt::Display for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "\nConfig:")?;
+        writeln!(f, "  NCN:                          {}", self.ncn)?;
+        writeln!(
+            f,
+            "  Tie Breaker:                  {}",
+            self.tie_breaker_admin
+        )?;
+        writeln!(f, "  Fee Admin:                    {}", self.fee_admin)?;
+        writeln!(
+            f,
+            "  Valid Slots After Consensus:  {}",
+            self.valid_slots_after_consensus()
+        )?;
+        writeln!(
+            f,
+            "  Epochs Before Stall:          {}",
+            self.epochs_before_stall()
+        )?;
+        writeln!(
+            f,
+            "  Starting Valid Epochs:        {}",
+            self.starting_valid_epoch()
+        )?;
+        writeln!(
+            f,
+            "  Close Epoch:  {}",
+            self.epochs_after_consensus_before_close()
+        )?;
+        // writeln!(f, "  Fees:         {}", self.fee_config)?;
+        writeln!(f, "  Bump:         {}", self.bump)?;
+        Ok(())
     }
 }
 

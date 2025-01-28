@@ -416,7 +416,7 @@ pub async fn admin_set_config_fees(
     }
 
     if let Some(wallet) = &new_base_fee_wallet {
-        let wallet = Pubkey::from_str(&wallet).map_err(|_| anyhow!("Invalid wallet address"))?;
+        let wallet = Pubkey::from_str(wallet).map_err(|_| anyhow!("Invalid wallet address"))?;
         ix.new_base_fee_wallet(wallet);
     }
 

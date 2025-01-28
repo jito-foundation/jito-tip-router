@@ -6,7 +6,7 @@ use crate::{
         crank_snapshot, crank_vote, create_epoch_state,
     },
     keeper::{
-        keeper_metrics::{emit_epoch_metrics, emit_error},
+        keeper_metrics::{emit_epoch_metrics, emit_error, emit_ncn_metrics},
         keeper_state::KeeperState,
     },
     log::{boring_progress_bar, progress_bar},
@@ -101,7 +101,7 @@ pub async fn run_keeper(
     loop {
         {
             info!("A. Emit NCN Metrics");
-            let result = emit_epoch_metrics(handler, state.epoch).await;
+            let result = emit_ncn_metrics(handler).await;
 
             check_and_timeout_error(
                 "Emit NCN Metrics".to_string(),

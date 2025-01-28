@@ -3,6 +3,7 @@ use jito_tip_router_core::{
     account_payer::AccountPayer, base_fee_group::BaseFeeGroup, constants::MAX_OPERATORS,
     epoch_state::AccountStatus, ncn_fee_group::NcnFeeGroup,
 };
+use log::info;
 use solana_metrics::datapoint_info;
 use solana_sdk::native_token::lamports_to_sol;
 
@@ -11,8 +12,9 @@ use crate::{
         get_account_payer, get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn,
         get_ballot_box, get_base_reward_receiver, get_base_reward_router,
         get_current_epoch_and_slot, get_epoch_snapshot, get_epoch_state, get_is_epoch_completed,
-        get_ncn_reward_receiver, get_ncn_reward_router, get_operator, get_tip_router_config,
-        get_vault, get_vault_operator_delegation, get_vault_registry, get_weight_table,
+        get_ncn_reward_receiver, get_ncn_reward_router, get_operator, get_operator_snapshot,
+        get_tip_router_config, get_vault, get_vault_operator_delegation, get_vault_registry,
+        get_weight_table,
     },
     handler::CliHandler,
 };
@@ -40,6 +42,8 @@ pub async fn emit_ncn_metrics(handler: &CliHandler) -> Result<()> {
 
 pub async fn emit_ncn_metrics_account_payer(handler: &CliHandler) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    info!("\n\nACCOUNT PAYER\n\n");
+
     let (account_payer_address, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, handler.ncn()?);
     let account_payer = get_account_payer(handler).await?;
@@ -115,6 +119,8 @@ pub async fn emit_ncn_metrics_operators(handler: &CliHandler) -> Result<()> {
     let all_operators = get_all_operators_in_ncn(handler).await?;
 
     for operator in all_operators {
+        info!("\n\nOPERATOR {}\n\n", operator);
+
         let operator_account = get_operator(handler, &operator).await?;
 
         datapoint_info!(
@@ -148,6 +154,10 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
     );
 
     for vault in vault_registry.vault_list {
+        if vault.is_empty() {
+            continue;
+        }
+
         let vault_account = get_vault(handler, vault.vault()).await?;
 
         datapoint_info!(
@@ -194,6 +204,8 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
 
 pub async fn emit_ncn_metrics_config(handler: &CliHandler) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    info!("\n\nTIP ROUTER CONFIG\n\n");
+
     let config = get_tip_router_config(handler).await?;
     let fee_config = config.fee_config;
     let current_fees = fee_config.current_fees(current_epoch);
@@ -258,6 +270,7 @@ pub async fn emit_epoch_metrics(handler: &CliHandler, epoch: u64) -> Result<()> 
     emit_epoch_metrics_state(handler, epoch).await?;
     emit_epoch_metrics_weight_table(handler, epoch).await?;
     emit_epoch_metrics_epoch_snapshot(handler, epoch).await?;
+    emit_epoch_metrics_operator_snapshot(handler, epoch).await?;
     emit_epoch_metrics_ballot_box(handler, epoch).await?;
     emit_epoch_metrics_base_rewards(handler, epoch).await?;
     emit_epoch_metrics_ncn_rewards(handler, epoch).await?;
@@ -399,6 +412,7 @@ pub async fn emit_epoch_metrics_base_rewards(handler: &CliHandler, epoch: u64) -
     Ok(())
 }
 
+#[allow(clippy::large_stack_frames)]
 pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let valid_slots_after_consensus = {
@@ -411,6 +425,10 @@ pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> 
 
     if let Ok(ballot_box) = result {
         for operator_vote in ballot_box.operator_votes() {
+            if operator_vote.is_empty() {
+                continue;
+            }
+
             let ballot_index = operator_vote.ballot_index();
             let ballot_tally = ballot_box.ballot_tallies()[ballot_index as usize];
             let vote = format!("{:?}", ballot_tally.ballot().root());
@@ -451,6 +469,61 @@ pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> 
                 bool
             ),
         );
+    }
+
+    Ok(())
+}
+
+pub async fn emit_epoch_metrics_operator_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
+    let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+
+    let all_operators = get_all_operators_in_ncn(handler).await?;
+
+    for operator in all_operators.iter() {
+        let result = get_operator_snapshot(handler, operator, epoch).await;
+
+        if let Ok(operator_snapshot) = result {
+            datapoint_info!(
+                "beta-trk-ee-operator-snapshot",
+                ("current-epoch", current_epoch, i64),
+                ("current-slot", current_slot, i64),
+                ("keeper-epoch", epoch, i64),
+                ("operator", operator.to_string(), String),
+                ("is-finalized", operator_snapshot.finalized(), bool),
+                ("is-active", operator_snapshot.is_active(), bool),
+                (
+                    "ncn-operator-index",
+                    operator_snapshot.ncn_operator_index(),
+                    i64
+                ),
+                (
+                    "operator-fee-bps",
+                    operator_snapshot.operator_fee_bps(),
+                    i64
+                ),
+                (
+                    "valid-operator-vault-delegations",
+                    operator_snapshot.valid_operator_vault_delegations(),
+                    i64
+                ),
+                (
+                    "vault-operator-delegation-count",
+                    operator_snapshot.vault_operator_delegation_count(),
+                    i64
+                ),
+                (
+                    "vault-operator-delegations-registered",
+                    operator_snapshot.vault_operator_delegations_registered(),
+                    i64
+                ),
+                (
+                    "stake-weight",
+                    operator_snapshot.stake_weights().stake_weight(),
+                    i64
+                ),
+                ("slot-finalized", operator_snapshot.slot_finalized(), i64),
+            );
+        }
     }
 
     Ok(())
@@ -549,6 +622,8 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
             ("keeper-epoch", epoch, i64),
             ("is-complete", true, bool),
         );
+
+        return Ok(());
     }
 
     let state = get_epoch_state(handler, epoch).await?;
