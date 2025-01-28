@@ -1,3 +1,4 @@
+use core::fmt;
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
@@ -292,6 +293,46 @@ impl WeightTable {
             expect_writable,
         )
     }
+}
+
+#[rustfmt::skip]
+impl fmt::Display for WeightTable {
+   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+       writeln!(f, "\n\n----------- Weight Table -------------")?;
+       writeln!(f, "  NCN:                          {}", self.ncn)?;
+       writeln!(f, "  Epoch:                        {}", self.epoch())?;
+       writeln!(f, "  Bump:                         {}", self.bump)?;
+       writeln!(f, "  Slot Created:                 {}", self.slot_created())?;
+       writeln!(f, "  Vault Count:                  {}", self.vault_count())?;
+       writeln!(f, "  Registry Initialized:         {}", self.vault_registry_initialized())?;
+       writeln!(f, "  Table Initialized:            {}", self.table_initialized())?;
+       writeln!(f, "  Finalized:                    {}", self.finalized())?;
+
+       writeln!(f, "\nVault Registry Entries:")?;
+       for (i, entry) in self.vault_registry.iter().enumerate() {
+           if !entry.is_empty() {
+               writeln!(f, "  Entry {}:", i)?;
+               writeln!(f, "    Vault:                      {}", entry.vault())?;
+               writeln!(f, "    St Mint:                    {}", entry.st_mint())?;
+               writeln!(f, "    Vault Index:                {}", entry.vault_index())?;
+               writeln!(f, "    Slot Registered:            {}", entry.slot_registered())?;
+           }
+       }
+
+       writeln!(f, "\nWeight Table Entries:")?;
+       for (i, entry) in self.table.iter().enumerate() {
+           if !entry.is_empty() {
+               writeln!(f, "  Entry {}:", i)?;
+               writeln!(f, "    St Mint:                    {}", entry.st_mint())?;
+               writeln!(f, "    Weight:                     {}", entry.weight())?;
+               writeln!(f, "    Slot Set:                   {}", entry.slot_set())?;
+               writeln!(f, "    Slot Updated:               {}", entry.slot_updated())?;
+           }
+       }
+
+       writeln!(f, "\n")?;
+       Ok(())
+   }
 }
 
 #[cfg(test)]

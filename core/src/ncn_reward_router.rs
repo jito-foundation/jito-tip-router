@@ -1,4 +1,4 @@
-use core::mem::size_of;
+use core::{fmt, mem::size_of};
 
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
@@ -786,6 +786,44 @@ impl VaultRewardRoute {
             .ok_or(TipRouterError::ArithmeticUnderflowError)?;
 
         self.set_rewards(new_rewards)
+    }
+}
+
+#[rustfmt::skip]
+impl fmt::Display for NcnRewardRouter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "\n\n----------- NCN Reward Router -------------")?;
+        writeln!(f, "  NCN Fee Group:                {}", self.ncn_fee_group.group)?;
+        writeln!(f, "  Operator:                     {}", self.operator)?;
+        writeln!(f, "  NCN:                          {}", self.ncn)?;
+        writeln!(f, "  Epoch:                        {}", self.epoch())?;
+        writeln!(f, "  Bump:                         {}", self.bump)?;
+        writeln!(f, "  Slot Created:                 {}", self.slot_created())?;
+        writeln!(f, "  NCN Operator Index:           {}", self.ncn_operator_index())?;
+        writeln!(f, "  Still Routing:                {}", self.still_routing())?;
+        writeln!(f, "  Total Rewards:                {}", self.total_rewards())?;
+        writeln!(f, "  Reward Pool:                  {}", self.reward_pool())?;
+        writeln!(f, "  Rewards Processed:            {}", self.rewards_processed())?;
+        writeln!(f, "  Operator Rewards:             {}", self.operator_rewards())?;
+
+        if self.still_routing() {
+            writeln!(f, "\nRouting State:")?;
+            writeln!(f, "  Last Rewards to Process:      {}", self.last_rewards_to_process())?;
+            writeln!(f, "  Last Vault Op Del Index:      {}", self.last_vault_operator_delegation_index())?;
+        }
+
+        writeln!(f, "\nVault Reward Routes:")?;
+        for route in self.vault_reward_routes().iter() {
+            if !route.is_empty() {
+                writeln!(f, "  Vault:                        {}", route.vault())?;
+                if route.has_rewards() {
+                    writeln!(f, "    Rewards:                    {}", route.rewards())?;
+                }
+            }
+        }
+
+        writeln!(f, "\n")?;
+        Ok(())
     }
 }
 

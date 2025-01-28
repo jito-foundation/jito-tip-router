@@ -1,3 +1,4 @@
+use core::fmt;
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
@@ -11,9 +12,9 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    constants::MAX_VAULTS, discriminators::Discriminators, epoch_state::EpochState,
-    error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup, stake_weight::StakeWeights,
-    weight_table::WeightTable,
+    base_fee_group::BaseFeeGroup, constants::MAX_VAULTS, discriminators::Discriminators,
+    epoch_state::EpochState, error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup,
+    stake_weight::StakeWeights, weight_table::WeightTable,
 };
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
@@ -169,6 +170,10 @@ impl EpochSnapshot {
 
     pub const fn fees(&self) -> &Fees {
         &self.fees
+    }
+
+    pub fn slot_finalized(&self) -> u64 {
+        self.slot_finalized.into()
     }
 
     pub fn finalized(&self) -> bool {
@@ -603,6 +608,98 @@ impl VaultOperatorStakeWeight {
     pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
         self.ncn_fee_group
     }
+}
+
+#[rustfmt::skip]
+impl fmt::Display for EpochSnapshot {
+   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+       writeln!(f, "\n\n----------- Epoch Snapshot -------------")?;
+       writeln!(f, "  NCN:                          {}", self.ncn)?;
+       writeln!(f, "  Epoch:                        {}", self.epoch())?;
+       writeln!(f, "  Bump:                         {}", self.bump)?;
+       writeln!(f, "  Operator Count:               {}", self.operator_count())?;
+       writeln!(f, "  Vault Count:                  {}", self.vault_count())?;
+       writeln!(f, "  Operators Registered:         {}", self.operators_registered())?;
+       writeln!(f, "  Valid Delegations:            {}", self.valid_operator_vault_delegations())?;
+       writeln!(f, "  Slot Finalized:               {}", self.slot_finalized())?;
+       writeln!(f, "  Finalized:                    {}", self.finalized())?;
+
+       writeln!(f, "\nFees:")?;
+       writeln!(f, "\n  Base Fee Group Fees:")?;
+       for group in BaseFeeGroup::all_groups() {
+           if let Ok(fee) = self.fees().base_fee_bps(group) {
+               writeln!(f, "    Group {}:                    {}", group.group, fee)?;
+           }
+       }
+       writeln!(f, "\n  NCN Fee Group Fees:")?;
+       for group in NcnFeeGroup::all_groups() {
+           if let Ok(fee) = self.fees().ncn_fee_bps(group) {
+               writeln!(f, "    Group {}:                    {}", group.group, fee)?;
+           }
+       }
+
+       writeln!(f, "\nStake Weights:")?;
+       let stake_weights = self.stake_weights();
+       for group in NcnFeeGroup::all_groups() {
+           if let Ok(weight) = stake_weights.ncn_fee_group_stake_weight(group) {
+               if weight > 0 {
+                   writeln!(f, "  Group {}:                      {}", group.group, weight)?;
+               }
+           }
+       }
+
+       writeln!(f, "\n")?;
+       Ok(())
+   }
+}
+
+#[rustfmt::skip]
+impl fmt::Display for OperatorSnapshot {
+   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+       writeln!(f, "\n\n----------- Operator Snapshot -------------")?;
+       writeln!(f, "  Operator:                     {}", self.operator)?;
+       writeln!(f, "  NCN:                          {}", self.ncn)?;
+       writeln!(f, "  Epoch:                        {}", self.epoch())?;
+       writeln!(f, "  Bump:                         {}", self.bump)?;
+       writeln!(f, "  Slot Finalized:               {}", self.slot_finalized())?;
+       writeln!(f, "  Is Active:                    {}", self.is_active())?;
+       writeln!(f, "  NCN Operator Index:           {}", self.ncn_operator_index())?;
+       writeln!(f, "  Operator Fee BPS:             {}", self.operator_fee_bps())?;
+       writeln!(f, "  Delegation Count:             {}", self.vault_operator_delegation_count())?;
+       writeln!(f, "  Delegations Registered:       {}", self.vault_operator_delegations_registered())?;
+       writeln!(f, "  Valid Delegations:            {}", self.valid_operator_vault_delegations())?;
+       writeln!(f, "  Finalized:                    {}", self.finalized())?;
+
+       writeln!(f, "\nStake Weights by Group:")?;
+       let stake_weights = self.stake_weights();
+       for group in NcnFeeGroup::all_groups() {
+           if let Ok(weight) = stake_weights.ncn_fee_group_stake_weight(group) {
+               if weight > 0 {
+                   writeln!(f, "  Group {}:                      {}", group.group, weight)?;
+               }
+           }
+       }
+
+       writeln!(f, "\nVault Operator Stake Weights:")?;
+       for weight in self.vault_operator_stake_weight().iter() {
+           if !weight.is_empty() {
+               writeln!(f, "  Vault:                        {}", weight.vault())?;
+               writeln!(f, "    Vault Index:                {}", weight.vault_index())?;
+               writeln!(f, "    NCN Fee Group:              {}", weight.ncn_fee_group().group)?;
+               let stake_weights = weight.stake_weights();
+               for group in NcnFeeGroup::all_groups() {
+                   if let Ok(weight) = stake_weights.ncn_fee_group_stake_weight(group) {
+                       if weight > 0 {
+                           writeln!(f, "    Group {} Weight:             {}", group.group, weight)?; 
+                       }
+                   }
+               }
+           }
+       }
+
+       writeln!(f, "\n")?;
+       Ok(())
+   }
 }
 
 #[cfg(test)]

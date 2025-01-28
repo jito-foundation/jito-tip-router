@@ -1,4 +1,4 @@
-use core::mem::size_of;
+use core::{fmt, mem::size_of};
 
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
@@ -697,6 +697,66 @@ impl BaseRewardRouter {
         }
 
         Err(TipRouterError::OperatorRewardNotFound)
+    }
+}
+
+#[rustfmt::skip]
+impl fmt::Display for BaseRewardRouter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "\n\n----------- Base Reward Router -------------")?;
+        writeln!(f, "  NCN:                          {}", self.ncn)?;
+        writeln!(f, "  Epoch:                        {}", self.epoch())?;
+        writeln!(f, "  Bump:                         {}", self.bump)?;
+        writeln!(f, "  Slot Created:                 {}", self.slot_created())?;
+        writeln!(f, "  Still Routing:                {}", self.still_routing())?;
+        writeln!(f, "  Total Rewards:                {}", self.total_rewards())?;
+        writeln!(f, "  Reward Pool:                  {}", self.reward_pool())?;
+        writeln!(f, "  Rewards Processed:            {}", self.rewards_processed())?;
+
+        if self.still_routing() {
+            writeln!(f, "\nRouting State:")?;
+            writeln!(f, "  Last NCN Group Index:         {}", self.last_ncn_group_index())?;
+            writeln!(f, "  Last Vote Index:              {}", self.last_vote_index())?;
+            writeln!(f, "  Last Rewards to Process:      {}", self.last_rewards_to_process())?;
+        }
+
+        writeln!(f, "\nBase Fee Group Rewards:")?;
+        for group in BaseFeeGroup::all_groups().iter() {
+            let rewards = self.base_fee_group_reward(*group).unwrap_or(0);
+            if rewards > 0 {
+                writeln!(f, "  Group {}:                      {}", group.group, rewards)?;
+            }
+        }
+
+        writeln!(f, "\nNCN Fee Group Rewards:")?;
+        for group in NcnFeeGroup::all_groups().iter() {
+            let rewards = self.ncn_fee_group_rewards(*group).unwrap_or(0);
+            if rewards > 0 {
+                writeln!(f, "  Group {}:                      {}", group.group, rewards)?;
+            }
+        }
+
+        writeln!(f, "\nNCN Fee Group Reward Routes:")?;
+        for route in self.ncn_fee_group_reward_routes().iter() {
+            if !route.is_empty() {
+                writeln!(f, "  Operator:                     {}", route.operator())?;
+                if let Ok(has_rewards) = route.has_rewards() {
+                    if has_rewards {
+                        writeln!(f, "    Rewards by Group:")?;
+                        for group in NcnFeeGroup::all_groups().iter() {
+                            if let Ok(rewards) = route.rewards(*group) {
+                                if rewards > 0 {
+                                    writeln!(f, "      Group {}:                  {}", group.group, rewards)?;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        writeln!(f, "\n")?;
+        Ok(())
     }
 }
 

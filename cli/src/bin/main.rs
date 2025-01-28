@@ -33,11 +33,8 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    match args.command {
-        ProgramCommand::Keeper { .. } => {
-            info!("\n{}", args);
-        }
-        _ => {}
+    if let ProgramCommand::Keeper { .. } = args.command {
+        info!("\n{}", args);
     }
 
     let handler = CliHandler::from_args(&args).await?;

@@ -299,13 +299,25 @@ pub enum ProgramCommand {
     GetAllVaultsInNcn,
     GetTipRouterConfig,
     GetVaultRegistry,
+    GetWeightTable,
     GetEpochState,
-    GetStakePool,
+    GetEpochSnapshot,
+    GetOperatorSnapshot {
+        #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
+        operator: String,
+    },
     GetBallotBox,
     GetBaseRewardRouter,
+    GetNcnRewardRouter {
+        #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
+        operator: String,
+        #[arg(long, default_value_t = 0, help = "NCN fee group")]
+        ncn_fee_group: u8,
+    },
+    GetAllNcnRewardRouters,
     GetAccountPayer,
     GetTotalEpochRentCost,
-    GetNcnRewardRouters,
+    GetStakePool,
 
     /// TESTS
     Test,

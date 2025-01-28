@@ -1,3 +1,4 @@
+use core::fmt;
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
@@ -18,6 +19,7 @@ use crate::{
     epoch_state::EpochState,
     error::TipRouterError,
     loaders::check_load,
+    ncn_fee_group::NcnFeeGroup,
     stake_weight::StakeWeights,
 };
 
@@ -638,6 +640,65 @@ impl BallotBox {
 
         Ok(())
     }
+}
+
+#[rustfmt::skip]
+impl fmt::Display for BallotBox {
+   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+       writeln!(f, "\n\n----------- Ballot Box -------------")?;
+       writeln!(f, "  NCN:                          {}", self.ncn)?;
+       writeln!(f, "  Epoch:                        {}", self.epoch())?;
+       writeln!(f, "  Bump:                         {}", self.bump)?;
+       writeln!(f, "  Slot Consensus Reached:       {}", self.slot_consensus_reached())?;
+       writeln!(f, "  Operators Voted:              {}", self.operators_voted())?;
+       writeln!(f, "  Unique Ballots:               {}", self.unique_ballots())?;
+       writeln!(f, "  IS Consensus Reached:         {}", self.is_consensus_reached())?;
+       if self.is_consensus_reached() {
+           writeln!(f, "  Tie Breaker Set:              {}", self.tie_breaker_set())?;
+           if let Ok(winning_ballot) = self.get_winning_ballot() {
+               writeln!(f, "  Winning Ballot:               {}", winning_ballot)?;
+           }
+       }
+
+       writeln!(f, "\nOperator Votes:")?;
+       for vote in self.operator_votes().iter() {
+           if !vote.is_empty() {
+               writeln!(f, "  Operator:                     {}", vote.operator())?;
+               writeln!(f, "    Slot Voted:                 {}", vote.slot_voted())?;
+               writeln!(f, "    Ballot Index:               {}", vote.ballot_index())?;
+               writeln!(f, "    Stake Weights:")?;
+               let weights = vote.stake_weights();
+               for group in NcnFeeGroup::all_groups() {
+                   if let Ok(weight) = weights.ncn_fee_group_stake_weight(group) {
+                       if weight > 0 {
+                           writeln!(f, "      Group {}:                  {}", group.group, weight)?;
+                       }
+                   }
+               }
+           }
+       }
+
+       writeln!(f, "\nBallot Tallies:")?;
+       for tally in self.ballot_tallies().iter() {
+           if tally.is_valid() {
+               writeln!(f, "  Index {}:", tally.index())?;
+               writeln!(f, "    Ballot:                     {}", tally.ballot())?;
+               writeln!(f, "    Tally:                      {}", tally.tally())?;
+               writeln!(f, "    Stake Weights:")?;
+               let weights = tally.stake_weights();
+               for group in NcnFeeGroup::all_groups() {
+                   if let Ok(weight) = weights.ncn_fee_group_stake_weight(group) {
+                       if weight > 0 {
+                           writeln!(f, "      Group {}:                  {}", group.group, weight)?;
+                       }
+                   }
+               }
+           }
+       }
+
+       writeln!(f, "\n")?;
+       Ok(())
+   }
 }
 
 #[cfg(test)]

@@ -873,7 +873,7 @@ impl fmt::Display for EpochState {
            }
        }
 
-       writeln!(f, "")?;
+       writeln!(f, "\n")?;
        Ok(())
    }
 }
