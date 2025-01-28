@@ -203,10 +203,11 @@ pub fn create_merkle_tree_collection(
 
 // STAGE 4 CreateMetaMerkleTree
 pub fn create_meta_merkle_tree(
-    cli: Cli,
+    operator_address: String,
     merkle_tree_collection: GeneratedMerkleTreeCollection,
     epoch: u64,
-    save_path: Option<PathBuf>,
+    save_path: &PathBuf,
+    save: bool,
 ) {
     let start = Instant::now();
     let meta_merkle_tree =
@@ -216,7 +217,7 @@ pub fn create_meta_merkle_tree(
                 let error_str = format!("{:?}", e);
                 datapoint_error!(
                     "tip_router_cli.create_meta_merkle_tree",
-                    ("operator_address", cli.operator_address, String),
+                    ("operator_address", operator_address, String),
                     ("epoch", epoch, i64),
                     ("status", "error", String),
                     ("error", error_str, String),
@@ -232,17 +233,17 @@ pub fn create_meta_merkle_tree(
         meta_merkle_tree.num_nodes, meta_merkle_tree.merkle_root
     );
 
-    if let Some(path_to_save) = save_path {
+    if save {
         // Note: We have the epoch come before the file name so ordering is neat on a machine
         //  with multiple epochs saved.
-        let file = path_to_save.join(format!("{}_meta_merkle_tree.json", epoch));
+        let file = save_path.join(format!("{}_meta_merkle_tree.json", epoch));
         match meta_merkle_tree.write_to_file(&file) {
             Ok(_) => {}
             Err(e) => {
                 let error_str = format!("{:?}", e);
                 datapoint_error!(
                     "tip_router_cli.create_meta_merkle_tree",
-                    ("operator_address", cli.operator_address, String),
+                    ("operator_address", operator_address, String),
                     ("epoch", epoch, i64),
                     ("status", "error", String),
                     ("error", error_str, String),
@@ -256,7 +257,7 @@ pub fn create_meta_merkle_tree(
 
     datapoint_info!(
         "tip_router_cli.create_meta_merkle_tree",
-        ("operator_address", cli.operator_address, String),
+        ("operator_address", operator_address, String),
         ("state", "meta_merkle_tree_creation", String),
         ("step", 4, i64),
         ("epoch", epoch, i64),

@@ -123,4 +123,11 @@ pub enum Commands {
         #[arg(long, env, default_value = "true")]
         save: bool,
     },
+    CreateMetaMerkleTree {
+        #[arg(long, env)]
+        epoch: u64,
+
+        #[arg(long, env, default_value = "true")]
+        save: bool,
+    },
 }

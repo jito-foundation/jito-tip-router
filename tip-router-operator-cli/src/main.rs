@@ -17,7 +17,7 @@ use ::{
         backup_snapshots::BackupSnapshotMonitor,
         claim::claim_mev_tips,
         cli::{Cli, Commands},
-        create_merkle_tree_collection, create_stake_meta,
+        create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_ledger,
         process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
@@ -314,6 +314,22 @@ async fn main() -> Result<()> {
                 epoch,
                 &ncn_address,
                 PROTOCOL_FEE_BPS,
+                &cli.save_path,
+                save,
+            );
+        }
+        Commands::CreateMetaMerkleTree { epoch, save } => {
+            // Load the stake_meta_collection from disk
+            let merkle_tree_collection =
+                match GeneratedMerkleTreeCollection::new_from_file(&cli.save_path) {
+                    Ok(merkle_tree_collection) => merkle_tree_collection,
+                    Err(e) => panic!("{}", e), // TODO: should datapoint error be emitted here?
+                };
+
+            create_meta_merkle_tree(
+                cli.operator_address,
+                merkle_tree_collection,
+                epoch,
                 &cli.save_path,
                 save,
             );
