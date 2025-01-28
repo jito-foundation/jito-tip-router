@@ -213,7 +213,8 @@ pub fn get_bank_from_ledger(
             }
             // Check if we have the slot data necessary to replay from starting_slot to >= halt_slot.
             if !blockstore.slot_range_connected(starting_slot, halt_slot) {
-                let error_str = format!("Blockstore missing data to replay to slot {}", desired_slot);
+                let error_str =
+                    format!("Blockstore missing data to replay to slot {}", desired_slot);
                 datapoint_error!(
                     "tip_router_cli.get_bank",
                     ("operator", operator_address.to_string(), String),
