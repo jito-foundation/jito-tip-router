@@ -1,4 +1,8 @@
-use std::{fs::File, io::BufReader, path::PathBuf};
+use std::{
+    fs::File,
+    io::{BufReader, Write},
+    path::PathBuf,
+};
 
 use jito_tip_distribution_sdk::{
     jito_tip_distribution::ID as TIP_DISTRIBUTION_ID, CLAIM_STATUS_SEED,
@@ -116,6 +120,14 @@ impl GeneratedMerkleTreeCollection {
         let tree: Self = serde_json::from_reader(reader)?;
 
         Ok(tree)
+    }
+
+    /// Write a GeneratedMerkleTreeCollection to a filepath
+    pub fn write_to_file(&self, path: &PathBuf) -> Result<(), MerkleRootGeneratorError> {
+        let serialized = serde_json::to_string_pretty(&self)?;
+        let mut file = File::create(path)?;
+        file.write_all(serialized.as_bytes())?;
+        Ok(())
     }
 }
 
@@ -317,6 +329,24 @@ pub struct StakeMetaCollection {
 
     /// Slot at which this object was generated.
     pub slot: Slot,
+}
+
+impl StakeMetaCollection {
+    /// Load a serialized merkle tree from file path
+    pub fn new_from_file(path: &PathBuf) -> Result<Self, MerkleRootGeneratorError> {
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        let tree: Self = serde_json::from_reader(reader)?;
+
+        Ok(tree)
+    }
+
+    /// Write a merkle tree to a filepath
+    pub fn write_to_file(&self, path: &PathBuf) {
+        let serialized = serde_json::to_string_pretty(&self).unwrap();
+        let mut file = File::create(path).unwrap();
+        file.write_all(serialized.as_bytes()).unwrap();
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]

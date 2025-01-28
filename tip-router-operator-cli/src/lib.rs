@@ -11,6 +11,8 @@ pub mod rpc_utils;
 pub mod submit;
 
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Instant;
 
 use anchor_lang::prelude::*;
@@ -20,12 +22,244 @@ use jito_tip_payment_sdk::{
     TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
     TIP_ACCOUNT_SEED_7,
 };
+use ledger_utils::get_bank_from_ledger;
 use log::info;
+use meta_merkle_tree::generated_merkle_tree::StakeMetaCollection;
 use meta_merkle_tree::{
     generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
 };
 use solana_metrics::{datapoint_error, datapoint_info};
+use solana_runtime::bank::Bank;
 use solana_sdk::{account::AccountSharedData, pubkey::Pubkey, slot_history::Slot};
+use stake_meta_generator::generate_stake_meta_collection;
+
+pub enum OperatorState {
+    // Allows the operator to load from a snapshot created externally
+    LoadBankFromSnapshot,
+    CreateStakeMeta,
+    CreateMerkleTreeCollection,
+    CreateMetaMerkleTree,
+    SubmitToNcn,
+}
+// STAGE 1 LoadBankFromSnapshot
+pub fn load_bank_from_snapshot(cli: Cli, slot: u64, store_snapshot: bool) -> Arc<Bank> {
+    let operator_address = Pubkey::from_str(&cli.operator_address).unwrap();
+    let account_paths = cli
+        .account_paths
+        .map_or_else(|| vec![cli.ledger_path.clone()], |paths| paths);
+
+    let bank = get_bank_from_ledger(
+        &operator_address,
+        &cli.ledger_path,
+        account_paths,
+        cli.full_snapshots_path.unwrap(),
+        cli.backup_snapshots_dir,
+        &slot,
+        store_snapshot,
+    );
+    return bank;
+}
+
+// STAGE 2 CreateStakeMeta
+pub fn create_stake_meta(
+    cli: Cli,
+    epoch: u64,
+    bank: Arc<Bank>,
+    tip_distribution_program_id: &Pubkey,
+    tip_payment_program_id: &Pubkey,
+    save_path: Option<PathBuf>,
+) {
+    let start = Instant::now();
+
+    info!("Generating stake_meta_collection object...");
+    let stake_meta_coll = match generate_stake_meta_collection(
+        &bank,
+        tip_distribution_program_id,
+        tip_payment_program_id,
+    ) {
+        Ok(stake_meta) => stake_meta,
+        Err(e) => {
+            let error_str = format!("{:?}", e);
+            datapoint_error!(
+                "tip_router_cli.process_epoch",
+                ("operator_address", cli.operator_address, String),
+                ("epoch", epoch, i64),
+                ("status", "error", String),
+                ("error", error_str, String),
+                ("state", "stake_meta_generation", String),
+                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+            );
+            panic!("{}", error_str);
+        }
+    };
+
+    info!(
+        "Created StakeMetaCollection:\n - epoch: {:?}\n - slot: {:?}\n - num stake metas: {:?}\n - bank_hash: {:?}",
+        stake_meta_coll.epoch,
+        stake_meta_coll.slot,
+        stake_meta_coll.stake_metas.len(),
+        stake_meta_coll.bank_hash
+    );
+    if let Some(path_to_save) = save_path {
+        // Note: We have the epoch come before the file name so ordering is neat on a machine
+        //  with multiple epochs saved.
+        let file = path_to_save.join(format!("{}_stake_meta_collection.json", epoch));
+        stake_meta_coll.write_to_file(&file);
+    }
+
+    datapoint_info!(
+        "tip_router_cli.get_meta_merkle_root",
+        ("operator_address", cli.operator_address, String),
+        ("state", "create_stake_meta", String),
+        ("step", 2, i64),
+        ("epoch", stake_meta_coll.epoch, i64),
+        ("duration_ms", start.elapsed().as_millis() as i64, i64)
+    );
+}
+
+// STAGE 3 CreateMerkleTreeCollection
+pub fn create_merkle_tree_collection(
+    cli: Cli,
+    stake_meta_collection: StakeMetaCollection,
+    epoch: u64,
+    ncn_address: &Pubkey,
+    protocol_fee_bps: u64,
+    save_path: Option<PathBuf>,
+) {
+    let start = Instant::now();
+
+    // Generate merkle tree collection
+    let merkle_tree_coll = match GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
+        stake_meta_collection,
+        ncn_address,
+        epoch,
+        protocol_fee_bps,
+    ) {
+        Ok(merkle_tree_coll) => merkle_tree_coll,
+        Err(e) => {
+            let error_str = format!("{:?}", e);
+            datapoint_error!(
+                "tip_router_cli.create_merkle_tree_collection",
+                ("operator_address", cli.operator_address, String),
+                ("epoch", epoch, i64),
+                ("status", "error", String),
+                ("error", error_str, String),
+                ("state", "merkle_tree_generation", String),
+                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+            );
+            panic!("{}", error_str);
+        }
+    };
+    info!(
+        "Created GeneratedMerkleTreeCollection:\n - epoch: {:?}\n - slot: {:?}\n - num generated merkle trees: {:?}\n - bank_hash: {:?}",
+        merkle_tree_coll.epoch,
+        merkle_tree_coll.slot,
+        merkle_tree_coll.generated_merkle_trees.len(),
+        merkle_tree_coll.bank_hash
+    );
+
+    datapoint_info!(
+        "tip_router_cli.create_merkle_tree_collection",
+        ("operator_address", cli.operator_address, String),
+        ("state", "meta_merkle_tree_creation", String),
+        ("step", 3, i64),
+        ("epoch", epoch, i64),
+        ("duration_ms", start.elapsed().as_millis() as i64, i64)
+    );
+
+    if let Some(path_to_save) = save_path {
+        // Note: We have the epoch come before the file name so ordering is neat on a machine
+        //  with multiple epochs saved.
+        let file = path_to_save.join(format!("{}_merkle_tree_collection.json", epoch));
+        match merkle_tree_coll.write_to_file(&file) {
+            Ok(_) => {}
+            Err(e) => {
+                let error_str = format!("{:?}", e);
+                datapoint_error!(
+                    "tip_router_cli.create_merkle_tree_collection",
+                    ("operator_address", cli.operator_address, String),
+                    ("epoch", epoch, i64),
+                    ("status", "error", String),
+                    ("error", error_str, String),
+                    ("state", "merkle_root_file_write", String),
+                    ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                );
+                panic!("{:?}", e);
+            }
+        }
+    }
+    datapoint_info!(
+        "tip_router_cli.create_merkle_tree_collection",
+        ("operator_address", cli.operator_address, String),
+        ("state", "meta_merkle_tree_creation", String),
+        ("step", 3, i64),
+        ("epoch", epoch, i64),
+        ("duration_ms", start.elapsed().as_millis() as i64, i64)
+    );
+}
+
+// STAGE 4 CreateMetaMerkleTree
+pub fn create_meta_merkle_tree(
+    cli: Cli,
+    merkle_tree_collection: GeneratedMerkleTreeCollection,
+    epoch: u64,
+    save_path: Option<PathBuf>,
+) {
+    let start = Instant::now();
+    let meta_merkle_tree =
+        match MetaMerkleTree::new_from_generated_merkle_tree_collection(merkle_tree_collection) {
+            Ok(meta_merkle_tree) => meta_merkle_tree,
+            Err(e) => {
+                let error_str = format!("{:?}", e);
+                datapoint_error!(
+                    "tip_router_cli.create_meta_merkle_tree",
+                    ("operator_address", cli.operator_address, String),
+                    ("epoch", epoch, i64),
+                    ("status", "error", String),
+                    ("error", error_str, String),
+                    ("state", "merkle_tree_generation", String),
+                    ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                );
+                panic!("{}", error_str);
+            }
+        };
+
+    info!(
+        "Created MetaMerkleTree:\n - num nodes: {:?}\n - merkle root: {:?}",
+        meta_merkle_tree.num_nodes, meta_merkle_tree.merkle_root
+    );
+
+    if let Some(path_to_save) = save_path {
+        // Note: We have the epoch come before the file name so ordering is neat on a machine
+        //  with multiple epochs saved.
+        let file = path_to_save.join(format!("{}_meta_merkle_tree.json", epoch));
+        match meta_merkle_tree.write_to_file(&file) {
+            Ok(_) => {}
+            Err(e) => {
+                let error_str = format!("{:?}", e);
+                datapoint_error!(
+                    "tip_router_cli.create_meta_merkle_tree",
+                    ("operator_address", cli.operator_address, String),
+                    ("epoch", epoch, i64),
+                    ("status", "error", String),
+                    ("error", error_str, String),
+                    ("state", "merkle_root_file_write", String),
+                    ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                );
+                panic!("{:?}", e);
+            }
+        }
+    }
+
+    datapoint_info!(
+        "tip_router_cli.create_meta_merkle_tree",
+        ("operator_address", cli.operator_address, String),
+        ("state", "meta_merkle_tree_creation", String),
+        ("step", 4, i64),
+        ("epoch", epoch, i64),
+        ("duration_ms", start.elapsed().as_millis() as i64, i64)
+    );
+}
 
 #[derive(Debug)]
 pub enum MerkleRootError {
@@ -174,35 +408,32 @@ pub fn get_meta_merkle_root(
     let generated_merkle_tree_col_json = match serde_json::to_string(&merkle_tree_coll) {
         Ok(json) => json,
         Err(e) => {
+            let error_str = format!("{:?}", e);
             datapoint_error!(
                 "tip_router_cli.process_epoch",
                 ("operator_address", operator_address.to_string(), String),
                 ("epoch", epoch, i64),
                 ("status", "error", String),
-                ("error", format!("{:?}", e), String),
+                ("error", error_str, String),
                 ("state", "merkle_root_serialization", String),
                 ("duration_ms", start.elapsed().as_millis() as i64, i64)
             );
-            return Err(MerkleRootError::MerkleRootGeneratorError(
-                "Failed to serialize merkle tree collection",
-            ));
+            return Err(MerkleRootError::MerkleRootGeneratorError(error_str));
         }
     };
 
     if let Err(e) = std::fs::write(&merkle_tree_coll_path, generated_merkle_tree_col_json) {
+        let error_str = format!("{:?}", e);
         datapoint_error!(
             "tip_router_cli.process_epoch",
             ("operator_address", operator_address.to_string(), String),
             ("epoch", epoch, i64),
             ("status", "error", String),
-            ("error", format!("{:?}", e), String),
+            ("error", error_str, String),
             ("state", "merkle_root_file_write", String),
             ("duration_ms", start.elapsed().as_millis() as i64, i64)
         );
-        // TODO: propogate error
-        return Err(MerkleRootError::MerkleRootGeneratorError(
-            "Failed to write meta merkle tree to file",
-        ));
+        return Err(MerkleRootError::MerkleRootGeneratorError(error_str));
     }
 
     // Convert to MetaMerkleTree
