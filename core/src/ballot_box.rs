@@ -365,6 +365,10 @@ impl BallotBox {
         self.ballot_tallies.iter().any(|t| t.ballot.eq(ballot))
     }
 
+    pub const fn ballot_tallies(&self) -> &[BallotTally; MAX_OPERATORS] {
+        &self.ballot_tallies
+    }
+
     pub fn is_consensus_reached(&self) -> bool {
         self.slot_consensus_reached() != DEFAULT_CONSENSUS_REACHED_SLOT
             || self.winning_ballot.is_valid()
