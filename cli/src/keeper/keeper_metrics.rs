@@ -620,6 +620,8 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("keeper-epoch", epoch, i64),
+            ("current-state-string", "Complete", String),
+            ("current-state", u8::MAX, i64),
             ("is-complete", true, bool),
         );
 
