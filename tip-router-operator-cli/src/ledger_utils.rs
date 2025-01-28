@@ -180,13 +180,13 @@ pub fn get_bank_from_ledger(
     };
     let exit = Arc::new(AtomicBool::new(false));
 
-    let mut arg_matches = ArgMatches::new();
-    arg_matches::set_ledger_tool_arg_matches(
-        &mut arg_matches,
-        snapshot_config.full_snapshot_archives_dir.clone(),
-        snapshot_config.incremental_snapshot_archives_dir.clone(),
-        account_paths,
-    );
+    // let mut arg_matches = ArgMatches::new();
+    // arg_matches::set_ledger_tool_arg_matches(
+    //     &mut arg_matches,
+    //     snapshot_config.full_snapshot_archives_dir.clone(),
+    //     snapshot_config.incremental_snapshot_archives_dir.clone(),
+    //     account_paths,
+    // );
 
     // Call ledger_utils::load_and_process_ledger here
     // let (bank_forks, starting_snapshot_hashes) =
