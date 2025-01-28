@@ -3,7 +3,6 @@ use jito_tip_router_core::{
     account_payer::AccountPayer, base_fee_group::BaseFeeGroup, constants::MAX_OPERATORS,
     epoch_state::AccountStatus, ncn_fee_group::NcnFeeGroup,
 };
-use log::info;
 use solana_metrics::datapoint_info;
 use solana_sdk::native_token::lamports_to_sol;
 
@@ -131,8 +130,6 @@ pub async fn emit_ncn_metrics_operators(handler: &CliHandler) -> Result<()> {
     let all_operators = get_all_operators_in_ncn(handler).await?;
 
     for operator in all_operators {
-        info!("\n\nOPERATOR {}\n\n", operator);
-
         let operator_account = get_operator(handler, &operator).await?;
 
         datapoint_info!(
@@ -216,7 +213,6 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
 
 pub async fn emit_ncn_metrics_config(handler: &CliHandler) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
-    info!("\n\nTIP ROUTER CONFIG\n\n");
 
     let config = get_tip_router_config(handler).await?;
     let fee_config = config.fee_config;

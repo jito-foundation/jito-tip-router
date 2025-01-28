@@ -1817,6 +1817,26 @@ pub async fn close_epoch_account(
 }
 
 // --------------------- MIDDLEWARE ------------------------------
+pub const CREATE_TIMEOUT_MS: u64 = 2000;
+pub const CREATE_GET_RETRIES: u64 = 3;
+pub async fn check_created(handler: &CliHandler, address: &Pubkey) -> Result<()> {
+    let mut retries = 0;
+    let mut account = get_account(handler, address).await?;
+    while account.is_none() && retries < CREATE_GET_RETRIES {
+        sleep(Duration::from_millis(CREATE_TIMEOUT_MS * (retries + 1))).await;
+        account = get_account(handler, address).await?;
+        retries += 1;
+    }
+
+    if account.is_none() {
+        return Err(anyhow!(
+            "Failed to get account after creation {:?}",
+            address
+        ));
+    }
+
+    Ok(())
+}
 
 pub async fn get_or_create_weight_table(handler: &CliHandler, epoch: u64) -> Result<WeightTable> {
     let ncn = *handler.ncn()?;
@@ -1829,6 +1849,7 @@ pub async fn get_or_create_weight_table(handler: &CliHandler, epoch: u64) -> Res
         .map_or(true, |table| table.data.len() < WeightTable::SIZE)
     {
         create_weight_table(handler, epoch).await?;
+        check_created(handler, &weight_table).await?;
     }
     get_weight_table(handler, epoch).await
 }
@@ -1846,6 +1867,7 @@ pub async fn get_or_create_epoch_snapshot(
         .map_or(true, |snapshot| snapshot.data.len() < EpochSnapshot::SIZE)
     {
         create_epoch_snapshot(handler, epoch).await?;
+        check_created(handler, &epoch_snapshot).await?;
     }
 
     get_epoch_snapshot(handler, epoch).await
@@ -1871,6 +1893,7 @@ pub async fn get_or_create_operator_snapshot(
         })
     {
         create_operator_snapshot(handler, operator, epoch).await?;
+        check_created(handler, &operator_snapshot).await?;
     }
     get_operator_snapshot(handler, operator, epoch).await
 }
@@ -1886,6 +1909,7 @@ pub async fn get_or_create_ballot_box(handler: &CliHandler, epoch: u64) -> Resul
         .map_or(true, |ballot_box| ballot_box.data.len() < BallotBox::SIZE)
     {
         create_ballot_box(handler, epoch).await?;
+        check_created(handler, &ballot_box).await?;
     }
     get_ballot_box(handler, epoch).await
 }
@@ -1903,6 +1927,7 @@ pub async fn get_or_create_base_reward_router(
         .map_or(true, |router| router.data.len() < BaseRewardRouter::SIZE)
     {
         create_base_reward_router(handler, epoch).await?;
+        check_created(handler, &base_reward_router).await?;
     }
     get_base_reward_router(handler, epoch).await
 }
@@ -1927,6 +1952,7 @@ pub async fn get_or_create_ncn_reward_router(
         .map_or(true, |router| router.data.len() < NcnRewardRouter::SIZE)
     {
         create_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await?;
+        check_created(handler, &ncn_reward_router).await?;
     }
     get_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await
 }

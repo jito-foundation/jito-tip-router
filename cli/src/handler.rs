@@ -5,10 +5,11 @@ use crate::{
     getters::{
         get_account_payer, get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn,
         get_ballot_box, get_base_reward_receiver, get_base_reward_router, get_current_slot,
-        get_epoch_snapshot, get_epoch_state, get_ncn, get_ncn_operator_state,
-        get_ncn_reward_receiver, get_ncn_reward_router, get_ncn_vault_ticket, get_stake_pool,
-        get_tip_router_config, get_total_epoch_rent_cost, get_total_rewards_to_be_distributed,
-        get_vault_ncn_ticket, get_vault_operator_delegation, get_vault_registry,
+        get_epoch_snapshot, get_epoch_state, get_is_epoch_completed, get_ncn,
+        get_ncn_operator_state, get_ncn_reward_receiver, get_ncn_reward_router,
+        get_ncn_vault_ticket, get_stake_pool, get_tip_router_config, get_total_epoch_rent_cost,
+        get_total_rewards_to_be_distributed, get_vault_ncn_ticket, get_vault_operator_delegation,
+        get_vault_registry,
     },
     instructions::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
@@ -379,15 +380,22 @@ impl CliHandler {
             }
             ProgramCommand::GetTipRouterConfig {} => {
                 let config = get_tip_router_config(self).await?;
-                info!("Tip Router Config: {:?}", config);
+                info!("{}", config);
                 Ok(())
             }
             ProgramCommand::GetVaultRegistry {} => {
                 let vault_registry = get_vault_registry(self).await?;
-                info!("Vault Registry: {:?}", vault_registry);
+                info!("{}", vault_registry);
                 Ok(())
             }
             ProgramCommand::GetEpochState {} => {
+                let is_epoch_complete = get_is_epoch_completed(self, self.epoch).await?;
+
+                if is_epoch_complete {
+                    info!("\n\nEpoch {} is complete", self.epoch);
+                    return Ok(());
+                }
+
                 let epoch_state = get_epoch_state(self, self.epoch).await?;
                 let current_slot = get_current_slot(self).await?;
                 let current_state = {
@@ -408,16 +416,8 @@ impl CliHandler {
                     )?
                 };
 
-                let current_slot = self.rpc_client.get_slot().await?;
-                info!(
-                    "\n\n--- Epoch State ---\nState: {:?}\nEpoch: {}\nSlot consensus {} {}\nDistribute Progress: {:?}",
-                    current_state,
-                    epoch_state.epoch(),
-                    epoch_state.slot_consensus_reached(),
-                    current_slot,
-                    epoch_state.total_distribution_progress()
-                );
-                // info!("Epoch State: {:?}", epoch_state);
+                info!("{}\nCurrent State: {:?}\n", epoch_state, current_state);
+
                 Ok(())
             }
             ProgramCommand::GetStakePool {} => {

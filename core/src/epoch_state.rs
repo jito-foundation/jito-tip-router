@@ -1,3 +1,4 @@
+use core::fmt;
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
@@ -802,4 +803,77 @@ pub enum State {
     Vote,
     Distribute,
     Close,
+}
+
+#[rustfmt::skip]
+impl fmt::Display for EpochState {
+   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+       writeln!(f, "\n\n----------- Epoch State -------------")?;
+       writeln!(f, "  NCN:                          {}", self.ncn)?;
+       writeln!(f, "  Epoch:                        {}", self.epoch())?;
+       writeln!(f, "  Bump:                         {}", self.bump)?;
+       writeln!(f, "  Slot Created:                 {}", self.slot_created())?;
+       writeln!(f, "  Was Tie Breaker Set:          {}", self.was_tie_breaker_set())?;
+       writeln!(f, "  Slot Consensus Reached:       {}", self.slot_consensus_reached())?;
+       writeln!(f, "  Operator Count:               {}", self.operator_count())?;
+       writeln!(f, "  Vault Count:                  {}", self.vault_count())?;
+
+       writeln!(f, "\nAccount Status:")?;
+       writeln!(f, "  Epoch State:                  {:?}", self.account_status.epoch_state().unwrap())?;
+       writeln!(f, "  Weight Table:                 {:?}", self.account_status.weight_table().unwrap())?;
+       writeln!(f, "  Epoch Snapshot:               {:?}", self.account_status.epoch_snapshot().unwrap())?;
+       writeln!(f, "  Ballot Box:                   {:?}", self.account_status.ballot_box().unwrap())?;
+       writeln!(f, "  Base Reward Router:           {:?}", self.account_status.base_reward_router().unwrap())?;
+       
+       writeln!(f, "\nOperator Snapshots:")?;
+       for i in 0..MAX_OPERATORS {
+           if let Ok(status) = self.account_status.operator_snapshot(i) {
+                if status != AccountStatus::DNE {
+                    writeln!(f, "  Operator {}:                   {:?}", i, status)?;
+                }
+           }
+       }
+
+       writeln!(f, "\nNCN Reward Routers:")?;
+       for i in 0..MAX_OPERATORS {
+           for group in NcnFeeGroup::all_groups() {
+               if let Ok(status) = self.account_status.ncn_reward_router(i, group) {
+                    if status != AccountStatus::DNE {
+                        writeln!(f, "  Operator {} Group {}:           {:?}", i, group.group, status)?;
+                    }
+               }
+           }
+       }
+
+       writeln!(f, "\nProgress:")?;
+       writeln!(f, "  Set Weight Progress:          {}/{}", self.set_weight_progress.tally(), self.set_weight_progress.total())?;
+       writeln!(f, "  Epoch Snapshot Progress:      {}/{}", self.epoch_snapshot_progress.tally(), self.epoch_snapshot_progress.total())?;
+       
+       writeln!(f, "\nOperator Snapshot Progress:")?;
+       for i in 0..MAX_OPERATORS {
+            if self.operator_snapshot_progress(i).total() > 0 {
+                writeln!(f, "  Operator {}:                   {}/{}", i, self.operator_snapshot_progress(i).tally(), self.operator_snapshot_progress(i).total())?;                
+            }
+       }
+
+       writeln!(f, "\nVoting Progress:                {}/{}", self.voting_progress.tally(), self.voting_progress.total())?;
+       writeln!(f, "  Validation Progress:          {}/{}", self.validation_progress.tally(), self.validation_progress.total())?;
+       writeln!(f, "  Upload Progress:              {}/{}", self.upload_progress.tally(), self.upload_progress.total())?;
+       writeln!(f, "  Total Distribution Progress:  {}/{}", self.total_distribution_progress.tally(), self.total_distribution_progress.total())?;
+       writeln!(f, "  Base Distribution Progress:   {}/{}", self.base_distribution_progress.tally(), self.base_distribution_progress.total())?;
+
+       writeln!(f, "\nNCN Distribution Progress:")?;
+       for i in 0..MAX_OPERATORS {
+           for group in NcnFeeGroup::all_groups() {
+               if let Ok(progress) = self.ncn_distribution_progress(i, group) {
+                    if progress.total() > 0 {
+                        writeln!(f, "  Operator {} Group {}:           {}/{}", i, group.group, progress.tally(), progress.total())?;
+                    } 
+               }
+           }
+       }
+
+       writeln!(f, "")?;
+       Ok(())
+   }
 }

@@ -344,6 +344,7 @@ pub enum ProgramCommand {
     },
 }
 
+#[rustfmt::skip]
 impl fmt::Display for Args {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "\nMEV Tip Distribution NCN CLI Configuration")?;
@@ -360,46 +361,18 @@ impl fmt::Display for Args {
         writeln!(f, "  • Restaking:         {}", self.restaking_program_id)?;
         writeln!(f, "  • Vault:             {}", self.vault_program_id)?;
         writeln!(f, "  • Token:             {}", self.token_program_id)?;
-        writeln!(
-            f,
-            "  • Tip Distribution:  {}",
-            self.tip_distribution_program_id
-        )?;
+        writeln!(f, "  • Tip Distribution:  {}", self.tip_distribution_program_id)?;
 
         // Solana Settings
         writeln!(f, "\n◎  Solana Settings:")?;
-        writeln!(
-            f,
-            "  • Keypair Path:  {}",
-            self.keypair_path.as_deref().unwrap_or("Not Set")
-        )?;
+        writeln!(f, "  • Keypair Path:  {}", self.keypair_path.as_deref().unwrap_or("Not Set"))?;
         writeln!(f, "  • NCN:  {}", self.ncn.as_deref().unwrap_or("Not Set"))?;
-        writeln!(
-            f,
-            "  • Epoch: {}",
-            if self.epoch.is_some() {
-                format!("{}", self.epoch.unwrap())
-            } else {
-                "Current".to_string()
-            }
-        )?;
+        writeln!(f, "  • Epoch: {}", if self.epoch.is_some() { format!("{}", self.epoch.unwrap()) } else { "Current".to_string() })?;
 
         // Optional Settings
         writeln!(f, "\n⚙️  Additional Settings:")?;
-        writeln!(
-            f,
-            "  • Verbose Mode:  {}",
-            if self.verbose { "Enabled" } else { "Disabled" }
-        )?;
-        writeln!(
-            f,
-            "  • Markdown Help: {}",
-            if self.markdown_help {
-                "Enabled"
-            } else {
-                "Disabled"
-            }
-        )?;
+        writeln!(f, "  • Verbose Mode:  {}", if self.verbose { "Enabled" } else { "Disabled" })?;
+        writeln!(f, "  • Markdown Help: {}", if self.markdown_help { "Enabled" } else { "Disabled" })?;
 
         writeln!(f, "\n")?;
 
