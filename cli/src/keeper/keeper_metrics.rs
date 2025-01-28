@@ -36,13 +36,25 @@ pub async fn emit_ncn_metrics(handler: &CliHandler) -> Result<()> {
     emit_ncn_metrics_vault_registry(handler).await?;
     emit_ncn_metrics_config(handler).await?;
     emit_ncn_metrics_account_payer(handler).await?;
+    emit_ncn_metrics_epoch_slot(handler).await?;
+
+    Ok(())
+}
+
+pub async fn emit_ncn_metrics_epoch_slot(handler: &CliHandler) -> Result<()> {
+    let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+
+    datapoint_info!(
+        "beta-trk-em-epoch-slot",
+        ("current-epoch", current_epoch, i64),
+        ("current-slot", current_slot, i64),
+    );
 
     Ok(())
 }
 
 pub async fn emit_ncn_metrics_account_payer(handler: &CliHandler) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
-    info!("\n\nACCOUNT PAYER\n\n");
 
     let (account_payer_address, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, handler.ncn()?);
