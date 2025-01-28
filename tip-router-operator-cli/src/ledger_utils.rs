@@ -1,6 +1,9 @@
 use std::{
     path::{Path, PathBuf},
-    sync::{atomic::AtomicBool, Arc},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::Instant,
 };
 
@@ -186,50 +189,50 @@ pub fn get_bank_from_ledger(
     );
 
     // Call ledger_utils::load_and_process_ledger here
-    let (bank_forks, starting_snapshot_hashes) =
-        match crate::load_and_process_ledger::load_and_process_ledger(
-            &arg_matches,
-            &genesis_config,
-            Arc::new(blockstore),
-            process_options,
-            Some(snapshot_config.full_snapshot_archives_dir),
-            Some(snapshot_config.incremental_snapshot_archives_dir),
-        ) {
-            Ok(res) => res,
-            Err(e) => {
-                // TODO datapoint_error!
-                panic!("Failed to load bank forks: {}", e);
-            }
-        };
-
-    // let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
-    //     match bank_forks_utils::load_bank_forks(
+    // let (bank_forks, starting_snapshot_hashes) =
+    //     match crate::load_and_process_ledger::load_and_process_ledger(
+    //         &arg_matches,
     //         &genesis_config,
-    //         &blockstore,
-    //         account_paths,
-    //         None,
-    //         Some(&snapshot_config),
-    //         &process_options,
-    //         None,
-    //         None, // Maybe support this later, though
-    //         None,
-    //         exit,
-    //         false,
+    //         Arc::new(blockstore),
+    //         process_options,
+    //         Some(snapshot_config.full_snapshot_archives_dir),
+    //         Some(snapshot_config.incremental_snapshot_archives_dir),
     //     ) {
     //         Ok(res) => res,
     //         Err(e) => {
-    //             datapoint_error!(
-    //                 "tip_router_cli.get_bank",
-    //                 ("operator", operator_address.to_string(), String),
-    //                 ("state", "load_bank_forks", String),
-    //                 ("status", "error", String),
-    //                 ("step", 4, i64),
-    //                 ("error", format!("{:?}", e), String),
-    //                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
-    //             );
+    //             // TODO datapoint_error!
     //             panic!("Failed to load bank forks: {}", e);
     //         }
     //     };
+
+    let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
+        match bank_forks_utils::load_bank_forks(
+            &genesis_config,
+            &blockstore,
+            account_paths,
+            None,
+            Some(&snapshot_config),
+            &process_options,
+            None,
+            None, // Maybe support this later, though
+            None,
+            exit.clone(),
+            false,
+        ) {
+            Ok(res) => res,
+            Err(e) => {
+                datapoint_error!(
+                    "tip_router_cli.get_bank",
+                    ("operator", operator_address.to_string(), String),
+                    ("state", "load_bank_forks", String),
+                    ("status", "error", String),
+                    ("step", 4, i64),
+                    ("error", format!("{:?}", e), String),
+                    ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                );
+                panic!("Failed to load bank forks: {}", e);
+            }
+        };
 
     // STEP 4: Process blockstore from root //
 
@@ -277,6 +280,8 @@ pub fn get_bank_from_ledger(
     );
 
     let working_bank = bank_forks.read().unwrap().working_bank();
+
+    exit.store(true, Ordering::Relaxed);
 
     if take_snapshot {
         let full_snapshot_archive_info = match snapshot_bank_utils::bank_to_full_snapshot_archive(
