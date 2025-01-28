@@ -170,7 +170,7 @@ pub fn get_bank_from_ledger(
     let snapshot_config = SnapshotConfig {
         full_snapshot_archives_dir: full_snapshots_path.clone(),
         incremental_snapshot_archives_dir: incremental_snapshots_path.clone(),
-        bank_snapshots_dir: full_snapshots_path,
+        bank_snapshots_dir: full_snapshots_path.clone(),
         ..SnapshotConfig::new_load_only()
     };
 
@@ -180,59 +180,59 @@ pub fn get_bank_from_ledger(
     };
     let exit = Arc::new(AtomicBool::new(false));
 
-    // let mut arg_matches = ArgMatches::new();
-    // arg_matches::set_ledger_tool_arg_matches(
-    //     &mut arg_matches,
-    //     snapshot_config.full_snapshot_archives_dir.clone(),
-    //     snapshot_config.incremental_snapshot_archives_dir.clone(),
-    //     account_paths,
-    // );
+    let mut arg_matches = ArgMatches::new();
+    arg_matches::set_ledger_tool_arg_matches(
+        &mut arg_matches,
+        snapshot_config.full_snapshot_archives_dir.clone(),
+        snapshot_config.incremental_snapshot_archives_dir.clone(),
+        account_paths,
+    );
 
     // Call ledger_utils::load_and_process_ledger here
-    // let (bank_forks, starting_snapshot_hashes) =
-    //     match crate::load_and_process_ledger::load_and_process_ledger(
-    //         &arg_matches,
-    //         &genesis_config,
-    //         Arc::new(blockstore),
-    //         process_options,
-    //         Some(snapshot_config.full_snapshot_archives_dir),
-    //         Some(snapshot_config.incremental_snapshot_archives_dir),
-    //     ) {
-    //         Ok(res) => res,
-    //         Err(e) => {
-    //             // TODO datapoint_error!
-    //             panic!("Failed to load bank forks: {}", e);
-    //         }
-    //     };
-
-    let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
-        match bank_forks_utils::load_bank_forks(
+    let (bank_forks, _starting_snapshot_hashes) =
+        match crate::load_and_process_ledger::load_and_process_ledger(
+            &arg_matches,
             &genesis_config,
-            &blockstore,
-            account_paths,
-            None,
-            Some(&snapshot_config),
-            &process_options,
-            None,
-            None, // Maybe support this later, though
-            None,
-            exit.clone(),
-            false,
+            Arc::new(blockstore),
+            process_options,
+            Some(full_snapshots_path.clone()),
+            Some(incremental_snapshots_path.clone()),
         ) {
             Ok(res) => res,
             Err(e) => {
-                datapoint_error!(
-                    "tip_router_cli.get_bank",
-                    ("operator", operator_address.to_string(), String),
-                    ("state", "load_bank_forks", String),
-                    ("status", "error", String),
-                    ("step", 4, i64),
-                    ("error", format!("{:?}", e), String),
-                    ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
-                );
+                // TODO datapoint_error!
                 panic!("Failed to load bank forks: {}", e);
             }
         };
+
+    // let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
+    //     match bank_forks_utils::load_bank_forks(
+    //         &genesis_config,
+    //         &blockstore,
+    //         account_paths,
+    //         None,
+    //         Some(&snapshot_config),
+    //         &process_options,
+    //         None,
+    //         None, // Maybe support this later, though
+    //         None,
+    //         exit.clone(),
+    //         false,
+    //     ) {
+    //         Ok(res) => res,
+    //         Err(e) => {
+    //             datapoint_error!(
+    //                 "tip_router_cli.get_bank",
+    //                 ("operator", operator_address.to_string(), String),
+    //                 ("state", "load_bank_forks", String),
+    //                 ("status", "error", String),
+    //                 ("step", 4, i64),
+    //                 ("error", format!("{:?}", e), String),
+    //                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    //             );
+    //             panic!("Failed to load bank forks: {}", e);
+    //         }
+    //     };
 
     // STEP 4: Process blockstore from root //
 
@@ -244,30 +244,30 @@ pub fn get_bank_from_ledger(
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
     );
 
-    match blockstore_processor::process_blockstore_from_root(
-        &blockstore,
-        &bank_forks,
-        &leader_schedule_cache,
-        &process_options,
-        None,
-        None,
-        None,
-        &AbsRequestSender::default(),
-    ) {
-        Ok(()) => (),
-        Err(e) => {
-            datapoint_error!(
-                "tip_router_cli.get_bank",
-                ("operator", operator_address.to_string(), String),
-                ("status", "error", String),
-                ("state", "process_blockstore_from_root", String),
-                ("step", 5, i64),
-                ("error", format!("{:?}", e), String),
-                ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
-            );
-            panic!("Failed to process blockstore from root: {}", e);
-        }
-    };
+    // match blockstore_processor::process_blockstore_from_root(
+    //     &blockstore,
+    //     &bank_forks,
+    //     &leader_schedule_cache,
+    //     &process_options,
+    //     None,
+    //     None,
+    //     None,
+    //     &AbsRequestSender::default(),
+    // ) {
+    //     Ok(()) => (),
+    //     Err(e) => {
+    //         datapoint_error!(
+    //             "tip_router_cli.get_bank",
+    //             ("operator", operator_address.to_string(), String),
+    //             ("status", "error", String),
+    //             ("state", "process_blockstore_from_root", String),
+    //             ("step", 5, i64),
+    //             ("error", format!("{:?}", e), String),
+    //             ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    //         );
+    //         panic!("Failed to process blockstore from root: {}", e);
+    //     }
+    // };
 
     // STEP 5: Save snapshot //
 
