@@ -68,7 +68,8 @@ pub fn create_stake_meta(
     bank: Arc<Bank>,
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
-    save_path: &Option<PathBuf>,
+    save_path: &PathBuf,
+    save_snapshot: bool,
 ) {
     let start = Instant::now();
 
@@ -101,10 +102,10 @@ pub fn create_stake_meta(
         stake_meta_coll.stake_metas.len(),
         stake_meta_coll.bank_hash
     );
-    if let Some(path_to_save) = save_path {
+    if save_snapshot {
         // Note: We have the epoch come before the file name so ordering is neat on a machine
         //  with multiple epochs saved.
-        let file = path_to_save.join(format!("{}_stake_meta_collection.json", epoch));
+        let file = save_path.join(format!("{}_stake_meta_collection.json", epoch));
         stake_meta_coll.write_to_file(&file);
     }
 
@@ -120,12 +121,13 @@ pub fn create_stake_meta(
 
 // STAGE 3 CreateMerkleTreeCollection
 pub fn create_merkle_tree_collection(
-    cli: Cli,
+    operator_address: String,
     stake_meta_collection: StakeMetaCollection,
     epoch: u64,
     ncn_address: &Pubkey,
     protocol_fee_bps: u64,
-    save_path: Option<PathBuf>,
+    save_path: &PathBuf,
+    save: bool,
 ) {
     let start = Instant::now();
 
@@ -141,7 +143,7 @@ pub fn create_merkle_tree_collection(
             let error_str = format!("{:?}", e);
             datapoint_error!(
                 "tip_router_cli.create_merkle_tree_collection",
-                ("operator_address", cli.operator_address, String),
+                ("operator_address", operator_address, String),
                 ("epoch", epoch, i64),
                 ("status", "error", String),
                 ("error", error_str, String),
@@ -161,24 +163,24 @@ pub fn create_merkle_tree_collection(
 
     datapoint_info!(
         "tip_router_cli.create_merkle_tree_collection",
-        ("operator_address", cli.operator_address, String),
+        ("operator_address", operator_address, String),
         ("state", "meta_merkle_tree_creation", String),
         ("step", 3, i64),
         ("epoch", epoch, i64),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
 
-    if let Some(path_to_save) = save_path {
+    if save {
         // Note: We have the epoch come before the file name so ordering is neat on a machine
         //  with multiple epochs saved.
-        let file = path_to_save.join(format!("{}_merkle_tree_collection.json", epoch));
+        let file = save_path.join(format!("{}_merkle_tree_collection.json", epoch));
         match merkle_tree_coll.write_to_file(&file) {
             Ok(_) => {}
             Err(e) => {
                 let error_str = format!("{:?}", e);
                 datapoint_error!(
                     "tip_router_cli.create_merkle_tree_collection",
-                    ("operator_address", cli.operator_address, String),
+                    ("operator_address", operator_address, String),
                     ("epoch", epoch, i64),
                     ("status", "error", String),
                     ("error", error_str, String),
@@ -191,7 +193,7 @@ pub fn create_merkle_tree_collection(
     }
     datapoint_info!(
         "tip_router_cli.create_merkle_tree_collection",
-        ("operator_address", cli.operator_address, String),
+        ("operator_address", operator_address, String),
         ("state", "meta_merkle_tree_creation", String),
         ("step", 3, i64),
         ("epoch", epoch, i64),

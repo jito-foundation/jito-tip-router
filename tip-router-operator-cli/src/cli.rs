@@ -34,7 +34,7 @@ pub struct Cli {
     pub meta_merkle_tree_dir: PathBuf,
 
     #[arg(short, long, env)]
-    pub save_path: Option<PathBuf>,
+    pub save_path: PathBuf,
 
     #[command(subcommand)]
     pub command: Commands,
@@ -109,5 +109,18 @@ pub enum Commands {
 
         #[arg(long, env)]
         tip_payment_program_id: Pubkey,
+
+        #[arg(long, env, default_value = "true")]
+        save: bool,
+    },
+    CreateMerkleTreeCollection {
+        #[arg(short, long, env)]
+        ncn_address: Pubkey,
+
+        #[arg(long, env)]
+        epoch: u64,
+
+        #[arg(long, env, default_value = "true")]
+        save: bool,
     },
 }

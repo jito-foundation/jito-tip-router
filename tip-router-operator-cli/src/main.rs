@@ -1,16 +1,12 @@
 use ::{
     anyhow::Result,
     clap::Parser,
-    ellipsis_client::{ClientSubset, EllipsisClient},
+    ellipsis_client::EllipsisClient,
     log::{error, info},
-    meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection,
+    meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection},
     solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::rpc_client::RpcClient,
-    solana_sdk::{
-        pubkey::Pubkey,
-        signer::{keypair::read_keypair_file, Signer},
-        transaction::Transaction,
-    },
+    solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
     std::{
         path::PathBuf,
         str::FromStr,
@@ -21,13 +17,16 @@ use ::{
         backup_snapshots::BackupSnapshotMonitor,
         claim::claim_mev_tips,
         cli::{Cli, Commands},
-        create_stake_meta,
+        create_merkle_tree_collection, create_stake_meta,
         ledger_utils::get_bank_from_ledger,
         process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
     },
     tokio::time::sleep,
 };
+
+// TODO: Should this be loaded from somewhere?
+const PROTOCOL_FEE_BPS: u64 = 300;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -271,6 +270,7 @@ async fn main() -> Result<()> {
             slot,
             tip_distribution_program_id,
             tip_payment_program_id,
+            save,
         } => {
             let operator_address = Pubkey::from_str(&cli.operator_address)?;
             let account_paths = cli
@@ -293,6 +293,29 @@ async fn main() -> Result<()> {
                 &tip_distribution_program_id,
                 &tip_payment_program_id,
                 &cli.save_path,
+                save,
+            );
+        }
+        Commands::CreateMerkleTreeCollection {
+            ncn_address,
+            epoch,
+            save,
+        } => {
+            // Load the stake_meta_collection from disk
+            let stake_meta_collection = match StakeMetaCollection::new_from_file(&cli.save_path) {
+                Ok(stake_meta_collection) => stake_meta_collection,
+                Err(e) => panic!("{}", e), // TODO: should datapoint error be emitted here?
+            };
+
+            // Generate the merkle tree collection
+            create_merkle_tree_collection(
+                cli.operator_address,
+                stake_meta_collection,
+                epoch,
+                &ncn_address,
+                PROTOCOL_FEE_BPS,
+                &cli.save_path,
+                save,
             );
         }
     }
