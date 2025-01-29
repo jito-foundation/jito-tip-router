@@ -188,14 +188,6 @@ pub fn get_bank_from_ledger(
         account_paths,
     );
 
-    info!(
-        "FROM EVAN: Paths before load_and_process_ledger:\n
-        ledger_path: {:?}\n
-        snapshot_archive_path: {:?}\n
-        incremental_snapshot_archive_path: {:?}",
-        ledger_path, full_snapshots_path, incremental_snapshots_path
-    );
-
     // Call ledger_utils::load_and_process_ledger here
     let (bank_forks, _starting_snapshot_hashes) =
         match crate::load_and_process_ledger::load_and_process_ledger(
