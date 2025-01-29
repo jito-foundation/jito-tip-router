@@ -197,6 +197,7 @@ pub fn get_bank_from_ledger(
             process_options,
             Some(full_snapshots_path.clone()),
             Some(incremental_snapshots_path.clone()),
+            operator_address,
         ) {
             Ok(res) => res,
             Err(e) => {
