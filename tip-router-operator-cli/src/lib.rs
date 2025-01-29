@@ -319,7 +319,12 @@ pub fn emit_solana_validator_args() -> std::result::Result<(), anyhow::Error> {
     Ok(())
 }
 
-pub fn cleanup_tmp_files(snapshot_output_dir: &Path) -> Result<()> {
+pub fn cleanup_tmp_files(snapshot_output_dir: &Path) -> std::result::Result<(), anyhow::Error> {
+    // Fail if snapshot_output_dir is "/"
+    if snapshot_output_dir == Path::new("/") {
+        return Err(anyhow::anyhow!("snapshot_output_dir cannot be /"));
+    }
+
     // Remove stake-meta.accounts directory
     let stake_meta_path = snapshot_output_dir.join("stake-meta.accounts");
     if stake_meta_path.exists() {

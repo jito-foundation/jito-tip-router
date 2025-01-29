@@ -25,6 +25,7 @@ use {
         use_snapshot_archives_at_startup::UseSnapshotArchivesAtStartup,
     },
     solana_measure::measure,
+    solana_metrics::datapoint_info,
     solana_rpc::transaction_status_service::TransactionStatusService,
     solana_runtime::{
         accounts_background_service::{
@@ -97,27 +98,27 @@ pub(crate) enum LoadAndProcessLedgerError {
     ProcessBlockstoreFromRoot(#[source] BlockstoreProcessorError),
 }
 
-pub fn load_and_process_ledger_or_exit(
-    arg_matches: &ArgMatches,
-    genesis_config: &GenesisConfig,
-    blockstore: Arc<Blockstore>,
-    process_options: ProcessOptions,
-    snapshot_archive_path: Option<PathBuf>,
-    incremental_snapshot_archive_path: Option<PathBuf>,
-) -> (Arc<RwLock<BankForks>>, Option<StartingSnapshotHashes>) {
-    load_and_process_ledger(
-        arg_matches,
-        genesis_config,
-        blockstore,
-        process_options,
-        snapshot_archive_path,
-        incremental_snapshot_archive_path,
-    )
-    .unwrap_or_else(|err| {
-        eprintln!("Exiting. Failed to load and process ledger: {err}");
-        exit(1);
-    })
-}
+// pub fn load_and_process_ledger_or_exit(
+//     arg_matches: &ArgMatches,
+//     genesis_config: &GenesisConfig,
+//     blockstore: Arc<Blockstore>,
+//     process_options: ProcessOptions,
+//     snapshot_archive_path: Option<PathBuf>,
+//     incremental_snapshot_archive_path: Option<PathBuf>,
+// ) -> (Arc<RwLock<BankForks>>, Option<StartingSnapshotHashes>) {
+//     load_and_process_ledger(
+//         arg_matches,
+//         genesis_config,
+//         blockstore,
+//         process_options,
+//         snapshot_archive_path,
+//         incremental_snapshot_archive_path,
+//     )
+//     .unwrap_or_else(|err| {
+//         eprintln!("Exiting. Failed to load and process ledger: {err}");
+//         exit(1);
+//     })
+// }
 
 pub fn load_and_process_ledger(
     arg_matches: &ArgMatches,
@@ -126,6 +127,7 @@ pub fn load_and_process_ledger(
     process_options: ProcessOptions,
     snapshot_archive_path: Option<PathBuf>,
     incremental_snapshot_archive_path: Option<PathBuf>,
+    operator_address: Pubkey,
 ) -> Result<(Arc<RwLock<BankForks>>, Option<StartingSnapshotHashes>), LoadAndProcessLedgerError> {
     let bank_snapshots_dir = if blockstore.is_primary_access() {
         blockstore.ledger_path().join("snapshot")
@@ -398,6 +400,15 @@ pub fn load_and_process_ledger(
     } else {
         (None, None)
     };
+
+    // STEP 4: Process blockstore from root //
+
+    datapoint_info!(
+        "tip_router_cli.get_bank",
+        ("operator", operator_address.to_string(), String),
+        ("state", "process_blockstore_from_root_start", String),
+        ("step", 4, i64),
+    );
 
     let result = blockstore_processor::process_blockstore_from_root(
         blockstore.as_ref(),

@@ -200,7 +200,15 @@ pub fn get_bank_from_ledger(
         ) {
             Ok(res) => res,
             Err(e) => {
-                // TODO datapoint_error!
+                datapoint_error!(
+                    "tip_router_cli.get_bank",
+                    ("operator", operator_address.to_string(), String),
+                    ("state", "load_bank_forks", String),
+                    ("status", "error", String),
+                    ("step", 4, i64),
+                    ("error", format!("{:?}", e), String),
+                    ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                );
                 panic!("Failed to load bank forks: {}", e);
             }
         };
@@ -236,13 +244,13 @@ pub fn get_bank_from_ledger(
 
     // STEP 4: Process blockstore from root //
 
-    datapoint_info!(
-        "tip_router_cli.get_bank",
-        ("operator", operator_address.to_string(), String),
-        ("state", "process_blockstore_from_root_start", String),
-        ("step", 4, i64),
-        ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
-    );
+    // datapoint_info!(
+    //     "tip_router_cli.get_bank",
+    //     ("operator", operator_address.to_string(), String),
+    //     ("state", "process_blockstore_from_root_start", String),
+    //     ("step", 4, i64),
+    //     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    // );
 
     // match blockstore_processor::process_blockstore_from_root(
     //     &blockstore,
@@ -271,15 +279,16 @@ pub fn get_bank_from_ledger(
 
     // STEP 5: Save snapshot //
 
+    let working_bank = bank_forks.read().unwrap().working_bank();
+
     datapoint_info!(
         "tip_router_cli.get_bank",
         ("operator", operator_address.to_string(), String),
         ("state", "bank_to_full_snapshot_archive_start", String),
+        ("bank_hash", working_bank.hash().to_string(), String),
         ("step", 5, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
     );
-
-    let working_bank = bank_forks.read().unwrap().working_bank();
 
     exit.store(true, Ordering::Relaxed);
 

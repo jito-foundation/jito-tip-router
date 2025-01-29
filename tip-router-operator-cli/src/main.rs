@@ -70,8 +70,6 @@ async fn main() -> Result<()> {
                 std::fs::create_dir_all(&backup_snapshots_dir)?;
             }
 
-            
-
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
                 loop {
