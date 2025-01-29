@@ -93,17 +93,6 @@ pub fn get_meta_merkle_root(
 ) -> std::result::Result<MetaMerkleTree, MerkleRootError> {
     let start = Instant::now();
 
-    // cleanup tmp files - update with path where stake meta is written
-    match cleanup_tmp_files(&incremental_snapshots_path.clone()) {
-        Ok(_) => {}
-        Err(e) => {
-            return Err(MerkleRootError::StakeMetaGeneratorError(format!(
-                "Failed to cleanup tmp files: {:?}",
-                e
-            )));
-        }
-    }
-
     datapoint_info!(
         "tip_router_cli.get_meta_merkle_root",
         ("operator_address", operator_address.to_string(), String),
@@ -112,6 +101,21 @@ pub fn get_meta_merkle_root(
         ("epoch", epoch, i64),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
+
+    // cleanup tmp files - update with path where stake meta is written
+    match cleanup_tmp_files(&incremental_snapshots_path.clone()) {
+        Ok(_) => {}
+        Err(e) => {
+            datapoint_info!(
+                "tip_router_cli.get_meta_merkle_root",
+                ("operator_address", operator_address.to_string(), String),
+                ("state", "cleanup_tmp_files", String),
+                ("error", format!("{:?}", e), String),
+                ("epoch", epoch, i64),
+                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+            );
+        }
+    }
 
     // Get stake meta collection
     let stake_meta_collection = stake_meta_generator::generate_stake_meta(
@@ -151,10 +155,14 @@ pub fn get_meta_merkle_root(
     match cleanup_tmp_files(&incremental_snapshots_path) {
         Ok(_) => {}
         Err(e) => {
-            return Err(MerkleRootError::StakeMetaGeneratorError(format!(
-                "Failed to cleanup tmp files: {:?}",
-                e
-            )));
+            datapoint_info!(
+                "tip_router_cli.get_meta_merkle_root",
+                ("operator_address", operator_address.to_string(), String),
+                ("state", "cleanup_tmp_files", String),
+                ("error", format!("{:?}", e), String),
+                ("epoch", epoch, i64),
+                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+            );
         }
     }
 
