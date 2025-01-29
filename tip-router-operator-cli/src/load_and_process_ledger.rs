@@ -172,31 +172,31 @@ pub fn load_and_process_ledger(
         })
     };
 
-    match process_options.halt_at_slot {
-        // Skip the following checks for sentinel values of Some(0) and None.
-        // For Some(0), no slots will be be replayed after starting_slot.
-        // For None, all available children of starting_slot will be replayed.
-        None | Some(0) => {}
-        Some(halt_slot) => {
-            if halt_slot < starting_slot {
-                return Err(LoadAndProcessLedgerError::EndingSlotLessThanStartingSlot(
-                    starting_slot,
-                    halt_slot,
-                    PROCESS_SLOTS_HELP_STRING.to_string(),
-                ));
-            }
-            // Check if we have the slot data necessary to replay from starting_slot to >= halt_slot.
-            if !blockstore.slot_range_connected(starting_slot, halt_slot) {
-                return Err(
-                    LoadAndProcessLedgerError::EndingSlotNotReachableFromStartingSlot(
-                        starting_slot,
-                        halt_slot,
-                        PROCESS_SLOTS_HELP_STRING.to_string(),
-                    ),
-                );
-            }
-        }
-    }
+    // match process_options.halt_at_slot {
+    //     // Skip the following checks for sentinel values of Some(0) and None.
+    //     // For Some(0), no slots will be be replayed after starting_slot.
+    //     // For None, all available children of starting_slot will be replayed.
+    //     None | Some(0) => {}
+    //     Some(halt_slot) => {
+    //         if halt_slot < starting_slot {
+    //             return Err(LoadAndProcessLedgerError::EndingSlotLessThanStartingSlot(
+    //                 starting_slot,
+    //                 halt_slot,
+    //                 PROCESS_SLOTS_HELP_STRING.to_string(),
+    //             ));
+    //         }
+    //         // Check if we have the slot data necessary to replay from starting_slot to >= halt_slot.
+    //         if !blockstore.slot_range_connected(starting_slot, halt_slot) {
+    //             return Err(
+    //                 LoadAndProcessLedgerError::EndingSlotNotReachableFromStartingSlot(
+    //                     starting_slot,
+    //                     halt_slot,
+    //                     PROCESS_SLOTS_HELP_STRING.to_string(),
+    //                 ),
+    //             );
+    //         }
+    //     }
+    // }
 
     let account_paths = if let Some(account_paths) = arg_matches.value_of("account_paths") {
         // If this blockstore access is Primary, no other process (agave-validator) can hold

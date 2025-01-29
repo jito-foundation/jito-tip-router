@@ -93,6 +93,17 @@ pub fn get_meta_merkle_root(
 ) -> std::result::Result<MetaMerkleTree, MerkleRootError> {
     let start = Instant::now();
 
+    // cleanup tmp files - update with path where stake meta is written
+    match cleanup_tmp_files(&incremental_snapshots_path.clone()) {
+        Ok(_) => {}
+        Err(e) => {
+            return Err(MerkleRootError::StakeMetaGeneratorError(format!(
+                "Failed to cleanup tmp files: {:?}",
+                e
+            )));
+        }
+    }
+
     datapoint_info!(
         "tip_router_cli.get_meta_merkle_root",
         ("operator_address", operator_address.to_string(), String),
@@ -108,7 +119,7 @@ pub fn get_meta_merkle_root(
         ledger_path,
         account_paths,
         full_snapshots_path,
-        incremental_snapshots_path,
+        incremental_snapshots_path.clone(),
         desired_slot,
         tip_distribution_program_id,
         out_path,
@@ -135,6 +146,17 @@ pub fn get_meta_merkle_root(
         ("epoch", epoch, i64),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
+
+    // Cleanup tmp files
+    match cleanup_tmp_files(&incremental_snapshots_path) {
+        Ok(_) => {}
+        Err(e) => {
+            return Err(MerkleRootError::StakeMetaGeneratorError(format!(
+                "Failed to cleanup tmp files: {:?}",
+                e
+            )));
+        }
+    }
 
     // Generate merkle tree collection
     let merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
@@ -293,6 +315,57 @@ pub fn emit_solana_validator_args() -> std::result::Result<(), anyhow::Error> {
             String
         )
     );
+
+    Ok(())
+}
+
+pub fn cleanup_tmp_files(snapshot_output_dir: &Path) -> Result<()> {
+    // Remove stake-meta.accounts directory
+    let stake_meta_path = snapshot_output_dir.join("stake-meta.accounts");
+    if stake_meta_path.exists() {
+        if stake_meta_path.is_dir() {
+            std::fs::remove_dir_all(&stake_meta_path)?;
+        } else {
+            std::fs::remove_file(&stake_meta_path)?;
+        }
+    }
+
+    // Remove tmp* files/directories in snapshot dir
+    for entry in std::fs::read_dir(snapshot_output_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if let Some(file_name) = path.file_name() {
+            if let Some(file_name_str) = file_name.to_str() {
+                if file_name_str.starts_with("tmp") {
+                    if path.is_dir() {
+                        std::fs::remove_dir_all(path)?;
+                    } else {
+                        std::fs::remove_file(path)?;
+                    }
+                }
+            }
+        }
+    }
+
+    // Remove /tmp/.tmp* files/directories
+    let tmp_dir = PathBuf::from("/tmp");
+    if tmp_dir.exists() {
+        for entry in std::fs::read_dir(&tmp_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if let Some(file_name) = path.file_name() {
+                if let Some(file_name_str) = file_name.to_str() {
+                    if file_name_str.starts_with(".tmp") {
+                        if path.is_dir() {
+                            std::fs::remove_dir_all(path)?;
+                        } else {
+                            std::fs::remove_file(path)?;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     Ok(())
 }
