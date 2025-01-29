@@ -11,7 +11,6 @@ pub mod rpc_utils;
 pub mod submit;
 
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -33,6 +32,7 @@ use solana_runtime::bank::Bank;
 use solana_sdk::{account::AccountSharedData, pubkey::Pubkey, slot_history::Slot};
 use stake_meta_generator::generate_stake_meta_collection;
 
+#[derive(clap::ValueEnum, Clone, Copy, Debug)]
 pub enum OperatorState {
     // Allows the operator to load from a snapshot created externally
     LoadBankFromSnapshot,
@@ -42,15 +42,15 @@ pub enum OperatorState {
     SubmitToNcn,
     WaitForNextEpoch,
 }
+
 // STAGE 1 LoadBankFromSnapshot
 pub fn load_bank_from_snapshot(cli: Cli, slot: u64, store_snapshot: bool) -> Arc<Bank> {
-    let operator_address = Pubkey::from_str(&cli.operator_address).unwrap();
     let account_paths = cli
         .account_paths
         .map_or_else(|| vec![cli.ledger_path.clone()], |paths| paths);
 
     let bank = get_bank_from_ledger(
-        &operator_address,
+        cli.operator_address,
         &cli.ledger_path,
         account_paths,
         cli.full_snapshots_path.unwrap(),
@@ -65,17 +65,17 @@ pub fn load_bank_from_snapshot(cli: Cli, slot: u64, store_snapshot: bool) -> Arc
 pub fn create_stake_meta(
     operator_address: String,
     epoch: u64,
-    bank: Arc<Bank>,
+    bank: &Arc<Bank>,
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     save_path: &PathBuf,
     save_snapshot: bool,
-) {
+) -> StakeMetaCollection {
     let start = Instant::now();
 
     info!("Generating stake_meta_collection object...");
     let stake_meta_coll = match generate_stake_meta_collection(
-        &bank,
+        bank,
         tip_distribution_program_id,
         tip_payment_program_id,
     ) {
@@ -117,6 +117,7 @@ pub fn create_stake_meta(
         ("epoch", stake_meta_coll.epoch, i64),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
+    stake_meta_coll
 }
 
 // STAGE 3 CreateMerkleTreeCollection
@@ -128,7 +129,7 @@ pub fn create_merkle_tree_collection(
     protocol_fee_bps: u64,
     save_path: &PathBuf,
     save: bool,
-) {
+) -> GeneratedMerkleTreeCollection {
     let start = Instant::now();
 
     // Generate merkle tree collection
@@ -199,6 +200,7 @@ pub fn create_merkle_tree_collection(
         ("epoch", epoch, i64),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
+    merkle_tree_coll
 }
 
 // STAGE 4 CreateMetaMerkleTree
@@ -208,7 +210,7 @@ pub fn create_meta_merkle_tree(
     epoch: u64,
     save_path: &PathBuf,
     save: bool,
-) {
+) -> MetaMerkleTree {
     let start = Instant::now();
     let meta_merkle_tree =
         match MetaMerkleTree::new_from_generated_merkle_tree_collection(merkle_tree_collection) {
@@ -263,6 +265,8 @@ pub fn create_meta_merkle_tree(
         ("epoch", epoch, i64),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
+
+    meta_merkle_tree
 }
 
 #[derive(Debug)]

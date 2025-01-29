@@ -90,7 +90,7 @@ pub fn generate_stake_meta(
     info!("Creating bank from ledger path...");
     let res = std::panic::catch_unwind(|| {
         get_bank_from_ledger(
-            operator_address,
+            operator_address.to_string(),
             ledger_path,
             account_paths,
             full_snapshots_path,

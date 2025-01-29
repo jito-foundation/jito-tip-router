@@ -21,12 +21,12 @@ use solana_runtime::{
     snapshot_config::SnapshotConfig,
     snapshot_utils::{self, SnapshotVersion},
 };
-use solana_sdk::{clock::Slot, pubkey::Pubkey};
+use solana_sdk::clock::Slot;
 
 // TODO: Use Result and propagate errors more gracefully
 /// Create the Bank for a desired slot for given file paths.
 pub fn get_bank_from_ledger(
-    operator_address: &Pubkey,
+    operator_address: String,
     ledger_path: &Path,
     account_paths: Vec<PathBuf>,
     full_snapshots_path: PathBuf,
@@ -39,7 +39,7 @@ pub fn get_bank_from_ledger(
     // Start validation
     datapoint_info!(
         "tip_router_cli.get_bank",
-        ("operator", operator_address.to_string(), String),
+        ("operator", operator_address, String),
         ("state", "validate_path_start", String),
         ("step", 0, i64),
     );
@@ -48,7 +48,7 @@ pub fn get_bank_from_ledger(
 
     datapoint_info!(
         "tip_router_cli.get_bank",
-        ("operator", operator_address.to_string(), String),
+        ("operator", operator_address, String),
         ("state", "load_genesis_start", String),
         ("step", 1, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -59,7 +59,7 @@ pub fn get_bank_from_ledger(
         Err(e) => {
             datapoint_error!(
                 "tip_router_cli.get_bank",
-                ("operator", operator_address.to_string(), String),
+                ("operator", operator_address, String),
                 ("status", "error", String),
                 ("state", "load_genesis", String),
                 ("step", 1, i64),
@@ -73,7 +73,7 @@ pub fn get_bank_from_ledger(
 
     datapoint_info!(
         "tip_router_cli.get_bank",
-        ("operator", operator_address.to_string(), String),
+        ("operator", operator_address, String),
         ("state", "load_blockstore_start", String),
         ("step", 2, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -118,7 +118,7 @@ pub fn get_bank_from_ledger(
             };
             datapoint_error!(
                 "tip_router_cli.get_bank",
-                ("operator", operator_address.to_string(), String),
+                ("operator", operator_address, String),
                 ("status", "error", String),
                 ("state", "load_blockstore", String),
                 ("step", 2, i64),
@@ -131,7 +131,7 @@ pub fn get_bank_from_ledger(
             let error_str = format!("Failed to open blockstore at {ledger_path:?}: {err:?}");
             datapoint_error!(
                 "tip_router_cli.get_bank",
-                ("operator", operator_address.to_string(), String),
+                ("operator", operator_address, String),
                 ("status", "error", String),
                 ("state", "load_blockstore", String),
                 ("step", 2, i64),
@@ -158,7 +158,7 @@ pub fn get_bank_from_ledger(
 
     datapoint_info!(
         "tip_router_cli.get_bank",
-        ("operator", operator_address.to_string(), String),
+        ("operator", operator_address, String),
         ("state", "load_snapshot_config_start", String),
         ("step", 3, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -202,7 +202,7 @@ pub fn get_bank_from_ledger(
                 let error_str = String::from("halt_slot < starting_slot");
                 datapoint_error!(
                     "tip_router_cli.get_bank",
-                    ("operator", operator_address.to_string(), String),
+                    ("operator", operator_address, String),
                     ("status", "error", String),
                     ("state", "load_blockstore", String),
                     ("step", 2, i64),
@@ -217,7 +217,7 @@ pub fn get_bank_from_ledger(
                     format!("Blockstore missing data to replay to slot {}", desired_slot);
                 datapoint_error!(
                     "tip_router_cli.get_bank",
-                    ("operator", operator_address.to_string(), String),
+                    ("operator", operator_address, String),
                     ("status", "error", String),
                     ("state", "load_blockstore", String),
                     ("step", 2, i64),
@@ -247,7 +247,7 @@ pub fn get_bank_from_ledger(
             Err(e) => {
                 datapoint_error!(
                     "tip_router_cli.get_bank",
-                    ("operator", operator_address.to_string(), String),
+                    ("operator", operator_address, String),
                     ("state", "load_bank_forks", String),
                     ("status", "error", String),
                     ("step", 4, i64),
@@ -262,7 +262,7 @@ pub fn get_bank_from_ledger(
 
     datapoint_info!(
         "tip_router_cli.get_bank",
-        ("operator", operator_address.to_string(), String),
+        ("operator", operator_address, String),
         ("state", "process_blockstore_from_root_start", String),
         ("step", 4, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -282,7 +282,7 @@ pub fn get_bank_from_ledger(
         Err(e) => {
             datapoint_error!(
                 "tip_router_cli.get_bank",
-                ("operator", operator_address.to_string(), String),
+                ("operator", operator_address, String),
                 ("status", "error", String),
                 ("state", "process_blockstore_from_root", String),
                 ("step", 5, i64),
@@ -297,7 +297,7 @@ pub fn get_bank_from_ledger(
 
     datapoint_info!(
         "tip_router_cli.get_bank",
-        ("operator", operator_address.to_string(), String),
+        ("operator", operator_address, String),
         ("state", "bank_to_full_snapshot_archive_start", String),
         ("step", 5, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -320,7 +320,7 @@ pub fn get_bank_from_ledger(
             Err(e) => {
                 datapoint_error!(
                     "tip_router_cli.get_bank",
-                    ("operator", operator_address.to_string(), String),
+                    ("operator", operator_address, String),
                     ("status", "error", String),
                     ("state", "bank_to_full_snapshot_archive", String),
                     ("step", 6, i64),
@@ -350,7 +350,7 @@ pub fn get_bank_from_ledger(
 
     datapoint_info!(
         "tip_router_cli.get_bank",
-        ("operator", operator_address.to_string(), String),
+        ("operator", operator_address, String),
         ("state", "get_bank_from_ledger_success", String),
         ("step", 6, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -360,6 +360,8 @@ pub fn get_bank_from_ledger(
 
 #[cfg(test)]
 mod tests {
+    use solana_sdk::pubkey::Pubkey;
+
     use super::*;
 
     #[test]
@@ -370,7 +372,7 @@ mod tests {
         let full_snapshots_path = ledger_path.clone();
         let desired_slot = 144;
         let res = get_bank_from_ledger(
-            &operator_address,
+            operator_address.to_string(),
             &ledger_path,
             account_paths,
             full_snapshots_path.clone(),

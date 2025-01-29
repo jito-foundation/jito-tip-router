@@ -6,6 +6,7 @@ use ::{
     meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection},
     solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::rpc_client::RpcClient,
+    solana_runtime::bank::Bank,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
     std::{
         path::PathBuf,
@@ -19,8 +20,9 @@ use ::{
         cli::{Cli, Commands},
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_ledger,
-        process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
+        process_epoch::{get_previous_epoch_last_slot, wait_for_next_epoch},
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
+        OperatorState,
     },
     tokio::time::sleep,
 };
@@ -66,11 +68,14 @@ async fn main() -> Result<()> {
             tip_router_program_id,
             enable_snapshots,
             num_monitored_epochs,
-            start_next_epoch,
             override_target_slot,
+            starting_stage,
+            save_stages,
         } => {
             info!("Running Tip Router...");
+            info!("starting stage: {:?}", starting_stage);
 
+            let operator_address = cli.operator_address.clone();
             let rpc_client_clone = rpc_client.clone();
             let full_snapshots_path = cli.full_snapshots_path.clone().unwrap();
             let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
@@ -122,64 +127,125 @@ async fn main() -> Result<()> {
                 }
             });
 
-            if start_next_epoch {
-                wait_for_next_epoch(&rpc_client).await?;
-            }
-
             // Track runs that are starting right at the beginning of a new epoch
-            let mut new_epoch_rollover = start_next_epoch;
-
+            let mut stage = starting_stage;
+            let mut bank: Option<Arc<Bank>> = None;
+            let mut stake_meta_collection: Option<StakeMetaCollection> = None;
+            let mut merkle_tree_collection: Option<GeneratedMerkleTreeCollection> = None;
+            let account_paths = cli
+                .account_paths
+                .map_or_else(|| vec![cli.ledger_path.clone()], |paths| paths);
+            let mut slot_to_process = if let Some(slot) = override_target_slot {
+                slot
+            } else {
+                0
+            };
+            let mut epoch_to_process = 0;
             loop {
-                // Get the last slot of the previous epoch
-                let (previous_epoch, previous_epoch_slot) =
-                    if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client) {
-                        (epoch, slot)
-                    } else {
-                        error!("Error getting previous epoch slot");
-                        continue;
-                    };
+                match stage {
+                    OperatorState::LoadBankFromSnapshot => {
+                        bank = Some(get_bank_from_ledger(
+                            operator_address.clone(),
+                            &cli.ledger_path,
+                            account_paths.clone(),
+                            cli.full_snapshots_path.clone().unwrap(),
+                            cli.backup_snapshots_dir.clone(),
+                            &slot_to_process,
+                            enable_snapshots,
+                        ));
+                        // Transition to the next stage
+                        stage = OperatorState::CreateStakeMeta;
+                    }
+                    OperatorState::CreateStakeMeta => {
+                        // TODO: Determine if we want to allow operators to start from this stage.
+                        //  No matter what a bank has to be loaded from a snapshot, so might as
+                        //  well start from load bank
+                        stake_meta_collection = Some(create_stake_meta(
+                            operator_address.clone(),
+                            epoch_to_process,
+                            bank.as_ref().expect("Bank was not set"),
+                            &tip_distribution_program_id,
+                            &tip_payment_program_id,
+                            &cli.save_path,
+                            save_stages,
+                        ));
+                        // we should be able to safely drop the bank in this loop
+                        bank = None;
+                        // Transition to the next stage
+                        stage = OperatorState::CreateMerkleTreeCollection;
+                    }
+                    OperatorState::CreateMerkleTreeCollection => {
+                        let some_stake_meta_collection = match stake_meta_collection.to_owned() {
+                            Some(collection) => collection,
+                            // TODO: Handle this
+                            None => todo!("load stake meta from disk given desired epoch"),
+                        };
 
-                info!("Processing slot {} for previous epoch", previous_epoch_slot);
+                        // Generate the merkle tree collection
+                        merkle_tree_collection = Some(create_merkle_tree_collection(
+                            cli.operator_address.clone(),
+                            some_stake_meta_collection,
+                            epoch_to_process,
+                            &ncn_address,
+                            PROTOCOL_FEE_BPS,
+                            &cli.save_path,
+                            save_stages,
+                        ));
 
-                // Process the epoch
-                match process_epoch(
-                    &rpc_client,
-                    previous_epoch_slot,
-                    previous_epoch,
-                    &tip_distribution_program_id,
-                    &tip_payment_program_id,
-                    &tip_router_program_id,
-                    &ncn_address,
-                    enable_snapshots,
-                    new_epoch_rollover,
-                    &cli,
-                )
-                .await
-                {
-                    Ok(_) => info!("Successfully processed epoch"),
-                    Err(e) => {
-                        error!("Error processing epoch: {}", e);
+                        stake_meta_collection = None;
+                        // Transition to the next stage
+                        stage = OperatorState::CreateMetaMerkleTree;
+                    }
+                    OperatorState::CreateMetaMerkleTree => {
+                        let some_merkle_tree_collection = match merkle_tree_collection.to_owned() {
+                            Some(collection) => collection,
+                            None => {
+                                // TODO: Handle this
+                                todo!("load merkle tree collection from disk given desired epoch")
+                            }
+                        };
+
+                        create_meta_merkle_tree(
+                            cli.operator_address.clone(),
+                            some_merkle_tree_collection,
+                            epoch_to_process,
+                            &cli.save_path,
+                            // TODO: If we keep the separate thread for handling NCN submission
+                            //  through files on disk then this needs to be true
+                            save_stages,
+                        );
+                        stage = OperatorState::WaitForNextEpoch;
+                    }
+                    OperatorState::SubmitToNcn => {
+                        // TODO: Determine if this should be a stage given the task that's in a
+                        //  separate thread
+                    }
+                    OperatorState::WaitForNextEpoch => {
+                        wait_for_next_epoch(&rpc_client).await?;
+                        // Get the last slot of the previous epoch
+                        let (previous_epoch, previous_epoch_slot) =
+                            if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client) {
+                                (epoch, slot)
+                            } else {
+                                // TODO: Make a datapoint error
+                                error!("Error getting previous epoch slot");
+                                continue;
+                            };
+                        slot_to_process = previous_epoch_slot;
+                        epoch_to_process = previous_epoch;
+                        stage = OperatorState::LoadBankFromSnapshot;
                     }
                 }
-
-                // Wait for epoch change
-                if let Err(e) = wait_for_next_epoch(&rpc_client).await {
-                    error!("Error waiting for next epoch: {}", e);
-                    sleep(Duration::from_secs(60)).await;
-                }
-
-                new_epoch_rollover = true;
             }
         }
         Commands::SnapshotSlot { slot } => {
             info!("Snapshotting slot...");
-            let operator_address = Pubkey::from_str(&cli.operator_address)?;
             let account_paths = cli
                 .account_paths
                 .map_or_else(|| vec![cli.ledger_path.clone()], |paths| paths);
 
             get_bank_from_ledger(
-                &operator_address,
+                cli.operator_address,
                 &cli.ledger_path,
                 account_paths,
                 cli.full_snapshots_path.unwrap(),
@@ -272,12 +338,11 @@ async fn main() -> Result<()> {
             tip_payment_program_id,
             save,
         } => {
-            let operator_address = Pubkey::from_str(&cli.operator_address)?;
             let account_paths = cli
                 .account_paths
                 .map_or_else(|| vec![cli.ledger_path.clone()], |paths| paths);
             let bank = get_bank_from_ledger(
-                &operator_address,
+                cli.operator_address.clone(),
                 &cli.ledger_path,
                 account_paths,
                 cli.full_snapshots_path.unwrap(),
@@ -289,7 +354,7 @@ async fn main() -> Result<()> {
             create_stake_meta(
                 cli.operator_address,
                 epoch,
-                bank,
+                &bank,
                 &tip_distribution_program_id,
                 &tip_payment_program_id,
                 &cli.save_path,

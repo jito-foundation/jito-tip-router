@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use clap::Parser;
 use solana_sdk::pubkey::Pubkey;
 
+use crate::OperatorState;
+
 #[derive(Clone, Parser)]
 #[command(author, version, about)]
 pub struct Cli {
@@ -33,7 +35,7 @@ pub struct Cli {
     #[arg(short, long, env)]
     pub meta_merkle_tree_dir: PathBuf,
 
-    #[arg(short, long, env)]
+    #[arg(long, env)]
     pub save_path: PathBuf,
 
     #[command(subcommand)]
@@ -61,11 +63,14 @@ pub enum Commands {
         #[arg(long, env, default_value = "3")]
         num_monitored_epochs: u64,
 
-        #[arg(long, env, default_value = "false")]
-        start_next_epoch: bool,
-
         #[arg(long, env)]
         override_target_slot: Option<u64>,
+
+        #[arg(long, env, default_value = "wait-for-next-epoch")]
+        starting_stage: OperatorState,
+
+        #[arg(long, env, default_value = "true")]
+        save_stages: bool,
     },
     SnapshotSlot {
         #[arg(long, env)]
