@@ -66,7 +66,7 @@ const PROCESS_SLOTS_HELP_STRING: &str =
      --halt-at-slot if specified, or the highest slot in the blockstore.";
 
 #[derive(Error, Debug)]
-pub(crate) enum LoadAndProcessLedgerError {
+pub enum LoadAndProcessLedgerError {
     #[error("failed to clean orphaned account snapshot directories: {0}")]
     CleanOrphanedAccountSnapshotDirectories(#[source] std::io::Error),
 

@@ -190,7 +190,7 @@ pub fn get_bank_from_ledger(
 
     // Call ledger_utils::load_and_process_ledger here
     let (bank_forks, _starting_snapshot_hashes) =
-        match crate::load_and_process_ledger::load_and_process_ledger(
+        match load_and_process_ledger::load_and_process_ledger(
             &arg_matches,
             &genesis_config,
             Arc::new(blockstore),
