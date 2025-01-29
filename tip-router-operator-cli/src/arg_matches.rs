@@ -445,17 +445,18 @@ pub fn set_ledger_tool_arg_matches<'a>(
 
     let args: Vec<OsString> = vec![
         "tip-router-operator-cli".into(),
+        "create-snapshot".into(),
         "--full-snapshot-archive-path".into(),
         full_snapshots_archives_dir.into(),
         "--incremental-snapshot-archive-path".into(),
         incremental_snapshots_archives_dir.into(),
-        "--accounts".into(),
-        account_paths
-            .iter()
-            .map(|p| p.to_string_lossy().to_string())
-            .collect::<Vec<_>>()
-            .join(",")
-            .into(),
+        // "--accounts".into(),
+        // account_paths
+        //     .iter()
+        //     .map(|p| p.to_string_lossy().to_string())
+        //     .collect::<Vec<_>>()
+        //     .join(",")
+        //     .into(),
     ];
 
     *arg_matches = app.get_matches_from(args);
