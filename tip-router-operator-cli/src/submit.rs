@@ -170,6 +170,7 @@ pub async fn submit_to_ncn(
             ncn_address,
             keypair,
             tip_distribution_program_id,
+            tip_router_program_id,
             epoch,
             tip_distribution_accounts,
             meta_merkle_tree,
