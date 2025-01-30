@@ -21,7 +21,7 @@ use ::{
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_ledger,
         load_bank_from_snapshot,
-        process_epoch::{get_previous_epoch_last_slot, wait_for_next_epoch},
+        process_epoch::{calc_prev_epoch_and_final_slot, get_previous_epoch_last_slot, wait_for_next_epoch},
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         OperatorState,
     },
@@ -80,8 +80,7 @@ async fn main() -> Result<()> {
             let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
             let rpc_url = cli.rpc_url.clone();
             let cli_clone: Cli = cli.clone();
-            let starting_epoch_info = rpc_client.get_epoch_info()?;
-            let mut current_epoch = starting_epoch_info.epoch;
+            let mut current_epoch_info = rpc_client.get_epoch_info()?;
 
             if !backup_snapshots_dir.exists() {
                 info!(
@@ -133,10 +132,12 @@ async fn main() -> Result<()> {
             let mut bank: Option<Arc<Bank>> = None;
             let mut stake_meta_collection: Option<StakeMetaCollection> = None;
             let mut merkle_tree_collection: Option<GeneratedMerkleTreeCollection> = None;
+            let mut epoch_to_process = current_epoch_info.epoch.saturating_sub(1);
             let mut slot_to_process = if let Some(slot) = override_target_slot {
                 slot
             } else {
-                0
+                let (_, prev_slot) = calc_prev_epoch_and_final_slot(&current_epoch_info)?;
+                prev_slot
             };
             loop {
                 match stage {
@@ -155,7 +156,7 @@ async fn main() -> Result<()> {
                         //  well start from load bank
                         stake_meta_collection = Some(create_stake_meta(
                             operator_address.clone(),
-                            current_epoch,
+                            epoch_to_process,
                             bank.as_ref().expect("Bank was not set"),
                             &tip_distribution_program_id,
                             &tip_payment_program_id,
@@ -178,7 +179,7 @@ async fn main() -> Result<()> {
                         merkle_tree_collection = Some(create_merkle_tree_collection(
                             cli.operator_address.clone(),
                             some_stake_meta_collection,
-                            current_epoch,
+                            epoch_to_process,
                             &ncn_address,
                             PROTOCOL_FEE_BPS,
                             &cli.save_path,
@@ -201,7 +202,7 @@ async fn main() -> Result<()> {
                         create_meta_merkle_tree(
                             cli.operator_address.clone(),
                             some_merkle_tree_collection,
-                            current_epoch,
+                            epoch_to_process,
                             &cli.save_path,
                             // TODO: If we keep the separate thread for handling NCN submission
                             //  through files on disk then this needs to be true
@@ -215,7 +216,7 @@ async fn main() -> Result<()> {
                     }
                     OperatorState::WaitForNextEpoch => {
                         // TODO: use the epoch returned from wait_for_next_epoch
-                        wait_for_next_epoch(&rpc_client, current_epoch).await;
+                        current_epoch_info = wait_for_next_epoch(&rpc_client, current_epoch_info.epoch).await;
                         // Get the last slot of the previous epoch
                         let (previous_epoch, previous_epoch_slot) =
                             if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client) {
@@ -226,7 +227,7 @@ async fn main() -> Result<()> {
                                 continue;
                             };
                         slot_to_process = previous_epoch_slot;
-                        current_epoch = previous_epoch;
+                        epoch_to_process = previous_epoch;
                         stage = OperatorState::LoadBankFromSnapshot;
                     }
                 }
