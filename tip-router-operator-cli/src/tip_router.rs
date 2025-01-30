@@ -127,6 +127,7 @@ pub async fn set_merkle_roots_batched(
                 .max_num_nodes(meta_merkle_node.max_num_nodes)
                 .epoch(epoch)
                 .instruction();
+
             Some(ix)
         })
         .collect::<Vec<_>>();
