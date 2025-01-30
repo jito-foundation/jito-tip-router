@@ -85,7 +85,7 @@ pub async fn submit_to_ncn(
     let ballot_box_account = match client.get_account(&ballot_box_address).await {
         Ok(account) => account,
         Err(e) => {
-            debug!("Ballot box not created yet for epoch {}: {:?}", epoch, e);
+            info!("Ballot box not created yet for epoch {}: {:?}", epoch, e);
             return Ok(());
         }
     };
