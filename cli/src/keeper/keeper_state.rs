@@ -1,8 +1,11 @@
 use crate::{
-    getters::{get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn},
+    getters::{
+        get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn, get_is_epoch_completed,
+        get_tip_router_config, get_total_rewards_to_be_distributed,
+    },
     handler::CliHandler,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Ok, Result};
 use jito_bytemuck::AccountDeserialize;
 
 use jito_tip_router_core::{
@@ -36,6 +39,8 @@ pub struct KeeperState {
     pub ncn_reward_routers_address: Vec<Vec<Pubkey>>,
     pub ncn_reward_receivers_address: Vec<Vec<Pubkey>>,
     pub epoch_state: Option<Box<EpochState>>,
+    pub current_state: Option<State>,
+    pub is_epoch_completed: bool,
 }
 
 impl KeeperState {
@@ -132,17 +137,34 @@ impl KeeperState {
     }
 
     pub async fn update_epoch_state(&mut self, handler: &CliHandler) -> Result<()> {
+        let is_epoch_completed = get_is_epoch_completed(handler, self.epoch).await?;
+        if is_epoch_completed {
+            self.is_epoch_completed = true;
+            return Ok(());
+        } else {
+            self.is_epoch_completed = false;
+        }
+
         let raw_account = get_account(handler, &self.epoch_state_address).await?;
 
         if raw_account.is_none() {
             self.epoch_state = None;
-        } else {
-            let raw_account = raw_account.unwrap();
-            let account = Box::new(*EpochState::try_from_slice_unchecked(
-                raw_account.data.as_slice(),
-            )?);
-            self.epoch_state = Some(account);
+            return Ok(());
         }
+
+        let raw_account = raw_account.unwrap();
+
+        if raw_account.data.len() < EpochState::SIZE {
+            self.epoch_state = None;
+            return Ok(());
+        }
+
+        let account = Box::new(*EpochState::try_from_slice_unchecked(
+            raw_account.data.as_slice(),
+        )?);
+        self.epoch_state = Some(account);
+
+        self.update_current_state(handler).await?;
 
         Ok(())
     }
@@ -291,14 +313,58 @@ impl KeeperState {
             .ok_or_else(|| anyhow!("Epoch state does not exist"))
     }
 
+    pub async fn update_current_state(&mut self, handler: &CliHandler) -> Result<()> {
+        let rpc_client = handler.rpc_client();
+        let current_slot = rpc_client.get_epoch_info().await?.absolute_slot;
+        let epoch_schedule = rpc_client.get_epoch_schedule().await?;
+
+        let (valid_slots_after_consensus, epochs_after_consensus_before_close) = {
+            let config = get_tip_router_config(handler).await?;
+            (
+                config.valid_slots_after_consensus(),
+                config.epochs_after_consensus_before_close(),
+            )
+        };
+
+        let epoch_state = self.epoch_state()?;
+        let state = epoch_state.current_state(
+            &epoch_schedule,
+            valid_slots_after_consensus,
+            epochs_after_consensus_before_close,
+            current_slot,
+        )?;
+
+        self.current_state = Some(state);
+
+        Ok(())
+    }
+
     pub fn current_state(&self) -> Result<State> {
-        self.epoch_state
+        let state = self
+            .current_state
             .as_ref()
-            .ok_or_else(|| anyhow!("Epoch state does not exist"))
-            .and_then(|epoch_state| {
-                epoch_state
-                    .current_state()
-                    .map_or_else(|_| Err(anyhow!("Could not get current state")), Ok)
-            })
+            .ok_or_else(|| anyhow!("Current state does not exist"))?;
+
+        Ok(*state)
+    }
+
+    pub async fn detect_stall(&mut self, handler: &CliHandler) -> Result<bool> {
+        let current_state = self.current_state()?;
+
+        if current_state == State::Vote {
+            return Ok(true);
+        }
+
+        if current_state == State::Distribute {
+            let total_rewards_to_be_distributed =
+                get_total_rewards_to_be_distributed(handler, self.epoch).await?;
+
+            // If dust rewards, then stall
+            if total_rewards_to_be_distributed < 10_000 {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 }

@@ -3,27 +3,31 @@ use std::str::FromStr;
 use crate::{
     args::{Args, ProgramCommand},
     getters::{
-        get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn, get_ballot_box,
-        get_base_reward_receiver, get_base_reward_router, get_epoch_state, get_ncn,
-        get_ncn_operator_state, get_ncn_vault_ticket, get_stake_pool, get_tip_router_config,
-        get_vault_ncn_ticket, get_vault_operator_delegation, get_vault_registry,
+        get_account_payer, get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn,
+        get_ballot_box, get_base_reward_receiver, get_base_reward_router, get_epoch_snapshot,
+        get_epoch_state, get_ncn, get_ncn_operator_state, get_ncn_reward_receiver,
+        get_ncn_reward_router, get_ncn_vault_ticket, get_stake_pool, get_tip_router_config,
+        get_total_epoch_rent_cost, get_total_rewards_to_be_distributed, get_vault_ncn_ticket,
+        get_vault_operator_delegation, get_vault_registry,
     },
     instructions::{
-        admin_create_config, admin_register_st_mint, admin_set_weight,
-        create_and_add_test_operator, create_and_add_test_vault, create_ballot_box,
-        create_base_reward_router, create_epoch_snapshot, create_epoch_state,
-        create_ncn_reward_router, create_operator_snapshot, create_test_ncn, create_vault_registry,
-        create_weight_table, distribute_base_ncn_rewards, register_vault, route_base_rewards,
-        route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
+        admin_create_config, admin_fund_account_payer, admin_register_st_mint,
+        admin_set_parameters, admin_set_weight, create_and_add_test_operator,
+        create_and_add_test_vault, create_ballot_box, create_base_reward_router,
+        create_epoch_snapshot, create_epoch_state, create_ncn_reward_router,
+        create_operator_snapshot, create_test_ncn, create_vault_registry, create_weight_table,
+        distribute_base_ncn_rewards, register_vault, route_base_rewards, route_ncn_rewards,
+        set_weight, snapshot_vault_operator_delegation,
     },
     keeper::keeper_loop::startup_keeper,
 };
 use anyhow::{anyhow, Result};
-use jito_tip_router_core::ncn_fee_group::NcnFeeGroup;
+use jito_tip_router_core::{base_fee_group::BaseFeeGroup, ncn_fee_group::NcnFeeGroup};
 use log::info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
+    native_token::lamports_to_sol,
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
 };
@@ -102,10 +106,6 @@ impl CliHandler {
         Ok(handler)
     }
 
-    pub fn set_epoch(&mut self, epoch: u64) {
-        self.epoch = epoch;
-    }
-
     pub const fn rpc_client(&self) -> &RpcClient {
         &self.rpc_client
     }
@@ -122,12 +122,17 @@ impl CliHandler {
     pub async fn handle(&self, action: ProgramCommand) -> Result<()> {
         match action {
             // Keeper
-            ProgramCommand::Keeper {} => startup_keeper(self).await,
+            ProgramCommand::Keeper {
+                loop_timeout_ms,
+                error_timeout_ms,
+                test_vote,
+            } => startup_keeper(self, loop_timeout_ms, error_timeout_ms, test_vote).await,
 
-            // Instructions
+            // Admin
             ProgramCommand::AdminCreateConfig {
                 epochs_before_stall,
                 valid_slots_after_consensus,
+                epochs_after_consensus_before_close,
                 dao_fee_bps,
                 block_engine_fee_bps,
                 default_ncn_fee_bps,
@@ -142,6 +147,7 @@ impl CliHandler {
                     self,
                     epochs_before_stall,
                     valid_slots_after_consensus,
+                    epochs_after_consensus_before_close,
                     dao_fee_bps,
                     block_engine_fee_bps,
                     default_ncn_fee_bps,
@@ -150,9 +156,6 @@ impl CliHandler {
                 )
                 .await
             }
-
-            ProgramCommand::CreateVaultRegistry {} => create_vault_registry(self).await,
-
             ProgramCommand::AdminRegisterStMint {
                 vault,
                 ncn_fee_group,
@@ -175,6 +178,50 @@ impl CliHandler {
                 )
                 .await
             }
+            ProgramCommand::AdminSetWeight { vault, weight } => {
+                let vault = Pubkey::from_str(&vault).expect("error parsing vault");
+                admin_set_weight(self, &vault, self.epoch, weight).await
+            }
+            ProgramCommand::AdminSetTieBreaker { meta_merkle_root } => {
+                todo!(
+                    "Create and implement admin set tie breaker: {}",
+                    meta_merkle_root
+                );
+                // let merkle_root = hex::decode(meta_merkle_root).expect("error parsing merkle root");
+                // let mut root = [0u8; 32];
+                // root.copy_from_slice(&merkle_root);
+                // admin_set_tie_breaker(self, root).await
+            }
+            ProgramCommand::AdminSetParameters {
+                epochs_before_stall,
+                epochs_after_consensus_before_close,
+                valid_slots_after_consensus,
+                starting_valid_epoch,
+            } => {
+                admin_set_parameters(
+                    self,
+                    epochs_before_stall,
+                    epochs_after_consensus_before_close,
+                    valid_slots_after_consensus,
+                    starting_valid_epoch,
+                )
+                .await?;
+                let config = get_tip_router_config(self).await?;
+                info!("\n\n--- Parameters Set ---\nepochs_before_stall: {}\nepochs_after_consensus_before_close: {}\nvalid_slots_after_consensus: {}\nstarting_valid_epoch: {}\n",
+                    config.epochs_before_stall(),
+                    config.epochs_after_consensus_before_close(),
+                    config.valid_slots_after_consensus(),
+                    config.starting_valid_epoch()
+                );
+
+                Ok(())
+            }
+            ProgramCommand::AdminFundAccountPayer { amount_in_sol } => {
+                admin_fund_account_payer(self, amount_in_sol).await
+            }
+
+            // Instructions
+            ProgramCommand::CreateVaultRegistry {} => create_vault_registry(self).await,
 
             ProgramCommand::RegisterVault { vault } => {
                 let vault = Pubkey::from_str(&vault).expect("error parsing vault");
@@ -184,11 +231,6 @@ impl CliHandler {
             ProgramCommand::CreateEpochState {} => create_epoch_state(self, self.epoch).await,
 
             ProgramCommand::CreateWeightTable {} => create_weight_table(self, self.epoch).await,
-
-            ProgramCommand::AdminSetWeight { vault, weight } => {
-                let vault = Pubkey::from_str(&vault).expect("error parsing vault");
-                admin_set_weight(self, &vault, self.epoch, weight).await
-            }
 
             ProgramCommand::SetWeight { vault } => {
                 let vault = Pubkey::from_str(&vault).expect("error parsing vault");
@@ -210,7 +252,7 @@ impl CliHandler {
 
             ProgramCommand::CreateBallotBox {} => create_ballot_box(self, self.epoch).await,
 
-            ProgramCommand::AdminCastVote {
+            ProgramCommand::OperatorCastVote {
                 operator,
                 meta_merkle_root,
             } => {
@@ -260,17 +302,6 @@ impl CliHandler {
                 let ncn_fee_group =
                     NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
                 distribute_base_ncn_rewards(self, &operator, ncn_fee_group, self.epoch).await
-            }
-
-            ProgramCommand::AdminSetTieBreaker { meta_merkle_root } => {
-                todo!(
-                    "Create and implement admin set tie breaker: {}",
-                    meta_merkle_root
-                );
-                // let merkle_root = hex::decode(meta_merkle_root).expect("error parsing merkle root");
-                // let mut root = [0u8; 32];
-                // root.copy_from_slice(&merkle_root);
-                // admin_set_tie_breaker(self, root).await
             }
 
             // Getters
@@ -339,7 +370,15 @@ impl CliHandler {
             }
             ProgramCommand::GetEpochState {} => {
                 let epoch_state = get_epoch_state(self, self.epoch).await?;
-                info!("Epoch State: {:?}", epoch_state);
+                let current_slot = self.rpc_client.get_slot().await?;
+                info!(
+                    "\n\n--- Epoch State ---\nEpoch: {}\nSlot consensus {} {}\nDistribute Progress: {:?}",
+                    epoch_state.epoch(),
+                    epoch_state.slot_consensus_reached(),
+                    current_slot,
+                    epoch_state.total_distribution_progress()
+                );
+                // info!("Epoch State: {:?}", epoch_state);
                 Ok(())
             }
             ProgramCommand::GetStakePool {} => {
@@ -353,19 +392,92 @@ impl CliHandler {
                 Ok(())
             }
             ProgramCommand::GetBaseRewardRouter {} => {
+                let total_rewards_to_be_distributed =
+                    get_total_rewards_to_be_distributed(self, self.epoch).await?;
                 let base_reward_router = get_base_reward_router(self, self.epoch).await?;
-                info!("Base Reward Router: {:?}", base_reward_router);
-                Ok(())
-            }
-            ProgramCommand::GetBaseRewardReceiver {} => {
-                let base_reward_receiver = get_base_reward_receiver(self, self.epoch).await?;
+                let (base_reward_receiver_address, base_reward_receiver_account) =
+                    get_base_reward_receiver(self, self.epoch).await?;
                 let rent = self
                     .rpc_client
                     .get_minimum_balance_for_rent_exemption(0)
                     .await?;
+                // info!("Base Reward Router: {:?}", base_reward_router);
+                info!(
+                    "\n\n --- Base Reward Router ---\ntotal to distribute: {}\nreceiver: {}: {}\nrewards in receiver: {}\nrewards processed: {}\nbase fee group reward: {}\nncn fee group reward: {}\n",
+                    total_rewards_to_be_distributed,
+                    base_reward_receiver_address,
+                    base_reward_receiver_account.lamports,
+                    base_reward_receiver_account.lamports - rent,
+                    base_reward_router.rewards_processed(),
+                    base_reward_router.base_fee_group_reward(BaseFeeGroup::default()).unwrap(),
+                    base_reward_router.ncn_fee_group_rewards(NcnFeeGroup::default()).unwrap()
+                );
+                Ok(())
+            }
+            ProgramCommand::GetNcnRewardRouters {} => {
+                let all_operators = get_all_operators_in_ncn(self).await?;
+                let rent = self
+                    .rpc_client
+                    .get_minimum_balance_for_rent_exemption(0)
+                    .await?;
+                let epoch_snapshot = get_epoch_snapshot(self, self.epoch).await?;
+                let fees = epoch_snapshot.fees();
 
-                info!("Base Reward Receiver: {} {:?}", rent, base_reward_receiver);
+                let mut valid_ncn_groups: Vec<NcnFeeGroup> = Vec::new();
+                for group in NcnFeeGroup::all_groups() {
+                    if fees.ncn_fee_bps(group)? > 0 {
+                        valid_ncn_groups.push(group);
+                    }
+                }
 
+                for operator in all_operators.iter() {
+                    for group in valid_ncn_groups.iter() {
+                        let ncn_reward_router =
+                            get_ncn_reward_router(self, *group, operator, self.epoch).await?;
+                        let (ncn_reward_receiver_address, ncn_reward_receiver_account) =
+                            get_ncn_reward_receiver(self, *group, operator, self.epoch).await?;
+
+                        let mut routes = String::new();
+                        for vault_route in ncn_reward_router.vault_reward_routes() {
+                            if !vault_route.is_empty() {
+                                routes.push_str(&format!(
+                                    "{:?}: {}\n",
+                                    vault_route.vault(),
+                                    vault_route.rewards()
+                                ));
+                            }
+                        }
+
+                        info!(
+                            "\n\n --- NCN Reward Router ---\noperator: {}\ngroup: {:?}\nreceiver: {} {}\nrewards in receiver: {}\nrewards processed: {}\noperator rewards: {}\n{}\n",
+                            operator,
+                            group,
+                            ncn_reward_receiver_address,
+                            ncn_reward_receiver_account.lamports,
+                            ncn_reward_receiver_account.lamports - rent,
+                            ncn_reward_router.rewards_processed(),
+                            ncn_reward_router.operator_rewards(),
+                            routes
+                        );
+                    }
+                }
+
+                Ok(())
+            }
+            ProgramCommand::GetAccountPayer {} => {
+                let account_payer = get_account_payer(self).await?;
+                info!(
+                    "\n\n--- Account Payer ---\nBalance: {}\n",
+                    lamports_to_sol(account_payer.lamports)
+                );
+                Ok(())
+            }
+            ProgramCommand::GetTotalEpochRentCost {} => {
+                let total_epoch_rent_cost = get_total_epoch_rent_cost(self).await?;
+                info!(
+                    "\n\n--- Total Epoch Rent Cost ---\nCost: {}\n",
+                    lamports_to_sol(total_epoch_rent_cost)
+                );
                 Ok(())
             }
 

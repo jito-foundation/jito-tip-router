@@ -23,6 +23,8 @@ pub struct EpochState {
     pub epoch: u64,
     pub bump: u8,
     pub slot_created: u64,
+    pub was_tie_breaker_set: bool,
+    pub slot_consensus_reached: u64,
     pub operator_count: u64,
     pub vault_count: u64,
     pub account_status: EpochAccountStatus,

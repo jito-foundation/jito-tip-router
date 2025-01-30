@@ -20,14 +20,11 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -41,14 +38,14 @@ export function getReallocOperatorSnapshotDiscriminatorBytes() {
 export type ReallocOperatorSnapshotInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
   TAccountEpochState extends string | IAccountMeta<string> = string,
-  TAccountNcnConfig extends string | IAccountMeta<string> = string,
+  TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountRestakingConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountOperator extends string | IAccountMeta<string> = string,
   TAccountNcnOperatorState extends string | IAccountMeta<string> = string,
   TAccountEpochSnapshot extends string | IAccountMeta<string> = string,
   TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountAccountPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -60,9 +57,9 @@ export type ReallocOperatorSnapshotInstruction<
       TAccountEpochState extends string
         ? WritableAccount<TAccountEpochState>
         : TAccountEpochState,
-      TAccountNcnConfig extends string
-        ? ReadonlyAccount<TAccountNcnConfig>
-        : TAccountNcnConfig,
+      TAccountConfig extends string
+        ? ReadonlyAccount<TAccountConfig>
+        : TAccountConfig,
       TAccountRestakingConfig extends string
         ? ReadonlyAccount<TAccountRestakingConfig>
         : TAccountRestakingConfig,
@@ -79,10 +76,9 @@ export type ReallocOperatorSnapshotInstruction<
       TAccountOperatorSnapshot extends string
         ? WritableAccount<TAccountOperatorSnapshot>
         : TAccountOperatorSnapshot,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
+      TAccountAccountPayer extends string
+        ? WritableAccount<TAccountAccountPayer>
+        : TAccountAccountPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -131,66 +127,66 @@ export function getReallocOperatorSnapshotInstructionDataCodec(): Codec<
 
 export type ReallocOperatorSnapshotInput<
   TAccountEpochState extends string = string,
-  TAccountNcnConfig extends string = string,
+  TAccountConfig extends string = string,
   TAccountRestakingConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountOperator extends string = string,
   TAccountNcnOperatorState extends string = string,
   TAccountEpochSnapshot extends string = string,
   TAccountOperatorSnapshot extends string = string,
-  TAccountPayer extends string = string,
+  TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   epochState: Address<TAccountEpochState>;
-  ncnConfig: Address<TAccountNcnConfig>;
+  config: Address<TAccountConfig>;
   restakingConfig: Address<TAccountRestakingConfig>;
   ncn: Address<TAccountNcn>;
   operator: Address<TAccountOperator>;
   ncnOperatorState: Address<TAccountNcnOperatorState>;
   epochSnapshot: Address<TAccountEpochSnapshot>;
   operatorSnapshot: Address<TAccountOperatorSnapshot>;
-  payer: TransactionSigner<TAccountPayer>;
+  accountPayer: Address<TAccountAccountPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: ReallocOperatorSnapshotInstructionDataArgs['epoch'];
 };
 
 export function getReallocOperatorSnapshotInstruction<
   TAccountEpochState extends string,
-  TAccountNcnConfig extends string,
+  TAccountConfig extends string,
   TAccountRestakingConfig extends string,
   TAccountNcn extends string,
   TAccountOperator extends string,
   TAccountNcnOperatorState extends string,
   TAccountEpochSnapshot extends string,
   TAccountOperatorSnapshot extends string,
-  TAccountPayer extends string,
+  TAccountAccountPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: ReallocOperatorSnapshotInput<
     TAccountEpochState,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountRestakingConfig,
     TAccountNcn,
     TAccountOperator,
     TAccountNcnOperatorState,
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot,
-    TAccountPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): ReallocOperatorSnapshotInstruction<
   TProgramAddress,
   TAccountEpochState,
-  TAccountNcnConfig,
+  TAccountConfig,
   TAccountRestakingConfig,
   TAccountNcn,
   TAccountOperator,
   TAccountNcnOperatorState,
   TAccountEpochSnapshot,
   TAccountOperatorSnapshot,
-  TAccountPayer,
+  TAccountAccountPayer,
   TAccountSystemProgram
 > {
   // Program address.
@@ -200,7 +196,7 @@ export function getReallocOperatorSnapshotInstruction<
   // Original accounts.
   const originalAccounts = {
     epochState: { value: input.epochState ?? null, isWritable: true },
-    ncnConfig: { value: input.ncnConfig ?? null, isWritable: false },
+    config: { value: input.config ?? null, isWritable: false },
     restakingConfig: {
       value: input.restakingConfig ?? null,
       isWritable: false,
@@ -216,7 +212,7 @@ export function getReallocOperatorSnapshotInstruction<
       value: input.operatorSnapshot ?? null,
       isWritable: true,
     },
-    payer: { value: input.payer ?? null, isWritable: true },
+    accountPayer: { value: input.accountPayer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -237,14 +233,14 @@ export function getReallocOperatorSnapshotInstruction<
   const instruction = {
     accounts: [
       getAccountMeta(accounts.epochState),
-      getAccountMeta(accounts.ncnConfig),
+      getAccountMeta(accounts.config),
       getAccountMeta(accounts.restakingConfig),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.operator),
       getAccountMeta(accounts.ncnOperatorState),
       getAccountMeta(accounts.epochSnapshot),
       getAccountMeta(accounts.operatorSnapshot),
-      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.accountPayer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -254,14 +250,14 @@ export function getReallocOperatorSnapshotInstruction<
   } as ReallocOperatorSnapshotInstruction<
     TProgramAddress,
     TAccountEpochState,
-    TAccountNcnConfig,
+    TAccountConfig,
     TAccountRestakingConfig,
     TAccountNcn,
     TAccountOperator,
     TAccountNcnOperatorState,
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot,
-    TAccountPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >;
 
@@ -275,14 +271,14 @@ export type ParsedReallocOperatorSnapshotInstruction<
   programAddress: Address<TProgram>;
   accounts: {
     epochState: TAccountMetas[0];
-    ncnConfig: TAccountMetas[1];
+    config: TAccountMetas[1];
     restakingConfig: TAccountMetas[2];
     ncn: TAccountMetas[3];
     operator: TAccountMetas[4];
     ncnOperatorState: TAccountMetas[5];
     epochSnapshot: TAccountMetas[6];
     operatorSnapshot: TAccountMetas[7];
-    payer: TAccountMetas[8];
+    accountPayer: TAccountMetas[8];
     systemProgram: TAccountMetas[9];
   };
   data: ReallocOperatorSnapshotInstructionData;
@@ -310,14 +306,14 @@ export function parseReallocOperatorSnapshotInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       epochState: getNextAccount(),
-      ncnConfig: getNextAccount(),
+      config: getNextAccount(),
       restakingConfig: getNextAccount(),
       ncn: getNextAccount(),
       operator: getNextAccount(),
       ncnOperatorState: getNextAccount(),
       epochSnapshot: getNextAccount(),
       operatorSnapshot: getNextAccount(),
-      payer: getNextAccount(),
+      accountPayer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getReallocOperatorSnapshotInstructionDataDecoder().decode(

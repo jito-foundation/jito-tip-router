@@ -34,11 +34,11 @@ pub async fn get_ncn_config(
 /// Generate and send a CastVote instruction with the merkle root.
 pub async fn cast_vote(
     client: &EllipsisClient,
-    _payer: &Keypair,
+    payer: &Keypair,
     tip_router_program_id: &Pubkey,
     ncn: Pubkey,
     operator: Pubkey,
-    operator_admin: &Keypair,
+    operator_voter: &Keypair,
     meta_merkle_root: [u8; 32],
     epoch: u64,
 ) -> EllipsisClientResult<Signature> {
@@ -61,17 +61,19 @@ pub async fn cast_vote(
         .epoch_snapshot(epoch_snapshot)
         .operator_snapshot(operator_snapshot)
         .operator(operator)
-        .operator_admin(operator_admin.pubkey())
+        .operator_voter(operator_voter.pubkey())
         .meta_merkle_root(meta_merkle_root)
         .epoch(epoch)
         .instruction();
 
     // Until we actually want to start voting on live or test NCN
-    let ix = spl_memo::build_memo(&meta_merkle_root.to_vec(), &[&operator_admin.pubkey()]);
+    let ix = spl_memo::build_memo(&meta_merkle_root.to_vec(), &[&operator_voter.pubkey()]);
     info!("Submitting meta merkle root {:?}", meta_merkle_root);
 
-    let tx = Transaction::new_with_payer(&[ix], Some(&operator_admin.pubkey()));
-    client.process_transaction(tx, &[operator_admin]).await
+    let tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
+    client
+        .process_transaction(tx, &[payer, operator_voter])
+        .await
 }
 
 pub async fn set_merkle_roots_batched(
