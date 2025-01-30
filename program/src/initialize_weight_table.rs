@@ -23,11 +23,11 @@ pub fn process_initialize_weight_table(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
-    VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
+    EpochState::load_and_check_is_closing(program_id, epoch_state, ncn.key, epoch, false)?;
+    VaultRegistry::load(program_id, vault_registry, ncn.key, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
-    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
+    EpochMarker::check_dne(program_id, epoch_marker, ncn.key, epoch)?;
 
     load_system_account(weight_table, true)?;
     load_system_program(system_program)?;

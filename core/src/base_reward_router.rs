@@ -15,8 +15,8 @@ use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     ballot_box::BallotBox, base_fee_group::BaseFeeGroup, constants::MAX_OPERATORS,
-    discriminators::Discriminators, epoch_state::EpochState, error::TipRouterError, fees::Fees,
-    loaders::check_load, ncn_fee_group::NcnFeeGroup,
+    discriminators::Discriminators, error::TipRouterError, fees::Fees, loaders::check_load,
+    ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -108,15 +108,6 @@ impl BaseRewardRouter {
         self.reset_routing_state();
     }
 
-    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
-        if epoch_state.epoch().ne(&self.epoch()) {
-            msg!("Base Reward Router epoch does not match Epoch State");
-            return Err(TipRouterError::CannotCloseAccount);
-        }
-
-        Ok(())
-    }
-
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -142,9 +133,9 @@ impl BaseRewardRouter {
 
     pub fn load(
         program_id: &Pubkey,
+        account: &AccountInfo,
         ncn: &Pubkey,
         epoch: u64,
-        account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
@@ -155,6 +146,15 @@ impl BaseRewardRouter {
             Some(Self::DISCRIMINATOR),
             expect_writable,
         )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        Self::load(program_id, account_to_close, ncn, epoch, true)
     }
 
     // ----------------- ROUTE STATE TRACKING --------------
@@ -899,6 +899,15 @@ impl BaseRewardReceiver {
             None,
             expect_writable,
         )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        Self::load(program_id, account_to_close, ncn, epoch, true)
     }
 
     #[inline(always)]

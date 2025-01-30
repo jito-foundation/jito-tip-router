@@ -26,7 +26,7 @@ pub fn process_switchboard_set_weight(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     WeightTable::load(program_id, weight_table, ncn.key, epoch, true)?;
 

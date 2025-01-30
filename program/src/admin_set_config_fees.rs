@@ -26,7 +26,7 @@ pub fn process_admin_set_config_fees(
 
     load_signer(fee_admin, true)?;
 
-    Config::load(program_id, ncn_account.key, config, true)?;
+    Config::load(program_id, config, ncn_account.key, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
 
     let epoch = Clock::get()?.epoch;

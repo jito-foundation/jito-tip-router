@@ -209,8 +209,8 @@ impl VaultRegistry {
 
     pub fn load(
         program_id: &Pubkey,
-        ncn: &Pubkey,
         account: &AccountInfo,
+        ncn: &Pubkey,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda = Self::find_program_address(program_id, ncn).0;

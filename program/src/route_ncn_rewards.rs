@@ -25,7 +25,7 @@ pub fn process_route_ncn_rewards(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     Operator::load(&jito_restaking_program::id(), operator, false)?;
     NcnRewardReceiver::load(
@@ -42,19 +42,19 @@ pub fn process_route_ncn_rewards(
 
     OperatorSnapshot::load(
         program_id,
+        operator_snapshot,
         operator.key,
         ncn.key,
         epoch,
-        operator_snapshot,
         false,
     )?;
     NcnRewardRouter::load(
         program_id,
+        ncn_reward_router,
         ncn_fee_group,
         operator.key,
         ncn.key,
         epoch,
-        ncn_reward_router,
         true,
     )?;
 

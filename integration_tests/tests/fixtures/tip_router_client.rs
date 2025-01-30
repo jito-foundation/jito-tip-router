@@ -294,7 +294,7 @@ impl TipRouterClient {
         // Setup account payer
         let (account_payer, _, _) =
             AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
-        self.airdrop(&account_payer, 10.0).await?;
+        self.airdrop(&account_payer, 100.0).await?;
 
         let ncn_admin_pubkey = ncn_admin.pubkey();
         self.initialize_config(

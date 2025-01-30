@@ -20,9 +20,9 @@ pub fn process_admin_set_tie_breaker(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    BallotBox::load(program_id, ncn.key, epoch, ballot_box, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    BallotBox::load(program_id, ballot_box, ncn.key, epoch, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     load_signer(tie_breaker_admin, false)?;
 

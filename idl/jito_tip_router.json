@@ -2618,11 +2618,17 @@
             }
           },
           {
+            "name": "isClosing",
+            "type": {
+              "defined": "PodBool"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                1024
+                1023
               ]
             }
           }
@@ -3865,8 +3871,13 @@
     },
     {
       "code": 8784,
-      "name": "CannotVoteWithZeroStake",
-      "msg": "Cannot vote with 0 stake"
+      "name": "EpochIsClosingDown",
+      "msg": "Epoch is closing down"
+    },
+    {
+      "code": 8785,
+      "name": "MarkerExists",
+      "msg": "Marker exists"
     }
   ],
   "metadata": {

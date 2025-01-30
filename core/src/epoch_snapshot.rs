@@ -8,12 +8,12 @@ use jito_bytemuck::{
 };
 use jito_vault_core::vault_operator_delegation::VaultOperatorDelegation;
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     base_fee_group::BaseFeeGroup, constants::MAX_VAULTS, discriminators::Discriminators,
-    epoch_state::EpochState, error::TipRouterError, fees::Fees, ncn_fee_group::NcnFeeGroup,
+    error::TipRouterError, fees::Fees, loaders::check_load, ncn_fee_group::NcnFeeGroup,
     stake_weight::StakeWeights, weight_table::WeightTable,
 };
 
@@ -79,15 +79,6 @@ impl EpochSnapshot {
         }
     }
 
-    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
-        if epoch_state.epoch().ne(&self.epoch()) {
-            msg!("Epoch Snapshot epoch does not match Epoch State");
-            return Err(TipRouterError::CannotCloseAccount);
-        }
-
-        Ok(())
-    }
-
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -103,9 +94,9 @@ impl EpochSnapshot {
     pub fn find_program_address(
         program_id: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(ncn, ncn_epoch);
+        let seeds = Self::seeds(ncn, epoch);
         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
         (pda, bump, seeds)
@@ -113,35 +104,28 @@ impl EpochSnapshot {
 
     pub fn load(
         program_id: &Pubkey,
+        account: &AccountInfo,
         ncn: &Pubkey,
-        ncn_epoch: u64,
-        epoch_snapshot: &AccountInfo,
+        epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if epoch_snapshot.owner.ne(program_id) {
-            msg!("Epoch Snapshot account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-        if epoch_snapshot.data_is_empty() {
-            msg!("Epoch Snapshot account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if expect_writable && !epoch_snapshot.is_writable {
-            msg!("Epoch Snapshot account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if epoch_snapshot.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Epoch Snapshot account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if epoch_snapshot
-            .key
-            .ne(&Self::find_program_address(program_id, ncn, ncn_epoch).0)
-        {
-            msg!("Epoch Snapshot account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
+        let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
+        check_load(
+            program_id,
+            account,
+            &expected_pda,
+            Some(Self::DISCRIMINATOR),
+            expect_writable,
+        )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        Self::load(program_id, account_to_close, ncn, epoch, true)
     }
 
     pub fn epoch(&self) -> u64 {
@@ -330,15 +314,6 @@ impl OperatorSnapshot {
         Ok(())
     }
 
-    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
-        if epoch_state.epoch().ne(&self.epoch()) {
-            msg!("Operator Snapshot epoch does not match Epoch State");
-            return Err(TipRouterError::CannotCloseAccount);
-        }
-
-        Ok(())
-    }
-
     pub fn seeds(operator: &Pubkey, ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -356,9 +331,9 @@ impl OperatorSnapshot {
         program_id: &Pubkey,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(operator, ncn, ncn_epoch);
+        let seeds = Self::seeds(operator, ncn, epoch);
         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
         (pda, bump, seeds)
@@ -366,36 +341,33 @@ impl OperatorSnapshot {
 
     pub fn load(
         program_id: &Pubkey,
+        account: &AccountInfo,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
-        operator_snapshot: &AccountInfo,
+        epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        if operator_snapshot.owner.ne(program_id) {
-            msg!("Operator Snapshot account has an invalid owner");
-            return Err(ProgramError::InvalidAccountOwner);
-        }
-        if operator_snapshot.data_is_empty() {
-            msg!("Operator Snapshot account data is empty");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if expect_writable && !operator_snapshot.is_writable {
-            msg!("Operator Snapshot account is not writable");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if operator_snapshot.data.borrow()[0].ne(&Self::DISCRIMINATOR) {
-            msg!("Operator Snapshot account discriminator is invalid");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if operator_snapshot
-            .key
-            .ne(&Self::find_program_address(program_id, operator, ncn, ncn_epoch).0)
-        {
-            msg!("Operator Snapshot account is not at the correct PDA");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        Ok(())
+        let expected_pda = Self::find_program_address(program_id, operator, ncn, epoch).0;
+        check_load(
+            program_id,
+            account,
+            &expected_pda,
+            Some(Self::DISCRIMINATOR),
+            expect_writable,
+        )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        let account_data = account_to_close.try_borrow_data()?;
+        let account_struct = Self::try_from_slice_unchecked(&account_data)?;
+        let operator = *account_struct.operator();
+
+        Self::load(program_id, account_to_close, &operator, ncn, epoch, true)
     }
 
     pub fn epoch(&self) -> u64 {
@@ -705,237 +677,6 @@ impl fmt::Display for OperatorSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn test_epoch_snapshot_load() {
-            let program_id = Pubkey::new_unique();
-            let ncn = Pubkey::new_unique();
-            let epoch = 1;
-            let mut lamports = 0;
-
-            let (address, _, _) = EpochSnapshot::find_program_address(&program_id, &ncn, epoch);
-            let mut data = [0u8; EpochSnapshot::SIZE];
-
-            // Set discriminator
-            data[0] = EpochSnapshot::DISCRIMINATOR;
-
-            // Test 1: Valid case - should succeed
-            let account = AccountInfo::new(
-                &address,
-                false,
-                false,
-                &mut lamports,
-                &mut data,
-                &program_id,
-                false,
-                0,
-            );
-
-            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, false);
-            assert!(result.is_ok());
-
-            // Test 2: Invalid owner
-            let wrong_program_id = Pubkey::new_unique();
-            let account = AccountInfo::new(
-                &address,
-                false,
-                false,
-                &mut lamports,
-                &mut data,
-                &wrong_program_id,
-                false,
-                0,
-            );
-
-            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, false);
-            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
-
-            // Test 3: Empty data
-            let mut empty_data = [0u8; 0];
-            let account = AccountInfo::new(
-                &address,
-                false,
-                false,
-                &mut lamports,
-                &mut empty_data,
-                &program_id,
-                false,
-                0,
-            );
-
-            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, false);
-            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-            // Test 4: Not writable when expected
-            let account = AccountInfo::new(
-                &address,
-                false,
-                false, // not writable
-                &mut lamports,
-                &mut data,
-                &program_id,
-                false,
-                0,
-            );
-
-            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, true);
-            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-            // Test 5: Invalid discriminator
-            let mut bad_discriminator_data = [0u8; EpochSnapshot::SIZE];
-            bad_discriminator_data[0] = EpochSnapshot::DISCRIMINATOR + 1; // wrong discriminator
-            let account = AccountInfo::new(
-                &address,
-                false,
-                false,
-                &mut lamports,
-                &mut bad_discriminator_data,
-                &program_id,
-                false,
-                0,
-            );
-
-            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, false);
-            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-            // Test 6: Wrong PDA address
-            let wrong_address = Pubkey::new_unique();
-            let account = AccountInfo::new(
-                &wrong_address,
-                false,
-                false,
-                &mut lamports,
-                &mut data,
-                &program_id,
-                false,
-                0,
-            );
-
-            let result = EpochSnapshot::load(&program_id, &ncn, epoch, &account, false);
-            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-        }
-
-        #[test]
-        fn test_operator_snapshot_load() {
-            let program_id = Pubkey::new_unique();
-            let operator = Pubkey::new_unique();
-            let ncn = Pubkey::new_unique();
-            let epoch = 1;
-            let mut lamports = 0;
-
-            let (address, _, _) =
-                OperatorSnapshot::find_program_address(&program_id, &operator, &ncn, epoch);
-            let mut data = [0u8; OperatorSnapshot::SIZE];
-
-            // Set discriminator
-            data[0] = OperatorSnapshot::DISCRIMINATOR;
-
-            // Test 1: Valid case - should succeed
-            let account = AccountInfo::new(
-                &address,
-                false,
-                false,
-                &mut lamports,
-                &mut data,
-                &program_id,
-                false,
-                0,
-            );
-
-            let result =
-                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, false);
-            assert!(result.is_ok());
-
-            // Test 2: Invalid owner
-            let wrong_program_id = Pubkey::new_unique();
-            let account = AccountInfo::new(
-                &address,
-                false,
-                false,
-                &mut lamports,
-                &mut data,
-                &wrong_program_id,
-                false,
-                0,
-            );
-
-            let result =
-                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, false);
-            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountOwner);
-
-            // Test 3: Empty data
-            let mut empty_data = [0u8; 0];
-            let account = AccountInfo::new(
-                &address,
-                false,
-                false,
-                &mut lamports,
-                &mut empty_data,
-                &program_id,
-                false,
-                0,
-            );
-
-            let result =
-                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, false);
-            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-            // Test 4: Not writable when expected
-            let account = AccountInfo::new(
-                &address,
-                false,
-                false, // not writable
-                &mut lamports,
-                &mut data,
-                &program_id,
-                false,
-                0,
-            );
-
-            let result =
-                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, true);
-            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-            // Test 5: Invalid discriminator
-            let mut bad_discriminator_data = [0u8; OperatorSnapshot::SIZE];
-            bad_discriminator_data[0] = OperatorSnapshot::DISCRIMINATOR + 1; // wrong discriminator
-            let account = AccountInfo::new(
-                &address,
-                false,
-                false,
-                &mut lamports,
-                &mut bad_discriminator_data,
-                &program_id,
-                false,
-                0,
-            );
-
-            let result =
-                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, false);
-            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-
-            // Test 6: Wrong PDA address
-            let wrong_address = Pubkey::new_unique();
-            let account = AccountInfo::new(
-                &wrong_address,
-                false,
-                false,
-                &mut lamports,
-                &mut data,
-                &program_id,
-                false,
-                0,
-            );
-
-            let result =
-                OperatorSnapshot::load(&program_id, &operator, &ncn, epoch, &account, false);
-            assert_eq!(result.err().unwrap(), ProgramError::InvalidAccountData);
-        }
-    }
 
     #[test]
     fn test_operator_snapshot_size() {

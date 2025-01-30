@@ -24,11 +24,11 @@ pub fn process_initialize_base_reward_router(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
+    EpochState::load_and_check_is_closing(program_id, epoch_state, ncn.key, epoch, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
-    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
+    EpochMarker::check_dne(program_id, epoch_marker, ncn.key, epoch)?;
 
     load_system_account(base_reward_router, true)?;
     load_system_program(system_program)?;

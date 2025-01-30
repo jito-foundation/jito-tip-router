@@ -183,8 +183,10 @@ pub enum TipRouterError {
     CannotCloseEpochStateAccount,
     #[error("Invalid DAO wallet")]
     InvalidDaoWallet,
-    #[error("Cannot vote with 0 stake")]
-    CannotVoteWithZeroStake,
+    #[error("Epoch is closing down")]
+    EpochIsClosingDown,
+    #[error("Marker exists")]
+    MarkerExists,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

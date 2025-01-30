@@ -23,10 +23,10 @@ pub fn process_realloc_weight_table(
 
     load_system_program(system_program)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    VaultRegistry::load(program_id, vault_registry, ncn.key, false)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
     let (weight_table_pda, weight_table_bump, _) =
         WeightTable::find_program_address(program_id, ncn.key, epoch);

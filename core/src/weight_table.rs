@@ -4,13 +4,12 @@ use std::mem::size_of;
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     constants::{MAX_ST_MINTS, MAX_VAULTS},
     discriminators::Discriminators,
-    epoch_state::EpochState,
     error::TipRouterError,
     loaders::check_load,
     vault_registry::{StMintEntry, VaultEntry},
@@ -56,15 +55,6 @@ impl WeightTable {
             vault_registry: [VaultEntry::default(); MAX_VAULTS],
             table: [WeightEntry::default(); MAX_ST_MINTS],
         }
-    }
-
-    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
-        if epoch_state.epoch().ne(&self.epoch()) {
-            msg!("Weight Table epoch does not match Epoch State");
-            return Err(TipRouterError::CannotCloseAccount);
-        }
-
-        Ok(())
     }
 
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
@@ -279,7 +269,7 @@ impl WeightTable {
 
     pub fn load(
         program_id: &Pubkey,
-        weight_table: &AccountInfo,
+        account: &AccountInfo,
         ncn: &Pubkey,
         epoch: u64,
         expect_writable: bool,
@@ -287,11 +277,20 @@ impl WeightTable {
         let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
         check_load(
             program_id,
-            weight_table,
+            account,
             &expected_pda,
             Some(Self::DISCRIMINATOR),
             expect_writable,
         )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        Self::load(program_id, account_to_close, ncn, epoch, true)
     }
 }
 

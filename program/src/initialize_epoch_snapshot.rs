@@ -23,11 +23,11 @@ pub fn process_initialize_epoch_snapshot(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    Config::load(program_id, ncn.key, config, false)?;
+    EpochState::load_and_check_is_closing(program_id, epoch_state, ncn.key, epoch, true)?;
+    Config::load(program_id, config, ncn.key, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
-    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
+    EpochMarker::check_dne(program_id, epoch_marker, ncn.key, epoch)?;
 
     load_system_account(epoch_snapshot, true)?;
     load_system_program(system_program)?;

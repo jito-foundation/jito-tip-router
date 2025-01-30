@@ -16,8 +16,7 @@ use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     constants::MAX_VAULTS, discriminators::Discriminators, epoch_snapshot::OperatorSnapshot,
-    epoch_state::EpochState, error::TipRouterError, loaders::check_load,
-    ncn_fee_group::NcnFeeGroup,
+    error::TipRouterError, loaders::check_load, ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -98,15 +97,6 @@ impl NcnRewardRouter {
         }
     }
 
-    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
-        if epoch_state.epoch().ne(&self.epoch()) {
-            msg!("Ncn Reward Router epoch does not match Epoch State");
-            return Err(TipRouterError::CannotCloseAccount);
-        }
-
-        Ok(())
-    }
-
     pub fn seeds(
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
@@ -141,11 +131,11 @@ impl NcnRewardRouter {
 
     pub fn load(
         program_id: &Pubkey,
+        account: &AccountInfo,
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
         epoch: u64,
-        account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda =
@@ -156,6 +146,28 @@ impl NcnRewardRouter {
             &expected_pda,
             Some(Self::DISCRIMINATOR),
             expect_writable,
+        )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        let account_data = account_to_close.try_borrow_data()?;
+        let account_struct = Self::try_from_slice_unchecked(&account_data)?;
+        let ncn_fee_group = account_struct.ncn_fee_group();
+        let operator = *account_struct.operator();
+
+        Self::load(
+            program_id,
+            account_to_close,
+            ncn_fee_group,
+            &operator,
+            ncn,
+            epoch,
+            true,
         )
     }
 

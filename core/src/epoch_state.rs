@@ -311,8 +311,11 @@ pub struct EpochState {
     /// ncn distribution progress
     ncn_distribution_progress: [Progress; 2048],
 
+    /// Is closing
+    is_closing: PodBool,
+
     /// Reserved space
-    reserved: [u8; 1024],
+    reserved: [u8; 1023],
 }
 
 impl Discriminator for EpochState {
@@ -343,18 +346,9 @@ impl EpochState {
             base_distribution_progress: Progress::default(),
             ncn_distribution_progress: [Progress::default();
                 MAX_OPERATORS * NcnFeeGroup::FEE_GROUP_COUNT],
-            reserved: [0; 1024],
+            is_closing: PodBool::from(false),
+            reserved: [0; 1023],
         }
-    }
-
-    pub fn check_can_close(&self) -> Result<(), TipRouterError> {
-        // Check all other accounts are closed
-        if !self.account_status.are_all_closed() {
-            msg!("Cannot close Epoch State until all other accounts are closed");
-            return Err(TipRouterError::CannotCloseEpochStateAccount);
-        }
-
-        Ok(())
     }
 
     pub fn initialize(&mut self, ncn: &Pubkey, epoch: u64, bump: u8, slot_created: u64) {
@@ -364,7 +358,7 @@ impl EpochState {
         self.epoch = PodU64::from(epoch);
         self.slot_created = PodU64::from(slot_created);
         self.slot_consensus_reached = PodU64::from(DEFAULT_CONSENSUS_REACHED_SLOT);
-        self.reserved = [0; 1024];
+        self.reserved = [0; 1023];
     }
 
     pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {
@@ -392,9 +386,9 @@ impl EpochState {
 
     pub fn load(
         program_id: &Pubkey,
+        account: &AccountInfo,
         ncn: &Pubkey,
         epoch: u64,
-        account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
@@ -405,6 +399,48 @@ impl EpochState {
             Some(Self::DISCRIMINATOR),
             expect_writable,
         )
+    }
+
+    pub fn load_to_close(
+        account_to_close: &Self,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        if account_to_close.ncn().ne(ncn) {
+            msg!("Epoch State NCN does not match NCN");
+            return Err(TipRouterError::CannotCloseAccount.into());
+        }
+
+        if account_to_close.epoch().ne(&epoch) {
+            msg!("Epoch State epoch does not match epoch");
+            return Err(TipRouterError::CannotCloseAccount.into());
+        }
+
+        // Check all other accounts are closed
+        if !account_to_close.account_status.are_all_closed() {
+            msg!("Cannot close Epoch State until all other accounts are closed");
+            return Err(TipRouterError::CannotCloseEpochStateAccount.into());
+        }
+
+        Ok(())
+    }
+
+    pub fn load_and_check_is_closing(
+        program_id: &Pubkey,
+        account: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+        expect_writable: bool,
+    ) -> Result<(), ProgramError> {
+        let account_data = account.try_borrow_data()?;
+        let account_struct = Self::try_from_slice_unchecked(&account_data)?;
+
+        if account_struct.is_closing() {
+            msg!("Epoch is closing down");
+            return Err(TipRouterError::EpochIsClosingDown.into());
+        }
+
+        Self::load(program_id, account, ncn, epoch, expect_writable)
     }
 
     // ------------ HELPER FUNCTIONS ------------
@@ -449,6 +485,10 @@ impl EpochState {
 
     pub fn slot_consensus_reached(&self) -> u64 {
         self.slot_consensus_reached.into()
+    }
+
+    pub fn is_closing(&self) -> bool {
+        self.is_closing.into()
     }
 
     pub fn get_slot_consensus_reached(&self) -> Result<u64, TipRouterError> {
@@ -689,6 +729,10 @@ impl EpochState {
     }
 
     // ---------- CLOSERS ----------
+    pub fn set_is_closing(&mut self) {
+        self.is_closing = PodBool::from(true);
+    }
+
     pub fn close_epoch_state(&mut self) {
         self.account_status.set_epoch_state(AccountStatus::Closed);
     }

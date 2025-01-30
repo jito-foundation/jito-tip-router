@@ -192,8 +192,10 @@ export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NO_RECEIVER_PROVIDED = 
 export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT = 0x224e; // 8782
 /** InvalidDaoWallet: Invalid DAO wallet */
 export const JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET = 0x224f; // 8783
-/** CannotVoteWithZeroStake: Cannot vote with 0 stake */
-export const JITO_TIP_ROUTER_ERROR__CANNOT_VOTE_WITH_ZERO_STAKE = 0x2250; // 8784
+/** EpochIsClosingDown: Epoch is closing down */
+export const JITO_TIP_ROUTER_ERROR__EPOCH_IS_CLOSING_DOWN = 0x2250; // 8784
+/** MarkerExists: Marker exists */
+export const JITO_TIP_ROUTER_ERROR__MARKER_EXISTS = 0x2251; // 8785
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED
@@ -212,7 +214,6 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NOT_ENOUGH_EPOCHS
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
-  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_VOTE_WITH_ZERO_STAKE
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR
@@ -226,6 +227,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST
+  | typeof JITO_TIP_ROUTER_ERROR__EPOCH_IS_CLOSING_DOWN
   | typeof JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED
   | typeof JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE
@@ -244,6 +246,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_OPERATOR_VOTER
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS
+  | typeof JITO_TIP_ROUTER_ERROR__MARKER_EXISTS
   | typeof JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__MINT_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW
@@ -306,7 +309,6 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NOT_ENOUGH_EPOCHS]: `Cannot close account - Not enough epochs have passed since consensus reached`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT]: `Cannot close epoch state account - Epoch state needs all other accounts to be closed first`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
-    [JITO_TIP_ROUTER_ERROR__CANNOT_VOTE_WITH_ZERO_STAKE]: `Cannot vote with 0 stake`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR]: `Cast to u128 error`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR]: `Cast to u64 error`,
@@ -320,6 +322,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE]: `Duplicate mints in table`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION]: `Duplicate vault operator delegation`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST]: `Duplicate Vote Cast`,
+    [JITO_TIP_ROUTER_ERROR__EPOCH_IS_CLOSING_DOWN]: `Epoch is closing down`,
     [JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED]: `Epoch snapshot not finalized`,
     [JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED]: `Fee cap exceeded`,
     [JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE]: `Fee not active`,
@@ -338,6 +341,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP]: `Not a valid NCN fee group`,
     [JITO_TIP_ROUTER_ERROR__INVALID_OPERATOR_VOTER]: `Operator voter needs to sign its vote`,
     [JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS]: `Invalid slots after consensus`,
+    [JITO_TIP_ROUTER_ERROR__MARKER_EXISTS]: `Marker exists`,
     [JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND]: `Mint Entry not found`,
     [JITO_TIP_ROUTER_ERROR__MINT_IN_TABLE]: `Mint is already in the table`,
     [JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW]: `Modulo Overflow`,

@@ -16,7 +16,6 @@ use spl_math::precise_number::PreciseNumber;
 use crate::{
     constants::{precise_consensus, DEFAULT_CONSENSUS_REACHED_SLOT, MAX_OPERATORS},
     discriminators::Discriminators,
-    epoch_state::EpochState,
     error::TipRouterError,
     loaders::check_load,
     ncn_fee_group::NcnFeeGroup,
@@ -298,15 +297,6 @@ impl BallotBox {
         self.reserved = [0; 128];
     }
 
-    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
-        if epoch_state.epoch().ne(&self.epoch()) {
-            msg!("Ballot Box epoch does not match Epoch State");
-            return Err(TipRouterError::CannotCloseAccount);
-        }
-
-        Ok(())
-    }
-
     pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -332,9 +322,9 @@ impl BallotBox {
 
     pub fn load(
         program_id: &Pubkey,
+        account: &AccountInfo,
         ncn: &Pubkey,
         epoch: u64,
-        account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
@@ -345,6 +335,15 @@ impl BallotBox {
             Some(Self::DISCRIMINATOR),
             expect_writable,
         )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        Self::load(program_id, account_to_close, ncn, epoch, true)
     }
 
     pub fn epoch(&self) -> u64 {

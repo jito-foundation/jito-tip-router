@@ -36,10 +36,10 @@ pub fn process_close_epoch_account(
 
     load_system_program(system_program)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
-    NcnConfig::load(program_id, ncn.key, config, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, false)?;
-    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, false)?;
+    NcnConfig::load(program_id, config, ncn.key, false)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, false)?;
+    EpochMarker::check_dne(program_id, epoch_marker, ncn.key, epoch)?;
 
     let closing_epoch_state = account_to_close.key.eq(epoch_state.key);
 
@@ -85,6 +85,8 @@ pub fn process_close_epoch_account(
                 msg!("Not enough epochs have passed since consensus reached");
                 return Err(TipRouterError::CannotCloseAccountNotEnoughEpochs.into());
             }
+
+            epoch_state_account.set_is_closing();
         }
 
         // Account Check
@@ -101,47 +103,31 @@ pub fn process_close_epoch_account(
 
             match discriminator {
                 EpochState::DISCRIMINATOR => {
-                    epoch_state_account.check_can_close()?;
+                    EpochState::load_to_close(epoch_state_account, ncn.key, epoch)?;
                     epoch_state_account.close_epoch_state();
                 }
                 WeightTable::DISCRIMINATOR => {
-                    let account_to_close_data = account_to_close.try_borrow_data()?;
-                    let weight_table =
-                        WeightTable::try_from_slice_unchecked(&account_to_close_data)?;
-                    weight_table.check_can_close(epoch_state_account)?;
-
+                    WeightTable::load_to_close(program_id, account_to_close, ncn.key, epoch)?;
                     epoch_state_account.close_weight_table();
                 }
                 EpochSnapshot::DISCRIMINATOR => {
-                    let account_to_close_data = account_to_close.try_borrow_data()?;
-                    let epoch_snapshot =
-                        EpochSnapshot::try_from_slice_unchecked(&account_to_close_data)?;
-                    epoch_snapshot.check_can_close(epoch_state_account)?;
-
+                    EpochSnapshot::load_to_close(program_id, account_to_close, ncn.key, epoch)?;
                     epoch_state_account.close_epoch_snapshot();
                 }
                 OperatorSnapshot::DISCRIMINATOR => {
+                    OperatorSnapshot::load_to_close(program_id, account_to_close, ncn.key, epoch)?;
                     let account_to_close_data = account_to_close.try_borrow_data()?;
-                    let operator_snapshot =
+                    let account_to_close_struct =
                         OperatorSnapshot::try_from_slice_unchecked(&account_to_close_data)?;
-                    operator_snapshot.check_can_close(epoch_state_account)?;
-
-                    let ncn_operator_index = operator_snapshot.ncn_operator_index() as usize;
+                    let ncn_operator_index = account_to_close_struct.ncn_operator_index() as usize;
                     epoch_state_account.close_operator_snapshot(ncn_operator_index);
                 }
                 BallotBox::DISCRIMINATOR => {
-                    let account_to_close_data = account_to_close.try_borrow_data()?;
-                    let ballot_box = BallotBox::try_from_slice_unchecked(&account_to_close_data)?;
-                    ballot_box.check_can_close(epoch_state_account)?;
-
+                    BallotBox::load_to_close(program_id, account_to_close, ncn.key, epoch)?;
                     epoch_state_account.close_ballot_box();
                 }
                 BaseRewardRouter::DISCRIMINATOR => {
-                    let account_to_close_data = account_to_close.try_borrow_data()?;
-                    let base_reward_router =
-                        BaseRewardRouter::try_from_slice_unchecked(&account_to_close_data)?;
-                    base_reward_router.check_can_close(epoch_state_account)?;
-
+                    BaseRewardRouter::load_to_close(program_id, account_to_close, ncn.key, epoch)?;
                     let [base_reward_receiver] = optional_accounts else {
                         msg!("Base reward receiver account is missing");
                         return Err(TipRouterError::CannotCloseAccountNoReceiverProvided.into());
@@ -153,7 +139,6 @@ pub fn process_close_epoch_account(
                         epoch,
                         true,
                     )?;
-
                     BaseRewardReceiver::close(
                         program_id,
                         ncn.key,
@@ -166,10 +151,10 @@ pub fn process_close_epoch_account(
                     epoch_state_account.close_base_reward_router();
                 }
                 NcnRewardRouter::DISCRIMINATOR => {
+                    NcnRewardRouter::load_to_close(program_id, account_to_close, ncn.key, epoch)?;
                     let account_to_close_data = account_to_close.try_borrow_data()?;
                     let ncn_reward_router =
                         NcnRewardRouter::try_from_slice_unchecked(&account_to_close_data)?;
-                    ncn_reward_router.check_can_close(epoch_state_account)?;
 
                     let ncn_operator_index = ncn_reward_router.ncn_operator_index() as usize;
                     let operator = ncn_reward_router.operator();

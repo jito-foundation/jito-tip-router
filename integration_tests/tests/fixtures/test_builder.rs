@@ -333,6 +333,37 @@ impl TestBuilder {
         })
     }
 
+    // 1a. Setup Just NCN
+    pub async fn create_just_test_ncn(&mut self) -> TestResult<TestNcn> {
+        let mut restaking_program_client = self.restaking_program_client();
+
+        let mut tip_router_client = self.tip_router_client();
+
+        let ncn_root = restaking_program_client
+            .do_initialize_ncn(Some(self.context.payer.insecure_clone()))
+            .await?;
+
+        tip_router_client.setup_tip_router(&ncn_root).await?;
+
+        tip_router_client
+            .do_set_config_fees(
+                Some(300),
+                None,
+                Some(self.context.payer.pubkey()),
+                Some(270),
+                None,
+                Some(15),
+                &ncn_root,
+            )
+            .await?;
+
+        Ok(TestNcn {
+            ncn_root: ncn_root.clone(),
+            operators: vec![],
+            vaults: vec![],
+        })
+    }
+
     // 1a.
     pub async fn create_custom_test_ncn(
         &mut self,
@@ -418,7 +449,7 @@ impl TestBuilder {
         const DEPOSIT_FEE_BPS: u16 = 0;
         const WITHDRAWAL_FEE_BPS: u16 = 0;
         const REWARD_FEE_BPS: u16 = 0;
-        let mint_amount: u64 = sol_to_lamports(1_000_000.0);
+        let mint_amount: u64 = sol_to_lamports(100_000_000.0);
 
         let should_generate = token_mint.is_none();
         let pass_through = if token_mint.is_some() {
@@ -890,15 +921,14 @@ impl TestBuilder {
         let sol_rewards = lamports_to_sol(rewards);
 
         // send rewards to the base reward router
+        println!("Airdropping {} SOL to base reward receiver", sol_rewards);
         tip_router_client
             .airdrop(&base_reward_receiver, sol_rewards)
             .await?;
 
         // route rewards
+        println!("Route");
         tip_router_client.do_route_base_rewards(ncn, epoch).await?;
-        // Should be able to route twice
-        tip_router_client.do_route_base_rewards(ncn, epoch).await?;
-
         // Should be able to route twice
         tip_router_client.do_route_base_rewards(ncn, epoch).await?;
 
@@ -911,7 +941,7 @@ impl TestBuilder {
             if rewards == 0 {
                 continue;
             }
-
+            println!("Distribute Base {}", rewards);
             tip_router_client
                 .do_distribute_base_rewards(*group, ncn, epoch, pool_root)
                 .await?;
@@ -931,12 +961,15 @@ impl TestBuilder {
                         continue;
                     }
 
+                    println!("Distribute Ncn Reward {}", rewards);
                     tip_router_client
                         .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)
                         .await?;
                 }
             }
         }
+
+        println!("Done");
 
         Ok(())
     }
@@ -1284,6 +1317,14 @@ impl TestBuilder {
 
             let result = self.get_account(&epoch_state).await?;
             assert!(result.is_none());
+        }
+
+        {
+            let epoch_marker = tip_router_client
+                .get_epoch_marker(ncn, epoch_to_close)
+                .await?;
+
+            assert!(epoch_marker.slot_closed() > 0);
         }
 
         Ok(())

@@ -27,8 +27,8 @@ impl AccountPayer {
 
     pub fn load(
         program_id: &Pubkey,
-        ncn: &Pubkey,
         account: &AccountInfo,
+        ncn: &Pubkey,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let system_program_id = system_program::id();
