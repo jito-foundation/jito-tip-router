@@ -778,6 +778,10 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
     let switchboard_context = handler.switchboard_context();
     let payer = handler.keypair()?;
 
+    if switchboard_feed.eq(&Pubkey::default()) {
+        return Ok(());
+    }
+
     wait_for_x_slots_after_epoch(handler, 400).await?;
 
     // STATIC PUBKEY
