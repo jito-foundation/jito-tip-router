@@ -38,10 +38,13 @@ pub fn process_set_merkle_root(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    let tip_distribution_epoch = epoch
+        .checked_sub(1)
+        .ok_or(TipRouterError::ArithmeticUnderflowError)?;
     let (tip_distribution_address, _) = derive_tip_distribution_account_address(
         tip_distribution_program.key,
         vote_account.key,
-        epoch,
+        tip_distribution_epoch,
     );
 
     if tip_distribution_address.ne(tip_distribution_account.key) {
