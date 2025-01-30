@@ -1,9 +1,11 @@
 use std::{
-    path::{Path, PathBuf},
-    sync::{atomic::AtomicBool, Arc},
-    time::Instant,
+    path::{Path, PathBuf}, str::FromStr, sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    }, time::Instant
 };
 
+use clap_old::ArgMatches;
 use log::{info, warn};
 use solana_accounts_db::hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE};
 use solana_ledger::{
@@ -21,7 +23,9 @@ use solana_runtime::{
     snapshot_config::SnapshotConfig,
     snapshot_utils::{self, SnapshotVersion},
 };
-use solana_sdk::clock::Slot;
+use solana_sdk::{clock::Slot, pubkey::Pubkey};
+
+use crate::{arg_matches, load_and_process_ledger};
 
 // TODO: Use Result and propagate errors more gracefully
 /// Create the Bank for a desired slot for given file paths.
@@ -229,19 +233,26 @@ pub fn get_bank_from_ledger(
         }
     }
     let exit = Arc::new(AtomicBool::new(false));
-    let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
-        match bank_forks_utils::load_bank_forks(
+
+    let mut arg_matches = ArgMatches::new();
+    arg_matches::set_ledger_tool_arg_matches(
+        &mut arg_matches,
+        snapshot_config.full_snapshot_archives_dir.clone(),
+        snapshot_config.incremental_snapshot_archives_dir.clone(),
+        account_paths,
+    );
+
+    let operator_pubkey = Pubkey::from_str(&operator_address).unwrap();
+    // Call ledger_utils::load_and_process_ledger here
+    let (bank_forks, _starting_snapshot_hashes) =
+        match load_and_process_ledger::load_and_process_ledger(
+            &arg_matches,
             &genesis_config,
-            &blockstore,
-            account_paths,
-            None,
-            Some(&snapshot_config),
-            &process_options,
-            None,
-            None, // Maybe support this later, though
-            None,
-            exit,
-            false,
+            Arc::new(blockstore),
+            process_options,
+            Some(full_snapshots_path.clone()),
+            Some(incremental_snapshots_path.clone()),
+            &operator_pubkey,
         ) {
             Ok(res) => res,
             Err(e) => {
@@ -258,52 +269,84 @@ pub fn get_bank_from_ledger(
             }
         };
 
+    // let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
+    //     match bank_forks_utils::load_bank_forks(
+    //         &genesis_config,
+    //         &blockstore,
+    //         account_paths,
+    //         None,
+    //         Some(&snapshot_config),
+    //         &process_options,
+    //         None,
+    //         None, // Maybe support this later, though
+    //         None,
+    //         exit.clone(),
+    //         false,
+    //     ) {
+    //         Ok(res) => res,
+    //         Err(e) => {
+    //             datapoint_error!(
+    //                 "tip_router_cli.get_bank",
+    //                 ("operator", operator_address.to_string(), String),
+    //                 ("state", "load_bank_forks", String),
+    //                 ("status", "error", String),
+    //                 ("step", 4, i64),
+    //                 ("error", format!("{:?}", e), String),
+    //                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    //             );
+    //             panic!("Failed to load bank forks: {}", e);
+    //         }
+    //     };
+
     // STEP 4: Process blockstore from root //
 
-    datapoint_info!(
-        "tip_router_cli.get_bank",
-        ("operator", operator_address, String),
-        ("state", "process_blockstore_from_root_start", String),
-        ("step", 4, i64),
-        ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
-    );
+    // datapoint_info!(
+    //     "tip_router_cli.get_bank",
+    //     ("operator", operator_address, String),
+    //     ("state", "process_blockstore_from_root_start", String),
+    //     ("step", 4, i64),
+    //     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    // );
 
-    match blockstore_processor::process_blockstore_from_root(
-        &blockstore,
-        &bank_forks,
-        &leader_schedule_cache,
-        &process_options,
-        None,
-        None,
-        None,
-        &AbsRequestSender::default(),
-    ) {
-        Ok(()) => (),
-        Err(e) => {
-            datapoint_error!(
-                "tip_router_cli.get_bank",
-                ("operator", operator_address, String),
-                ("status", "error", String),
-                ("state", "process_blockstore_from_root", String),
-                ("step", 5, i64),
-                ("error", format!("{:?}", e), String),
-                ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
-            );
-            panic!("Failed to process blockstore from root: {}", e);
-        }
-    };
+    // match blockstore_processor::process_blockstore_from_root(
+    //     &blockstore,
+    //     &bank_forks,
+    //     &leader_schedule_cache,
+    //     &process_options,
+    //     None,
+    //     None,
+    //     None,
+    //     &AbsRequestSender::default(),
+    // ) {
+    //     Ok(()) => (),
+    //     Err(e) => {
+    //         datapoint_error!(
+    //             "tip_router_cli.get_bank",
+    //             ("operator", operator_address, String),
+    //             ("status", "error", String),
+    //             ("state", "process_blockstore_from_root", String),
+    //             ("step", 5, i64),
+    //             ("error", format!("{:?}", e), String),
+    //             ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    //         );
+    //         panic!("Failed to process blockstore from root: {}", e);
+    //     }
+    // };
 
     // STEP 5: Save snapshot //
+
+    let working_bank = bank_forks.read().unwrap().working_bank();
 
     datapoint_info!(
         "tip_router_cli.get_bank",
         ("operator", operator_address, String),
         ("state", "bank_to_full_snapshot_archive_start", String),
+        ("bank_hash", working_bank.hash().to_string(), String),
         ("step", 5, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
     );
 
-    let working_bank = bank_forks.read().unwrap().working_bank();
+    exit.store(true, Ordering::Relaxed);
 
     if take_snapshot {
         let full_snapshot_archive_info = match snapshot_bank_utils::bank_to_full_snapshot_archive(

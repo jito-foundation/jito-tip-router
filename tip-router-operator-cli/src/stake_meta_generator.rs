@@ -129,6 +129,9 @@ pub fn generate_stake_meta(
     let stake_meta_coll =
         generate_stake_meta_collection(&bank, tip_distribution_program_id, tip_payment_program_id)?;
 
+    // Explicity drop to clean up disk space
+    drop(bank);
+
     Ok(stake_meta_coll)
 }
 

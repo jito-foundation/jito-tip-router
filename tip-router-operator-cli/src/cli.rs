@@ -21,9 +21,6 @@ pub struct Cli {
     pub ledger_path: PathBuf,
 
     #[arg(short, long, env)]
-    pub account_paths: Option<Vec<PathBuf>>,
-
-    #[arg(short, long, env)]
     pub full_snapshots_path: Option<PathBuf>,
 
     #[arg(short, long, env)]
