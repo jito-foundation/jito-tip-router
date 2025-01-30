@@ -20,7 +20,7 @@ use crate::{
 
 pub async fn emit_error(title: String, error: String, message: String, keeper_epoch: u64) {
     datapoint_info!(
-        "beta-trk-error",
+        "trk-error",
         ("command-title", title, String),
         ("error", error, String),
         ("message", message, String),
@@ -44,7 +44,7 @@ pub async fn emit_ncn_metrics_epoch_slot(handler: &CliHandler) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
 
     datapoint_info!(
-        "beta-trk-em-epoch-slot",
+        "trk-em-epoch-slot",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
     );
@@ -60,7 +60,7 @@ pub async fn emit_ncn_metrics_account_payer(handler: &CliHandler) -> Result<()> 
     let account_payer = get_account_payer(handler).await?;
 
     datapoint_info!(
-        "beta-trk-em-vault-ticket",
+        "trk-em-vault-ticket",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         ("account-payer", account_payer_address.to_string(), String),
@@ -77,7 +77,7 @@ pub async fn emit_ncn_metrics_vault_tickets(handler: &CliHandler) -> Result<()> 
 
     for ticket in all_tickets {
         datapoint_info!(
-            "beta-trk-em-vault-ticket",
+            "trk-em-vault-ticket",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("operator", ticket.operator.to_string(), String),
@@ -106,7 +106,7 @@ pub async fn emit_ncn_metrics_vault_operator_delegation(handler: &CliHandler) ->
 
             //TODO add delegation?
             datapoint_info!(
-                "beta-trk-em-vault-operator-delegation",
+                "trk-em-vault-operator-delegation",
                 ("current-epoch", current_epoch, i64),
                 ("current-slot", current_slot, i64),
                 ("vault", vault.to_string(), String),
@@ -133,7 +133,7 @@ pub async fn emit_ncn_metrics_operators(handler: &CliHandler) -> Result<()> {
         let operator_account = get_operator(handler, &operator).await?;
 
         datapoint_info!(
-            "beta-trk-em-operator",
+            "trk-em-operator",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("operator", operator.to_string(), String),
@@ -155,7 +155,7 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
     let vault_registry = get_vault_registry(handler).await?;
 
     datapoint_info!(
-        "beta-trk-em-vault-registry",
+        "trk-em-vault-registry",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         ("st-mints", vault_registry.st_mint_count(), i64),
@@ -170,7 +170,7 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
         let vault_account = get_vault(handler, vault.vault()).await?;
 
         datapoint_info!(
-            "beta-trk-em-vault-registry-vault",
+            "trk-em-vault-registry-vault",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("vault", vault.vault().to_string(), String),
@@ -185,7 +185,7 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
 
     for st_mint in vault_registry.st_mint_list {
         datapoint_info!(
-            "beta-trk-em-vault-registry-st-mint",
+            "trk-em-vault-registry-st-mint",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("st-mint", st_mint.st_mint().to_string(), String),
@@ -219,7 +219,7 @@ pub async fn emit_ncn_metrics_config(handler: &CliHandler) -> Result<()> {
     let current_fees = fee_config.current_fees(current_epoch);
 
     datapoint_info!(
-        "beta-trk-em-config",
+        "trk-em-config",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         (
@@ -309,7 +309,7 @@ pub async fn emit_epoch_metrics_ncn_rewards(handler: &CliHandler, epoch: u64) ->
                         continue;
                     }
                     datapoint_info!(
-                        "beta-trk-ee-epoch-ncn-vault-rewards",
+                        "trk-ee-epoch-ncn-vault-rewards",
                         ("current-epoch", current_epoch, i64),
                         ("current-slot", current_slot, i64),
                         ("keeper-epoch", epoch, i64),
@@ -321,7 +321,7 @@ pub async fn emit_epoch_metrics_ncn_rewards(handler: &CliHandler, epoch: u64) ->
                 }
 
                 datapoint_info!(
-                    "beta-trk-ee-epoch-ncn-rewards",
+                    "trk-ee-epoch-ncn-rewards",
                     ("current-epoch", current_epoch, i64),
                     ("current-slot", current_slot, i64),
                     ("keeper-epoch", epoch, i64),
@@ -373,7 +373,7 @@ pub async fn emit_epoch_metrics_base_rewards(handler: &CliHandler, epoch: u64) -
             get_base_reward_receiver(handler, epoch).await?;
 
         datapoint_info!(
-            "beta-trk-ee-epoch-base-rewards",
+            "trk-ee-epoch-base-rewards",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("keeper-epoch", epoch, i64),
@@ -443,7 +443,7 @@ pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> 
             ballot_tally.stake_weights().stake_weight();
 
             datapoint_info!(
-                "beta-trk-ee-ballot-box-votes",
+                "trk-ee-ballot-box-votes",
                 ("current-epoch", current_epoch, i64),
                 ("current-slot", current_slot, i64),
                 ("keeper-epoch", epoch, i64),
@@ -464,7 +464,7 @@ pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> 
         }
 
         datapoint_info!(
-            "beta-trk-ee-ballot-box",
+            "trk-ee-ballot-box",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("keeper-epoch", epoch, i64),
@@ -492,7 +492,7 @@ pub async fn emit_epoch_metrics_operator_snapshot(handler: &CliHandler, epoch: u
 
         if let Ok(operator_snapshot) = result {
             datapoint_info!(
-                "beta-trk-ee-operator-snapshot",
+                "trk-ee-operator-snapshot",
                 ("current-epoch", current_epoch, i64),
                 ("current-slot", current_slot, i64),
                 ("keeper-epoch", epoch, i64),
@@ -546,7 +546,7 @@ pub async fn emit_epoch_metrics_epoch_snapshot(handler: &CliHandler, epoch: u64)
         let fees = epoch_snapshot.fees();
 
         datapoint_info!(
-            "beta-trk-ee-epoch-snapshot",
+            "trk-ee-epoch-snapshot",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("keeper-epoch", epoch, i64),
@@ -594,7 +594,7 @@ pub async fn emit_epoch_metrics_weight_table(handler: &CliHandler, epoch: u64) -
             }
 
             datapoint_info!(
-                "beta-trk-ee-weight-table-entry",
+                "trk-ee-weight-table-entry",
                 ("current-epoch", current_epoch, i64),
                 ("current-slot", current_slot, i64),
                 ("keeper-epoch", epoch, i64),
@@ -604,7 +604,7 @@ pub async fn emit_epoch_metrics_weight_table(handler: &CliHandler, epoch: u64) -
         }
 
         datapoint_info!(
-            "beta-trk-ee-weight-table",
+            "trk-ee-weight-table",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("keeper-epoch", epoch, i64),
@@ -624,7 +624,7 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
 
     if is_epoch_completed {
         datapoint_info!(
-            "beta-trk-ee-state",
+            "trk-ee-state",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("keeper-epoch", epoch, i64),
@@ -682,7 +682,7 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
     }
 
     datapoint_info!(
-        "beta-trk-ee-state",
+        "trk-ee-state",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         ("keeper-epoch", epoch, i64),
