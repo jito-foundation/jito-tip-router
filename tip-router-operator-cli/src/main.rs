@@ -53,14 +53,12 @@ async fn main() -> Result<()> {
         operator_address: {}
         rpc_url: {}
         ledger_path: {}
-        account_paths: {:?}
         full_snapshots_path: {:?}
         snapshot_output_dir: {}",
         cli.keypair_path,
         cli.operator_address,
         cli.rpc_url,
         cli.ledger_path.display(),
-        cli.account_paths,
         cli.full_snapshots_path,
         cli.snapshot_output_dir.display()
     );
@@ -83,6 +81,7 @@ async fn main() -> Result<()> {
             let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
             let rpc_url = cli.rpc_url.clone();
             let cli_clone = cli.clone();
+            let mut current_epoch = rpc_client.get_epoch_info()?.epoch;
 
             if !backup_snapshots_dir.exists() {
                 info!(
@@ -130,7 +129,7 @@ async fn main() -> Result<()> {
             });
 
             if start_next_epoch {
-                wait_for_next_epoch(&rpc_client).await?;
+                current_epoch = wait_for_next_epoch(&rpc_client, current_epoch).await;
             }
 
             // Track runs that are starting right at the beginning of a new epoch
@@ -170,10 +169,7 @@ async fn main() -> Result<()> {
                 }
 
                 // Wait for epoch change
-                if let Err(e) = wait_for_next_epoch(&rpc_client).await {
-                    error!("Error waiting for next epoch: {}", e);
-                    sleep(Duration::from_secs(60)).await;
-                }
+                current_epoch = wait_for_next_epoch(&rpc_client, current_epoch).await;
 
                 new_epoch_rollover = true;
             }

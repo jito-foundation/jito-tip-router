@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::Result;
 use ellipsis_client::EllipsisClient;
-use log::info;
+use log::{error, info};
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::pubkey::Pubkey;
@@ -19,16 +19,20 @@ use crate::{
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
 const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined
 
-pub async fn wait_for_next_epoch(rpc_client: &RpcClient) -> Result<()> {
-    let current_epoch = rpc_client.get_epoch_info()?.epoch;
-
+pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> u64 {
     loop {
         tokio::time::sleep(Duration::from_secs(10)).await; // Check every 10 seconds
-        let new_epoch = rpc_client.get_epoch_info()?.epoch;
+        let new_epoch = match rpc_client.get_epoch_info() {
+            Ok(info) => info.epoch,
+            Err(e) => {
+                error!("Error getting epoch info: {:?}", e);
+                continue;
+            }
+        };
 
         if new_epoch > current_epoch {
             info!("New epoch detected: {} -> {}", current_epoch, new_epoch);
-            return Ok(());
+            return new_epoch;
         }
     }
 }
@@ -99,7 +103,7 @@ pub async fn process_epoch(
     let start = Instant::now();
 
     let ledger_path = cli_args.ledger_path.clone();
-    let account_paths = cli_args.account_paths.clone();
+    let account_paths = None;
     let full_snapshots_path = cli_args.full_snapshots_path.clone();
     let incremental_snapshots_path = cli_args.backup_snapshots_dir.clone();
     let operator_address = Pubkey::from_str(&cli_args.operator_address).unwrap();

@@ -79,20 +79,18 @@ pub async fn set_merkle_roots_batched(
     ncn_address: &Pubkey,
     keypair: &Keypair,
     tip_distribution_program: &Pubkey,
+    tip_router_program_id: &Pubkey,
     epoch: u64,
     tip_distribution_accounts: Vec<(Pubkey, TipDistributionAccount)>,
     meta_merkle_tree: MetaMerkleTree,
 ) -> Result<Vec<EllipsisClientResult<Signature>>> {
-    let ballot_box =
-        BallotBox::find_program_address(&jito_tip_router_program::id(), ncn_address, epoch).0;
+    let ballot_box = BallotBox::find_program_address(tip_router_program_id, ncn_address, epoch).0;
 
-    let config = Config::find_program_address(&jito_tip_router_program::id(), ncn_address).0;
+    let config = Config::find_program_address(tip_router_program_id, ncn_address).0;
 
-    let epoch_state =
-        EpochState::find_program_address(&jito_tip_router_program::id(), ncn_address, epoch).0;
+    let epoch_state = EpochState::find_program_address(tip_router_program_id, ncn_address, epoch).0;
 
-    let tip_distribution_config =
-        derive_config_account_address(&jito_tip_distribution_sdk::jito_tip_distribution::ID).0;
+    let tip_distribution_config = derive_config_account_address(tip_distribution_program).0;
 
     // Given a list of target TipDistributionAccounts and a meta merkle tree, fetch each meta merkle root, create its instruction, and call set_merkle_root
     let instructions = tip_distribution_accounts
