@@ -65,7 +65,7 @@ impl GeneratedMerkleTreeCollection {
             .filter(|stake_meta| stake_meta.maybe_tip_distribution_meta.is_some())
             .filter_map(|stake_meta| {
                 // Use the helper function to create tree nodes
-                let mut tree_nodes: Vec<TreeNode> = match TreeNode::vec_from_stake_meta(
+                let mut tree_nodes = match TreeNode::vec_from_stake_meta(
                     &stake_meta,
                     protocol_fee_bps,
                     ncn_address,

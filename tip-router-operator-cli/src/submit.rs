@@ -89,35 +89,30 @@ pub async fn submit_to_ncn(
         tip_router_target_epoch,
     )
     .0;
-    info!("Found ballot box address: {}", ballot_box_address);
 
     let ballot_box_account = match client.get_account(&ballot_box_address).await {
         Ok(account) => account,
         Err(e) => {
-            info!(
+            debug!(
                 "Ballot box not created yet for epoch {}: {:?}",
                 tip_router_target_epoch, e
             );
             return Ok(());
         }
     };
-    info!("Retrieved ballot box account");
 
     let ballot_box = BallotBox::try_from_slice_unchecked(&ballot_box_account.data)?;
-    info!("Deserialized ballot box data");
 
     let is_voting_valid = ballot_box.is_voting_valid(
         epoch_info.absolute_slot,
         config.valid_slots_after_consensus(),
     )?;
-    info!("Voting validity checked: {}", is_voting_valid);
 
     // If exists, look for vote from current operator
     let vote = ballot_box
         .operator_votes()
         .iter()
         .find(|vote| vote.operator() == operator_address);
-    info!("Checked for existing operator vote: {}", vote.is_some());
 
     let should_cast_vote = match vote {
         Some(vote) => {
@@ -131,7 +126,6 @@ pub async fn submit_to_ncn(
         }
         None => true,
     };
-    info!("Determined if vote should be cast: {}", should_cast_vote);
 
     if should_cast_vote && is_voting_valid {
         let res = cast_vote(

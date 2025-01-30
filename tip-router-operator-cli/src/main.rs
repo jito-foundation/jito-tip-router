@@ -26,9 +26,10 @@ async fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
-    let rpc_client = EllipsisClient::from_rpc(
+    let rpc_client = EllipsisClient::from_rpc_with_timeout(
         RpcClient::new(cli.rpc_url.clone()),
         &read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
+        60_000,
     )?;
 
     set_host_id(cli.operator_address.to_string());
