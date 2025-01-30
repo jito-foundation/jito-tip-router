@@ -33,10 +33,10 @@ async fn main() -> Result<()> {
 
     set_host_id(cli.operator_address.to_string());
 
+    // Ensure tx submission works
     let test_meta_merkle_root = [1; 32];
     let ix = spl_memo::build_memo(&test_meta_merkle_root.to_vec(), &[&keypair.pubkey()]);
-    info!("Submitting test memo {:?}", test_meta_merkle_root);
-
+    info!("Submitting test tx {:?}", test_meta_merkle_root);
     let tx = Transaction::new_with_payer(&[ix], Some(&keypair.pubkey()));
     rpc_client.process_transaction(tx, &[&keypair]).await?;
 
@@ -47,13 +47,15 @@ async fn main() -> Result<()> {
         rpc_url: {}
         ledger_path: {}
         full_snapshots_path: {:?}
-        snapshot_output_dir: {}",
+        snapshot_output_dir: {}
+        backup_snapshots_dir: {}",
         cli.keypair_path,
         cli.operator_address,
         cli.rpc_url,
         cli.ledger_path.display(),
         cli.full_snapshots_path,
-        cli.snapshot_output_dir.display()
+        cli.snapshot_output_dir.display(),
+        cli.backup_snapshots_dir.display()
     );
 
     match cli.command {
@@ -68,6 +70,17 @@ async fn main() -> Result<()> {
             override_target_slot,
         } => {
             info!("Running Tip Router...");
+            info!("NCN Address: {}", ncn_address);
+            info!(
+                "Tip Distribution Program ID: {}",
+                tip_distribution_program_id
+            );
+            info!("Tip Payment Program ID: {}", tip_payment_program_id);
+            info!("Tip Router Program ID: {}", tip_router_program_id);
+            info!("Enable Snapshots: {}", enable_snapshots);
+            info!("Num Monitored Epochs: {}", num_monitored_epochs);
+            info!("Start Next Epoch: {}", start_next_epoch);
+            info!("Override Target Slot: {:?}", override_target_slot);
 
             let rpc_client_clone = rpc_client.clone();
             let full_snapshots_path = cli.full_snapshots_path.clone().unwrap();
@@ -224,6 +237,7 @@ async fn main() -> Result<()> {
                 &ncn_address,
                 &tip_router_program_id,
                 &tip_distribution_program_id,
+                cli.submit_as_memo,
             )
             .await?;
         }

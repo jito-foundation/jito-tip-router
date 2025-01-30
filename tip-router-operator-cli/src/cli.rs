@@ -30,6 +30,9 @@ pub struct Cli {
     #[arg(short, long, env)]
     pub meta_merkle_tree_dir: PathBuf,
 
+    #[arg(short, long, env, default_value = "false")]
+    pub submit_as_memo: bool,
+
     #[command(subcommand)]
     pub command: Commands,
 }

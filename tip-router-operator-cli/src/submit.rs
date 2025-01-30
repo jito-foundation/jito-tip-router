@@ -5,7 +5,7 @@ use ellipsis_client::EllipsisClient;
 use jito_bytemuck::AccountDeserialize as JitoAccountDeserialize;
 use jito_tip_distribution_sdk::{derive_config_account_address, TipDistributionAccount};
 use jito_tip_router_core::ballot_box::BallotBox;
-use log::{debug, info};
+use log::{debug, error, info};
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
@@ -42,7 +42,7 @@ pub async fn submit_recent_epochs_to_ncn(
             continue;
         }
 
-        submit_to_ncn(
+        match submit_to_ncn(
             client,
             keypair,
             &operator_address,
@@ -51,8 +51,13 @@ pub async fn submit_recent_epochs_to_ncn(
             ncn_address,
             tip_router_program_id,
             tip_distribution_program_id,
+            cli_args.submit_as_memo,
         )
-        .await?;
+        .await
+        {
+            Ok(_) => {}
+            Err(e) => error!("Failed to submit epoch {} to NCN: {:?}", process_epoch, e),
+        }
     }
 
     Ok(())
@@ -67,6 +72,7 @@ pub async fn submit_to_ncn(
     ncn_address: &Pubkey,
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
+    submit_as_memo: bool,
 ) -> Result<(), anyhow::Error> {
     let epoch_info = client.get_epoch_info()?;
     let meta_merkle_tree = MetaMerkleTree::new_from_file(meta_merkle_tree_path)?;
@@ -78,7 +84,7 @@ pub async fn submit_to_ncn(
     let ballot_box_account = match client.get_account(&ballot_box_address).await {
         Ok(account) => account,
         Err(e) => {
-            debug!("Ballot box not created yet for epoch {}: {}", epoch, e);
+            debug!("Ballot box not created yet for epoch {}: {:?}", epoch, e);
             return Ok(());
         }
     };
@@ -119,6 +125,7 @@ pub async fn submit_to_ncn(
             keypair,
             meta_merkle_tree.merkle_root,
             epoch,
+            submit_as_memo,
         )
         .await;
 
@@ -165,7 +172,7 @@ pub async fn submit_to_ncn(
                 .await?;
 
         // For each TipDistributionAccount returned, if it has no root uploaded, upload root with set_merkle_root
-        let res = set_merkle_roots_batched(
+        match set_merkle_roots_batched(
             client,
             ncn_address,
             keypair,
@@ -175,26 +182,35 @@ pub async fn submit_to_ncn(
             tip_distribution_accounts,
             meta_merkle_tree,
         )
-        .await?;
+        .await
+        {
+            Ok(res) => {
+                let num_success = res.iter().filter(|r| r.is_ok()).count();
+                let num_failed = res.iter().filter(|r| r.is_err()).count();
 
-        let num_success = res.iter().filter(|r| r.is_ok()).count();
-        let num_failed = res.iter().filter(|r| r.is_err()).count();
-
-        datapoint_info!(
-            "tip_router_cli.set_merkle_root",
-            ("operator_address", operator_address.to_string(), String),
-            ("epoch", epoch, i64),
-            ("num_success", num_success, i64),
-            ("num_failed", num_failed, i64)
-        );
-        info!(
-            "Set merkle root for {} tip distribution accounts",
-            num_success
-        );
-        info!(
-            "Failed to set merkle root for {} tip distribution accounts",
-            num_failed
-        );
+                datapoint_info!(
+                    "tip_router_cli.set_merkle_root",
+                    ("operator_address", operator_address.to_string(), String),
+                    ("epoch", epoch, i64),
+                    ("num_success", num_success, i64),
+                    ("num_failed", num_failed, i64)
+                );
+                info!(
+                    "Set merkle root for {} tip distribution accounts, failed for {}",
+                    num_success, num_failed
+                );
+            }
+            Err(e) => {
+                datapoint_error!(
+                    "tip_router_cli.set_merkle_root",
+                    ("operator_address", operator_address.to_string(), String),
+                    ("epoch", epoch, i64),
+                    ("status", "error", String),
+                    ("error", format!("{:?}", e), String)
+                );
+                error!("Failed to set merkle roots: {:?}", e);
+            }
+        }
     }
 
     Ok(())

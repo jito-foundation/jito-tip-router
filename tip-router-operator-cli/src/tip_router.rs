@@ -41,6 +41,7 @@ pub async fn cast_vote(
     operator_voter: &Keypair,
     meta_merkle_root: [u8; 32],
     epoch: u64,
+    submit_as_memo: bool,
 ) -> EllipsisClientResult<Signature> {
     let epoch_state = EpochState::find_program_address(tip_router_program_id, &ncn, epoch).0;
 
@@ -53,21 +54,23 @@ pub async fn cast_vote(
     let operator_snapshot =
         OperatorSnapshot::find_program_address(tip_router_program_id, &operator, &ncn, epoch).0;
 
-    let _ix = CastVoteBuilder::new()
-        .epoch_state(epoch_state)
-        .config(ncn_config)
-        .ballot_box(ballot_box)
-        .ncn(ncn)
-        .epoch_snapshot(epoch_snapshot)
-        .operator_snapshot(operator_snapshot)
-        .operator(operator)
-        .operator_voter(operator_voter.pubkey())
-        .meta_merkle_root(meta_merkle_root)
-        .epoch(epoch)
-        .instruction();
+    let ix = if !submit_as_memo {
+        CastVoteBuilder::new()
+            .epoch_state(epoch_state)
+            .config(ncn_config)
+            .ballot_box(ballot_box)
+            .ncn(ncn)
+            .epoch_snapshot(epoch_snapshot)
+            .operator_snapshot(operator_snapshot)
+            .operator(operator)
+            .operator_voter(operator_voter.pubkey())
+            .meta_merkle_root(meta_merkle_root)
+            .epoch(epoch)
+            .instruction()
+    } else {
+        spl_memo::build_memo(&meta_merkle_root.to_vec(), &[&operator_voter.pubkey()])
+    };
 
-    // Until we actually want to start voting on live or test NCN
-    let ix = spl_memo::build_memo(&meta_merkle_root.to_vec(), &[&operator_voter.pubkey()]);
     info!("Submitting meta merkle root {:?}", meta_merkle_root);
 
     let tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
