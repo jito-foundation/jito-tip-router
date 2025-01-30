@@ -18,7 +18,7 @@ mod tests {
 
         // // Setup vault and tickets
         let vault_root = vault_client
-            .do_initialize_vault(0, 0, 0, 9, &ncn_root.ncn_pubkey)
+            .do_initialize_vault(0, 0, 0, 9, &ncn_root.ncn_pubkey, None)
             .await?;
         restaking_client
             .do_initialize_ncn_vault_ticket(&ncn_root, &vault_root.vault_pubkey)
@@ -115,7 +115,7 @@ mod tests {
 
         // Setup vault and tickets
         let vault_root = vault_client
-            .do_initialize_vault(0, 0, 0, 9, &ncn_root.ncn_pubkey)
+            .do_initialize_vault(0, 0, 0, 9, &ncn_root.ncn_pubkey, None)
             .await?;
         restaking_client
             .do_initialize_ncn_vault_ticket(&ncn_root, &vault_root.vault_pubkey)

@@ -40,7 +40,7 @@ pub struct Args {
         long,
         global = true,
         env = "TRANSACTION_RETRIES",
-        default_value_t = 3,
+        default_value_t = 0,
         help = "Amount of times to retry a transaction"
     )]
     pub transaction_retries: u64,
@@ -204,6 +204,14 @@ pub enum ProgramCommand {
         #[arg(long, help = "New NCN fee in basis points")]
         new_ncn_fee_bps: Option<u16>,
     },
+    AdminSetNewAdmin {
+        #[arg(long, help = "New admin address")]
+        new_admin: String,
+        #[arg(long, help = "Set fee admin")]
+        set_fee_admin: bool,
+        #[arg(long, help = "Set tie breaker admin")]
+        set_tie_breaker_admin: bool,
+    },
     AdminFundAccountPayer {
         #[arg(long, help = "Amount of SOL to fund")]
         amount_in_sol: f64,
@@ -220,6 +228,11 @@ pub enum ProgramCommand {
     CreateEpochState,
 
     CreateWeightTable,
+
+    CrankSwitchboard {
+        #[arg(long, help = "Switchboard feed address")]
+        switchboard_feed: String,
+    },
 
     SetWeight {
         #[arg(long, help = "Vault address")]

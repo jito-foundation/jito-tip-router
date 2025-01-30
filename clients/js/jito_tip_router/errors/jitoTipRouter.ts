@@ -192,6 +192,8 @@ export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NO_RECEIVER_PROVIDED = 
 export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT = 0x224e; // 8782
 /** InvalidDaoWallet: Invalid DAO wallet */
 export const JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET = 0x224f; // 8783
+/** CannotVoteWithZeroStake: Cannot vote with 0 stake */
+export const JITO_TIP_ROUTER_ERROR__CANNOT_VOTE_WITH_ZERO_STAKE = 0x2250; // 8784
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED
@@ -210,6 +212,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NOT_ENOUGH_EPOCHS
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
+  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_VOTE_WITH_ZERO_STAKE
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR
@@ -303,6 +306,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NOT_ENOUGH_EPOCHS]: `Cannot close account - Not enough epochs have passed since consensus reached`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT]: `Cannot close epoch state account - Epoch state needs all other accounts to be closed first`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
+    [JITO_TIP_ROUTER_ERROR__CANNOT_VOTE_WITH_ZERO_STAKE]: `Cannot vote with 0 stake`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR]: `Cast to u128 error`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_U64_ERROR]: `Cast to u64 error`,

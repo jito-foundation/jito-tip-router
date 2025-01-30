@@ -277,6 +277,9 @@ pub enum JitoTipRouterError {
     /// 8783 - Invalid DAO wallet
     #[error("Invalid DAO wallet")]
     InvalidDaoWallet = 0x224F,
+    /// 8784 - Cannot vote with 0 stake
+    #[error("Cannot vote with 0 stake")]
+    CannotVoteWithZeroStake = 0x2250,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

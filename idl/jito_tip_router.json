@@ -3862,6 +3862,11 @@
       "code": 8783,
       "name": "InvalidDaoWallet",
       "msg": "Invalid DAO wallet"
+    },
+    {
+      "code": 8784,
+      "name": "CannotVoteWithZeroStake",
+      "msg": "Cannot vote with 0 stake"
     }
   ],
   "metadata": {

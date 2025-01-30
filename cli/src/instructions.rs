@@ -22,19 +22,24 @@ use jito_restaking_core::{
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
 };
-use jito_tip_router_client::instructions::{
-    AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetParametersBuilder,
-    AdminSetTieBreakerBuilder, AdminSetWeightBuilder, CastVoteBuilder, CloseEpochAccountBuilder,
-    DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
-    DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
-    InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder,
-    InitializeConfigBuilder as InitializeTipRouterConfigBuilder, InitializeEpochSnapshotBuilder,
-    InitializeEpochStateBuilder, InitializeNcnRewardRouterBuilder,
-    InitializeOperatorSnapshotBuilder, InitializeVaultRegistryBuilder,
-    InitializeWeightTableBuilder, ReallocBallotBoxBuilder, ReallocBaseRewardRouterBuilder,
-    ReallocEpochStateBuilder, ReallocOperatorSnapshotBuilder, ReallocVaultRegistryBuilder,
-    ReallocWeightTableBuilder, RegisterVaultBuilder, RouteBaseRewardsBuilder,
-    RouteNcnRewardsBuilder, SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
+use jito_tip_router_client::{
+    instructions::{
+        AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
+        AdminSetParametersBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder,
+        CastVoteBuilder, CloseEpochAccountBuilder, DistributeBaseNcnRewardRouteBuilder,
+        DistributeBaseRewardsBuilder, DistributeNcnOperatorRewardsBuilder,
+        DistributeNcnVaultRewardsBuilder, InitializeBallotBoxBuilder,
+        InitializeBaseRewardRouterBuilder,
+        InitializeConfigBuilder as InitializeTipRouterConfigBuilder,
+        InitializeEpochSnapshotBuilder, InitializeEpochStateBuilder,
+        InitializeNcnRewardRouterBuilder, InitializeOperatorSnapshotBuilder,
+        InitializeVaultRegistryBuilder, InitializeWeightTableBuilder, ReallocBallotBoxBuilder,
+        ReallocBaseRewardRouterBuilder, ReallocEpochStateBuilder, ReallocOperatorSnapshotBuilder,
+        ReallocVaultRegistryBuilder, ReallocWeightTableBuilder, RegisterVaultBuilder,
+        RouteBaseRewardsBuilder, RouteNcnRewardsBuilder, SnapshotVaultOperatorDelegationBuilder,
+        SwitchboardSetWeightBuilder,
+    },
+    types::ConfigAdminRole,
 };
 use jito_tip_router_core::{
     account_payer::AccountPayer,
@@ -63,6 +68,7 @@ use log::info;
 use solana_client::rpc_config::RpcSendTransactionConfig;
 
 use solana_sdk::{
+    clock::DEFAULT_SLOTS_PER_EPOCH,
     compute_budget::ComputeBudgetInstruction,
     instruction::Instruction,
     native_token::sol_to_lamports,
@@ -76,6 +82,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use spl_associated_token_account::get_associated_token_address;
+use switchboard_on_demand_client::{CrossbarClient, FetchUpdateParams, PullFeed, QueueAccountData};
 use tokio::time::sleep;
 
 // --------------------- ADMIN ------------------------------
@@ -308,6 +315,51 @@ pub async fn admin_set_tie_breaker(
         ],
     )
     .await?;
+
+    Ok(())
+}
+
+pub async fn admin_set_new_admin(
+    handler: &CliHandler,
+    new_admin: &Pubkey,
+    set_fee_admin: bool,
+    set_tie_breaker_admin: bool,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let ncn = *handler.ncn()?;
+
+    let config_pda = TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0;
+
+    let roles = [
+        (set_fee_admin, ConfigAdminRole::FeeAdmin),
+        (set_tie_breaker_admin, ConfigAdminRole::TieBreakerAdmin),
+    ];
+
+    for (should_set, role) in roles.iter() {
+        if !should_set {
+            continue;
+        }
+
+        let mut ix = AdminSetNewAdminBuilder::new();
+        ix.config(config_pda)
+            .ncn(ncn)
+            .ncn_admin(keypair.pubkey())
+            .new_admin(*new_admin)
+            .role(*role);
+
+        send_and_log_transaction(
+            handler,
+            &[ix.instruction()],
+            &[],
+            "Admin Set New Admin",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("New Admin: {:?}", new_admin),
+                format!("Role: {:?}", role),
+            ],
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -710,6 +762,59 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     Ok(())
 }
 
+pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) -> Result<()> {
+    async fn wait_for_x_slots_after_epoch(handler: &CliHandler, slots: u64) -> Result<()> {
+        loop {
+            let current_slot = handler.rpc_client().get_slot().await?;
+            if current_slot % DEFAULT_SLOTS_PER_EPOCH > slots {
+                break;
+            }
+            sleep(Duration::from_millis(500)).await;
+        }
+        Ok(())
+    }
+
+    let client = handler.rpc_client();
+    let switchboard_context = handler.switchboard_context();
+    let payer = handler.keypair()?;
+
+    wait_for_x_slots_after_epoch(handler, 400).await?;
+
+    // STATIC PUBKEY
+    let queue_key = Pubkey::from_str("A43DyUGA7s8eXPxqEjJY6EBu1KKbNgfxF8h17VAHn13w").unwrap();
+
+    let queue = QueueAccountData::load(client, &queue_key).await.unwrap();
+    let gw = &queue.fetch_gateways(client).await.unwrap()[0];
+    let crossbar = CrossbarClient::default();
+    let (ix, _, _, _) = PullFeed::fetch_update_ix(
+        switchboard_context.clone(),
+        client,
+        FetchUpdateParams {
+            feed: *switchboard_feed,
+            payer: payer.pubkey(),
+            gateway: gw.clone(),
+            crossbar: Some(crossbar),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    send_and_log_transaction(
+        handler,
+        &[
+            ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+            ix,
+        ],
+        &[],
+        "Crank Switchboard",
+        &[format!("FEED: {:?}", switchboard_feed)],
+    )
+    .await?;
+
+    Ok(())
+}
+
 pub async fn set_weight(handler: &CliHandler, vault: &Pubkey, epoch: u64) -> Result<()> {
     let vault_account = get_vault(handler, vault).await?;
 
@@ -733,6 +838,9 @@ pub async fn set_weight_with_st_mint(
 
     let (weight_table, _, _) =
         WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    // Crank Switchboard
+    crank_switchboard(handler, switchboard_feed).await?;
 
     let set_weight_ix = SwitchboardSetWeightBuilder::new()
         .ncn(ncn)

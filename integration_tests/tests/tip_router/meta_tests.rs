@@ -19,7 +19,7 @@ mod tests {
             .add_operators_to_test_ncn(&mut test_ncn, OPERATOR_COUNT, None)
             .await?;
         fixture
-            .add_vaults_to_test_ncn(&mut test_ncn, VAULT_COUNT)
+            .add_vaults_to_test_ncn(&mut test_ncn, VAULT_COUNT, None)
             .await?;
         fixture.add_delegation_in_test_ncn(&test_ncn, 100).await?;
         fixture.add_vault_registry_to_test_ncn(&test_ncn).await?;

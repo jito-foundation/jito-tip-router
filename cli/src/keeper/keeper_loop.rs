@@ -154,7 +154,7 @@ pub async fn run_keeper(
                 continue;
             }
 
-            current_epoch = result.unwrap();
+            current_epoch = result.expect("Cannot unwrap progress_epoch result");
             last_current_epoch = last_current_epoch.max(current_epoch);
             epoch_stall = false;
         }
@@ -232,7 +232,7 @@ pub async fn run_keeper(
         }
 
         {
-            let current_state = state.current_state().unwrap();
+            let current_state = state.current_state().expect("cannot get current state");
             info!("5. Crank State [{:?}] - {}", current_state, current_epoch);
 
             let result = match current_state {
@@ -284,7 +284,7 @@ pub async fn run_keeper(
                 continue;
             }
 
-            epoch_stall = result.unwrap();
+            epoch_stall = result.expect("cannot unwrap detect_stall result");
         }
 
         {

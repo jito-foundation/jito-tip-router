@@ -410,6 +410,7 @@ impl TestBuilder {
         &mut self,
         test_ncn: &mut TestNcn,
         vault_count: usize,
+        token_mint: Option<Keypair>,
     ) -> TestResult<()> {
         let mut vault_program_client = self.vault_program_client();
         let mut restaking_program_client = self.restaking_program_client();
@@ -417,9 +418,22 @@ impl TestBuilder {
         const DEPOSIT_FEE_BPS: u16 = 0;
         const WITHDRAWAL_FEE_BPS: u16 = 0;
         const REWARD_FEE_BPS: u16 = 0;
-        const MINT_AMOUNT: u64 = 1_000_000;
+        let mint_amount: u64 = sol_to_lamports(1_000_000.0);
+
+        let should_generate = token_mint.is_none();
+        let pass_through = if token_mint.is_some() {
+            token_mint.unwrap()
+        } else {
+            Keypair::new()
+        };
 
         for _ in 0..vault_count {
+            let pass_through = if should_generate {
+                Keypair::new()
+            } else {
+                pass_through.insecure_clone()
+            };
+
             let vault_root = vault_program_client
                 .do_initialize_vault(
                     DEPOSIT_FEE_BPS,
@@ -427,6 +441,7 @@ impl TestBuilder {
                     REWARD_FEE_BPS,
                     9,
                     &self.context.payer.pubkey(),
+                    Some(pass_through),
                 )
                 .await?;
 
@@ -466,10 +481,10 @@ impl TestBuilder {
             let depositor_keypair = self.context.payer.insecure_clone();
             let depositor = depositor_keypair.pubkey();
             vault_program_client
-                .configure_depositor(&vault_root, &depositor, MINT_AMOUNT)
+                .configure_depositor(&vault_root, &depositor, mint_amount)
                 .await?;
             vault_program_client
-                .do_mint_to(&vault_root, &depositor_keypair, MINT_AMOUNT, MINT_AMOUNT)
+                .do_mint_to(&vault_root, &depositor_keypair, mint_amount, mint_amount)
                 .await
                 .unwrap();
 
@@ -567,7 +582,7 @@ impl TestBuilder {
         let mut test_ncn = self.create_test_ncn().await?;
         self.add_operators_to_test_ncn(&mut test_ncn, operator_count, operator_fees_bps)
             .await?;
-        self.add_vaults_to_test_ncn(&mut test_ncn, vault_count)
+        self.add_vaults_to_test_ncn(&mut test_ncn, vault_count, None)
             .await?;
         self.add_delegation_in_test_ncn(&test_ncn, 100).await?;
         self.add_vault_registry_to_test_ncn(&test_ncn).await?;
@@ -588,7 +603,7 @@ impl TestBuilder {
             .await?;
         self.add_operators_to_test_ncn(&mut test_ncn, operator_count, Some(operator_fees_bps))
             .await?;
-        self.add_vaults_to_test_ncn(&mut test_ncn, vault_count)
+        self.add_vaults_to_test_ncn(&mut test_ncn, vault_count, None)
             .await?;
         self.add_delegation_in_test_ncn(&test_ncn, 100).await?;
         self.add_vault_registry_to_test_ncn(&test_ncn).await?;
@@ -644,7 +659,6 @@ impl TestBuilder {
         test_ncn: &TestNcn,
     ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
-        let mut vault_client = self.vault_program_client();
 
         // Not sure if this is needed
         self.warp_slot_incremental(1000).await?;
@@ -657,13 +671,16 @@ impl TestBuilder {
             .do_full_initialize_weight_table(ncn, epoch)
             .await?;
 
-        for vault_root in test_ncn.vaults.iter() {
-            let vault = vault_client.get_vault(&vault_root.vault_pubkey).await?;
+        let vault_registry = tip_router_client.get_vault_registry(ncn).await?;
 
-            let st_mint = vault.supported_mint;
+        for entry in vault_registry.st_mint_list {
+            if entry.is_empty() {
+                continue;
+            }
 
+            let st_mint = entry.st_mint();
             tip_router_client
-                .do_switchboard_set_weight(ncn, epoch, st_mint)
+                .do_switchboard_set_weight(ncn, epoch, *st_mint)
                 .await?;
         }
 
@@ -1012,7 +1029,6 @@ impl TestBuilder {
         let mut tip_router_client = self.tip_router_client();
 
         const EXTRA_SOL_TO_AIRDROP: f64 = 0.25;
-        const LAMPORTS_PER_SIGNATURE: u64 = 5_000;
 
         let epoch_to_close = self.clock().await.epoch;
         let ncn: Pubkey = test_ncn.ncn_root.ncn_pubkey;
@@ -1022,6 +1038,12 @@ impl TestBuilder {
             .fee_config
             .base_fee_wallet(BaseFeeGroup::dao())
             .expect("No DAO wallet ( do_close_epoch_account )");
+
+        let lamports_per_signature: u64 = if dao_wallet.eq(&self.context.payer.pubkey()) {
+            5000
+        } else {
+            0
+        };
 
         let (account_payer, _, _) =
             AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
@@ -1101,7 +1123,7 @@ impl TestBuilder {
                 // DAO wallet is also the payer wallet
                 assert_eq!(
                     dao_wallet_balance_before + sol_to_lamports(EXTRA_SOL_TO_AIRDROP)
-                        - LAMPORTS_PER_SIGNATURE,
+                        - lamports_per_signature,
                     dao_wallet_balance_after
                 );
 
@@ -1170,7 +1192,7 @@ impl TestBuilder {
             // DAO wallet is also the payer wallet
             assert_eq!(
                 dao_wallet_balance_before + sol_to_lamports(EXTRA_SOL_TO_AIRDROP)
-                    - LAMPORTS_PER_SIGNATURE,
+                    - lamports_per_signature,
                 dao_wallet_balance_after
             );
 

@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     args::{Args, ProgramCommand},
@@ -13,9 +13,9 @@ use crate::{
     },
     instructions::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
-        admin_set_config_fees, admin_set_parameters, admin_set_weight,
-        create_and_add_test_operator, create_and_add_test_vault, create_ballot_box,
-        create_base_reward_router, create_epoch_snapshot, create_epoch_state,
+        admin_set_config_fees, admin_set_new_admin, admin_set_parameters, admin_set_weight,
+        crank_switchboard, create_and_add_test_operator, create_and_add_test_vault,
+        create_ballot_box, create_base_reward_router, create_epoch_snapshot, create_epoch_state,
         create_ncn_reward_router, create_operator_snapshot, create_test_ncn, create_vault_registry,
         create_weight_table, distribute_base_ncn_rewards, register_vault, route_base_rewards,
         route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
@@ -32,6 +32,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
 };
+use switchboard_on_demand_client::SbContext;
 
 pub struct CliHandler {
     pub rpc_url: String,
@@ -45,6 +46,7 @@ pub struct CliHandler {
     ncn: Option<Pubkey>,
     pub epoch: u64,
     rpc_client: RpcClient,
+    switchboard_context: Arc<SbContext>,
     pub retries: u64,
     pub priority_fee_micro_lamports: u64,
 }
@@ -78,6 +80,8 @@ impl CliHandler {
 
         let rpc_client = RpcClient::new_with_commitment(rpc_url.clone(), commitment);
 
+        let switchboard_context = SbContext::new();
+
         let mut handler = Self {
             rpc_url,
             commitment,
@@ -88,6 +92,7 @@ impl CliHandler {
             tip_distribution_program_id,
             token_program_id,
             ncn,
+            switchboard_context,
             epoch: u64::MAX,
             rpc_client,
             retries: args.transaction_retries,
@@ -109,6 +114,10 @@ impl CliHandler {
 
     pub const fn rpc_client(&self) -> &RpcClient {
         &self.rpc_client
+    }
+
+    pub const fn switchboard_context(&self) -> &Arc<SbContext> {
+        &self.switchboard_context
     }
 
     pub fn keypair(&self) -> Result<&Keypair> {
@@ -236,6 +245,14 @@ impl CliHandler {
                 )
                 .await
             }
+            ProgramCommand::AdminSetNewAdmin {
+                new_admin,
+                set_fee_admin,
+                set_tie_breaker_admin,
+            } => {
+                let new_admin = Pubkey::from_str(&new_admin).expect("error parsing new admin");
+                admin_set_new_admin(self, &new_admin, set_fee_admin, set_tie_breaker_admin).await
+            }
             ProgramCommand::AdminFundAccountPayer { amount_in_sol } => {
                 admin_fund_account_payer(self, amount_in_sol).await
             }
@@ -251,7 +268,11 @@ impl CliHandler {
             ProgramCommand::CreateEpochState {} => create_epoch_state(self, self.epoch).await,
 
             ProgramCommand::CreateWeightTable {} => create_weight_table(self, self.epoch).await,
-
+            ProgramCommand::CrankSwitchboard { switchboard_feed } => {
+                let switchboard_feed =
+                    Pubkey::from_str(&switchboard_feed).expect("error parsing switchboard feed");
+                crank_switchboard(self, &switchboard_feed).await
+            }
             ProgramCommand::SetWeight { vault } => {
                 let vault = Pubkey::from_str(&vault).expect("error parsing vault");
                 set_weight(self, &vault, self.epoch).await
