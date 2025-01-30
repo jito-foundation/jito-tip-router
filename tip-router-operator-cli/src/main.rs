@@ -81,6 +81,7 @@ async fn main() -> Result<()> {
             info!("Num Monitored Epochs: {}", num_monitored_epochs);
             info!("Start Next Epoch: {}", start_next_epoch);
             info!("Override Target Slot: {:?}", override_target_slot);
+            info!("Submit as Memo: {}", cli.submit_as_memo);
 
             let rpc_client_clone = rpc_client.clone();
             let full_snapshots_path = cli.full_snapshots_path.clone().unwrap();
