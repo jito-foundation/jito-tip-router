@@ -139,7 +139,7 @@ pub async fn submit_to_ncn(
             keypair,
             tip_router_program_id,
             *ncn_address,
-            operator_address,
+            &operator_address,
             keypair,
             meta_merkle_tree.merkle_root,
             tip_router_target_epoch,
