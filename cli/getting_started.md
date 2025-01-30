@@ -4,7 +4,7 @@
 
 | Account                    | Address                                      |
 | -------------------------- | -------------------------------------------- |
-| Test Tip Router Program ID | Ap2AH3VcZGuuauEDq87uhgjNoUKcCAafc4DTyTByLMFf |
+| Test Tip Router Program ID | RouterBmuRBkPUbgEDMtdvTZ75GBdSREZR5uGUxxxpb |
 | Test NCN                   | rYQFkFYXuDqJPoH2FvFtZTC8oC3CntgRjtNatx6q1z1  |
 
 ## Setup CLIs
