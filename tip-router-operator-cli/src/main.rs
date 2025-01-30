@@ -21,7 +21,9 @@ use ::{
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_ledger,
         load_bank_from_snapshot,
-        process_epoch::{calc_prev_epoch_and_final_slot, get_previous_epoch_last_slot, wait_for_next_epoch},
+        process_epoch::{
+            calc_prev_epoch_and_final_slot, get_previous_epoch_last_slot, wait_for_next_epoch, wait_for_optimal_incremental_snapshot,
+        },
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         OperatorState,
     },
@@ -172,9 +174,12 @@ async fn main() -> Result<()> {
                         let some_stake_meta_collection = match stake_meta_collection.to_owned() {
                             Some(collection) => collection,
                             None => {
-                                let file = cli.save_path.join(format!("{}_stake_meta_collection.json", epoch_to_process));
+                                let file = cli.save_path.join(format!(
+                                    "{}_stake_meta_collection.json",
+                                    epoch_to_process
+                                ));
                                 StakeMetaCollection::new_from_file(&file)?
-                            },
+                            }
                         };
 
                         // Generate the merkle tree collection
@@ -196,9 +201,12 @@ async fn main() -> Result<()> {
                         let some_merkle_tree_collection = match merkle_tree_collection.to_owned() {
                             Some(collection) => collection,
                             None => {
-                                let file = cli.save_path.join(format!("{}_merkle_tree_collection.json", epoch_to_process));
+                                let file = cli.save_path.join(format!(
+                                    "{}_merkle_tree_collection.json",
+                                    epoch_to_process
+                                ));
                                 GeneratedMerkleTreeCollection::new_from_file(&file)?
-                            },
+                            }
                         };
 
                         create_meta_merkle_tree(
@@ -217,7 +225,8 @@ async fn main() -> Result<()> {
                         //  separate thread
                     }
                     OperatorState::WaitForNextEpoch => {
-                        current_epoch_info = wait_for_next_epoch(&rpc_client, current_epoch_info.epoch).await;
+                        current_epoch_info =
+                            wait_for_next_epoch(&rpc_client, current_epoch_info.epoch).await;
                         // Get the last slot of the previous epoch
                         let (previous_epoch, previous_epoch_slot) =
                             if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client) {
@@ -229,6 +238,15 @@ async fn main() -> Result<()> {
                             };
                         slot_to_process = previous_epoch_slot;
                         epoch_to_process = previous_epoch;
+
+                        // TODO: When we start with wait for the next epoch, should we always wait 
+                        //  for the optimal snapshot?
+                        let incremental_snapshots_path = cli.backup_snapshots_dir.clone();
+                        wait_for_optimal_incremental_snapshot(
+                            incremental_snapshots_path,
+                            slot_to_process,
+                        )
+                        .await?;
                         stage = OperatorState::LoadBankFromSnapshot;
                     }
                 }
@@ -236,15 +254,10 @@ async fn main() -> Result<()> {
         }
         Commands::SnapshotSlot { slot } => {
             info!("Snapshotting slot...");
-            let account_paths = vec![cli.ledger_path.clone()];
 
-            get_bank_from_ledger(
-                cli.operator_address,
-                &cli.ledger_path,
-                account_paths,
-                cli.full_snapshots_path.unwrap(),
-                cli.backup_snapshots_dir,
-                &slot,
+            load_bank_from_snapshot(
+                cli,
+                slot,
                 true,
             );
         }
