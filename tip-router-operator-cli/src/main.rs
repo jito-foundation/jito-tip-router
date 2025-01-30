@@ -171,8 +171,10 @@ async fn main() -> Result<()> {
                     OperatorState::CreateMerkleTreeCollection => {
                         let some_stake_meta_collection = match stake_meta_collection.to_owned() {
                             Some(collection) => collection,
-                            // TODO: Handle this
-                            None => todo!("load stake meta from disk given desired epoch"),
+                            None => {
+                                let file = cli.save_path.join(format!("{}_stake_meta_collection.json", epoch_to_process));
+                                StakeMetaCollection::new_from_file(&file)?
+                            },
                         };
 
                         // Generate the merkle tree collection
@@ -194,9 +196,9 @@ async fn main() -> Result<()> {
                         let some_merkle_tree_collection = match merkle_tree_collection.to_owned() {
                             Some(collection) => collection,
                             None => {
-                                // TODO: Handle this
-                                todo!("load merkle tree collection from disk given desired epoch")
-                            }
+                                let file = cli.save_path.join(format!("{}_merkle_tree_collection.json", epoch_to_process));
+                                GeneratedMerkleTreeCollection::new_from_file(&file)?
+                            },
                         };
 
                         create_meta_merkle_tree(
@@ -215,7 +217,6 @@ async fn main() -> Result<()> {
                         //  separate thread
                     }
                     OperatorState::WaitForNextEpoch => {
-                        // TODO: use the epoch returned from wait_for_next_epoch
                         current_epoch_info = wait_for_next_epoch(&rpc_client, current_epoch_info.epoch).await;
                         // Get the last slot of the previous epoch
                         let (previous_epoch, previous_epoch_slot) =
