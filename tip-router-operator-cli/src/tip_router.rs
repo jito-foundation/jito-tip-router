@@ -40,21 +40,31 @@ pub async fn cast_vote(
     operator: &Pubkey,
     operator_voter: &Keypair,
     meta_merkle_root: [u8; 32],
-    epoch: u64,
+    tip_router_epoch: u64,
     submit_as_memo: bool,
 ) -> EllipsisClientResult<Signature> {
-    let epoch_state = EpochState::find_program_address(tip_router_program_id, &ncn, epoch).0;
+    let epoch_state =
+        EpochState::find_program_address(tip_router_program_id, &ncn, tip_router_epoch).0;
 
     let ncn_config = Config::find_program_address(tip_router_program_id, &ncn).0;
 
-    let ballot_box = BallotBox::find_program_address(tip_router_program_id, &ncn, epoch).0;
+    let ballot_box =
+        BallotBox::find_program_address(tip_router_program_id, &ncn, tip_router_epoch).0;
 
-    let epoch_snapshot = EpochSnapshot::find_program_address(tip_router_program_id, &ncn, epoch).0;
+    let epoch_snapshot =
+        EpochSnapshot::find_program_address(tip_router_program_id, &ncn, tip_router_epoch).0;
 
-    let operator_snapshot =
-        OperatorSnapshot::find_program_address(tip_router_program_id, &operator, &ncn, epoch).0;
+    let operator_snapshot = OperatorSnapshot::find_program_address(
+        tip_router_program_id,
+        &operator,
+        &ncn,
+        tip_router_epoch,
+    )
+    .0;
 
-    let ix = if !submit_as_memo {
+    let ix = if submit_as_memo {
+        spl_memo::build_memo(&meta_merkle_root.to_vec(), &[&operator_voter.pubkey()])
+    } else {
         CastVoteBuilder::new()
             .epoch_state(epoch_state)
             .config(ncn_config)
@@ -65,10 +75,8 @@ pub async fn cast_vote(
             .operator(*operator)
             .operator_voter(operator_voter.pubkey())
             .meta_merkle_root(meta_merkle_root)
-            .epoch(epoch)
+            .epoch(tip_router_epoch)
             .instruction()
-    } else {
-        spl_memo::build_memo(&meta_merkle_root.to_vec(), &[&operator_voter.pubkey()])
     };
 
     info!("Submitting meta merkle root {:?}", meta_merkle_root);
