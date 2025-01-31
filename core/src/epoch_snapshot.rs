@@ -642,8 +642,9 @@ impl fmt::Display for OperatorSnapshot {
        writeln!(f, "  Valid Delegations:            {}", self.valid_operator_vault_delegations())?;
        writeln!(f, "  Finalized:                    {}", self.finalized())?;
 
-       writeln!(f, "\nStake Weights by Group:")?;
        let stake_weights = self.stake_weights();
+       writeln!(f, "\nTotal Stake Weight: {}", stake_weights.stake_weight())?;
+       writeln!(f, "\nStake Weights by Group:")?;
        for group in NcnFeeGroup::all_groups() {
            if let Ok(weight) = stake_weights.ncn_fee_group_stake_weight(group) {
                if weight > 0 {

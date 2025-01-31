@@ -838,6 +838,45 @@ impl EpochState {
 
         Ok(State::Distribute)
     }
+
+    pub fn current_state_patched(
+        &self,
+        epoch_schedule: &EpochSchedule,
+        valid_slots_after_consensus: u64,
+        epochs_after_consensus_before_close: u64,
+        st_mint_count: u64,
+        current_slot: u64,
+    ) -> Result<State, ProgramError> {
+        if self.account_status.weight_table()? == AccountStatus::DNE
+            || self.set_weight_progress.tally() < st_mint_count
+        {
+            return Ok(State::SetWeight);
+        }
+
+        if self.account_status.epoch_snapshot()? == AccountStatus::DNE
+            || !self.epoch_snapshot_progress.is_complete()
+        {
+            return Ok(State::Snapshot);
+        }
+
+        if self.account_status.ballot_box()? == AccountStatus::DNE
+            || !self.can_start_routing(valid_slots_after_consensus, current_slot)?
+        {
+            return Ok(State::Vote);
+        }
+
+        // The upload state is not required to progress to the next state
+        let can_close_epoch_accounts = self.can_close_epoch_accounts(
+            epoch_schedule,
+            epochs_after_consensus_before_close,
+            current_slot,
+        )?;
+        if can_close_epoch_accounts {
+            return Ok(State::Close);
+        }
+
+        Ok(State::Distribute)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
