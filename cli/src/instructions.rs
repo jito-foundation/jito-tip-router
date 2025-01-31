@@ -788,7 +788,12 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
     let queue_key = Pubkey::from_str("A43DyUGA7s8eXPxqEjJY6EBu1KKbNgfxF8h17VAHn13w").unwrap();
 
     let queue = QueueAccountData::load(client, &queue_key).await?;
-    let gw = &queue.fetch_gateways(client).await?[0];
+    let gateways = &queue.fetch_gateways(client).await?;
+    if gateways.is_empty() {
+        return Err(anyhow!("No gateways found"));
+    }
+
+    let gw = &gateways[0];
     let crossbar = CrossbarClient::default();
     let (ix, _, _, _) = PullFeed::fetch_update_ix(
         switchboard_context.clone(),
@@ -843,7 +848,17 @@ pub async fn set_weight_with_st_mint(
         WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
     // Crank Switchboard
-    crank_switchboard(handler, switchboard_feed).await?;
+    let result = crank_switchboard(handler, switchboard_feed).await;
+    if let Err(e) = result {
+        log::error!(
+            "\n\nFailed to crank switchboard - will need manual crank at {}\n\nError:\n{:?}\n",
+            format!(
+                "https://ondemand.switchboard.xyz/solana/mainnet/feed/{}",
+                switchboard_feed
+            ),
+            e
+        );
+    }
 
     let set_weight_ix = SwitchboardSetWeightBuilder::new()
         .ncn(ncn)
