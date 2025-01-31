@@ -10,7 +10,8 @@ pub mod load_and_process_ledger;
 pub mod process_epoch;
 pub mod submit;
 
-use std::fs;
+use std::fs::{self, File};
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
@@ -23,6 +24,7 @@ use jito_tip_payment_sdk::{
     TIP_ACCOUNT_SEED_7,
 };
 use log::info;
+use meta_merkle_tree::generated_merkle_tree::MerkleRootGeneratorError;
 use meta_merkle_tree::{
     generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
 };
@@ -66,6 +68,19 @@ fn derive_tip_payment_pubkeys(program_id: &Pubkey) -> TipPaymentPubkeys {
             tip_pda_0, tip_pda_1, tip_pda_2, tip_pda_3, tip_pda_4, tip_pda_5, tip_pda_6, tip_pda_7,
         ],
     }
+}
+
+fn write_to_json_file(
+    merkle_tree_coll: &GeneratedMerkleTreeCollection,
+    file_path: &PathBuf,
+) -> std::result::Result<(), MerkleRootGeneratorError> {
+    let file = File::create(file_path)?;
+    let mut writer = BufWriter::new(file);
+    let json = serde_json::to_string_pretty(&merkle_tree_coll).unwrap();
+    writer.write_all(json.as_bytes())?;
+    writer.flush()?;
+
+    Ok(())
 }
 
 /// Convenience wrapper around [TipDistributionAccount]
@@ -186,6 +201,26 @@ pub fn get_meta_merkle_root(
         merkle_tree_coll.generated_merkle_trees.len(),
         merkle_tree_coll.bank_hash
     );
+
+    // Write GeneratedMerkleTreeCollection to file for debugging/verification
+    let generated_merkle_tree_path = incremental_snapshots_path.join(format!(
+        "generated_merkle_tree_{}.json",
+        merkle_tree_coll.epoch
+    ));
+    match write_to_json_file(&merkle_tree_coll, &generated_merkle_tree_path) {
+        Ok(_) => {
+            info!(
+                "Wrote GeneratedMerkleTreeCollection to {}",
+                generated_merkle_tree_path.display()
+            );
+        }
+        Err(e) => {
+            error!(
+                "Failed to write GeneratedMerkleTreeCollection to file {}: {:?}",
+                generated_merkle_tree_path, e
+            );
+        }
+    }
 
     datapoint_info!(
         "tip_router_cli.get_meta_merkle_root",
