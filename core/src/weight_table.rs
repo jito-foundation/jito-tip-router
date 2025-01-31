@@ -197,6 +197,13 @@ impl WeightTable {
         self.table.iter().filter(|entry| entry.is_set()).count()
     }
 
+    pub fn st_mint_count(&self) -> usize {
+        self.vault_registry
+            .iter()
+            .filter(|entry| !entry.is_empty())
+            .count()
+    }
+
     pub const fn table(&self) -> &[WeightEntry; MAX_ST_MINTS] {
         &self.table
     }

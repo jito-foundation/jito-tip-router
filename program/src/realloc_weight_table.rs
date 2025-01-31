@@ -54,6 +54,7 @@ pub fn process_realloc_weight_table(
         let vault_registry = VaultRegistry::try_from_slice_unchecked(&vault_registry_data)?;
 
         let vault_count = vault_registry.vault_count();
+        let st_mint_count = vault_registry.st_mint_count();
         let vault_entries = vault_registry.get_vault_entries();
         let mint_entries = vault_registry.get_mint_entries();
 
@@ -77,7 +78,7 @@ pub fn process_realloc_weight_table(
             let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
             let epoch_state_account =
                 EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
-            epoch_state_account.update_realloc_weight_table(vault_count);
+            epoch_state_account.update_realloc_weight_table(vault_count, st_mint_count as u64);
         }
     }
 

@@ -567,15 +567,16 @@ impl EpochState {
         self.account_status.set_epoch_state(AccountStatus::Created);
     }
 
-    pub fn update_realloc_weight_table(&mut self, vault_count: u64) {
+    pub fn update_realloc_weight_table(&mut self, vault_count: u64, st_mint_count: u64) {
         self.account_status.set_weight_table(AccountStatus::Created);
 
         self.vault_count = PodU64::from(vault_count);
-        self.set_weight_progress = Progress::new(vault_count);
+        self.set_weight_progress = Progress::new(st_mint_count);
     }
 
-    pub fn update_set_weight(&mut self, weights_set: u64) {
-        self.set_weight_progress.set_tally(weights_set)
+    pub fn update_set_weight(&mut self, weights_set: u64, st_mint_count: u64) {
+        self.set_weight_progress.set_tally(weights_set);
+        self.set_weight_progress.set_total(st_mint_count)
     }
 
     pub fn update_initialize_epoch_snapshot(&mut self, operator_count: u64) {

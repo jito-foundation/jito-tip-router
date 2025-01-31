@@ -198,6 +198,7 @@ mod tests {
         fixture
             .add_switchboard_weights_for_test_ncn(&test_ncn)
             .await?;
+
         fixture.add_epoch_snapshot_to_test_ncn(&test_ncn).await?;
         fixture
             .add_operator_snapshots_to_test_ncn(&test_ncn)
@@ -546,6 +547,13 @@ mod fuzz_tests {
         fixture
             .add_switchboard_weights_for_test_ncn(&test_ncn)
             .await?;
+
+        {
+            let epoch = fixture.clock().await.epoch;
+            let epoch_state = tip_router_client.get_epoch_state(ncn, epoch).await?;
+            assert!(epoch_state.set_weight_progress().is_complete())
+        }
+
         fixture.add_epoch_snapshot_to_test_ncn(&test_ncn).await?;
         fixture
             .add_operator_snapshots_to_test_ncn(&test_ncn)
