@@ -787,8 +787,8 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
     // STATIC PUBKEY
     let queue_key = Pubkey::from_str("A43DyUGA7s8eXPxqEjJY6EBu1KKbNgfxF8h17VAHn13w").unwrap();
 
-    let queue = QueueAccountData::load(client, &queue_key).await.unwrap();
-    let gw = &queue.fetch_gateways(client).await.unwrap()[0];
+    let queue = QueueAccountData::load(client, &queue_key).await?;
+    let gw = &queue.fetch_gateways(client).await?[0];
     let crossbar = CrossbarClient::default();
     let (ix, _, _, _) = PullFeed::fetch_update_ix(
         switchboard_context.clone(),
@@ -801,8 +801,7 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
             ..Default::default()
         },
     )
-    .await
-    .unwrap();
+    .await?;
 
     send_and_log_transaction(
         handler,

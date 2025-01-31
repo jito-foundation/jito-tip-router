@@ -760,6 +760,7 @@ pub struct NcnTickets {
     pub epoch_length: u64,
     pub ncn: Pubkey,
     pub vault: Pubkey,
+    pub vault_account: Vault,
     pub operator: Pubkey,
     pub ncn_vault_ticket_address: Pubkey,
     pub ncn_vault_ticket: Option<NcnVaultTicket>,
@@ -875,11 +876,14 @@ impl NcnTickets {
             }
         };
 
+        let vault_account = get_vault(handler, vault).await.expect("Vault not found");
+
         Self {
             slot,
             epoch_length,
             ncn: *ncn,
             vault: *vault,
+            vault_account,
             operator: *operator,
             ncn_vault_ticket,
             vault_ncn_ticket,
@@ -1053,11 +1057,27 @@ impl fmt::Display for NcnTickets {
             check(self.operator_vault()),
             self.operator_vault_ticket_address
         )?;
+
+        let st_mint = self.vault_account.supported_mint;
+        let delegation = {
+            if self.vault_operator_delegation.is_some() {
+                self.vault_operator_delegation
+                    .unwrap()
+                    .delegation_state
+                    .total_security()
+                    .unwrap()
+            } else {
+                0
+            }
+        };
+
         writeln!(
             f,
-            "Vault    -> Operator: {} {}",
+            "Vault    -> Operator: {} {} {}: {}",
             check(self.vault_operator()),
-            self.vault_operator_delegation_address
+            self.vault_operator_delegation_address,
+            st_mint,
+            delegation
         )?;
         writeln!(f, "\n")?;
 

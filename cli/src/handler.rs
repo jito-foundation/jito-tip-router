@@ -23,7 +23,7 @@ use crate::{
     keeper::keeper_loop::startup_keeper,
 };
 use anyhow::{anyhow, Result};
-use jito_tip_router_core::ncn_fee_group::NcnFeeGroup;
+use jito_tip_router_core::{account_payer::AccountPayer, ncn_fee_group::NcnFeeGroup};
 use log::info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -538,8 +538,11 @@ impl CliHandler {
             }
             ProgramCommand::GetAccountPayer {} => {
                 let account_payer = get_account_payer(self).await?;
+                let (account_payer_address, _, _) =
+                    AccountPayer::find_program_address(&self.tip_router_program_id, self.ncn()?);
                 info!(
-                    "\n\n--- Account Payer ---\nBalance: {}\n",
+                    "\n\n--- Account Payer ---\n{}\nBalance: {}\n",
+                    account_payer_address,
                     lamports_to_sol(account_payer.lamports)
                 );
                 Ok(())
