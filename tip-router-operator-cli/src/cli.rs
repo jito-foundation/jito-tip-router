@@ -96,4 +96,17 @@ pub enum Commands {
         #[arg(long, env)]
         epoch: u64,
     },
+    ClaimTips {
+        /// Tip distribution program ID
+        #[arg(long, env)]
+        tip_distribution_program_id: Pubkey,
+
+        /// The price to pay for priority fee
+        #[arg(long, env, default_value_t = 1)]
+        micro_lamports: u64,
+
+        /// The epoch to Claim tips for
+        #[arg(long, env)]
+        epoch: u64,
+    },
 }

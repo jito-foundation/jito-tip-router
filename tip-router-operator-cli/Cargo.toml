@@ -25,6 +25,7 @@ jito-tip-router-core = { workspace = true }
 jito-tip-router-program = { workspace = true }
 log = { workspace = true }
 meta-merkle-tree = { workspace = true }
+rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 solana-account-decoder = { workspace = true }
@@ -40,11 +41,13 @@ solana-metrics = { workspace = true }
 solana-program = { workspace = true }
 solana-rpc = { workspace = true }
 solana-rpc-client = { workspace = true }
+solana-rpc-client-api = { workspace = true }
 solana-runtime = { workspace = true }
 solana-sdk = { workspace = true }
 solana-stake-program = { workspace = true }
 solana-streamer = { workspace = true }
 solana-unified-scheduler-pool = { workspace = true }
+solana-transaction-status = { workspace = true }
 solana-vote = { workspace = true }
 spl-memo = { workspace = true }
 thiserror = { workspace = true }

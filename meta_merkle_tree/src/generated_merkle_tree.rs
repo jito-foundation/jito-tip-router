@@ -108,6 +108,15 @@ impl GeneratedMerkleTreeCollection {
             slot: stake_meta_collection.slot,
         })
     }
+
+    /// Load a serialized GeneratedMerkleTreeCollection from file path
+    pub fn new_from_file(path: &PathBuf) -> Result<Self, MerkleRootGeneratorError> {
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        let tree: Self = serde_json::from_reader(reader)?;
+
+        Ok(tree)
+    }
 }
 
 #[derive(Clone, Eq, Debug, Hash, PartialEq, Deserialize, Serialize)]
