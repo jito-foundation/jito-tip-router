@@ -23,7 +23,7 @@ use jito_tip_payment_sdk::{
     TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
     TIP_ACCOUNT_SEED_7,
 };
-use log::info;
+use log::{error, info};
 use meta_merkle_tree::generated_merkle_tree::MerkleRootGeneratorError;
 use meta_merkle_tree::{
     generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
@@ -217,7 +217,8 @@ pub fn get_meta_merkle_root(
         Err(e) => {
             error!(
                 "Failed to write GeneratedMerkleTreeCollection to file {}: {:?}",
-                generated_merkle_tree_path, e
+                generated_merkle_tree_path.display(),
+                e
             );
         }
     }
