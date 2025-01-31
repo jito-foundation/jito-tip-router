@@ -2316,6 +2316,17 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
                 continue;
             }
 
+            let result = base_reward_router.ncn_fee_group_reward_route(operator);
+
+            if result.is_err() {
+                log::info!(
+                    "Could not find route for operator: {:?} in epoch: {:?}",
+                    operator,
+                    epoch,
+                );
+                continue;
+            }
+
             if base_reward_router
                 .ncn_fee_group_reward_route(operator)?
                 .rewards(group)?
