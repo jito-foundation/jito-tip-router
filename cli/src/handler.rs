@@ -23,7 +23,9 @@ use crate::{
     keeper::keeper_loop::startup_keeper,
 };
 use anyhow::{anyhow, Result};
-use jito_tip_router_core::{account_payer::AccountPayer, ncn_fee_group::NcnFeeGroup};
+use jito_tip_router_core::{
+    account_payer::AccountPayer, base_reward_router::BaseRewardReceiver, ncn_fee_group::NcnFeeGroup,
+};
 use log::info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -431,12 +433,24 @@ impl CliHandler {
                     };
                     let epoch_schedule = self.rpc_client().get_epoch_schedule().await?;
 
-                    epoch_state.current_state(
-                        &epoch_schedule,
-                        valid_slots_after_consensus,
-                        epochs_after_consensus_before_close,
-                        current_slot,
-                    )?
+                    let state = if epoch_state.set_weight_progress().tally() > 0 {
+                        let weight_table = get_weight_table(self, self.epoch).await?;
+                        epoch_state.current_state_patched(
+                            &epoch_schedule,
+                            valid_slots_after_consensus,
+                            epochs_after_consensus_before_close,
+                            weight_table.st_mint_count() as u64,
+                            current_slot,
+                        )
+                    } else {
+                        epoch_state.current_state(
+                            &epoch_schedule,
+                            valid_slots_after_consensus,
+                            epochs_after_consensus_before_close,
+                            current_slot,
+                        )
+                    };
+                    state
                 };
 
                 info!("{}\nCurrent State: {:?}\n", epoch_state, current_state);
@@ -459,7 +473,15 @@ impl CliHandler {
                 info!("{}", ballot_box);
                 Ok(())
             }
-
+            ProgramCommand::GetBaseRewardReceiverAddress {} => {
+                let (base_reward_receiver_address, _, _) = BaseRewardReceiver::find_program_address(
+                    &self.tip_router_program_id,
+                    self.ncn()?,
+                    self.epoch,
+                );
+                info!("Base Reward Receiver: {}", base_reward_receiver_address);
+                Ok(())
+            }
             ProgramCommand::GetBaseRewardRouter {} => {
                 let total_rewards_to_be_distributed =
                     get_total_rewards_to_be_distributed(self, self.epoch).await?;

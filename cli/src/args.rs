@@ -323,6 +323,7 @@ pub enum ProgramCommand {
     },
     GetBallotBox,
     GetBaseRewardRouter,
+    GetBaseRewardReceiverAddress,
     GetNcnRewardRouter {
         #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
         operator: String,
