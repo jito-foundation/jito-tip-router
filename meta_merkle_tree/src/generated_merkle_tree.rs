@@ -145,12 +145,14 @@ impl TreeNode {
         tip_distribution_program_id: &Pubkey,
     ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
         if let Some(tip_distribution_meta) = stake_meta.maybe_tip_distribution_meta.as_ref() {
-            let protocol_fee_amount = u128::div_ceil(
+            let protocol_fee_amount = u128::checked_div(
                 (tip_distribution_meta.total_tips as u128)
                     .checked_mul(protocol_fee_bps as u128)
                     .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
                 MAX_BPS as u128,
-            );
+            )
+            .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
+
             let protocol_fee_amount = u64::try_from(protocol_fee_amount)
                 .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
 
@@ -163,20 +165,20 @@ impl TreeNode {
             )
             .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
 
-            let (protocol_fee_amount, remaining_total_rewards) = validator_amount
+            let (validator_amount, remaining_total_rewards) = validator_amount
                 .checked_add(protocol_fee_amount)
-                .map_or((protocol_fee_amount, None), |total_fees| {
+                .map_or((validator_amount, None), |total_fees| {
                     if total_fees > tip_distribution_meta.total_tips {
-                        // If fees exceed total tips, preference validator amount and reduce protocol fee
+                        // If fees exceed total tips, preference protocol fee amount and reduce validator amount
                         tip_distribution_meta
                             .total_tips
-                            .checked_sub(validator_amount)
-                            .map(|adjusted_protocol_fee| (adjusted_protocol_fee, Some(0)))
+                            .checked_sub(protocol_fee_amount)
+                            .map(|adjusted_validator_amount| (adjusted_validator_amount, Some(0)))
                             .unwrap_or((0, None))
                     } else {
                         // Otherwise use original protocol fee and subtract both fees from total
                         (
-                            protocol_fee_amount,
+                            validator_amount,
                             tip_distribution_meta
                                 .total_tips
                                 .checked_sub(protocol_fee_amount)
@@ -188,6 +190,10 @@ impl TreeNode {
             let remaining_total_rewards =
                 remaining_total_rewards.ok_or(MerkleRootGeneratorError::CheckedMathError)?;
 
+            let tip_router_target_epoch = epoch
+                .checked_add(1)
+                .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
+
             // Must match the seeds from `core::BaseRewardReceiver`. Cannot
             // use `BaseRewardReceiver::find_program_address` as it would cause
             // circular dependecies.
@@ -195,7 +201,7 @@ impl TreeNode {
                 &[
                     b"base_reward_receiver",
                     &ncn_address.to_bytes(),
-                    &epoch.to_le_bytes(),
+                    &tip_router_target_epoch.to_le_bytes(),
                 ],
                 tip_distribution_program_id,
             )
