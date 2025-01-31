@@ -748,7 +748,7 @@ pub async fn get_all_tickets(handler: &CliHandler) -> Result<Vec<NcnTickets>> {
     let mut tickets = Vec::new();
     for operator in all_operators.iter() {
         for vault in all_vaults.iter() {
-            tickets.push(NcnTickets::fetch(handler, operator, vault, slot, epoch_length).await);
+            tickets.push(NcnTickets::fetch(handler, operator, vault, slot, epoch_length).await?);
         }
     }
 
@@ -785,7 +785,7 @@ impl NcnTickets {
         vault: &Pubkey,
         slot: u64,
         epoch_length: u64,
-    ) -> Self {
+    ) -> Result<Self> {
         let ncn = handler.ncn().expect("NCN not found");
 
         let (ncn_vault_ticket_address, _, _) =
@@ -798,7 +798,7 @@ impl NcnTickets {
                     if e.to_string().contains("Account not found") {
                         None
                     } else {
-                        panic!("Error fetching NCN vault ticket: {}", e);
+                        return Err(e);
                     }
                 }
             }
@@ -814,7 +814,7 @@ impl NcnTickets {
                     if e.to_string().contains("Account not found") {
                         None
                     } else {
-                        panic!("Error fetching NCN vault ticket: {}", e);
+                        return Err(e);
                     }
                 }
             }
@@ -835,7 +835,7 @@ impl NcnTickets {
                     if e.to_string().contains("Account not found") {
                         None
                     } else {
-                        panic!("Error fetching NCN vault ticket: {}", e);
+                        return Err(e);
                     }
                 }
             }
@@ -854,7 +854,7 @@ impl NcnTickets {
                     if e.to_string().contains("Account not found") {
                         None
                     } else {
-                        panic!("Error fetching NCN vault ticket: {}", e);
+                        return Err(e);
                     }
                 }
             }
@@ -870,7 +870,7 @@ impl NcnTickets {
                     if e.to_string().contains("Account not found") {
                         None
                     } else {
-                        panic!("Error fetching NCN vault ticket: {}", e);
+                        return Err(e);
                     }
                 }
             }
@@ -878,7 +878,7 @@ impl NcnTickets {
 
         let vault_account = get_vault(handler, vault).await.expect("Vault not found");
 
-        Self {
+        Ok(Self {
             slot,
             epoch_length,
             ncn: *ncn,
@@ -895,7 +895,7 @@ impl NcnTickets {
             vault_operator_delegation_address,
             operator_vault_ticket_address,
             ncn_operator_state_address,
-        }
+        })
     }
 
     pub fn ncn_operator(&self) -> u8 {
