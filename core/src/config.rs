@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{mem::size_of, u64};
+use std::mem::size_of;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
