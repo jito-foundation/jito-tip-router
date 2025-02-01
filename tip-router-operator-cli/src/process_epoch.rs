@@ -137,6 +137,7 @@ pub async fn process_epoch(
         tip_distribution_program_id,
         "", // TODO out_path is not used, unsure what should be put here. Maybe `snapshot_output_dir` from cli args?
         tip_payment_program_id,
+        tip_router_program_id,
         ncn_address,
         &operator_address,
         target_epoch,

@@ -210,6 +210,7 @@ async fn test_meta_merkle_creation_from_ledger() {
         tip_distribution_program_id,
         out_path,
         tip_payment_program_id,
+        &jito_tip_router_program::id(),
         &ncn_address,
         &operator_address,
         epoch,
@@ -307,6 +308,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         &ncn_address,
         epoch,
         PROTOCOL_FEE_BPS,
+        &jito_tip_router_program::id(),
     )?;
 
     let generated_tree = &merkle_tree_coll.generated_merkle_trees[0];
