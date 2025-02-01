@@ -433,7 +433,7 @@ impl CliHandler {
                     };
                     let epoch_schedule = self.rpc_client().get_epoch_schedule().await?;
 
-                    let state = if epoch_state.set_weight_progress().tally() > 0 {
+                    if epoch_state.set_weight_progress().tally() > 0 {
                         let weight_table = get_weight_table(self, self.epoch).await?;
                         epoch_state.current_state_patched(
                             &epoch_schedule,
@@ -449,8 +449,7 @@ impl CliHandler {
                             epochs_after_consensus_before_close,
                             current_slot,
                         )
-                    };
-                    state
+                    }
                 };
 
                 info!("{}\nCurrent State: {:?}\n", epoch_state, current_state);
