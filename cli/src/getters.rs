@@ -802,38 +802,17 @@ impl NcnTickets {
         epoch_length: u64,
     ) -> Result<Self> {
         let ncn = handler.ncn().expect("NCN not found");
+        let vault_account = get_vault(handler, vault).await.expect("Vault not found");
 
         let (ncn_vault_ticket_address, _, _) =
             NcnVaultTicket::find_program_address(&handler.restaking_program_id, ncn, vault);
         let ncn_vault_ticket = get_ncn_vault_ticket(handler, vault).await;
-        let ncn_vault_ticket = {
-            match ncn_vault_ticket {
-                Ok(account) => Some(account),
-                Err(e) => {
-                    if e.to_string().contains("Account not found") {
-                        None
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        };
+        let ncn_vault_ticket = ncn_vault_ticket.ok();
 
         let (vault_ncn_ticket_address, _, _) =
             VaultNcnTicket::find_program_address(&handler.vault_program_id, vault, ncn);
         let vault_ncn_ticket = get_vault_ncn_ticket(handler, vault).await;
-        let vault_ncn_ticket = {
-            match vault_ncn_ticket {
-                Ok(account) => Some(account),
-                Err(e) => {
-                    if e.to_string().contains("Account not found") {
-                        None
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        };
+        let vault_ncn_ticket = vault_ncn_ticket.ok();
 
         let (vault_operator_delegation_address, _, _) =
             VaultOperatorDelegation::find_program_address(
@@ -843,18 +822,7 @@ impl NcnTickets {
             );
         let vault_operator_delegation =
             get_vault_operator_delegation(handler, vault, operator).await;
-        let vault_operator_delegation = {
-            match vault_operator_delegation {
-                Ok(account) => Some(account),
-                Err(e) => {
-                    if e.to_string().contains("Account not found") {
-                        None
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        };
+        let vault_operator_delegation = vault_operator_delegation.ok();
 
         let (operator_vault_ticket_address, _, _) = OperatorVaultTicket::find_program_address(
             &handler.restaking_program_id,
@@ -862,36 +830,12 @@ impl NcnTickets {
             vault,
         );
         let operator_vault_ticket = get_operator_vault_ticket(handler, vault, operator).await;
-        let operator_vault_ticket = {
-            match operator_vault_ticket {
-                Ok(account) => Some(account),
-                Err(e) => {
-                    if e.to_string().contains("Account not found") {
-                        None
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        };
+        let operator_vault_ticket = operator_vault_ticket.ok();
 
         let (ncn_operator_state_address, _, _) =
             NcnOperatorState::find_program_address(&handler.restaking_program_id, ncn, operator);
         let ncn_operator_state = get_ncn_operator_state(handler, operator).await;
-        let ncn_operator_state = {
-            match ncn_operator_state {
-                Ok(account) => Some(account),
-                Err(e) => {
-                    if e.to_string().contains("Account not found") {
-                        None
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        };
-
-        let vault_account = get_vault(handler, vault).await.expect("Vault not found");
+        let ncn_operator_state = ncn_operator_state.ok();
 
         Ok(Self {
             slot,
