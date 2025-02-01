@@ -621,6 +621,7 @@ pub async fn emit_epoch_metrics_weight_table(handler: &CliHandler, epoch: u64) -
     Ok(())
 }
 
+#[allow(clippy::large_stack_frames)]
 pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
 
