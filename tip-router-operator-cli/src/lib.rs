@@ -100,6 +100,7 @@ pub fn get_meta_merkle_root(
     tip_distribution_program_id: &Pubkey,
     out_path: &str,
     tip_payment_program_id: &Pubkey,
+    tip_router_program_id: &Pubkey,
     ncn_address: &Pubkey,
     operator_address: &Pubkey,
     epoch: u64,
@@ -187,6 +188,7 @@ pub fn get_meta_merkle_root(
         ncn_address,
         epoch,
         protocol_fee_bps,
+        tip_router_program_id,
     )
     .map_err(|_| {
         MerkleRootError::MerkleRootGeneratorError(

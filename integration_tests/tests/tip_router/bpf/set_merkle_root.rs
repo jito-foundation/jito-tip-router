@@ -127,6 +127,7 @@ mod set_merkle_root {
             &ncn_address,
             epoch,
             300,
+            &jito_tip_router_program::id(),
         )
         .map_err(TestError::from)?;
 

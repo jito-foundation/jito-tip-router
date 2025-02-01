@@ -58,6 +58,7 @@ impl GeneratedMerkleTreeCollection {
         ncn_address: &Pubkey,
         epoch: u64,
         protocol_fee_bps: u64,
+        tip_router_program_id: &Pubkey,
     ) -> Result<Self, MerkleRootGeneratorError> {
         let generated_merkle_trees = stake_meta_collection
             .stake_metas
@@ -71,6 +72,7 @@ impl GeneratedMerkleTreeCollection {
                     ncn_address,
                     epoch,
                     &stake_meta_collection.tip_distribution_program_id, // Pass the program ID
+                    &tip_router_program_id,
                 ) {
                     Err(e) => return Some(Err(e)),
                     Ok(maybe_tree_nodes) => maybe_tree_nodes,
@@ -143,6 +145,7 @@ impl TreeNode {
         ncn_address: &Pubkey,
         epoch: u64,
         tip_distribution_program_id: &Pubkey,
+        tip_router_program_id: &Pubkey,
     ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
         if let Some(tip_distribution_meta) = stake_meta.maybe_tip_distribution_meta.as_ref() {
             let protocol_fee_amount = u128::checked_div(
@@ -203,7 +206,7 @@ impl TreeNode {
                     &ncn_address.to_bytes(),
                     &tip_router_target_epoch.to_le_bytes(),
                 ],
-                tip_distribution_program_id,
+                tip_router_program_id,
             )
             .0;
 
@@ -494,6 +497,7 @@ mod tests {
     #[test]
     fn test_new_from_stake_meta_collection_happy_path() {
         let merkle_root_upload_authority = Pubkey::new_unique();
+        let tip_router_program_id = Pubkey::new_unique();
         let (tda_0, tda_1) = (Pubkey::new_unique(), Pubkey::new_unique());
         let stake_account_0 = Pubkey::new_unique();
         let stake_account_1 = Pubkey::new_unique();
@@ -576,6 +580,7 @@ mod tests {
             &ncn_address,
             epoch,
             300,
+            &tip_router_program_id,
         )
         .unwrap();
 
@@ -596,7 +601,7 @@ mod tests {
                 &ncn_address.to_bytes(),
                 &epoch.to_le_bytes(),
             ],
-            &stake_meta_collection.tip_distribution_program_id,
+            &tip_router_program_id,
         )
         .0;
 
