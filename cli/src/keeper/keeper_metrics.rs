@@ -651,13 +651,24 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
         };
         let epoch_schedule = handler.rpc_client().get_epoch_schedule().await?;
 
-        state.current_state(
-            &epoch_schedule,
-            valid_slots_after_consensus,
-            epochs_after_consensus_before_close,
-            current_slot,
-        )?
-    };
+        if state.set_weight_progress().tally() > 0 {
+            let weight_table = get_weight_table(handler, epoch).await?;
+            state.current_state_patched(
+                &epoch_schedule,
+                valid_slots_after_consensus,
+                epochs_after_consensus_before_close,
+                weight_table.st_mint_count() as u64,
+                current_slot,
+            )
+        } else {
+            state.current_state(
+                &epoch_schedule,
+                valid_slots_after_consensus,
+                epochs_after_consensus_before_close,
+                current_slot,
+            )
+        }
+    }?;
 
     let mut operator_snapshot_dne = 0;
     let mut operator_snapshot_open = 0;
