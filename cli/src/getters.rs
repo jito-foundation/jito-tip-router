@@ -26,7 +26,7 @@ use jito_tip_router_core::{
     weight_table::WeightTable,
 };
 use jito_vault_core::{
-    vault::Vault, vault_ncn_ticket::VaultNcnTicket,
+    config::Config as VaultConfig, vault::Vault, vault_ncn_ticket::VaultNcnTicket,
     vault_operator_delegation::VaultOperatorDelegation,
 };
 use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
@@ -405,12 +405,25 @@ pub async fn get_is_epoch_completed(handler: &CliHandler, epoch: u64) -> Result<
 
 // ---------------------- RESTAKING ----------------------
 
+pub async fn get_vault_config(handler: &CliHandler) -> Result<VaultConfig> {
+    let (address, _, _) = VaultConfig::find_program_address(&handler.vault_program_id);
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Vault Config account not found"));
+    }
+    let account = account.unwrap();
+
+    let account = VaultConfig::try_from_slice_unchecked(account.data.as_slice())?;
+    Ok(*account)
+}
+
 pub async fn get_restaking_config(handler: &CliHandler) -> Result<RestakingConfig> {
     let (address, _, _) = RestakingConfig::find_program_address(&handler.restaking_program_id);
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("Restaking Config Account not found"));
     }
     let account = account.unwrap();
 
@@ -422,7 +435,7 @@ pub async fn get_ncn(handler: &CliHandler) -> Result<Ncn> {
     let account = get_account(handler, handler.ncn()?).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("NCN account not found"));
     }
     let account = account.unwrap();
 
@@ -433,7 +446,7 @@ pub async fn get_ncn(handler: &CliHandler) -> Result<Ncn> {
 pub async fn get_vault(handler: &CliHandler, vault: &Pubkey) -> Result<Vault> {
     let account = get_account(handler, vault)
         .await?
-        .expect("Account not found");
+        .expect("Vault account not found");
     let account = Vault::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -442,7 +455,7 @@ pub async fn get_operator(handler: &CliHandler, operator: &Pubkey) -> Result<Ope
     let account = get_account(handler, operator).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("Operator account not found"));
     }
     let account = account.unwrap();
 
@@ -463,7 +476,7 @@ pub async fn get_ncn_operator_state(
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("NCN Operator State account not found"));
     }
     let account = account.unwrap();
 
@@ -478,7 +491,7 @@ pub async fn get_vault_ncn_ticket(handler: &CliHandler, vault: &Pubkey) -> Resul
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("Vault NCN Ticket account not found"));
     }
     let account = account.unwrap();
 
@@ -493,7 +506,7 @@ pub async fn get_ncn_vault_ticket(handler: &CliHandler, vault: &Pubkey) -> Resul
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("NCN Vault Ticket account not found"));
     }
     let account = account.unwrap();
 
@@ -512,7 +525,9 @@ pub async fn get_vault_operator_delegation(
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!(
+            "Vault Operator Delegation account not found"
+        ));
     }
     let account = account.unwrap();
 
@@ -531,7 +546,7 @@ pub async fn get_operator_vault_ticket(
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("Operator Vault Ticket account not found"));
     }
     let account = account.unwrap();
 
@@ -898,6 +913,28 @@ impl NcnTickets {
         })
     }
 
+    pub fn st_mint(&self) -> Pubkey {
+        self.vault_account.supported_mint
+    }
+
+    pub fn delegation(&self) -> (u64, u64, u64) {
+        if self.vault_operator_delegation.is_none() {
+            return (0, 0, 0);
+        }
+
+        let delegation_state = self
+            .vault_operator_delegation
+            .as_ref()
+            .unwrap()
+            .delegation_state;
+
+        (
+            delegation_state.staked_amount(),
+            delegation_state.cooling_down_amount(),
+            delegation_state.total_security().unwrap(),
+        )
+    }
+
     pub fn ncn_operator(&self) -> u8 {
         if self.ncn_operator_state.is_none() {
             return Self::DNE;
@@ -1058,26 +1095,13 @@ impl fmt::Display for NcnTickets {
             self.operator_vault_ticket_address
         )?;
 
-        let st_mint = self.vault_account.supported_mint;
-        let delegation = {
-            if self.vault_operator_delegation.is_some() {
-                self.vault_operator_delegation
-                    .unwrap()
-                    .delegation_state
-                    .total_security()
-                    .unwrap()
-            } else {
-                0
-            }
-        };
-
         writeln!(
             f,
             "Vault    -> Operator: {} {} {}: {}",
             check(self.vault_operator()),
             self.vault_operator_delegation_address,
-            st_mint,
-            delegation
+            self.st_mint(),
+            self.delegation().2
         )?;
         writeln!(f, "\n")?;
 
