@@ -21,7 +21,7 @@ pub fn process_admin_set_new_admin(
 
     load_signer(ncn_admin, true)?;
 
-    NcnConfig::load(program_id, ncn_account.key, config, true)?;
+    NcnConfig::load(program_id, config, ncn_account.key, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
 
     let mut config_data = config.try_borrow_mut_data()?;

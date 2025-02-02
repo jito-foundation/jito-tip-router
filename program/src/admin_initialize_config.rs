@@ -39,7 +39,7 @@ pub fn process_admin_initialize_config(
     load_signer(ncn_admin, false)?;
 
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
     let epoch = Clock::get()?.epoch;
 

@@ -21,8 +21,8 @@ pub fn process_claim_with_payer(
 
     // Verify claim status address
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    Config::load(program_id, ncn.key, config, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    Config::load(program_id, config, ncn.key, false)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
     if tip_distribution_program.key.ne(&jito_tip_distribution::ID) {
         msg!("Incorrect tip distribution program");

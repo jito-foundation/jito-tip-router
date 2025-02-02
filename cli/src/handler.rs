@@ -1,28 +1,31 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     args::{Args, ProgramCommand},
     getters::{
         get_account_payer, get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn,
-        get_ballot_box, get_base_reward_receiver, get_base_reward_router, get_epoch_snapshot,
-        get_epoch_state, get_ncn, get_ncn_operator_state, get_ncn_reward_receiver,
-        get_ncn_reward_router, get_ncn_vault_ticket, get_stake_pool, get_tip_router_config,
+        get_ballot_box, get_base_reward_receiver, get_base_reward_router, get_current_slot,
+        get_epoch_snapshot, get_epoch_state, get_is_epoch_completed, get_ncn,
+        get_ncn_operator_state, get_ncn_reward_receiver, get_ncn_reward_router,
+        get_ncn_vault_ticket, get_operator_snapshot, get_stake_pool, get_tip_router_config,
         get_total_epoch_rent_cost, get_total_rewards_to_be_distributed, get_vault_ncn_ticket,
-        get_vault_operator_delegation, get_vault_registry,
+        get_vault_operator_delegation, get_vault_registry, get_weight_table,
     },
     instructions::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
-        admin_set_parameters, admin_set_weight, create_and_add_test_operator,
-        create_and_add_test_vault, create_ballot_box, create_base_reward_router,
-        create_epoch_snapshot, create_epoch_state, create_ncn_reward_router,
-        create_operator_snapshot, create_test_ncn, create_vault_registry, create_weight_table,
-        distribute_base_ncn_rewards, register_vault, route_base_rewards, route_ncn_rewards,
-        set_weight, snapshot_vault_operator_delegation,
+        admin_set_config_fees, admin_set_new_admin, admin_set_parameters, admin_set_weight,
+        crank_switchboard, create_and_add_test_operator, create_and_add_test_vault,
+        create_ballot_box, create_base_reward_router, create_epoch_snapshot, create_epoch_state,
+        create_ncn_reward_router, create_operator_snapshot, create_test_ncn, create_vault_registry,
+        create_weight_table, distribute_base_ncn_rewards, register_vault, route_base_rewards,
+        route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
     },
     keeper::keeper_loop::startup_keeper,
 };
 use anyhow::{anyhow, Result};
-use jito_tip_router_core::{base_fee_group::BaseFeeGroup, ncn_fee_group::NcnFeeGroup};
+use jito_tip_router_core::{
+    account_payer::AccountPayer, base_reward_router::BaseRewardReceiver, ncn_fee_group::NcnFeeGroup,
+};
 use log::info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -31,6 +34,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
 };
+use switchboard_on_demand_client::SbContext;
 
 pub struct CliHandler {
     pub rpc_url: String,
@@ -44,6 +48,7 @@ pub struct CliHandler {
     ncn: Option<Pubkey>,
     pub epoch: u64,
     rpc_client: RpcClient,
+    switchboard_context: Arc<SbContext>,
     pub retries: u64,
     pub priority_fee_micro_lamports: u64,
 }
@@ -77,6 +82,8 @@ impl CliHandler {
 
         let rpc_client = RpcClient::new_with_commitment(rpc_url.clone(), commitment);
 
+        let switchboard_context = SbContext::new();
+
         let mut handler = Self {
             rpc_url,
             commitment,
@@ -87,6 +94,7 @@ impl CliHandler {
             tip_distribution_program_id,
             token_program_id,
             ncn,
+            switchboard_context,
             epoch: u64::MAX,
             rpc_client,
             retries: args.transaction_retries,
@@ -108,6 +116,10 @@ impl CliHandler {
 
     pub const fn rpc_client(&self) -> &RpcClient {
         &self.rpc_client
+    }
+
+    pub const fn switchboard_context(&self) -> &Arc<SbContext> {
+        &self.switchboard_context
     }
 
     pub fn keypair(&self) -> Result<&Keypair> {
@@ -216,6 +228,33 @@ impl CliHandler {
 
                 Ok(())
             }
+            ProgramCommand::AdminSetConfigFees {
+                new_block_engine_fee_bps,
+                base_fee_group,
+                new_base_fee_wallet,
+                new_base_fee_bps,
+                ncn_fee_group,
+                new_ncn_fee_bps,
+            } => {
+                admin_set_config_fees(
+                    self,
+                    new_block_engine_fee_bps,
+                    base_fee_group,
+                    new_base_fee_wallet,
+                    new_base_fee_bps,
+                    ncn_fee_group,
+                    new_ncn_fee_bps,
+                )
+                .await
+            }
+            ProgramCommand::AdminSetNewAdmin {
+                new_admin,
+                set_fee_admin,
+                set_tie_breaker_admin,
+            } => {
+                let new_admin = Pubkey::from_str(&new_admin).expect("error parsing new admin");
+                admin_set_new_admin(self, &new_admin, set_fee_admin, set_tie_breaker_admin).await
+            }
             ProgramCommand::AdminFundAccountPayer { amount_in_sol } => {
                 admin_fund_account_payer(self, amount_in_sol).await
             }
@@ -231,19 +270,21 @@ impl CliHandler {
             ProgramCommand::CreateEpochState {} => create_epoch_state(self, self.epoch).await,
 
             ProgramCommand::CreateWeightTable {} => create_weight_table(self, self.epoch).await,
-
+            ProgramCommand::CrankSwitchboard { switchboard_feed } => {
+                let switchboard_feed =
+                    Pubkey::from_str(&switchboard_feed).expect("error parsing switchboard feed");
+                crank_switchboard(self, &switchboard_feed).await
+            }
             ProgramCommand::SetWeight { vault } => {
                 let vault = Pubkey::from_str(&vault).expect("error parsing vault");
                 set_weight(self, &vault, self.epoch).await
             }
 
             ProgramCommand::CreateEpochSnapshot {} => create_epoch_snapshot(self, self.epoch).await,
-
             ProgramCommand::CreateOperatorSnapshot { operator } => {
                 let operator = Pubkey::from_str(&operator).expect("error parsing operator");
                 create_operator_snapshot(self, &operator, self.epoch).await
             }
-
             ProgramCommand::SnapshotVaultOperatorDelegation { vault, operator } => {
                 let vault = Pubkey::from_str(&vault).expect("error parsing vault");
                 let operator = Pubkey::from_str(&operator).expect("error parsing operator");
@@ -251,7 +292,6 @@ impl CliHandler {
             }
 
             ProgramCommand::CreateBallotBox {} => create_ballot_box(self, self.epoch).await,
-
             ProgramCommand::OperatorCastVote {
                 operator,
                 meta_merkle_root,
@@ -360,35 +400,85 @@ impl CliHandler {
             }
             ProgramCommand::GetTipRouterConfig {} => {
                 let config = get_tip_router_config(self).await?;
-                info!("Tip Router Config: {:?}", config);
+                info!("{}", config);
                 Ok(())
             }
             ProgramCommand::GetVaultRegistry {} => {
                 let vault_registry = get_vault_registry(self).await?;
-                info!("Vault Registry: {:?}", vault_registry);
+                info!("{}", vault_registry);
+                Ok(())
+            }
+            ProgramCommand::GetWeightTable {} => {
+                let weight_table = get_weight_table(self, self.epoch).await?;
+                info!("{}", weight_table);
                 Ok(())
             }
             ProgramCommand::GetEpochState {} => {
+                let is_epoch_complete = get_is_epoch_completed(self, self.epoch).await?;
+
+                if is_epoch_complete {
+                    info!("\n\nEpoch {} is complete", self.epoch);
+                    return Ok(());
+                }
+
                 let epoch_state = get_epoch_state(self, self.epoch).await?;
-                let current_slot = self.rpc_client.get_slot().await?;
-                info!(
-                    "\n\n--- Epoch State ---\nEpoch: {}\nSlot consensus {} {}\nDistribute Progress: {:?}",
-                    epoch_state.epoch(),
-                    epoch_state.slot_consensus_reached(),
-                    current_slot,
-                    epoch_state.total_distribution_progress()
-                );
-                // info!("Epoch State: {:?}", epoch_state);
+                let current_slot = get_current_slot(self).await?;
+                let current_state = {
+                    let (valid_slots_after_consensus, epochs_after_consensus_before_close) = {
+                        let config = get_tip_router_config(self).await?;
+                        (
+                            config.valid_slots_after_consensus(),
+                            config.epochs_after_consensus_before_close(),
+                        )
+                    };
+                    let epoch_schedule = self.rpc_client().get_epoch_schedule().await?;
+
+                    if epoch_state.set_weight_progress().tally() > 0 {
+                        let weight_table = get_weight_table(self, self.epoch).await?;
+                        epoch_state.current_state_patched(
+                            &epoch_schedule,
+                            valid_slots_after_consensus,
+                            epochs_after_consensus_before_close,
+                            weight_table.st_mint_count() as u64,
+                            current_slot,
+                        )
+                    } else {
+                        epoch_state.current_state(
+                            &epoch_schedule,
+                            valid_slots_after_consensus,
+                            epochs_after_consensus_before_close,
+                            current_slot,
+                        )
+                    }
+                };
+
+                info!("{}\nCurrent State: {:?}\n", epoch_state, current_state);
+
                 Ok(())
             }
-            ProgramCommand::GetStakePool {} => {
-                let stake_pool = get_stake_pool(self).await?;
-                info!("Stake Pool: {:?}", stake_pool);
+            ProgramCommand::GetEpochSnapshot {} => {
+                let epoch_snapshot = get_epoch_snapshot(self, self.epoch).await?;
+                info!("{}", epoch_snapshot);
+                Ok(())
+            }
+            ProgramCommand::GetOperatorSnapshot { operator } => {
+                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
+                let operator_snapshot = get_operator_snapshot(self, &operator, self.epoch).await?;
+                info!("{}", operator_snapshot);
                 Ok(())
             }
             ProgramCommand::GetBallotBox {} => {
                 let ballot_box = get_ballot_box(self, self.epoch).await?;
-                info!("Ballot Box: {:?}", ballot_box);
+                info!("{}", ballot_box);
+                Ok(())
+            }
+            ProgramCommand::GetBaseRewardReceiverAddress {} => {
+                let (base_reward_receiver_address, _, _) = BaseRewardReceiver::find_program_address(
+                    &self.tip_router_program_id,
+                    self.ncn()?,
+                    self.epoch,
+                );
+                info!("Base Reward Receiver: {}", base_reward_receiver_address);
                 Ok(())
             }
             ProgramCommand::GetBaseRewardRouter {} => {
@@ -401,20 +491,39 @@ impl CliHandler {
                     .rpc_client
                     .get_minimum_balance_for_rent_exemption(0)
                     .await?;
-                // info!("Base Reward Router: {:?}", base_reward_router);
                 info!(
-                    "\n\n --- Base Reward Router ---\ntotal to distribute: {}\nreceiver: {}: {}\nrewards in receiver: {}\nrewards processed: {}\nbase fee group reward: {}\nncn fee group reward: {}\n",
+                    "{}\nTotal Rewards To Distribute: {}\nReceiver {}: {}\n",
+                    base_reward_router,
                     total_rewards_to_be_distributed,
                     base_reward_receiver_address,
-                    base_reward_receiver_account.lamports,
-                    base_reward_receiver_account.lamports - rent,
-                    base_reward_router.rewards_processed(),
-                    base_reward_router.base_fee_group_reward(BaseFeeGroup::default()).unwrap(),
-                    base_reward_router.ncn_fee_group_rewards(NcnFeeGroup::default()).unwrap()
+                    base_reward_receiver_account.lamports - rent
                 );
                 Ok(())
             }
-            ProgramCommand::GetNcnRewardRouters {} => {
+            ProgramCommand::GetNcnRewardRouter {
+                operator,
+                ncn_fee_group,
+            } => {
+                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
+                let ncn_fee_group =
+                    NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
+                let ncn_reward_router =
+                    get_ncn_reward_router(self, ncn_fee_group, &operator, self.epoch).await?;
+                let (ncn_reward_receiver_address, ncn_reward_receiver_account) =
+                    get_ncn_reward_receiver(self, ncn_fee_group, &operator, self.epoch).await?;
+                let rent = self
+                    .rpc_client
+                    .get_minimum_balance_for_rent_exemption(0)
+                    .await?;
+                info!(
+                    "{}\nReceiver {}: {}\n",
+                    ncn_reward_router,
+                    ncn_reward_receiver_address,
+                    ncn_reward_receiver_account.lamports - rent
+                );
+                Ok(())
+            }
+            ProgramCommand::GetAllNcnRewardRouters {} => {
                 let all_operators = get_all_operators_in_ncn(self).await?;
                 let rent = self
                     .rpc_client
@@ -437,27 +546,11 @@ impl CliHandler {
                         let (ncn_reward_receiver_address, ncn_reward_receiver_account) =
                             get_ncn_reward_receiver(self, *group, operator, self.epoch).await?;
 
-                        let mut routes = String::new();
-                        for vault_route in ncn_reward_router.vault_reward_routes() {
-                            if !vault_route.is_empty() {
-                                routes.push_str(&format!(
-                                    "{:?}: {}\n",
-                                    vault_route.vault(),
-                                    vault_route.rewards()
-                                ));
-                            }
-                        }
-
                         info!(
-                            "\n\n --- NCN Reward Router ---\noperator: {}\ngroup: {:?}\nreceiver: {} {}\nrewards in receiver: {}\nrewards processed: {}\noperator rewards: {}\n{}\n",
-                            operator,
-                            group,
+                            "{}\nReceiver {}: {}\n",
+                            ncn_reward_router,
                             ncn_reward_receiver_address,
-                            ncn_reward_receiver_account.lamports,
                             ncn_reward_receiver_account.lamports - rent,
-                            ncn_reward_router.rewards_processed(),
-                            ncn_reward_router.operator_rewards(),
-                            routes
                         );
                     }
                 }
@@ -466,8 +559,11 @@ impl CliHandler {
             }
             ProgramCommand::GetAccountPayer {} => {
                 let account_payer = get_account_payer(self).await?;
+                let (account_payer_address, _, _) =
+                    AccountPayer::find_program_address(&self.tip_router_program_id, self.ncn()?);
                 info!(
-                    "\n\n--- Account Payer ---\nBalance: {}\n",
+                    "\n\n--- Account Payer ---\n{}\nBalance: {}\n",
+                    account_payer_address,
                     lamports_to_sol(account_payer.lamports)
                 );
                 Ok(())
@@ -478,6 +574,11 @@ impl CliHandler {
                     "\n\n--- Total Epoch Rent Cost ---\nCost: {}\n",
                     lamports_to_sol(total_epoch_rent_cost)
                 );
+                Ok(())
+            }
+            ProgramCommand::GetStakePool {} => {
+                let stake_pool = get_stake_pool(self).await?;
+                info!("Stake Pool: {:?}", stake_pool);
                 Ok(())
             }
 

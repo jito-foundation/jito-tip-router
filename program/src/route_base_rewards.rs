@@ -26,13 +26,13 @@ pub fn process_route_base_rewards(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    NcnConfig::load(program_id, ncn.key, config, false)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    NcnConfig::load(program_id, config, ncn.key, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
 
-    EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;
-    BaseRewardRouter::load(program_id, ncn.key, epoch, base_reward_router, true)?;
-    BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
+    EpochSnapshot::load(program_id, epoch_snapshot, ncn.key, epoch, false)?;
+    BaseRewardRouter::load(program_id, base_reward_router, ncn.key, epoch, true)?;
+    BallotBox::load(program_id, ballot_box, ncn.key, epoch, false)?;
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
 
     let epoch_snapshot_data = epoch_snapshot.try_borrow_data()?;

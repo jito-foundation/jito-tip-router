@@ -2618,11 +2618,17 @@
             }
           },
           {
+            "name": "isClosing",
+            "type": {
+              "defined": "PodBool"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                1024
+                1023
               ]
             }
           }
@@ -3862,10 +3868,20 @@
       "code": 8783,
       "name": "InvalidDaoWallet",
       "msg": "Invalid DAO wallet"
+    },
+    {
+      "code": 8784,
+      "name": "EpochIsClosingDown",
+      "msg": "Epoch is closing down"
+    },
+    {
+      "code": 8785,
+      "name": "MarkerExists",
+      "msg": "Marker exists"
     }
   ],
   "metadata": {
     "origin": "shank",
-    "address": "Ap2AH3VcZGuuauEDq87uhgjNoUKcCAafc4DTyTByLMFf"
+    "address": "RouterBmuRBkPUbgEDMtdvTZ75GBdSREZR5uGUxxxpb"
   }
 }
