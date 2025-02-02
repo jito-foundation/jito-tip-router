@@ -432,19 +432,6 @@ pub async fn get_restaking_config(handler: &CliHandler) -> Result<RestakingConfi
     Ok(*account)
 }
 
-pub async fn get_vault_config(handler: &CliHandler) -> Result<VaultConfig> {
-    let (address, _, _) = VaultConfig::find_program_address(&handler.vault_program_id);
-    let account = get_account(handler, &address).await?;
-
-    if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
-    }
-    let account = account.unwrap();
-
-    let account = VaultConfig::try_from_slice_unchecked(account.data.as_slice())?;
-    Ok(*account)
-}
-
 pub async fn get_ncn(handler: &CliHandler) -> Result<Ncn> {
     let account = get_account(handler, handler.ncn()?).await?;
 
