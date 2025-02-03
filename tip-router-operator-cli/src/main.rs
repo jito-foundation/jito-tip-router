@@ -29,17 +29,17 @@ async fn main() -> Result<()> {
     let rpc_client = EllipsisClient::from_rpc_with_timeout(
         RpcClient::new(cli.rpc_url.clone()),
         &read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
-        60_000,
+        1_800_000, // 30 minutes
     )?;
 
     set_host_id(cli.operator_address.to_string());
 
     // Ensure tx submission works
-    let test_meta_merkle_root = [1; 32];
-    let ix = spl_memo::build_memo(&test_meta_merkle_root.to_vec(), &[&keypair.pubkey()]);
-    info!("Submitting test tx {:?}", test_meta_merkle_root);
-    let tx = Transaction::new_with_payer(&[ix], Some(&keypair.pubkey()));
-    rpc_client.process_transaction(tx, &[&keypair]).await?;
+    // let test_meta_merkle_root = [1; 32];
+    // let ix = spl_memo::build_memo(&test_meta_merkle_root.to_vec(), &[&keypair.pubkey()]);
+    // info!("Submitting test tx {:?}", test_meta_merkle_root);
+    // let tx = Transaction::new_with_payer(&[ix], Some(&keypair.pubkey()));
+    // rpc_client.process_transaction(tx, &[&keypair]).await?;
 
     info!(
         "CLI Arguments:

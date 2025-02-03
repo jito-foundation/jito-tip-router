@@ -140,6 +140,11 @@ pub async fn set_merkle_roots_batched(
         })
         .collect::<Vec<_>>();
 
+    info!(
+        "Build instructions for {} tip distribution accounts",
+        instructions.len()
+    );
+
     let mut results = vec![];
     for _ in 0..instructions.len() {
         results.push(Err(EllipsisClientError::Other(anyhow::anyhow!(
