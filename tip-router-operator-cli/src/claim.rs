@@ -66,7 +66,7 @@ pub async fn claim_mev_tips(
 ) -> Result<(), ClaimMevError> {
     let rpc_client = RpcClient::new_with_timeout_and_commitment(
         rpc_url,
-        Duration::from_secs(300),
+        Duration::from_secs(1800),
         CommitmentConfig::confirmed(),
     );
     let rpc_sender_client = RpcClient::new(rpc_sender_url);
@@ -195,7 +195,8 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .collect_vec();
 
     info!(
-        "reading tip distribution related accounts for epoch {}",
+        "reading {} tip distribution related accounts for epoch {}",
+        tree_nodes.len(),
         merkle_trees.epoch
     );
 
@@ -283,13 +284,10 @@ fn build_mev_claim_transactions(
     let tip_distribution_accounts: HashMap<Pubkey, TipDistributionAccount> = tdas
         .iter()
         .filter_map(|(pubkey, account)| {
-            let tip_distribution_account =
-                TipDistributionAccount::try_deserialize(&mut account.data.as_slice()).ok()?;
-            if tip_distribution_account.merkle_root_upload_authority == tip_router_config_address {
-                Some((*pubkey, tip_distribution_account))
-            } else {
-                None
-            }
+            Some((
+                *pubkey,
+                TipDistributionAccount::try_deserialize(&mut account.data.as_slice()).ok()?,
+            ))
         })
         .collect();
 
@@ -329,7 +327,9 @@ fn build_mev_claim_transactions(
             .unwrap();
 
         // can continue here, as there might be tip distribution accounts this account doesn't upload for
-        if tip_distribution_account.merkle_root.is_none() {
+        if tip_distribution_account.merkle_root.is_none()
+            || tip_distribution_account.merkle_root_upload_authority != tip_router_config_address
+        {
             continue;
         }
 
