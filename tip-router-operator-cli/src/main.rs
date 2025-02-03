@@ -270,8 +270,6 @@ async fn main() -> Result<()> {
             ));
             let merkle_tree_coll =
                 GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)?;
-            let tip_router_config_address =
-                Config::find_program_address(&tip_router_program_id, &ncn_address).0;
 
             match claim_mev_tips(
                 &merkle_tree_coll,
@@ -280,10 +278,11 @@ async fn main() -> Result<()> {
                 //  if sending via block engine.
                 cli.rpc_url,
                 tip_distribution_program_id,
+                tip_router_program_id,
+                ncn_address,
                 arc_keypair,
                 Duration::from_secs(3600),
                 micro_lamports,
-                tip_router_config_address,
             )
             .await
             {
