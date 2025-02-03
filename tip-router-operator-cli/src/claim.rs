@@ -62,6 +62,7 @@ pub async fn claim_mev_tips(
     keypair: Arc<Keypair>,
     max_loop_duration: Duration,
     micro_lamports: u64,
+    tip_router_config_address: Pubkey,
 ) -> Result<(), ClaimMevError> {
     let rpc_client = RpcClient::new_with_timeout_and_commitment(
         rpc_url,
@@ -78,6 +79,7 @@ pub async fn claim_mev_tips(
             tip_distribution_program_id,
             micro_lamports,
             keypair.pubkey(),
+            tip_router_config_address,
         )
         .await?;
 
@@ -122,6 +124,7 @@ pub async fn claim_mev_tips(
         tip_distribution_program_id,
         micro_lamports,
         keypair.pubkey(),
+        tip_router_config_address,
     )
     .await?;
     if transactions.is_empty() {
@@ -177,11 +180,18 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     tip_distribution_program_id: Pubkey,
     micro_lamports: u64,
     payer_pubkey: Pubkey,
+    tip_router_config_address: Pubkey,
 ) -> Result<Vec<Transaction>, ClaimMevError> {
     let tree_nodes = merkle_trees
         .generated_merkle_trees
         .iter()
-        .flat_map(|tree| &tree.tree_nodes)
+        .filter_map(|tree| {
+            if tree.merkle_root_upload_authority != tip_router_config_address {
+                return None;
+            }
+            Some(&tree.tree_nodes)
+        })
+        .flatten()
         .collect_vec();
 
     info!(
@@ -245,6 +255,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         claim_statuses,
         micro_lamports,
         payer_pubkey,
+        tip_router_config_address,
     );
 
     Ok(transactions)
@@ -267,14 +278,18 @@ fn build_mev_claim_transactions(
     claim_status: HashMap<Pubkey, Account>,
     micro_lamports: u64,
     payer_pubkey: Pubkey,
+    tip_router_config_address: Pubkey,
 ) -> Vec<Transaction> {
     let tip_distribution_accounts: HashMap<Pubkey, TipDistributionAccount> = tdas
         .iter()
         .filter_map(|(pubkey, account)| {
-            Some((
-                *pubkey,
-                TipDistributionAccount::try_deserialize(&mut account.data.as_slice()).ok()?,
-            ))
+            let tip_distribution_account =
+                TipDistributionAccount::try_deserialize(&mut account.data.as_slice()).ok()?;
+            if tip_distribution_account.merkle_root_upload_authority == tip_router_config_address {
+                Some((*pubkey, tip_distribution_account))
+            } else {
+                None
+            }
         })
         .collect();
 

@@ -98,6 +98,14 @@ pub enum Commands {
         #[arg(long, env)]
         tip_distribution_program_id: Pubkey,
 
+        /// Tip router program ID
+        #[arg(long, env)]
+        tip_router_program_id: Pubkey,
+
+        /// NCN address
+        #[arg(long, env)]
+        ncn_address: Pubkey,
+
         /// The price to pay for priority fee
         #[arg(long, env, default_value_t = 1)]
         micro_lamports: u64,

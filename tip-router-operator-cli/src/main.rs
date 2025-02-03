@@ -2,6 +2,7 @@ use ::{
     anyhow::Result,
     clap::Parser,
     ellipsis_client::{ClientSubset, EllipsisClient},
+    jito_tip_router_core::config::Config,
     log::{error, info},
     meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection,
     solana_metrics::{datapoint_error, datapoint_info, set_host_id},
@@ -236,6 +237,8 @@ async fn main() -> Result<()> {
         }
         Commands::ClaimTips {
             tip_distribution_program_id,
+            tip_router_program_id,
+            ncn_address,
             micro_lamports,
             epoch,
         } => {
@@ -245,12 +248,15 @@ async fn main() -> Result<()> {
             let arc_keypair = Arc::new(keypair);
             // Load the GeneratedMerkleTreeCollection, which should have been previously generated
             let merkle_tree_coll_path = PathBuf::from(format!(
-                "{}/merkle_tree_coll_{}.json",
+                "{}/generated_merkle_tree_{}.json",
                 cli.meta_merkle_tree_dir.display(),
                 epoch
             ));
             let merkle_tree_coll =
                 GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)?;
+            let tip_router_config_address =
+                Config::find_program_address(&tip_router_program_id, &ncn_address).0;
+
             match claim_mev_tips(
                 &merkle_tree_coll,
                 cli.rpc_url.clone(),
@@ -261,6 +267,7 @@ async fn main() -> Result<()> {
                 arc_keypair,
                 Duration::from_secs(3600),
                 micro_lamports,
+                tip_router_config_address,
             )
             .await
             {

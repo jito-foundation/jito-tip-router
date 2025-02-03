@@ -204,7 +204,7 @@ pub fn get_meta_merkle_root(
 
     // Write GeneratedMerkleTreeCollection to disk. Required for Claiming
     let merkle_tree_coll_path =
-        meta_merkle_tree_dir.join(format!("merkle_tree_coll_{}.json", epoch));
+        meta_merkle_tree_dir.join(format!("generated_merkle_tree_{}.json", epoch));
     let generated_merkle_tree_col_json = match serde_json::to_string(&merkle_tree_coll) {
         Ok(json) => json,
         Err(e) => {
@@ -218,7 +218,7 @@ pub fn get_meta_merkle_root(
                 ("duration_ms", start.elapsed().as_millis() as i64, i64)
             );
             return Err(MerkleRootError::MerkleRootGeneratorError(
-                "Failed to serialize merkle tree collection",
+                "Failed to serialize merkle tree collection".to_string(),
             ));
         }
     };
@@ -235,7 +235,7 @@ pub fn get_meta_merkle_root(
         );
         // TODO: propogate error
         return Err(MerkleRootError::MerkleRootGeneratorError(
-            "Failed to write meta merkle tree to file",
+            "Failed to write meta merkle tree to file".to_string(),
         ));
     }
 
