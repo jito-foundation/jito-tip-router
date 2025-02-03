@@ -31,8 +31,12 @@ pub struct Config {
     pub fee_config: FeeConfig,
     /// Bump seed for the PDA
     pub bump: u8,
+    ///TODO move when we deploy real program Number of epochs until rent can be reclaimed
+    pub epochs_after_consensus_before_close: PodU64,
+    /// Only epochs after this epoch are valid for voting
+    pub starting_valid_epoch: PodU64,
     /// Reserved space
-    reserved: [u8; 127],
+    reserved: [u8; 111],
 }
 
 impl Discriminator for Config {
@@ -42,24 +46,29 @@ impl Discriminator for Config {
 impl Config {
     pub const SIZE: usize = 8 + size_of::<Self>();
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         ncn: &Pubkey,
         tie_breaker_admin: &Pubkey,
         fee_admin: &Pubkey,
         fee_config: &FeeConfig,
+        starting_valid_epoch: u64,
         valid_slots_after_consensus: u64,
         epochs_before_stall: u64,
+        epochs_after_consensus_before_close: u64,
         bump: u8,
     ) -> Self {
         Self {
             ncn: *ncn,
             tie_breaker_admin: *tie_breaker_admin,
             fee_admin: *fee_admin,
+            starting_valid_epoch: PodU64::from(starting_valid_epoch),
             valid_slots_after_consensus: PodU64::from(valid_slots_after_consensus),
             epochs_before_stall: PodU64::from(epochs_before_stall),
+            epochs_after_consensus_before_close: PodU64::from(epochs_after_consensus_before_close),
             fee_config: *fee_config,
             bump,
-            reserved: [0; 127],
+            reserved: [0; 111],
         }
     }
 
@@ -102,11 +111,43 @@ impl Config {
         )
     }
 
+    pub fn starting_valid_epoch(&self) -> u64 {
+        self.starting_valid_epoch.into()
+    }
+
     pub fn valid_slots_after_consensus(&self) -> u64 {
         self.valid_slots_after_consensus.into()
     }
 
     pub fn epochs_before_stall(&self) -> u64 {
         self.epochs_before_stall.into()
+    }
+
+    pub fn epochs_after_consensus_before_close(&self) -> u64 {
+        self.epochs_after_consensus_before_close.into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_len() {
+        use std::mem::size_of;
+
+        let expected_total = size_of::<Pubkey>() // ncn
+            + size_of::<Pubkey>() // tie_breaker_admin 
+            + size_of::<Pubkey>() // fee_admin
+            + size_of::<PodU64>() // valid_slots_after_consensus
+            + size_of::<PodU64>() // epochs_before_stall
+            + size_of::<FeeConfig>() // fee_config
+            + 1 // bump
+            + size_of::<PodU64>() //TODO move up before deploy epochs_after_consensus_before_close
+            + size_of::<PodU64>() //TODO starting_valid_epoch
+            + 111; // reserved
+
+        assert_eq!(size_of::<Config>(), expected_total);
+        assert_eq!(size_of::<Config>() + 8, Config::SIZE);
     }
 }

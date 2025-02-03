@@ -20,14 +20,11 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -40,10 +37,11 @@ export function getInitializeEpochStateDiscriminatorBytes() {
 
 export type InitializeEpochStateInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochMarker extends string | IAccountMeta<string> = string,
   TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountAccountPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -52,6 +50,9 @@ export type InitializeEpochStateInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochMarker extends string
+        ? ReadonlyAccount<TAccountEpochMarker>
+        : TAccountEpochMarker,
       TAccountEpochState extends string
         ? WritableAccount<TAccountEpochState>
         : TAccountEpochState,
@@ -59,10 +60,9 @@ export type InitializeEpochStateInstruction<
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
+      TAccountAccountPayer extends string
+        ? WritableAccount<TAccountAccountPayer>
+        : TAccountAccountPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -110,42 +110,47 @@ export function getInitializeEpochStateInstructionDataCodec(): Codec<
 }
 
 export type InitializeEpochStateInput<
+  TAccountEpochMarker extends string = string,
   TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
-  TAccountPayer extends string = string,
+  TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochMarker: Address<TAccountEpochMarker>;
   epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
-  payer: TransactionSigner<TAccountPayer>;
+  accountPayer: Address<TAccountAccountPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: InitializeEpochStateInstructionDataArgs['epoch'];
 };
 
 export function getInitializeEpochStateInstruction<
+  TAccountEpochMarker extends string,
   TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountNcn extends string,
-  TAccountPayer extends string,
+  TAccountAccountPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: InitializeEpochStateInput<
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
-    TAccountPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): InitializeEpochStateInstruction<
   TProgramAddress,
+  TAccountEpochMarker,
   TAccountEpochState,
   TAccountConfig,
   TAccountNcn,
-  TAccountPayer,
+  TAccountAccountPayer,
   TAccountSystemProgram
 > {
   // Program address.
@@ -154,10 +159,11 @@ export function getInitializeEpochStateInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochMarker: { value: input.epochMarker ?? null, isWritable: false },
     epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    payer: { value: input.payer ?? null, isWritable: true },
+    accountPayer: { value: input.accountPayer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -177,10 +183,11 @@ export function getInitializeEpochStateInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochMarker),
       getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.accountPayer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -189,10 +196,11 @@ export function getInitializeEpochStateInstruction<
     ),
   } as InitializeEpochStateInstruction<
     TProgramAddress,
+    TAccountEpochMarker,
     TAccountEpochState,
     TAccountConfig,
     TAccountNcn,
-    TAccountPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >;
 
@@ -205,11 +213,12 @@ export type ParsedInitializeEpochStateInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    epochState: TAccountMetas[0];
-    config: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    payer: TAccountMetas[3];
-    systemProgram: TAccountMetas[4];
+    epochMarker: TAccountMetas[0];
+    epochState: TAccountMetas[1];
+    config: TAccountMetas[2];
+    ncn: TAccountMetas[3];
+    accountPayer: TAccountMetas[4];
+    systemProgram: TAccountMetas[5];
   };
   data: InitializeEpochStateInstructionData;
 };
@@ -222,7 +231,7 @@ export function parseInitializeEpochStateInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedInitializeEpochStateInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -235,10 +244,11 @@ export function parseInitializeEpochStateInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochMarker: getNextAccount(),
       epochState: getNextAccount(),
       config: getNextAccount(),
       ncn: getNextAccount(),
-      payer: getNextAccount(),
+      accountPayer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeEpochStateInstructionDataDecoder().decode(

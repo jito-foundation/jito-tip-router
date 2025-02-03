@@ -36,7 +36,7 @@ import {
   type ConfigAdminRoleArgs,
 } from '../types';
 
-export const ADMIN_SET_NEW_ADMIN_DISCRIMINATOR = 29;
+export const ADMIN_SET_NEW_ADMIN_DISCRIMINATOR = 30;
 
 export function getAdminSetNewAdminDiscriminatorBytes() {
   return getU8Encoder().encode(ADMIN_SET_NEW_ADMIN_DISCRIMINATOR);

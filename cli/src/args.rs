@@ -31,7 +31,7 @@ pub struct Args {
         long,
         global = true,
         env = "PRIORITY_FEE_MICRO_LAMPORTS",
-        default_value_t = 10_000,
+        default_value_t = 1,
         help = "Priority fee in micro lamports"
     )]
     pub priority_fee_micro_lamports: u64,
@@ -114,14 +114,35 @@ pub struct Args {
 #[derive(Subcommand)]
 pub enum ProgramCommand {
     /// Keeper
-    Keeper,
+    Keeper {
+        #[arg(
+            long,
+            default_value_t = 600_000, // 10 minutes
+            help = "Keeper error timeout in milliseconds"
+        )]
+        loop_timeout_ms: u64,
+        #[arg(
+            long,
+            default_value_t = 10_000, // 10 seconds
+            help = "Keeper error timeout in milliseconds"
+        )]
+        error_timeout_ms: u64,
+        #[arg(long, help = "calls test vote, instead of waiting for a real vote")]
+        test_vote: bool,
+    },
 
-    /// Instructions
+    /// Admin
     AdminCreateConfig {
         #[arg(long, default_value_t = 10 as u64, help = "Epochs before tie breaker can set consensus")]
         epochs_before_stall: u64,
         #[arg(long, default_value_t = (DEFAULT_SLOTS_PER_EPOCH as f64 * 0.1) as u64, help = "Valid slots after consensus")]
         valid_slots_after_consensus: u64,
+        #[arg(
+            long,
+            default_value_t = 10,
+            help = "Epochs after consensus before accounts can be closed"
+        )]
+        epochs_after_consensus_before_close: u64,
         #[arg(long, default_value_t = 300, help = "DAO fee in basis points")]
         dao_fee_bps: u16,
         #[arg(long, default_value_t = 100, help = "Block engine fee in basis points")]
@@ -133,9 +154,6 @@ pub enum ProgramCommand {
         #[arg(long, help = "Tie breaker admin address")]
         tie_breaker_admin: Option<String>,
     },
-
-    CreateVaultRegistry,
-
     AdminRegisterStMint {
         #[arg(long, help = "Vault address")]
         vault: String,
@@ -152,6 +170,33 @@ pub enum ProgramCommand {
         #[arg(long, help = "Weight when no feed is available")]
         no_feed_weight: Option<u128>,
     },
+    AdminSetWeight {
+        #[arg(long, help = "Vault address")]
+        vault: String,
+        #[arg(long, help = "Weight value")]
+        weight: u128,
+    },
+    AdminSetTieBreaker {
+        #[arg(long, help = "Meta merkle root")]
+        meta_merkle_root: String,
+    },
+    AdminSetParameters {
+        #[arg(long, help = "Epochs before tie breaker can set consensus")]
+        epochs_before_stall: Option<u64>,
+        #[arg(long, help = "Epochs after consensus before accounts can be closed")]
+        epochs_after_consensus_before_close: Option<u64>,
+        #[arg(long, help = "Slots to which voting is allowed after consensus")]
+        valid_slots_after_consensus: Option<u64>,
+        #[arg(long, help = "Starting valid epoch")]
+        starting_valid_epoch: Option<u64>,
+    },
+    AdminFundAccountPayer {
+        #[arg(long, help = "Amount of SOL to fund")]
+        amount_in_sol: f64,
+    },
+
+    /// Instructions
+    CreateVaultRegistry,
 
     RegisterVault {
         #[arg(long, help = "Vault address")]
@@ -161,13 +206,6 @@ pub enum ProgramCommand {
     CreateEpochState,
 
     CreateWeightTable,
-
-    AdminSetWeight {
-        #[arg(long, help = "Vault address")]
-        vault: String,
-        #[arg(long, help = "Weight value")]
-        weight: u128,
-    },
 
     SetWeight {
         #[arg(long, help = "Vault address")]
@@ -190,7 +228,7 @@ pub enum ProgramCommand {
 
     CreateBallotBox,
 
-    AdminCastVote {
+    OperatorCastVote {
         #[arg(long, help = "Operator address")]
         operator: String,
         #[arg(long, help = "Meta merkle root")]
@@ -222,11 +260,6 @@ pub enum ProgramCommand {
         ncn_fee_group: u8,
     },
 
-    AdminSetTieBreaker {
-        #[arg(long, help = "Meta merkle root")]
-        meta_merkle_root: String,
-    },
-
     /// Getters
     GetNcn,
     GetNcnOperatorState {
@@ -256,7 +289,9 @@ pub enum ProgramCommand {
     GetStakePool,
     GetBallotBox,
     GetBaseRewardRouter,
-    GetBaseRewardReceiver,
+    GetAccountPayer,
+    GetTotalEpochRentCost,
+    GetNcnRewardRouters,
 
     /// TESTS
     Test,

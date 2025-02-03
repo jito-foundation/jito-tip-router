@@ -81,7 +81,6 @@ pub fn process_switchboard_set_weight(
             .round();
 
         msg!("Oracle Weight: {}", weight);
-
         weight.to_u128().ok_or(TipRouterError::CastToU128Error)?
     };
 
@@ -89,6 +88,7 @@ pub fn process_switchboard_set_weight(
     let weight_table_account = WeightTable::try_from_slice_unchecked_mut(&mut weight_table_data)?;
 
     weight_table_account.check_table_initialized()?;
+
     if weight_table_account.finalized() {
         msg!("Weight table is finalized");
         return Err(ProgramError::InvalidAccountData);

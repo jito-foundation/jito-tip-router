@@ -33,8 +33,10 @@ pub struct Config {
     pub epochs_before_stall: u64,
     pub fee_config: FeeConfig,
     pub bump: u8,
+    pub epochs_after_consensus_before_close: u64,
+    pub starting_valid_epoch: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-    pub reserved: [u8; 127],
+    pub reserved: [u8; 111],
 }
 
 impl Config {

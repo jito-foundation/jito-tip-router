@@ -22,6 +22,7 @@ import {
   type ParsedAdminSetWeightInstruction,
   type ParsedCastVoteInstruction,
   type ParsedClaimWithPayerInstruction,
+  type ParsedCloseEpochAccountInstruction,
   type ParsedDistributeBaseNcnRewardRouteInstruction,
   type ParsedDistributeBaseRewardsInstruction,
   type ParsedDistributeNcnOperatorRewardsInstruction,
@@ -50,12 +51,13 @@ import {
 } from '../instructions';
 
 export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
-  'Ap2AH3VcZGuuauEDq87uhgjNoUKcCAafc4DTyTByLMFf' as Address<'Ap2AH3VcZGuuauEDq87uhgjNoUKcCAafc4DTyTByLMFf'>;
+  'RouterBmuRBkPUbgEDMtdvTZ75GBdSREZR5uGUxxxpb' as Address<'RouterBmuRBkPUbgEDMtdvTZ75GBdSREZR5uGUxxxpb'>;
 
 export enum JitoTipRouterAccount {
   BallotBox,
   BaseRewardRouter,
   Config,
+  EpochMarker,
   EpochSnapshot,
   OperatorSnapshot,
   EpochState,
@@ -92,6 +94,7 @@ export enum JitoTipRouterInstruction {
   DistributeNcnOperatorRewards,
   DistributeNcnVaultRewards,
   ClaimWithPayer,
+  CloseEpochAccount,
   AdminSetParameters,
   AdminSetConfigFees,
   AdminSetNewAdmin,
@@ -187,24 +190,27 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.ClaimWithPayer;
   }
   if (containsBytes(data, getU8Encoder().encode(27), 0)) {
-    return JitoTipRouterInstruction.AdminSetParameters;
+    return JitoTipRouterInstruction.CloseEpochAccount;
   }
   if (containsBytes(data, getU8Encoder().encode(28), 0)) {
-    return JitoTipRouterInstruction.AdminSetConfigFees;
+    return JitoTipRouterInstruction.AdminSetParameters;
   }
   if (containsBytes(data, getU8Encoder().encode(29), 0)) {
-    return JitoTipRouterInstruction.AdminSetNewAdmin;
+    return JitoTipRouterInstruction.AdminSetConfigFees;
   }
   if (containsBytes(data, getU8Encoder().encode(30), 0)) {
-    return JitoTipRouterInstruction.AdminSetTieBreaker;
+    return JitoTipRouterInstruction.AdminSetNewAdmin;
   }
   if (containsBytes(data, getU8Encoder().encode(31), 0)) {
-    return JitoTipRouterInstruction.AdminSetWeight;
+    return JitoTipRouterInstruction.AdminSetTieBreaker;
   }
   if (containsBytes(data, getU8Encoder().encode(32), 0)) {
-    return JitoTipRouterInstruction.AdminRegisterStMint;
+    return JitoTipRouterInstruction.AdminSetWeight;
   }
   if (containsBytes(data, getU8Encoder().encode(33), 0)) {
+    return JitoTipRouterInstruction.AdminRegisterStMint;
+  }
+  if (containsBytes(data, getU8Encoder().encode(34), 0)) {
     return JitoTipRouterInstruction.AdminSetStMint;
   }
   throw new Error(
@@ -213,7 +219,7 @@ export function identifyJitoTipRouterInstruction(
 }
 
 export type ParsedJitoTipRouterInstruction<
-  TProgram extends string = 'Ap2AH3VcZGuuauEDq87uhgjNoUKcCAafc4DTyTByLMFf',
+  TProgram extends string = 'RouterBmuRBkPUbgEDMtdvTZ75GBdSREZR5uGUxxxpb',
 > =
   | ({
       instructionType: JitoTipRouterInstruction.InitializeConfig;
@@ -296,6 +302,9 @@ export type ParsedJitoTipRouterInstruction<
   | ({
       instructionType: JitoTipRouterInstruction.ClaimWithPayer;
     } & ParsedClaimWithPayerInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.CloseEpochAccount;
+    } & ParsedCloseEpochAccountInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.AdminSetParameters;
     } & ParsedAdminSetParametersInstruction<TProgram>)

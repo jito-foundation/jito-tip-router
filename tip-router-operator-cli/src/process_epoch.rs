@@ -111,9 +111,12 @@ pub async fn process_epoch(
 
     // Get the protocol fees
     let ncn_config = get_ncn_config(client, tip_router_program_id, ncn_address).await?;
+    let tip_router_target_epoch = target_epoch
+        .checked_add(1)
+        .ok_or(anyhow::anyhow!("tip_router_target_epoch overflow"))?;
     let adjusted_total_fees = ncn_config
         .fee_config
-        .adjusted_total_fees_bps(target_epoch)?;
+        .adjusted_total_fees_bps(tip_router_target_epoch)?;
 
     let account_paths = account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
     let full_snapshots_path = full_snapshots_path.map_or(ledger_path, |path| path);
@@ -134,6 +137,7 @@ pub async fn process_epoch(
         tip_distribution_program_id,
         "", // TODO out_path is not used, unsure what should be put here. Maybe `snapshot_output_dir` from cli args?
         tip_payment_program_id,
+        tip_router_program_id,
         ncn_address,
         &operator_address,
         target_epoch,

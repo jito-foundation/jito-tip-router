@@ -5,7 +5,7 @@ use ellipsis_client::EllipsisClient;
 use jito_bytemuck::AccountDeserialize as JitoAccountDeserialize;
 use jito_tip_distribution_sdk::{derive_config_account_address, TipDistributionAccount};
 use jito_tip_router_core::ballot_box::BallotBox;
-use log::{debug, info};
+use log::{debug, error, info};
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
@@ -42,7 +42,7 @@ pub async fn submit_recent_epochs_to_ncn(
             continue;
         }
 
-        submit_to_ncn(
+        match submit_to_ncn(
             client,
             keypair,
             &operator_address,
@@ -51,8 +51,13 @@ pub async fn submit_recent_epochs_to_ncn(
             ncn_address,
             tip_router_program_id,
             tip_distribution_program_id,
+            cli_args.submit_as_memo,
         )
-        .await?;
+        .await
+        {
+            Ok(_) => {}
+            Err(e) => error!("Failed to submit epoch {} to NCN: {:?}", process_epoch, e),
+        }
     }
 
     Ok(())
@@ -63,22 +68,35 @@ pub async fn submit_to_ncn(
     keypair: &Keypair,
     operator_address: &Pubkey,
     meta_merkle_tree_path: &PathBuf,
-    epoch: u64,
+    merkle_root_epoch: u64,
     ncn_address: &Pubkey,
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
+    submit_as_memo: bool,
 ) -> Result<(), anyhow::Error> {
     let epoch_info = client.get_epoch_info()?;
     let meta_merkle_tree = MetaMerkleTree::new_from_file(meta_merkle_tree_path)?;
     let config = get_ncn_config(client, tip_router_program_id, ncn_address).await?;
 
+    // The meta merkle root files are tagged with the epoch they have created the snapshot for
+    // Tip router accounts for that merkle root are created in the next epoch
+    let tip_router_target_epoch = merkle_root_epoch + 1;
+
     // Check for ballot box
-    let ballot_box_address =
-        BallotBox::find_program_address(tip_router_program_id, ncn_address, epoch).0;
+    let ballot_box_address = BallotBox::find_program_address(
+        tip_router_program_id,
+        ncn_address,
+        tip_router_target_epoch,
+    )
+    .0;
+
     let ballot_box_account = match client.get_account(&ballot_box_address).await {
         Ok(account) => account,
         Err(e) => {
-            debug!("Ballot box not created yet for epoch {}: {}", epoch, e);
+            debug!(
+                "Ballot box not created yet for epoch {}: {:?}",
+                tip_router_target_epoch, e
+            );
             return Ok(());
         }
     };
@@ -114,11 +132,12 @@ pub async fn submit_to_ncn(
             client,
             keypair,
             tip_router_program_id,
-            *ncn_address,
-            keypair.pubkey(),
+            ncn_address,
+            operator_address,
             keypair,
             meta_merkle_tree.merkle_root,
-            epoch,
+            tip_router_target_epoch,
+            submit_as_memo,
         )
         .await;
 
@@ -127,7 +146,7 @@ pub async fn submit_to_ncn(
                 datapoint_info!(
                     "tip_router_cli.vote_cast",
                     ("operator_address", operator_address.to_string(), String),
-                    ("epoch", epoch, i64),
+                    ("epoch", tip_router_target_epoch, i64),
                     (
                         "merkle_root",
                         format!("{:?}", meta_merkle_tree.merkle_root),
@@ -137,14 +156,14 @@ pub async fn submit_to_ncn(
                 );
                 info!(
                     "Cast vote for epoch {} with signature {:?}",
-                    epoch, signature
+                    tip_router_target_epoch, signature
                 )
             }
             Err(e) => {
                 datapoint_error!(
                     "tip_router_cli.vote_cast",
                     ("operator_address", operator_address.to_string(), String),
-                    ("epoch", epoch, i64),
+                    ("epoch", tip_router_target_epoch, i64),
                     (
                         "merkle_root",
                         format!("{:?}", meta_merkle_tree.merkle_root),
@@ -153,48 +172,64 @@ pub async fn submit_to_ncn(
                     ("status", "error", String),
                     ("error", format!("{:?}", e), String)
                 );
-                info!("Failed to cast vote for epoch {}: {:?}", epoch, e)
+                info!(
+                    "Failed to cast vote for epoch {}: {:?}",
+                    tip_router_target_epoch, e
+                )
             }
         }
     }
 
     if ballot_box.is_consensus_reached() {
         // Fetch TipDistributionAccounts filtered by epoch and upload authority
-        let tip_distribution_accounts =
-            get_tip_distribution_accounts_to_upload(client, epoch, tip_distribution_program_id)
-                .await?;
+        // Tip distribution accounts are derived from the epoch they are for
+        let tip_distribution_accounts = get_tip_distribution_accounts_to_upload(
+            client,
+            merkle_root_epoch,
+            tip_distribution_program_id,
+        )
+        .await?;
 
         // For each TipDistributionAccount returned, if it has no root uploaded, upload root with set_merkle_root
-        let res = set_merkle_roots_batched(
+        match set_merkle_roots_batched(
             client,
             ncn_address,
             keypair,
             tip_distribution_program_id,
             tip_router_program_id,
-            epoch,
+            tip_router_target_epoch,
             tip_distribution_accounts,
             meta_merkle_tree,
         )
-        .await?;
+        .await
+        {
+            Ok(res) => {
+                let num_success = res.iter().filter(|r| r.is_ok()).count();
+                let num_failed = res.iter().filter(|r| r.is_err()).count();
 
-        let num_success = res.iter().filter(|r| r.is_ok()).count();
-        let num_failed = res.iter().filter(|r| r.is_err()).count();
-
-        datapoint_info!(
-            "tip_router_cli.set_merkle_root",
-            ("operator_address", operator_address.to_string(), String),
-            ("epoch", epoch, i64),
-            ("num_success", num_success, i64),
-            ("num_failed", num_failed, i64)
-        );
-        info!(
-            "Set merkle root for {} tip distribution accounts",
-            num_success
-        );
-        info!(
-            "Failed to set merkle root for {} tip distribution accounts",
-            num_failed
-        );
+                datapoint_info!(
+                    "tip_router_cli.set_merkle_root",
+                    ("operator_address", operator_address.to_string(), String),
+                    ("epoch", tip_router_target_epoch, i64),
+                    ("num_success", num_success, i64),
+                    ("num_failed", num_failed, i64)
+                );
+                info!(
+                    "Set merkle root for {} tip distribution accounts, failed for {}",
+                    num_success, num_failed
+                );
+            }
+            Err(e) => {
+                datapoint_error!(
+                    "tip_router_cli.set_merkle_root",
+                    ("operator_address", operator_address.to_string(), String),
+                    ("epoch", tip_router_target_epoch, i64),
+                    ("status", "error", String),
+                    ("error", format!("{:?}", e), String)
+                );
+                error!("Failed to set merkle roots: {:?}", e);
+            }
+        }
     }
 
     Ok(())

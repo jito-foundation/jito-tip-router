@@ -12,7 +12,7 @@ use borsh::BorshSerialize;
 pub struct ReallocOperatorSnapshot {
     pub epoch_state: solana_program::pubkey::Pubkey,
 
-    pub ncn_config: solana_program::pubkey::Pubkey,
+    pub config: solana_program::pubkey::Pubkey,
 
     pub restaking_config: solana_program::pubkey::Pubkey,
 
@@ -26,7 +26,7 @@ pub struct ReallocOperatorSnapshot {
 
     pub operator_snapshot: solana_program::pubkey::Pubkey,
 
-    pub payer: solana_program::pubkey::Pubkey,
+    pub account_payer: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
@@ -50,7 +50,7 @@ impl ReallocOperatorSnapshot {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_config,
+            self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -77,7 +77,8 @@ impl ReallocOperatorSnapshot {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.payer, true,
+            self.account_payer,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
@@ -126,26 +127,26 @@ pub struct ReallocOperatorSnapshotInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[writable]` epoch_state
-///   1. `[]` ncn_config
+///   1. `[]` config
 ///   2. `[]` restaking_config
 ///   3. `[]` ncn
 ///   4. `[]` operator
 ///   5. `[]` ncn_operator_state
 ///   6. `[writable]` epoch_snapshot
 ///   7. `[writable]` operator_snapshot
-///   8. `[writable, signer]` payer
+///   8. `[writable]` account_payer
 ///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct ReallocOperatorSnapshotBuilder {
     epoch_state: Option<solana_program::pubkey::Pubkey>,
-    ncn_config: Option<solana_program::pubkey::Pubkey>,
+    config: Option<solana_program::pubkey::Pubkey>,
     restaking_config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
     ncn_operator_state: Option<solana_program::pubkey::Pubkey>,
     epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
     operator_snapshot: Option<solana_program::pubkey::Pubkey>,
-    payer: Option<solana_program::pubkey::Pubkey>,
+    account_payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -161,8 +162,8 @@ impl ReallocOperatorSnapshotBuilder {
         self
     }
     #[inline(always)]
-    pub fn ncn_config(&mut self, ncn_config: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.ncn_config = Some(ncn_config);
+    pub fn config(&mut self, config: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.config = Some(config);
         self
     }
     #[inline(always)]
@@ -205,8 +206,8 @@ impl ReallocOperatorSnapshotBuilder {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
+    pub fn account_payer(&mut self, account_payer: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.account_payer = Some(account_payer);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -242,7 +243,7 @@ impl ReallocOperatorSnapshotBuilder {
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = ReallocOperatorSnapshot {
             epoch_state: self.epoch_state.expect("epoch_state is not set"),
-            ncn_config: self.ncn_config.expect("ncn_config is not set"),
+            config: self.config.expect("config is not set"),
             restaking_config: self.restaking_config.expect("restaking_config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             operator: self.operator.expect("operator is not set"),
@@ -253,7 +254,7 @@ impl ReallocOperatorSnapshotBuilder {
             operator_snapshot: self
                 .operator_snapshot
                 .expect("operator_snapshot is not set"),
-            payer: self.payer.expect("payer is not set"),
+            account_payer: self.account_payer.expect("account_payer is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -270,7 +271,7 @@ impl ReallocOperatorSnapshotBuilder {
 pub struct ReallocOperatorSnapshotCpiAccounts<'a, 'b> {
     pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -284,7 +285,7 @@ pub struct ReallocOperatorSnapshotCpiAccounts<'a, 'b> {
 
     pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
@@ -296,7 +297,7 @@ pub struct ReallocOperatorSnapshotCpi<'a, 'b> {
 
     pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+    pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub restaking_config: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -310,7 +311,7 @@ pub struct ReallocOperatorSnapshotCpi<'a, 'b> {
 
     pub operator_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -326,14 +327,14 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
         Self {
             __program: program,
             epoch_state: accounts.epoch_state,
-            ncn_config: accounts.ncn_config,
+            config: accounts.config,
             restaking_config: accounts.restaking_config,
             ncn: accounts.ncn,
             operator: accounts.operator,
             ncn_operator_state: accounts.ncn_operator_state,
             epoch_snapshot: accounts.epoch_snapshot,
             operator_snapshot: accounts.operator_snapshot,
-            payer: accounts.payer,
+            account_payer: accounts.account_payer,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -377,7 +378,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_config.key,
+            *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -405,8 +406,8 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.payer.key,
-            true,
+            *self.account_payer.key,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
@@ -433,14 +434,14 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
         let mut account_infos = Vec::with_capacity(10 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.epoch_state.clone());
-        account_infos.push(self.ncn_config.clone());
+        account_infos.push(self.config.clone());
         account_infos.push(self.restaking_config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.operator.clone());
         account_infos.push(self.ncn_operator_state.clone());
         account_infos.push(self.epoch_snapshot.clone());
         account_infos.push(self.operator_snapshot.clone());
-        account_infos.push(self.payer.clone());
+        account_infos.push(self.account_payer.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -459,14 +460,14 @@ impl<'a, 'b> ReallocOperatorSnapshotCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[writable]` epoch_state
-///   1. `[]` ncn_config
+///   1. `[]` config
 ///   2. `[]` restaking_config
 ///   3. `[]` ncn
 ///   4. `[]` operator
 ///   5. `[]` ncn_operator_state
 ///   6. `[writable]` epoch_snapshot
 ///   7. `[writable]` operator_snapshot
-///   8. `[writable, signer]` payer
+///   8. `[writable]` account_payer
 ///   9. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
@@ -478,14 +479,14 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
         let instruction = Box::new(ReallocOperatorSnapshotCpiBuilderInstruction {
             __program: program,
             epoch_state: None,
-            ncn_config: None,
+            config: None,
             restaking_config: None,
             ncn: None,
             operator: None,
             ncn_operator_state: None,
             epoch_snapshot: None,
             operator_snapshot: None,
-            payer: None,
+            account_payer: None,
             system_program: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
@@ -501,11 +502,11 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn ncn_config(
+    pub fn config(
         &mut self,
-        ncn_config: &'b solana_program::account_info::AccountInfo<'a>,
+        config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_config = Some(ncn_config);
+        self.instruction.config = Some(config);
         self
     }
     #[inline(always)]
@@ -554,8 +555,11 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
+    pub fn account_payer(
+        &mut self,
+        account_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.account_payer = Some(account_payer);
         self
     }
     #[inline(always)]
@@ -623,7 +627,7 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
                 .epoch_state
                 .expect("epoch_state is not set"),
 
-            ncn_config: self.instruction.ncn_config.expect("ncn_config is not set"),
+            config: self.instruction.config.expect("config is not set"),
 
             restaking_config: self
                 .instruction
@@ -649,7 +653,10 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
                 .operator_snapshot
                 .expect("operator_snapshot is not set"),
 
-            payer: self.instruction.payer.expect("payer is not set"),
+            account_payer: self
+                .instruction
+                .account_payer
+                .expect("account_payer is not set"),
 
             system_program: self
                 .instruction
@@ -668,14 +675,14 @@ impl<'a, 'b> ReallocOperatorSnapshotCpiBuilder<'a, 'b> {
 struct ReallocOperatorSnapshotCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     restaking_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_operator_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    account_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

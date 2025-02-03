@@ -34,44 +34,57 @@ pub async fn get_ncn_config(
 /// Generate and send a CastVote instruction with the merkle root.
 pub async fn cast_vote(
     client: &EllipsisClient,
-    _payer: &Keypair,
+    payer: &Keypair,
     tip_router_program_id: &Pubkey,
-    ncn: Pubkey,
-    operator: Pubkey,
-    operator_admin: &Keypair,
+    ncn: &Pubkey,
+    operator: &Pubkey,
+    operator_voter: &Keypair,
     meta_merkle_root: [u8; 32],
-    epoch: u64,
+    tip_router_epoch: u64,
+    submit_as_memo: bool,
 ) -> EllipsisClientResult<Signature> {
-    let epoch_state = EpochState::find_program_address(tip_router_program_id, &ncn, epoch).0;
+    let epoch_state =
+        EpochState::find_program_address(tip_router_program_id, &ncn, tip_router_epoch).0;
 
     let ncn_config = Config::find_program_address(tip_router_program_id, &ncn).0;
 
-    let ballot_box = BallotBox::find_program_address(tip_router_program_id, &ncn, epoch).0;
+    let ballot_box =
+        BallotBox::find_program_address(tip_router_program_id, &ncn, tip_router_epoch).0;
 
-    let epoch_snapshot = EpochSnapshot::find_program_address(tip_router_program_id, &ncn, epoch).0;
+    let epoch_snapshot =
+        EpochSnapshot::find_program_address(tip_router_program_id, &ncn, tip_router_epoch).0;
 
-    let operator_snapshot =
-        OperatorSnapshot::find_program_address(tip_router_program_id, &operator, &ncn, epoch).0;
+    let operator_snapshot = OperatorSnapshot::find_program_address(
+        tip_router_program_id,
+        &operator,
+        &ncn,
+        tip_router_epoch,
+    )
+    .0;
 
-    let _ix = CastVoteBuilder::new()
-        .epoch_state(epoch_state)
-        .config(ncn_config)
-        .ballot_box(ballot_box)
-        .ncn(ncn)
-        .epoch_snapshot(epoch_snapshot)
-        .operator_snapshot(operator_snapshot)
-        .operator(operator)
-        .operator_admin(operator_admin.pubkey())
-        .meta_merkle_root(meta_merkle_root)
-        .epoch(epoch)
-        .instruction();
+    let ix = if submit_as_memo {
+        spl_memo::build_memo(&meta_merkle_root.to_vec(), &[&operator_voter.pubkey()])
+    } else {
+        CastVoteBuilder::new()
+            .epoch_state(epoch_state)
+            .config(ncn_config)
+            .ballot_box(ballot_box)
+            .ncn(*ncn)
+            .epoch_snapshot(epoch_snapshot)
+            .operator_snapshot(operator_snapshot)
+            .operator(*operator)
+            .operator_voter(operator_voter.pubkey())
+            .meta_merkle_root(meta_merkle_root)
+            .epoch(tip_router_epoch)
+            .instruction()
+    };
 
-    // Until we actually want to start voting on live or test NCN
-    let ix = spl_memo::build_memo(&meta_merkle_root.to_vec(), &[&operator_admin.pubkey()]);
     info!("Submitting meta merkle root {:?}", meta_merkle_root);
 
-    let tx = Transaction::new_with_payer(&[ix], Some(&operator_admin.pubkey()));
-    client.process_transaction(tx, &[operator_admin]).await
+    let tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
+    client
+        .process_transaction(tx, &[payer, operator_voter])
+        .await
 }
 
 pub async fn set_merkle_roots_batched(
@@ -122,6 +135,7 @@ pub async fn set_merkle_roots_batched(
                 .max_num_nodes(meta_merkle_node.max_num_nodes)
                 .epoch(epoch)
                 .instruction();
+
             Some(ix)
         })
         .collect::<Vec<_>>();

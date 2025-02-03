@@ -16,7 +16,7 @@ pub struct ReallocEpochState {
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub payer: solana_program::pubkey::Pubkey,
+    pub account_payer: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
@@ -47,7 +47,8 @@ impl ReallocEpochState {
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.payer, true,
+            self.account_payer,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
@@ -98,14 +99,14 @@ pub struct ReallocEpochStateInstructionArgs {
 ///   0. `[writable]` epoch_state
 ///   1. `[]` config
 ///   2. `[]` ncn
-///   3. `[writable, signer]` payer
+///   3. `[writable]` account_payer
 ///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct ReallocEpochStateBuilder {
     epoch_state: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    payer: Option<solana_program::pubkey::Pubkey>,
+    account_payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -131,8 +132,8 @@ impl ReallocEpochStateBuilder {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
+    pub fn account_payer(&mut self, account_payer: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.account_payer = Some(account_payer);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -170,7 +171,7 @@ impl ReallocEpochStateBuilder {
             epoch_state: self.epoch_state.expect("epoch_state is not set"),
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            payer: self.payer.expect("payer is not set"),
+            account_payer: self.account_payer.expect("account_payer is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -191,7 +192,7 @@ pub struct ReallocEpochStateCpiAccounts<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
@@ -207,7 +208,7 @@ pub struct ReallocEpochStateCpi<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -225,7 +226,7 @@ impl<'a, 'b> ReallocEpochStateCpi<'a, 'b> {
             epoch_state: accounts.epoch_state,
             config: accounts.config,
             ncn: accounts.ncn,
-            payer: accounts.payer,
+            account_payer: accounts.account_payer,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -277,8 +278,8 @@ impl<'a, 'b> ReallocEpochStateCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.payer.key,
-            true,
+            *self.account_payer.key,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
@@ -307,7 +308,7 @@ impl<'a, 'b> ReallocEpochStateCpi<'a, 'b> {
         account_infos.push(self.epoch_state.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.payer.clone());
+        account_infos.push(self.account_payer.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -328,7 +329,7 @@ impl<'a, 'b> ReallocEpochStateCpi<'a, 'b> {
 ///   0. `[writable]` epoch_state
 ///   1. `[]` config
 ///   2. `[]` ncn
-///   3. `[writable, signer]` payer
+///   3. `[writable]` account_payer
 ///   4. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct ReallocEpochStateCpiBuilder<'a, 'b> {
@@ -342,7 +343,7 @@ impl<'a, 'b> ReallocEpochStateCpiBuilder<'a, 'b> {
             epoch_state: None,
             config: None,
             ncn: None,
-            payer: None,
+            account_payer: None,
             system_program: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
@@ -371,8 +372,11 @@ impl<'a, 'b> ReallocEpochStateCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
+    pub fn account_payer(
+        &mut self,
+        account_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.account_payer = Some(account_payer);
         self
     }
     #[inline(always)]
@@ -444,7 +448,10 @@ impl<'a, 'b> ReallocEpochStateCpiBuilder<'a, 'b> {
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            payer: self.instruction.payer.expect("payer is not set"),
+            account_payer: self
+                .instruction
+                .account_payer
+                .expect("account_payer is not set"),
 
             system_program: self
                 .instruction
@@ -465,7 +472,7 @@ struct ReallocEpochStateCpiBuilderInstruction<'a, 'b> {
     epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    account_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

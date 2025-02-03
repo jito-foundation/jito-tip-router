@@ -12,7 +12,8 @@ pub mod process_epoch;
 pub mod rpc_utils;
 pub mod submit;
 
-use std::fs;
+use std::fs::{self, File};
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
@@ -24,7 +25,8 @@ use jito_tip_payment_sdk::{
     TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
     TIP_ACCOUNT_SEED_7,
 };
-use log::info;
+use log::{error, info};
+use meta_merkle_tree::generated_merkle_tree::MerkleRootGeneratorError;
 use meta_merkle_tree::{
     generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
 };
@@ -70,6 +72,19 @@ fn derive_tip_payment_pubkeys(program_id: &Pubkey) -> TipPaymentPubkeys {
     }
 }
 
+fn write_to_json_file(
+    merkle_tree_coll: &GeneratedMerkleTreeCollection,
+    file_path: &PathBuf,
+) -> std::result::Result<(), MerkleRootGeneratorError> {
+    let file = File::create(file_path)?;
+    let mut writer = BufWriter::new(file);
+    let json = serde_json::to_string_pretty(&merkle_tree_coll).unwrap();
+    writer.write_all(json.as_bytes())?;
+    writer.flush()?;
+
+    Ok(())
+}
+
 /// Convenience wrapper around [TipDistributionAccount]
 pub struct TipDistributionAccountWrapper {
     pub tip_distribution_account: TipDistributionAccount,
@@ -87,6 +102,7 @@ pub fn get_meta_merkle_root(
     tip_distribution_program_id: &Pubkey,
     out_path: &str,
     tip_payment_program_id: &Pubkey,
+    tip_router_program_id: &Pubkey,
     ncn_address: &Pubkey,
     operator_address: &Pubkey,
     epoch: u64,
@@ -175,6 +191,7 @@ pub fn get_meta_merkle_root(
         ncn_address,
         epoch,
         protocol_fee_bps,
+        tip_router_program_id,
     )
     .map_err(|_| {
         MerkleRootError::MerkleRootGeneratorError(
@@ -189,6 +206,27 @@ pub fn get_meta_merkle_root(
         merkle_tree_coll.generated_merkle_trees.len(),
         merkle_tree_coll.bank_hash
     );
+
+    // Write GeneratedMerkleTreeCollection to file for debugging/verification
+    let generated_merkle_tree_path = incremental_snapshots_path.join(format!(
+        "generated_merkle_tree_{}.json",
+        merkle_tree_coll.epoch
+    ));
+    match write_to_json_file(&merkle_tree_coll, &generated_merkle_tree_path) {
+        Ok(_) => {
+            info!(
+                "Wrote GeneratedMerkleTreeCollection to {}",
+                generated_merkle_tree_path.display()
+            );
+        }
+        Err(e) => {
+            error!(
+                "Failed to write GeneratedMerkleTreeCollection to file {}: {:?}",
+                generated_merkle_tree_path.display(),
+                e
+            );
+        }
+    }
 
     datapoint_info!(
         "tip_router_cli.get_meta_merkle_root",
