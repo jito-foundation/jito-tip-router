@@ -1,17 +1,14 @@
+#![allow(clippy::integer_division)]
 use ::{
     anyhow::Result,
     clap::Parser,
-    ellipsis_client::{ClientSubset, EllipsisClient},
-    jito_tip_router_core::config::Config,
+    ellipsis_client::EllipsisClient,
     log::{error, info},
     meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection,
     solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::rpc_client::RpcClient,
     solana_sdk::{
-        clock::DEFAULT_SLOTS_PER_EPOCH,
-        pubkey::Pubkey,
-        signer::{keypair::read_keypair_file, Signer},
-        transaction::Transaction,
+        clock::DEFAULT_SLOTS_PER_EPOCH, pubkey::Pubkey, signer::keypair::read_keypair_file,
     },
     std::{
         path::PathBuf,

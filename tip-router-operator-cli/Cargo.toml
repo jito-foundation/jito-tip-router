@@ -46,8 +46,8 @@ solana-runtime = { workspace = true }
 solana-sdk = { workspace = true }
 solana-stake-program = { workspace = true }
 solana-streamer = { workspace = true }
-solana-unified-scheduler-pool = { workspace = true }
 solana-transaction-status = { workspace = true }
+solana-unified-scheduler-pool = { workspace = true }
 solana-vote = { workspace = true }
 spl-memo = { workspace = true }
 thiserror = { workspace = true }

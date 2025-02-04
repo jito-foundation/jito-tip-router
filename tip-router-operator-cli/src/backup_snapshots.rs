@@ -1,3 +1,4 @@
+#![allow(clippy::arithmetic_side_effects, clippy::integer_division)]
 use anyhow::{Context, Result};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
@@ -38,7 +39,7 @@ impl SnapshotInfo {
         let start_slot = parts[2].parse().ok()?;
         let end_slot = parts[3].parse().ok()?;
 
-        Some(SnapshotInfo {
+        Some(Self {
             path,
             _start_slot: start_slot,
             end_slot,

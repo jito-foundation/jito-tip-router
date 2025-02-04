@@ -102,6 +102,7 @@ pub fn generate_stake_meta(
     let bank = match res {
         Ok(bank) => bank,
         Err(e) => {
+            #[allow(clippy::option_if_let_else)]
             let error_str = if let Some(s) = e.downcast_ref::<String>() {
                 s.to_string()
             } else if let Some(s) = e.downcast_ref::<&'static str>() {

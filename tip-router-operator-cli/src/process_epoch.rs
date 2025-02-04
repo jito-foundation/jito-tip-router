@@ -113,7 +113,7 @@ pub async fn process_epoch(
     let ncn_config = get_ncn_config(client, tip_router_program_id, ncn_address).await?;
     let tip_router_target_epoch = target_epoch
         .checked_add(1)
-        .ok_or(anyhow::anyhow!("tip_router_target_epoch overflow"))?;
+        .ok_or_else(|| anyhow::anyhow!("tip_router_target_epoch overflow"))?;
     let adjusted_total_fees = ncn_config
         .fee_config
         .adjusted_total_fees_bps(tip_router_target_epoch)?;
@@ -192,7 +192,7 @@ pub async fn process_epoch(
         }
     };
 
-    if let Err(e) = std::fs::write(&meta_merkle_tree_path, meta_merkle_tree_json) {
+    if let Err(e) = std::fs::write(meta_merkle_tree_path, meta_merkle_tree_json) {
         datapoint_error!(
             "tip_router_cli.process_epoch",
             ("operator_address", operator_address.to_string(), String),

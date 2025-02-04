@@ -1,5 +1,5 @@
 use {
-    clap_old::{value_t, value_t_or_exit, values_t_or_exit, ArgMatches},
+    clap_old::ArgMatches,
     crossbeam_channel::unbounded,
     log::*,
     solana_accounts_db::{
@@ -59,7 +59,7 @@ use {
 
 pub const LEDGER_TOOL_DIRECTORY: &str = "ledger_tool";
 
-const PROCESS_SLOTS_HELP_STRING: &str =
+const _PROCESS_SLOTS_HELP_STRING: &str =
     "The starting slot is either the latest found snapshot slot, or genesis (slot 0) if the \
      --no-snapshot flag was specified or if no snapshots were found. \
      The ending slot is the snapshot creation slot for create-snapshot, the value for \
@@ -138,7 +138,7 @@ pub fn load_and_process_ledger(
             .join("snapshot")
     };
 
-    let mut starting_slot = 0; // default start check with genesis
+    let mut _starting_slot = 0; // default start check with genesis
     let snapshot_config = if arg_matches.is_present("no_snapshot") {
         None
     } else {
@@ -157,7 +157,7 @@ pub fn load_and_process_ledger(
                     None,
                 )
                 .unwrap_or_default();
-            starting_slot = std::cmp::max(full_snapshot_slot, incremental_snapshot_slot);
+            _starting_slot = std::cmp::max(full_snapshot_slot, incremental_snapshot_slot);
         }
 
         Some(SnapshotConfig {
@@ -521,13 +521,13 @@ pub fn get_shred_storage_type(ledger_path: &Path, message: &str) -> ShredStorage
     // the rocksdb options can be constructed via load_options_file() as the
     // value picked by passing None for `max_shred_storage_size` could affect
     // the persisted rocksdb options file.
-    match ShredStorageType::from_ledger_path(ledger_path, None) {
-        Some(s) => s,
-        None => {
+    ShredStorageType::from_ledger_path(ledger_path, None).map_or_else(
+        || {
             info!("{}", message);
             ShredStorageType::RocksLevel
-        }
-    }
+        },
+        |s| s,
+    )
 }
 
 /// Open blockstore with temporary primary access to allow necessary,
@@ -568,7 +568,7 @@ fn open_blockstore_with_temporary_primary_access(
     )
 }
 
-pub fn open_genesis_config_by(ledger_path: &Path, matches: &ArgMatches<'_>) -> GenesisConfig {
+pub fn open_genesis_config_by(ledger_path: &Path, _matches: &ArgMatches<'_>) -> GenesisConfig {
     const MAX_GENESIS_ARCHIVE_UNPACKED_SIZE: u64 = 10 * 1024 * 1024; // 10 MiB
     let max_genesis_archive_unpacked_size = MAX_GENESIS_ARCHIVE_UNPACKED_SIZE;
 
@@ -589,7 +589,7 @@ pub fn get_program_ids(tx: &VersionedTransaction) -> impl Iterator<Item = &Pubke
 }
 
 /// Get the AccessType required, based on `process_options`
-pub(crate) fn get_access_type(process_options: &ProcessOptions) -> AccessType {
+pub(crate) const fn _get_access_type(process_options: &ProcessOptions) -> AccessType {
     match process_options.use_snapshot_archives_at_startup {
         UseSnapshotArchivesAtStartup::Always => AccessType::Secondary,
         UseSnapshotArchivesAtStartup::Never => AccessType::PrimaryForMaintenance,

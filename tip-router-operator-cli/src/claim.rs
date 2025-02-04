@@ -56,6 +56,7 @@ pub enum ClaimMevError {
     UncaughtError { e: String },
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn claim_mev_tips(
     merkle_trees: &GeneratedMerkleTreeCollection,
     rpc_url: String,
@@ -280,6 +281,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 /// - the claimant must have enough lamports post-claim to be rent-exempt.
 ///   - note: there aren't any rent exempt accounts on solana mainnet anymore.
 /// - it must not have already been claimed.
+#[allow(clippy::too_many_arguments)]
 fn build_mev_claim_transactions(
     tip_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,

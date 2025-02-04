@@ -72,7 +72,7 @@ impl GeneratedMerkleTreeCollection {
                     ncn_address,
                     epoch,
                     &stake_meta_collection.tip_distribution_program_id, // Pass the program ID
-                    &tip_router_program_id,
+                    tip_router_program_id,
                 ) {
                     Err(e) => return Some(Err(e)),
                     Ok(maybe_tree_nodes) => maybe_tree_nodes,

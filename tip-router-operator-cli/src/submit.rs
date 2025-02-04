@@ -4,7 +4,7 @@ use std::{path::PathBuf, str::FromStr};
 use anchor_lang::AccountDeserialize;
 use ellipsis_client::EllipsisClient;
 use jito_bytemuck::AccountDeserialize as JitoAccountDeserialize;
-use jito_tip_distribution_sdk::{derive_config_account_address, TipDistributionAccount};
+use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_router_core::{ballot_box::BallotBox, config::Config};
 use log::{debug, error, info};
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
@@ -15,13 +15,14 @@ use solana_client::{
     rpc_filter::{Memcmp, RpcFilterType},
 };
 use solana_metrics::{datapoint_error, datapoint_info};
-use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer};
+use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 
 use crate::{
     tip_router::{cast_vote, get_ncn_config, set_merkle_roots_batched},
     Cli,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub async fn submit_recent_epochs_to_ncn(
     client: &EllipsisClient,
     keypair: &Keypair,
@@ -67,6 +68,7 @@ pub async fn submit_recent_epochs_to_ncn(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn submit_to_ncn(
     client: &EllipsisClient,
     keypair: &Keypair,
@@ -125,8 +127,8 @@ pub async fn submit_to_ncn(
             // If vote exists, cast_vote if different from current meta_merkle_root
             let tally = ballot_box
                 .ballot_tallies()
-                .get(u16::from(vote.ballot_index()) as usize)
-                .ok_or(anyhow::anyhow!("Ballot tally not found"))?;
+                .get(vote.ballot_index() as usize)
+                .ok_or_else(|| anyhow::anyhow!("Ballot tally not found"))?;
 
             tally.ballot().root() != meta_merkle_tree.merkle_root
         }
@@ -290,20 +292,16 @@ async fn get_tip_distribution_accounts_to_upload(
         .filter_map(|(pubkey, account)| {
             let tip_distribution_account =
                 TipDistributionAccount::try_deserialize(&mut account.data.as_slice());
-            match tip_distribution_account {
-                Ok(tip_distribution_account) => {
-                    // Double check that GPA filter worked
-                    if tip_distribution_account.epoch_created_at == epoch
-                        && tip_distribution_account.merkle_root_upload_authority
-                            == *tip_router_config_address
-                    {
-                        Some((pubkey, tip_distribution_account))
-                    } else {
-                        None
-                    }
+            tip_distribution_account.map_or(None, |tip_distribution_account| {
+                if tip_distribution_account.epoch_created_at == epoch
+                    && tip_distribution_account.merkle_root_upload_authority
+                        == *tip_router_config_address
+                {
+                    Some((pubkey, tip_distribution_account))
+                } else {
+                    None
                 }
-                Err(_) => None,
-            }
+            })
         })
         .collect::<Vec<_>>();
 

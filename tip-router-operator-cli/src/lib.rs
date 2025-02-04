@@ -1,3 +1,4 @@
+#![allow(clippy::arithmetic_side_effects)]
 pub mod ledger_utils;
 pub mod stake_meta_generator;
 pub mod tip_router;
@@ -108,7 +109,7 @@ pub fn get_meta_merkle_root(
     epoch: u64,
     protocol_fee_bps: u64,
     snapshots_enabled: bool,
-    meta_merkle_tree_dir: &PathBuf,
+    meta_merkle_tree_dir: &Path,
 ) -> std::result::Result<MetaMerkleTree, MerkleRootError> {
     let start = Instant::now();
 
@@ -122,7 +123,7 @@ pub fn get_meta_merkle_root(
     );
 
     // cleanup tmp files - update with path where stake meta is written
-    match cleanup_tmp_files(&incremental_snapshots_path.clone()) {
+    match cleanup_tmp_files(&incremental_snapshots_path) {
         Ok(_) => {}
         Err(e) => {
             datapoint_info!(
@@ -261,7 +262,7 @@ pub fn get_meta_merkle_root(
         }
     };
 
-    if let Err(e) = std::fs::write(&merkle_tree_coll_path, generated_merkle_tree_col_json) {
+    if let Err(e) = std::fs::write(merkle_tree_coll_path, generated_merkle_tree_col_json) {
         datapoint_error!(
             "tip_router_cli.process_epoch",
             ("operator_address", operator_address.to_string(), String),

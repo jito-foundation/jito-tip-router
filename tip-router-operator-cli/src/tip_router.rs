@@ -32,6 +32,7 @@ pub async fn get_ncn_config(
 }
 
 /// Generate and send a CastVote instruction with the merkle root.
+#[allow(clippy::too_many_arguments)]
 pub async fn cast_vote(
     client: &EllipsisClient,
     payer: &Keypair,
@@ -44,26 +45,26 @@ pub async fn cast_vote(
     submit_as_memo: bool,
 ) -> EllipsisClientResult<Signature> {
     let epoch_state =
-        EpochState::find_program_address(tip_router_program_id, &ncn, tip_router_epoch).0;
+        EpochState::find_program_address(tip_router_program_id, ncn, tip_router_epoch).0;
 
-    let ncn_config = Config::find_program_address(tip_router_program_id, &ncn).0;
+    let ncn_config = Config::find_program_address(tip_router_program_id, ncn).0;
 
     let ballot_box =
-        BallotBox::find_program_address(tip_router_program_id, &ncn, tip_router_epoch).0;
+        BallotBox::find_program_address(tip_router_program_id, ncn, tip_router_epoch).0;
 
     let epoch_snapshot =
-        EpochSnapshot::find_program_address(tip_router_program_id, &ncn, tip_router_epoch).0;
+        EpochSnapshot::find_program_address(tip_router_program_id, ncn, tip_router_epoch).0;
 
     let operator_snapshot = OperatorSnapshot::find_program_address(
         tip_router_program_id,
-        &operator,
-        &ncn,
+        operator,
+        ncn,
         tip_router_epoch,
     )
     .0;
 
     let ix = if submit_as_memo {
-        spl_memo::build_memo(&meta_merkle_root.to_vec(), &[&operator_voter.pubkey()])
+        spl_memo::build_memo(meta_merkle_root.as_ref(), &[&operator_voter.pubkey()])
     } else {
         CastVoteBuilder::new()
             .epoch_state(epoch_state)
@@ -87,6 +88,7 @@ pub async fn cast_vote(
         .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn set_merkle_roots_batched(
     client: &EllipsisClient,
     ncn_address: &Pubkey,

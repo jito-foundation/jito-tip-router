@@ -11,14 +11,13 @@ use clap_old::ArgMatches;
 use log::{info, warn};
 use solana_accounts_db::hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE};
 use solana_ledger::{
-    bank_forks_utils::{self},
     blockstore::{Blockstore, BlockstoreError},
     blockstore_options::{AccessType, BlockstoreOptions},
-    blockstore_processor::{self, ProcessOptions},
+    blockstore_processor::{ProcessOptions},
 };
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::{
-    accounts_background_service::AbsRequestSender, bank::Bank,
+    bank::Bank,
     snapshot_archive_info::SnapshotArchiveInfoGetter, snapshot_bank_utils,
     snapshot_config::SnapshotConfig, snapshot_utils::SnapshotVersion,
 };
@@ -195,8 +194,8 @@ pub fn get_bank_from_ledger(
             &genesis_config,
             Arc::new(blockstore),
             process_options,
-            Some(full_snapshots_path.clone()),
-            Some(incremental_snapshots_path.clone()),
+            Some(full_snapshots_path),
+            Some(incremental_snapshots_path),
             operator_address,
         ) {
             Ok(res) => res,
