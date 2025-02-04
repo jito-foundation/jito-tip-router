@@ -369,6 +369,9 @@ fn build_mev_claim_transactions(
                 .claim_status(node.claim_status_pubkey)
                 .claimant(node.claimant)
                 .system_program(system_program::id())
+                .proof(node.proof.clone().unwrap())
+                .amount(node.amount)
+                .bump(node.claim_status_bump)
                 .instruction();
 
             instructions.push(claim_with_payer_ix);
