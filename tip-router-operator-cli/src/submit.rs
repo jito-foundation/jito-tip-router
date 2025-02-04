@@ -30,6 +30,7 @@ pub async fn submit_recent_epochs_to_ncn(
     tip_distribution_program_id: &Pubkey,
     num_monitored_epochs: u64,
     cli_args: &Cli,
+    set_merkle_roots: bool,
 ) -> Result<(), anyhow::Error> {
     let epoch = client.get_epoch_info()?;
     let operator_address = Pubkey::from_str(&cli_args.operator_address)?;
@@ -54,6 +55,7 @@ pub async fn submit_recent_epochs_to_ncn(
             tip_router_program_id,
             tip_distribution_program_id,
             cli_args.submit_as_memo,
+            set_merkle_roots,
         )
         .await
         {
@@ -75,12 +77,12 @@ pub async fn submit_to_ncn(
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
     submit_as_memo: bool,
+    set_merkle_roots: bool,
 ) -> Result<(), anyhow::Error> {
     let epoch_info = client.get_epoch_info()?;
     let meta_merkle_tree = MetaMerkleTree::new_from_file(meta_merkle_tree_path)?;
     let config_pda = Config::find_program_address(tip_router_program_id, ncn_address).0;
     let config = get_ncn_config(client, tip_router_program_id, ncn_address).await?;
-    info!("Fetched NCN config");
 
     // The meta merkle root files are tagged with the epoch they have created the snapshot for
     // Tip router accounts for that merkle root are created in the next epoch
@@ -105,15 +107,12 @@ pub async fn submit_to_ncn(
         }
     };
 
-    info!("Fetched ballot box account");
-
     let ballot_box = BallotBox::try_from_slice_unchecked(&ballot_box_account.data)?;
 
     let is_voting_valid = ballot_box.is_voting_valid(
         epoch_info.absolute_slot,
         config.valid_slots_after_consensus(),
     )?;
-    info!("Is voting valid: {}", is_voting_valid);
 
     // If exists, look for vote from current operator
     let vote = ballot_box
@@ -187,7 +186,7 @@ pub async fn submit_to_ncn(
         }
     }
 
-    if ballot_box.is_consensus_reached() {
+    if ballot_box.is_consensus_reached() && set_merkle_roots {
         // Fetch TipDistributionAccounts filtered by epoch and upload authority
         // Tip distribution accounts are derived from the epoch they are for
         let tip_distribution_accounts = get_tip_distribution_accounts_to_upload(
@@ -255,8 +254,6 @@ async fn get_tip_distribution_accounts_to_upload(
     tip_distribution_program_id: &Pubkey,
 ) -> Result<Vec<(Pubkey, TipDistributionAccount)>, anyhow::Error> {
     let rpc_client = AsyncRpcClient::new_with_timeout(client.url(), Duration::from_secs(1800));
-    let tip_distribution_config_address =
-        derive_config_account_address(tip_distribution_program_id).0;
 
     // Filters assume merkle root is None
     let filters = vec![

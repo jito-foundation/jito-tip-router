@@ -11,7 +11,7 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
 };
-use log::info;
+use log::{error, info};
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use solana_sdk::{
     pubkey::Pubkey,
@@ -114,7 +114,7 @@ pub async fn set_merkle_roots_batched(
             let proof = if let Some(proof) = meta_merkle_node.proof {
                 proof
             } else {
-                // TODO emit big warning NO PROOF
+                error!("No proof found for tip distribution account {:?}", key);
                 return None;
             };
 
@@ -139,11 +139,6 @@ pub async fn set_merkle_roots_batched(
             Some(ix)
         })
         .collect::<Vec<_>>();
-
-    info!(
-        "Build instructions for {} tip distribution accounts",
-        instructions.len()
-    );
 
     let mut results = vec![];
     for _ in 0..instructions.len() {

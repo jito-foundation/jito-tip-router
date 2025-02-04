@@ -63,6 +63,9 @@ pub enum Commands {
 
         #[arg(long, env)]
         override_target_slot: Option<u64>,
+
+        #[arg(long, env, default_value = "false")]
+        set_merkle_roots: bool,
     },
     SnapshotSlot {
         #[arg(short, long, env)]

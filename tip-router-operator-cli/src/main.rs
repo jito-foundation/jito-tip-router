@@ -69,6 +69,7 @@ async fn main() -> Result<()> {
             num_monitored_epochs,
             start_next_epoch,
             override_target_slot,
+            set_merkle_roots,
         } => {
             info!("Running Tip Router...");
             info!("NCN Address: {}", ncn_address);
@@ -110,6 +111,7 @@ async fn main() -> Result<()> {
                         &tip_distribution_program_id,
                         num_monitored_epochs,
                         &cli_clone,
+                        set_merkle_roots,
                     )
                     .await
                     {
@@ -240,6 +242,7 @@ async fn main() -> Result<()> {
                 &tip_router_program_id,
                 &tip_distribution_program_id,
                 cli.submit_as_memo,
+                true,
             )
             .await?;
         }
