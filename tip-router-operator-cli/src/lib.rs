@@ -77,7 +77,7 @@ pub fn create_stake_meta(
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     save_path: &PathBuf,
-    save_snapshot: bool,
+    save: bool,
 ) -> StakeMetaCollection {
     let start = Instant::now();
 
@@ -110,7 +110,7 @@ pub fn create_stake_meta(
         stake_meta_coll.stake_metas.len(),
         stake_meta_coll.bank_hash
     );
-    if save_snapshot {
+    if save {
         // Note: We have the epoch come before the file name so ordering is neat on a machine
         //  with multiple epochs saved.
         let file = save_path.join(format!("{}_stake_meta_collection.json", epoch));
