@@ -186,10 +186,7 @@ impl TestContext {
 async fn test_meta_merkle_creation_from_ledger() {
     // 1. Setup - create necessary variables/arguments
     let ledger_path = Path::new("tests/fixtures/test-ledger");
-    let account_paths = vec![
-        PathBuf::from("tests/fixtures/accounts"),
-        PathBuf::from("path/to/account2"),
-    ];
+    let account_paths = vec![ledger_path.join("accounts/run")];
     let full_snapshots_path = PathBuf::from("tests/fixtures/test-ledger");
     let desired_slot = &144;
     let tip_distribution_program_id = &TIP_DISTRIBUTION_ID;
@@ -216,6 +213,7 @@ async fn test_meta_merkle_creation_from_ledger() {
         epoch,
         PROTOCOL_FEE_BPS,
         false,
+        &ledger_path.to_path_buf(),
     )
     .unwrap();
 

@@ -2,12 +2,14 @@ pub mod ledger_utils;
 pub mod stake_meta_generator;
 pub mod tip_router;
 pub use crate::cli::{Cli, Commands};
+pub mod claim;
 pub mod cli;
 pub use crate::process_epoch::process_epoch;
 pub mod arg_matches;
 pub mod backup_snapshots;
 pub mod load_and_process_ledger;
 pub mod process_epoch;
+pub mod rpc_utils;
 pub mod submit;
 
 use std::fs::{self, File};
@@ -28,7 +30,7 @@ use meta_merkle_tree::generated_merkle_tree::MerkleRootGeneratorError;
 use meta_merkle_tree::{
     generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
 };
-use solana_metrics::datapoint_info;
+use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{account::AccountSharedData, pubkey::Pubkey, slot_history::Slot};
 
 #[derive(Debug)]
@@ -106,6 +108,7 @@ pub fn get_meta_merkle_root(
     epoch: u64,
     protocol_fee_bps: u64,
     snapshots_enabled: bool,
+    meta_merkle_tree_dir: &PathBuf,
 ) -> std::result::Result<MetaMerkleTree, MerkleRootError> {
     let start = Instant::now();
 
@@ -233,6 +236,46 @@ pub fn get_meta_merkle_root(
         ("epoch", epoch, i64),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
+
+    // TODO: Hide this behind a flag when the process gets split up into the various stages and
+    //  checkpoints.
+
+    // Write GeneratedMerkleTreeCollection to disk. Required for Claiming
+    let merkle_tree_coll_path =
+        meta_merkle_tree_dir.join(format!("generated_merkle_tree_{}.json", epoch));
+    let generated_merkle_tree_col_json = match serde_json::to_string(&merkle_tree_coll) {
+        Ok(json) => json,
+        Err(e) => {
+            datapoint_error!(
+                "tip_router_cli.process_epoch",
+                ("operator_address", operator_address.to_string(), String),
+                ("epoch", epoch, i64),
+                ("status", "error", String),
+                ("error", format!("{:?}", e), String),
+                ("state", "merkle_root_serialization", String),
+                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+            );
+            return Err(MerkleRootError::MerkleRootGeneratorError(
+                "Failed to serialize merkle tree collection".to_string(),
+            ));
+        }
+    };
+
+    if let Err(e) = std::fs::write(&merkle_tree_coll_path, generated_merkle_tree_col_json) {
+        datapoint_error!(
+            "tip_router_cli.process_epoch",
+            ("operator_address", operator_address.to_string(), String),
+            ("epoch", epoch, i64),
+            ("status", "error", String),
+            ("error", format!("{:?}", e), String),
+            ("state", "merkle_root_file_write", String),
+            ("duration_ms", start.elapsed().as_millis() as i64, i64)
+        );
+        // TODO: propogate error
+        return Err(MerkleRootError::MerkleRootGeneratorError(
+            "Failed to write meta merkle tree to file".to_string(),
+        ));
+    }
 
     // Convert to MetaMerkleTree
     let meta_merkle_tree = MetaMerkleTree::new_from_generated_merkle_tree_collection(
