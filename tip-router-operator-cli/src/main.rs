@@ -355,7 +355,7 @@ async fn main() -> Result<()> {
                 cli.full_snapshots_path.unwrap(),
                 cli.backup_snapshots_dir,
                 &slot,
-                true,
+                false,
             );
 
             create_stake_meta(
