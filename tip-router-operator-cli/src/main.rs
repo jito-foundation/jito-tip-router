@@ -61,6 +61,8 @@ async fn main() -> Result<()> {
         cli.snapshot_output_dir.display()
     );
 
+    cli.create_save_path();
+
     match cli.command {
         Commands::Run {
             ncn_address,

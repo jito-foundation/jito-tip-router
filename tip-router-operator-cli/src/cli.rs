@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
+use log::info;
 use solana_sdk::pubkey::Pubkey;
 
 use crate::OperatorState;
@@ -37,6 +38,18 @@ pub struct Cli {
 
     #[command(subcommand)]
     pub command: Commands,
+}
+
+impl Cli {
+    pub fn create_save_path(&self) {
+        if !self.save_path.exists() {
+            info!(
+                "Creating Tip Router save directory at {}",
+                self.save_path.display()
+            );
+            std::fs::create_dir_all(&self.save_path).unwrap();
+        }
+    }
 }
 
 #[derive(clap::Subcommand, Clone)]
