@@ -5,7 +5,7 @@ use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 
-use crate::discriminators::Discriminators;
+use crate::{discriminators::Discriminators, error::TipRouterError};
 
 /// 56-byte account to mark that an epoch's accounts have all been closed
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
@@ -67,9 +67,9 @@ impl EpochMarker {
 
     pub fn check_dne(
         program_id: &Pubkey,
+        account: &AccountInfo,
         ncn: &Pubkey,
         epoch: u64,
-        account: &AccountInfo,
     ) -> Result<(), ProgramError> {
         let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
 
@@ -84,8 +84,8 @@ impl EpochMarker {
 
         let data_length = account.data_len();
         if data_length > 0 {
-            msg!("Market exists.");
-            return Err(ProgramError::AccountAlreadyInitialized);
+            msg!("Marker exists.");
+            return Err(TipRouterError::MarkerExists.into());
         }
 
         Ok(())

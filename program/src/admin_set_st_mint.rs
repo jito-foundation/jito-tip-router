@@ -20,8 +20,8 @@ pub fn process_admin_set_st_mint(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    Config::load(program_id, ncn.key, config, false)?;
-    VaultRegistry::load(program_id, ncn.key, vault_registry, true)?;
+    Config::load(program_id, config, ncn.key, false)?;
+    VaultRegistry::load(program_id, vault_registry, ncn.key, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
 
     load_signer(admin, false)?;

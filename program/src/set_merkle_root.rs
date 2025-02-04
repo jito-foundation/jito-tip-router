@@ -28,20 +28,23 @@ pub fn process_set_merkle_root(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
+    BallotBox::load(program_id, ballot_box, ncn.key, epoch, false)?;
 
     if tip_distribution_program.key.ne(&jito_tip_distribution::ID) {
         msg!("Incorrect tip distribution program");
         return Err(ProgramError::InvalidAccountData);
     }
 
+    let tip_distribution_epoch = epoch
+        .checked_sub(1)
+        .ok_or(TipRouterError::ArithmeticUnderflowError)?;
     let (tip_distribution_address, _) = derive_tip_distribution_account_address(
         tip_distribution_program.key,
         vote_account.key,
-        epoch,
+        tip_distribution_epoch,
     );
 
     if tip_distribution_address.ne(tip_distribution_account.key) {

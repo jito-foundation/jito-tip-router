@@ -528,6 +528,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34ac096ce696dc2fcabef30516bb13c0a68a11d30131d3df6f04711467681b04"
 
 [[package]]
+name = "anyhow_ext"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a135cb522bf5b2254ed712979bc242f60c13f7906c1e4585d5fef36ae9017528"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
 name = "aquamarine"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -893,6 +902,12 @@ dependencies = [
  "rustc-demangle",
  "windows-targets 0.52.6",
 ]
+
+[[package]]
+name = "base58"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6107fe1be6682a68940da878d9e9f5e90ca5745b3dec9fd1bb393c8777d4f581"
 
 [[package]]
 name = "base64"
@@ -1753,6 +1768,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashmap"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
+dependencies = [
+ "cfg-if 1.0.0",
+ "crossbeam-utils",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core 0.9.10",
+]
+
+[[package]]
 name = "data-encoding"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1821,9 +1850,9 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "0.99.18"
+version = "0.99.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f33878137e4dafd7fa914ad4e259e18a4e8e532b9617a2d0150262bf53abfce"
+checksum = "3da29a38df43d6f156149c9b43ded5e018ddff2a855cf2cfd62e8cd7d079c69f"
 dependencies = [
  "convert_case",
  "proc-macro2 1.0.92",
@@ -2162,7 +2191,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f4b0ea5ef6dc2388a4b1669fa32097249bc03a15417b97cb75e38afb309e4a89"
 dependencies = [
  "http",
- "prost",
+ "prost 0.11.9",
  "tokio",
  "tokio-stream",
  "tonic",
@@ -3163,7 +3192,7 @@ version = "1.18.26"
 source = "git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5#0bbcbe476c0e728907ac01135115e661c16538e5"
 dependencies = [
  "bytes",
- "prost",
+ "prost 0.11.9",
  "prost-types",
  "protobuf-src",
  "tonic",
@@ -3312,6 +3341,7 @@ dependencies = [
  "spl-associated-token-account",
  "spl-stake-pool",
  "spl-token 4.0.0",
+ "switchboard-on-demand-client",
  "thiserror 1.0.69",
  "tokio",
 ]
@@ -4583,6 +4613,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
+name = "pbjson"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7e6349fa080353f4a597daffd05cb81572a9c031a6d4fff7e504947496fcc68"
+dependencies = [
+ "base64 0.21.7",
+ "serde",
+]
+
+[[package]]
 name = "pbkdf2"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4925,7 +4965,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b82eaa1d779e9a4bc1c3217db8ffbeabaae1dca241bf70183242128d48681cd"
 dependencies = [
  "bytes",
- "prost-derive",
+ "prost-derive 0.11.9",
+]
+
+[[package]]
+name = "prost"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c0fef6c4230e4ccf618a35c59d7ede15dea37de8427500f50aff708806e42ec"
+dependencies = [
+ "bytes",
+ "prost-derive 0.13.4",
 ]
 
 [[package]]
@@ -4942,7 +4992,7 @@ dependencies = [
  "multimap",
  "petgraph",
  "prettyplease 0.1.25",
- "prost",
+ "prost 0.11.9",
  "prost-types",
  "regex",
  "syn 1.0.109",
@@ -4964,12 +5014,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "prost-derive"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "157c5a9d7ea5c2ed2d9fb8f495b64759f7816c7eaea54ba3978f0d63000162e3"
+dependencies = [
+ "anyhow",
+ "itertools 0.11.0",
+ "proc-macro2 1.0.92",
+ "quote 1.0.38",
+ "syn 2.0.93",
+]
+
+[[package]]
 name = "prost-types"
 version = "0.11.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "213622a1460818959ac1181aaeb2dc9c7f63df720db7d788b3e24eacd1983e13"
 dependencies = [
- "prost",
+ "prost 0.11.9",
 ]
 
 [[package]]
@@ -6121,7 +6184,7 @@ dependencies = [
  "byteorder",
  "bzip2",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "flate2",
  "fnv",
  "im",
@@ -6181,7 +6244,7 @@ dependencies = [
  "byteorder",
  "bzip2",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "flate2",
  "fnv",
  "im",
@@ -6530,7 +6593,7 @@ checksum = "24a9f32c42402c4b9484d5868ac74b7e0a746e3905d8bfd756e1203e50cbb87e"
 dependencies = [
  "async-trait",
  "bincode",
- "dashmap",
+ "dashmap 5.5.3",
  "futures 0.3.31",
  "futures-util",
  "indexmap 2.7.0",
@@ -6562,7 +6625,7 @@ source = "git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0
 dependencies = [
  "async-trait",
  "bincode",
- "dashmap",
+ "dashmap 5.5.3",
  "futures 0.3.31",
  "futures-util",
  "indexmap 2.7.0",
@@ -6688,7 +6751,7 @@ dependencies = [
  "bytes",
  "chrono",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "eager",
  "etcd-client",
  "futures 0.3.31",
@@ -6703,7 +6766,7 @@ dependencies = [
  "min-max-heap",
  "num_enum 0.7.3",
  "prio-graph",
- "prost",
+ "prost 0.11.9",
  "prost-types",
  "quinn",
  "rand 0.8.5",
@@ -7023,7 +7086,7 @@ dependencies = [
  "chrono",
  "chrono-humanize",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "fs_extra",
  "futures 0.3.31",
  "itertools 0.10.5",
@@ -7034,7 +7097,7 @@ dependencies = [
  "mockall",
  "num_cpus",
  "num_enum 0.7.3",
- "prost",
+ "prost 0.11.9",
  "qualifier_attr",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
@@ -7629,7 +7692,7 @@ dependencies = [
  "bincode",
  "bs58 0.4.0",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "itertools 0.10.5",
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -7767,7 +7830,7 @@ dependencies = [
  "byteorder",
  "bzip2",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "dir-diff",
  "flate2",
  "fnv",
@@ -7843,7 +7906,7 @@ dependencies = [
  "byteorder",
  "bzip2",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 5.5.3",
  "dir-diff",
  "flate2",
  "fnv",
@@ -8075,7 +8138,7 @@ dependencies = [
  "hyper-proxy",
  "log",
  "openssl",
- "prost",
+ "prost 0.11.9",
  "prost-types",
  "serde",
  "serde_derive",
@@ -8097,7 +8160,7 @@ source = "git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0
 dependencies = [
  "bincode",
  "bs58 0.4.0",
- "prost",
+ "prost 0.11.9",
  "protobuf-src",
  "serde",
  "solana-account-decoder 1.18.26 (git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5)",
@@ -8465,7 +8528,7 @@ version = "1.18.26"
 source = "git+https://github.com/jito-foundation/jito-solana.git?rev=0bbcbe476c0e728907ac01135115e661c16538e5#0bbcbe476c0e728907ac01135115e661c16538e5"
 dependencies = [
  "log",
- "prost",
+ "prost 0.11.9",
  "prost-build",
  "prost-types",
  "protobuf-src",
@@ -9273,6 +9336,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "switchboard-on-demand-client"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "948936c9e0d2eb83a45a386b18c171347d3b80d1e38e16e5ed3bbb736e75e3f5"
+dependencies = [
+ "anyhow_ext",
+ "arrayref",
+ "base58",
+ "base64 0.22.1",
+ "bincode",
+ "borsh 0.9.3",
+ "bs58 0.4.0",
+ "bytemuck",
+ "dashmap 6.1.0",
+ "futures 0.3.31",
+ "hex",
+ "lazy_static",
+ "pbjson",
+ "prost 0.13.4",
+ "reqwest",
+ "rust_decimal",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "sha2 0.10.8",
+ "solana-client 1.18.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-sdk",
+ "tokio",
+]
+
+[[package]]
 name = "symlink"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9896,7 +9990,7 @@ dependencies = [
  "hyper-timeout",
  "percent-encoding 2.3.1",
  "pin-project",
- "prost",
+ "prost 0.11.9",
  "rustls-pemfile",
  "tokio",
  "tokio-rustls",

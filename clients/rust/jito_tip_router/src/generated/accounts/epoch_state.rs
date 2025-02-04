@@ -39,8 +39,9 @@ pub struct EpochState {
     pub base_distribution_progress: Progress,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub ncn_distribution_progress: [Progress; 2048],
+    pub is_closing: bool,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-    pub reserved: [u8; 1024],
+    pub reserved: [u8; 1023],
 }
 
 impl EpochState {

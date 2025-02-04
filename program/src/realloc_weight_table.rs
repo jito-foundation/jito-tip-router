@@ -23,10 +23,10 @@ pub fn process_realloc_weight_table(
 
     load_system_program(system_program)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    VaultRegistry::load(program_id, ncn.key, vault_registry, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    VaultRegistry::load(program_id, vault_registry, ncn.key, false)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
     let (weight_table_pda, weight_table_bump, _) =
         WeightTable::find_program_address(program_id, ncn.key, epoch);
@@ -54,6 +54,7 @@ pub fn process_realloc_weight_table(
         let vault_registry = VaultRegistry::try_from_slice_unchecked(&vault_registry_data)?;
 
         let vault_count = vault_registry.vault_count();
+        let st_mint_count = vault_registry.st_mint_count();
         let vault_entries = vault_registry.get_vault_entries();
         let mint_entries = vault_registry.get_mint_entries();
 
@@ -77,7 +78,7 @@ pub fn process_realloc_weight_table(
             let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
             let epoch_state_account =
                 EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
-            epoch_state_account.update_realloc_weight_table(vault_count);
+            epoch_state_account.update_realloc_weight_table(vault_count, st_mint_count as u64);
         }
     }
 

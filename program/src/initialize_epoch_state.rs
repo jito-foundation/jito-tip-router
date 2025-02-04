@@ -29,9 +29,9 @@ pub fn process_initialize_epoch_state(
     load_system_program(system_program)?;
 
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    Config::load(program_id, ncn.key, config, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
-    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
+    Config::load(program_id, config, ncn.key, false)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
+    EpochMarker::check_dne(program_id, epoch_marker, ncn.key, epoch)?;
 
     let config_data = config.try_borrow_data()?;
     let config_account = Config::try_from_slice_unchecked(&config_data)?;

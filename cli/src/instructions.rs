@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 use crate::{
     getters::{
@@ -22,19 +22,24 @@ use jito_restaking_core::{
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
 };
-use jito_tip_router_client::instructions::{
-    AdminRegisterStMintBuilder, AdminSetParametersBuilder, AdminSetTieBreakerBuilder,
-    AdminSetWeightBuilder, CastVoteBuilder, CloseEpochAccountBuilder,
-    DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
-    DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
-    InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder,
-    InitializeConfigBuilder as InitializeTipRouterConfigBuilder, InitializeEpochSnapshotBuilder,
-    InitializeEpochStateBuilder, InitializeNcnRewardRouterBuilder,
-    InitializeOperatorSnapshotBuilder, InitializeVaultRegistryBuilder,
-    InitializeWeightTableBuilder, ReallocBallotBoxBuilder, ReallocBaseRewardRouterBuilder,
-    ReallocEpochStateBuilder, ReallocOperatorSnapshotBuilder, ReallocVaultRegistryBuilder,
-    ReallocWeightTableBuilder, RegisterVaultBuilder, RouteBaseRewardsBuilder,
-    RouteNcnRewardsBuilder, SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
+use jito_tip_router_client::{
+    instructions::{
+        AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
+        AdminSetParametersBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder,
+        CastVoteBuilder, CloseEpochAccountBuilder, DistributeBaseNcnRewardRouteBuilder,
+        DistributeBaseRewardsBuilder, DistributeNcnOperatorRewardsBuilder,
+        DistributeNcnVaultRewardsBuilder, InitializeBallotBoxBuilder,
+        InitializeBaseRewardRouterBuilder,
+        InitializeConfigBuilder as InitializeTipRouterConfigBuilder,
+        InitializeEpochSnapshotBuilder, InitializeEpochStateBuilder,
+        InitializeNcnRewardRouterBuilder, InitializeOperatorSnapshotBuilder,
+        InitializeVaultRegistryBuilder, InitializeWeightTableBuilder, ReallocBallotBoxBuilder,
+        ReallocBaseRewardRouterBuilder, ReallocEpochStateBuilder, ReallocOperatorSnapshotBuilder,
+        ReallocVaultRegistryBuilder, ReallocWeightTableBuilder, RegisterVaultBuilder,
+        RouteBaseRewardsBuilder, RouteNcnRewardsBuilder, SnapshotVaultOperatorDelegationBuilder,
+        SwitchboardSetWeightBuilder,
+    },
+    types::ConfigAdminRole,
 };
 use jito_tip_router_core::{
     account_payer::AccountPayer,
@@ -63,6 +68,7 @@ use log::info;
 use solana_client::rpc_config::RpcSendTransactionConfig;
 
 use solana_sdk::{
+    clock::DEFAULT_SLOTS_PER_EPOCH,
     compute_budget::ComputeBudgetInstruction,
     instruction::Instruction,
     native_token::sol_to_lamports,
@@ -76,6 +82,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use spl_associated_token_account::get_associated_token_address;
+use switchboard_on_demand_client::{CrossbarClient, FetchUpdateParams, PullFeed, QueueAccountData};
 use tokio::time::sleep;
 
 // --------------------- ADMIN ------------------------------
@@ -312,6 +319,51 @@ pub async fn admin_set_tie_breaker(
     Ok(())
 }
 
+pub async fn admin_set_new_admin(
+    handler: &CliHandler,
+    new_admin: &Pubkey,
+    set_fee_admin: bool,
+    set_tie_breaker_admin: bool,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let ncn = *handler.ncn()?;
+
+    let config_pda = TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0;
+
+    let roles = [
+        (set_fee_admin, ConfigAdminRole::FeeAdmin),
+        (set_tie_breaker_admin, ConfigAdminRole::TieBreakerAdmin),
+    ];
+
+    for (should_set, role) in roles.iter() {
+        if !should_set {
+            continue;
+        }
+
+        let mut ix = AdminSetNewAdminBuilder::new();
+        ix.config(config_pda)
+            .ncn(ncn)
+            .ncn_admin(keypair.pubkey())
+            .new_admin(*new_admin)
+            .role(*role);
+
+        send_and_log_transaction(
+            handler,
+            &[ix.instruction()],
+            &[],
+            "Admin Set New Admin",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("New Admin: {:?}", new_admin),
+                format!("Role: {:?}", role),
+            ],
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
 pub async fn admin_set_parameters(
     handler: &CliHandler,
     epochs_before_stall: Option<u64>,
@@ -383,6 +435,68 @@ pub async fn admin_fund_account_payer(handler: &CliHandler, amount: f64) -> Resu
         &[
             format!("NCN: {:?}", ncn),
             format!("Amount: {:?} SOL", amount),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn admin_set_config_fees(
+    handler: &CliHandler,
+    new_block_engine_fee_bps: Option<u16>,
+    base_fee_group: Option<u8>,
+    new_base_fee_wallet: Option<String>,
+    new_base_fee_bps: Option<u16>,
+    ncn_fee_group: Option<u8>,
+    new_ncn_fee_bps: Option<u16>,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let ncn = *handler.ncn()?;
+
+    let config_pda = TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0;
+
+    let mut ix = AdminSetConfigFeesBuilder::new();
+    ix.config(config_pda).ncn(ncn).ncn_admin(keypair.pubkey());
+
+    if let Some(fee) = new_block_engine_fee_bps {
+        ix.new_block_engine_fee_bps(fee);
+    }
+
+    if let Some(group) = base_fee_group {
+        ix.base_fee_group(group);
+    }
+
+    if let Some(wallet) = &new_base_fee_wallet {
+        let wallet = Pubkey::from_str(wallet).map_err(|_| anyhow!("Invalid wallet address"))?;
+        ix.new_base_fee_wallet(wallet);
+    }
+
+    if let Some(fee) = new_base_fee_bps {
+        ix.new_base_fee_bps(fee);
+    }
+
+    if let Some(group) = ncn_fee_group {
+        ix.ncn_fee_group(group);
+    }
+
+    if let Some(fee) = new_ncn_fee_bps {
+        ix.new_ncn_fee_bps(fee);
+    }
+
+    send_and_log_transaction(
+        handler,
+        &[ix.instruction()],
+        &[],
+        "Set Config Fees",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("New Block Engine Fee BPS: {:?}", new_block_engine_fee_bps),
+            format!("Base Fee Group: {:?}", base_fee_group),
+            format!("New Base Fee Wallet: {:?}", new_base_fee_wallet),
+            format!("New Base Fee BPS: {:?}", new_base_fee_bps),
+            format!("NCN Fee Group: {:?}", ncn_fee_group),
+            format!("New NCN Fee BPS: {:?}", new_ncn_fee_bps),
         ],
     )
     .await?;
@@ -648,6 +762,67 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     Ok(())
 }
 
+pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) -> Result<()> {
+    async fn wait_for_x_slots_after_epoch(handler: &CliHandler, slots: u64) -> Result<()> {
+        loop {
+            let current_slot = handler.rpc_client().get_slot().await?;
+            if current_slot % DEFAULT_SLOTS_PER_EPOCH > slots {
+                break;
+            }
+            sleep(Duration::from_millis(500)).await;
+        }
+        Ok(())
+    }
+
+    let client = handler.rpc_client();
+    let switchboard_context = handler.switchboard_context();
+    let payer = handler.keypair()?;
+
+    if switchboard_feed.eq(&Pubkey::default()) {
+        return Ok(());
+    }
+
+    wait_for_x_slots_after_epoch(handler, 400).await?;
+
+    // STATIC PUBKEY
+    let queue_key = Pubkey::from_str("A43DyUGA7s8eXPxqEjJY6EBu1KKbNgfxF8h17VAHn13w").unwrap();
+
+    let queue = QueueAccountData::load(client, &queue_key).await?;
+    let gateways = &queue.fetch_gateways(client).await?;
+    if gateways.is_empty() {
+        return Err(anyhow!("No gateways found"));
+    }
+
+    let gw = &gateways[0];
+    let crossbar = CrossbarClient::default();
+    let (ix, _, _, _) = PullFeed::fetch_update_ix(
+        switchboard_context.clone(),
+        client,
+        FetchUpdateParams {
+            feed: *switchboard_feed,
+            payer: payer.pubkey(),
+            gateway: gw.clone(),
+            crossbar: Some(crossbar),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    send_and_log_transaction(
+        handler,
+        &[
+            ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+            ix,
+        ],
+        &[],
+        "Crank Switchboard",
+        &[format!("FEED: {:?}", switchboard_feed)],
+    )
+    .await?;
+
+    Ok(())
+}
+
 pub async fn set_weight(handler: &CliHandler, vault: &Pubkey, epoch: u64) -> Result<()> {
     let vault_account = get_vault(handler, vault).await?;
 
@@ -671,6 +846,19 @@ pub async fn set_weight_with_st_mint(
 
     let (weight_table, _, _) =
         WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    // Crank Switchboard
+    let result = crank_switchboard(handler, switchboard_feed).await;
+    if let Err(e) = result {
+        log::error!(
+            "\n\nFailed to crank switchboard - will need manual crank at {}\n\nError:\n{:?}\n",
+            format!(
+                "https://ondemand.switchboard.xyz/solana/mainnet/feed/{}",
+                switchboard_feed
+            ),
+            e
+        );
+    }
 
     let set_weight_ix = SwitchboardSetWeightBuilder::new()
         .ncn(ncn)
@@ -1755,6 +1943,26 @@ pub async fn close_epoch_account(
 }
 
 // --------------------- MIDDLEWARE ------------------------------
+pub const CREATE_TIMEOUT_MS: u64 = 2000;
+pub const CREATE_GET_RETRIES: u64 = 3;
+pub async fn check_created(handler: &CliHandler, address: &Pubkey) -> Result<()> {
+    let mut retries = 0;
+    let mut account = get_account(handler, address).await?;
+    while account.is_none() && retries < CREATE_GET_RETRIES {
+        sleep(Duration::from_millis(CREATE_TIMEOUT_MS * (retries + 1))).await;
+        account = get_account(handler, address).await?;
+        retries += 1;
+    }
+
+    if account.is_none() {
+        return Err(anyhow!(
+            "Failed to get account after creation {:?}",
+            address
+        ));
+    }
+
+    Ok(())
+}
 
 pub async fn get_or_create_weight_table(handler: &CliHandler, epoch: u64) -> Result<WeightTable> {
     let ncn = *handler.ncn()?;
@@ -1767,6 +1975,7 @@ pub async fn get_or_create_weight_table(handler: &CliHandler, epoch: u64) -> Res
         .map_or(true, |table| table.data.len() < WeightTable::SIZE)
     {
         create_weight_table(handler, epoch).await?;
+        check_created(handler, &weight_table).await?;
     }
     get_weight_table(handler, epoch).await
 }
@@ -1784,6 +1993,7 @@ pub async fn get_or_create_epoch_snapshot(
         .map_or(true, |snapshot| snapshot.data.len() < EpochSnapshot::SIZE)
     {
         create_epoch_snapshot(handler, epoch).await?;
+        check_created(handler, &epoch_snapshot).await?;
     }
 
     get_epoch_snapshot(handler, epoch).await
@@ -1809,6 +2019,7 @@ pub async fn get_or_create_operator_snapshot(
         })
     {
         create_operator_snapshot(handler, operator, epoch).await?;
+        check_created(handler, &operator_snapshot).await?;
     }
     get_operator_snapshot(handler, operator, epoch).await
 }
@@ -1824,6 +2035,7 @@ pub async fn get_or_create_ballot_box(handler: &CliHandler, epoch: u64) -> Resul
         .map_or(true, |ballot_box| ballot_box.data.len() < BallotBox::SIZE)
     {
         create_ballot_box(handler, epoch).await?;
+        check_created(handler, &ballot_box).await?;
     }
     get_ballot_box(handler, epoch).await
 }
@@ -1841,6 +2053,7 @@ pub async fn get_or_create_base_reward_router(
         .map_or(true, |router| router.data.len() < BaseRewardRouter::SIZE)
     {
         create_base_reward_router(handler, epoch).await?;
+        check_created(handler, &base_reward_router).await?;
     }
     get_base_reward_router(handler, epoch).await
 }
@@ -1865,6 +2078,7 @@ pub async fn get_or_create_ncn_reward_router(
         .map_or(true, |router| router.data.len() < NcnRewardRouter::SIZE)
     {
         create_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await?;
+        check_created(handler, &ncn_reward_router).await?;
     }
     get_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await
 }
@@ -2112,6 +2326,17 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
                     operator,
                     epoch,
                     err
+                );
+                continue;
+            }
+
+            let result = base_reward_router.ncn_fee_group_reward_route(operator);
+
+            if result.is_err() {
+                log::info!(
+                    "Could not find route for operator: {:?} in epoch: {:?}",
+                    operator,
+                    epoch,
                 );
                 continue;
             }

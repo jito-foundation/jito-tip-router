@@ -27,10 +27,10 @@ pub fn process_distribute_base_rewards(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    BaseRewardRouter::load(program_id, ncn.key, epoch, base_reward_router, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    BaseRewardRouter::load(program_id, base_reward_router, ncn.key, epoch, true)?;
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
     load_associated_token_account(base_fee_wallet_ata, base_fee_wallet.key, &JITOSOL_MINT)?;
 

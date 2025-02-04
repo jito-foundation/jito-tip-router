@@ -22,8 +22,8 @@ pub fn process_realloc_epoch_state(
 
     load_system_program(system_program)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    Config::load(program_id, ncn.key, config, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    Config::load(program_id, config, ncn.key, false)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
     let (epoch_state_pda, epoch_state_bump, _) =
         EpochState::find_program_address(program_id, ncn.key, epoch);

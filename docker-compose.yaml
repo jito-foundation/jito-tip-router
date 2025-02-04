@@ -1,29 +1,20 @@
 services:
-  tip-router:
-    build: .
-    container_name: tip-router-operator
-    env_file:
-      - .env
+  jito-tip-router-ncn-keeper:
+    build:
+      context: .
+      dockerfile: cli/Dockerfile
+    container_name: jito-tip-router-ncn-keeper
     environment:
-      - KEYPAIR_PATH=/etc/solana/keypair.json
-      - OPERATOR_ADDRESS=${OPERATOR_ADDRESS}
+      - RUST_LOG=${RUST_LOG:-info}
       - RPC_URL=${RPC_URL}
-      - LEDGER_PATH=/solana/ledger
-      - ACCOUNT_PATHS=/solana/accounts
-      - FULL_SNAPSHOTS_PATH=/solana/snapshots
-      - SNAPSHOT_OUTPUT_DIR=/solana/snapshots/autosnapshot
-      - NCN_ADDRESS=${NCN_ADDRESS}
-      - TIP_DISTRIBUTION_PROGRAM_ID=${TIP_DISTRIBUTION_PROGRAM_ID}
-      - TIP_PAYMENT_PROGRAM_ID=${TIP_PAYMENT_PROGRAM_ID}
-      - ENABLE_SNAPSHOTS=false
-    volumes: # Replace the paths before the ":" with the path to your keypair and relevant directories
-      - /etc/solana/keypair.json:/etc/solana/keypair.json:ro
-      - /solana/ledger:/solana/ledger
-      - /solana/snapshots:/solana/snapshots
-      - /solana/snapshots/autosnapshot:/solana/snapshots/autosnapshot
-    command: ["run"]
-    ulimits:
-      nofile:
-        soft: 2000000
-        hard: 2000000
-    restart: unless-stopped
+      - PRIORITY_FEE_MICRO_LAMPORTS=${PRIORITY_FEE_MICRO_LAMPORTS}
+      - KEYPAIR_PATH=${KEYPAIR_PATH}
+      - NCN=${NCN}
+      - EPOCH=${EPOCH}
+      - VAULT_PROGRAM_ID=${VAULT_PROGRAM_ID}
+      - RESTAKING_PROGRAM_ID=${RESTAKING_PROGRAM_ID}
+      - TIP_ROUTER_PROGRAM_ID=${TIP_ROUTER_PROGRAM_ID}
+      - SOLANA_METRICS_CONFIG=${SOLANA_METRICS_CONFIG}
+    volumes:
+      - ./credentials:/credentials
+    restart: on-failure:5

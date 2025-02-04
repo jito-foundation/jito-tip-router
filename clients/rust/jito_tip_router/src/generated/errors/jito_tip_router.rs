@@ -277,6 +277,12 @@ pub enum JitoTipRouterError {
     /// 8783 - Invalid DAO wallet
     #[error("Invalid DAO wallet")]
     InvalidDaoWallet = 0x224F,
+    /// 8784 - Epoch is closing down
+    #[error("Epoch is closing down")]
+    EpochIsClosingDown = 0x2250,
+    /// 8785 - Marker exists
+    #[error("Marker exists")]
+    MarkerExists = 0x2251,
 }
 
 impl solana_program::program_error::PrintProgramError for JitoTipRouterError {

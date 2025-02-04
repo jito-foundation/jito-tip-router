@@ -67,6 +67,7 @@ export type EpochState = {
   totalDistributionProgress: Progress;
   baseDistributionProgress: Progress;
   ncnDistributionProgress: Array<Progress>;
+  isClosing: number;
   reserved: Array<number>;
 };
 
@@ -90,6 +91,7 @@ export type EpochStateArgs = {
   totalDistributionProgress: ProgressArgs;
   baseDistributionProgress: ProgressArgs;
   ncnDistributionProgress: Array<ProgressArgs>;
+  isClosing: number;
   reserved: Array<number>;
 };
 
@@ -120,7 +122,8 @@ export function getEpochStateEncoder(): Encoder<EpochStateArgs> {
       'ncnDistributionProgress',
       getArrayEncoder(getProgressEncoder(), { size: 2048 }),
     ],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 1024 })],
+    ['isClosing', getBoolEncoder()],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 1023 })],
   ]);
 }
 
@@ -151,7 +154,8 @@ export function getEpochStateDecoder(): Decoder<EpochState> {
       'ncnDistributionProgress',
       getArrayDecoder(getProgressDecoder(), { size: 2048 }),
     ],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 1024 })],
+    ['isClosing', getBoolDecoder()],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 1023 })],
   ]);
 }
 

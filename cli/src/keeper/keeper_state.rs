@@ -46,13 +46,13 @@ pub struct KeeperState {
 impl KeeperState {
     pub async fn fetch(&mut self, handler: &CliHandler, epoch: u64) -> Result<()> {
         // Fetch all vaults and operators
-        let ncn = *handler.ncn().unwrap();
+        let ncn = *handler.ncn()?;
         self.ncn = ncn;
 
-        let vaults = get_all_vaults_in_ncn(handler).await.unwrap();
+        let vaults = get_all_vaults_in_ncn(handler).await?;
         self.vaults = vaults;
 
-        let operators = get_all_operators_in_ncn(handler).await.unwrap();
+        let operators = get_all_operators_in_ncn(handler).await?;
         self.operators = operators;
 
         let (tip_router_config_address, _, _) =
@@ -152,7 +152,7 @@ impl KeeperState {
             return Ok(());
         }
 
-        let raw_account = raw_account.unwrap();
+        let raw_account = raw_account.expect("Cannot unwrap raw account");
 
         if raw_account.data.len() < EpochState::SIZE {
             self.epoch_state = None;
@@ -175,7 +175,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.unwrap();
+            let raw_account = raw_account.expect("Cannot unwrap raw account");
             let account = TipRouterConfig::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }
@@ -187,7 +187,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.unwrap();
+            let raw_account = raw_account.expect("Cannot unwrap raw account");
             let account = VaultRegistry::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }
@@ -199,7 +199,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.unwrap();
+            let raw_account = raw_account.expect("Cannot unwrap raw account");
             let account = WeightTable::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }
@@ -211,7 +211,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.unwrap();
+            let raw_account = raw_account.expect("Cannot unwrap raw account");
 
             let account = EpochSnapshot::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
@@ -229,7 +229,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.unwrap();
+            let raw_account = raw_account.expect("Cannot unwrap raw account");
             let account = OperatorSnapshot::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }
@@ -241,7 +241,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.unwrap();
+            let raw_account = raw_account.expect("Cannot unwrap raw account");
             let account = Box::new(*BallotBox::try_from_slice_unchecked(
                 raw_account.data.as_slice(),
             )?);
@@ -258,7 +258,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.unwrap();
+            let raw_account = raw_account.expect("Cannot unwrap raw account");
             let account = BaseRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }
@@ -285,7 +285,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.unwrap();
+            let raw_account = raw_account.expect("Cannot unwrap raw account");
             let account = NcnRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }
@@ -327,14 +327,31 @@ impl KeeperState {
         };
 
         let epoch_state = self.epoch_state()?;
-        let state = epoch_state.current_state(
-            &epoch_schedule,
-            valid_slots_after_consensus,
-            epochs_after_consensus_before_close,
-            current_slot,
-        )?;
 
-        self.current_state = Some(state);
+        let state = if epoch_state.set_weight_progress().tally() > 0 {
+            let weight_table_result = self.weight_table(handler).await?;
+
+            if weight_table_result.is_none() {
+                return Err(anyhow!("Weight table does not exist"));
+            }
+
+            epoch_state.current_state_patched(
+                &epoch_schedule,
+                valid_slots_after_consensus,
+                epochs_after_consensus_before_close,
+                weight_table_result.unwrap().st_mint_count() as u64,
+                current_slot,
+            )
+        } else {
+            epoch_state.current_state(
+                &epoch_schedule,
+                valid_slots_after_consensus,
+                epochs_after_consensus_before_close,
+                current_slot,
+            )
+        };
+
+        self.current_state = Some(state?);
 
         Ok(())
     }

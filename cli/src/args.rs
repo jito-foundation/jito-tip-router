@@ -40,7 +40,7 @@ pub struct Args {
         long,
         global = true,
         env = "TRANSACTION_RETRIES",
-        default_value_t = 3,
+        default_value_t = 0,
         help = "Amount of times to retry a transaction"
     )]
     pub transaction_retries: u64,
@@ -117,12 +117,14 @@ pub enum ProgramCommand {
     Keeper {
         #[arg(
             long,
+            env,
             default_value_t = 600_000, // 10 minutes
             help = "Keeper error timeout in milliseconds"
         )]
         loop_timeout_ms: u64,
         #[arg(
             long,
+            env,
             default_value_t = 10_000, // 10 seconds
             help = "Keeper error timeout in milliseconds"
         )]
@@ -190,6 +192,28 @@ pub enum ProgramCommand {
         #[arg(long, help = "Starting valid epoch")]
         starting_valid_epoch: Option<u64>,
     },
+    AdminSetConfigFees {
+        #[arg(long, help = "New block engine fee in basis points")]
+        new_block_engine_fee_bps: Option<u16>,
+        #[arg(long, help = "Base fee group")]
+        base_fee_group: Option<u8>,
+        #[arg(long, help = "New base fee wallet")]
+        new_base_fee_wallet: Option<String>,
+        #[arg(long, help = "New base fee in basis points")]
+        new_base_fee_bps: Option<u16>,
+        #[arg(long, help = "NCN fee group")]
+        ncn_fee_group: Option<u8>,
+        #[arg(long, help = "New NCN fee in basis points")]
+        new_ncn_fee_bps: Option<u16>,
+    },
+    AdminSetNewAdmin {
+        #[arg(long, help = "New admin address")]
+        new_admin: String,
+        #[arg(long, help = "Set fee admin")]
+        set_fee_admin: bool,
+        #[arg(long, help = "Set tie breaker admin")]
+        set_tie_breaker_admin: bool,
+    },
     AdminFundAccountPayer {
         #[arg(long, help = "Amount of SOL to fund")]
         amount_in_sol: f64,
@@ -206,6 +230,11 @@ pub enum ProgramCommand {
     CreateEpochState,
 
     CreateWeightTable,
+
+    CrankSwitchboard {
+        #[arg(long, help = "Switchboard feed address")]
+        switchboard_feed: String,
+    },
 
     SetWeight {
         #[arg(long, help = "Vault address")]
@@ -285,13 +314,26 @@ pub enum ProgramCommand {
     GetAllVaultsInNcn,
     GetTipRouterConfig,
     GetVaultRegistry,
+    GetWeightTable,
     GetEpochState,
-    GetStakePool,
+    GetEpochSnapshot,
+    GetOperatorSnapshot {
+        #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
+        operator: String,
+    },
     GetBallotBox,
     GetBaseRewardRouter,
+    GetBaseRewardReceiverAddress,
+    GetNcnRewardRouter {
+        #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
+        operator: String,
+        #[arg(long, default_value_t = 0, help = "NCN fee group")]
+        ncn_fee_group: u8,
+    },
+    GetAllNcnRewardRouters,
     GetAccountPayer,
     GetTotalEpochRentCost,
-    GetNcnRewardRouters,
+    GetStakePool,
 
     /// TESTS
     Test,
@@ -330,6 +372,7 @@ pub enum ProgramCommand {
     },
 }
 
+#[rustfmt::skip]
 impl fmt::Display for Args {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "\nMEV Tip Distribution NCN CLI Configuration")?;
@@ -346,46 +389,18 @@ impl fmt::Display for Args {
         writeln!(f, "  • Restaking:         {}", self.restaking_program_id)?;
         writeln!(f, "  • Vault:             {}", self.vault_program_id)?;
         writeln!(f, "  • Token:             {}", self.token_program_id)?;
-        writeln!(
-            f,
-            "  • Tip Distribution:  {}",
-            self.tip_distribution_program_id
-        )?;
+        writeln!(f, "  • Tip Distribution:  {}", self.tip_distribution_program_id)?;
 
         // Solana Settings
         writeln!(f, "\n◎  Solana Settings:")?;
-        writeln!(
-            f,
-            "  • Keypair Path:  {}",
-            self.keypair_path.as_deref().unwrap_or("Not Set")
-        )?;
+        writeln!(f, "  • Keypair Path:  {}", self.keypair_path.as_deref().unwrap_or("Not Set"))?;
         writeln!(f, "  • NCN:  {}", self.ncn.as_deref().unwrap_or("Not Set"))?;
-        writeln!(
-            f,
-            "  • Epoch: {}",
-            if self.epoch.is_some() {
-                format!("{}", self.epoch.unwrap())
-            } else {
-                "Current".to_string()
-            }
-        )?;
+        writeln!(f, "  • Epoch: {}", if self.epoch.is_some() { format!("{}", self.epoch.unwrap()) } else { "Current".to_string() })?;
 
         // Optional Settings
         writeln!(f, "\n⚙️  Additional Settings:")?;
-        writeln!(
-            f,
-            "  • Verbose Mode:  {}",
-            if self.verbose { "Enabled" } else { "Disabled" }
-        )?;
-        writeln!(
-            f,
-            "  • Markdown Help: {}",
-            if self.markdown_help {
-                "Enabled"
-            } else {
-                "Disabled"
-            }
-        )?;
+        writeln!(f, "  • Verbose Mode:  {}", if self.verbose { "Enabled" } else { "Disabled" })?;
+        writeln!(f, "  • Markdown Help: {}", if self.markdown_help { "Enabled" } else { "Disabled" })?;
 
         writeln!(f, "\n")?;
 

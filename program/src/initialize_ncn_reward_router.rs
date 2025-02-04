@@ -27,15 +27,15 @@ pub fn process_initialize_ncn_reward_router(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
+    EpochState::load_and_check_is_closing(program_id, epoch_state, ncn.key, epoch, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     Operator::load(&jito_restaking_program::id(), operator, false)?;
     OperatorSnapshot::load(
         program_id,
+        operator_snapshot,
         operator.key,
         ncn.key,
         epoch,
-        operator_snapshot,
         false,
     )?;
     NcnRewardReceiver::load(
@@ -50,8 +50,8 @@ pub fn process_initialize_ncn_reward_router(
 
     load_system_account(ncn_reward_router, true)?;
     load_system_program(system_program)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
-    EpochMarker::check_dne(program_id, ncn.key, epoch, epoch_marker)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
+    EpochMarker::check_dne(program_id, epoch_marker, ncn.key, epoch)?;
 
     let operator_ncn_index = {
         let operator_snapshot_data = operator_snapshot.try_borrow_data()?;

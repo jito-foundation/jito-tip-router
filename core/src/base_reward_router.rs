@@ -1,4 +1,4 @@
-use core::mem::size_of;
+use core::{fmt, mem::size_of};
 
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
@@ -15,8 +15,8 @@ use spl_math::precise_number::PreciseNumber;
 
 use crate::{
     ballot_box::BallotBox, base_fee_group::BaseFeeGroup, constants::MAX_OPERATORS,
-    discriminators::Discriminators, epoch_state::EpochState, error::TipRouterError, fees::Fees,
-    loaders::check_load, ncn_fee_group::NcnFeeGroup,
+    discriminators::Discriminators, error::TipRouterError, fees::Fees, loaders::check_load,
+    ncn_fee_group::NcnFeeGroup,
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
@@ -108,15 +108,6 @@ impl BaseRewardRouter {
         self.reset_routing_state();
     }
 
-    pub fn check_can_close(&self, epoch_state: &EpochState) -> Result<(), TipRouterError> {
-        if epoch_state.epoch().ne(&self.epoch()) {
-            msg!("Base Reward Router epoch does not match Epoch State");
-            return Err(TipRouterError::CannotCloseAccount);
-        }
-
-        Ok(())
-    }
-
     pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -142,9 +133,9 @@ impl BaseRewardRouter {
 
     pub fn load(
         program_id: &Pubkey,
+        account: &AccountInfo,
         ncn: &Pubkey,
         epoch: u64,
-        account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
@@ -155,6 +146,15 @@ impl BaseRewardRouter {
             Some(Self::DISCRIMINATOR),
             expect_writable,
         )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        Self::load(program_id, account_to_close, ncn, epoch, true)
     }
 
     // ----------------- ROUTE STATE TRACKING --------------
@@ -700,6 +700,66 @@ impl BaseRewardRouter {
     }
 }
 
+#[rustfmt::skip]
+impl fmt::Display for BaseRewardRouter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "\n\n----------- Base Reward Router -------------")?;
+        writeln!(f, "  NCN:                          {}", self.ncn)?;
+        writeln!(f, "  Epoch:                        {}", self.epoch())?;
+        writeln!(f, "  Bump:                         {}", self.bump)?;
+        writeln!(f, "  Slot Created:                 {}", self.slot_created())?;
+        writeln!(f, "  Still Routing:                {}", self.still_routing())?;
+        writeln!(f, "  Total Rewards:                {}", self.total_rewards())?;
+        writeln!(f, "  Reward Pool:                  {}", self.reward_pool())?;
+        writeln!(f, "  Rewards Processed:            {}", self.rewards_processed())?;
+
+        if self.still_routing() {
+            writeln!(f, "\nRouting State:")?;
+            writeln!(f, "  Last NCN Group Index:         {}", self.last_ncn_group_index())?;
+            writeln!(f, "  Last Vote Index:              {}", self.last_vote_index())?;
+            writeln!(f, "  Last Rewards to Process:      {}", self.last_rewards_to_process())?;
+        }
+
+        writeln!(f, "\nBase Fee Group Rewards:")?;
+        for group in BaseFeeGroup::all_groups().iter() {
+            let rewards = self.base_fee_group_reward(*group).unwrap_or(0);
+            if rewards > 0 {
+                writeln!(f, "  Group {}:                      {}", group.group, rewards)?;
+            }
+        }
+
+        writeln!(f, "\nNCN Fee Group Rewards:")?;
+        for group in NcnFeeGroup::all_groups().iter() {
+            let rewards = self.ncn_fee_group_rewards(*group).unwrap_or(0);
+            if rewards > 0 {
+                writeln!(f, "  Group {}:                      {}", group.group, rewards)?;
+            }
+        }
+
+        writeln!(f, "\nNCN Fee Group Reward Routes:")?;
+        for route in self.ncn_fee_group_reward_routes().iter() {
+            if !route.is_empty() {
+                writeln!(f, "  Operator:                     {}", route.operator())?;
+                if let Ok(has_rewards) = route.has_rewards() {
+                    if has_rewards {
+                        writeln!(f, "    Rewards by Group:")?;
+                        for group in NcnFeeGroup::all_groups().iter() {
+                            if let Ok(rewards) = route.rewards(*group) {
+                                if rewards > 0 {
+                                    writeln!(f, "      Group {}:                  {}", group.group, rewards)?;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        writeln!(f, "\n")?;
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct NcnRewardRoute {
@@ -839,6 +899,15 @@ impl BaseRewardReceiver {
             None,
             expect_writable,
         )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        Self::load(program_id, account_to_close, ncn, epoch, true)
     }
 
     #[inline(always)]

@@ -1,3 +1,4 @@
+use core::fmt;
 use std::mem::size_of;
 
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -6,7 +7,10 @@ use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
 use shank::{ShankAccount, ShankType};
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 
-use crate::{discriminators::Discriminators, fees::FeeConfig, loaders::check_load};
+use crate::{
+    base_fee_group::BaseFeeGroup, discriminators::Discriminators, fees::FeeConfig,
+    loaders::check_load, ncn_fee_group::NcnFeeGroup,
+};
 
 #[derive(Debug, BorshSerialize, BorshDeserialize)]
 pub enum ConfigAdminRole {
@@ -97,8 +101,8 @@ impl Config {
     /// * `Result<(), ProgramError>` - The result of the operation
     pub fn load(
         program_id: &Pubkey,
-        ncn: &Pubkey,
         account: &AccountInfo,
+        ncn: &Pubkey,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda = Self::find_program_address(program_id, ncn).0;
@@ -125,6 +129,39 @@ impl Config {
 
     pub fn epochs_after_consensus_before_close(&self) -> u64 {
         self.epochs_after_consensus_before_close.into()
+    }
+}
+
+#[rustfmt::skip]
+impl fmt::Display for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "\n\n----------- Config -------------")?;
+        writeln!(f, "  NCN:                          {}", self.ncn)?;
+        writeln!(f, "  Tie Breaker:                  {}", self.tie_breaker_admin)?;
+        writeln!(f, "  Fee Admin:                    {}", self.fee_admin)?;
+        writeln!(f, "  Valid Slots After Consensus:  {}", self.valid_slots_after_consensus())?;
+        writeln!(f, "  Epochs Before Stall:          {}", self.epochs_before_stall())?;
+        writeln!(f, "  Starting Valid Epochs:        {}", self.starting_valid_epoch())?;
+        writeln!(f, "  Close Epoch:                  {}", self.epochs_after_consensus_before_close())?;
+        writeln!(f, "  Fees:")?;
+        writeln!(f, "    Block Engine Fee:           {}", self.fee_config.block_engine_fee_bps())?;
+        for group in BaseFeeGroup::all_groups() {
+            writeln!(f, "    Base Fee Wallet [{:?}]:        {:?}", group.group, self.fee_config.base_fee_wallet(group).unwrap())?;
+        }
+        for group in BaseFeeGroup::all_groups() {
+            writeln!(f, "    Late Base Fee [{:?}]:          {}", group.group, self.fee_config.base_fee_bps(group, u64::MAX).unwrap())?;
+        }
+        for group in NcnFeeGroup::all_groups() {
+            writeln!(f, "    Late NCN Fee [{:?}]:           {}", group.group, self.fee_config.ncn_fee_bps(group, u64::MAX).unwrap())?;
+        }
+        for group in BaseFeeGroup::all_groups() {
+            writeln!(f, "    Current Base Fee [{:?}]:       {}", group.group, self.fee_config.base_fee_bps(group, 0).unwrap())?;
+        }
+        for group in NcnFeeGroup::all_groups() {
+            writeln!(f, "    Current NCN Fee [{:?}]:        {}", group.group, self.fee_config.ncn_fee_bps(group, 0).unwrap())?;
+        }
+
+        Ok(())
     }
 }
 

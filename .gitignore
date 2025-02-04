@@ -20,3 +20,5 @@ notes.md
 
 integration_tests/tests/fixtures/jito_tip_router_program-keypair.json
 lcov.info
+
+credentials/

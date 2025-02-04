@@ -28,19 +28,19 @@ pub fn process_cast_vote(
     // Operator is casting the vote, needs to be signer
     load_signer(operator_admin, false)?;
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, false)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     Operator::load(&jito_restaking_program::id(), operator, false)?;
 
-    BallotBox::load(program_id, ncn.key, epoch, ballot_box, true)?;
-    EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;
+    BallotBox::load(program_id, ballot_box, ncn.key, epoch, true)?;
+    EpochSnapshot::load(program_id, epoch_snapshot, ncn.key, epoch, false)?;
     OperatorSnapshot::load(
         program_id,
+        operator_snapshot,
         operator.key,
         ncn.key,
         epoch,
-        operator_snapshot,
         false,
     )?;
     let operator_data = operator.data.borrow();
@@ -77,6 +77,11 @@ pub fn process_cast_vote(
 
         *operator_snapshot.stake_weights()
     };
+
+    // if operator_stake_weights.stake_weight() == 0 {
+    //     msg!("Operator has zero stake weight, cannot vote");
+    //     return Err(TipRouterError::CannotVoteWithZeroStake.into());
+    // }
 
     let slot = Clock::get()?.slot;
 

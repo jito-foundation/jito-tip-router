@@ -44,6 +44,7 @@ solana-transaction-status = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-stake-pool = { workspace = true }
 spl-token = { workspace = true }
+switchboard-on-demand-client = "0.2.11"
 thiserror = { workspace = true }
 tokio = { workspace = true }
 
