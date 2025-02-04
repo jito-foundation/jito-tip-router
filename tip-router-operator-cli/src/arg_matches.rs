@@ -14,7 +14,6 @@ use solana_runtime::snapshot_utils::{
 };
 use solana_sdk::{clock::Slot, rent::Rent};
 
-
 // pub fn create_snapshot_arg_matches<'a, 'b>(
 //     full_snapshots_archives_dir: PathBuf,
 //     incremental_snapshots_archives_dir: PathBuf,
@@ -58,9 +57,10 @@ pub fn set_ledger_tool_arg_matches(
     let accounts_db_config_args = accounts_db_args();
     let snapshot_config_args = snapshot_args();
 
-    let _accounts_db_test_hash_calculation_arg = Arg::with_name("accounts_db_test_hash_calculation")
-        .long("accounts-db-test-hash-calculation")
-        .help("Enable hash calculation test");
+    let _accounts_db_test_hash_calculation_arg =
+        Arg::with_name("accounts_db_test_hash_calculation")
+            .long("accounts-db-test-hash-calculation")
+            .help("Enable hash calculation test");
     let _halt_at_slot_arg = Arg::with_name("halt_at_slot")
         .long("halt-at-slot")
         .value_name("SLOT")

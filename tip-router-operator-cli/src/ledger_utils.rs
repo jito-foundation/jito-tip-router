@@ -13,12 +13,11 @@ use solana_accounts_db::hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHI
 use solana_ledger::{
     blockstore::{Blockstore, BlockstoreError},
     blockstore_options::{AccessType, BlockstoreOptions},
-    blockstore_processor::{ProcessOptions},
+    blockstore_processor::ProcessOptions,
 };
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::{
-    bank::Bank,
-    snapshot_archive_info::SnapshotArchiveInfoGetter, snapshot_bank_utils,
+    bank::Bank, snapshot_archive_info::SnapshotArchiveInfoGetter, snapshot_bank_utils,
     snapshot_config::SnapshotConfig, snapshot_utils::SnapshotVersion,
 };
 use solana_sdk::{clock::Slot, pubkey::Pubkey};
