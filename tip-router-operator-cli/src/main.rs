@@ -148,7 +148,7 @@ async fn main() -> Result<()> {
                         // Slow process with lots of account fetches so run every 30 minutes
                         sleep(Duration::from_secs(1800)).await;
                         let epoch = if let Ok(epoch) = rpc_client.get_epoch_info() {
-                            epoch.epoch - 1
+                            epoch.epoch.checked_sub(1).unwrap_or(epoch.epoch)
                         } else {
                             continue;
                         };
