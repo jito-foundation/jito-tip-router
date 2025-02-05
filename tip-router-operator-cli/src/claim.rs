@@ -354,8 +354,8 @@ fn build_mev_claim_transactions(
             // doesn't make sense to claim for claimants that don't exist anymore
             // can't claim for something already claimed
             // don't need to claim for claimants that get 0 MEV
-            if claimants.get(&node.claimant).is_none()
-                || claim_statuses.get(&node.claim_status_pubkey).is_some()
+            if !claimants.contains_key(&node.claimant)
+                || claim_statuses.contains_key(&node.claim_status_pubkey)
                 || node.amount == 0
             {
                 continue;

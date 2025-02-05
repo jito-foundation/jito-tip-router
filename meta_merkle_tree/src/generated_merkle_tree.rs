@@ -534,7 +534,7 @@ mod tests {
         let validator_id_0 = Pubkey::new_unique();
         let validator_id_1 = Pubkey::new_unique();
         let ncn_address = Pubkey::new_unique();
-        let epoch = 0u64;
+        let epoch = 737;
 
         let stake_meta_collection = StakeMetaCollection {
             stake_metas: vec![
@@ -621,7 +621,7 @@ mod tests {
             &[
                 b"base_reward_receiver",
                 &ncn_address.to_bytes(),
-                &epoch.to_le_bytes(),
+                &(epoch + 1).to_le_bytes(),
             ],
             &tip_router_program_id,
         )
@@ -666,7 +666,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: staker_account_0, // Use staker_account instead of stake_account
+                claimant: stake_account_0,
                 claim_status_pubkey: claim_statuses[2].0,
                 claim_status_bump: claim_statuses[2].1,
                 staker_pubkey: staker_account_0,
@@ -675,7 +675,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: staker_account_1, // Use staker_account instead of stake_account
+                claimant: stake_account_1,
                 claim_status_pubkey: claim_statuses[3].0,
                 claim_status_bump: claim_statuses[3].1,
                 staker_pubkey: staker_account_1,
@@ -707,7 +707,7 @@ mod tests {
                 claim_status_bump: claim_statuses[4].1,
                 staker_pubkey: Pubkey::default(),
                 withdrawer_pubkey: Pubkey::default(),
-                amount: 57_003_663_340,
+                amount: 57_003_663_339, // Updated from 57_003_663_340 after div_ceil -> checked_div change. Dust stays in TDA and goes to DAO
                 proof: None,
             },
             TreeNode {
@@ -720,7 +720,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: staker_account_2,
+                claimant: stake_account_2,
                 claim_status_pubkey: claim_statuses[6].0,
                 claim_status_bump: claim_statuses[6].1,
                 staker_pubkey: staker_account_2,
@@ -729,7 +729,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: staker_account_3,
+                claimant: stake_account_3,
                 claim_status_pubkey: claim_statuses[7].0,
                 claim_status_bump: claim_statuses[7].1,
                 staker_pubkey: staker_account_3,
@@ -783,8 +783,7 @@ mod tests {
                             .unwrap();
                         assert!(
                             (expected_tree_node.amount as i128 - actual_tree_node.amount as i128)
-                                .abs()
-                                <= 1,
+                                == 0,
                             "Expected amount: {}, Actual amount: {}",
                             expected_tree_node.amount,
                             actual_tree_node.amount
