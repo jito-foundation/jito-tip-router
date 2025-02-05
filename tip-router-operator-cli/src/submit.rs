@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Duration;
 use std::{path::PathBuf, str::FromStr};
 
@@ -25,7 +26,7 @@ use crate::{
 #[allow(clippy::too_many_arguments)]
 pub async fn submit_recent_epochs_to_ncn(
     client: &EllipsisClient,
-    keypair: &Keypair,
+    keypair: &Arc<Keypair>,
     ncn_address: &Pubkey,
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
