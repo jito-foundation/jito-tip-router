@@ -344,6 +344,8 @@ pub fn get_bank_from_ledger(
 
 #[cfg(test)]
 mod tests {
+    use crate::load_and_process_ledger::LEDGER_TOOL_DIRECTORY;
+
     use super::*;
 
     #[test]
@@ -377,7 +379,7 @@ mod tests {
         std::fs::remove_dir_all(
             ledger_path
                 .as_path()
-                .join(format!("accounts/snapshot/{}", desired_slot)),
+                .join(LEDGER_TOOL_DIRECTORY),
         )
         .unwrap();
     }
