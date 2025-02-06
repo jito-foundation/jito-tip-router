@@ -3,7 +3,7 @@ use std::mem::size_of;
 
 use crate::handler::CliHandler;
 use anyhow::Result;
-use borsh::BorshDeserialize;
+use borsh1::BorshDeserialize;
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{
     config::Config as RestakingConfig, ncn::Ncn, ncn_operator_state::NcnOperatorState,
