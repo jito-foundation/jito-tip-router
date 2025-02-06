@@ -684,6 +684,11 @@ impl VaultProgramClient {
 
         let burn_vault_vrt_token_account =
             get_associated_token_address(&burn_vault, &vrt_mint.pubkey());
+
+        self.create_ata(&st_mint.pubkey(), vault).await?;
+        self.create_ata(&st_mint.pubkey(), &vault_admin.pubkey())
+            .await?;
+        
         self._process_transaction(&Transaction::new_signed_with_payer(
             &[initialize_vault(
                 &jito_vault_program::id(),
