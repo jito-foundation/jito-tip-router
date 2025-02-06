@@ -112,17 +112,17 @@ jito-tip-router-client = { path = "./clients/rust/jito_tip_router", version = "0
 jito-tip-router-core = { path = "./core", version = "=0.0.1" }
 jito-tip-router-program = { path = "./program", version = "=0.0.1" }
 jito-tip-router-shank-cli = { path = "./shank_cli", version = "=0.0.1" }
-jito-bytemuck = { path = "../../jito-foundation/restaking/bytemuck" }
-jito-account-traits-derive = { path = "../../jito-foundation/restaking" }
-jito-jsm-core = { path = "../../jito-foundation/restaking/core" }
-jito-restaking-client = { path = "../../jito-foundation/restaking/clients/rust/restaking_client" }
-jito-restaking-core = { path = "../../jito-foundation/restaking/restaking_core" }
-jito-restaking-program = { path = "../../jito-foundation/restaking/restaking_program", features = ["no-entrypoint"] }
-jito-restaking-sdk = { path = "../../jito-foundation/restaking/restaking_sdk" }
-jito-vault-client = { path = "../../jito-foundation/restaking/clients/rust/vault_client" }
-jito-vault-core = { path = "../../jito-foundation/restaking/vault_core" }
-jito-vault-program = { path = "../../jito-foundation/restaking/vault_program", features = ["no-entrypoint"] }
-jito-vault-sdk = { path = "../../jito-foundation/restaking/vault_sdk" }
+jito-bytemuck = { package = "jito-bytemuck", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-account-traits-derive = { package = "jito-account-traits-derive", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-jsm-core = { package = "jito-jsm-core", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-restaking-client = { package = "jito-restaking-client", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-restaking-core = { package = "jito-restaking-core", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-restaking-program = { package = "jito-restaking-program", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade", features = ["no-entrypoint"] }
+jito-restaking-sdk = { package = "jito-restaking-sdk", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-vault-core = { package = "jito-vault-core", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-vault-program = { package = "jito-vault-program", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade", features = ["no-entrypoint"] }
+jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
 
 [patch.crates-io]
 solana-account = { package = "solana-account", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
