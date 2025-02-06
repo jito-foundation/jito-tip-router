@@ -299,8 +299,6 @@ pub fn get_bank_from_ledger(
             snapshot_config.full_snapshot_archives_dir,
             snapshot_config.incremental_snapshot_archives_dir,
             snapshot_config.archive_format,
-            snapshot_config.maximum_full_snapshot_archives_to_retain,
-            snapshot_config.maximum_incremental_snapshot_archives_to_retain,
         ) {
             Ok(res) => res,
             Err(e) => {
