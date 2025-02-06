@@ -1,3 +1,4 @@
+#![allow(clippy::integer_division)]
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 use crate::{
@@ -632,7 +633,7 @@ impl CliHandler {
                                 vault_operator_stake_weight.stake_weights().stake_weight();
 
                             vault_stakes
-                                .entry(vault.clone())
+                                .entry(*vault)
                                 .and_modify(|w| *w += stake_weight)
                                 .or_insert(stake_weight);
                         }
@@ -719,7 +720,7 @@ impl CliHandler {
                             stake * 10000 / vault_total % 100
                         );
                     }
-                    println!("");
+                    println!();
                 }
 
                 Ok(())
