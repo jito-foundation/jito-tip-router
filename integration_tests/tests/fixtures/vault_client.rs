@@ -308,6 +308,8 @@ impl VaultProgramClient {
     ) -> Result<VaultRoot, TestError> {
         let vault_base = Keypair::new();
 
+        let initialize_token_amount = Vault::DEFAULT_INITIALIZATION_TOKEN_AMOUNT;
+
         let vault_pubkey =
             Vault::find_program_address(&jito_vault_program::id(), &vault_base.pubkey()).0;
 
@@ -337,7 +339,7 @@ impl VaultProgramClient {
             withdrawal_fee_bps,
             reward_fee_bps,
             decimals,
-            0,
+            initialize_token_amount,
         )
         .await?;
 
@@ -688,6 +690,13 @@ impl VaultProgramClient {
         self.create_ata(&st_mint.pubkey(), vault).await?;
         self.create_ata(&st_mint.pubkey(), &vault_admin.pubkey())
             .await?;
+
+        self.mint_spl_to(
+            &st_mint.pubkey(),
+            &vault_admin.pubkey(),
+            initialize_token_amount,
+        )
+        .await?;
         
         self._process_transaction(&Transaction::new_signed_with_payer(
             &[initialize_vault(
