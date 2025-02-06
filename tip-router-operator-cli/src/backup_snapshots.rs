@@ -1,6 +1,6 @@
 #![allow(clippy::arithmetic_side_effects, clippy::integer_division)]
 use anyhow::{Context, Result};
-use solana_client::rpc_client::RpcClient;
+use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -70,9 +70,9 @@ impl BackupSnapshotMonitor {
     }
 
     /// Gets target slot for current epoch
-    fn get_target_slots(&self) -> Result<(u64, u64)> {
+    async fn get_target_slots(&self) -> Result<(u64, u64)> {
         // Get the last slot of the current epoch
-        let (_, last_epoch_target_slot) = get_previous_epoch_last_slot(&self.rpc_client)?;
+        let (_, last_epoch_target_slot) = get_previous_epoch_last_slot(&self.rpc_client).await?;
         let next_epoch_target_slot = last_epoch_target_slot + DEFAULT_SLOTS_PER_EPOCH;
 
         if let Some(target_slot) = self.override_target_slot {
@@ -249,7 +249,7 @@ impl BackupSnapshotMonitor {
         loop {
             interval.tick().await;
 
-            let (last_epoch_target_slot, this_epoch_target_slot) = self.get_target_slots()?;
+            let (last_epoch_target_slot, this_epoch_target_slot) = self.get_target_slots().await?;
 
             // Detect new epoch
             if current_target_slot != Some(this_epoch_target_slot) {

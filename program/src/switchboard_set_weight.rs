@@ -60,7 +60,9 @@ pub fn process_switchboard_set_weight(
             .map_err(|_| TipRouterError::BadSwitchboardFeed)?;
 
         let clock = Clock::get()?;
-        let price: Decimal = feed.value(&clock).map_err(|_| TipRouterError::BadSwitchboardValue)?;
+        let price: Decimal = feed
+            .value(&clock)
+            .map_err(|_| TipRouterError::BadSwitchboardValue)?;
 
         let current_slot = clock.slot;
         let stale_slot = {
