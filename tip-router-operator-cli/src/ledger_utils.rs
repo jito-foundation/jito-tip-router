@@ -376,11 +376,6 @@ mod tests {
         assert!(snapshot_path.exists());
         // Delete the snapshot
         std::fs::remove_file(snapshot_path).unwrap();
-        std::fs::remove_dir_all(
-            ledger_path
-                .as_path()
-                .join(LEDGER_TOOL_DIRECTORY),
-        )
-        .unwrap();
+        std::fs::remove_dir_all(ledger_path.as_path().join(LEDGER_TOOL_DIRECTORY)).unwrap();
     }
 }

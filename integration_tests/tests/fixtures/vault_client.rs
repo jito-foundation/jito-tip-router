@@ -697,7 +697,7 @@ impl VaultProgramClient {
             initialize_token_amount,
         )
         .await?;
-        
+
         self._process_transaction(&Transaction::new_signed_with_payer(
             &[initialize_vault(
                 &jito_vault_program::id(),
