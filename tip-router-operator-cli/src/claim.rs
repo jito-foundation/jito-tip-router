@@ -7,8 +7,8 @@ use std::{
 use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
 use jito_tip_distribution_sdk::{
-    jito_tip_distribution::accounts::ClaimStatus, TipDistributionAccount, CLAIM_STATUS_SIZE,
-    CONFIG_SEED,
+    jito_tip_distribution::accounts::ClaimStatus, TipDistributionAccount, CLAIM_STATUS_SEED,
+    CLAIM_STATUS_SIZE, CONFIG_SEED,
 };
 use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
@@ -434,6 +434,14 @@ fn build_mev_claim_transactions(
             {
                 continue;
             }
+            let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
+                &[
+                    CLAIM_STATUS_SEED,
+                    &node.claimant.to_bytes(),
+                    &tree.tip_distribution_account.to_bytes(),
+                ],
+                &tip_distribution_program_id,
+            );
 
             let claim_with_payer_ix = ClaimWithPayerBuilder::new()
                 .account_payer(tip_router_account_payer)
@@ -442,12 +450,12 @@ fn build_mev_claim_transactions(
                 .tip_distribution_program(tip_distribution_program_id)
                 .tip_distribution_config(tip_distribution_config)
                 .tip_distribution_account(tree.tip_distribution_account)
-                .claim_status(node.claim_status_pubkey)
+                .claim_status(claim_status_pubkey)
                 .claimant(node.claimant)
                 .system_program(system_program::id())
                 .proof(node.proof.clone().unwrap())
                 .amount(node.amount)
-                .bump(node.claim_status_bump)
+                .bump(claim_status_bump)
                 .instruction();
 
             instructions.push(claim_with_payer_ix);
