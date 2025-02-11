@@ -640,6 +640,7 @@ pub async fn get_all_sorted_operators_for_vault(
             min_context_slot: None,
         },
         with_context: Some(false),
+        sort_results: None,
     };
 
     let results = client
