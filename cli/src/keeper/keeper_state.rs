@@ -152,7 +152,7 @@ impl KeeperState {
             return Ok(());
         }
 
-        let raw_account = raw_account.expect("Cannot unwrap raw account");
+        let raw_account = raw_account.unwrap();
 
         if raw_account.data.len() < EpochState::SIZE {
             self.epoch_state = None;
@@ -175,7 +175,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.expect("Cannot unwrap raw account");
+            let raw_account = raw_account.unwrap();
             let account = TipRouterConfig::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }
@@ -187,7 +187,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.expect("Cannot unwrap raw account");
+            let raw_account = raw_account.unwrap();
             let account = VaultRegistry::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }
@@ -199,7 +199,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.expect("Cannot unwrap raw account");
+            let raw_account = raw_account.unwrap();
             let account = WeightTable::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }
@@ -211,7 +211,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.expect("Cannot unwrap raw account");
+            let raw_account = raw_account.unwrap();
 
             let account = EpochSnapshot::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
@@ -229,7 +229,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.expect("Cannot unwrap raw account");
+            let raw_account = raw_account.unwrap();
             let account = OperatorSnapshot::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }
@@ -241,7 +241,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.expect("Cannot unwrap raw account");
+            let raw_account = raw_account.unwrap();
             let account = Box::new(*BallotBox::try_from_slice_unchecked(
                 raw_account.data.as_slice(),
             )?);
@@ -258,7 +258,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.expect("Cannot unwrap raw account");
+            let raw_account = raw_account.unwrap();
             let account = BaseRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }
@@ -285,7 +285,7 @@ impl KeeperState {
         if raw_account.is_none() {
             Ok(None)
         } else {
-            let raw_account = raw_account.expect("Cannot unwrap raw account");
+            let raw_account = raw_account.unwrap();
             let account = NcnRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice())?;
             Ok(Some(*account))
         }

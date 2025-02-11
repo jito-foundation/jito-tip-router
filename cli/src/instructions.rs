@@ -48,7 +48,7 @@ use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
-    constants::MAX_REALLOC_BYTES,
+    constants::{MAX_REALLOC_BYTES, SWITCHBOARD_QUEUE},
     epoch_marker::EpochMarker,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
@@ -793,7 +793,7 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
     wait_for_x_slots_after_epoch(handler, 400).await?;
 
     // STATIC PUBKEY
-    let queue_key = Pubkey::from_str("A43DyUGA7s8eXPxqEjJY6EBu1KKbNgfxF8h17VAHn13w").unwrap();
+    let queue_key = SWITCHBOARD_QUEUE;
 
     let queue = QueueAccountData::load(client, &queue_key).await?;
     let gateways = &queue.fetch_gateways(client).await?;
@@ -1939,8 +1939,7 @@ pub async fn close_epoch_account(
     let config_account = get_tip_router_config(handler).await?;
     let dao_wallet = *config_account
         .fee_config
-        .base_fee_wallet(BaseFeeGroup::dao())
-        .expect("No DAO wallet ( close_epoch_account )");
+        .base_fee_wallet(BaseFeeGroup::dao())?;
 
     let mut ix = CloseEpochAccountBuilder::new();
 
@@ -2453,7 +2452,7 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
     if ballot_box.is_consensus_reached() {
         let (base_reward_receiver_address, _, _) = BaseRewardReceiver::find_program_address(
             &handler.tip_router_program_id,
-            handler.ncn().unwrap(),
+            handler.ncn()?,
             epoch,
         );
 
@@ -2951,8 +2950,7 @@ pub async fn create_and_add_test_vault(
         &keypair.pubkey(),
         None,
         9,
-    )
-    .unwrap();
+    )?;
     let create_admin_ata_ix =
         spl_associated_token_account::instruction::create_associated_token_account_idempotent(
             &keypair.pubkey(),
@@ -2967,8 +2965,7 @@ pub async fn create_and_add_test_vault(
         &keypair.pubkey(),
         &[],
         1_000_000,
-    )
-    .unwrap();
+    )?;
 
     send_and_log_transaction(
         handler,
@@ -3283,7 +3280,7 @@ pub async fn send_transactions(
             continue;
         }
 
-        return Ok(result.unwrap());
+        return Ok(result?);
     }
 
     // last retry
@@ -3306,7 +3303,7 @@ pub async fn send_transactions(
         return Err(anyhow!("\nError: \n\n{:?}\n\n", e));
     }
 
-    Ok(result.unwrap())
+    Ok(result?)
 }
 
 pub fn log_transaction(title: &str, signature: Signature, log_items: &[String]) {

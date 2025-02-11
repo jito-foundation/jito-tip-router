@@ -1,5 +1,5 @@
-use std::fmt;
 use std::mem::size_of;
+use std::{fmt, time::Duration};
 
 use crate::handler::CliHandler;
 use anyhow::Result;
@@ -30,6 +30,7 @@ use jito_vault_core::{
     vault_operator_delegation::VaultOperatorDelegation,
     vault_update_state_tracker::VaultUpdateStateTracker,
 };
+use log::info;
 use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
 use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
@@ -38,6 +39,7 @@ use solana_client::{
 use solana_sdk::{account::Account, pubkey::Pubkey};
 use spl_associated_token_account::get_associated_token_address;
 use spl_stake_pool::{find_withdraw_authority_program_address, state::StakePool};
+use tokio::time::sleep;
 
 // ---------------------- HELPERS ----------------------
 // So we can switch between the two implementations
@@ -68,10 +70,17 @@ pub async fn get_current_epoch_and_slot(handler: &CliHandler) -> Result<(u64, u6
     Ok((epoch, slot))
 }
 
-pub async fn get_current_epoch_and_slot_unsafe(handler: &CliHandler) -> (u64, u64) {
-    get_current_epoch_and_slot(handler)
-        .await
-        .expect("Failed to get epoch and slot")
+pub async fn get_guaranteed_epoch_and_slot(handler: &CliHandler) -> (u64, u64) {
+    loop {
+        let current_epoch_and_slot_result = get_current_epoch_and_slot(handler).await;
+
+        if current_epoch_and_slot_result.is_ok() {
+            return current_epoch_and_slot_result.unwrap();
+        }
+
+        info!("Could not fetch current epoch and slot. Retrying...");
+        sleep(Duration::from_secs(1)).await;
+    }
 }
 
 // ---------------------- TIP ROUTER ----------------------
@@ -445,9 +454,13 @@ pub async fn get_ncn(handler: &CliHandler) -> Result<Ncn> {
 }
 
 pub async fn get_vault(handler: &CliHandler, vault: &Pubkey) -> Result<Vault> {
-    let account = get_account(handler, vault)
-        .await?
-        .expect("Vault account not found");
+    let account = get_account(handler, vault).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Vault account not found"));
+    }
+    let account = account.unwrap();
+
     let account = Vault::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -460,9 +473,15 @@ pub async fn get_vault_update_state_tracker(
     let (vault_update_state_tracker, _, _) =
         VaultUpdateStateTracker::find_program_address(&handler.vault_program_id, vault, ncn_epoch);
 
-    let account = get_account(handler, &vault_update_state_tracker)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &vault_update_state_tracker).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!(
+            "Vault Update State Tracker account not found"
+        ));
+    }
+    let account = account.unwrap();
+
     let account = VaultUpdateStateTracker::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -572,7 +591,13 @@ pub async fn get_operator_vault_ticket(
 
 pub async fn get_stake_pool(handler: &CliHandler) -> Result<StakePool> {
     let stake_pool = JITOSOL_POOL_ADDRESS;
-    let account = get_account(handler, &stake_pool).await?.unwrap();
+    let account = get_account(handler, &stake_pool).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Stake Pool account not found"));
+    }
+    let account = account.unwrap();
+
     let mut data_slice = account.data.as_slice();
     let account = StakePool::deserialize(&mut data_slice)
         .map_err(|_| anyhow::anyhow!("Invalid stake pool account"))?;
@@ -879,8 +904,8 @@ impl NcnTickets {
         slot: u64,
         epoch_length: u64,
     ) -> Result<Self> {
-        let ncn = handler.ncn().expect("NCN not found");
-        let vault_account = get_vault(handler, vault).await.expect("Vault not found");
+        let ncn = handler.ncn()?;
+        let vault_account = get_vault(handler, vault).await?;
 
         let (ncn_vault_ticket_address, _, _) =
             NcnVaultTicket::find_program_address(&handler.restaking_program_id, ncn, vault);

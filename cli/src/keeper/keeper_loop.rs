@@ -1,5 +1,5 @@
 use crate::{
-    getters::get_current_epoch,
+    getters::get_guaranteed_epoch_and_slot,
     handler::CliHandler,
     instructions::{
         crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
@@ -22,25 +22,25 @@ pub async fn progress_epoch(
     last_current_epoch: u64,
     keeper_epoch: u64,
     epoch_stall: bool,
-) -> Result<u64> {
-    let current_epoch = get_current_epoch(handler).await?;
+) -> u64 {
+    let (current_epoch, _) = get_guaranteed_epoch_and_slot(handler).await;
 
     if current_epoch > last_current_epoch {
         // Automatically go to new epoch
-        return Ok(current_epoch);
+        return current_epoch;
     }
 
     if is_epoch_completed || epoch_stall {
         // Reset to starting epoch
         if keeper_epoch == current_epoch {
-            return Ok(starting_epoch);
+            return starting_epoch;
         }
 
         // Increment keeper epoch
-        return Ok(keeper_epoch + 1);
+        return keeper_epoch + 1;
     }
 
-    Ok(keeper_epoch)
+    keeper_epoch
 }
 
 #[allow(clippy::future_not_send)]
@@ -94,13 +94,35 @@ pub async fn run_keeper(
     let mut state: KeeperState = KeeperState::default();
     let mut epoch_stall = false;
     let mut current_epoch = handler.epoch;
-    let mut last_current_epoch = get_current_epoch(handler)
-        .await
-        .expect("Could not get epoch");
+    let (mut last_current_epoch, _) = get_guaranteed_epoch_and_slot(handler).await;
 
     loop {
         {
-            info!("A. Emit NCN Metrics");
+            info!("\n\nA. Progress Epoch - {}\n", current_epoch);
+            let starting_epoch = handler.epoch;
+            let keeper_epoch = current_epoch;
+
+            let result = progress_epoch(
+                handler,
+                state.is_epoch_completed,
+                starting_epoch,
+                last_current_epoch,
+                keeper_epoch,
+                epoch_stall,
+            )
+            .await;
+
+            if current_epoch != result {
+                info!("\n\nPROGRESS EPOCH: {} -> {}\n\n", current_epoch, result);
+            }
+
+            current_epoch = result;
+            last_current_epoch = last_current_epoch.max(current_epoch);
+            epoch_stall = false;
+        }
+
+        {
+            info!("\n\nB. Emit NCN Metrics - {}\n", current_epoch);
             let result = emit_ncn_metrics(handler).await;
 
             check_and_timeout_error(
@@ -113,7 +135,7 @@ pub async fn run_keeper(
         }
 
         {
-            info!("-1. Register Vaults");
+            info!("\n\n-1. Register Vaults - {}\n", current_epoch);
             let result = crank_register_vaults(handler).await;
 
             if check_and_timeout_error(
@@ -129,38 +151,7 @@ pub async fn run_keeper(
         }
 
         {
-            info!("0. Progress Epoch");
-            let starting_epoch = handler.epoch;
-            let keeper_epoch = current_epoch;
-
-            let result = progress_epoch(
-                handler,
-                state.is_epoch_completed,
-                starting_epoch,
-                last_current_epoch,
-                keeper_epoch,
-                epoch_stall,
-            )
-            .await;
-
-            if check_and_timeout_error(
-                "Progress Epoch".to_string(),
-                &result,
-                error_timeout_ms,
-                state.epoch,
-            )
-            .await
-            {
-                continue;
-            }
-
-            current_epoch = result.expect("Cannot unwrap progress_epoch result");
-            last_current_epoch = last_current_epoch.max(current_epoch);
-            epoch_stall = false;
-        }
-
-        {
-            info!("1. Update Keeper State - {}", current_epoch);
+            info!("\n\n0. Update Keeper State - {}\n", current_epoch);
             if state.epoch != current_epoch {
                 let result = state.fetch(handler, current_epoch).await;
 
@@ -178,7 +169,7 @@ pub async fn run_keeper(
         }
 
         {
-            info!("2. Update the epoch state - {}", current_epoch);
+            info!("\n\n1. Update the epoch state - {}\n", current_epoch);
             let result = state.update_epoch_state(handler).await;
 
             if check_and_timeout_error(
@@ -194,7 +185,7 @@ pub async fn run_keeper(
         }
 
         {
-            info!("3. Create or Complete State - {}", current_epoch);
+            info!("\n\n2. Create or Complete State - {}\n", current_epoch);
 
             // If complete, reset loop
             if state.is_epoch_completed {
@@ -219,7 +210,10 @@ pub async fn run_keeper(
         }
 
         {
-            info!("B. Emit Epoch Metrics ( Before Crank )");
+            info!(
+                "\n\nC. Emit Epoch Metrics ( Before Crank ) - {}\n",
+                current_epoch
+            );
             let result = emit_epoch_metrics(handler, state.epoch).await;
 
             check_and_timeout_error(
@@ -233,7 +227,10 @@ pub async fn run_keeper(
 
         {
             let current_state = state.current_state().expect("cannot get current state");
-            info!("5. Crank State [{:?}] - {}", current_state, current_epoch);
+            info!(
+                "\n\n3. Crank State [{:?}] - {}\n",
+                current_state, current_epoch
+            );
 
             let result = match current_state {
                 State::SetWeight => crank_set_weight(handler, state.epoch).await,
@@ -256,7 +253,10 @@ pub async fn run_keeper(
         }
 
         {
-            info!("B. Emit Epoch Metrics ( After Crank )");
+            info!(
+                "\n\nD. Emit Epoch Metrics ( After Crank ) - {}\n",
+                current_epoch
+            );
             let result = emit_epoch_metrics(handler, state.epoch).await;
 
             check_and_timeout_error(
@@ -269,7 +269,7 @@ pub async fn run_keeper(
         }
 
         {
-            info!("5. Detect Stall - {}", current_epoch);
+            info!("\n\nE. Detect Stall - {}\n", current_epoch);
 
             let result = state.detect_stall(handler).await;
 
@@ -284,10 +284,16 @@ pub async fn run_keeper(
                 continue;
             }
 
-            epoch_stall = result.expect("cannot unwrap detect_stall result");
+            epoch_stall = result.unwrap();
+
+            if epoch_stall {
+                info!("\n\nSTALL DETECTED FOR {}\n\n", current_epoch);
+            }
         }
 
         {
+            info!("\n\nF. Timeout - {}\n", current_epoch);
+
             timeout_keeper(loop_timeout_ms).await;
         }
     }
