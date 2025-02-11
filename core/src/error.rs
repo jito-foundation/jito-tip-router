@@ -153,8 +153,8 @@ pub enum TipRouterError {
     RouterStillRouting,
     #[error("Invalid epochs before stall")]
     InvalidEpochsBeforeStall,
-    #[error("Invalid epochs before claim")]
-    InvalidEpochsBeforeClaim,
+    #[error("Invalid epochs before accounts can close")]
+    InvalidEpochsBeforeClose,
     #[error("Invalid slots after consensus")]
     InvalidSlotsAfterConsensus,
     #[error("Vault needs to be updated")]
@@ -183,6 +183,10 @@ pub enum TipRouterError {
     CannotCloseEpochStateAccount,
     #[error("Invalid DAO wallet")]
     InvalidDaoWallet,
+    #[error("Epoch is closing down")]
+    EpochIsClosingDown,
+    #[error("Marker exists")]
+    MarkerExists,
 }
 
 impl<T> DecodeError<T> for TipRouterError {

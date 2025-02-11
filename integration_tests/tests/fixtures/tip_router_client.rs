@@ -147,16 +147,6 @@ impl TipRouterClient {
         Ok(*EpochMarker::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap())
     }
 
-    pub async fn get_restaking_config(&mut self) -> TestResult<Config> {
-        let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
-        let restaking_config_data = self
-            .banks_client
-            .get_account(restaking_config)
-            .await?
-            .unwrap();
-        Ok(*Config::try_from_slice_unchecked(restaking_config_data.data.as_slice()).unwrap())
-    }
-
     pub async fn get_ncn_config(&mut self, ncn_pubkey: Pubkey) -> TestResult<NcnConfig> {
         let config_pda =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_pubkey).0;
@@ -294,7 +284,7 @@ impl TipRouterClient {
         // Setup account payer
         let (account_payer, _, _) =
             AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
-        self.airdrop(&account_payer, 10.0).await?;
+        self.airdrop(&account_payer, 100.0).await?;
 
         let ncn_admin_pubkey = ncn_admin.pubkey();
         self.initialize_config(
@@ -1403,7 +1393,7 @@ impl TipRouterClient {
         let tip_distribution_account = derive_tip_distribution_account_address(
             &tip_distribution_program,
             &vote_account,
-            epoch,
+            epoch - 1,
         )
         .0;
 

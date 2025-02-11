@@ -1,6 +1,8 @@
 /target
 
 .developer
+.env
+.cursorrules
 node_modules
 test-ledger
 tip-router-operator-cli/scripts/test-validator-keys
@@ -18,3 +20,5 @@ notes.md
 
 integration_tests/tests/fixtures/jito_tip_router_program-keypair.json
 lcov.info
+
+credentials/

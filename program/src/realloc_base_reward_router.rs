@@ -23,9 +23,9 @@ pub fn process_realloc_base_reward_router(
 
     load_system_program(system_program)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
     let (base_reward_router_pda, base_reward_router_bump, _) =
         BaseRewardRouter::find_program_address(program_id, ncn.key, epoch);

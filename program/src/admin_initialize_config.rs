@@ -6,8 +6,8 @@ use jito_tip_router_core::{
     config::Config,
     constants::{
         MAX_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE, MAX_EPOCHS_BEFORE_STALL, MAX_FEE_BPS,
-        MAX_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE,
-        MIN_EPOCHS_BEFORE_STALL, MIN_SLOTS_AFTER_CONSENSUS,
+        MAX_VALID_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE,
+        MIN_EPOCHS_BEFORE_STALL, MIN_VALID_SLOTS_AFTER_CONSENSUS,
     },
     error::TipRouterError,
     fees::FeeConfig,
@@ -39,7 +39,7 @@ pub fn process_admin_initialize_config(
     load_signer(ncn_admin, false)?;
 
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
     let epoch = Clock::get()?.epoch;
 
@@ -60,10 +60,10 @@ pub fn process_admin_initialize_config(
     if !(MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE..=MAX_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE)
         .contains(&epochs_after_consensus_before_close)
     {
-        return Err(TipRouterError::InvalidEpochsBeforeClaim.into());
+        return Err(TipRouterError::InvalidEpochsBeforeClose.into());
     }
 
-    if !(MIN_SLOTS_AFTER_CONSENSUS..=MAX_SLOTS_AFTER_CONSENSUS)
+    if !(MIN_VALID_SLOTS_AFTER_CONSENSUS..=MAX_VALID_SLOTS_AFTER_CONSENSUS)
         .contains(&valid_slots_after_consensus)
     {
         return Err(TipRouterError::InvalidSlotsAfterConsensus.into());

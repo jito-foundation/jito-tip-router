@@ -29,7 +29,7 @@ pub fn process_admin_set_weight(
     };
 
     load_signer(weight_table_admin, true)?;
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
     WeightTable::load(program_id, weight_table, ncn.key, epoch, true)?;
 
     if ncn_weight_table_admin.ne(weight_table_admin.key) {
@@ -52,7 +52,10 @@ pub fn process_admin_set_weight(
     {
         let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
         let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
-        epoch_state_account.update_set_weight(weight_table_account.weight_count() as u64);
+        epoch_state_account.update_set_weight(
+            weight_table_account.weight_count() as u64,
+            weight_table_account.st_mint_count() as u64,
+        );
     }
 
     Ok(())

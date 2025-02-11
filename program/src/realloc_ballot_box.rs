@@ -23,9 +23,9 @@ pub fn process_realloc_ballot_box(
 
     load_system_program(system_program)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, false)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    AccountPayer::load(program_id, ncn.key, account_payer, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, false)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
     let (ballot_box_pda, ballot_box_bump, _) =
         BallotBox::find_program_address(program_id, ncn.key, epoch);

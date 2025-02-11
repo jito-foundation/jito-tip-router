@@ -1,11 +1,13 @@
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 use crate::{
     getters::{
-        get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn, get_ballot_box,
-        get_base_reward_router, get_epoch_snapshot, get_ncn_reward_router, get_operator_snapshot,
-        get_stake_pool_accounts, get_tip_router_config, get_vault, get_vault_registry,
-        get_weight_table,
+        get_account, get_all_operators_in_ncn, get_all_sorted_operators_for_vault,
+        get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver_rewards,
+        get_base_reward_router, get_current_slot, get_epoch_snapshot,
+        get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator,
+        get_operator_snapshot, get_stake_pool_accounts, get_tip_router_config, get_vault,
+        get_vault_config, get_vault_registry, get_vault_update_state_tracker, get_weight_table,
     },
     handler::CliHandler,
     log::boring_progress_bar,
@@ -21,19 +23,24 @@ use jito_restaking_core::{
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
 };
-use jito_tip_distribution_sdk::jito_tip_distribution;
-use jito_tip_router_client::instructions::{
-    AdminRegisterStMintBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder, CastVoteBuilder,
-    DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
-    DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
-    InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder,
-    InitializeConfigBuilder as InitializeTipRouterConfigBuilder, InitializeEpochSnapshotBuilder,
-    InitializeEpochStateBuilder, InitializeNcnRewardRouterBuilder,
-    InitializeOperatorSnapshotBuilder, InitializeVaultRegistryBuilder,
-    InitializeWeightTableBuilder, ReallocBallotBoxBuilder, ReallocBaseRewardRouterBuilder,
-    ReallocEpochStateBuilder, ReallocOperatorSnapshotBuilder, ReallocVaultRegistryBuilder,
-    ReallocWeightTableBuilder, RegisterVaultBuilder, RouteBaseRewardsBuilder,
-    RouteNcnRewardsBuilder, SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
+use jito_tip_router_client::{
+    instructions::{
+        AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
+        AdminSetParametersBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder,
+        CastVoteBuilder, CloseEpochAccountBuilder, DistributeBaseNcnRewardRouteBuilder,
+        DistributeBaseRewardsBuilder, DistributeNcnOperatorRewardsBuilder,
+        DistributeNcnVaultRewardsBuilder, InitializeBallotBoxBuilder,
+        InitializeBaseRewardRouterBuilder,
+        InitializeConfigBuilder as InitializeTipRouterConfigBuilder,
+        InitializeEpochSnapshotBuilder, InitializeEpochStateBuilder,
+        InitializeNcnRewardRouterBuilder, InitializeOperatorSnapshotBuilder,
+        InitializeVaultRegistryBuilder, InitializeWeightTableBuilder, ReallocBallotBoxBuilder,
+        ReallocBaseRewardRouterBuilder, ReallocEpochStateBuilder, ReallocOperatorSnapshotBuilder,
+        ReallocVaultRegistryBuilder, ReallocWeightTableBuilder, RegisterVaultBuilder,
+        RouteBaseRewardsBuilder, RouteNcnRewardsBuilder, SnapshotVaultOperatorDelegationBuilder,
+        SwitchboardSetWeightBuilder,
+    },
+    types::ConfigAdminRole,
 };
 use jito_tip_router_core::{
     account_payer::AccountPayer,
@@ -50,18 +57,26 @@ use jito_tip_router_core::{
     vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
-use jito_vault_client::instructions::{
-    AddDelegationBuilder, InitializeVaultBuilder, InitializeVaultNcnTicketBuilder,
-    InitializeVaultOperatorDelegationBuilder, MintToBuilder, WarmupVaultNcnTicketBuilder,
+use jito_vault_client::{
+    instructions::{
+        AddDelegationBuilder, CloseVaultUpdateStateTrackerBuilder,
+        CrankVaultUpdateStateTrackerBuilder, InitializeVaultBuilder,
+        InitializeVaultNcnTicketBuilder, InitializeVaultOperatorDelegationBuilder,
+        InitializeVaultUpdateStateTrackerBuilder, MintToBuilder, UpdateVaultBalanceBuilder,
+        WarmupVaultNcnTicketBuilder,
+    },
+    types::WithdrawalAllocationMethod,
 };
 use jito_vault_core::{
     config::Config as VaultConfig, vault::Vault, vault_ncn_ticket::VaultNcnTicket,
     vault_operator_delegation::VaultOperatorDelegation,
+    vault_update_state_tracker::VaultUpdateStateTracker,
 };
 use log::info;
 use solana_client::rpc_config::RpcSendTransactionConfig;
 
 use solana_sdk::{
+    clock::DEFAULT_SLOTS_PER_EPOCH,
     compute_budget::ComputeBudgetInstruction,
     instruction::Instruction,
     native_token::sol_to_lamports,
@@ -75,15 +90,16 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use spl_associated_token_account::get_associated_token_address;
+use switchboard_on_demand_client::{CrossbarClient, FetchUpdateParams, PullFeed, QueueAccountData};
 use tokio::time::sleep;
 
-// --------------------- TIP ROUTER ------------------------------
-
+// --------------------- ADMIN ------------------------------
 #[allow(clippy::too_many_arguments)]
 pub async fn admin_create_config(
     handler: &CliHandler,
     epochs_before_stall: u64,
     valid_slots_after_consensus: u64,
+    epochs_after_consensus_before_close: u64,
     dao_fee_bps: u16,
     block_engine_fee: u16,
     default_ncn_fee_bps: u16,
@@ -98,10 +114,8 @@ pub async fn admin_create_config(
     let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
-    let (account_payer, _, _) = AccountPayer::find_program_address(
-        &handler.tip_router_program_id,
-        &jito_tip_distribution::ID,
-    );
+    let (account_payer, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
 
     let fee_wallet = fee_wallet.unwrap_or_else(|| keypair.pubkey());
     let tie_breaker_admin = tie_breaker_admin.unwrap_or_else(|| keypair.pubkey());
@@ -113,6 +127,7 @@ pub async fn admin_create_config(
         .account_payer(account_payer)
         .epochs_before_stall(epochs_before_stall)
         .valid_slots_after_consensus(valid_slots_after_consensus)
+        .epochs_after_consensus_before_close(epochs_after_consensus_before_close)
         .dao_fee_bps(dao_fee_bps)
         .block_engine_fee_bps(block_engine_fee)
         .default_ncn_fee_bps(default_ncn_fee_bps)
@@ -144,73 +159,6 @@ pub async fn admin_create_config(
             format!("DAO Fee BPS: {:?}", dao_fee_bps),
             format!("Block Engine Fee BPS: {:?}", block_engine_fee),
             format!("Default NCN Fee BPS: {:?}", default_ncn_fee_bps),
-        ],
-    )
-    .await?;
-
-    Ok(())
-}
-
-pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
-    let ncn = *handler.ncn()?;
-
-    let (config, _, _) =
-        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
-
-    let (vault_registry, _, _) =
-        VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
-
-    let (account_payer, _, _) = AccountPayer::find_program_address(
-        &handler.tip_router_program_id,
-        &jito_tip_distribution::ID,
-    );
-
-    let vault_registry_account = get_account(handler, &vault_registry).await?;
-
-    // Skip if vault registry already exists
-    if vault_registry_account.is_none() {
-        let initialize_vault_registry_ix = InitializeVaultRegistryBuilder::new()
-            .config(config)
-            .account_payer(account_payer)
-            .ncn(ncn)
-            .vault_registry(vault_registry)
-            .instruction();
-
-        send_and_log_transaction(
-            handler,
-            &[initialize_vault_registry_ix],
-            &[],
-            "Created Vault Registry",
-            &[format!("NCN: {:?}", ncn)],
-        )
-        .await?;
-    }
-
-    // Number of reallocations needed based on VaultRegistry::SIZE
-    let num_reallocs = (VaultRegistry::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
-
-    let realloc_vault_registry_ix = ReallocVaultRegistryBuilder::new()
-        .config(config)
-        .vault_registry(vault_registry)
-        .ncn(ncn)
-        .account_payer(account_payer)
-        .system_program(system_program::id())
-        .instruction();
-
-    let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
-    realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
-    for _ in 0..num_reallocs {
-        realloc_ixs.push(realloc_vault_registry_ix.clone());
-    }
-
-    send_and_log_transaction(
-        handler,
-        &realloc_ixs,
-        &[],
-        "Reallocated Vault Registry",
-        &[
-            format!("NCN: {:?}", ncn),
-            format!("Number of reallocations: {:?}", num_reallocs),
         ],
     )
     .await?;
@@ -281,6 +229,356 @@ pub async fn admin_register_st_mint(
     Ok(())
 }
 
+pub async fn admin_set_weight(
+    handler: &CliHandler,
+    vault: &Pubkey,
+    epoch: u64,
+    weight: u128,
+) -> Result<()> {
+    let vault_account = get_vault(handler, vault).await?;
+
+    admin_set_weight_with_st_mint(handler, &vault_account.supported_mint, epoch, weight).await
+}
+
+pub async fn admin_set_weight_with_st_mint(
+    handler: &CliHandler,
+    st_mint: &Pubkey,
+    epoch: u64,
+    weight: u128,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+
+    let ncn = *handler.ncn()?;
+
+    let (weight_table, _, _) =
+        WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let admin_set_weight_ix = AdminSetWeightBuilder::new()
+        .ncn(ncn)
+        .weight_table(weight_table)
+        .epoch_state(epoch_state)
+        .weight_table_admin(keypair.pubkey())
+        .st_mint(*st_mint)
+        .weight(weight)
+        .epoch(epoch)
+        .instruction();
+
+    send_and_log_transaction(
+        handler,
+        &[admin_set_weight_ix],
+        &[],
+        "Set Weight",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Epoch: {:?}", epoch),
+            format!("ST Mint: {:?}", st_mint),
+            format!("Weight: {:?}", weight),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn admin_set_tie_breaker(
+    handler: &CliHandler,
+    epoch: u64,
+    meta_merkle_root: [u8; 32],
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+
+    let ncn = *handler.ncn()?;
+
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (ncn_config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (ballot_box, _, _) =
+        BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let set_tie_breaker_ix = AdminSetTieBreakerBuilder::new()
+        .epoch_state(epoch_state)
+        .config(ncn_config)
+        .ballot_box(ballot_box)
+        .ncn(ncn)
+        .tie_breaker_admin(keypair.pubkey())
+        .meta_merkle_root(meta_merkle_root)
+        .epoch(epoch)
+        .instruction();
+
+    send_and_log_transaction(
+        handler,
+        &[set_tie_breaker_ix],
+        &[],
+        "Set Tie Breaker",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Meta Merkle Root: {:?}", meta_merkle_root),
+            format!("Epoch: {:?}", epoch),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn admin_set_new_admin(
+    handler: &CliHandler,
+    new_admin: &Pubkey,
+    set_fee_admin: bool,
+    set_tie_breaker_admin: bool,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let ncn = *handler.ncn()?;
+
+    let config_pda = TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0;
+
+    let roles = [
+        (set_fee_admin, ConfigAdminRole::FeeAdmin),
+        (set_tie_breaker_admin, ConfigAdminRole::TieBreakerAdmin),
+    ];
+
+    for (should_set, role) in roles.iter() {
+        if !should_set {
+            continue;
+        }
+
+        let mut ix = AdminSetNewAdminBuilder::new();
+        ix.config(config_pda)
+            .ncn(ncn)
+            .ncn_admin(keypair.pubkey())
+            .new_admin(*new_admin)
+            .role(*role);
+
+        send_and_log_transaction(
+            handler,
+            &[ix.instruction()],
+            &[],
+            "Admin Set New Admin",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("New Admin: {:?}", new_admin),
+                format!("Role: {:?}", role),
+            ],
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+pub async fn admin_set_parameters(
+    handler: &CliHandler,
+    epochs_before_stall: Option<u64>,
+    epochs_after_consensus_before_close: Option<u64>,
+    valid_slots_after_consensus: Option<u64>,
+    starting_valid_epoch: Option<u64>,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let ncn = *handler.ncn()?;
+
+    let config_pda = TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0;
+
+    let mut ix = AdminSetParametersBuilder::new();
+    ix.config(config_pda).ncn(ncn).ncn_admin(keypair.pubkey());
+
+    if let Some(epochs) = epochs_before_stall {
+        ix.epochs_before_stall(epochs);
+    }
+
+    if let Some(epochs) = epochs_after_consensus_before_close {
+        ix.epochs_after_consensus_before_close(epochs);
+    }
+
+    if let Some(slots) = valid_slots_after_consensus {
+        ix.valid_slots_after_consensus(slots);
+    }
+
+    if let Some(epoch) = starting_valid_epoch {
+        ix.starting_valid_epoch(epoch);
+    }
+
+    send_and_log_transaction(
+        handler,
+        &[ix.instruction()],
+        &[],
+        "Set Parameters",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Epochs Before Stall: {:?}", epochs_before_stall),
+            format!(
+                "Epochs After Consensus Before Close: {:?}",
+                epochs_after_consensus_before_close
+            ),
+            format!(
+                "Valid Slots After Consensus: {:?}",
+                valid_slots_after_consensus
+            ),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn admin_fund_account_payer(handler: &CliHandler, amount: f64) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let ncn = *handler.ncn()?;
+
+    let (account_payer, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let transfer_ix = transfer(&keypair.pubkey(), &account_payer, sol_to_lamports(amount));
+
+    send_and_log_transaction(
+        handler,
+        &[transfer_ix],
+        &[],
+        "Fund Account Payer",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Amount: {:?} SOL", amount),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn admin_set_config_fees(
+    handler: &CliHandler,
+    new_block_engine_fee_bps: Option<u16>,
+    base_fee_group: Option<u8>,
+    new_base_fee_wallet: Option<String>,
+    new_base_fee_bps: Option<u16>,
+    ncn_fee_group: Option<u8>,
+    new_ncn_fee_bps: Option<u16>,
+) -> Result<()> {
+    let keypair = handler.keypair()?;
+    let ncn = *handler.ncn()?;
+
+    let config_pda = TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0;
+
+    let mut ix = AdminSetConfigFeesBuilder::new();
+    ix.config(config_pda).ncn(ncn).ncn_admin(keypair.pubkey());
+
+    if let Some(fee) = new_block_engine_fee_bps {
+        ix.new_block_engine_fee_bps(fee);
+    }
+
+    if let Some(group) = base_fee_group {
+        ix.base_fee_group(group);
+    }
+
+    if let Some(wallet) = &new_base_fee_wallet {
+        let wallet = Pubkey::from_str(wallet).map_err(|_| anyhow!("Invalid wallet address"))?;
+        ix.new_base_fee_wallet(wallet);
+    }
+
+    if let Some(fee) = new_base_fee_bps {
+        ix.new_base_fee_bps(fee);
+    }
+
+    if let Some(group) = ncn_fee_group {
+        ix.ncn_fee_group(group);
+    }
+
+    if let Some(fee) = new_ncn_fee_bps {
+        ix.new_ncn_fee_bps(fee);
+    }
+
+    send_and_log_transaction(
+        handler,
+        &[ix.instruction()],
+        &[],
+        "Set Config Fees",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("New Block Engine Fee BPS: {:?}", new_block_engine_fee_bps),
+            format!("Base Fee Group: {:?}", base_fee_group),
+            format!("New Base Fee Wallet: {:?}", new_base_fee_wallet),
+            format!("New Base Fee BPS: {:?}", new_base_fee_bps),
+            format!("NCN Fee Group: {:?}", ncn_fee_group),
+            format!("New NCN Fee BPS: {:?}", new_ncn_fee_bps),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
+// --------------------- TIP ROUTER ------------------------------
+
+pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
+    let ncn = *handler.ncn()?;
+
+    let (config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (vault_registry, _, _) =
+        VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (account_payer, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let vault_registry_account = get_account(handler, &vault_registry).await?;
+
+    // Skip if vault registry already exists
+    if vault_registry_account.is_none() {
+        let initialize_vault_registry_ix = InitializeVaultRegistryBuilder::new()
+            .config(config)
+            .account_payer(account_payer)
+            .ncn(ncn)
+            .vault_registry(vault_registry)
+            .instruction();
+
+        send_and_log_transaction(
+            handler,
+            &[initialize_vault_registry_ix],
+            &[],
+            "Created Vault Registry",
+            &[format!("NCN: {:?}", ncn)],
+        )
+        .await?;
+    }
+
+    // Number of reallocations needed based on VaultRegistry::SIZE
+    let num_reallocs = (VaultRegistry::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
+
+    let realloc_vault_registry_ix = ReallocVaultRegistryBuilder::new()
+        .config(config)
+        .vault_registry(vault_registry)
+        .ncn(ncn)
+        .account_payer(account_payer)
+        .system_program(system_program::id())
+        .instruction();
+
+    let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
+    realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
+    for _ in 0..num_reallocs {
+        realloc_ixs.push(realloc_vault_registry_ix.clone());
+    }
+
+    send_and_log_transaction(
+        handler,
+        &realloc_ixs,
+        &[],
+        "Reallocated Vault Registry",
+        &[
+            format!("NCN: {:?}", ncn),
+            format!("Number of reallocations: {:?}", num_reallocs),
+        ],
+    )
+    .await?;
+
+    Ok(())
+}
+
 pub async fn register_vault(handler: &CliHandler, vault: &Pubkey) -> Result<()> {
     let ncn = *handler.ncn()?;
     let vault = *vault;
@@ -324,13 +622,10 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (account_payer, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
     let (epoch_marker, _, _) =
         EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-    let (account_payer, _, _) = AccountPayer::find_program_address(
-        &handler.tip_router_program_id,
-        &jito_tip_distribution::ID,
-    );
 
     let epoch_state_account = get_account(handler, &epoch_state).await?;
 
@@ -407,13 +702,10 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (account_payer, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
     let (epoch_marker, _, _) =
         EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-    let (account_payer, _, _) = AccountPayer::find_program_address(
-        &handler.tip_router_program_id,
-        &jito_tip_distribution::ID,
-    );
 
     let weight_table_account = get_account(handler, &weight_table).await?;
 
@@ -478,54 +770,61 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     Ok(())
 }
 
-pub async fn admin_set_weight(
-    handler: &CliHandler,
-    vault: &Pubkey,
-    epoch: u64,
-    weight: u128,
-) -> Result<()> {
-    let vault_account = get_vault(handler, vault).await?;
+pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) -> Result<()> {
+    async fn wait_for_x_slots_after_epoch(handler: &CliHandler, slots: u64) -> Result<()> {
+        loop {
+            let current_slot = handler.rpc_client().get_slot().await?;
+            if current_slot % DEFAULT_SLOTS_PER_EPOCH > slots {
+                break;
+            }
+            sleep(Duration::from_millis(500)).await;
+        }
+        Ok(())
+    }
 
-    admin_set_weight_with_st_mint(handler, &vault_account.supported_mint, epoch, weight).await
-}
+    let client = handler.rpc_client();
+    let switchboard_context = handler.switchboard_context();
+    let payer = handler.keypair()?;
 
-pub async fn admin_set_weight_with_st_mint(
-    handler: &CliHandler,
-    st_mint: &Pubkey,
-    epoch: u64,
-    weight: u128,
-) -> Result<()> {
-    let keypair = handler.keypair()?;
+    if switchboard_feed.eq(&Pubkey::default()) {
+        return Ok(());
+    }
 
-    let ncn = *handler.ncn()?;
+    wait_for_x_slots_after_epoch(handler, 400).await?;
 
-    let (weight_table, _, _) =
-        WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+    // STATIC PUBKEY
+    let queue_key = Pubkey::from_str("A43DyUGA7s8eXPxqEjJY6EBu1KKbNgfxF8h17VAHn13w").unwrap();
 
-    let (epoch_state, _, _) =
-        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+    let queue = QueueAccountData::load(client, &queue_key).await?;
+    let gateways = &queue.fetch_gateways(client).await?;
+    if gateways.is_empty() {
+        return Err(anyhow!("No gateways found"));
+    }
 
-    let admin_set_weight_ix = AdminSetWeightBuilder::new()
-        .ncn(ncn)
-        .weight_table(weight_table)
-        .epoch_state(epoch_state)
-        .weight_table_admin(keypair.pubkey())
-        .st_mint(*st_mint)
-        .weight(weight)
-        .epoch(epoch)
-        .instruction();
+    let gw = &gateways[0];
+    let crossbar = CrossbarClient::default();
+    let (ix, _, _, _) = PullFeed::fetch_update_ix(
+        switchboard_context.clone(),
+        client,
+        FetchUpdateParams {
+            feed: *switchboard_feed,
+            payer: payer.pubkey(),
+            gateway: gw.clone(),
+            crossbar: Some(crossbar),
+            ..Default::default()
+        },
+    )
+    .await?;
 
     send_and_log_transaction(
         handler,
-        &[admin_set_weight_ix],
-        &[],
-        "Set Weight",
         &[
-            format!("NCN: {:?}", ncn),
-            format!("Epoch: {:?}", epoch),
-            format!("ST Mint: {:?}", st_mint),
-            format!("Weight: {:?}", weight),
+            ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+            ix,
         ],
+        &[],
+        "Crank Switchboard",
+        &[format!("FEED: {:?}", switchboard_feed)],
     )
     .await?;
 
@@ -555,6 +854,19 @@ pub async fn set_weight_with_st_mint(
 
     let (weight_table, _, _) =
         WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    // Crank Switchboard
+    let result = crank_switchboard(handler, switchboard_feed).await;
+    if let Err(e) = result {
+        log::error!(
+            "\n\nFailed to crank switchboard - will need manual crank at {}\n\nError:\n{:?}\n",
+            format!(
+                "https://ondemand.switchboard.xyz/solana/mainnet/feed/{}",
+                switchboard_feed
+            ),
+            e
+        );
+    }
 
     let set_weight_ix = SwitchboardSetWeightBuilder::new()
         .ncn(ncn)
@@ -597,13 +909,10 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
     let (epoch_snapshot, _, _) =
         EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (account_payer, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
     let (epoch_marker, _, _) =
         EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-    let (account_payer, _, _) = AccountPayer::find_program_address(
-        &handler.tip_router_program_id,
-        &jito_tip_distribution::ID,
-    );
 
     let initialize_epoch_snapshot_ix = InitializeEpochSnapshotBuilder::new()
         .epoch_marker(epoch_marker)
@@ -657,13 +966,10 @@ pub async fn create_operator_snapshot(
         epoch,
     );
 
+    let (account_payer, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
     let (epoch_marker, _, _) =
         EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-    let (account_payer, _, _) = AccountPayer::find_program_address(
-        &handler.tip_router_program_id,
-        &jito_tip_distribution::ID,
-    );
 
     let operator_snapshot_account = get_account(handler, &operator_snapshot).await?;
 
@@ -738,6 +1044,7 @@ pub async fn create_operator_snapshot(
 
     Ok(())
 }
+
 pub async fn snapshot_vault_operator_delegation(
     handler: &CliHandler,
     vault: &Pubkey,
@@ -825,13 +1132,10 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (ballot_box, _, _) =
         BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (account_payer, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
     let (epoch_marker, _, _) =
         EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-    let (account_payer, _, _) = AccountPayer::find_program_address(
-        &handler.tip_router_program_id,
-        &jito_tip_distribution::ID,
-    );
 
     let ballot_box_account = get_account(handler, &ballot_box).await?;
 
@@ -895,7 +1199,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     Ok(())
 }
 
-pub async fn admin_cast_vote(
+pub async fn operator_cast_vote(
     handler: &CliHandler,
     operator: &Pubkey,
     epoch: u64,
@@ -968,13 +1272,10 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
     let (base_reward_receiver, _, _) =
         BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
+    let (account_payer, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
     let (epoch_marker, _, _) =
         EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-    let (account_payer, _, _) = AccountPayer::find_program_address(
-        &handler.tip_router_program_id,
-        &jito_tip_distribution::ID,
-    );
 
     let base_reward_router_account = get_account(handler, &base_reward_router).await?;
 
@@ -1072,13 +1373,10 @@ pub async fn create_ncn_reward_router(
         epoch,
     );
 
+    let (account_payer, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
     let (epoch_marker, _, _) =
         EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-    let (account_payer, _, _) = AccountPayer::find_program_address(
-        &handler.tip_router_program_id,
-        &jito_tip_distribution::ID,
-    );
 
     let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
         .epoch_marker(epoch_marker)
@@ -1477,9 +1775,33 @@ pub async fn distribute_ncn_vault_rewards(
         .epoch(epoch)
         .instruction();
 
+    let vault_account = get_vault(handler, &vault).await?;
+    let st_mint = vault_account.supported_mint;
+    let vrt_mint = vault_account.vrt_mint;
+    let vault_fee_wallet = vault_account.fee_wallet;
+
+    let vault_fee_token_account = get_associated_token_address(&vault_fee_wallet, &vrt_mint);
+    let vault_token_account = get_associated_token_address(&vault, &st_mint);
+
+    let (vault_config, _, _) = VaultConfig::find_program_address(&handler.vault_program_id);
+
+    let update_vault_balance_ix = UpdateVaultBalanceBuilder::new()
+        .config(vault_config)
+        .vault(vault)
+        .token_program(spl_token::id())
+        .vault_fee_token_account(vault_fee_token_account)
+        .vault_token_account(vault_token_account)
+        .vrt_mint(vrt_mint)
+        .instruction();
+
     send_and_log_transaction(
         handler,
-        &[create_vault_ata_ix, distribute_ncn_vault_rewards_ix],
+        &[
+            ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+            create_vault_ata_ix,
+            distribute_ncn_vault_rewards_ix,
+            update_vault_balance_ix,
+        ],
         &[],
         "Distributed NCN Vault Rewards",
         &[
@@ -1585,42 +1907,66 @@ pub async fn distribute_ncn_operator_rewards(
     Ok(())
 }
 
-pub async fn admin_set_tie_breaker(
+pub async fn close_epoch_account(
     handler: &CliHandler,
+    ncn: Pubkey,
     epoch: u64,
-    meta_merkle_root: [u8; 32],
+    account_to_close: Pubkey,
+    receiver_to_close: Option<Pubkey>,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
-
-    let ncn = *handler.ncn()?;
+    let (epoch_marker, _, _) =
+        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    let (ncn_config, _, _) =
+    let (account_payer, _, _) =
+        AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (config, _, _) =
         TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
 
-    let (ballot_box, _, _) =
-        BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+    let account_already_closed = get_account(handler, &account_to_close)
+        .await?
+        .map_or(true, |account| {
+            account.data.is_empty() || account.lamports == 0
+        });
+    if account_already_closed {
+        info!("Account already closed: {:?}", account_to_close);
+        return Ok(());
+    }
 
-    let set_tie_breaker_ix = AdminSetTieBreakerBuilder::new()
+    let config_account = get_tip_router_config(handler).await?;
+    let dao_wallet = *config_account
+        .fee_config
+        .base_fee_wallet(BaseFeeGroup::dao())
+        .expect("No DAO wallet ( close_epoch_account )");
+
+    let mut ix = CloseEpochAccountBuilder::new();
+
+    ix.account_payer(account_payer)
+        .epoch_marker(epoch_marker)
+        .config(config)
+        .account_to_close(account_to_close)
         .epoch_state(epoch_state)
-        .config(ncn_config)
-        .ballot_box(ballot_box)
         .ncn(ncn)
-        .tie_breaker_admin(keypair.pubkey())
-        .meta_merkle_root(meta_merkle_root)
-        .epoch(epoch)
-        .instruction();
+        .dao_wallet(dao_wallet)
+        .system_program(system_program::id())
+        .epoch(epoch);
+
+    if let Some(receiver_to_close) = receiver_to_close {
+        ix.receiver_to_close(Some(receiver_to_close));
+    }
 
     send_and_log_transaction(
         handler,
-        &[set_tie_breaker_ix],
+        &[ix.instruction()],
         &[],
-        "Set Tie Breaker",
+        "Close Epoch Account",
         &[
             format!("NCN: {:?}", ncn),
-            format!("Meta Merkle Root: {:?}", meta_merkle_root),
+            format!("Account to Close: {:?}", account_to_close),
+            format!("Receiver to Close: {:?}", receiver_to_close),
             format!("Epoch: {:?}", epoch),
         ],
     )
@@ -1630,6 +1976,183 @@ pub async fn admin_set_tie_breaker(
 }
 
 // --------------------- MIDDLEWARE ------------------------------
+pub const CREATE_TIMEOUT_MS: u64 = 2000;
+pub const CREATE_GET_RETRIES: u64 = 3;
+pub async fn check_created(handler: &CliHandler, address: &Pubkey) -> Result<()> {
+    let mut retries = 0;
+    let mut account = get_account(handler, address).await?;
+    while account.is_none() && retries < CREATE_GET_RETRIES {
+        sleep(Duration::from_millis(CREATE_TIMEOUT_MS * (retries + 1))).await;
+        account = get_account(handler, address).await?;
+        retries += 1;
+    }
+
+    if account.is_none() {
+        return Err(anyhow!(
+            "Failed to get account after creation {:?}",
+            address
+        ));
+    }
+
+    Ok(())
+}
+
+pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<()> {
+    let payer = handler.keypair()?;
+
+    // Get Epoch Info
+    let current_slot = get_current_slot(handler).await?;
+    let (ncn_epoch, epoch_length) = {
+        let vault_config = get_vault_config(handler).await?;
+        let ncn_epoch = vault_config.get_epoch_from_slot(current_slot)?;
+        let epoch_length = vault_config.epoch_length();
+        (ncn_epoch, epoch_length)
+    };
+
+    // Check Vault
+    let vault_account = get_vault(handler, vault).await?;
+    let current_slot = get_current_slot(handler).await?;
+
+    if !vault_account.is_update_needed(current_slot, epoch_length)? {
+        return Ok(());
+    }
+
+    // Initialize Vault Update State Tracker
+    let (vault_config, _, _) = VaultConfig::find_program_address(&handler.vault_program_id);
+
+    let (vault_update_state_tracker, _, _) =
+        VaultUpdateStateTracker::find_program_address(&handler.vault_program_id, vault, ncn_epoch);
+
+    let vault_update_state_tracker_account =
+        get_account(handler, &vault_update_state_tracker).await?;
+
+    if vault_update_state_tracker_account.is_none() {
+        let initialize_vault_update_state_tracker_ix =
+            InitializeVaultUpdateStateTrackerBuilder::new()
+                .vault(*vault)
+                .vault_update_state_tracker(vault_update_state_tracker)
+                .system_program(system_program::id())
+                .withdrawal_allocation_method(WithdrawalAllocationMethod::Greedy)
+                .payer(payer.pubkey())
+                .config(vault_config)
+                .instruction();
+
+        let result = send_and_log_transaction(
+            handler,
+            &[initialize_vault_update_state_tracker_ix],
+            &[payer],
+            "Initialize Vault Update State Tracker",
+            &[
+                format!("VAULT: {:?}", vault),
+                format!("Vault Epoch: {:?}", ncn_epoch),
+            ],
+        )
+        .await;
+
+        if result.is_err() {
+            log::error!(
+                "Failed to initialize Vault Update State Tracker for Vault: {:?} at NCN Epoch: {:?} with error: {:?}",
+                vault,
+                ncn_epoch,
+                result.err().unwrap()
+            );
+        }
+    }
+
+    // Crank Vault Update State Tracker
+    let all_operators = get_all_sorted_operators_for_vault(handler, vault).await?;
+
+    let starting_index = {
+        let vault_update_state_tracker_account =
+            get_vault_update_state_tracker(handler, vault, ncn_epoch).await?;
+        let last_updated_index = vault_update_state_tracker_account.last_updated_index();
+
+        if last_updated_index == u64::MAX {
+            ncn_epoch % all_operators.len() as u64
+        } else {
+            (last_updated_index + 1) % all_operators.len() as u64
+        }
+    };
+
+    for index in 0..all_operators.len() {
+        let current_index = (starting_index as usize + index) % all_operators.len();
+        let operator = all_operators.get(current_index).unwrap();
+
+        let (vault_operator_delegation, _, _) = VaultOperatorDelegation::find_program_address(
+            &handler.vault_program_id,
+            vault,
+            operator,
+        );
+
+        let crank_vault_update_state_tracker_ix = CrankVaultUpdateStateTrackerBuilder::new()
+            .vault(*vault)
+            .operator(*operator)
+            .config(vault_config)
+            .vault_operator_delegation(vault_operator_delegation)
+            .vault_update_state_tracker(vault_update_state_tracker)
+            .instruction();
+
+        let result = send_and_log_transaction(
+            handler,
+            &[crank_vault_update_state_tracker_ix],
+            &[payer],
+            "Crank Vault Update State Tracker",
+            &[
+                format!("VAULT: {:?}", vault),
+                format!("Operator: {:?}", operator),
+                format!("Vault Epoch: {:?}", ncn_epoch),
+            ],
+        )
+        .await;
+
+        if result.is_err() {
+            log::error!(
+                "Failed to crank Vault Update State Tracker for Vault: {:?} and Operator: {:?} at NCN Epoch: {:?} with error: {:?}",
+                vault,
+                operator,
+                ncn_epoch,
+                result.err().unwrap()
+            );
+        }
+    }
+
+    // Close Update State Tracker
+    let vault_update_state_tracker_account =
+        get_account(handler, &vault_update_state_tracker).await?;
+
+    if vault_update_state_tracker_account.is_some() {
+        let close_vault_update_state_tracker_ix = CloseVaultUpdateStateTrackerBuilder::new()
+            .vault(*vault)
+            .vault_update_state_tracker(vault_update_state_tracker)
+            .payer(payer.pubkey())
+            .config(vault_config)
+            .ncn_epoch(ncn_epoch)
+            .instruction();
+
+        let result = send_and_log_transaction(
+            handler,
+            &[close_vault_update_state_tracker_ix],
+            &[payer],
+            "Close Vault Update State Tracker",
+            &[
+                format!("VAULT: {:?}", vault),
+                format!("Vault Epoch: {:?}", ncn_epoch),
+            ],
+        )
+        .await;
+
+        if result.is_err() {
+            log::error!(
+                "Failed to close Vault Update State Tracker for Vault: {:?} at NCN Epoch: {:?} with error: {:?}",
+                vault,
+                ncn_epoch,
+                result.err().unwrap()
+            );
+        }
+    }
+
+    Ok(())
+}
 
 pub async fn get_or_create_weight_table(handler: &CliHandler, epoch: u64) -> Result<WeightTable> {
     let ncn = *handler.ncn()?;
@@ -1642,6 +2165,7 @@ pub async fn get_or_create_weight_table(handler: &CliHandler, epoch: u64) -> Res
         .map_or(true, |table| table.data.len() < WeightTable::SIZE)
     {
         create_weight_table(handler, epoch).await?;
+        check_created(handler, &weight_table).await?;
     }
     get_weight_table(handler, epoch).await
 }
@@ -1659,6 +2183,7 @@ pub async fn get_or_create_epoch_snapshot(
         .map_or(true, |snapshot| snapshot.data.len() < EpochSnapshot::SIZE)
     {
         create_epoch_snapshot(handler, epoch).await?;
+        check_created(handler, &epoch_snapshot).await?;
     }
 
     get_epoch_snapshot(handler, epoch).await
@@ -1684,6 +2209,7 @@ pub async fn get_or_create_operator_snapshot(
         })
     {
         create_operator_snapshot(handler, operator, epoch).await?;
+        check_created(handler, &operator_snapshot).await?;
     }
     get_operator_snapshot(handler, operator, epoch).await
 }
@@ -1699,8 +2225,27 @@ pub async fn get_or_create_ballot_box(handler: &CliHandler, epoch: u64) -> Resul
         .map_or(true, |ballot_box| ballot_box.data.len() < BallotBox::SIZE)
     {
         create_ballot_box(handler, epoch).await?;
+        check_created(handler, &ballot_box).await?;
     }
     get_ballot_box(handler, epoch).await
+}
+
+pub async fn get_or_create_base_reward_router(
+    handler: &CliHandler,
+    epoch: u64,
+) -> Result<BaseRewardRouter> {
+    let ncn = *handler.ncn()?;
+    let (base_reward_router, _, _) =
+        BaseRewardRouter::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    if get_account(handler, &base_reward_router)
+        .await?
+        .map_or(true, |router| router.data.len() < BaseRewardRouter::SIZE)
+    {
+        create_base_reward_router(handler, epoch).await?;
+        check_created(handler, &base_reward_router).await?;
+    }
+    get_base_reward_router(handler, epoch).await
 }
 
 pub async fn get_or_create_ncn_reward_router(
@@ -1723,6 +2268,7 @@ pub async fn get_or_create_ncn_reward_router(
         .map_or(true, |router| router.data.len() < NcnRewardRouter::SIZE)
     {
         create_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await?;
+        check_created(handler, &ncn_reward_router).await?;
     }
     get_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await
 }
@@ -1829,6 +2375,16 @@ pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
             .collect();
 
         for vault in vaults_to_run.iter() {
+            let result = full_vault_update(handler, vault).await;
+
+            if let Err(err) = result {
+                log::error!(
+                    "Failed to update the vault: {:?} with error: {:?}",
+                    vault,
+                    err
+                );
+            }
+
             let result = snapshot_vault_operator_delegation(handler, vault, operator, epoch).await;
 
             if let Err(err) = result {
@@ -1847,20 +2403,39 @@ pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
 }
 
 #[allow(clippy::large_stack_frames)]
-pub async fn crank_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let _ballot_box = get_or_create_ballot_box(handler, epoch).await?;
+pub async fn crank_vote(handler: &CliHandler, epoch: u64, test_vote: bool) -> Result<()> {
+    // VOTE
 
-    info!("TODO crank vote");
+    let ballot_box = get_or_create_ballot_box(handler, epoch).await?;
+    if ballot_box.is_consensus_reached() {
+        log::info!(
+            "Consensus already reached for epoch: {:?}. Skipping voting.",
+            epoch
+        );
+        return Ok(());
+    }
+
+    if test_vote {
+        crank_test_vote(handler, epoch).await?;
+    }
+
     Ok(())
 }
 
 #[allow(clippy::large_stack_frames)]
 pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
+    let voter = handler.keypair()?.pubkey();
     let meta_merkle_root = [8; 32];
     let operators = get_all_operators_in_ncn(handler).await?;
 
     for operator in operators.iter() {
-        let result = admin_cast_vote(handler, operator, epoch, meta_merkle_root).await;
+        let operator_account = get_operator(handler, operator).await?;
+
+        if operator_account.voter.ne(&voter) {
+            continue;
+        }
+
+        let result = operator_cast_vote(handler, operator, epoch, meta_merkle_root).await;
 
         if let Err(err) = result {
             log::error!(
@@ -1875,7 +2450,7 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
     let ballot_box = get_or_create_ballot_box(handler, epoch).await?;
 
     // Send 'Test' Rewards
-    if ballot_box.has_winning_ballot() {
+    if ballot_box.is_consensus_reached() {
         let (base_reward_receiver_address, _, _) = BaseRewardReceiver::find_program_address(
             &handler.tip_router_program_id,
             handler.ncn().unwrap(),
@@ -1904,44 +2479,101 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
     Ok(())
 }
 
-pub async fn crank_setup_router(handler: &CliHandler, epoch: u64) -> Result<()> {
-    create_base_reward_router(handler, epoch).await
-}
-
-pub async fn crank_upload(_: &CliHandler, _: u64) -> Result<()> {
-    info!("TODO crank upload");
-    Ok(())
-}
-
+//TODO Multi-thread sending the TXs
 pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
     let operators = get_all_operators_in_ncn(handler).await?;
 
-    let config = get_tip_router_config(handler).await?;
-    let fee_config = config.fee_config;
+    let epoch_snapshot = get_or_create_epoch_snapshot(handler, epoch).await?;
+    let fees = epoch_snapshot.fees();
 
-    route_base_rewards(handler, epoch).await?;
+    let base_reward_router = get_or_create_base_reward_router(handler, epoch).await?;
+
+    let base_reward_receiver_rewards = get_base_reward_receiver_rewards(handler, epoch).await?;
+    if base_reward_receiver_rewards > 0 {
+        route_base_rewards(handler, epoch).await?;
+    }
 
     for group in BaseFeeGroup::all_groups() {
-        if fee_config.base_fee_bps(group, epoch)? == 0 {
+        if fees.base_fee_bps(group)? == 0 {
             continue;
         }
 
-        let result = distribute_base_rewards(handler, group, epoch).await;
+        if base_reward_router.base_fee_group_reward(group)? != 0 {
+            let result = distribute_base_rewards(handler, group, epoch).await;
 
-        if let Err(err) = result {
-            log::error!(
+            if let Err(err) = result {
+                log::error!(
                 "Failed to distribute base rewards for group: {:?} in epoch: {:?} with error: {:?}",
                 group,
                 epoch,
                 err
             );
+            }
         }
     }
 
     for operator in operators.iter() {
         for group in NcnFeeGroup::all_groups() {
-            if fee_config.ncn_fee_bps(group, epoch)? == 0 {
+            if fees.ncn_fee_bps(group)? == 0 {
                 continue;
+            }
+
+            let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
+
+            if let Err(err) = result {
+                log::error!(
+                    "Failed to get or create ncn reward router: {:?} in epoch: {:?} with error: {:?}",
+                    operator,
+                    epoch,
+                    err
+                );
+                continue;
+            }
+
+            let result = base_reward_router.ncn_fee_group_reward_route(operator);
+
+            if result.is_err() {
+                log::info!(
+                    "Could not find route for operator: {:?} in epoch: {:?}",
+                    operator,
+                    epoch,
+                );
+                continue;
+            }
+
+            if base_reward_router
+                .ncn_fee_group_reward_route(operator)?
+                .rewards(group)?
+                != 0
+            {
+                let result = distribute_base_ncn_rewards(handler, operator, group, epoch).await;
+
+                if let Err(err) = result {
+                    log::error!(
+                    "Failed to distribute base ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
+                    operator,
+                    epoch,
+                    err
+                );
+                    continue;
+                }
+            }
+
+            let ncn_reward_receiver_rewards =
+                get_ncn_reward_receiver_rewards(handler, group, operator, epoch).await?;
+
+            if ncn_reward_receiver_rewards > 0 {
+                let result = route_ncn_rewards(handler, operator, group, epoch).await;
+
+                if let Err(err) = result {
+                    log::error!(
+                    "Failed to route ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
+                    operator,
+                    epoch,
+                    err
+                );
+                    continue;
+                }
             }
 
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
@@ -1957,46 +2589,24 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
             }
             let ncn_reward_router = result?;
 
-            let result = distribute_base_ncn_rewards(handler, operator, group, epoch).await;
+            if ncn_reward_router.operator_rewards() != 0 {
+                let result = distribute_ncn_operator_rewards(handler, operator, group, epoch).await;
 
-            if let Err(err) = result {
-                log::error!(
-                    "Failed to distribute base ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
-                    operator,
-                    epoch,
-                    err
-                );
-                continue;
-            }
-
-            let result = route_ncn_rewards(handler, operator, group, epoch).await;
-
-            if let Err(err) = result {
-                log::error!(
-                    "Failed to route ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
-                    operator,
-                    epoch,
-                    err
-                );
-                continue;
-            }
-
-            let result = distribute_ncn_operator_rewards(handler, operator, group, epoch).await;
-
-            if let Err(err) = result {
-                log::error!(
+                if let Err(err) = result {
+                    log::error!(
                     "Failed to distribute ncn operator rewards for operator: {:?} in epoch: {:?} with error: {:?}",
                     operator,
                     epoch,
                     err
                 );
-                continue;
+                    continue;
+                }
             }
 
             let vaults_to_route = ncn_reward_router
                 .vault_reward_routes()
                 .iter()
-                .filter(|route| !route.is_empty())
+                .filter(|route| !route.is_empty() && route.has_rewards())
                 .map(|route| route.vault())
                 .collect::<Vec<Pubkey>>();
 
@@ -2015,6 +2625,168 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
                 }
             }
         }
+    }
+
+    Ok(())
+}
+
+pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Result<()> {
+    let ncn = *handler.ncn()?;
+
+    // One last distribution crank
+    let result = crank_distribute(handler, epoch).await;
+    if result.is_err() {
+        log::error!(
+            "Failed to distribute rewards before closing for epoch: {:?} with error: {:?}",
+            epoch,
+            result.err().unwrap()
+        );
+    }
+
+    // Close NCN Reward Routers
+    let all_operators = get_all_operators_in_ncn(handler).await?;
+    for operator in all_operators.iter() {
+        for group in NcnFeeGroup::all_groups() {
+            let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+                &handler.tip_router_program_id,
+                group,
+                operator,
+                &ncn,
+                epoch,
+            );
+
+            let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+                &handler.tip_router_program_id,
+                group,
+                operator,
+                &ncn,
+                epoch,
+            );
+
+            let result = close_epoch_account(
+                handler,
+                ncn,
+                epoch,
+                ncn_reward_router,
+                Some(ncn_reward_receiver),
+            )
+            .await;
+
+            if let Err(err) = result {
+                log::error!(
+                    "Failed to close ncn reward router: {:?} in epoch: {:?} with error: {:?}",
+                    ncn_reward_router,
+                    epoch,
+                    err
+                );
+            }
+        }
+    }
+
+    // Close Base Reward Router
+    let (base_reward_router, _, _) =
+        BaseRewardRouter::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let (base_reward_receiver, _, _) =
+        BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let result = close_epoch_account(
+        handler,
+        ncn,
+        epoch,
+        base_reward_router,
+        Some(base_reward_receiver),
+    )
+    .await;
+
+    if let Err(err) = result {
+        log::error!(
+            "Failed to close base reward router: {:?} in epoch: {:?} with error: {:?}",
+            base_reward_router,
+            epoch,
+            err
+        );
+    }
+
+    // Close Ballot Box
+    let (ballot_box, _, _) =
+        BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let result = close_epoch_account(handler, ncn, epoch, ballot_box, None).await;
+
+    if let Err(err) = result {
+        log::error!(
+            "Failed to close ballot box: {:?} in epoch: {:?} with error: {:?}",
+            ballot_box,
+            epoch,
+            err
+        );
+    }
+
+    // Close Operator Snapshots
+    for operator in all_operators.iter() {
+        let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+            &handler.tip_router_program_id,
+            operator,
+            &ncn,
+            epoch,
+        );
+
+        let result = close_epoch_account(handler, ncn, epoch, operator_snapshot, None).await;
+
+        if let Err(err) = result {
+            log::error!(
+                "Failed to close operator snapshot: {:?} in epoch: {:?} with error: {:?}",
+                operator_snapshot,
+                epoch,
+                err
+            );
+        }
+    }
+
+    // Close Epoch Snapshot
+    let (epoch_snapshot, _, _) =
+        EpochSnapshot::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let result = close_epoch_account(handler, ncn, epoch, epoch_snapshot, None).await;
+
+    if let Err(err) = result {
+        log::error!(
+            "Failed to close epoch snapshot: {:?} in epoch: {:?} with error: {:?}",
+            epoch_snapshot,
+            epoch,
+            err
+        );
+    }
+
+    // Close Weight Table
+    let (weight_table, _, _) =
+        WeightTable::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let result = close_epoch_account(handler, ncn, epoch, weight_table, None).await;
+
+    if let Err(err) = result {
+        log::error!(
+            "Failed to close weight table: {:?} in epoch: {:?} with error: {:?}",
+            weight_table,
+            epoch,
+            err
+        );
+    }
+
+    // Close Epoch State
+    let (epoch_state, _, _) =
+        EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
+
+    let result = close_epoch_account(handler, ncn, epoch, epoch_state, None).await;
+
+    if let Err(err) = result {
+        log::error!(
+            "Failed to close epoch state: {:?} in epoch: {:?} with error: {:?}",
+            epoch_state,
+            epoch,
+            err
+        );
     }
 
     Ok(())

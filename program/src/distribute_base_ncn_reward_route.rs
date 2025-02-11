@@ -27,21 +27,21 @@ pub fn process_distribute_base_ncn_reward_route(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     Operator::load(&jito_restaking_program::id(), operator, false)?;
 
     let ncn_fee_group = NcnFeeGroup::try_from(ncn_fee_group)?;
 
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    BaseRewardRouter::load(program_id, ncn.key, epoch, base_reward_router, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    BaseRewardRouter::load(program_id, base_reward_router, ncn.key, epoch, true)?;
     NcnRewardRouter::load(
         program_id,
+        ncn_reward_router,
         ncn_fee_group,
         operator.key,
         ncn.key,
         epoch,
-        ncn_reward_router,
         false,
     )?;
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;

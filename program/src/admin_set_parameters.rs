@@ -5,8 +5,8 @@ use jito_tip_router_core::{
     config::Config,
     constants::{
         MAX_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE, MAX_EPOCHS_BEFORE_STALL,
-        MAX_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE,
-        MIN_EPOCHS_BEFORE_STALL, MIN_SLOTS_AFTER_CONSENSUS,
+        MAX_VALID_SLOTS_AFTER_CONSENSUS, MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE,
+        MIN_EPOCHS_BEFORE_STALL, MIN_VALID_SLOTS_AFTER_CONSENSUS,
     },
     error::TipRouterError,
 };
@@ -30,7 +30,7 @@ pub fn process_admin_set_parameters(
     load_signer(ncn_admin, true)?;
 
     // Load and verify accounts
-    Config::load(program_id, ncn_account.key, config, true)?;
+    Config::load(program_id, config, ncn_account.key, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn_account, false)?;
 
     {
@@ -65,14 +65,14 @@ pub fn process_admin_set_parameters(
         if !(MIN_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE..=MAX_EPOCHS_AFTER_CONSENSUS_BEFORE_CLOSE)
             .contains(&epochs)
         {
-            return Err(TipRouterError::InvalidEpochsBeforeClaim.into());
+            return Err(TipRouterError::InvalidEpochsBeforeClose.into());
         }
         msg!("Updated epochs_after_consensus_before_close to {}", epochs);
         config.epochs_after_consensus_before_close = PodU64::from(epochs);
     }
 
     if let Some(slots) = valid_slots_after_consensus {
-        if !(MIN_SLOTS_AFTER_CONSENSUS..=MAX_SLOTS_AFTER_CONSENSUS).contains(&slots) {
+        if !(MIN_VALID_SLOTS_AFTER_CONSENSUS..=MAX_VALID_SLOTS_AFTER_CONSENSUS).contains(&slots) {
             return Err(TipRouterError::InvalidSlotsAfterConsensus.into());
         }
         msg!("Updated valid_slots_after_consensus to {}", slots);
