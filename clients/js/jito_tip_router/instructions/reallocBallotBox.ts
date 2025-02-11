@@ -20,19 +20,16 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
-  type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const REALLOC_BALLOT_BOX_DISCRIMINATOR = 12;
+export const REALLOC_BALLOT_BOX_DISCRIMINATOR = 14;
 
 export function getReallocBallotBoxDiscriminatorBytes() {
   return getU8Encoder().encode(REALLOC_BALLOT_BOX_DISCRIMINATOR);
@@ -40,10 +37,11 @@ export function getReallocBallotBoxDiscriminatorBytes() {
 
 export type ReallocBallotBoxInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
-  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountAccountPayer extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
@@ -52,6 +50,9 @@ export type ReallocBallotBoxInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? WritableAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
@@ -59,10 +60,9 @@ export type ReallocBallotBoxInstruction<
         ? WritableAccount<TAccountBallotBox>
         : TAccountBallotBox,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
+      TAccountAccountPayer extends string
+        ? WritableAccount<TAccountAccountPayer>
+        : TAccountAccountPayer,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -105,42 +105,47 @@ export function getReallocBallotBoxInstructionDataCodec(): Codec<
 }
 
 export type ReallocBallotBoxInput<
+  TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountBallotBox extends string = string,
   TAccountNcn extends string = string,
-  TAccountPayer extends string = string,
+  TAccountAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ballotBox: Address<TAccountBallotBox>;
   ncn: Address<TAccountNcn>;
-  payer: TransactionSigner<TAccountPayer>;
+  accountPayer: Address<TAccountAccountPayer>;
   systemProgram?: Address<TAccountSystemProgram>;
   epoch: ReallocBallotBoxInstructionDataArgs['epoch'];
 };
 
 export function getReallocBallotBoxInstruction<
+  TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountBallotBox extends string,
   TAccountNcn extends string,
-  TAccountPayer extends string,
+  TAccountAccountPayer extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: ReallocBallotBoxInput<
+    TAccountEpochState,
     TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
-    TAccountPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): ReallocBallotBoxInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountConfig,
   TAccountBallotBox,
   TAccountNcn,
-  TAccountPayer,
+  TAccountAccountPayer,
   TAccountSystemProgram
 > {
   // Program address.
@@ -149,10 +154,11 @@ export function getReallocBallotBoxInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
-    payer: { value: input.payer ?? null, isWritable: true },
+    accountPayer: { value: input.accountPayer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -172,10 +178,11 @@ export function getReallocBallotBoxInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncn),
-      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.accountPayer),
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
@@ -184,10 +191,11 @@ export function getReallocBallotBoxInstruction<
     ),
   } as ReallocBallotBoxInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
-    TAccountPayer,
+    TAccountAccountPayer,
     TAccountSystemProgram
   >;
 
@@ -200,11 +208,12 @@ export type ParsedReallocBallotBoxInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    config: TAccountMetas[0];
-    ballotBox: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    payer: TAccountMetas[3];
-    systemProgram: TAccountMetas[4];
+    epochState: TAccountMetas[0];
+    config: TAccountMetas[1];
+    ballotBox: TAccountMetas[2];
+    ncn: TAccountMetas[3];
+    accountPayer: TAccountMetas[4];
+    systemProgram: TAccountMetas[5];
   };
   data: ReallocBallotBoxInstructionData;
 };
@@ -217,7 +226,7 @@ export function parseReallocBallotBoxInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedReallocBallotBoxInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -230,10 +239,11 @@ export function parseReallocBallotBoxInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       config: getNextAccount(),
       ballotBox: getNextAccount(),
       ncn: getNextAccount(),
-      payer: getNextAccount(),
+      accountPayer: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getReallocBallotBoxInstructionDataDecoder().decode(instruction.data),

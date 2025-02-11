@@ -58,6 +58,7 @@ impl GeneratedMerkleTreeCollection {
         ncn_address: &Pubkey,
         epoch: u64,
         protocol_fee_bps: u64,
+        tip_router_program_id: &Pubkey,
     ) -> Result<Self, MerkleRootGeneratorError> {
         let generated_merkle_trees = stake_meta_collection
             .stake_metas
@@ -71,6 +72,7 @@ impl GeneratedMerkleTreeCollection {
                     ncn_address,
                     epoch,
                     &stake_meta_collection.tip_distribution_program_id, // Pass the program ID
+                    tip_router_program_id,
                 ) {
                     Err(e) => return Some(Err(e)),
                     Ok(maybe_tree_nodes) => maybe_tree_nodes,
@@ -108,6 +110,15 @@ impl GeneratedMerkleTreeCollection {
             slot: stake_meta_collection.slot,
         })
     }
+
+    /// Load a serialized GeneratedMerkleTreeCollection from file path
+    pub fn new_from_file(path: &PathBuf) -> Result<Self, MerkleRootGeneratorError> {
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        let tree: Self = serde_json::from_reader(reader)?;
+
+        Ok(tree)
+    }
 }
 
 #[derive(Clone, Eq, Debug, Hash, PartialEq, Deserialize, Serialize)]
@@ -143,14 +154,17 @@ impl TreeNode {
         ncn_address: &Pubkey,
         epoch: u64,
         tip_distribution_program_id: &Pubkey,
+        tip_router_program_id: &Pubkey,
     ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
         if let Some(tip_distribution_meta) = stake_meta.maybe_tip_distribution_meta.as_ref() {
-            let protocol_fee_amount = u128::div_ceil(
+            let protocol_fee_amount = u128::checked_div(
                 (tip_distribution_meta.total_tips as u128)
                     .checked_mul(protocol_fee_bps as u128)
                     .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
                 MAX_BPS as u128,
-            );
+            )
+            .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
+
             let protocol_fee_amount = u64::try_from(protocol_fee_amount)
                 .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
 
@@ -163,10 +177,33 @@ impl TreeNode {
             )
             .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
 
-            let remaining_total_rewards = tip_distribution_meta
-                .total_tips
-                .checked_sub(protocol_fee_amount)
-                .and_then(|v| v.checked_sub(validator_amount))
+            let (validator_amount, remaining_total_rewards) = validator_amount
+                .checked_add(protocol_fee_amount)
+                .map_or((validator_amount, None), |total_fees| {
+                    if total_fees > tip_distribution_meta.total_tips {
+                        // If fees exceed total tips, preference protocol fee amount and reduce validator amount
+                        tip_distribution_meta
+                            .total_tips
+                            .checked_sub(protocol_fee_amount)
+                            .map(|adjusted_validator_amount| (adjusted_validator_amount, Some(0)))
+                            .unwrap_or((0, None))
+                    } else {
+                        // Otherwise use original protocol fee and subtract both fees from total
+                        (
+                            validator_amount,
+                            tip_distribution_meta
+                                .total_tips
+                                .checked_sub(protocol_fee_amount)
+                                .and_then(|v| v.checked_sub(validator_amount)),
+                        )
+                    }
+                });
+
+            let remaining_total_rewards =
+                remaining_total_rewards.ok_or(MerkleRootGeneratorError::CheckedMathError)?;
+
+            let tip_router_target_epoch = epoch
+                .checked_add(1)
                 .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
 
             // Must match the seeds from `core::BaseRewardReceiver`. Cannot
@@ -176,9 +213,9 @@ impl TreeNode {
                 &[
                     b"base_reward_receiver",
                     &ncn_address.to_bytes(),
-                    &epoch.to_le_bytes(),
+                    &tip_router_target_epoch.to_le_bytes(),
                 ],
-                tip_distribution_program_id,
+                tip_router_program_id,
             )
             .0;
 
@@ -245,15 +282,28 @@ impl TreeNode {
                             ],
                             &TIP_DISTRIBUTION_ID,
                         );
-                        Ok(Self {
-                            claimant: delegation.staker_pubkey,
-                            claim_status_pubkey,
-                            claim_status_bump,
-                            staker_pubkey: delegation.staker_pubkey,
-                            withdrawer_pubkey: delegation.withdrawer_pubkey,
-                            amount: reward_amount,
-                            proof: None,
-                        })
+                        // Time-gated fix so slow rollout won't affect consensus
+                        if tip_router_target_epoch > 737 {
+                            Ok(Self {
+                                claimant: delegation.stake_account_pubkey,
+                                claim_status_pubkey,
+                                claim_status_bump,
+                                staker_pubkey: delegation.staker_pubkey,
+                                withdrawer_pubkey: delegation.withdrawer_pubkey,
+                                amount: reward_amount,
+                                proof: None,
+                            })
+                        } else {
+                            Ok(Self {
+                                claimant: delegation.staker_pubkey,
+                                claim_status_pubkey,
+                                claim_status_bump,
+                                staker_pubkey: delegation.staker_pubkey,
+                                withdrawer_pubkey: delegation.withdrawer_pubkey,
+                                amount: reward_amount,
+                                proof: None,
+                            })
+                        }
                     })
                     .collect::<Result<Vec<Self>, MerkleRootGeneratorError>>()?,
             );
@@ -469,6 +519,7 @@ mod tests {
     #[test]
     fn test_new_from_stake_meta_collection_happy_path() {
         let merkle_root_upload_authority = Pubkey::new_unique();
+        let tip_router_program_id = Pubkey::new_unique();
         let (tda_0, tda_1) = (Pubkey::new_unique(), Pubkey::new_unique());
         let stake_account_0 = Pubkey::new_unique();
         let stake_account_1 = Pubkey::new_unique();
@@ -483,7 +534,7 @@ mod tests {
         let validator_id_0 = Pubkey::new_unique();
         let validator_id_1 = Pubkey::new_unique();
         let ncn_address = Pubkey::new_unique();
-        let epoch = 0u64;
+        let epoch = 737;
 
         let stake_meta_collection = StakeMetaCollection {
             stake_metas: vec![
@@ -551,6 +602,7 @@ mod tests {
             &ncn_address,
             epoch,
             300,
+            &tip_router_program_id,
         )
         .unwrap();
 
@@ -569,9 +621,9 @@ mod tests {
             &[
                 b"base_reward_receiver",
                 &ncn_address.to_bytes(),
-                &epoch.to_le_bytes(),
+                &(epoch + 1).to_le_bytes(),
             ],
-            &stake_meta_collection.tip_distribution_program_id,
+            &tip_router_program_id,
         )
         .0;
 
@@ -614,7 +666,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: staker_account_0, // Use staker_account instead of stake_account
+                claimant: stake_account_0,
                 claim_status_pubkey: claim_statuses[2].0,
                 claim_status_bump: claim_statuses[2].1,
                 staker_pubkey: staker_account_0,
@@ -623,7 +675,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: staker_account_1, // Use staker_account instead of stake_account
+                claimant: stake_account_1,
                 claim_status_pubkey: claim_statuses[3].0,
                 claim_status_bump: claim_statuses[3].1,
                 staker_pubkey: staker_account_1,
@@ -655,7 +707,7 @@ mod tests {
                 claim_status_bump: claim_statuses[4].1,
                 staker_pubkey: Pubkey::default(),
                 withdrawer_pubkey: Pubkey::default(),
-                amount: 57_003_663_340,
+                amount: 57_003_663_339, // Updated from 57_003_663_340 after div_ceil -> checked_div change. Dust stays in TDA and goes to DAO
                 proof: None,
             },
             TreeNode {
@@ -668,7 +720,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: staker_account_2,
+                claimant: stake_account_2,
                 claim_status_pubkey: claim_statuses[6].0,
                 claim_status_bump: claim_statuses[6].1,
                 staker_pubkey: staker_account_2,
@@ -677,7 +729,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: staker_account_3,
+                claimant: stake_account_3,
                 claim_status_pubkey: claim_statuses[7].0,
                 claim_status_bump: claim_statuses[7].1,
                 staker_pubkey: staker_account_3,
@@ -731,8 +783,7 @@ mod tests {
                             .unwrap();
                         assert!(
                             (expected_tree_node.amount as i128 - actual_tree_node.amount as i128)
-                                .abs()
-                                <= 1,
+                                == 0,
                             "Expected amount: {}, Actual amount: {}",
                             expected_tree_node.amount,
                             actual_tree_node.amount

@@ -2,7 +2,8 @@ use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::loader::load_signer;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    ballot_box::BallotBox, config::Config as NcnConfig, error::TipRouterError,
+    ballot_box::BallotBox, config::Config as NcnConfig, epoch_state::EpochState,
+    error::TipRouterError,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -15,13 +16,14 @@ pub fn process_admin_set_tie_breaker(
     meta_merkle_root: &[u8; 32],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ballot_box, ncn, tie_breaker_admin, restaking_program] = accounts else {
+    let [epoch_state, ncn_config, ballot_box, ncn, tie_breaker_admin] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    BallotBox::load(program_id, ballot_box, ncn.key, epoch, true)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     load_signer(tie_breaker_admin, false)?;
 
     let ncn_config_data = ncn_config.data.borrow();
@@ -35,13 +37,23 @@ pub fn process_admin_set_tie_breaker(
     let mut ballot_box_data = ballot_box.data.borrow_mut();
     let ballot_box_account = BallotBox::try_from_slice_unchecked_mut(&mut ballot_box_data)?;
 
-    let current_epoch = Clock::get()?.epoch;
+    let clock = Clock::get()?;
+    let current_epoch = clock.epoch;
 
     ballot_box_account.set_tie_breaker_ballot(
         meta_merkle_root,
         current_epoch,
         ncn_config.epochs_before_stall(),
     )?;
+
+    // Update Epoch State
+    {
+        let slot = clock.slot;
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account
+            .update_set_tie_breaker(ballot_box_account.is_consensus_reached(), slot)?;
+    }
 
     Ok(())
 }

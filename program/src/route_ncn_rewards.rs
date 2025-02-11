@@ -2,11 +2,12 @@ use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     epoch_snapshot::OperatorSnapshot,
+    epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
 };
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
+    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
@@ -18,19 +19,15 @@ pub fn process_route_ncn_rewards(
     max_iterations: u16,
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn, operator, operator_snapshot, ncn_reward_router, ncn_reward_receiver, restaking_program] =
+    let [epoch_state, ncn, operator, operator_snapshot, ncn_reward_router, ncn_reward_receiver] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    Ncn::load(restaking_program.key, ncn, false)?;
-    Operator::load(restaking_program.key, operator, false)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Operator::load(&jito_restaking_program::id(), operator, false)?;
     NcnRewardReceiver::load(
         program_id,
         ncn_reward_receiver,
@@ -45,19 +42,19 @@ pub fn process_route_ncn_rewards(
 
     OperatorSnapshot::load(
         program_id,
+        operator_snapshot,
         operator.key,
         ncn.key,
         epoch,
-        operator_snapshot,
         false,
     )?;
     NcnRewardRouter::load(
         program_id,
+        ncn_reward_router,
         ncn_fee_group,
         operator.key,
         ncn.key,
         epoch,
-        ncn_reward_router,
         true,
     )?;
 
@@ -79,6 +76,16 @@ pub fn process_route_ncn_rewards(
     }
 
     ncn_reward_router_account.route_reward_pool(operator_snapshot_account, max_iterations)?;
+
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_route_ncn_rewards(
+            operator_snapshot_account.ncn_operator_index() as usize,
+            ncn_fee_group,
+            ncn_reward_router_account.total_rewards(),
+        )?;
+    }
 
     Ok(())
 }

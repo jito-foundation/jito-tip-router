@@ -1,0 +1,20 @@
+services:
+  jito-tip-router-ncn-keeper:
+    build:
+      context: .
+      dockerfile: cli/Dockerfile
+    container_name: jito-tip-router-ncn-keeper
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+      - RPC_URL=${RPC_URL}
+      - PRIORITY_FEE_MICRO_LAMPORTS=${PRIORITY_FEE_MICRO_LAMPORTS}
+      - KEYPAIR_PATH=${KEYPAIR_PATH}
+      - NCN=${NCN}
+      - EPOCH=${EPOCH}
+      - VAULT_PROGRAM_ID=${VAULT_PROGRAM_ID}
+      - RESTAKING_PROGRAM_ID=${RESTAKING_PROGRAM_ID}
+      - TIP_ROUTER_PROGRAM_ID=${TIP_ROUTER_PROGRAM_ID}
+      - SOLANA_METRICS_CONFIG=${SOLANA_METRICS_CONFIG}
+    volumes:
+      - ./credentials:/credentials
+    restart: on-failure:5

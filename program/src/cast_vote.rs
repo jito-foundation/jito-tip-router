@@ -5,6 +5,7 @@ use jito_tip_router_core::{
     ballot_box::{Ballot, BallotBox},
     config::Config as NcnConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_state::EpochState,
     error::TipRouterError,
 };
 use solana_program::{
@@ -18,7 +19,7 @@ pub fn process_cast_vote(
     meta_merkle_root: &[u8; 32],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator, operator_admin, restaking_program] =
+    let [epoch_state, ncn_config, ballot_box, ncn, epoch_snapshot, operator_snapshot, operator, operator_admin] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -27,25 +28,26 @@ pub fn process_cast_vote(
     // Operator is casting the vote, needs to be signer
     load_signer(operator_admin, false)?;
 
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
-    Operator::load(restaking_program.key, operator, false)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, false)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Operator::load(&jito_restaking_program::id(), operator, false)?;
 
-    BallotBox::load(program_id, ncn.key, epoch, ballot_box, true)?;
-    EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, false)?;
+    BallotBox::load(program_id, ballot_box, ncn.key, epoch, true)?;
+    EpochSnapshot::load(program_id, epoch_snapshot, ncn.key, epoch, false)?;
     OperatorSnapshot::load(
         program_id,
+        operator_snapshot,
         operator.key,
         ncn.key,
         epoch,
-        operator_snapshot,
         false,
     )?;
     let operator_data = operator.data.borrow();
     let operator_account = Operator::try_from_slice_unchecked(&operator_data)?;
 
-    if *operator_admin.key != operator_account.admin {
-        return Err(TipRouterError::OperatorAdminInvalid.into());
+    if *operator_admin.key != operator_account.voter {
+        return Err(TipRouterError::InvalidOperatorVoter.into());
     }
 
     let valid_slots_after_consensus = {
@@ -76,6 +78,11 @@ pub fn process_cast_vote(
         *operator_snapshot.stake_weights()
     };
 
+    // if operator_stake_weights.stake_weight() == 0 {
+    //     msg!("Operator has zero stake weight, cannot vote");
+    //     return Err(TipRouterError::CannotVoteWithZeroStake.into());
+    // }
+
     let slot = Clock::get()?.slot;
 
     let ballot = Ballot::new(meta_merkle_root);
@@ -96,6 +103,17 @@ pub fn process_cast_vote(
             epoch,
             ballot_box.get_winning_ballot_tally()?
         );
+    }
+
+    // Update Epoch State
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_cast_vote(
+            ballot_box.operators_voted(),
+            ballot_box.is_consensus_reached(),
+            slot,
+        )?;
     }
 
     Ok(())

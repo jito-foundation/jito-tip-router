@@ -46,6 +46,7 @@ use crate::fixtures::{TestError, TestResult};
 pub struct VaultRoot {
     pub vault_pubkey: Pubkey,
     pub vault_admin: Keypair,
+    pub mint: Keypair,
 }
 
 impl Clone for VaultRoot {
@@ -53,6 +54,7 @@ impl Clone for VaultRoot {
         Self {
             vault_pubkey: self.vault_pubkey,
             vault_admin: self.vault_admin.insecure_clone(),
+            mint: self.mint.insecure_clone(),
         }
     }
 }
@@ -222,6 +224,20 @@ impl VaultProgramClient {
         )?)
     }
 
+    pub async fn get_vault_is_update_needed(
+        &mut self,
+        vault: &Pubkey,
+        slot: u64,
+    ) -> Result<bool, TestError> {
+        let vault_config = self
+            .get_config(&Config::find_program_address(&jito_vault_program::id()).0)
+            .await?;
+        let vault_account = self.get_vault(vault).await?;
+
+        let is_update_needed = vault_account.is_update_needed(slot, vault_config.epoch_length())?;
+        Ok(is_update_needed)
+    }
+
     pub async fn do_initialize_config(&mut self) -> Result<Keypair, TestError> {
         let config_admin = Keypair::new();
 
@@ -273,6 +289,7 @@ impl VaultProgramClient {
                 reward_fee_bps,
                 9,
                 &config_admin.pubkey(),
+                None,
             )
             .await?;
 
@@ -286,6 +303,7 @@ impl VaultProgramClient {
         reward_fee_bps: u16,
         decimals: u8,
         program_fee_wallet: &Pubkey,
+        token_mint: Option<Keypair>,
     ) -> Result<VaultRoot, TestError> {
         let vault_base = Keypair::new();
 
@@ -294,11 +312,18 @@ impl VaultProgramClient {
 
         let vrt_mint = Keypair::new();
         let vault_admin = Keypair::new();
-        let token_mint = Keypair::new();
+        let token_mint = token_mint.unwrap_or_else(|| Keypair::new());
 
         self.airdrop(&vault_admin.pubkey(), 100.0).await?;
-        self.create_token_mint(&token_mint, &spl_token::id())
-            .await?;
+
+        let should_create_mint = {
+            let raw_account = self.banks_client.get_account(token_mint.pubkey()).await?;
+            raw_account.is_none()
+        };
+        if should_create_mint {
+            self.create_token_mint(&token_mint, &spl_token::id())
+                .await?;
+        }
 
         self.initialize_vault(
             &Config::find_program_address(&jito_vault_program::id()).0,
@@ -327,6 +352,7 @@ impl VaultProgramClient {
         Ok(VaultRoot {
             vault_admin,
             vault_pubkey,
+            mint: token_mint,
         })
     }
 

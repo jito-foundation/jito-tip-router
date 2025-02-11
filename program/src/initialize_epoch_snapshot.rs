@@ -1,16 +1,14 @@
 use jito_bytemuck::{AccountDeserialize, Discriminator};
-use jito_jsm_core::{
-    create_account,
-    loader::{load_signer, load_system_account, load_system_program},
-};
+use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    config::Config, epoch_snapshot::EpochSnapshot, error::TipRouterError, fees,
+    account_payer::AccountPayer, config::Config, epoch_marker::EpochMarker,
+    epoch_snapshot::EpochSnapshot, epoch_state::EpochState, error::TipRouterError, fees,
     weight_table::WeightTable,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
 /// Initializes an Epoch Snapshot
@@ -19,24 +17,20 @@ pub fn process_initialize_epoch_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [config, ncn, weight_table, epoch_snapshot, payer, restaking_program, system_program] =
+    let [epoch_marker, epoch_state, config, ncn, weight_table, epoch_snapshot, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    Config::load(program_id, ncn.key, config, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
+    EpochState::load_and_check_is_closing(program_id, epoch_state, ncn.key, epoch, true)?;
+    Config::load(program_id, config, ncn.key, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
+    EpochMarker::check_dne(program_id, epoch_marker, ncn.key, epoch)?;
 
     load_system_account(epoch_snapshot, true)?;
     load_system_program(system_program)?;
-    //TODO check that it is not writable
-    load_signer(payer, false)?;
 
     let current_slot = Clock::get()?.slot;
     let ncn_epoch = epoch;
@@ -71,15 +65,14 @@ pub fn process_initialize_epoch_snapshot(
         ncn.key,
         ncn_epoch
     );
-    create_account(
-        payer,
+    AccountPayer::pay_and_create_account(
+        program_id,
+        ncn.key,
+        account_payer,
         epoch_snapshot,
         system_program,
         program_id,
-        &Rent::get()?,
-        8_u64
-            .checked_add(std::mem::size_of::<EpochSnapshot>() as u64)
-            .unwrap(),
+        EpochSnapshot::SIZE,
         &epoch_snapshot_seeds,
     )?;
 
@@ -115,6 +108,13 @@ pub fn process_initialize_epoch_snapshot(
         operator_count,
         vault_count,
     );
+
+    // Update Epoch State
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_initialize_epoch_snapshot(operator_count);
+    }
 
     Ok(())
 }

@@ -3,8 +3,10 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 
 /// Accounts.
 pub struct AdminSetParameters {
@@ -13,8 +15,6 @@ pub struct AdminSetParameters {
     pub ncn: solana_program::pubkey::Pubkey,
 
     pub ncn_admin: solana_program::pubkey::Pubkey,
-
-    pub restaking_program: solana_program::pubkey::Pubkey,
 }
 
 impl AdminSetParameters {
@@ -30,7 +30,7 @@ impl AdminSetParameters {
         args: AdminSetParametersInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.config,
             false,
@@ -41,10 +41,6 @@ impl AdminSetParameters {
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn_admin,
             true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.restaking_program,
-            false,
         ));
         accounts.extend_from_slice(remaining_accounts);
         let mut data = AdminSetParametersInstructionData::new()
@@ -68,7 +64,7 @@ pub struct AdminSetParametersInstructionData {
 
 impl AdminSetParametersInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 25 }
+        Self { discriminator: 28 }
     }
 }
 
@@ -81,7 +77,9 @@ impl Default for AdminSetParametersInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AdminSetParametersInstructionArgs {
+    pub starting_valid_epoch: Option<u64>,
     pub epochs_before_stall: Option<u64>,
+    pub epochs_after_consensus_before_close: Option<u64>,
     pub valid_slots_after_consensus: Option<u64>,
 }
 
@@ -92,14 +90,14 @@ pub struct AdminSetParametersInstructionArgs {
 ///   0. `[writable]` config
 ///   1. `[]` ncn
 ///   2. `[signer]` ncn_admin
-///   3. `[]` restaking_program
 #[derive(Clone, Debug, Default)]
 pub struct AdminSetParametersBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
     ncn_admin: Option<solana_program::pubkey::Pubkey>,
-    restaking_program: Option<solana_program::pubkey::Pubkey>,
+    starting_valid_epoch: Option<u64>,
     epochs_before_stall: Option<u64>,
+    epochs_after_consensus_before_close: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
@@ -123,18 +121,25 @@ impl AdminSetParametersBuilder {
         self.ncn_admin = Some(ncn_admin);
         self
     }
+    /// `[optional argument]`
     #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.restaking_program = Some(restaking_program);
+    pub fn starting_valid_epoch(&mut self, starting_valid_epoch: u64) -> &mut Self {
+        self.starting_valid_epoch = Some(starting_valid_epoch);
         self
     }
     /// `[optional argument]`
     #[inline(always)]
     pub fn epochs_before_stall(&mut self, epochs_before_stall: u64) -> &mut Self {
         self.epochs_before_stall = Some(epochs_before_stall);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn epochs_after_consensus_before_close(
+        &mut self,
+        epochs_after_consensus_before_close: u64,
+    ) -> &mut Self {
+        self.epochs_after_consensus_before_close = Some(epochs_after_consensus_before_close);
         self
     }
     /// `[optional argument]`
@@ -167,12 +172,11 @@ impl AdminSetParametersBuilder {
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
             ncn_admin: self.ncn_admin.expect("ncn_admin is not set"),
-            restaking_program: self
-                .restaking_program
-                .expect("restaking_program is not set"),
         };
         let args = AdminSetParametersInstructionArgs {
+            starting_valid_epoch: self.starting_valid_epoch.clone(),
             epochs_before_stall: self.epochs_before_stall.clone(),
+            epochs_after_consensus_before_close: self.epochs_after_consensus_before_close.clone(),
             valid_slots_after_consensus: self.valid_slots_after_consensus.clone(),
         };
 
@@ -187,8 +191,6 @@ pub struct AdminSetParametersCpiAccounts<'a, 'b> {
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `admin_set_parameters` CPI instruction.
@@ -201,8 +203,6 @@ pub struct AdminSetParametersCpi<'a, 'b> {
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AdminSetParametersInstructionArgs,
 }
@@ -218,7 +218,6 @@ impl<'a, 'b> AdminSetParametersCpi<'a, 'b> {
             config: accounts.config,
             ncn: accounts.ncn,
             ncn_admin: accounts.ncn_admin,
-            restaking_program: accounts.restaking_program,
             __args: args,
         }
     }
@@ -255,7 +254,7 @@ impl<'a, 'b> AdminSetParametersCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.config.key,
             false,
@@ -267,10 +266,6 @@ impl<'a, 'b> AdminSetParametersCpi<'a, 'b> {
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn_admin.key,
             true,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.restaking_program.key,
-            false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_program::instruction::AccountMeta {
@@ -290,12 +285,11 @@ impl<'a, 'b> AdminSetParametersCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(4 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(3 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
         account_infos.push(self.ncn_admin.clone());
-        account_infos.push(self.restaking_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -315,7 +309,6 @@ impl<'a, 'b> AdminSetParametersCpi<'a, 'b> {
 ///   0. `[writable]` config
 ///   1. `[]` ncn
 ///   2. `[signer]` ncn_admin
-///   3. `[]` restaking_program
 #[derive(Clone, Debug)]
 pub struct AdminSetParametersCpiBuilder<'a, 'b> {
     instruction: Box<AdminSetParametersCpiBuilderInstruction<'a, 'b>>,
@@ -328,8 +321,9 @@ impl<'a, 'b> AdminSetParametersCpiBuilder<'a, 'b> {
             config: None,
             ncn: None,
             ncn_admin: None,
-            restaking_program: None,
+            starting_valid_epoch: None,
             epochs_before_stall: None,
+            epochs_after_consensus_before_close: None,
             valid_slots_after_consensus: None,
             __remaining_accounts: Vec::new(),
         });
@@ -356,18 +350,26 @@ impl<'a, 'b> AdminSetParametersCpiBuilder<'a, 'b> {
         self.instruction.ncn_admin = Some(ncn_admin);
         self
     }
+    /// `[optional argument]`
     #[inline(always)]
-    pub fn restaking_program(
-        &mut self,
-        restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.restaking_program = Some(restaking_program);
+    pub fn starting_valid_epoch(&mut self, starting_valid_epoch: u64) -> &mut Self {
+        self.instruction.starting_valid_epoch = Some(starting_valid_epoch);
         self
     }
     /// `[optional argument]`
     #[inline(always)]
     pub fn epochs_before_stall(&mut self, epochs_before_stall: u64) -> &mut Self {
         self.instruction.epochs_before_stall = Some(epochs_before_stall);
+        self
+    }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn epochs_after_consensus_before_close(
+        &mut self,
+        epochs_after_consensus_before_close: u64,
+    ) -> &mut Self {
+        self.instruction.epochs_after_consensus_before_close =
+            Some(epochs_after_consensus_before_close);
         self
     }
     /// `[optional argument]`
@@ -418,7 +420,12 @@ impl<'a, 'b> AdminSetParametersCpiBuilder<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
         let args = AdminSetParametersInstructionArgs {
+            starting_valid_epoch: self.instruction.starting_valid_epoch.clone(),
             epochs_before_stall: self.instruction.epochs_before_stall.clone(),
+            epochs_after_consensus_before_close: self
+                .instruction
+                .epochs_after_consensus_before_close
+                .clone(),
             valid_slots_after_consensus: self.instruction.valid_slots_after_consensus.clone(),
         };
         let instruction = AdminSetParametersCpi {
@@ -429,11 +436,6 @@ impl<'a, 'b> AdminSetParametersCpiBuilder<'a, 'b> {
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
             ncn_admin: self.instruction.ncn_admin.expect("ncn_admin is not set"),
-
-            restaking_program: self
-                .instruction
-                .restaking_program
-                .expect("restaking_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -449,8 +451,9 @@ struct AdminSetParametersCpiBuilderInstruction<'a, 'b> {
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    starting_valid_epoch: Option<u64>,
     epochs_before_stall: Option<u64>,
+    epochs_after_consensus_before_close: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

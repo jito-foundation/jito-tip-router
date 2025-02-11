@@ -6,6 +6,7 @@ use jito_tip_router_core::{
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as NcnConfig,
     constants::JITOSOL_MINT,
+    epoch_state::EpochState,
     error::TipRouterError,
 };
 use solana_program::{
@@ -20,20 +21,16 @@ pub fn process_distribute_base_rewards(
     base_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ncn, base_reward_router, base_reward_receiver, base_fee_wallet, base_fee_wallet_ata, restaking_program, stake_pool_program, stake_pool, stake_pool_withdraw_authority, reserve_stake, manager_fee_account, referrer_pool_tokens_account, pool_mint, token_program, system_program] =
+    let [epoch_state, ncn_config, ncn, base_reward_router, base_reward_receiver, base_fee_wallet, base_fee_wallet_ata, stake_pool_program, stake_pool, stake_pool_withdraw_authority, reserve_stake, manager_fee_account, referrer_pool_tokens_account, pool_mint, token_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    Ncn::load(restaking_program.key, ncn, false)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    BaseRewardRouter::load(program_id, ncn.key, epoch, base_reward_router, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    BaseRewardRouter::load(program_id, base_reward_router, ncn.key, epoch, true)?;
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
     load_associated_token_account(base_fee_wallet_ata, base_fee_wallet.key, &JITOSOL_MINT)?;
 
@@ -109,6 +106,12 @@ pub fn process_distribute_base_rewards(
                 .collect::<Vec<&[u8]>>()
                 .as_slice()],
         )?;
+    }
+
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_distribute_base_rewards(rewards)?;
     }
 
     Ok(())

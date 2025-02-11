@@ -1,11 +1,13 @@
+pub mod account_payer;
 pub mod ballot_box;
 pub mod base_fee_group;
 pub mod base_reward_router;
-pub mod claim_status_payer;
 pub mod config;
 pub mod constants;
 pub mod discriminators;
+pub mod epoch_marker;
 pub mod epoch_snapshot;
+pub mod epoch_state;
 pub mod error;
 pub mod fees;
 pub mod instruction;

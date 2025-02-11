@@ -3,14 +3,16 @@
 //! to add features, then rerun kinobi to update it.
 //!
 //! <https://github.com/kinobi-so/kinobi>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ballot {
     pub meta_merkle_root: [u8; 32],
-    pub is_initialized: bool,
+    pub is_valid: bool,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 63],
 }

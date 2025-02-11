@@ -65,13 +65,13 @@ impl TipDistributionClient {
     pub async fn get_tip_distribution_account(
         &mut self,
         vote_account: Pubkey,
-        epoch: u64,
+        target_epoch: u64,
     ) -> TestResult<TipDistributionAccount> {
         let (tip_distribution_address, _) =
             jito_tip_distribution_sdk::derive_tip_distribution_account_address(
                 &jito_tip_distribution::ID,
                 &vote_account,
-                epoch,
+                target_epoch,
             );
         let tip_distribution_account = self
             .banks_client

@@ -1,4 +1,4 @@
-use core::mem::size_of;
+use core::{fmt, mem::size_of};
 
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
@@ -7,8 +7,9 @@ use jito_bytemuck::{
 };
 use shank::{ShankAccount, ShankType};
 use solana_program::{
-    account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
-    system_program,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction, system_program,
+    sysvar::Sysvar,
 };
 use spl_math::precise_number::PreciseNumber;
 
@@ -122,9 +123,9 @@ impl BaseRewardRouter {
     pub fn find_program_address(
         program_id: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds: Vec<Vec<u8>> = Self::seeds(ncn, ncn_epoch);
+        let seeds: Vec<Vec<u8>> = Self::seeds(ncn, epoch);
         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
         (pda, bump, seeds)
@@ -132,12 +133,12 @@ impl BaseRewardRouter {
 
     pub fn load(
         program_id: &Pubkey,
-        ncn: &Pubkey,
-        ncn_epoch: u64,
         account: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
-        let expected_pda = Self::find_program_address(program_id, ncn, ncn_epoch).0;
+        let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
         check_load(
             program_id,
             account,
@@ -145,6 +146,15 @@ impl BaseRewardRouter {
             Some(Self::DISCRIMINATOR),
             expect_writable,
         )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        Self::load(program_id, account_to_close, ncn, epoch, true)
     }
 
     // ----------------- ROUTE STATE TRACKING --------------
@@ -248,7 +258,7 @@ impl BaseRewardRouter {
             let leftover_rewards = self.reward_pool();
 
             self.route_from_reward_pool(leftover_rewards)?;
-            self.route_to_base_fee_group_rewards(BaseFeeGroup::default(), leftover_rewards)?;
+            self.route_to_base_fee_group_rewards(BaseFeeGroup::dao(), leftover_rewards)?;
         }
 
         Ok(())
@@ -262,9 +272,12 @@ impl BaseRewardRouter {
         let winning_ballot = ballot_box.get_winning_ballot_tally()?;
         let winning_stake_weight = winning_ballot.stake_weights();
 
-        let (starting_group_index, starting_vote_index, mut starting_rewards_to_process) =
+        let (starting_group_index, mut starting_vote_index, mut starting_rewards_to_process) =
             self.resume_routing_state();
+
         let mut iterations: u16 = 0;
+        // Always have at least 1 iteration
+        let max_iterations = max_iterations.max(1);
 
         for group_index in starting_group_index..NcnFeeGroup::FEE_GROUP_COUNT {
             let group = NcnFeeGroup::all_groups()[group_index];
@@ -291,7 +304,7 @@ impl BaseRewardRouter {
                             .checked_add(1)
                             .ok_or(TipRouterError::ArithmeticOverflow)?;
 
-                        if iterations >= max_iterations {
+                        if iterations > max_iterations {
                             msg!(
                                 "Reached max iterations, saving state and exiting {}/{}",
                                 group_index,
@@ -323,6 +336,16 @@ impl BaseRewardRouter {
                     )?;
                 }
             }
+
+            // DAO gets any remainder
+            {
+                let leftover_rewards = self.ncn_fee_group_rewards(group)?;
+
+                self.route_from_ncn_fee_group_rewards(group, leftover_rewards)?;
+                self.route_to_base_fee_group_rewards(BaseFeeGroup::dao(), leftover_rewards)?;
+            }
+
+            starting_vote_index = 0;
         }
 
         msg!("Finished routing NCN fee group rewards");
@@ -438,7 +461,7 @@ impl BaseRewardRouter {
         &self.ncn
     }
 
-    pub fn ncn_epoch(&self) -> u64 {
+    pub fn epoch(&self) -> u64 {
         self.epoch.into()
     }
 
@@ -462,6 +485,7 @@ impl BaseRewardRouter {
                 .checked_add(rewards)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
+
         Ok(())
     }
 
@@ -475,6 +499,8 @@ impl BaseRewardRouter {
                 .checked_sub(rewards)
                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
         );
+
+        self.increment_rewards_processed(rewards)?;
 
         Ok(())
     }
@@ -533,8 +559,6 @@ impl BaseRewardRouter {
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
 
-        self.increment_rewards_processed(rewards)?;
-
         Ok(())
     }
 
@@ -578,8 +602,6 @@ impl BaseRewardRouter {
                 .checked_add(rewards)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
-
-        self.increment_rewards_processed(rewards)?;
 
         Ok(())
     }
@@ -675,6 +697,66 @@ impl BaseRewardRouter {
         }
 
         Err(TipRouterError::OperatorRewardNotFound)
+    }
+}
+
+#[rustfmt::skip]
+impl fmt::Display for BaseRewardRouter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "\n\n----------- Base Reward Router -------------")?;
+        writeln!(f, "  NCN:                          {}", self.ncn)?;
+        writeln!(f, "  Epoch:                        {}", self.epoch())?;
+        writeln!(f, "  Bump:                         {}", self.bump)?;
+        writeln!(f, "  Slot Created:                 {}", self.slot_created())?;
+        writeln!(f, "  Still Routing:                {}", self.still_routing())?;
+        writeln!(f, "  Total Rewards:                {}", self.total_rewards())?;
+        writeln!(f, "  Reward Pool:                  {}", self.reward_pool())?;
+        writeln!(f, "  Rewards Processed:            {}", self.rewards_processed())?;
+
+        if self.still_routing() {
+            writeln!(f, "\nRouting State:")?;
+            writeln!(f, "  Last NCN Group Index:         {}", self.last_ncn_group_index())?;
+            writeln!(f, "  Last Vote Index:              {}", self.last_vote_index())?;
+            writeln!(f, "  Last Rewards to Process:      {}", self.last_rewards_to_process())?;
+        }
+
+        writeln!(f, "\nBase Fee Group Rewards:")?;
+        for group in BaseFeeGroup::all_groups().iter() {
+            let rewards = self.base_fee_group_reward(*group).unwrap_or(0);
+            if rewards > 0 {
+                writeln!(f, "  Group {}:                      {}", group.group, rewards)?;
+            }
+        }
+
+        writeln!(f, "\nNCN Fee Group Rewards:")?;
+        for group in NcnFeeGroup::all_groups().iter() {
+            let rewards = self.ncn_fee_group_rewards(*group).unwrap_or(0);
+            if rewards > 0 {
+                writeln!(f, "  Group {}:                      {}", group.group, rewards)?;
+            }
+        }
+
+        writeln!(f, "\nNCN Fee Group Reward Routes:")?;
+        for route in self.ncn_fee_group_reward_routes().iter() {
+            if !route.is_empty() {
+                writeln!(f, "  Operator:                     {}", route.operator())?;
+                if let Ok(has_rewards) = route.has_rewards() {
+                    if has_rewards {
+                        writeln!(f, "    Rewards by Group:")?;
+                        for group in NcnFeeGroup::all_groups().iter() {
+                            if let Ok(rewards) = route.rewards(*group) {
+                                if rewards > 0 {
+                                    writeln!(f, "      Group {}:                  {}", group.group, rewards)?;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        writeln!(f, "\n")?;
+        Ok(())
     }
 }
 
@@ -780,20 +862,20 @@ impl NcnRewardRoute {
 pub struct BaseRewardReceiver {}
 
 impl BaseRewardReceiver {
-    pub fn seeds(ncn: &Pubkey, ncn_epoch: u64) -> Vec<Vec<u8>> {
+    pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {
         vec![
             b"base_reward_receiver".to_vec(),
             ncn.to_bytes().to_vec(),
-            ncn_epoch.to_le_bytes().to_vec(),
+            epoch.to_le_bytes().to_vec(),
         ]
     }
 
     pub fn find_program_address(
         program_id: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(ncn, ncn_epoch);
+        let seeds = Self::seeds(ncn, epoch);
         let (address, bump) = Pubkey::find_program_address(
             &seeds.iter().map(|s| s.as_slice()).collect::<Vec<_>>(),
             program_id,
@@ -805,11 +887,11 @@ impl BaseRewardReceiver {
         program_id: &Pubkey,
         account: &AccountInfo,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let system_program_id = system_program::id();
-        let expected_pda = Self::find_program_address(program_id, ncn, ncn_epoch).0;
+        let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
         check_load(
             &system_program_id,
             account,
@@ -817,6 +899,81 @@ impl BaseRewardReceiver {
             None,
             expect_writable,
         )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        Self::load(program_id, account_to_close, ncn, epoch, true)
+    }
+
+    #[inline(always)]
+    pub fn close<'a, 'info>(
+        program_id: &Pubkey,
+        ncn: &Pubkey,
+        epoch: u64,
+        base_reward_receiver: &'a AccountInfo<'info>,
+        dao_wallet: &'a AccountInfo<'info>,
+        account_payer: &'a AccountInfo<'info>,
+    ) -> ProgramResult {
+        let min_rent = Rent::get()?.minimum_balance(0);
+
+        let delta_lamports = base_reward_receiver.lamports().saturating_sub(min_rent);
+        if delta_lamports > 0 {
+            Self::transfer(
+                program_id,
+                ncn,
+                epoch,
+                base_reward_receiver,
+                dao_wallet,
+                delta_lamports,
+            )?;
+        }
+
+        Self::transfer(
+            program_id,
+            ncn,
+            epoch,
+            base_reward_receiver,
+            account_payer,
+            min_rent,
+        )
+    }
+
+    #[inline(always)]
+    pub fn transfer<'a, 'info>(
+        program_id: &Pubkey,
+        ncn: &Pubkey,
+        epoch: u64,
+        base_reward_receiver: &'a AccountInfo<'info>,
+        to: &'a AccountInfo<'info>,
+        lamports: u64,
+    ) -> ProgramResult {
+        let (
+            base_reward_receiver_address,
+            base_reward_receiver_bump,
+            mut base_reward_receiver_seeds,
+        ) = Self::find_program_address(program_id, ncn, epoch);
+        base_reward_receiver_seeds.push(vec![base_reward_receiver_bump]);
+
+        if base_reward_receiver_address.ne(base_reward_receiver.key) {
+            msg!("Incorrect base reward receiver PDA");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        invoke_signed(
+            &system_instruction::transfer(&base_reward_receiver_address, to.key, lamports),
+            &[base_reward_receiver.clone(), to.clone()],
+            &[base_reward_receiver_seeds
+                .iter()
+                .map(|seed| seed.as_slice())
+                .collect::<Vec<&[u8]>>()
+                .as_slice()],
+        )?;
+        Ok(())
     }
 }
 
@@ -1470,7 +1627,15 @@ mod tests {
         );
 
         // Fees
-        let fees = Fees::new(0, 100, 1).unwrap();
+        let mut fees: Fees = Fees::new(0, 100, 1).unwrap();
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            fees.set_base_fee_bps(*group, 0).unwrap();
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            fees.set_ncn_fee_bps(*group, 100).unwrap();
+        }
 
         // Route incoming rewards
         router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
@@ -1491,14 +1656,16 @@ mod tests {
             router
                 .ncn_fee_group_rewards(NcnFeeGroup::default())
                 .unwrap(),
-            INCOMING_REWARDS
+            INCOMING_REWARDS / 8
         );
 
         let (ballot_box, operators) = {
             let mut ballot_box = get_test_ballot_box();
 
-            for _ in 0..256 {
-                cast_test_vote(&mut ballot_box, NcnFeeGroup::default(), 200, 1, 1);
+            for _ in 0..32 {
+                for group in NcnFeeGroup::all_groups().iter() {
+                    cast_test_vote(&mut ballot_box, *group, 200, 1, 1);
+                }
             }
 
             let total_stake_weights = get_test_total_stake_weights(&ballot_box);
@@ -1510,13 +1677,101 @@ mod tests {
             (ballot_box, get_test_operators(&ballot_box))
         };
 
+        assert_eq!(operators.len(), 256);
+
         router.route_ncn_fee_group_rewards(&ballot_box, 5).unwrap();
 
         assert!(router.still_routing());
 
         router
-            .route_ncn_fee_group_rewards(&ballot_box, 1000)
+            .route_ncn_fee_group_rewards(&ballot_box, 256 * 8)
             .unwrap();
+
+        assert!(!router.still_routing());
+
+        for operator in operators.iter() {
+            let route = router.ncn_fee_group_reward_route(operator).unwrap();
+
+            let mut rewards = 0;
+            for group in NcnFeeGroup::all_groups().iter() {
+                rewards += route.rewards(*group).unwrap();
+            }
+
+            assert_eq!(rewards, 1000);
+        }
+    }
+
+    #[test]
+    fn test_route_with_0_iterations() {
+        const INCOMING_REWARDS: u64 = 256_000;
+
+        let mut router = BaseRewardRouter::new(
+            &Pubkey::new_unique(), // ncn
+            1,                     // ncn_epoch
+            1,                     // bump
+            100,                   // slot_created
+        );
+
+        // Fees
+        let mut fees: Fees = Fees::new(0, 100, 1).unwrap();
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            fees.set_base_fee_bps(*group, 0).unwrap();
+        }
+
+        for group in NcnFeeGroup::all_groups().iter() {
+            fees.set_ncn_fee_bps(*group, 100).unwrap();
+        }
+
+        // Route incoming rewards
+        router.route_incoming_rewards(0, INCOMING_REWARDS).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), INCOMING_REWARDS);
+
+        router.route_reward_pool(&fees).unwrap();
+
+        assert_eq!(router.total_rewards(), INCOMING_REWARDS);
+        assert_eq!(router.reward_pool(), 0);
+
+        for group in BaseFeeGroup::all_groups().iter() {
+            assert_eq!(router.base_fee_group_reward(*group).unwrap(), 0);
+        }
+
+        assert_eq!(
+            router
+                .ncn_fee_group_rewards(NcnFeeGroup::default())
+                .unwrap(),
+            INCOMING_REWARDS / 8
+        );
+
+        let (ballot_box, operators) = {
+            let mut ballot_box = get_test_ballot_box();
+
+            for _ in 0..32 {
+                for group in NcnFeeGroup::all_groups().iter() {
+                    cast_test_vote(&mut ballot_box, *group, 200, 1, 1);
+                }
+            }
+
+            let total_stake_weights = get_test_total_stake_weights(&ballot_box);
+
+            ballot_box
+                .tally_votes(total_stake_weights.stake_weight(), TEST_CURRENT_SLOT)
+                .unwrap();
+
+            (ballot_box, get_test_operators(&ballot_box))
+        };
+
+        assert_eq!(operators.len(), 256);
+
+        router.route_ncn_fee_group_rewards(&ballot_box, 0).unwrap();
+
+        assert!(router.still_routing());
+
+        for _ in 0..256 * 8 {
+            router.route_ncn_fee_group_rewards(&ballot_box, 0).unwrap();
+        }
 
         assert!(!router.still_routing());
 

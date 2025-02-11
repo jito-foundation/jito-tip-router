@@ -1,14 +1,13 @@
 use jito_bytemuck::{AccountDeserialize, Discriminator};
-use jito_jsm_core::{
-    loader::{load_signer, load_system_program},
-    realloc,
-};
+use jito_jsm_core::loader::load_system_program;
+use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
-    ballot_box::BallotBox, config::Config as NcnConfig, utils::get_new_size,
+    account_payer::AccountPayer, ballot_box::BallotBox, config::Config as NcnConfig,
+    epoch_state::EpochState, utils::get_new_size,
 };
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
 };
 
 /// Reallocates the ballot box account to its full size.
@@ -18,13 +17,15 @@ pub fn process_realloc_ballot_box(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ballot_box, ncn, payer, system_program] = accounts else {
+    let [epoch_state, ncn_config, ballot_box, ncn, account_payer, system_program] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
     load_system_program(system_program)?;
-    load_signer(payer, false)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, false)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
     let (ballot_box_pda, ballot_box_bump, _) =
         BallotBox::find_program_address(program_id, ncn.key, epoch);
@@ -41,7 +42,8 @@ pub fn process_realloc_ballot_box(
             ballot_box.data_len(),
             new_size
         );
-        realloc(ballot_box, new_size, payer, &Rent::get()?)?;
+
+        AccountPayer::pay_and_realloc(program_id, ncn.key, account_payer, ballot_box, new_size)?;
     }
 
     let should_initialize = ballot_box.data_len() >= BallotBox::SIZE
@@ -52,6 +54,14 @@ pub fn process_realloc_ballot_box(
         ballot_box_data[0] = BallotBox::DISCRIMINATOR;
         let ballot_box_account = BallotBox::try_from_slice_unchecked_mut(&mut ballot_box_data)?;
         ballot_box_account.initialize(ncn.key, epoch, ballot_box_bump, Clock::get()?.slot);
+
+        // Update Epoch State
+        {
+            let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+            let epoch_state_account =
+                EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+            epoch_state_account.update_realloc_ballot_box();
+        }
     }
 
     Ok(())

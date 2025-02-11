@@ -36,7 +36,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ADMIN_SET_WEIGHT_DISCRIMINATOR = 29;
+export const ADMIN_SET_WEIGHT_DISCRIMINATOR = 32;
 
 export function getAdminSetWeightDiscriminatorBytes() {
   return getU8Encoder().encode(ADMIN_SET_WEIGHT_DISCRIMINATOR);
@@ -44,15 +44,18 @@ export function getAdminSetWeightDiscriminatorBytes() {
 
 export type AdminSetWeightInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountWeightTableAdmin extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? WritableAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountNcn extends string ? ReadonlyAccount<TAccountNcn> : TAccountNcn,
       TAccountWeightTable extends string
         ? WritableAccount<TAccountWeightTable>
@@ -61,9 +64,6 @@ export type AdminSetWeightInstruction<
         ? ReadonlySignerAccount<TAccountWeightTableAdmin> &
             IAccountSignerMeta<TAccountWeightTableAdmin>
         : TAccountWeightTableAdmin,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -113,40 +113,40 @@ export function getAdminSetWeightInstructionDataCodec(): Codec<
 }
 
 export type AdminSetWeightInput<
+  TAccountEpochState extends string = string,
   TAccountNcn extends string = string,
   TAccountWeightTable extends string = string,
   TAccountWeightTableAdmin extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   ncn: Address<TAccountNcn>;
   weightTable: Address<TAccountWeightTable>;
   weightTableAdmin: TransactionSigner<TAccountWeightTableAdmin>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   stMint: AdminSetWeightInstructionDataArgs['stMint'];
   weight: AdminSetWeightInstructionDataArgs['weight'];
   epoch: AdminSetWeightInstructionDataArgs['epoch'];
 };
 
 export function getAdminSetWeightInstruction<
+  TAccountEpochState extends string,
   TAccountNcn extends string,
   TAccountWeightTable extends string,
   TAccountWeightTableAdmin extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: AdminSetWeightInput<
+    TAccountEpochState,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountWeightTableAdmin,
-    TAccountRestakingProgram
+    TAccountWeightTableAdmin
   >,
   config?: { programAddress?: TProgramAddress }
 ): AdminSetWeightInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountNcn,
   TAccountWeightTable,
-  TAccountWeightTableAdmin,
-  TAccountRestakingProgram
+  TAccountWeightTableAdmin
 > {
   // Program address.
   const programAddress =
@@ -154,14 +154,11 @@ export function getAdminSetWeightInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     weightTable: { value: input.weightTable ?? null, isWritable: true },
     weightTableAdmin: {
       value: input.weightTableAdmin ?? null,
-      isWritable: false,
-    },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
       isWritable: false,
     },
   };
@@ -176,10 +173,10 @@ export function getAdminSetWeightInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.weightTableAdmin),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getAdminSetWeightInstructionDataEncoder().encode(
@@ -187,10 +184,10 @@ export function getAdminSetWeightInstruction<
     ),
   } as AdminSetWeightInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountNcn,
     TAccountWeightTable,
-    TAccountWeightTableAdmin,
-    TAccountRestakingProgram
+    TAccountWeightTableAdmin
   >;
 
   return instruction;
@@ -202,10 +199,10 @@ export type ParsedAdminSetWeightInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    ncn: TAccountMetas[0];
-    weightTable: TAccountMetas[1];
-    weightTableAdmin: TAccountMetas[2];
-    restakingProgram: TAccountMetas[3];
+    epochState: TAccountMetas[0];
+    ncn: TAccountMetas[1];
+    weightTable: TAccountMetas[2];
+    weightTableAdmin: TAccountMetas[3];
   };
   data: AdminSetWeightInstructionData;
 };
@@ -231,10 +228,10 @@ export function parseAdminSetWeightInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       ncn: getNextAccount(),
       weightTable: getNextAccount(),
       weightTableAdmin: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getAdminSetWeightInstructionDataDecoder().decode(instruction.data),
   };

@@ -6,13 +6,17 @@ use std::{
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
 use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
+    account_payer::AccountPayer,
+    ballot_box::BallotBox,
     base_fee_group::BaseFeeGroup,
-    base_reward_router::BaseRewardReceiver,
+    base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     constants::{JITOSOL_MINT, JTO_SOL_FEED},
+    epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
-    ncn_reward_router::NcnRewardReceiver,
+    ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
+    weight_table::WeightTable,
 };
-use jito_vault_core::vault_ncn_ticket::VaultNcnTicket;
 use solana_program::{
     clock::Clock, native_token::sol_to_lamports, program_pack::Pack, pubkey::Pubkey,
     system_instruction::transfer,
@@ -20,6 +24,7 @@ use solana_program::{
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
     account::Account,
+    clock::DEFAULT_SLOTS_PER_EPOCH,
     commitment_config::CommitmentLevel,
     epoch_schedule::EpochSchedule,
     native_token::lamports_to_sol,
@@ -47,9 +52,7 @@ pub struct TestNcn {
     pub vaults: Vec<VaultRoot>,
 }
 
-//TODO implement for more fine-grained relationship control
 #[allow(dead_code)]
-
 pub struct TestNcnNode {
     pub ncn_root: NcnRoot,
     pub operator_root: OperatorRoot,
@@ -189,6 +192,22 @@ impl TestBuilder {
         Ok(())
     }
 
+    pub async fn warp_epoch_incremental(
+        &mut self,
+        incremental_epochs: u64,
+    ) -> Result<(), BanksClientError> {
+        let clock: Clock = self.context.banks_client.get_sysvar().await?;
+        self.context
+            .warp_to_slot(
+                clock
+                    .slot
+                    .checked_add(DEFAULT_SLOTS_PER_EPOCH * incremental_epochs)
+                    .unwrap(),
+            )
+            .map_err(|_| BanksClientError::ClientError("failed to warp slot"))?;
+        Ok(())
+    }
+
     pub async fn set_account(&mut self, address: Pubkey, account: Account) {
         self.context
             .borrow_mut()
@@ -280,6 +299,78 @@ impl TestBuilder {
     // 1. Setup NCN
     pub async fn create_test_ncn(&mut self) -> TestResult<TestNcn> {
         let mut restaking_program_client = self.restaking_program_client();
+
+        let mut vault_program_client = self.vault_program_client();
+
+        let mut tip_router_client = self.tip_router_client();
+
+        vault_program_client.do_initialize_config().await?;
+
+        restaking_program_client.do_initialize_config().await?;
+
+        let ncn_root = restaking_program_client
+            .do_initialize_ncn(Some(self.context.payer.insecure_clone()))
+            .await?;
+
+        tip_router_client.setup_tip_router(&ncn_root).await?;
+
+        tip_router_client
+            .do_set_config_fees(
+                Some(300),
+                None,
+                Some(self.context.payer.pubkey()),
+                Some(270),
+                None,
+                Some(15),
+                &ncn_root,
+            )
+            .await?;
+
+        Ok(TestNcn {
+            ncn_root: ncn_root.clone(),
+            operators: vec![],
+            vaults: vec![],
+        })
+    }
+
+    // 1a. Setup Just NCN
+    pub async fn create_just_test_ncn(&mut self) -> TestResult<TestNcn> {
+        let mut restaking_program_client = self.restaking_program_client();
+
+        let mut tip_router_client = self.tip_router_client();
+
+        let ncn_root = restaking_program_client
+            .do_initialize_ncn(Some(self.context.payer.insecure_clone()))
+            .await?;
+
+        tip_router_client.setup_tip_router(&ncn_root).await?;
+
+        tip_router_client
+            .do_set_config_fees(
+                Some(300),
+                None,
+                Some(self.context.payer.pubkey()),
+                Some(270),
+                None,
+                Some(15),
+                &ncn_root,
+            )
+            .await?;
+
+        Ok(TestNcn {
+            ncn_root: ncn_root.clone(),
+            operators: vec![],
+            vaults: vec![],
+        })
+    }
+
+    // 1a.
+    pub async fn create_custom_test_ncn(
+        &mut self,
+        base_fee_bps: u16,
+        ncn_fee_bps: u16,
+    ) -> TestResult<TestNcn> {
+        let mut restaking_program_client = self.restaking_program_client();
         let mut vault_program_client = self.vault_program_client();
         let mut tip_router_client = self.tip_router_client();
 
@@ -296,9 +387,9 @@ impl TestBuilder {
                 Some(300),
                 None,
                 Some(self.context.payer.pubkey()),
-                Some(270),
+                Some(base_fee_bps),
                 None,
-                Some(15),
+                Some(ncn_fee_bps),
                 &ncn_root,
             )
             .await?;
@@ -350,6 +441,7 @@ impl TestBuilder {
         &mut self,
         test_ncn: &mut TestNcn,
         vault_count: usize,
+        token_mint: Option<Keypair>,
     ) -> TestResult<()> {
         let mut vault_program_client = self.vault_program_client();
         let mut restaking_program_client = self.restaking_program_client();
@@ -357,9 +449,22 @@ impl TestBuilder {
         const DEPOSIT_FEE_BPS: u16 = 0;
         const WITHDRAWAL_FEE_BPS: u16 = 0;
         const REWARD_FEE_BPS: u16 = 0;
-        const MINT_AMOUNT: u64 = 1_000_000;
+        let mint_amount: u64 = sol_to_lamports(100_000_000.0);
+
+        let should_generate = token_mint.is_none();
+        let pass_through = if token_mint.is_some() {
+            token_mint.unwrap()
+        } else {
+            Keypair::new()
+        };
 
         for _ in 0..vault_count {
+            let pass_through = if should_generate {
+                Keypair::new()
+            } else {
+                pass_through.insecure_clone()
+            };
+
             let vault_root = vault_program_client
                 .do_initialize_vault(
                     DEPOSIT_FEE_BPS,
@@ -367,6 +472,7 @@ impl TestBuilder {
                     REWARD_FEE_BPS,
                     9,
                     &self.context.payer.pubkey(),
+                    Some(pass_through),
                 )
                 .await?;
 
@@ -406,10 +512,10 @@ impl TestBuilder {
             let depositor_keypair = self.context.payer.insecure_clone();
             let depositor = depositor_keypair.pubkey();
             vault_program_client
-                .configure_depositor(&vault_root, &depositor, MINT_AMOUNT)
+                .configure_depositor(&vault_root, &depositor, mint_amount)
                 .await?;
             vault_program_client
-                .do_mint_to(&vault_root, &depositor_keypair, MINT_AMOUNT, MINT_AMOUNT)
+                .do_mint_to(&vault_root, &depositor_keypair, mint_amount, mint_amount)
                 .await
                 .unwrap();
 
@@ -475,9 +581,6 @@ impl TestBuilder {
 
             let st_mint = vault_client.get_vault(&vault).await?.supported_mint;
 
-            let vault_ncn_ticket =
-                VaultNcnTicket::find_program_address(&jito_vault_program::id(), &vault, &ncn).0;
-
             let ncn_vault_ticket =
                 NcnVaultTicket::find_program_address(&jito_restaking_program::id(), &ncn, &vault).0;
 
@@ -493,7 +596,7 @@ impl TestBuilder {
                 .await?;
 
             tip_router_client
-                .do_register_vault(ncn, vault, vault_ncn_ticket, ncn_vault_ticket)
+                .do_register_vault(ncn, vault, ncn_vault_ticket)
                 .await?;
         }
 
@@ -510,12 +613,49 @@ impl TestBuilder {
         let mut test_ncn = self.create_test_ncn().await?;
         self.add_operators_to_test_ncn(&mut test_ncn, operator_count, operator_fees_bps)
             .await?;
-        self.add_vaults_to_test_ncn(&mut test_ncn, vault_count)
+        self.add_vaults_to_test_ncn(&mut test_ncn, vault_count, None)
             .await?;
         self.add_delegation_in_test_ncn(&test_ncn, 100).await?;
         self.add_vault_registry_to_test_ncn(&test_ncn).await?;
 
         Ok(test_ncn)
+    }
+
+    pub async fn create_custom_initial_test_ncn(
+        &mut self,
+        operator_count: usize,
+        vault_count: usize,
+        operator_fees_bps: u16,
+        base_fee_bps: u16,
+        ncn_fee_bps: u16,
+    ) -> TestResult<TestNcn> {
+        let mut test_ncn = self
+            .create_custom_test_ncn(base_fee_bps, ncn_fee_bps)
+            .await?;
+        self.add_operators_to_test_ncn(&mut test_ncn, operator_count, Some(operator_fees_bps))
+            .await?;
+        self.add_vaults_to_test_ncn(&mut test_ncn, vault_count, None)
+            .await?;
+        self.add_delegation_in_test_ncn(&test_ncn, 100).await?;
+        self.add_vault_registry_to_test_ncn(&test_ncn).await?;
+
+        Ok(test_ncn)
+    }
+
+    // 6-1. Admin Set weights
+    pub async fn add_epoch_state_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+
+        // Not sure if this is needed
+        self.warp_slot_incremental(1000).await?;
+
+        let clock = self.clock().await;
+        let epoch = clock.epoch;
+        tip_router_client
+            .do_full_initialize_epoch_state(test_ncn.ncn_root.ncn_pubkey, epoch)
+            .await?;
+
+        Ok(())
     }
 
     // 6a. Admin Set weights
@@ -524,9 +664,6 @@ impl TestBuilder {
         let mut vault_client = self.vault_program_client();
 
         const WEIGHT: u128 = 100;
-
-        // Not sure if this is needed
-        self.warp_slot_incremental(1000).await?;
 
         let clock = self.clock().await;
         let epoch = clock.epoch;
@@ -553,7 +690,6 @@ impl TestBuilder {
         test_ncn: &TestNcn,
     ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
-        let mut vault_client = self.vault_program_client();
 
         // Not sure if this is needed
         self.warp_slot_incremental(1000).await?;
@@ -566,13 +702,16 @@ impl TestBuilder {
             .do_full_initialize_weight_table(ncn, epoch)
             .await?;
 
-        for vault_root in test_ncn.vaults.iter() {
-            let vault = vault_client.get_vault(&vault_root.vault_pubkey).await?;
+        let vault_registry = tip_router_client.get_vault_registry(ncn).await?;
 
-            let st_mint = vault.supported_mint;
+        for entry in vault_registry.st_mint_list {
+            if entry.is_empty() {
+                continue;
+            }
 
+            let st_mint = entry.st_mint();
             tip_router_client
-                .do_switchboard_set_weight(ncn, epoch, st_mint)
+                .do_switchboard_set_weight(ncn, epoch, *st_mint)
                 .await?;
         }
 
@@ -622,15 +761,43 @@ impl TestBuilder {
         test_ncn: &TestNcn,
     ) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
+        let mut vault_program_client = self.vault_program_client();
 
         let clock = self.clock().await;
+        let slot = clock.slot;
         let epoch = clock.epoch;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
 
+        let operators_for_update = test_ncn
+            .operators
+            .iter()
+            .map(|operator_root| operator_root.operator_pubkey)
+            .collect::<Vec<Pubkey>>();
+
         for operator_root in test_ncn.operators.iter() {
             let operator = operator_root.operator_pubkey;
+
+            let operator_snapshot = tip_router_client
+                .get_operator_snapshot(operator, ncn, epoch)
+                .await?;
+
+            // If operator snapshot is finalized it means that the operator is not active.
+            if operator_snapshot.finalized() {
+                continue;
+            }
+
             for vault_root in test_ncn.vaults.iter() {
                 let vault = vault_root.vault_pubkey;
+
+                let vault_is_update_needed = vault_program_client
+                    .get_vault_is_update_needed(&vault, slot)
+                    .await?;
+
+                if vault_is_update_needed {
+                    vault_program_client
+                        .do_full_vault_update(&vault, &operators_for_update)
+                        .await?;
+                }
 
                 tip_router_client
                     .do_snapshot_vault_operator_delegation(vault, operator, ncn, epoch)
@@ -643,6 +810,7 @@ impl TestBuilder {
 
     // Intermission 2 - all snapshots are taken
     pub async fn snapshot_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+        self.add_epoch_state_for_test_ncn(test_ncn).await?;
         self.add_admin_weights_for_test_ncn(test_ncn).await?;
         self.add_epoch_snapshot_to_test_ncn(test_ncn).await?;
         self.add_operator_snapshots_to_test_ncn(test_ncn).await?;
@@ -703,7 +871,7 @@ impl TestBuilder {
     }
 
     // 12 - Create Routers
-    pub async fn add_routers_for_tests_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
+    pub async fn add_routers_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
 
         let ncn: Pubkey = test_ncn.ncn_root.ncn_pubkey;
@@ -739,17 +907,29 @@ impl TestBuilder {
         let ncn = test_ncn.ncn_root.ncn_pubkey;
         let epoch = self.clock().await.epoch;
 
+        let valid_slots_after_consensus = {
+            let config = tip_router_client.get_ncn_config(ncn).await?;
+            config.valid_slots_after_consensus()
+        };
+
+        self.warp_slot_incremental(valid_slots_after_consensus + 1)
+            .await?;
+
         let base_reward_receiver =
             BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let sol_rewards = lamports_to_sol(rewards);
 
         // send rewards to the base reward router
+        println!("Airdropping {} SOL to base reward receiver", sol_rewards);
         tip_router_client
             .airdrop(&base_reward_receiver, sol_rewards)
             .await?;
 
         // route rewards
+        println!("Route");
+        tip_router_client.do_route_base_rewards(ncn, epoch).await?;
+        // Should be able to route twice
         tip_router_client.do_route_base_rewards(ncn, epoch).await?;
 
         let base_reward_router = tip_router_client.get_base_reward_router(ncn, epoch).await?;
@@ -761,7 +941,7 @@ impl TestBuilder {
             if rewards == 0 {
                 continue;
             }
-
+            println!("Distribute Base {}", rewards);
             tip_router_client
                 .do_distribute_base_rewards(*group, ncn, epoch, pool_root)
                 .await?;
@@ -781,24 +961,15 @@ impl TestBuilder {
                         continue;
                     }
 
-                    let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
-                        &jito_tip_router_program::id(),
-                        *group,
-                        &operator,
-                        &ncn,
-                        epoch,
-                    );
-                    let sol_rewards = lamports_to_sol(rewards);
-                    tip_router_client
-                        .airdrop(&ncn_reward_receiver, sol_rewards)
-                        .await?;
-
+                    println!("Distribute Ncn Reward {}", rewards);
                     tip_router_client
                         .do_distribute_base_ncn_reward_route(*group, operator, ncn, epoch)
                         .await?;
                 }
             }
         }
+
+        println!("Done");
 
         Ok(())
     }
@@ -818,6 +989,10 @@ impl TestBuilder {
             let operator = operator_root.operator_pubkey;
 
             for group in NcnFeeGroup::all_groups().iter() {
+                tip_router_client
+                    .do_route_ncn_rewards(*group, ncn, operator, epoch)
+                    .await?;
+                // Should be able to route twice
                 tip_router_client
                     .do_route_ncn_rewards(*group, ncn, operator, epoch)
                     .await?;
@@ -866,7 +1041,7 @@ impl TestBuilder {
     ) -> TestResult<()> {
         let mut stake_pool_client = self.stake_pool_client();
 
-        self.add_routers_for_tests_ncn(test_ncn).await?;
+        self.add_routers_for_test_ncn(test_ncn).await?;
 
         stake_pool_client
             .update_stake_pool_balance(pool_root)
@@ -876,6 +1051,281 @@ impl TestBuilder {
             .await?;
         self.route_in_ncn_rewards_for_test_ncn(test_ncn, pool_root)
             .await?;
+
+        Ok(())
+    }
+
+    pub async fn close_epoch_accounts_for_test_ncn(
+        &mut self,
+        test_ncn: &TestNcn,
+    ) -> TestResult<()> {
+        let mut tip_router_client = self.tip_router_client();
+
+        const EXTRA_SOL_TO_AIRDROP: f64 = 0.25;
+
+        let epoch_to_close = self.clock().await.epoch;
+        let ncn: Pubkey = test_ncn.ncn_root.ncn_pubkey;
+
+        let config_account = tip_router_client.get_ncn_config(ncn).await?;
+        let dao_wallet = *config_account
+            .fee_config
+            .base_fee_wallet(BaseFeeGroup::dao())
+            .expect("No DAO wallet ( do_close_epoch_account )");
+
+        let lamports_per_signature: u64 = if dao_wallet.eq(&self.context.payer.pubkey()) {
+            5000
+        } else {
+            0
+        };
+
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
+        let rent = self.context.banks_client.get_rent().await?;
+
+        // Wait until we can close the accounts
+        {
+            let epochs_after_consensus_before_close =
+                config_account.epochs_after_consensus_before_close();
+
+            self.warp_epoch_incremental(epochs_after_consensus_before_close + 1)
+                .await?;
+        }
+
+        // Close Accounts in reverse order of creation
+
+        // NCN Reward Routers
+        for operator_root in test_ncn.operators.iter() {
+            let operator = operator_root.operator_pubkey;
+            for group in NcnFeeGroup::all_groups().iter() {
+                let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
+                    &jito_tip_router_program::id(),
+                    *group,
+                    &operator,
+                    &ncn,
+                    epoch_to_close,
+                );
+
+                let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+                    &jito_tip_router_program::id(),
+                    *group,
+                    &operator,
+                    &ncn,
+                    epoch_to_close,
+                );
+
+                tip_router_client
+                    .airdrop(&ncn_reward_receiver, EXTRA_SOL_TO_AIRDROP)
+                    .await?;
+
+                let dao_wallet_balance_before = {
+                    let account = self.get_account(&dao_wallet).await?;
+                    account.unwrap().lamports
+                };
+
+                let account_payer_balance_before = {
+                    let account = self.get_account(&account_payer).await?;
+                    account.unwrap().lamports
+                };
+
+                tip_router_client
+                    .do_close_epoch_account(
+                        ncn,
+                        epoch_to_close,
+                        ncn_reward_router,
+                        Some(ncn_reward_receiver),
+                    )
+                    .await?;
+
+                let dao_wallet_balance_after = {
+                    let account = self.get_account(&dao_wallet).await?;
+                    account.unwrap().lamports
+                };
+
+                let account_payer_balance_after = {
+                    let account = self.get_account(&account_payer).await?;
+                    account.unwrap().lamports
+                };
+
+                let router_rent = rent.minimum_balance(NcnRewardRouter::SIZE);
+                let receiver_rent = rent.minimum_balance(0);
+                assert_eq!(
+                    account_payer_balance_before + router_rent + receiver_rent,
+                    account_payer_balance_after
+                );
+
+                // DAO wallet is also the payer wallet
+                assert_eq!(
+                    dao_wallet_balance_before + sol_to_lamports(EXTRA_SOL_TO_AIRDROP)
+                        - lamports_per_signature,
+                    dao_wallet_balance_after
+                );
+
+                let result = self.get_account(&ncn_reward_router).await?;
+                assert!(result.is_none());
+
+                let result = self.get_account(&ncn_reward_receiver).await?;
+                assert!(result.is_none());
+            }
+        }
+
+        // Base Reward Router
+        {
+            let (base_reward_router, _, _) = BaseRewardRouter::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            let (base_reward_receiver, _, _) = BaseRewardReceiver::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .airdrop(&base_reward_receiver, EXTRA_SOL_TO_AIRDROP)
+                .await?;
+
+            let dao_wallet_balance_before = {
+                let account = self.get_account(&dao_wallet).await?;
+                account.unwrap().lamports
+            };
+
+            let account_payer_balance_before = {
+                let account = self.get_account(&account_payer).await?;
+                account.unwrap().lamports
+            };
+
+            tip_router_client
+                .do_close_epoch_account(
+                    ncn,
+                    epoch_to_close,
+                    base_reward_router,
+                    Some(base_reward_receiver),
+                )
+                .await?;
+
+            let dao_wallet_balance_after = {
+                let account = self.get_account(&dao_wallet).await?;
+                account.unwrap().lamports
+            };
+
+            let account_payer_balance_after = {
+                let account = self.get_account(&account_payer).await?;
+                account.unwrap().lamports
+            };
+
+            let router_rent = rent.minimum_balance(BaseRewardRouter::SIZE);
+            let receiver_rent = rent.minimum_balance(0);
+            assert_eq!(
+                account_payer_balance_before + router_rent + receiver_rent,
+                account_payer_balance_after
+            );
+
+            // DAO wallet is also the payer wallet
+            assert_eq!(
+                dao_wallet_balance_before + sol_to_lamports(EXTRA_SOL_TO_AIRDROP)
+                    - lamports_per_signature,
+                dao_wallet_balance_after
+            );
+
+            let result = self.get_account(&base_reward_router).await?;
+            assert!(result.is_none());
+
+            let result = self.get_account(&base_reward_receiver).await?;
+            assert!(result.is_none());
+        }
+
+        // Ballot Box
+        {
+            let (ballot_box, _, _) = BallotBox::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, ballot_box, None)
+                .await?;
+
+            let result = self.get_account(&ballot_box).await?;
+            assert!(result.is_none());
+        }
+
+        // Operator Snapshots
+        for operator_root in test_ncn.operators.iter() {
+            let operator = operator_root.operator_pubkey;
+
+            let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+                &jito_tip_router_program::id(),
+                &operator,
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, operator_snapshot, None)
+                .await?;
+
+            let result = self.get_account(&operator_snapshot).await?;
+            assert!(result.is_none());
+        }
+
+        // Epoch Snapshot
+        {
+            let (epoch_snapshot, _, _) = EpochSnapshot::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, epoch_snapshot, None)
+                .await?;
+
+            let result = self.get_account(&epoch_snapshot).await?;
+            assert!(result.is_none());
+        }
+
+        // Weight Table
+        {
+            let (weight_table, _, _) = WeightTable::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, weight_table, None)
+                .await?;
+
+            let result = self.get_account(&weight_table).await?;
+            assert!(result.is_none());
+        }
+
+        // Epoch State
+        {
+            let (epoch_state, _, _) = EpochState::find_program_address(
+                &jito_tip_router_program::id(),
+                &ncn,
+                epoch_to_close,
+            );
+
+            tip_router_client
+                .do_close_epoch_account(ncn, epoch_to_close, epoch_state, None)
+                .await?;
+
+            let result = self.get_account(&epoch_state).await?;
+            assert!(result.is_none());
+        }
+
+        {
+            let epoch_marker = tip_router_client
+                .get_epoch_marker(ncn, epoch_to_close)
+                .await?;
+
+            assert!(epoch_marker.slot_closed() > 0);
+        }
 
         Ok(())
     }

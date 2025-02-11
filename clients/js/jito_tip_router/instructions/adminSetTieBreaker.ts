@@ -37,7 +37,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ADMIN_SET_TIE_BREAKER_DISCRIMINATOR = 28;
+export const ADMIN_SET_TIE_BREAKER_DISCRIMINATOR = 31;
 
 export function getAdminSetTieBreakerDiscriminatorBytes() {
   return getU8Encoder().encode(ADMIN_SET_TIE_BREAKER_DISCRIMINATOR);
@@ -45,16 +45,19 @@ export function getAdminSetTieBreakerDiscriminatorBytes() {
 
 export type AdminSetTieBreakerInstruction<
   TProgram extends string = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
+  TAccountEpochState extends string | IAccountMeta<string> = string,
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountBallotBox extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountTieBreakerAdmin extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountEpochState extends string
+        ? WritableAccount<TAccountEpochState>
+        : TAccountEpochState,
       TAccountConfig extends string
         ? ReadonlyAccount<TAccountConfig>
         : TAccountConfig,
@@ -66,9 +69,6 @@ export type AdminSetTieBreakerInstruction<
         ? ReadonlySignerAccount<TAccountTieBreakerAdmin> &
             IAccountSignerMeta<TAccountTieBreakerAdmin>
         : TAccountTieBreakerAdmin,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -117,44 +117,44 @@ export function getAdminSetTieBreakerInstructionDataCodec(): Codec<
 }
 
 export type AdminSetTieBreakerInput<
+  TAccountEpochState extends string = string,
   TAccountConfig extends string = string,
   TAccountBallotBox extends string = string,
   TAccountNcn extends string = string,
   TAccountTieBreakerAdmin extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
+  epochState: Address<TAccountEpochState>;
   config: Address<TAccountConfig>;
   ballotBox: Address<TAccountBallotBox>;
   ncn: Address<TAccountNcn>;
   tieBreakerAdmin: TransactionSigner<TAccountTieBreakerAdmin>;
-  restakingProgram: Address<TAccountRestakingProgram>;
   metaMerkleRoot: AdminSetTieBreakerInstructionDataArgs['metaMerkleRoot'];
   epoch: AdminSetTieBreakerInstructionDataArgs['epoch'];
 };
 
 export function getAdminSetTieBreakerInstruction<
+  TAccountEpochState extends string,
   TAccountConfig extends string,
   TAccountBallotBox extends string,
   TAccountNcn extends string,
   TAccountTieBreakerAdmin extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: AdminSetTieBreakerInput<
+    TAccountEpochState,
     TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
-    TAccountTieBreakerAdmin,
-    TAccountRestakingProgram
+    TAccountTieBreakerAdmin
   >,
   config?: { programAddress?: TProgramAddress }
 ): AdminSetTieBreakerInstruction<
   TProgramAddress,
+  TAccountEpochState,
   TAccountConfig,
   TAccountBallotBox,
   TAccountNcn,
-  TAccountTieBreakerAdmin,
-  TAccountRestakingProgram
+  TAccountTieBreakerAdmin
 > {
   // Program address.
   const programAddress =
@@ -162,15 +162,12 @@ export function getAdminSetTieBreakerInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    epochState: { value: input.epochState ?? null, isWritable: true },
     config: { value: input.config ?? null, isWritable: false },
     ballotBox: { value: input.ballotBox ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     tieBreakerAdmin: {
       value: input.tieBreakerAdmin ?? null,
-      isWritable: false,
-    },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
       isWritable: false,
     },
   };
@@ -185,11 +182,11 @@ export function getAdminSetTieBreakerInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.epochState),
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ballotBox),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.tieBreakerAdmin),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getAdminSetTieBreakerInstructionDataEncoder().encode(
@@ -197,11 +194,11 @@ export function getAdminSetTieBreakerInstruction<
     ),
   } as AdminSetTieBreakerInstruction<
     TProgramAddress,
+    TAccountEpochState,
     TAccountConfig,
     TAccountBallotBox,
     TAccountNcn,
-    TAccountTieBreakerAdmin,
-    TAccountRestakingProgram
+    TAccountTieBreakerAdmin
   >;
 
   return instruction;
@@ -213,11 +210,11 @@ export type ParsedAdminSetTieBreakerInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    config: TAccountMetas[0];
-    ballotBox: TAccountMetas[1];
-    ncn: TAccountMetas[2];
-    tieBreakerAdmin: TAccountMetas[3];
-    restakingProgram: TAccountMetas[4];
+    epochState: TAccountMetas[0];
+    config: TAccountMetas[1];
+    ballotBox: TAccountMetas[2];
+    ncn: TAccountMetas[3];
+    tieBreakerAdmin: TAccountMetas[4];
   };
   data: AdminSetTieBreakerInstructionData;
 };
@@ -243,11 +240,11 @@ export function parseAdminSetTieBreakerInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      epochState: getNextAccount(),
       config: getNextAccount(),
       ballotBox: getNextAccount(),
       ncn: getNextAccount(),
       tieBreakerAdmin: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getAdminSetTieBreakerInstructionDataDecoder().decode(
       instruction.data

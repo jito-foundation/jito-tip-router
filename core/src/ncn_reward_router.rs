@@ -1,4 +1,4 @@
-use core::mem::size_of;
+use core::{fmt, mem::size_of};
 
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{
@@ -8,8 +8,9 @@ use jito_bytemuck::{
 use jito_vault_core::MAX_BPS;
 use shank::{ShankAccount, ShankType};
 use solana_program::{
-    account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
-    system_program,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction, system_program,
+    sysvar::Sysvar,
 };
 use spl_math::precise_number::PreciseNumber;
 
@@ -34,6 +35,8 @@ pub struct NcnRewardRouter {
     bump: u8,
     /// The slot the router was created
     slot_created: PodU64,
+    /// The operator ncn index
+    ncn_operator_index: PodU64,
     /// The total rewards that have been routed ( in lamports )
     total_rewards: PodU64,
     /// The rewards in the reward pool ( in lamports )
@@ -67,8 +70,9 @@ impl NcnRewardRouter {
     pub fn new(
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
+        operator_ncn_index: u64,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
         bump: u8,
         slot_created: u64,
     ) -> Self {
@@ -76,9 +80,10 @@ impl NcnRewardRouter {
             ncn_fee_group,
             operator: *operator,
             ncn: *ncn,
-            epoch: PodU64::from(ncn_epoch),
+            epoch: PodU64::from(epoch),
             bump,
             slot_created: PodU64::from(slot_created),
+            ncn_operator_index: PodU64::from(operator_ncn_index),
             total_rewards: PodU64::from(0),
             reward_pool: PodU64::from(0),
             rewards_processed: PodU64::from(0),
@@ -96,7 +101,7 @@ impl NcnRewardRouter {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> Vec<Vec<u8>> {
         Vec::from_iter(
             [
@@ -104,7 +109,7 @@ impl NcnRewardRouter {
                 vec![ncn_fee_group.group],
                 operator.to_bytes().to_vec(),
                 ncn.to_bytes().to_vec(),
-                ncn_epoch.to_le_bytes().to_vec(),
+                epoch.to_le_bytes().to_vec(),
             ]
             .iter()
             .cloned(),
@@ -116,9 +121,9 @@ impl NcnRewardRouter {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(ncn_fee_group, operator, ncn, ncn_epoch);
+        let seeds = Self::seeds(ncn_fee_group, operator, ncn, epoch);
         let seeds_iter: Vec<_> = seeds.iter().map(|s| s.as_slice()).collect();
         let (pda, bump) = Pubkey::find_program_address(&seeds_iter, program_id);
         (pda, bump, seeds)
@@ -126,21 +131,43 @@ impl NcnRewardRouter {
 
     pub fn load(
         program_id: &Pubkey,
+        account: &AccountInfo,
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
-        account: &AccountInfo,
+        epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda =
-            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, ncn_epoch).0;
+            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, epoch).0;
         check_load(
             program_id,
             account,
             &expected_pda,
             Some(Self::DISCRIMINATOR),
             expect_writable,
+        )
+    }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        let account_data = account_to_close.try_borrow_data()?;
+        let account_struct = Self::try_from_slice_unchecked(&account_data)?;
+        let ncn_fee_group = account_struct.ncn_fee_group();
+        let operator = *account_struct.operator();
+
+        Self::load(
+            program_id,
+            account_to_close,
+            ncn_fee_group,
+            &operator,
+            ncn,
+            epoch,
+            true,
         )
     }
 
@@ -156,8 +183,12 @@ impl NcnRewardRouter {
         &self.ncn
     }
 
-    pub fn ncn_epoch(&self) -> u64 {
+    pub fn epoch(&self) -> u64 {
         self.epoch.into()
+    }
+
+    pub fn ncn_operator_index(&self) -> u64 {
+        self.ncn_operator_index.into()
     }
 
     pub fn slot_created(&self) -> u64 {
@@ -263,7 +294,13 @@ impl NcnRewardRouter {
             let (rewards_to_process, starting_vault_operator_delegation_index) =
                 self.resume_routing_state(rewards_to_process);
 
+            if rewards_to_process == 0 {
+                return Ok(());
+            }
+
             let mut iterations: u16 = 0;
+            // Always have at least 1 iteration
+            let max_iterations = max_iterations.max(1);
 
             for vault_operator_delegation_index in starting_vault_operator_delegation_index
                 ..operator_snapshot.vault_operator_stake_weight().len()
@@ -277,7 +314,7 @@ impl NcnRewardRouter {
                         .checked_add(1)
                         .ok_or(TipRouterError::ArithmeticOverflow)?;
 
-                    if iterations >= max_iterations {
+                    if iterations > max_iterations {
                         msg!(
                             "Reached max iterations, saving state and exiting {}/{}",
                             rewards_to_process,
@@ -455,6 +492,8 @@ impl NcnRewardRouter {
                 .ok_or(TipRouterError::ArithmeticUnderflowError)?,
         );
 
+        self.increment_rewards_processed(rewards)?;
+
         Ok(())
     }
 
@@ -500,13 +539,12 @@ impl NcnRewardRouter {
             return Ok(());
         }
 
-        self.increment_rewards_processed(rewards)?;
-
         self.operator_rewards = PodU64::from(
             self.operator_rewards()
                 .checked_add(rewards)
                 .ok_or(TipRouterError::ArithmeticOverflow)?,
         );
+
         Ok(())
     }
 
@@ -543,8 +581,6 @@ impl NcnRewardRouter {
             return Ok(());
         }
 
-        self.increment_rewards_processed(rewards)?;
-
         for vault_reward in self.vault_reward_routes.iter_mut() {
             if vault_reward.vault().eq(vault) {
                 vault_reward.increment_rewards(rewards)?;
@@ -576,7 +612,7 @@ impl NcnRewardRouter {
     }
 }
 
-/// Uninitiatilized, no-data account used to hold SOL for routing rewards to NcnRewardRouter
+/// Uninitialized, no-data account used to hold SOL for routing rewards to NcnRewardRouter
 /// Must be empty and uninitialized to be used as a payer or `transfer` instructions fail
 pub struct NcnRewardReceiver {}
 
@@ -585,14 +621,14 @@ impl NcnRewardReceiver {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> Vec<Vec<u8>> {
         vec![
             b"ncn_reward_receiver".to_vec(),
             vec![ncn_fee_group.group],
             operator.to_bytes().to_vec(),
             ncn.to_bytes().to_vec(),
-            ncn_epoch.to_le_bytes().to_vec(),
+            epoch.to_le_bytes().to_vec(),
         ]
     }
 
@@ -601,9 +637,9 @@ impl NcnRewardReceiver {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let seeds = Self::seeds(ncn_fee_group, operator, ncn, ncn_epoch);
+        let seeds = Self::seeds(ncn_fee_group, operator, ncn, epoch);
         let (address, bump) = Pubkey::find_program_address(
             &seeds.iter().map(|s| s.as_slice()).collect::<Vec<_>>(),
             program_id,
@@ -617,12 +653,12 @@ impl NcnRewardReceiver {
         ncn_fee_group: NcnFeeGroup,
         operator: &Pubkey,
         ncn: &Pubkey,
-        ncn_epoch: u64,
+        epoch: u64,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let system_program_id = system_program::id();
         let expected_pda =
-            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, ncn_epoch).0;
+            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, epoch).0;
         check_load(
             &system_program_id,
             account,
@@ -630,6 +666,79 @@ impl NcnRewardReceiver {
             None,
             expect_writable,
         )
+    }
+
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn close<'a, 'info>(
+        program_id: &Pubkey,
+        ncn_fee_group: NcnFeeGroup,
+        operator: &Pubkey,
+        ncn: &Pubkey,
+        epoch: u64,
+        ncn_reward_receiver: &'a AccountInfo<'info>,
+        dao_wallet: &'a AccountInfo<'info>,
+        account_payer: &'a AccountInfo<'info>,
+    ) -> ProgramResult {
+        let min_rent = Rent::get()?.minimum_balance(0);
+
+        let delta_lamports = ncn_reward_receiver.lamports().saturating_sub(min_rent);
+        if delta_lamports > 0 {
+            Self::transfer(
+                program_id,
+                ncn_fee_group,
+                operator,
+                ncn,
+                epoch,
+                ncn_reward_receiver,
+                dao_wallet,
+                delta_lamports,
+            )?;
+        }
+
+        Self::transfer(
+            program_id,
+            ncn_fee_group,
+            operator,
+            ncn,
+            epoch,
+            ncn_reward_receiver,
+            account_payer,
+            min_rent,
+        )
+    }
+
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn transfer<'a, 'info>(
+        program_id: &Pubkey,
+        ncn_fee_group: NcnFeeGroup,
+        operator: &Pubkey,
+        ncn: &Pubkey,
+        epoch: u64,
+        ncn_reward_receiver: &'a AccountInfo<'info>,
+        to: &'a AccountInfo<'info>,
+        lamports: u64,
+    ) -> ProgramResult {
+        let (ncn_reward_receiver_address, ncn_reward_receiver_bump, mut ncn_reward_receiver_seeds) =
+            Self::find_program_address(program_id, ncn_fee_group, operator, ncn, epoch);
+        ncn_reward_receiver_seeds.push(vec![ncn_reward_receiver_bump]);
+
+        if ncn_reward_receiver_address.ne(ncn_reward_receiver.key) {
+            msg!("Incorrect NCN reward receiver PDA");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        invoke_signed(
+            &system_instruction::transfer(&ncn_reward_receiver_address, to.key, lamports),
+            &[ncn_reward_receiver.clone(), to.clone()],
+            &[ncn_reward_receiver_seeds
+                .iter()
+                .map(|seed| seed.as_slice())
+                .collect::<Vec<&[u8]>>()
+                .as_slice()],
+        )?;
+        Ok(())
     }
 }
 
@@ -692,6 +801,44 @@ impl VaultRewardRoute {
     }
 }
 
+#[rustfmt::skip]
+impl fmt::Display for NcnRewardRouter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "\n\n----------- NCN Reward Router -------------")?;
+        writeln!(f, "  NCN Fee Group:                {}", self.ncn_fee_group.group)?;
+        writeln!(f, "  Operator:                     {}", self.operator)?;
+        writeln!(f, "  NCN:                          {}", self.ncn)?;
+        writeln!(f, "  Epoch:                        {}", self.epoch())?;
+        writeln!(f, "  Bump:                         {}", self.bump)?;
+        writeln!(f, "  Slot Created:                 {}", self.slot_created())?;
+        writeln!(f, "  NCN Operator Index:           {}", self.ncn_operator_index())?;
+        writeln!(f, "  Still Routing:                {}", self.still_routing())?;
+        writeln!(f, "  Total Rewards:                {}", self.total_rewards())?;
+        writeln!(f, "  Reward Pool:                  {}", self.reward_pool())?;
+        writeln!(f, "  Rewards Processed:            {}", self.rewards_processed())?;
+        writeln!(f, "  Operator Rewards:             {}", self.operator_rewards())?;
+
+        if self.still_routing() {
+            writeln!(f, "\nRouting State:")?;
+            writeln!(f, "  Last Rewards to Process:      {}", self.last_rewards_to_process())?;
+            writeln!(f, "  Last Vault Op Del Index:      {}", self.last_vault_operator_delegation_index())?;
+        }
+
+        writeln!(f, "\nVault Reward Routes:")?;
+        for route in self.vault_reward_routes().iter() {
+            if !route.is_empty() {
+                writeln!(f, "  Vault:                        {}", route.vault())?;
+                if route.has_rewards() {
+                    writeln!(f, "    Rewards:                    {}", route.rewards())?;
+                }
+            }
+        }
+
+        writeln!(f, "\n")?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use solana_program::pubkey::Pubkey;
@@ -708,7 +855,7 @@ mod tests {
     ) -> OperatorSnapshot {
         let operator = Pubkey::new_unique();
         let ncn = Pubkey::new_unique();
-        let ncn_epoch = TEST_EPOCH;
+        let epoch = TEST_EPOCH;
         let bump = 1;
         let current_slot = TEST_CURRENT_SLOT;
         let is_active = true;
@@ -718,7 +865,7 @@ mod tests {
         OperatorSnapshot::new(
             &operator,
             &ncn,
-            ncn_epoch,
+            epoch,
             bump,
             current_slot,
             is_active,
@@ -767,9 +914,10 @@ mod tests {
         let expected_total = size_of::<NcnFeeGroup>() // ncn_fee_group
             + size_of::<Pubkey>() // operator
             + size_of::<Pubkey>() // ncn
-            + size_of::<PodU64>() // ncn_epoch
+            + size_of::<PodU64>() // epoch
             + 1 // bump
             + size_of::<PodU64>() // slot_created
+            + size_of::<PodU64>() // operator_ncn_index
             + size_of::<PodU64>() // total_rewards
             + size_of::<PodU64>() // reward_pool
             + size_of::<PodU64>() // rewards_processed
@@ -787,8 +935,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -833,8 +982,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -881,8 +1031,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -929,8 +1080,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -997,8 +1149,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1067,8 +1220,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1132,8 +1286,9 @@ mod tests {
         let mut router = NcnRewardRouter::new(
             NcnFeeGroup::default(),
             &Pubkey::new_unique(), // ncn
+            0,
             &Pubkey::new_unique(), // ncn
-            TEST_EPOCH,            // ncn_epoch
+            TEST_EPOCH,            // epoch
             1,                     // bump
             TEST_CURRENT_SLOT,     // slot_created
         );
@@ -1173,6 +1328,79 @@ mod tests {
         assert_eq!(router.rewards_processed(), expected_operator_rewards);
 
         router.route_reward_pool(&operator_snapshot, 1000).unwrap();
+        for route in router
+            .vault_reward_routes()
+            .iter()
+            .filter(|route| !route.is_empty())
+        {
+            assert_eq!(route.rewards(), expected_vault_rewards);
+        }
+
+        assert_eq!(router.total_rewards(), incoming_rewards);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), incoming_rewards);
+    }
+
+    #[test]
+    fn test_route_with_0_iterations() {
+        // 64_000 / 0.9 ~= 71_111
+        let expected_vault_rewards: u64 = 1000;
+        let expected_all_vault_rewards: u64 = MAX_VAULTS as u64 * expected_vault_rewards;
+        let incoming_rewards: u64 = (expected_all_vault_rewards as f64 / 0.9).round() as u64;
+        let expected_operator_rewards: u64 = incoming_rewards - expected_all_vault_rewards;
+
+        let mut router = NcnRewardRouter::new(
+            NcnFeeGroup::default(),
+            &Pubkey::new_unique(), // ncn
+            0,
+            &Pubkey::new_unique(), // ncn
+            TEST_EPOCH,            // epoch
+            1,                     // bump
+            TEST_CURRENT_SLOT,     // slot_created
+        );
+
+        // Initial state checks
+        assert_eq!(router.total_rewards(), 0);
+        assert_eq!(router.reward_pool(), 0);
+        assert_eq!(router.rewards_processed(), 0);
+
+        // Test routing 1000 lamports
+        router.route_incoming_rewards(0, incoming_rewards).unwrap();
+
+        // Verify rewards were routed correctly
+        assert_eq!(router.total_rewards(), incoming_rewards);
+        assert_eq!(router.reward_pool(), incoming_rewards);
+        assert_eq!(router.rewards_processed(), 0);
+
+        let operator_snapshot = {
+            let operator_fee_bps = 1000; // 0%
+            let vault_operator_delegation_count = MAX_VAULTS as u64;
+            let mut operator_snapshot =
+                get_test_operator_snapshot(operator_fee_bps, vault_operator_delegation_count);
+
+            for _ in 0..vault_operator_delegation_count {
+                register_test_vault_operator_delegation(&mut operator_snapshot, 1000, 1000);
+            }
+
+            operator_snapshot
+        };
+
+        // Test routing operator rewards
+        router.route_operator_rewards(&operator_snapshot).unwrap();
+        assert_eq!(router.operator_rewards(), expected_operator_rewards);
+
+        assert_eq!(router.total_rewards(), incoming_rewards);
+        assert_eq!(router.reward_pool(), expected_all_vault_rewards);
+        assert_eq!(router.rewards_processed(), expected_operator_rewards);
+
+        router.route_reward_pool(&operator_snapshot, 0).unwrap();
+        assert!(router.still_routing());
+
+        for _ in 0..MAX_VAULTS * 2 {
+            router.route_reward_pool(&operator_snapshot, 0).unwrap();
+        }
+        assert!(!router.still_routing());
+
         for route in router
             .vault_reward_routes()
             .iter()

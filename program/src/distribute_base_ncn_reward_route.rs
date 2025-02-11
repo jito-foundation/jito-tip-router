@@ -4,6 +4,7 @@ use jito_restaking_core::{ncn::Ncn, operator::Operator};
 use jito_tip_router_core::{
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as NcnConfig,
+    epoch_state::EpochState,
     error::TipRouterError,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
@@ -20,32 +21,28 @@ pub fn process_distribute_base_ncn_reward_route(
     ncn_fee_group: u8,
     epoch: u64,
 ) -> ProgramResult {
-    let [ncn_config, ncn, operator, base_reward_router, base_reward_receiver, ncn_reward_router, ncn_reward_receiver, restaking_program, system_program] =
+    let [epoch_state, ncn_config, ncn, operator, base_reward_router, base_reward_receiver, ncn_reward_router, ncn_reward_receiver, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    Ncn::load(restaking_program.key, ncn, false)?;
-    Operator::load(restaking_program.key, operator, false)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Operator::load(&jito_restaking_program::id(), operator, false)?;
 
     let ncn_fee_group = NcnFeeGroup::try_from(ncn_fee_group)?;
 
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    BaseRewardRouter::load(program_id, ncn.key, epoch, base_reward_router, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    BaseRewardRouter::load(program_id, base_reward_router, ncn.key, epoch, true)?;
     NcnRewardRouter::load(
         program_id,
+        ncn_reward_router,
         ncn_fee_group,
         operator.key,
         ncn.key,
         epoch,
-        ncn_reward_router,
-        true,
+        false,
     )?;
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
     NcnRewardReceiver::load(
@@ -55,7 +52,7 @@ pub fn process_distribute_base_ncn_reward_route(
         operator.key,
         ncn.key,
         epoch,
-        true,
+        false,
     )?;
 
     load_system_program(system_program)?;
@@ -94,6 +91,12 @@ pub fn process_distribute_base_ncn_reward_route(
                 .collect::<Vec<&[u8]>>()
                 .as_slice()],
         )?;
+    }
+
+    {
+        let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
+        let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
+        epoch_state_account.update_distribute_base_ncn_rewards(rewards)?;
     }
 
     Ok(())

@@ -1,16 +1,18 @@
-use jito_jsm_core::{
-    create_account,
-    loader::{load_signer, load_system_account, load_system_program},
-};
+use jito_bytemuck::AccountDeserialize;
+use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::{ncn::Ncn, ncn_operator_state::NcnOperatorState, operator::Operator};
 use jito_tip_router_core::{
+    account_payer::AccountPayer,
     config::Config,
     constants::MAX_REALLOC_BYTES,
+    epoch_marker::EpochMarker,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
+    epoch_state::EpochState,
+    error::TipRouterError,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    pubkey::Pubkey,
 };
 
 /// Initializes an Operator Snapshot
@@ -19,33 +21,29 @@ pub fn process_initialize_operator_snapshot(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, payer, restaking_program, system_program] =
+    let [epoch_marker, epoch_state, config, ncn, operator, ncn_operator_state, epoch_snapshot, operator_snapshot, account_payer, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if restaking_program.key.ne(&jito_restaking_program::id()) {
-        msg!("Incorrect restaking program ID");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    Config::load(program_id, ncn.key, config, false)?;
-    Ncn::load(restaking_program.key, ncn, false)?;
-    Operator::load(restaking_program.key, operator, false)?;
+    EpochState::load_and_check_is_closing(program_id, epoch_state, ncn.key, epoch, false)?;
+    Config::load(program_id, config, ncn.key, false)?;
+    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
+    Operator::load(&jito_restaking_program::id(), operator, false)?;
     NcnOperatorState::load(
-        restaking_program.key,
+        &jito_restaking_program::id(),
         ncn_operator_state,
         ncn,
         operator,
         false,
     )?;
-    EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, true)?;
+    EpochSnapshot::load(program_id, epoch_snapshot, ncn.key, epoch, false)?;
 
     load_system_account(operator_snapshot, true)?;
     load_system_program(system_program)?;
-    //TODO check that it is not writable
-    load_signer(payer, false)?;
+    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
+    EpochMarker::check_dne(program_id, epoch_marker, ncn.key, epoch)?;
 
     let (operator_snapshot_pubkey, operator_snapshot_bump, mut operator_snapshot_seeds) =
         OperatorSnapshot::find_program_address(program_id, operator.key, ncn.key, epoch);
@@ -56,20 +54,38 @@ pub fn process_initialize_operator_snapshot(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    // Cannot create Operator snapshot if the operator index is greater than the operator count
+    {
+        let epoch_snapshot_data = epoch_snapshot.data.borrow();
+        let epoch_snapshot = EpochSnapshot::try_from_slice_unchecked(&epoch_snapshot_data)?;
+
+        let ncn_operator_state_data = ncn_operator_state.data.borrow();
+        let ncn_operator_state =
+            NcnOperatorState::try_from_slice_unchecked(&ncn_operator_state_data)?;
+
+        let operator_count = epoch_snapshot.operator_count();
+        let operator_index = ncn_operator_state.index();
+
+        if operator_index >= operator_count {
+            msg!("Operator index is out of bounds");
+            return Err(TipRouterError::OperatorIsNotInSnapshot.into());
+        }
+    }
+
     msg!(
         "Initializing Operator snapshot {} for NCN: {} at epoch: {}",
         epoch_snapshot.key,
         ncn.key,
         epoch
     );
-
-    create_account(
-        payer,
+    AccountPayer::pay_and_create_account(
+        program_id,
+        ncn.key,
+        account_payer,
         operator_snapshot,
         system_program,
         program_id,
-        &Rent::get()?,
-        MAX_REALLOC_BYTES,
+        MAX_REALLOC_BYTES as usize,
         &operator_snapshot_seeds,
     )?;
 

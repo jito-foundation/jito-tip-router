@@ -36,7 +36,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ADMIN_SET_PARAMETERS_DISCRIMINATOR = 25;
+export const ADMIN_SET_PARAMETERS_DISCRIMINATOR = 28;
 
 export function getAdminSetParametersDiscriminatorBytes() {
   return getU8Encoder().encode(ADMIN_SET_PARAMETERS_DISCRIMINATOR);
@@ -47,7 +47,6 @@ export type AdminSetParametersInstruction<
   TAccountConfig extends string | IAccountMeta<string> = string,
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountNcnAdmin extends string | IAccountMeta<string> = string,
-  TAccountRestakingProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -61,21 +60,22 @@ export type AdminSetParametersInstruction<
         ? ReadonlySignerAccount<TAccountNcnAdmin> &
             IAccountSignerMeta<TAccountNcnAdmin>
         : TAccountNcnAdmin,
-      TAccountRestakingProgram extends string
-        ? ReadonlyAccount<TAccountRestakingProgram>
-        : TAccountRestakingProgram,
       ...TRemainingAccounts,
     ]
   >;
 
 export type AdminSetParametersInstructionData = {
   discriminator: number;
+  startingValidEpoch: Option<bigint>;
   epochsBeforeStall: Option<bigint>;
+  epochsAfterConsensusBeforeClose: Option<bigint>;
   validSlotsAfterConsensus: Option<bigint>;
 };
 
 export type AdminSetParametersInstructionDataArgs = {
+  startingValidEpoch: OptionOrNullable<number | bigint>;
   epochsBeforeStall: OptionOrNullable<number | bigint>;
+  epochsAfterConsensusBeforeClose: OptionOrNullable<number | bigint>;
   validSlotsAfterConsensus: OptionOrNullable<number | bigint>;
 };
 
@@ -83,7 +83,9 @@ export function getAdminSetParametersInstructionDataEncoder(): Encoder<AdminSetP
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
+      ['startingValidEpoch', getOptionEncoder(getU64Encoder())],
       ['epochsBeforeStall', getOptionEncoder(getU64Encoder())],
+      ['epochsAfterConsensusBeforeClose', getOptionEncoder(getU64Encoder())],
       ['validSlotsAfterConsensus', getOptionEncoder(getU64Encoder())],
     ]),
     (value) => ({ ...value, discriminator: ADMIN_SET_PARAMETERS_DISCRIMINATOR })
@@ -93,7 +95,9 @@ export function getAdminSetParametersInstructionDataEncoder(): Encoder<AdminSetP
 export function getAdminSetParametersInstructionDataDecoder(): Decoder<AdminSetParametersInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
+    ['startingValidEpoch', getOptionDecoder(getU64Decoder())],
     ['epochsBeforeStall', getOptionDecoder(getU64Decoder())],
+    ['epochsAfterConsensusBeforeClose', getOptionDecoder(getU64Decoder())],
     ['validSlotsAfterConsensus', getOptionDecoder(getU64Decoder())],
   ]);
 }
@@ -112,13 +116,13 @@ export type AdminSetParametersInput<
   TAccountConfig extends string = string,
   TAccountNcn extends string = string,
   TAccountNcnAdmin extends string = string,
-  TAccountRestakingProgram extends string = string,
 > = {
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
-  restakingProgram: Address<TAccountRestakingProgram>;
+  startingValidEpoch: AdminSetParametersInstructionDataArgs['startingValidEpoch'];
   epochsBeforeStall: AdminSetParametersInstructionDataArgs['epochsBeforeStall'];
+  epochsAfterConsensusBeforeClose: AdminSetParametersInstructionDataArgs['epochsAfterConsensusBeforeClose'];
   validSlotsAfterConsensus: AdminSetParametersInstructionDataArgs['validSlotsAfterConsensus'];
 };
 
@@ -126,22 +130,15 @@ export function getAdminSetParametersInstruction<
   TAccountConfig extends string,
   TAccountNcn extends string,
   TAccountNcnAdmin extends string,
-  TAccountRestakingProgram extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
-  input: AdminSetParametersInput<
-    TAccountConfig,
-    TAccountNcn,
-    TAccountNcnAdmin,
-    TAccountRestakingProgram
-  >,
+  input: AdminSetParametersInput<TAccountConfig, TAccountNcn, TAccountNcnAdmin>,
   config?: { programAddress?: TProgramAddress }
 ): AdminSetParametersInstruction<
   TProgramAddress,
   TAccountConfig,
   TAccountNcn,
-  TAccountNcnAdmin,
-  TAccountRestakingProgram
+  TAccountNcnAdmin
 > {
   // Program address.
   const programAddress =
@@ -152,10 +149,6 @@ export function getAdminSetParametersInstruction<
     config: { value: input.config ?? null, isWritable: true },
     ncn: { value: input.ncn ?? null, isWritable: false },
     ncnAdmin: { value: input.ncnAdmin ?? null, isWritable: false },
-    restakingProgram: {
-      value: input.restakingProgram ?? null,
-      isWritable: false,
-    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -171,7 +164,6 @@ export function getAdminSetParametersInstruction<
       getAccountMeta(accounts.config),
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.ncnAdmin),
-      getAccountMeta(accounts.restakingProgram),
     ],
     programAddress,
     data: getAdminSetParametersInstructionDataEncoder().encode(
@@ -181,8 +173,7 @@ export function getAdminSetParametersInstruction<
     TProgramAddress,
     TAccountConfig,
     TAccountNcn,
-    TAccountNcnAdmin,
-    TAccountRestakingProgram
+    TAccountNcnAdmin
   >;
 
   return instruction;
@@ -197,7 +188,6 @@ export type ParsedAdminSetParametersInstruction<
     config: TAccountMetas[0];
     ncn: TAccountMetas[1];
     ncnAdmin: TAccountMetas[2];
-    restakingProgram: TAccountMetas[3];
   };
   data: AdminSetParametersInstructionData;
 };
@@ -210,7 +200,7 @@ export function parseAdminSetParametersInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminSetParametersInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 3) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -226,7 +216,6 @@ export function parseAdminSetParametersInstruction<
       config: getNextAccount(),
       ncn: getNextAccount(),
       ncnAdmin: getNextAccount(),
-      restakingProgram: getNextAccount(),
     },
     data: getAdminSetParametersInstructionDataDecoder().decode(
       instruction.data
