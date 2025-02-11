@@ -163,8 +163,6 @@ jobs:
       - build
     steps:
       - uses: actions/checkout@v4
-      - name: Debugging commit
-        run: echo ${{ github.ref }} && echo ${{ github.sha }}
       - uses: aarcangeli/load-dotenv@v1.0.0
         with:
           path: .cargo
