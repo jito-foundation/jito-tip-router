@@ -29,4 +29,4 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=builder /usr/src/app/target/release/jito-tip-router-cli /usr/local/bin/jito-tip-router-cli
 
-ENTRYPOINT ["jito-tip-router-cli keeper"]
+ENTRYPOINT ["jito-tip-router-cli", "keeper"]
