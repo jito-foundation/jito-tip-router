@@ -22,7 +22,7 @@ use crate::{
     stake_weight::StakeWeights,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Zeroable, ShankType, Pod)]
+#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct Ballot {
     /// The merkle root of the meta merkle tree
