@@ -6,6 +6,7 @@ use std::{
 use anchor_lang::prelude::AnchorSerialize;
 use jito_tip_distribution_sdk::jito_tip_distribution::ID as TIP_DISTRIBUTION_ID;
 use jito_tip_payment_sdk::jito_tip_payment::ID as TIP_PAYMENT_ID;
+use jito_tip_router_program::ID as TIP_ROUTER_ID;
 use meta_merkle_tree::generated_merkle_tree::{
     Delegation, GeneratedMerkleTreeCollection, MerkleRootGeneratorError, StakeMeta,
     StakeMetaCollection, TipDistributionMeta,
@@ -186,16 +187,14 @@ impl TestContext {
 async fn test_meta_merkle_creation_from_ledger() {
     // 1. Setup - create necessary variables/arguments
     let ledger_path = Path::new("tests/fixtures/test-ledger");
-    let account_paths = vec![
-        PathBuf::from("tests/fixtures/accounts"),
-        PathBuf::from("path/to/account2"),
-    ];
-    let full_snapshots_path = PathBuf::from("path/to/full_snapshots");
+    let account_paths = vec![ledger_path.join("accounts/run")];
+    let full_snapshots_path = PathBuf::from("tests/fixtures/test-ledger");
     let desired_slot = &144;
     let tip_distribution_program_id = &TIP_DISTRIBUTION_ID;
     let out_path = "tests/fixtures/output.json";
     let tip_payment_program_id = &TIP_PAYMENT_ID;
     let ncn_address = Pubkey::new_unique();
+    let operator_address = Pubkey::new_unique();
     let epoch = 0u64;
     const PROTOCOL_FEE_BPS: u64 = 300;
 
@@ -203,15 +202,19 @@ async fn test_meta_merkle_creation_from_ledger() {
     let meta_merkle_tree = get_meta_merkle_root(
         ledger_path,
         account_paths,
+        full_snapshots_path.clone(),
         full_snapshots_path,
         desired_slot,
         tip_distribution_program_id,
         out_path,
         tip_payment_program_id,
+        &jito_tip_router_program::id(),
         &ncn_address,
+        &operator_address,
         epoch,
         PROTOCOL_FEE_BPS,
         false,
+        &ledger_path.to_path_buf(),
     )
     .unwrap();
 
@@ -304,13 +307,14 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         &ncn_address,
         epoch,
         PROTOCOL_FEE_BPS,
+        &jito_tip_router_program::id(),
     )?;
 
     let generated_tree = &merkle_tree_coll.generated_merkle_trees[0];
 
     assert_eq!(
         generated_tree.merkle_root.to_string(),
-        "9TtRHiWFi3x6FFX6CNDrmJQkftQbZVBgKJbmG2Cd1EMo"
+        "4X4wPZvbbKQkkJEmdot5J2nQjs2amJUbF1Be6Pb5BV3u"
     );
 
     let nodes = &generated_tree.tree_nodes;
@@ -320,9 +324,9 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         &[
             b"base_reward_receiver",
             &ncn_address.to_bytes(),
-            &epoch.to_le_bytes(),
+            &(epoch + 1).to_le_bytes(),
         ],
-        &TIP_DISTRIBUTION_ID,
+        &TIP_ROUTER_ID,
     );
 
     let protocol_fee_node = nodes

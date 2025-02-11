@@ -1,34 +1,85 @@
 use std::{
     path::{Path, PathBuf},
-    sync::{atomic::AtomicBool, Arc},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Instant,
 };
 
-use log::info;
+use clap_old::ArgMatches;
+use log::{info, warn};
 use solana_accounts_db::hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE};
 use solana_ledger::{
-    bank_forks_utils::{self},
     blockstore::{Blockstore, BlockstoreError},
     blockstore_options::{AccessType, BlockstoreOptions},
-    blockstore_processor::{self, ProcessOptions},
+    blockstore_processor::ProcessOptions,
 };
+use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::{
-    accounts_background_service::AbsRequestSender, bank::Bank,
-    snapshot_archive_info::SnapshotArchiveInfoGetter, snapshot_bank_utils,
+    bank::Bank, snapshot_archive_info::SnapshotArchiveInfoGetter, snapshot_bank_utils,
     snapshot_config::SnapshotConfig, snapshot_utils::SnapshotVersion,
 };
-use solana_sdk::clock::Slot;
+use solana_sdk::{clock::Slot, pubkey::Pubkey};
+
+use crate::{arg_matches, load_and_process_ledger};
 
 // TODO: Use Result and propagate errors more gracefully
 /// Create the Bank for a desired slot for given file paths.
 pub fn get_bank_from_ledger(
+    operator_address: &Pubkey,
     ledger_path: &Path,
     account_paths: Vec<PathBuf>,
     full_snapshots_path: PathBuf,
+    incremental_snapshots_path: PathBuf,
     desired_slot: &Slot,
     take_snapshot: bool,
 ) -> Arc<Bank> {
-    let genesis_config =
-        open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE).unwrap();
+    let start_time = Instant::now();
+
+    // Start validation
+    datapoint_info!(
+        "tip_router_cli.get_bank",
+        ("operator", operator_address.to_string(), String),
+        ("state", "validate_path_start", String),
+        ("step", 0, i64),
+    );
+
+    // STEP 1: Load genesis config //
+
+    datapoint_info!(
+        "tip_router_cli.get_bank",
+        ("operator", operator_address.to_string(), String),
+        ("state", "load_genesis_start", String),
+        ("step", 1, i64),
+        ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    );
+
+    let genesis_config = match open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE) {
+        Ok(genesis_config) => genesis_config,
+        Err(e) => {
+            datapoint_error!(
+                "tip_router_cli.get_bank",
+                ("operator", operator_address.to_string(), String),
+                ("status", "error", String),
+                ("state", "load_genesis", String),
+                ("step", 1, i64),
+                ("error", format!("{:?}", e), String),
+            );
+            panic!("Failed to load genesis config: {}", e); // TODO should panic here?
+        }
+    };
+
+    // STEP 2: Load blockstore //
+
+    datapoint_info!(
+        "tip_router_cli.get_bank",
+        ("operator", operator_address.to_string(), String),
+        ("state", "load_blockstore_start", String),
+        ("step", 2, i64),
+        ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    );
+
     let access_type = AccessType::Secondary;
     // Error handling is a modified copy pasta from ledger utils
     let blockstore = match Blockstore::open_with_options(
@@ -53,29 +104,71 @@ pub fn get_bank_from_ledger(
             // if access type is Secondary
             let is_secondary = access_type == AccessType::Secondary;
 
-            if missing_blockstore && is_secondary {
-                panic!(
+            let error_str = if missing_blockstore && is_secondary {
+                format!(
                     "Failed to open blockstore at {ledger_path:?}, it is missing at least one \
                      critical file: {err:?}"
-                );
+                )
             } else if missing_column && is_secondary {
-                panic!(
+                format!(
                     "Failed to open blockstore at {ledger_path:?}, it does not have all necessary \
                      columns: {err:?}"
-                );
+                )
             } else {
-                panic!("Failed to open blockstore at {ledger_path:?}: {err:?}");
-            }
+                format!("Failed to open blockstore at {ledger_path:?}: {err:?}")
+            };
+            datapoint_error!(
+                "tip_router_cli.get_bank",
+                ("operator", operator_address.to_string(), String),
+                ("status", "error", String),
+                ("state", "load_blockstore", String),
+                ("step", 2, i64),
+                ("error", error_str, String),
+                ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+            );
+            panic!("{}", error_str);
         }
         Err(err) => {
-            panic!("Failed to open blockstore at {ledger_path:?}: {err:?}");
+            let error_str = format!("Failed to open blockstore at {ledger_path:?}: {err:?}");
+            datapoint_error!(
+                "tip_router_cli.get_bank",
+                ("operator", operator_address.to_string(), String),
+                ("status", "error", String),
+                ("state", "load_blockstore", String),
+                ("step", 2, i64),
+                ("error", error_str, String),
+                ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+            );
+            panic!("{}", error_str);
         }
     };
 
+    let desired_slot_in_blockstore = match blockstore.meta(*desired_slot) {
+        Ok(meta) => meta.is_some(),
+        Err(err) => {
+            warn!("Failed to get meta for slot {}: {:?}", desired_slot, err);
+            false
+        }
+    };
+    info!(
+        "Desired slot {} in blockstore: {}",
+        desired_slot, desired_slot_in_blockstore
+    );
+
+    // STEP 3: Load bank forks //
+
+    datapoint_info!(
+        "tip_router_cli.get_bank",
+        ("operator", operator_address.to_string(), String),
+        ("state", "load_snapshot_config_start", String),
+        ("step", 3, i64),
+        ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    );
+
     let snapshot_config = SnapshotConfig {
         full_snapshot_archives_dir: full_snapshots_path.clone(),
-        incremental_snapshot_archives_dir: full_snapshots_path.clone(),
-        bank_snapshots_dir: full_snapshots_path,
+        incremental_snapshot_archives_dir: incremental_snapshots_path.clone(),
+        bank_snapshots_dir: full_snapshots_path.clone(),
         ..SnapshotConfig::new_load_only()
     };
 
@@ -84,37 +177,122 @@ pub fn get_bank_from_ledger(
         ..Default::default()
     };
     let exit = Arc::new(AtomicBool::new(false));
-    let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
-        bank_forks_utils::load_bank_forks(
+
+    let mut arg_matches = ArgMatches::new();
+    arg_matches::set_ledger_tool_arg_matches(
+        &mut arg_matches,
+        snapshot_config.full_snapshot_archives_dir.clone(),
+        snapshot_config.incremental_snapshot_archives_dir.clone(),
+        account_paths,
+    );
+
+    // Call ledger_utils::load_and_process_ledger here
+    let (bank_forks, _starting_snapshot_hashes) =
+        match load_and_process_ledger::load_and_process_ledger(
+            &arg_matches,
             &genesis_config,
-            &blockstore,
-            account_paths,
-            None,
-            Some(&snapshot_config),
-            &process_options,
-            None,
-            None, // Maybe support this later, though
-            None,
-            exit,
-            false,
-        )
-        .unwrap();
-    blockstore_processor::process_blockstore_from_root(
-        &blockstore,
-        &bank_forks,
-        &leader_schedule_cache,
-        &process_options,
-        None,
-        None,
-        None,
-        &AbsRequestSender::default(),
-    )
-    .unwrap();
+            Arc::new(blockstore),
+            process_options,
+            Some(full_snapshots_path),
+            Some(incremental_snapshots_path),
+            operator_address,
+        ) {
+            Ok(res) => res,
+            Err(e) => {
+                datapoint_error!(
+                    "tip_router_cli.get_bank",
+                    ("operator", operator_address.to_string(), String),
+                    ("state", "load_bank_forks", String),
+                    ("status", "error", String),
+                    ("step", 4, i64),
+                    ("error", format!("{:?}", e), String),
+                    ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                );
+                panic!("Failed to load bank forks: {}", e);
+            }
+        };
+
+    // let (bank_forks, leader_schedule_cache, _starting_snapshot_hashes, ..) =
+    //     match bank_forks_utils::load_bank_forks(
+    //         &genesis_config,
+    //         &blockstore,
+    //         account_paths,
+    //         None,
+    //         Some(&snapshot_config),
+    //         &process_options,
+    //         None,
+    //         None, // Maybe support this later, though
+    //         None,
+    //         exit.clone(),
+    //         false,
+    //     ) {
+    //         Ok(res) => res,
+    //         Err(e) => {
+    //             datapoint_error!(
+    //                 "tip_router_cli.get_bank",
+    //                 ("operator", operator_address.to_string(), String),
+    //                 ("state", "load_bank_forks", String),
+    //                 ("status", "error", String),
+    //                 ("step", 4, i64),
+    //                 ("error", format!("{:?}", e), String),
+    //                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    //             );
+    //             panic!("Failed to load bank forks: {}", e);
+    //         }
+    //     };
+
+    // STEP 4: Process blockstore from root //
+
+    // datapoint_info!(
+    //     "tip_router_cli.get_bank",
+    //     ("operator", operator_address.to_string(), String),
+    //     ("state", "process_blockstore_from_root_start", String),
+    //     ("step", 4, i64),
+    //     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    // );
+
+    // match blockstore_processor::process_blockstore_from_root(
+    //     &blockstore,
+    //     &bank_forks,
+    //     &leader_schedule_cache,
+    //     &process_options,
+    //     None,
+    //     None,
+    //     None,
+    //     &AbsRequestSender::default(),
+    // ) {
+    //     Ok(()) => (),
+    //     Err(e) => {
+    //         datapoint_error!(
+    //             "tip_router_cli.get_bank",
+    //             ("operator", operator_address.to_string(), String),
+    //             ("status", "error", String),
+    //             ("state", "process_blockstore_from_root", String),
+    //             ("step", 5, i64),
+    //             ("error", format!("{:?}", e), String),
+    //             ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    //         );
+    //         panic!("Failed to process blockstore from root: {}", e);
+    //     }
+    // };
+
+    // STEP 5: Save snapshot //
 
     let working_bank = bank_forks.read().unwrap().working_bank();
 
+    datapoint_info!(
+        "tip_router_cli.get_bank",
+        ("operator", operator_address.to_string(), String),
+        ("state", "bank_to_full_snapshot_archive_start", String),
+        ("bank_hash", working_bank.hash().to_string(), String),
+        ("step", 5, i64),
+        ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+    );
+
+    exit.store(true, Ordering::Relaxed);
+
     if take_snapshot {
-        let full_snapshot_archive_info = snapshot_bank_utils::bank_to_full_snapshot_archive(
+        let full_snapshot_archive_info = match snapshot_bank_utils::bank_to_full_snapshot_archive(
             ledger_path,
             &working_bank,
             Some(SnapshotVersion::default()),
@@ -123,8 +301,21 @@ pub fn get_bank_from_ledger(
             snapshot_config.archive_format,
             snapshot_config.maximum_full_snapshot_archives_to_retain,
             snapshot_config.maximum_incremental_snapshot_archives_to_retain,
-        )
-        .unwrap();
+        ) {
+            Ok(res) => res,
+            Err(e) => {
+                datapoint_error!(
+                    "tip_router_cli.get_bank",
+                    ("operator", operator_address.to_string(), String),
+                    ("status", "error", String),
+                    ("state", "bank_to_full_snapshot_archive", String),
+                    ("step", 6, i64),
+                    ("error", format!("{:?}", e), String),
+                    ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                );
+                panic!("Failed to create snapshot: {}", e);
+            }
+        };
 
         info!(
             "Successfully created snapshot for slot {}, hash {}: {}",
@@ -133,6 +324,7 @@ pub fn get_bank_from_ledger(
             full_snapshot_archive_info.path().display(),
         );
     }
+    // STEP 6: Complete //
 
     assert_eq!(
         working_bank.slot(),
@@ -140,6 +332,14 @@ pub fn get_bank_from_ledger(
         "expected working bank slot {}, found {}",
         desired_slot,
         working_bank.slot()
+    );
+
+    datapoint_info!(
+        "tip_router_cli.get_bank",
+        ("operator", operator_address.to_string(), String),
+        ("state", "get_bank_from_ledger_success", String),
+        ("step", 6, i64),
+        ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
     );
     working_bank
 }
@@ -150,13 +350,16 @@ mod tests {
 
     #[test]
     fn test_get_bank_from_ledger_success() {
+        let operator_address = Pubkey::new_unique();
         let ledger_path = PathBuf::from("./tests/fixtures/test-ledger");
         let account_paths = vec![ledger_path.join("accounts/run")];
         let full_snapshots_path = ledger_path.clone();
         let desired_slot = 144;
         let res = get_bank_from_ledger(
+            &operator_address,
             &ledger_path,
             account_paths,
+            full_snapshots_path.clone(),
             full_snapshots_path.clone(),
             &desired_slot,
             true,

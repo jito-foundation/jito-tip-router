@@ -9,6 +9,8 @@ anchor-lang = { workspace = true }
 anyhow = { workspace = true }
 base64 = "0.13"
 clap = { workspace = true }
+clap_old = { workspace = true }
+crossbeam-channel = "0.5"
 ellipsis-client = "0.1"
 env_logger = { workspace = true }
 hex = "0.4"
@@ -23,18 +25,31 @@ jito-tip-router-core = { workspace = true }
 jito-tip-router-program = { workspace = true }
 log = { workspace = true }
 meta-merkle-tree = { workspace = true }
+rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+solana-account-decoder = { workspace = true }
 solana-accounts-db = { workspace = true }
+solana-clap-utils = { workspace = true }
 solana-client = { workspace = true }
+solana-core = { workspace = true }
+solana-geyser-plugin-manager = { workspace = true }
+solana-gossip = { workspace = true }
 solana-ledger = { workspace = true }
+solana-measure = { workspace = true }
 solana-metrics = { workspace = true }
 solana-program = { workspace = true }
+solana-rpc = { workspace = true }
 solana-rpc-client = { workspace = true }
+solana-rpc-client-api = { workspace = true }
 solana-runtime = { workspace = true }
 solana-sdk = { workspace = true }
 solana-stake-program = { workspace = true }
+solana-streamer = { workspace = true }
+solana-transaction-status = { workspace = true }
+solana-unified-scheduler-pool = { workspace = true }
 solana-vote = { workspace = true }
+spl-memo = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 
