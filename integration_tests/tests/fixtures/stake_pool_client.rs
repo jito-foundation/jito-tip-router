@@ -1,7 +1,6 @@
 #![allow(deprecated)] // using deprecated borsh to align with mainnet stake pool version
 use jito_tip_router_core::constants::JITOSOL_MINT;
 use solana_program::{
-    // TODO: Review if this is acceptable give spl-stake-pool crate was updated.
     borsh1::{get_instance_packed_len, get_packed_len},
     pubkey::Pubkey,
     stake,
