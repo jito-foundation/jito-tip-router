@@ -21,12 +21,12 @@ use crate::{
     handler::CliHandler,
 };
 
-pub fn format_stake_weight(value: u128) -> f64 {
-    return value as f64;
+pub const fn format_stake_weight(value: u128) -> f64 {
+    value as f64
 }
 
 pub fn format_token_amount(value: u64) -> f64 {
-    return lamports_to_sol(value);
+    lamports_to_sol(value)
 }
 
 pub async fn emit_error(title: String, error: String, message: String, keeper_epoch: u64) {
@@ -375,6 +375,7 @@ pub async fn emit_ncn_metrics_config(handler: &CliHandler) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::large_stack_frames)]
 pub async fn emit_epoch_metrics(handler: &CliHandler, epoch: u64) -> Result<()> {
     emit_epoch_metrics_state(handler, epoch).await?;
     emit_epoch_metrics_weight_table(handler, epoch).await?;

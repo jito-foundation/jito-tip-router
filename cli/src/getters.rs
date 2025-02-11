@@ -74,8 +74,8 @@ pub async fn get_guaranteed_epoch_and_slot(handler: &CliHandler) -> (u64, u64) {
     loop {
         let current_epoch_and_slot_result = get_current_epoch_and_slot(handler).await;
 
-        if current_epoch_and_slot_result.is_ok() {
-            return current_epoch_and_slot_result.unwrap();
+        if let Ok(result) = current_epoch_and_slot_result {
+            return result;
         }
 
         info!("Could not fetch current epoch and slot. Retrying...");
@@ -960,7 +960,7 @@ impl NcnTickets {
         })
     }
 
-    pub fn st_mint(&self) -> Pubkey {
+    pub const fn st_mint(&self) -> Pubkey {
         self.vault_account.supported_mint
     }
 
