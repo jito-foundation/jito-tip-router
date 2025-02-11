@@ -49,9 +49,6 @@ switchboard-on-demand-client = "0.2.12"
 thiserror = { workspace = true }
 tokio = { workspace = true }
 
-[patch.crates-io]
-borsh = { package = "borsh", git = 'https://github.com/near/borsh-rs', tag = 'borsh-v1.5.3' }
-
 [dev-dependencies]
 assert_matches = { workspace = true }
 

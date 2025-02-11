@@ -1122,7 +1122,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115e54d64eb62cdebad391c19efc9dce4981c690c85a33a12199d99bb9546fee"
 dependencies = [
  "borsh-derive 0.10.4",
- "hashbrown 0.11.2",
+ "hashbrown 0.13.2",
 ]
 
 [[package]]
@@ -3495,7 +3495,7 @@ checksum = "d75a2a4b1b190afb6f5425f10f6a8f959d2ea0b9c2b1d79553551850539e4674"
 [[package]]
 name = "jito-account-traits-derive"
 version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#7b192f42223db8efb68c076e526cc988d1e8fd61"
+source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#358fbc3c20d947c977a136808f9fbf7f070e478b"
 dependencies = [
  "proc-macro2 1.0.92",
  "quote 1.0.38",
@@ -3505,7 +3505,7 @@ dependencies = [
 [[package]]
 name = "jito-bytemuck"
 version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#7b192f42223db8efb68c076e526cc988d1e8fd61"
+source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#358fbc3c20d947c977a136808f9fbf7f070e478b"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -3516,7 +3516,7 @@ dependencies = [
 [[package]]
 name = "jito-jsm-core"
 version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#7b192f42223db8efb68c076e526cc988d1e8fd61"
+source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#358fbc3c20d947c977a136808f9fbf7f070e478b"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -3557,7 +3557,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-client"
 version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#7b192f42223db8efb68c076e526cc988d1e8fd61"
+source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#358fbc3c20d947c977a136808f9fbf7f070e478b"
 dependencies = [
  "anchor-lang 0.30.1",
  "borsh 0.10.4",
@@ -3574,7 +3574,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-core"
 version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#7b192f42223db8efb68c076e526cc988d1e8fd61"
+source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#358fbc3c20d947c977a136808f9fbf7f070e478b"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -3591,7 +3591,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-program"
 version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#7b192f42223db8efb68c076e526cc988d1e8fd61"
+source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#358fbc3c20d947c977a136808f9fbf7f070e478b"
 dependencies = [
  "borsh 0.10.4",
  "cfg-if 1.0.0",
@@ -3612,7 +3612,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-sdk"
 version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#7b192f42223db8efb68c076e526cc988d1e8fd61"
+source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#358fbc3c20d947c977a136808f9fbf7f070e478b"
 dependencies = [
  "borsh 0.10.4",
  "shank",
@@ -3821,7 +3821,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-client"
 version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#7b192f42223db8efb68c076e526cc988d1e8fd61"
+source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#358fbc3c20d947c977a136808f9fbf7f070e478b"
 dependencies = [
  "anchor-lang 0.30.1",
  "borsh 0.10.4",
@@ -3838,7 +3838,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-core"
 version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#7b192f42223db8efb68c076e526cc988d1e8fd61"
+source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#358fbc3c20d947c977a136808f9fbf7f070e478b"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -3856,7 +3856,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-program"
 version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#7b192f42223db8efb68c076e526cc988d1e8fd61"
+source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#358fbc3c20d947c977a136808f9fbf7f070e478b"
 dependencies = [
  "borsh 0.10.4",
  "cfg-if 1.0.0",
@@ -3877,7 +3877,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-sdk"
 version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#7b192f42223db8efb68c076e526cc988d1e8fd61"
+source = "git+https://github.com/jito-foundation/restaking?branch=v2.1-upgrade#358fbc3c20d947c977a136808f9fbf7f070e478b"
 dependencies = [
  "borsh 0.10.4",
  "shank",

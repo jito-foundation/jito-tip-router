@@ -416,7 +416,6 @@ mod tests {
         let (_, bank_forks) = Bank::new_with_bank_forks_for_tests(&genesis_config);
         // We have to update to working bank, otherwise cannot get strong pointer (Arc) for
         //  ProgramCache fork_graph
-        // TODO: Review if this will be an issue for the actual CLI
         let mut bank = bank_forks.read().unwrap().working_bank();
 
         /* 2. Seed the Bank with [TipDistributionAccount]'s */
