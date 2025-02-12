@@ -9,7 +9,9 @@ use std::{
 
 use clap_old::ArgMatches;
 use log::{info, warn};
-use solana_accounts_db::hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE};
+use solana_accounts_db::hardened_unpack::{
+    open_genesis_config, OpenGenesisConfigError, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
+};
 use solana_ledger::{
     blockstore::{Blockstore, BlockstoreError},
     blockstore_options::{AccessType, BlockstoreOptions},
@@ -21,11 +23,22 @@ use solana_runtime::{
     snapshot_archive_info::SnapshotArchiveInfoGetter,
     snapshot_bank_utils,
     snapshot_config::SnapshotConfig,
-    snapshot_utils::{self, SnapshotVersion},
+    snapshot_utils::{self, get_full_snapshot_archives, SnapshotError, SnapshotVersion},
 };
 use solana_sdk::clock::Slot;
+use thiserror::Error;
 
 use crate::{arg_matches, load_and_process_ledger};
+
+#[derive(Error, Debug)]
+pub enum LedgerUtilsError {
+    #[error("BankFromSnapshot error: {0}")]
+    BankFromSnapshotError(#[from] SnapshotError),
+    #[error("Missing snapshot at slot {0}")]
+    MissingSnapshotAtSlot(u64),
+    #[error("BankFromSnapshot error: {0}")]
+    OpenGenesisConfigError(#[from] OpenGenesisConfigError),
+}
 
 // TODO: Use Result and propagate errors more gracefully
 /// Create the Bank for a desired slot for given file paths.
@@ -398,6 +411,52 @@ pub fn get_bank_from_ledger(
     working_bank
 }
 
+pub fn get_bank_from_snapshot_at_slot(
+    snapshot_slot: u64,
+    full_snapshots_path: &PathBuf,
+    bank_snapshots_dir: &PathBuf,
+    account_paths: Vec<PathBuf>,
+    ledger_path: &Path,
+) -> Result<Bank, LedgerUtilsError> {
+    let mut full_snapshot_archives = get_full_snapshot_archives(full_snapshots_path);
+    full_snapshot_archives.retain(|archive| archive.snapshot_archive_info().slot == snapshot_slot);
+
+    if full_snapshot_archives.len() != 1 {
+        return Err(LedgerUtilsError::MissingSnapshotAtSlot(snapshot_slot));
+    }
+    let full_snapshot_archive_info = full_snapshot_archives.first().expect("unreachable");
+    let process_options = ProcessOptions {
+        halt_at_slot: Some(snapshot_slot.to_owned()),
+        ..Default::default()
+    };
+    let genesis_config = match open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE) {
+        Ok(genesis_config) => genesis_config,
+        Err(e) => return Err(e.into()),
+    };
+    let exit = Arc::new(AtomicBool::new(false));
+
+    let (bank, _) = snapshot_bank_utils::bank_from_snapshot_archives(
+        &account_paths,
+        &bank_snapshots_dir,
+        full_snapshot_archive_info,
+        None,
+        &genesis_config,
+        &process_options.runtime_config,
+        process_options.debug_keys.clone(),
+        None,
+        process_options.limit_load_slot_count_from_snapshot,
+        process_options.accounts_db_test_hash_calculation,
+        process_options.accounts_db_skip_shrink,
+        process_options.accounts_db_force_initial_clean,
+        process_options.verify_index,
+        process_options.accounts_db_config.clone(),
+        None,
+        exit.clone(),
+    )?;
+    exit.store(true, Ordering::Relaxed);
+    return Ok(bank);
+}
+
 #[cfg(test)]
 mod tests {
     use crate::load_and_process_ledger::LEDGER_TOOL_DIRECTORY;
@@ -405,6 +464,41 @@ mod tests {
     use solana_sdk::pubkey::Pubkey;
 
     use super::*;
+
+    #[test]
+    fn test_get_bank_from_snapshot_at_slot() {
+        let ledger_path = PathBuf::from("./tests/fixtures/test-ledger");
+        let account_paths = vec![ledger_path.join("accounts/run")];
+        let full_snapshots_path = ledger_path.clone();
+        let snapshot_slot = 100;
+        let bank = get_bank_from_snapshot_at_slot(
+            snapshot_slot,
+            &full_snapshots_path,
+            &full_snapshots_path,
+            account_paths,
+            &ledger_path.as_path(),
+        )
+        .unwrap();
+        assert_eq!(bank.slot(), snapshot_slot);
+    }
+
+    #[test]
+    fn test_get_bank_from_snapshot_at_slot_snapshot_missing_error() {
+        let ledger_path = PathBuf::from("./tests/fixtures/test-ledger");
+        let account_paths = vec![ledger_path.join("accounts/run")];
+        let full_snapshots_path = ledger_path.clone();
+        let snapshot_slot = 105;
+        let res = get_bank_from_snapshot_at_slot(
+            snapshot_slot,
+            &full_snapshots_path,
+            &full_snapshots_path,
+            account_paths,
+            &ledger_path.as_path(),
+        );
+        assert!(res.is_err());
+        let expected_err_str = format!("Missing snapshot at slot {}", snapshot_slot);
+        assert_eq!(res.err().unwrap().to_string(), expected_err_str);
+    }
 
     #[test]
     fn test_get_bank_from_ledger_success() {

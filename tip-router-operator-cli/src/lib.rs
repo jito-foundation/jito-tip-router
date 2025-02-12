@@ -522,7 +522,6 @@ pub fn get_meta_merkle_root(
             ("state", "merkle_root_file_write", String),
             ("duration_ms", start.elapsed().as_millis() as i64, i64)
         );
-        // TODO: propogate error
         return Err(MerkleRootError::MerkleRootGeneratorError(
             "Failed to write meta merkle tree to file".to_string(),
         ));

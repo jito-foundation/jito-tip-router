@@ -1,17 +1,26 @@
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    path::PathBuf,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use anyhow::Result;
 use ellipsis_client::EllipsisClient;
 use log::{error, info};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
+use solana_metrics::datapoint_error;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_runtime::bank::Bank;
+use solana_runtime::{
+    bank::Bank, snapshot_archive_info::SnapshotArchiveInfoGetter,
+    snapshot_utils::get_full_snapshot_archives,
+};
 use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey};
 use tokio::time;
 
 use crate::{
     backup_snapshots::SnapshotInfo, create_merkle_tree_collection, create_meta_merkle_tree,
-    create_stake_meta, load_bank_from_snapshot, Cli, OperatorState, PROTOCOL_FEE_BPS,
+    create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot, load_bank_from_snapshot, Cli,
+    OperatorState, PROTOCOL_FEE_BPS,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -129,9 +138,43 @@ pub async fn loop_stages(
                 stage = OperatorState::CreateStakeMeta;
             }
             OperatorState::CreateStakeMeta => {
-                // TODO: Determine if we want to allow operators to start from this stage.
-                //  No matter what a bank has to be loaded from a snapshot, so might as
-                //  well start from load bank
+                let start = Instant::now();
+                if bank.is_none() {
+                    // TODO: REVIEW should we expect snapshots to be in the save path rather than
+                    // the typical validator snapshots path? This would save the fight from the
+                    // validator process removing snapshots. We'd have to also update the snapshot
+                    // process and CLI to handle
+
+                    // TODO: DRY up these paths from the Cli arguments (duplicate code in load_bank_from_snapshot)
+                    let ledger_path = cli.ledger_path.clone();
+                    let account_paths = None;
+                    let account_paths =
+                        account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
+                    let full_snapshots_path = cli.full_snapshots_path.clone();
+                    let full_snapshots_path =
+                        full_snapshots_path.map_or(ledger_path.clone(), |path| path);
+                    let maybe_bank = get_bank_from_snapshot_at_slot(
+                        slot_to_process,
+                        &full_snapshots_path,
+                        &full_snapshots_path,
+                        account_paths,
+                        &ledger_path.as_path(),
+                    );
+                    match maybe_bank {
+                        Ok(some_bank) => bank = Some(Arc::new(some_bank)),
+                        Err(e) => {
+                            datapoint_error!(
+                                "tip_router_cli.create_stake_meta",
+                                ("operator_address", operator_address, String),
+                                ("epoch", epoch_to_process, i64),
+                                ("status", "error", String),
+                                ("error", e.to_string(), String),
+                                ("state", "create_stake_meta", String),
+                                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                            );
+                        }
+                    }
+                }
                 stake_meta_collection = Some(create_stake_meta(
                     operator_address.clone(),
                     epoch_to_process,
