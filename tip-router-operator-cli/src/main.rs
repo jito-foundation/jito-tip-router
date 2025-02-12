@@ -4,21 +4,15 @@ use ::{
     clap::Parser,
     ellipsis_client::EllipsisClient,
     log::{error, info},
-    meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection,
-    solana_metrics::{datapoint_error, datapoint_info, set_host_id},
+    solana_metrics::set_host_id,
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{
         clock::DEFAULT_SLOTS_PER_EPOCH, pubkey::Pubkey, signer::keypair::read_keypair_file,
     },
-    std::{
-        path::PathBuf,
-        str::FromStr,
-        sync::Arc,
-        time::{Duration, Instant},
-    },
+    std::{path::PathBuf, str::FromStr, sync::Arc, time::Duration},
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
-        claim::claim_mev_tips,
+        claim::claim_mev_tips_with_emit,
         cli::{Cli, Commands},
         process_epoch::{get_previous_epoch_last_slot, process_epoch, wait_for_next_epoch},
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
@@ -75,6 +69,7 @@ async fn main() -> Result<()> {
             start_next_epoch,
             override_target_slot,
             set_merkle_roots,
+            claim_tips,
         } => {
             info!("Running Tip Router...");
             info!("NCN Address: {}", ncn_address);
@@ -107,10 +102,11 @@ async fn main() -> Result<()> {
 
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
+                let keypair_arc = Arc::new(keypair);
                 loop {
                     if let Err(e) = submit_recent_epochs_to_ncn(
                         &rpc_client_clone,
-                        &keypair,
+                        &keypair_arc,
                         &ncn_address,
                         &tip_router_program_id,
                         &tip_distribution_program_id,
@@ -142,6 +138,35 @@ async fn main() -> Result<()> {
                     }
                 }
             });
+
+            // Run claims if enabled
+            if claim_tips {
+                let cli_clone = cli.clone();
+                let rpc_client = rpc_client.clone();
+                tokio::spawn(async move {
+                    loop {
+                        // Slow process with lots of account fetches so run every 30 minutes
+                        sleep(Duration::from_secs(1800)).await;
+                        let epoch = if let Ok(epoch) = rpc_client.get_epoch_info() {
+                            epoch.epoch.checked_sub(1).unwrap_or(epoch.epoch)
+                        } else {
+                            continue;
+                        };
+                        if let Err(e) = claim_mev_tips_with_emit(
+                            &cli_clone,
+                            epoch,
+                            tip_distribution_program_id,
+                            tip_router_program_id,
+                            ncn_address,
+                            Duration::from_secs(3600),
+                        )
+                        .await
+                        {
+                            error!("Error claiming tips: {}", e);
+                        }
+                    }
+                });
+            }
 
             if start_next_epoch {
                 current_epoch = wait_for_next_epoch(&rpc_client, current_epoch).await;
@@ -255,54 +280,19 @@ async fn main() -> Result<()> {
             tip_distribution_program_id,
             tip_router_program_id,
             ncn_address,
-            micro_lamports,
             epoch,
         } => {
-            let start = Instant::now();
             info!("Claiming tips...");
 
-            let arc_keypair = Arc::new(keypair);
-            // Load the GeneratedMerkleTreeCollection, which should have been previously generated
-            let merkle_tree_coll_path = PathBuf::from(format!(
-                "{}/generated_merkle_tree_{}.json",
-                cli.meta_merkle_tree_dir.display(),
-                epoch
-            ));
-            let merkle_tree_coll =
-                GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)?;
-
-            match claim_mev_tips(
-                &merkle_tree_coll,
-                cli.rpc_url.clone(),
-                // TODO: Review if we should offer separate rpc_send_url in CLI. This may be used
-                //  if sending via block engine.
-                cli.rpc_url,
+            claim_mev_tips_with_emit(
+                &cli,
+                epoch,
                 tip_distribution_program_id,
                 tip_router_program_id,
                 ncn_address,
-                arc_keypair,
                 Duration::from_secs(3600),
-                micro_lamports,
             )
-            .await
-            {
-                Err(e) => {
-                    datapoint_error!(
-                        "claim_mev_workflow-claim_error",
-                        ("epoch", epoch, i64),
-                        ("error", 1, i64),
-                        ("err_str", e.to_string(), String),
-                        ("elapsed_us", start.elapsed().as_micros(), i64),
-                    );
-                }
-                Ok(()) => {
-                    datapoint_info!(
-                        "claim_mev_workflow-claim_completion",
-                        ("epoch", epoch, i64),
-                        ("elapsed_us", start.elapsed().as_micros(), i64),
-                    );
-                }
-            }
+            .await?;
         }
     }
     Ok(())

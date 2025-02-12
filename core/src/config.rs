@@ -4,7 +4,7 @@ use std::mem::size_of;
 use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
-use shank::{ShankAccount, ShankType};
+use shank::ShankAccount;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 
 use crate::{
@@ -18,7 +18,7 @@ pub enum ConfigAdminRole {
     TieBreakerAdmin,
 }
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct Config {
     /// The Restaking program's NCN admin is the signer to create and update this account

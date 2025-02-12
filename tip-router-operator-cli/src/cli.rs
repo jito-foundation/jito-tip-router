@@ -33,6 +33,10 @@ pub struct Cli {
     #[arg(long, env, default_value = "false")]
     pub submit_as_memo: bool,
 
+    /// The price to pay for priority fee
+    #[arg(long, env, default_value_t = 1)]
+    pub micro_lamports: u64,
+
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -66,6 +70,9 @@ pub enum Commands {
 
         #[arg(long, env, default_value = "false")]
         set_merkle_roots: bool,
+
+        #[arg(long, env, default_value = "false")]
+        claim_tips: bool,
     },
     SnapshotSlot {
         #[arg(short, long, env)]
@@ -111,10 +118,6 @@ pub enum Commands {
         /// NCN address
         #[arg(long, env)]
         ncn_address: Pubkey,
-
-        /// The price to pay for priority fee
-        #[arg(long, env, default_value_t = 1)]
-        micro_lamports: u64,
 
         /// The epoch to Claim tips for
         #[arg(long, env)]

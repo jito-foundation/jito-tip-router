@@ -335,6 +335,10 @@ pub enum ProgramCommand {
     GetTotalEpochRentCost,
     GetStakePool,
 
+    GetOperatorStakes,
+    GetVaultStakes,
+    GetVaultOperatorStakes,
+
     /// TESTS
     Test,
     CreateTestNcn,

@@ -1,4 +1,5 @@
-use std::{str::FromStr, sync::Arc};
+#![allow(clippy::integer_division)]
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 use crate::{
     args::{Args, ProgramCommand},
@@ -579,6 +580,149 @@ impl CliHandler {
             ProgramCommand::GetStakePool {} => {
                 let stake_pool = get_stake_pool(self).await?;
                 info!("Stake Pool: {:?}", stake_pool);
+                Ok(())
+            }
+
+            ProgramCommand::GetOperatorStakes {} => {
+                // Get epoch snapshot for total stake
+                let epoch_snapshot = get_epoch_snapshot(self, self.epoch).await?;
+
+                let operators = get_all_operators_in_ncn(self).await?;
+                // For each fully activated operator, get their operator snapshot
+                let mut operator_stakes = Vec::new();
+                for operator in operators.iter() {
+                    let operator_snapshot = get_operator_snapshot(self, operator, self.epoch).await;
+                    if let Ok(operator_snapshot) = operator_snapshot {
+                        operator_stakes
+                            .push((operator, operator_snapshot.stake_weights().stake_weight()));
+                    }
+                }
+
+                // Sort operator stakes by stake weight descending
+                operator_stakes.sort_by(|(_, a), (_, b)| b.cmp(a));
+
+                for (operator, stake_weight) in operator_stakes.iter() {
+                    println!(
+                        "Operator: {}, Stake Weight: {}.{:02}%",
+                        operator,
+                        stake_weight * 10000 / epoch_snapshot.stake_weights().stake_weight() / 100,
+                        stake_weight * 10000 / epoch_snapshot.stake_weights().stake_weight() % 100
+                    );
+                }
+
+                Ok(())
+            }
+
+            ProgramCommand::GetVaultStakes {} => {
+                let operators = get_all_operators_in_ncn(self).await?;
+                let epoch_snapshot = get_epoch_snapshot(self, self.epoch).await?;
+                let mut vault_stakes = HashMap::new();
+                for operator in operators.iter() {
+                    let operator_snapshot = get_operator_snapshot(self, operator, self.epoch).await;
+                    if let Ok(operator_snapshot) = operator_snapshot {
+                        for vault_operator_stake_weight in
+                            operator_snapshot.vault_operator_stake_weight()
+                        {
+                            let vault = vault_operator_stake_weight.vault();
+
+                            if *vault == Pubkey::default() {
+                                continue;
+                            }
+
+                            let stake_weight =
+                                vault_operator_stake_weight.stake_weights().stake_weight();
+
+                            vault_stakes
+                                .entry(*vault)
+                                .and_modify(|w| *w += stake_weight)
+                                .or_insert(stake_weight);
+                        }
+                    }
+                }
+
+                let mut vault_stakes = vault_stakes.into_iter().collect::<Vec<_>>();
+                vault_stakes.sort_by(|(_, a), (_, b)| b.cmp(a));
+
+                for (vault, stake_weight) in vault_stakes.iter() {
+                    println!(
+                        "Vault: {}, Stake Weight: {}.{:02}%",
+                        vault,
+                        stake_weight * 10000 / epoch_snapshot.stake_weights().stake_weight() / 100,
+                        stake_weight * 10000 / epoch_snapshot.stake_weights().stake_weight() % 100
+                    );
+                }
+
+                Ok(())
+            }
+
+            ProgramCommand::GetVaultOperatorStakes {} => {
+                let operators = get_all_operators_in_ncn(self).await?;
+                let epoch_snapshot = get_epoch_snapshot(self, self.epoch).await?;
+                let mut vault_operator_stakes: HashMap<Pubkey, HashMap<Pubkey, u128>> =
+                    HashMap::new();
+
+                // Collect stakes for each vault-operator pair
+                for operator in operators.iter() {
+                    let operator_snapshot = get_operator_snapshot(self, operator, self.epoch).await;
+                    if let Ok(operator_snapshot) = operator_snapshot {
+                        for vault_operator_stake_weight in
+                            operator_snapshot.vault_operator_stake_weight()
+                        {
+                            let vault = vault_operator_stake_weight.vault();
+                            if *vault == Pubkey::default() {
+                                continue;
+                            }
+                            let stake_weight =
+                                vault_operator_stake_weight.stake_weights().stake_weight();
+
+                            vault_operator_stakes
+                                .entry(*vault)
+                                .or_default()
+                                .insert(*operator, stake_weight);
+                        }
+                    }
+                }
+
+                // Calculate total stake weight for percentage calculations
+                let total_stake_weight = epoch_snapshot.stake_weights().stake_weight();
+
+                // Sort vaults by total stake
+                let mut vaults: Vec<_> = vault_operator_stakes.iter().collect();
+                vaults.sort_by(|(_, a_ops), (_, b_ops)| {
+                    let a_total: u128 = a_ops.values().sum();
+                    let b_total: u128 = b_ops.values().sum();
+                    b_total.cmp(&a_total)
+                });
+
+                for (vault, operator_stakes) in vaults {
+                    let vault_total: u128 = operator_stakes.values().sum();
+                    if vault_total == 0 {
+                        continue;
+                    }
+                    println!(
+                        "Vault: {}, % of Total Stake: {}.{:02}%",
+                        vault,
+                        vault_total * 10000 / total_stake_weight / 100,
+                        vault_total * 10000 / total_stake_weight % 100
+                    );
+
+                    let mut operators: Vec<_> = operator_stakes.iter().collect();
+                    operators.sort_by(|(_, a), (_, b)| b.cmp(a));
+
+                    for (operator, stake) in operators {
+                        if *stake == 0 {
+                            continue;
+                        }
+                        println!(
+                            "  Operator: {}, Stake: {}.{:02}%",
+                            operator,
+                            stake * 10000 / vault_total / 100,
+                            stake * 10000 / vault_total % 100
+                        );
+                    }
+                    println!();
+                }
+
                 Ok(())
             }
 
