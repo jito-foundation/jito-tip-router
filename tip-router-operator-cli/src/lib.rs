@@ -48,7 +48,7 @@ pub enum OperatorState {
     CreateStakeMeta,
     CreateMerkleTreeCollection,
     CreateMetaMerkleTree,
-    SubmitToNcn,
+    CastVote,
     WaitForNextEpoch,
 }
 

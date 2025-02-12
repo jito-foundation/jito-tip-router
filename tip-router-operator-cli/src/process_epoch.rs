@@ -10,10 +10,7 @@ use log::{error, info};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
 use solana_metrics::datapoint_error;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_runtime::{
-    bank::Bank, snapshot_archive_info::SnapshotArchiveInfoGetter,
-    snapshot_utils::get_full_snapshot_archives,
-};
+use solana_runtime::bank::Bank;
 use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey};
 use tokio::time;
 
@@ -172,6 +169,7 @@ pub async fn loop_stages(
                                 ("state", "create_stake_meta", String),
                                 ("duration_ms", start.elapsed().as_millis() as i64, i64)
                             );
+                            panic!("{}", e.to_string());
                         }
                     }
                 }
@@ -238,7 +236,7 @@ pub async fn loop_stages(
                 );
                 stage = OperatorState::WaitForNextEpoch;
             }
-            OperatorState::SubmitToNcn => {
+            OperatorState::CastVote => {
                 // TODO: Determine if this should be a stage given the task that's in a
                 //  separate thread
             }
