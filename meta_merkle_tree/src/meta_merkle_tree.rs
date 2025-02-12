@@ -63,10 +63,7 @@ impl MetaMerkleTree {
             tree_nodes,
         };
 
-        info!(
-            "created merkle tree with {} nodes and max total claim of {}",
-            tree.num_nodes, tree.num_nodes
-        );
+        info!("created merkle tree with {} nodes", tree.num_nodes);
         tree.validate()?;
         Ok(tree)
     }

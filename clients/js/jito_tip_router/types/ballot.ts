@@ -28,7 +28,7 @@ import {
 
 export type Ballot = {
   metaMerkleRoot: ReadonlyUint8Array;
-  isInitialized: number;
+  isValid: number;
   reserved: Array<number>;
 };
 
@@ -37,7 +37,7 @@ export type BallotArgs = Ballot;
 export function getBallotEncoder(): Encoder<BallotArgs> {
   return getStructEncoder([
     ['metaMerkleRoot', fixEncoderSize(getBytesEncoder(), 32)],
-    ['isInitialized', getBoolEncoder()],
+    ['isValid', getBoolEncoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 63 })],
   ]);
 }
@@ -45,7 +45,7 @@ export function getBallotEncoder(): Encoder<BallotArgs> {
 export function getBallotDecoder(): Decoder<Ballot> {
   return getStructDecoder([
     ['metaMerkleRoot', fixDecoderSize(getBytesDecoder(), 32)],
-    ['isInitialized', getBoolDecoder()],
+    ['isValid', getBoolDecoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 63 })],
   ]);
 }

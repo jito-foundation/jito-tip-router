@@ -1,3 +1,4 @@
+use core::fmt;
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
@@ -150,7 +151,7 @@ impl Default for VaultEntry {
     }
 }
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct VaultRegistry {
     /// The NCN the vault registry is associated with
@@ -208,8 +209,8 @@ impl VaultRegistry {
 
     pub fn load(
         program_id: &Pubkey,
-        ncn: &Pubkey,
         account: &AccountInfo,
+        ncn: &Pubkey,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda = Self::find_program_address(program_id, ncn).0;
@@ -359,6 +360,10 @@ impl VaultRegistry {
         &self.st_mint_list
     }
 
+    pub fn st_mint_count(&self) -> usize {
+        self.st_mint_list.iter().filter(|m| !m.is_empty()).count()
+    }
+
     pub fn get_mint_entry(&self, st_mint: &Pubkey) -> Result<StMintEntry, ProgramError> {
         let mint_entry = self
             .st_mint_list
@@ -367,6 +372,32 @@ impl VaultRegistry {
             .ok_or(TipRouterError::MintEntryNotFound)?;
 
         Ok(*mint_entry)
+    }
+}
+
+#[rustfmt::skip]
+impl fmt::Display for VaultRegistry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "\n\n----------- Vault Registry -------------")?;
+        writeln!(f, "  NCN:                          {}", self.ncn)?;
+        writeln!(f, "  ST Mints:                     ")?;
+        for mint in self.get_valid_mint_entries() {
+            writeln!(f, "    Mint:                       {}", mint.st_mint())?;
+            writeln!(f, "      Fee Group:                {:?}", mint.ncn_fee_group())?;
+            writeln!(f, "      Reward Multiplier:        {}", mint.reward_multiplier_bps())?;
+            writeln!(f, "      Switchboard Feed:         {}", mint.switchboard_feed())?;
+            writeln!(f, "      No Feed Weight:           {}\n", mint.no_feed_weight())?;
+        }
+        writeln!(f, "  Vaults:                     ")?;
+        for vault in self.get_valid_vault_entries() {
+            writeln!(f, "    Vault:                      {}", vault.vault())?;
+            writeln!(f, "      Mint:                     {}", vault.st_mint())?;
+            writeln!(f, "      Index:                    {}", vault.vault_index())?;
+            writeln!(f, "      Slot Registered:          {}\n", vault.slot_registered())?;
+        }
+
+
+        Ok(())
     }
 }
 

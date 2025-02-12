@@ -1,4 +1,13 @@
-target/
+/target
+**/*.rs.bk
+
+.git
+.gitignore
+.github
+
+*.log
+*.md
+.vscode/
+.idea/
+*.iml
 node_modules/
-clients/js/
-.git/

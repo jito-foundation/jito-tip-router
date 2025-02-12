@@ -8,7 +8,7 @@ use anyhow::Result;
 use ellipsis_client::EllipsisClient;
 use log::{error, info};
 use solana_metrics::{datapoint_error, datapoint_info};
-use solana_rpc_client::rpc_client::RpcClient;
+use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey};
 use tokio::time;
 
@@ -17,12 +17,12 @@ use crate::{
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
-const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined\
+const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined
 
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> EpochInfo {
     loop {
         tokio::time::sleep(Duration::from_secs(10)).await; // Check every 10 seconds
-        let new_epoch_info = match rpc_client.get_epoch_info() {
+        let new_epoch_info = match rpc_client.get_epoch_info().await {
             Ok(info) => info,
             Err(e) => {
                 error!("Error getting epoch info: {:?}", e);
@@ -31,14 +31,17 @@ pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> 
         };
 
         if new_epoch_info.epoch > current_epoch {
-            info!("New epoch detected: {} -> {}", current_epoch, new_epoch_info.epoch);
+            info!(
+                "New epoch detected: {} -> {}",
+                current_epoch, new_epoch_info.epoch
+            );
             return new_epoch_info;
         }
     }
 }
 
-pub fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<(u64, u64)> {
-    let epoch_info = rpc_client.get_epoch_info()?;
+pub async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<(u64, u64)> {
+    let epoch_info = rpc_client.get_epoch_info().await?;
     calc_prev_epoch_and_final_slot(&epoch_info)
 }
 
@@ -115,9 +118,12 @@ pub async fn process_epoch(
 
     // Get the protocol fees
     let ncn_config = get_ncn_config(client, tip_router_program_id, ncn_address).await?;
+    let tip_router_target_epoch = target_epoch
+        .checked_add(1)
+        .ok_or_else(|| anyhow::anyhow!("tip_router_target_epoch overflow"))?;
     let adjusted_total_fees = ncn_config
         .fee_config
-        .adjusted_total_fees_bps(target_epoch)?;
+        .adjusted_total_fees_bps(tip_router_target_epoch)?;
 
     let account_paths = account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
     let full_snapshots_path = full_snapshots_path.map_or(ledger_path, |path| path);
@@ -138,6 +144,7 @@ pub async fn process_epoch(
         tip_distribution_program_id,
         "", // TODO out_path is not used, unsure what should be put here. Maybe `snapshot_output_dir` from cli args?
         tip_payment_program_id,
+        tip_router_program_id,
         ncn_address,
         &operator_address,
         target_epoch,
@@ -192,7 +199,7 @@ pub async fn process_epoch(
         }
     };
 
-    if let Err(e) = std::fs::write(&meta_merkle_tree_path, meta_merkle_tree_json) {
+    if let Err(e) = std::fs::write(meta_merkle_tree_path, meta_merkle_tree_json) {
         datapoint_error!(
             "tip_router_cli.process_epoch",
             ("operator_address", operator_address.to_string(), String),

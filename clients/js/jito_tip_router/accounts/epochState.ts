@@ -17,6 +17,8 @@ import {
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
+  getBoolDecoder,
+  getBoolEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -51,6 +53,8 @@ export type EpochState = {
   epoch: bigint;
   bump: number;
   slotCreated: bigint;
+  wasTieBreakerSet: number;
+  slotConsensusReached: bigint;
   operatorCount: bigint;
   vaultCount: bigint;
   accountStatus: EpochAccountStatus;
@@ -63,6 +67,7 @@ export type EpochState = {
   totalDistributionProgress: Progress;
   baseDistributionProgress: Progress;
   ncnDistributionProgress: Array<Progress>;
+  isClosing: number;
   reserved: Array<number>;
 };
 
@@ -72,6 +77,8 @@ export type EpochStateArgs = {
   epoch: number | bigint;
   bump: number;
   slotCreated: number | bigint;
+  wasTieBreakerSet: number;
+  slotConsensusReached: number | bigint;
   operatorCount: number | bigint;
   vaultCount: number | bigint;
   accountStatus: EpochAccountStatusArgs;
@@ -84,6 +91,7 @@ export type EpochStateArgs = {
   totalDistributionProgress: ProgressArgs;
   baseDistributionProgress: ProgressArgs;
   ncnDistributionProgress: Array<ProgressArgs>;
+  isClosing: number;
   reserved: Array<number>;
 };
 
@@ -94,6 +102,8 @@ export function getEpochStateEncoder(): Encoder<EpochStateArgs> {
     ['epoch', getU64Encoder()],
     ['bump', getU8Encoder()],
     ['slotCreated', getU64Encoder()],
+    ['wasTieBreakerSet', getBoolEncoder()],
+    ['slotConsensusReached', getU64Encoder()],
     ['operatorCount', getU64Encoder()],
     ['vaultCount', getU64Encoder()],
     ['accountStatus', getEpochAccountStatusEncoder()],
@@ -112,7 +122,8 @@ export function getEpochStateEncoder(): Encoder<EpochStateArgs> {
       'ncnDistributionProgress',
       getArrayEncoder(getProgressEncoder(), { size: 2048 }),
     ],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 1024 })],
+    ['isClosing', getBoolEncoder()],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 1023 })],
   ]);
 }
 
@@ -123,6 +134,8 @@ export function getEpochStateDecoder(): Decoder<EpochState> {
     ['epoch', getU64Decoder()],
     ['bump', getU8Decoder()],
     ['slotCreated', getU64Decoder()],
+    ['wasTieBreakerSet', getBoolDecoder()],
+    ['slotConsensusReached', getU64Decoder()],
     ['operatorCount', getU64Decoder()],
     ['vaultCount', getU64Decoder()],
     ['accountStatus', getEpochAccountStatusDecoder()],
@@ -141,7 +154,8 @@ export function getEpochStateDecoder(): Decoder<EpochState> {
       'ncnDistributionProgress',
       getArrayDecoder(getProgressDecoder(), { size: 2048 }),
     ],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 1024 })],
+    ['isClosing', getBoolDecoder()],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 1023 })],
   ]);
 }
 

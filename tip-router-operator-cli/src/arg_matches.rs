@@ -12,8 +12,7 @@ use solana_ledger::use_snapshot_archives_at_startup;
 use solana_runtime::snapshot_utils::{
     SnapshotVersion, DEFAULT_ARCHIVE_COMPRESSION, SUPPORTED_ARCHIVE_COMPRESSION,
 };
-use solana_sdk::{clock::Slot, native_token::sol_to_lamports, rent::Rent, vote::state::VoteState};
-use solana_stake_program::stake_state::StakeStateV2;
+use solana_sdk::{clock::Slot, rent::Rent};
 
 // pub fn create_snapshot_arg_matches<'a, 'b>(
 //     full_snapshots_archives_dir: PathBuf,
@@ -40,13 +39,13 @@ use solana_stake_program::stake_state::StakeStateV2;
 //     app.get_matches_from(args)
 // }
 
-pub fn set_ledger_tool_arg_matches<'a>(
-    arg_matches: &mut ArgMatches<'a>,
+pub fn set_ledger_tool_arg_matches(
+    arg_matches: &mut ArgMatches<'_>,
     full_snapshots_archives_dir: PathBuf,
     incremental_snapshots_archives_dir: PathBuf,
-    account_paths: Vec<PathBuf>,
+    _account_paths: Vec<PathBuf>,
 ) {
-    let rent = Rent::default();
+    let _rent = Rent::default();
     // let default_bootstrap_validator_lamports = sol_to_lamports(500.0)
     //     .max(VoteState::get_rent_exempt_reserve(&rent))
     //     .to_string();
@@ -58,30 +57,31 @@ pub fn set_ledger_tool_arg_matches<'a>(
     let accounts_db_config_args = accounts_db_args();
     let snapshot_config_args = snapshot_args();
 
-    let accounts_db_test_hash_calculation_arg = Arg::with_name("accounts_db_test_hash_calculation")
-        .long("accounts-db-test-hash-calculation")
-        .help("Enable hash calculation test");
-    let halt_at_slot_arg = Arg::with_name("halt_at_slot")
+    let _accounts_db_test_hash_calculation_arg =
+        Arg::with_name("accounts_db_test_hash_calculation")
+            .long("accounts-db-test-hash-calculation")
+            .help("Enable hash calculation test");
+    let _halt_at_slot_arg = Arg::with_name("halt_at_slot")
         .long("halt-at-slot")
         .value_name("SLOT")
         .validator(is_slot)
         .takes_value(true)
         .help("Halt processing at the given slot");
-    let os_memory_stats_reporting_arg = Arg::with_name("os_memory_stats_reporting")
+    let _os_memory_stats_reporting_arg = Arg::with_name("os_memory_stats_reporting")
         .long("os-memory-stats-reporting")
         .help("Enable reporting of OS memory statistics.");
-    let halt_at_slot_store_hash_raw_data = Arg::with_name("halt_at_slot_store_hash_raw_data")
+    let _halt_at_slot_store_hash_raw_data = Arg::with_name("halt_at_slot_store_hash_raw_data")
         .long("halt-at-slot-store-hash-raw-data")
         .help(
             "After halting at slot, run an accounts hash calculation and store the raw hash data \
          for debugging.",
         )
         .hidden(hidden_unless_forced());
-    let verify_index_arg = Arg::with_name("verify_accounts_index")
+    let _verify_index_arg = Arg::with_name("verify_accounts_index")
         .long("verify-accounts-index")
         .takes_value(false)
         .help("For debugging and tests on accounts index.");
-    let limit_load_slot_count_from_snapshot_arg =
+    let _limit_load_slot_count_from_snapshot_arg =
         Arg::with_name("limit_load_slot_count_from_snapshot")
             .long("limit-load-slot-count-from-snapshot")
             .value_name("SLOT")
@@ -98,7 +98,7 @@ pub fn set_ledger_tool_arg_matches<'a>(
         .multiple(true)
         .takes_value(true)
         .help("Add a hard fork at this slot");
-    let allow_dead_slots_arg = Arg::with_name("allow_dead_slots")
+    let _allow_dead_slots_arg = Arg::with_name("allow_dead_slots")
         .long("allow-dead-slots")
         .takes_value(false)
         .help("Output dead slots as well");
@@ -117,7 +117,7 @@ pub fn set_ledger_tool_arg_matches<'a>(
         .takes_value(true)
         .default_value(SnapshotVersion::default().into())
         .help("Output snapshot version");
-    let debug_key_arg = Arg::with_name("debug_key")
+    let _debug_key_arg = Arg::with_name("debug_key")
         .long("debug-key")
         .validator(is_pubkey)
         .value_name("ADDRESS")
@@ -139,7 +139,7 @@ pub fn set_ledger_tool_arg_matches<'a>(
         .value_name("BYTES")
         .help("Maximum number of bytes written to the program log before truncation");
 
-    let accounts_data_encoding_arg = Arg::with_name("encoding")
+    let _accounts_data_encoding_arg = Arg::with_name("encoding")
         .long("encoding")
         .takes_value(true)
         .possible_values(&["base64", "base64+zstd", "jsonParsed"])

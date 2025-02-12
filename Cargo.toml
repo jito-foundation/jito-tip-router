@@ -32,7 +32,7 @@ edition = "2021"
 readme = "README.md"
 
 [workspace.dependencies]
-anchor-lang = { version = "0.30.1" }
+anchor-lang = { git = "https://github.com/coral-xyz/anchor", rev = "96ed3b791c6fed9ab64cb138397795fe55991280" }
 anyhow = "1.0.86"
 assert_matches = "1.5.0"
 borsh = { version = "0.10.3" }
@@ -42,7 +42,7 @@ chrono = "0.4.38"
 clap = { version = "4.5.16", features = ["derive", "env", "cargo"] }
 clap_old = { package = "clap", version = "2.33.1" }
 clap-markdown = { version = "0.1.4" }
-const_str_to_pubkey = "0.1.1"
+const_str_to_pubkey = "0.2.0"
 dotenv = "0.15.0"
 envfile = "0.2.1"
 env_logger = "0.10.2"
@@ -64,36 +64,44 @@ serde_with = "3.9.0"
 serde-big-array = "0.5.1"
 shank = "0.4.2"
 shank_idl = "0.4.2"
-spl-math = { version = "0.2.0", features = ["no-entrypoint"] }
-spl-memo = "4.0.0"
-solana-account-decoder = { package = "solana-account-decoder", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-metrics = { package = "solana-metrics", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-accounts-db = { package = "solana-accounts-db", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-clap-utils = { package = "solana-clap-utils", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-client = { package = "solana-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-core = { package = "solana-core", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-geyser-plugin-manager = { package = "solana-geyser-plugin-manager", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-gossip = { package = "solana-gossip", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-measure = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-ledger = { package = "solana-ledger", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-program = { package = "solana-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-transaction-status = { package = "solana-transaction-status", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-program-test = { package = "solana-program-test", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-rpc-client = { package = "solana-rpc-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-rpc = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-rpc-client-api = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-runtime = { package = "solana-runtime", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-streamer = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-sdk = { package = "solana-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-stake-program = { package = "solana-stake-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-vote = { package = "solana-vote", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-unified-scheduler-pool = { package = "solana-unified-scheduler-pool", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+spl-math = { version = "0.3.0", features = ["no-entrypoint"] }
+spl-memo = "6.0.0"
+solana-account-decoder = { package = "solana-account-decoder", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-metrics = { package = "solana-metrics", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-accounts-db = { package = "solana-accounts-db", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-clap-utils = { package = "solana-clap-utils", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-client = { package = "solana-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-core = { package = "solana-core", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-geyser-plugin-manager = { package = "solana-geyser-plugin-manager", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-gossip = { package = "solana-gossip", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-measure = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-ledger = { package = "solana-ledger", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program = { package = "solana-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-transaction-status = { package = "solana-transaction-status", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program-test = { package = "solana-program-test", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-rpc-client = { package = "solana-rpc-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-rpc = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-rpc-client-api = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-runtime = { package = "solana-runtime", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-streamer = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-sdk = { package = "solana-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-stake-program = { package = "solana-stake-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-vote = { package = "solana-vote", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-unified-scheduler-pool = { package = "solana-unified-scheduler-pool", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-zk-sdk = { package = "solana-zk-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-zk-token-sdk = { package = "solana-zk-token-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-instruction = { package = "solana-instruction", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program-error = { package = "solana-program-error", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-pubkey = { package = "solana-pubkey", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-account-info = { package = "solana-account-info", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program-entrypoint = { package = "solana-program-entrypoint", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-decode-error = { package = "solana-decode-error", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
 solana-security-txt = "1.1.1"
-spl-associated-token-account = { version = "2.3.0", features = ["no-entrypoint"] }
-spl-stake-pool = { version = "1.0.0", features = ["no-entrypoint"] }
-spl-token = { version = "4.0.0", features = ["no-entrypoint"] }
-spl-token-2022 = "=1.0.0"
-switchboard-on-demand = "0.1.0"
+spl-associated-token-account = { version = "6.0.0", features = ["no-entrypoint"] }
+spl-stake-pool = { version = "2.0.1", features = ["no-entrypoint"] }
+spl-token = { version = "7.0.0", features = ["no-entrypoint"] }
+spl-token-2022 = { version = "=7.0.0", features = ["no-entrypoint"] }
+switchboard-on-demand = "0.3.4"
 syn = "2.0.72"
 thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
@@ -104,31 +112,140 @@ jito-tip-router-client = { path = "./clients/rust/jito_tip_router", version = "0
 jito-tip-router-core = { path = "./core", version = "=0.0.1" }
 jito-tip-router-program = { path = "./program", version = "=0.0.1" }
 jito-tip-router-shank-cli = { path = "./shank_cli", version = "=0.0.1" }
-jito-bytemuck = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-jito-account-traits-derive = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-jito-jsm-core = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-jito-restaking-client = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-jito-restaking-core = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-jito-restaking-program = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d", features = ["no-entrypoint"] }
-jito-restaking-sdk = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-jito-vault-client = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-jito-vault-core = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
-jito-vault-program = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d", features = ["no-entrypoint"] }
-jito-vault-sdk = { git = "https://github.com/jito-foundation/restaking.git", rev = "eaf88e7e5ca2845fe3108c4fc4a06a25f9a8514d" }
+jito-bytemuck = { package = "jito-bytemuck", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-account-traits-derive = { package = "jito-account-traits-derive", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-jsm-core = { package = "jito-jsm-core", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-restaking-client = { package = "jito-restaking-client", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-restaking-core = { package = "jito-restaking-core", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-restaking-program = { package = "jito-restaking-program", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade", features = ["no-entrypoint"] }
+jito-restaking-sdk = { package = "jito-restaking-sdk", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-vault-core = { package = "jito-vault-core", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
+jito-vault-program = { package = "jito-vault-program", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade", features = ["no-entrypoint"] }
+jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", branch = "v2.1-upgrade" }
 
 [patch.crates-io]
-# Force all Solana dependencies to use the Jito fork
-solana-program = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-sdk = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-rpc-client = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-# necessary for solana thin client
-solana-rpc-client-api = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-# necessary for ellipsis client
-solana-transaction-status = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-core = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-geyser-plugin-manager = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-gossip = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-measure = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-rpc = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-streamer = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
-solana-unified-scheduler-pool = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "0bbcbe476c0e728907ac01135115e661c16538e5" }
+solana-account = { package = "solana-account", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-account-decoder = { package = "solana-account-decoder", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-account-decoder-client-types = { package = "solana-account-decoder-client-types", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-account-info = { package = "solana-account-info", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-accounts-db = { package = "solana-accounts-db", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-address-lookup-table-program = { package = "solana-address-lookup-table-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-atomic-u64 = { package = "solana-atomic-u64", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-banks-client = { package = "solana-banks-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-banks-interface = { package = "solana-banks-interface", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-banks-server = { package = "solana-banks-server", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-bench-tps = { package = "solana-bench-tps", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-bincode = { package = "solana-bincode", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-bloom = { package = "solana-bloom", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-bn254 = { package = "solana-bn254", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-borsh = { package = "solana-borsh", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-bpf-loader-program = { package = "solana-bpf-loader-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-bucket-map = { package = "solana-bucket-map", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-builtins-default-costs = { package = "solana-builtins-default-costs", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-clap-utils = { package = "solana-clap-utils", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-cli-config = { package = "solana-cli-config", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-client = { package = "solana-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-clock = { package = "solana-clock", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-compute-budget = { package = "solana-compute-budget", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-config-program = { package = "solana-config-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-connection-cache = { package = "solana-connection-cache", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-core = { package = "solana-core", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-cost-model = { package = "solana-cost-model", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-cpi = { package = "solana-cpi", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-curve25519 = { package = "solana-curve25519", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-decode-error = { package = "solana-decode-error", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-define-syscall = { package = "solana-define-syscall", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-derivation-path = { package = "solana-derivation-path", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-entry = { package = "solana-entry", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program-entrypoint = { package = "solana-program-entrypoint", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-epoch-schedule = { package = "solana-epoch-schedule", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-faucet = { package = "solana-faucet", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-feature-set = { package = "solana-feature-set", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-fee-calculator = { package = "solana-fee-calculator", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-fee = { package = "solana-fee", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-geyser-plugin-manager = { package = "solana-geyser-plugin-manager", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-gossip = { package = "solana-gossip", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-hash = { package = "solana-hash", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-inflation = { package = "solana-inflation", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-inline-spl = { package = "solana-inline-spl", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-instruction = { package = "solana-instruction", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-last-restart-slot = { package = "solana-last-restart-slot", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-lattice-hash = { package = "solana-lattice-hash", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-ledger = { package = "solana-ledger", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-loader-v4-program = { package = "solana-loader-v4-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-log-collector = { package = "solana-log-collector", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-logger = { package = "solana-logger", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-measure = { package = "solana-measure", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-merkle-tree = { package = "solana-merkle-tree", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-metrics = { package = "solana-metrics", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-msg = { package = "solana-msg", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-native-token = { package = "solana-native-token", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-net-utils = { package = "solana-net-utils", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-packet = { package = "solana-packet", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-perf = { package = "solana-perf", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-poh = { package = "solana-poh", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-poseidon = { package = "solana-poseidon", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-precompile-error = { package = "solana-precompile-error", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program = { package = "solana-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program-error = { package = "solana-program-error", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program-memory = { package = "solana-program-memory", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program-option = { package = "solana-program-option", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program-pack = { package = "solana-program-pack", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program-runtime = { package = "solana-program-runtime", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-program-test = { package = "solana-program-test", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-pubkey = { package = "solana-pubkey", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-pubsub-client = { package = "solana-pubsub-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-quic-client = { package = "solana-quic-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-rayon-threadlimit = { package = "solana-rayon-threadlimit", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-remote-wallet = { package = "solana-remote-wallet", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-rent = { package = "solana-rent", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-sanitize = { package = "solana-sanitize", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-secp256r1-program = { package = "solana-secp256r1-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-serde-varint = { package = "solana-serde-varint", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-serialize-utils = { package = "solana-serialize-utils", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-sha256-hasher = { package = "solana-sha256-hasher", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-signature = { package = "solana-signature", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-slot-hashes = { package = "solana-slot-hashes", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-slot-history = { package = "solana-slot-history", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-timings = { package = "solana-timings", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-unified-scheduler-logic = { package = "solana-unified-scheduler-logic", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-unified-scheduler-pool = { package = "solana-unified-scheduler-pool", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-rpc = { package = "solana-rpc", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-rpc-client = { package = "solana-rpc-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-rpc-client-api = { package = "solana-rpc-client-api", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-rpc-client-nonce-utils = { package = "solana-rpc-client-nonce-utils", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-runtime = { package = "solana-runtime", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-runtime-transaction = { package = "solana-runtime-transaction", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-sdk = { package = "solana-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-sdk-macro = { package = "solana-sdk-macro", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-secp256k1-recover = { package = "solana-secp256k1-recover", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-send-transaction-service = { package = "solana-send-transaction-service", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-short-vec = { package = "solana-short-vec", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-stable-layout = { package = "solana-stable-layout", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-stake-program = { package = "solana-stake-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-storage-bigtable = { package = "solana-storage-bigtable", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-storage-proto = { package = "solana-storage-proto", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-streamer = { package = "solana-streamer", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-svm = { package = "solana-svm", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-svm-rent-collector = { package = "solana-svm-rent-collector", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-svm-transaction = { package = "solana-svm-transaction", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-system-program = { package = "solana-system-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-sysvar-id = { package = "solana-sysvar-id", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-thin-client = { package = "solana-thin-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-transaction-error = { package = "solana-transaction-error", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-tpu-client = { package = "solana-tpu-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-transaction-status = { package = "solana-transaction-status", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-transaction-status-client-types = { package = "solana-transaction-status-client-types", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-transaction-metrics-tracker = { package = "solana-transaction-metrics-tracker", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-turbine = { package = "solana-turbine", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-type-overrides = { package = "solana-type-overrides", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-udp-client = { package = "solana-udp-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-version = { package = "solana-version", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-vote = { package = "solana-vote", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-vote-program = { package = "solana-vote-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-wen-restart = { package = "solana-wen-restart", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-zk-elgamal-proof-program = { package = "solana-zk-elgamal-proof-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-zk-sdk = { package = "solana-zk-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-zk-token-proof-program = { package = "solana-zk-token-proof-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }
+solana-zk-token-sdk = { package = "solana-zk-token-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "87dcd086af931d81a0a71ad49cbea38e9655f166" }

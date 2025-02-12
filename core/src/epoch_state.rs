@@ -1,13 +1,23 @@
+use core::fmt;
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
-use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
+use jito_bytemuck::{
+    types::{PodBool, PodU64},
+    AccountDeserialize, Discriminator,
+};
 use shank::{ShankAccount, ShankType};
-use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{
+    account_info::AccountInfo, epoch_schedule::EpochSchedule, msg, program_error::ProgramError,
+    pubkey::Pubkey,
+};
 
 use crate::{
-    constants::MAX_OPERATORS, discriminators::Discriminators, error::TipRouterError,
-    loaders::check_load, ncn_fee_group::NcnFeeGroup,
+    constants::{DEFAULT_CONSENSUS_REACHED_SLOT, MAX_OPERATORS},
+    discriminators::Discriminators,
+    error::TipRouterError,
+    loaders::check_load,
+    ncn_fee_group::NcnFeeGroup,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -15,7 +25,8 @@ use crate::{
 pub enum AccountStatus {
     DNE = 0,
     Created = 1,
-    Closed = 2,
+    CreatedWithReceiver = 2,
+    Closed = 3,
 }
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
@@ -51,7 +62,8 @@ impl EpochAccountStatus {
         match u {
             0 => Ok(AccountStatus::DNE),
             1 => Ok(AccountStatus::Created),
-            2 => Ok(AccountStatus::Closed),
+            2 => Ok(AccountStatus::CreatedWithReceiver),
+            3 => Ok(AccountStatus::Closed),
             _ => Err(TipRouterError::InvalidAccountStatus),
         }
     }
@@ -124,6 +136,48 @@ impl EpochAccountStatus {
             status as u8;
         Ok(())
     }
+
+    pub fn are_all_closed(&self) -> bool {
+        // We don't need to check epoch state since it's the account we are closing
+
+        if self.weight_table != AccountStatus::Closed as u8 {
+            return false;
+        }
+
+        if self.epoch_snapshot != AccountStatus::Closed as u8 {
+            return false;
+        }
+
+        for operator_snapshot_ref in self.operator_snapshot.iter() {
+            let operator_snapshot = *operator_snapshot_ref;
+            let is_dne = operator_snapshot == AccountStatus::DNE as u8;
+            let is_closed = operator_snapshot == AccountStatus::Closed as u8;
+
+            if !is_dne && !is_closed {
+                return false;
+            }
+        }
+
+        if self.ballot_box != AccountStatus::Closed as u8 {
+            return false;
+        }
+
+        if self.base_reward_router != AccountStatus::Closed as u8 {
+            return false;
+        }
+
+        for ncn_reward_router_ref in self.ncn_reward_router.iter() {
+            let ncn_reward_router = *ncn_reward_router_ref;
+            let is_dne = ncn_reward_router == AccountStatus::DNE as u8;
+            let is_closed = ncn_reward_router == AccountStatus::Closed as u8;
+
+            if !is_dne && !is_closed {
+                return false;
+            }
+        }
+
+        true
+    }
 }
 
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
@@ -133,6 +187,8 @@ pub struct Progress {
     tally: PodU64,
     /// total
     total: PodU64,
+    /// Slot Completed
+    reserved: [u8; 8],
 }
 
 impl Default for Progress {
@@ -140,6 +196,7 @@ impl Default for Progress {
         Self {
             tally: PodU64::from(Self::INVALID),
             total: PodU64::from(Self::INVALID),
+            reserved: [0; 8],
         }
     }
 }
@@ -152,6 +209,7 @@ impl Progress {
         Self {
             tally: PodU64::from(0),
             total: PodU64::from(total),
+            reserved: [0; 8],
         }
     }
 
@@ -193,7 +251,7 @@ impl Progress {
         if self.is_invalid() {
             false
         } else {
-            self.tally.eq(&self.total)
+            self.tally() >= self.total()
         }
     }
 }
@@ -210,6 +268,12 @@ pub struct EpochState {
 
     /// The time this snapshot was created
     slot_created: PodU64,
+
+    /// Was tie breaker set
+    was_tie_breaker_set: PodBool,
+
+    /// The time consensus was reached
+    slot_consensus_reached: PodU64,
 
     /// The number of operators
     operator_count: PodU64,
@@ -247,8 +311,11 @@ pub struct EpochState {
     /// ncn distribution progress
     ncn_distribution_progress: [Progress; 2048],
 
+    /// Is closing
+    is_closing: PodBool,
+
     /// Reserved space
-    reserved: [u8; 1024],
+    reserved: [u8; 1023],
 }
 
 impl Discriminator for EpochState {
@@ -264,9 +331,11 @@ impl EpochState {
             epoch: PodU64::from(epoch),
             bump,
             slot_created: PodU64::from(slot_created),
+            slot_consensus_reached: PodU64::from(DEFAULT_CONSENSUS_REACHED_SLOT),
             operator_count: PodU64::from(0),
             vault_count: PodU64::from(0),
             account_status: EpochAccountStatus::default(),
+            was_tie_breaker_set: PodBool::from(false),
             set_weight_progress: Progress::default(),
             epoch_snapshot_progress: Progress::default(),
             operator_snapshot_progress: [Progress::default(); MAX_OPERATORS],
@@ -277,7 +346,8 @@ impl EpochState {
             base_distribution_progress: Progress::default(),
             ncn_distribution_progress: [Progress::default();
                 MAX_OPERATORS * NcnFeeGroup::FEE_GROUP_COUNT],
-            reserved: [0; 1024],
+            is_closing: PodBool::from(false),
+            reserved: [0; 1023],
         }
     }
 
@@ -287,7 +357,8 @@ impl EpochState {
         self.bump = bump;
         self.epoch = PodU64::from(epoch);
         self.slot_created = PodU64::from(slot_created);
-        self.reserved = [0; 1024];
+        self.slot_consensus_reached = PodU64::from(DEFAULT_CONSENSUS_REACHED_SLOT);
+        self.reserved = [0; 1023];
     }
 
     pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {
@@ -315,9 +386,9 @@ impl EpochState {
 
     pub fn load(
         program_id: &Pubkey,
+        account: &AccountInfo,
         ncn: &Pubkey,
         epoch: u64,
-        account: &AccountInfo,
         expect_writable: bool,
     ) -> Result<(), ProgramError> {
         let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
@@ -330,12 +401,54 @@ impl EpochState {
         )
     }
 
+    pub fn load_to_close(
+        account_to_close: &Self,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        if account_to_close.ncn().ne(ncn) {
+            msg!("Epoch State NCN does not match NCN");
+            return Err(TipRouterError::CannotCloseAccount.into());
+        }
+
+        if account_to_close.epoch().ne(&epoch) {
+            msg!("Epoch State epoch does not match epoch");
+            return Err(TipRouterError::CannotCloseAccount.into());
+        }
+
+        // Check all other accounts are closed
+        if !account_to_close.account_status.are_all_closed() {
+            msg!("Cannot close Epoch State until all other accounts are closed");
+            return Err(TipRouterError::CannotCloseEpochStateAccount.into());
+        }
+
+        Ok(())
+    }
+
+    pub fn load_and_check_is_closing(
+        program_id: &Pubkey,
+        account: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+        expect_writable: bool,
+    ) -> Result<(), ProgramError> {
+        let account_data = account.try_borrow_data()?;
+        let account_struct = Self::try_from_slice_unchecked(&account_data)?;
+
+        if account_struct.is_closing() {
+            msg!("Epoch is closing down");
+            return Err(TipRouterError::EpochIsClosingDown.into());
+        }
+
+        Self::load(program_id, account, ncn, epoch, expect_writable)
+    }
+
     // ------------ HELPER FUNCTIONS ------------
     pub fn get_ncn_reward_router_index(
-        operator_index: usize,
+        ncn_operator_index: usize,
         group: NcnFeeGroup,
     ) -> Result<usize, TipRouterError> {
-        let mut index = operator_index
+        let mut index = ncn_operator_index
             .checked_mul(NcnFeeGroup::FEE_GROUP_COUNT)
             .ok_or(TipRouterError::ArithmeticOverflow)?;
         index = index
@@ -360,6 +473,40 @@ impl EpochState {
 
     pub fn slot_created(&self) -> u64 {
         self.slot_created.into()
+    }
+
+    pub fn was_tie_breaker_set(&self) -> bool {
+        self.was_tie_breaker_set.into()
+    }
+
+    pub fn is_consensus_reached(&self) -> bool {
+        self.slot_consensus_reached() != DEFAULT_CONSENSUS_REACHED_SLOT
+    }
+
+    pub fn slot_consensus_reached(&self) -> u64 {
+        self.slot_consensus_reached.into()
+    }
+
+    pub fn is_closing(&self) -> bool {
+        self.is_closing.into()
+    }
+
+    pub fn get_slot_consensus_reached(&self) -> Result<u64, TipRouterError> {
+        if self.slot_consensus_reached() == DEFAULT_CONSENSUS_REACHED_SLOT {
+            Err(TipRouterError::ConsensusNotReached)
+        } else {
+            Ok(self.slot_consensus_reached.into())
+        }
+    }
+
+    pub fn get_epoch_consensus_reached(
+        &self,
+        epoch_schedule: &EpochSchedule,
+    ) -> Result<u64, ProgramError> {
+        let slot_consensus_reached = self.get_slot_consensus_reached()?;
+        let epoch_consensus_reached = epoch_schedule.get_epoch(slot_consensus_reached);
+
+        Ok(epoch_consensus_reached)
     }
 
     pub fn operator_count(&self) -> u64 {
@@ -408,11 +555,11 @@ impl EpochState {
 
     pub fn ncn_distribution_progress(
         &self,
-        ncn_operator_index: usize,
+        ncn_ncn_operator_index: usize,
         group: NcnFeeGroup,
-    ) -> Progress {
-        self.ncn_distribution_progress
-            [Self::get_ncn_reward_router_index(ncn_operator_index, group).unwrap()]
+    ) -> Result<Progress, TipRouterError> {
+        let index = Self::get_ncn_reward_router_index(ncn_ncn_operator_index, group)?;
+        Ok(self.ncn_distribution_progress[index])
     }
 
     // ------------ UPDATERS ------------
@@ -420,15 +567,16 @@ impl EpochState {
         self.account_status.set_epoch_state(AccountStatus::Created);
     }
 
-    pub fn update_realloc_weight_table(&mut self, vault_count: u64) {
+    pub fn update_realloc_weight_table(&mut self, vault_count: u64, st_mint_count: u64) {
         self.account_status.set_weight_table(AccountStatus::Created);
 
         self.vault_count = PodU64::from(vault_count);
-        self.set_weight_progress = Progress::new(vault_count);
+        self.set_weight_progress = Progress::new(st_mint_count);
     }
 
-    pub fn update_set_weight(&mut self, weights_set: u64) {
-        self.set_weight_progress.set_tally(weights_set)
+    pub fn update_set_weight(&mut self, weights_set: u64, st_mint_count: u64) {
+        self.set_weight_progress.set_tally(weights_set);
+        self.set_weight_progress.set_total(st_mint_count)
     }
 
     pub fn update_initialize_epoch_snapshot(&mut self, operator_count: u64) {
@@ -441,18 +589,18 @@ impl EpochState {
 
     pub fn update_realloc_operator_snapshot(
         &mut self,
-        operator_index: usize,
+        ncn_operator_index: usize,
         is_active: bool,
     ) -> Result<(), TipRouterError> {
         self.account_status
-            .set_operator_snapshot(operator_index, AccountStatus::Created);
+            .set_operator_snapshot(ncn_operator_index, AccountStatus::Created);
 
         if is_active {
-            self.operator_snapshot_progress[operator_index] =
+            self.operator_snapshot_progress[ncn_operator_index] =
                 Progress::new(self.vault_count.into());
         } else {
-            self.operator_snapshot_progress[operator_index] = Progress::new(1);
-            self.operator_snapshot_progress[operator_index].increment_one()?;
+            self.operator_snapshot_progress[ncn_operator_index] = Progress::new(1);
+            self.operator_snapshot_progress[ncn_operator_index].increment_one()?;
             self.epoch_snapshot_progress.increment_one()?;
         }
 
@@ -461,10 +609,10 @@ impl EpochState {
 
     pub fn update_snapshot_vault_operator_delegation(
         &mut self,
-        operator_index: usize,
+        ncn_operator_index: usize,
         finalized: bool,
     ) -> Result<(), TipRouterError> {
-        self.operator_snapshot_progress[operator_index].increment_one()?;
+        self.operator_snapshot_progress[ncn_operator_index].increment_one()?;
         if finalized {
             self.epoch_snapshot_progress.increment_one()?;
         }
@@ -474,34 +622,64 @@ impl EpochState {
 
     pub fn update_realloc_ballot_box(&mut self) {
         self.account_status.set_ballot_box(AccountStatus::Created);
-        self.voting_progress = Progress::new(1);
+        self.voting_progress = Progress::new(self.operator_count());
         self.validation_progress = Progress::new(1);
         self.upload_progress = Progress::new(1);
     }
 
-    pub fn update_cast_vote(&mut self) -> Result<(), TipRouterError> {
-        self.voting_progress.increment_one()
+    pub fn update_cast_vote(
+        &mut self,
+        operators_voted: u64,
+        is_consensus_reached: bool,
+        current_slot: u64,
+    ) -> Result<(), TipRouterError> {
+        if is_consensus_reached && !self.is_consensus_reached() {
+            self.slot_consensus_reached = PodU64::from(current_slot);
+        }
+
+        self.voting_progress.set_tally(operators_voted);
+
+        Ok(())
     }
 
+    pub fn update_set_tie_breaker(
+        &mut self,
+        is_consensus_reached: bool,
+        current_slot: u64,
+    ) -> Result<(), TipRouterError> {
+        if is_consensus_reached && !self.is_consensus_reached() {
+            self.slot_consensus_reached = PodU64::from(current_slot);
+            self.was_tie_breaker_set = PodBool::from(true);
+        }
+
+        Ok(())
+    }
+
+    // Just tracks the amount of times set_merkle_root is called
     pub fn update_set_merkle_root(&mut self) -> Result<(), TipRouterError> {
-        self.upload_progress.increment_one()
+        self.upload_progress.increment_one()?;
+        self.upload_progress.set_total(self.upload_progress.tally());
+        Ok(())
     }
 
     pub fn update_realloc_base_reward_router(&mut self) {
         self.account_status
-            .set_base_reward_router(AccountStatus::Created);
+            .set_base_reward_router(AccountStatus::CreatedWithReceiver);
         self.base_distribution_progress = Progress::new(0);
     }
 
     pub fn update_realloc_ncn_reward_router(
         &mut self,
-        operator_index: usize,
+        ncn_operator_index: usize,
         group: NcnFeeGroup,
     ) -> Result<(), TipRouterError> {
-        self.account_status
-            .set_ncn_reward_router(operator_index, group, AccountStatus::Created)?;
-        self.ncn_distribution_progress[Self::get_ncn_reward_router_index(operator_index, group)?] =
-            Progress::new(0);
+        self.account_status.set_ncn_reward_router(
+            ncn_operator_index,
+            group,
+            AccountStatus::CreatedWithReceiver,
+        )?;
+        self.ncn_distribution_progress
+            [Self::get_ncn_reward_router_index(ncn_operator_index, group)?] = Progress::new(0);
 
         Ok(())
     }
@@ -513,12 +691,13 @@ impl EpochState {
 
     pub fn update_route_ncn_rewards(
         &mut self,
-        operator_index: usize,
+        ncn_operator_index: usize,
         group: NcnFeeGroup,
         total_rewards: u64,
     ) -> Result<(), TipRouterError> {
-        self.ncn_distribution_progress[Self::get_ncn_reward_router_index(operator_index, group)?]
-            .set_total(total_rewards);
+        self.ncn_distribution_progress
+            [Self::get_ncn_reward_router_index(ncn_operator_index, group)?]
+        .set_total(total_rewards);
         Ok(())
     }
 
@@ -538,18 +717,97 @@ impl EpochState {
 
     pub fn update_distribute_ncn_rewards(
         &mut self,
-        operator_index: usize,
+        ncn_operator_index: usize,
         group: NcnFeeGroup,
         rewards: u64,
     ) -> Result<(), TipRouterError> {
         self.total_distribution_progress.increment(rewards)?;
-        self.ncn_distribution_progress[Self::get_ncn_reward_router_index(operator_index, group)?]
-            .increment(rewards)?;
+
+        self.ncn_distribution_progress
+            [Self::get_ncn_reward_router_index(ncn_operator_index, group)?]
+        .increment(rewards)?;
         Ok(())
     }
 
+    // ---------- CLOSERS ----------
+    pub fn set_is_closing(&mut self) {
+        self.is_closing = PodBool::from(true);
+    }
+
+    pub fn close_epoch_state(&mut self) {
+        self.account_status.set_epoch_state(AccountStatus::Closed);
+    }
+
+    pub fn close_weight_table(&mut self) {
+        self.account_status.set_weight_table(AccountStatus::Closed);
+    }
+
+    pub fn close_epoch_snapshot(&mut self) {
+        self.account_status
+            .set_epoch_snapshot(AccountStatus::Closed);
+    }
+
+    pub fn close_operator_snapshot(&mut self, ncn_operator_index: usize) {
+        self.account_status
+            .set_operator_snapshot(ncn_operator_index, AccountStatus::Closed);
+    }
+
+    pub fn close_ballot_box(&mut self) {
+        self.account_status.set_ballot_box(AccountStatus::Closed);
+    }
+
+    pub fn close_base_reward_router(&mut self) {
+        self.account_status
+            .set_base_reward_router(AccountStatus::Closed);
+    }
+
+    pub fn close_ncn_reward_router(
+        &mut self,
+        ncn_operator_index: usize,
+        group: NcnFeeGroup,
+    ) -> Result<(), TipRouterError> {
+        self.account_status
+            .set_ncn_reward_router(ncn_operator_index, group, AccountStatus::Closed)
+    }
+
     // ------------ STATE ------------
-    pub fn current_state(&self) -> Result<State, TipRouterError> {
+    pub fn can_start_routing(
+        &self,
+        valid_slots_after_consensus: u64,
+        current_slot: u64,
+    ) -> Result<bool, ProgramError> {
+        if !self.is_consensus_reached() {
+            return Ok(false);
+        }
+
+        let slot_consensus_reached = self.get_slot_consensus_reached()?;
+        let slot_can_start_routing = slot_consensus_reached
+            .checked_add(valid_slots_after_consensus)
+            .ok_or(TipRouterError::ArithmeticOverflow)?;
+
+        Ok(current_slot >= slot_can_start_routing)
+    }
+
+    pub fn can_close_epoch_accounts(
+        &self,
+        epoch_schedule: &EpochSchedule,
+        epochs_after_consensus_before_close: u64,
+        current_slot: u64,
+    ) -> Result<bool, ProgramError> {
+        let epoch_consensus_reached = self.get_epoch_consensus_reached(epoch_schedule)?;
+        let current_epoch = epoch_schedule.get_epoch(current_slot);
+        let epoch_delta = current_epoch.saturating_sub(epoch_consensus_reached);
+        let can_close_epoch_accounts = epoch_delta >= epochs_after_consensus_before_close;
+        Ok(can_close_epoch_accounts)
+    }
+
+    pub fn current_state(
+        &self,
+        epoch_schedule: &EpochSchedule,
+        valid_slots_after_consensus: u64,
+        epochs_after_consensus_before_close: u64,
+        current_slot: u64,
+    ) -> Result<State, ProgramError> {
         if self.account_status.weight_table()? == AccountStatus::DNE
             || !self.set_weight_progress.is_complete()
         {
@@ -563,47 +821,143 @@ impl EpochState {
         }
 
         if self.account_status.ballot_box()? == AccountStatus::DNE
-            || !self.voting_progress.is_complete()
+            || !self.can_start_routing(valid_slots_after_consensus, current_slot)?
         {
             return Ok(State::Vote);
         }
 
-        if self.account_status.base_reward_router()? == AccountStatus::DNE {
-            return Ok(State::SetupRouter);
+        // The upload state is not required to progress to the next state
+        let can_close_epoch_accounts = self.can_close_epoch_accounts(
+            epoch_schedule,
+            epochs_after_consensus_before_close,
+            current_slot,
+        )?;
+        if can_close_epoch_accounts {
+            return Ok(State::Close);
         }
 
-        //TODO set back when upload is implemented
-        // if !self.upload_progress.is_complete() {
-        //     return Ok(State::Upload);
-        // }
+        Ok(State::Distribute)
+    }
 
-        if !self.total_distribution_progress.is_complete()
-            || self.total_distribution_progress.total() == 0
+    pub fn current_state_patched(
+        &self,
+        epoch_schedule: &EpochSchedule,
+        valid_slots_after_consensus: u64,
+        epochs_after_consensus_before_close: u64,
+        st_mint_count: u64,
+        current_slot: u64,
+    ) -> Result<State, ProgramError> {
+        if self.account_status.weight_table()? == AccountStatus::DNE
+            || self.set_weight_progress.tally() < st_mint_count
         {
-            return Ok(State::Distribute);
+            return Ok(State::SetWeight);
         }
 
-        Ok(State::Done)
+        if self.account_status.epoch_snapshot()? == AccountStatus::DNE
+            || !self.epoch_snapshot_progress.is_complete()
+        {
+            return Ok(State::Snapshot);
+        }
+
+        if self.account_status.ballot_box()? == AccountStatus::DNE
+            || !self.can_start_routing(valid_slots_after_consensus, current_slot)?
+        {
+            return Ok(State::Vote);
+        }
+
+        // The upload state is not required to progress to the next state
+        let can_close_epoch_accounts = self.can_close_epoch_accounts(
+            epoch_schedule,
+            epochs_after_consensus_before_close,
+            current_slot,
+        )?;
+        if can_close_epoch_accounts {
+            return Ok(State::Close);
+        }
+
+        Ok(State::Distribute)
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
 pub enum State {
     SetWeight,
     Snapshot,
     Vote,
-    SetupRouter,
-    Upload,
     Distribute,
-    Done,
+    Close,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[rustfmt::skip]
+impl fmt::Display for EpochState {
+   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+       writeln!(f, "\n\n----------- Epoch State -------------")?;
+       writeln!(f, "  NCN:                          {}", self.ncn)?;
+       writeln!(f, "  Epoch:                        {}", self.epoch())?;
+       writeln!(f, "  Bump:                         {}", self.bump)?;
+       writeln!(f, "  Slot Created:                 {}", self.slot_created())?;
+       writeln!(f, "  Was Tie Breaker Set:          {}", self.was_tie_breaker_set())?;
+       writeln!(f, "  Slot Consensus Reached:       {}", self.slot_consensus_reached())?;
+       writeln!(f, "  Operator Count:               {}", self.operator_count())?;
+       writeln!(f, "  Vault Count:                  {}", self.vault_count())?;
 
-    #[test]
-    pub fn size() {
-        println!("{}", EpochState::SIZE);
-    }
+       writeln!(f, "\nAccount Status:")?;
+       writeln!(f, "  Epoch State:                  {:?}", self.account_status.epoch_state().unwrap())?;
+       writeln!(f, "  Weight Table:                 {:?}", self.account_status.weight_table().unwrap())?;
+       writeln!(f, "  Epoch Snapshot:               {:?}", self.account_status.epoch_snapshot().unwrap())?;
+       writeln!(f, "  Ballot Box:                   {:?}", self.account_status.ballot_box().unwrap())?;
+       writeln!(f, "  Base Reward Router:           {:?}", self.account_status.base_reward_router().unwrap())?;
+       
+       writeln!(f, "\nOperator Snapshots:")?;
+       for i in 0..MAX_OPERATORS {
+           if let Ok(status) = self.account_status.operator_snapshot(i) {
+                if status != AccountStatus::DNE {
+                    writeln!(f, "  Operator {}:                   {:?}", i, status)?;
+                }
+           }
+       }
+
+       writeln!(f, "\nNCN Reward Routers:")?;
+       for i in 0..MAX_OPERATORS {
+           for group in NcnFeeGroup::all_groups() {
+               if let Ok(status) = self.account_status.ncn_reward_router(i, group) {
+                    if status != AccountStatus::DNE {
+                        writeln!(f, "  Operator {} Group {}:           {:?}", i, group.group, status)?;
+                    }
+               }
+           }
+       }
+
+       writeln!(f, "\nProgress:")?;
+       writeln!(f, "  Set Weight Progress:          {}/{}", self.set_weight_progress.tally(), self.set_weight_progress.total())?;
+       writeln!(f, "  Epoch Snapshot Progress:      {}/{}", self.epoch_snapshot_progress.tally(), self.epoch_snapshot_progress.total())?;
+       
+       writeln!(f, "\nOperator Snapshot Progress:")?;
+       for i in 0..MAX_OPERATORS {
+            if self.operator_snapshot_progress(i).total() > 0 {
+                writeln!(f, "  Operator {}:                   {}/{}", i, self.operator_snapshot_progress(i).tally(), self.operator_snapshot_progress(i).total())?;                
+            }
+       }
+
+       writeln!(f, "\nVoting Progress:                {}/{}", self.voting_progress.tally(), self.voting_progress.total())?;
+       writeln!(f, "  Validation Progress:          {}/{}", self.validation_progress.tally(), self.validation_progress.total())?;
+       writeln!(f, "  Upload Progress:              {}/{}", self.upload_progress.tally(), self.upload_progress.total())?;
+       writeln!(f, "  Total Distribution Progress:  {}/{}", self.total_distribution_progress.tally(), self.total_distribution_progress.total())?;
+       writeln!(f, "  Base Distribution Progress:   {}/{}", self.base_distribution_progress.tally(), self.base_distribution_progress.total())?;
+
+       writeln!(f, "\nNCN Distribution Progress:")?;
+       for i in 0..MAX_OPERATORS {
+           for group in NcnFeeGroup::all_groups() {
+               if let Ok(progress) = self.ncn_distribution_progress(i, group) {
+                    if progress.total() > 0 {
+                        writeln!(f, "  Operator {} Group {}:           {}/{}", i, group.group, progress.tally(), progress.total())?;
+                    } 
+               }
+           }
+       }
+
+       writeln!(f, "\n")?;
+       Ok(())
+   }
 }

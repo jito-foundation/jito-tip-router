@@ -33,8 +33,10 @@ pub struct Config {
     pub epochs_before_stall: u64,
     pub fee_config: FeeConfig,
     pub bump: u8,
+    pub epochs_after_consensus_before_close: u64,
+    pub starting_valid_epoch: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-    pub reserved: [u8; 127],
+    pub reserved: [u8; 111],
 }
 
 impl Config {
@@ -78,5 +80,5 @@ impl anchor_lang::IdlBuild for Config {}
 
 #[cfg(feature = "anchor-idl-build")]
 impl anchor_lang::Discriminator for Config {
-    const DISCRIMINATOR: [u8; 8] = [0; 8];
+    const DISCRIMINATOR: &'static [u8] = &[0; 8];
 }

@@ -2,6 +2,7 @@ use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{
     derive_tip_distribution_account_address, instruction::upload_merkle_root_ix,
+    jito_tip_distribution,
 };
 use jito_tip_router_core::{
     ballot_box::BallotBox, config::Config as NcnConfig, epoch_state::EpochState,
@@ -21,21 +22,29 @@ pub fn process_set_merkle_root(
     max_num_nodes: u64,
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, ncn, ballot_box, vote_account, tip_distribution_account, tip_distribution_config, tip_distribution_program_id] =
+    let [epoch_state, ncn_config, ncn, ballot_box, vote_account, tip_distribution_account, tip_distribution_config, tip_distribution_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    BallotBox::load(program_id, ncn.key, epoch, ballot_box, false)?;
+    BallotBox::load(program_id, ballot_box, ncn.key, epoch, false)?;
 
+    if tip_distribution_program.key.ne(&jito_tip_distribution::ID) {
+        msg!("Incorrect tip distribution program");
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    let tip_distribution_epoch = epoch
+        .checked_sub(1)
+        .ok_or(TipRouterError::ArithmeticUnderflowError)?;
     let (tip_distribution_address, _) = derive_tip_distribution_account_address(
-        tip_distribution_program_id.key,
+        tip_distribution_program.key,
         vote_account.key,
-        epoch,
+        tip_distribution_epoch,
     );
 
     if tip_distribution_address.ne(tip_distribution_account.key) {

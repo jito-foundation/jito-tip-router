@@ -1,8 +1,9 @@
+use core::fmt;
 use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
 use jito_bytemuck::{types::PodU64, AccountDeserialize, Discriminator};
-use shank::{ShankAccount, ShankType};
+use shank::ShankAccount;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use spl_math::precise_number::PreciseNumber;
 
@@ -15,7 +16,7 @@ use crate::{
     weight_entry::WeightEntry,
 };
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct WeightTable {
     /// The NCN the account is associated with
@@ -184,12 +185,20 @@ impl WeightTable {
             .collect()
     }
 
+    pub fn epoch(&self) -> u64 {
+        self.epoch.into()
+    }
+
     pub fn mint_count(&self) -> usize {
         self.table.iter().filter(|entry| !entry.is_empty()).count()
     }
 
     pub fn weight_count(&self) -> usize {
         self.table.iter().filter(|entry| entry.is_set()).count()
+    }
+
+    pub fn st_mint_count(&self) -> usize {
+        self.table.iter().filter(|entry| !entry.is_empty()).count()
     }
 
     pub const fn table(&self) -> &[WeightEntry; MAX_ST_MINTS] {
@@ -264,7 +273,7 @@ impl WeightTable {
 
     pub fn load(
         program_id: &Pubkey,
-        weight_table: &AccountInfo,
+        account: &AccountInfo,
         ncn: &Pubkey,
         epoch: u64,
         expect_writable: bool,
@@ -272,12 +281,61 @@ impl WeightTable {
         let expected_pda = Self::find_program_address(program_id, ncn, epoch).0;
         check_load(
             program_id,
-            weight_table,
+            account,
             &expected_pda,
             Some(Self::DISCRIMINATOR),
             expect_writable,
         )
     }
+
+    pub fn load_to_close(
+        program_id: &Pubkey,
+        account_to_close: &AccountInfo,
+        ncn: &Pubkey,
+        epoch: u64,
+    ) -> Result<(), ProgramError> {
+        Self::load(program_id, account_to_close, ncn, epoch, true)
+    }
+}
+
+#[rustfmt::skip]
+impl fmt::Display for WeightTable {
+   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+       writeln!(f, "\n\n----------- Weight Table -------------")?;
+       writeln!(f, "  NCN:                          {}", self.ncn)?;
+       writeln!(f, "  Epoch:                        {}", self.epoch())?;
+       writeln!(f, "  Bump:                         {}", self.bump)?;
+       writeln!(f, "  Slot Created:                 {}", self.slot_created())?;
+       writeln!(f, "  Vault Count:                  {}", self.vault_count())?;
+       writeln!(f, "  Registry Initialized:         {}", self.vault_registry_initialized())?;
+       writeln!(f, "  Table Initialized:            {}", self.table_initialized())?;
+       writeln!(f, "  Finalized:                    {}", self.finalized())?;
+
+       writeln!(f, "\nVault Registry Entries:")?;
+       for (i, entry) in self.vault_registry.iter().enumerate() {
+           if !entry.is_empty() {
+               writeln!(f, "  Entry {}:", i)?;
+               writeln!(f, "    Vault:                      {}", entry.vault())?;
+               writeln!(f, "    St Mint:                    {}", entry.st_mint())?;
+               writeln!(f, "    Vault Index:                {}", entry.vault_index())?;
+               writeln!(f, "    Slot Registered:            {}", entry.slot_registered())?;
+           }
+       }
+
+       writeln!(f, "\nWeight Table Entries:")?;
+       for (i, entry) in self.table.iter().enumerate() {
+           if !entry.is_empty() {
+               writeln!(f, "  Entry {}:", i)?;
+               writeln!(f, "    St Mint:                    {}", entry.st_mint())?;
+               writeln!(f, "    Weight:                     {}", entry.weight())?;
+               writeln!(f, "    Slot Set:                   {}", entry.slot_set())?;
+               writeln!(f, "    Slot Updated:               {}", entry.slot_updated())?;
+           }
+       }
+
+       writeln!(f, "\n")?;
+       Ok(())
+   }
 }
 
 #[cfg(test)]

@@ -8,4 +8,4 @@
 use solana_program::{pubkey, pubkey::Pubkey};
 
 /// `jito_tip_router` program ID.
-pub const JITO_TIP_ROUTER_ID: Pubkey = pubkey!("Ap2AH3VcZGuuauEDq87uhgjNoUKcCAafc4DTyTByLMFf");
+pub const JITO_TIP_ROUTER_ID: Pubkey = pubkey!("RouterBmuRBkPUbgEDMtdvTZ75GBdSREZR5uGUxxxpb");

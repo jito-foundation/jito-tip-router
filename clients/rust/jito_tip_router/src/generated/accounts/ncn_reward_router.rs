@@ -29,6 +29,7 @@ pub struct NcnRewardRouter {
     pub epoch: u64,
     pub bump: u8,
     pub slot_created: u64,
+    pub ncn_operator_index: u64,
     pub total_rewards: u64,
     pub reward_pool: u64,
     pub rewards_processed: u64,
@@ -82,5 +83,5 @@ impl anchor_lang::IdlBuild for NcnRewardRouter {}
 
 #[cfg(feature = "anchor-idl-build")]
 impl anchor_lang::Discriminator for NcnRewardRouter {
-    const DISCRIMINATOR: [u8; 8] = [0; 8];
+    const DISCRIMINATOR: &'static [u8] = &[0; 8];
 }

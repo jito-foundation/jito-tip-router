@@ -126,8 +126,8 @@ export const JITO_TIP_ROUTER_ERROR__VOTING_NOT_FINALIZED = 0x222c; // 8748
 export const JITO_TIP_ROUTER_ERROR__TIE_BREAKER_NOT_IN_PRIOR_VOTES = 0x222d; // 8749
 /** InvalidMerkleProof: Invalid merkle proof */
 export const JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF = 0x222e; // 8750
-/** OperatorAdminInvalid: Operator admin needs to sign its vote */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID = 0x222f; // 8751
+/** InvalidOperatorVoter: Operator voter needs to sign its vote */
+export const JITO_TIP_ROUTER_ERROR__INVALID_OPERATOR_VOTER = 0x222f; // 8751
 /** InvalidNcnFeeGroup: Not a valid NCN fee group */
 export const JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP = 0x2230; // 8752
 /** InvalidBaseFeeGroup: Not a valid base fee group */
@@ -162,20 +162,40 @@ export const JITO_TIP_ROUTER_ERROR__NO_FEED_WEIGHT_OR_SWITCHBOARD_FEED = 0x223e;
 export const JITO_TIP_ROUTER_ERROR__ROUTER_STILL_ROUTING = 0x223f; // 8767
 /** InvalidEpochsBeforeStall: Invalid epochs before stall */
 export const JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL = 0x2240; // 8768
+/** InvalidEpochsBeforeClose: Invalid epochs before accounts can close */
+export const JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLOSE = 0x2241; // 8769
 /** InvalidSlotsAfterConsensus: Invalid slots after consensus */
-export const JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS = 0x2241; // 8769
+export const JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS = 0x2242; // 8770
 /** VaultNeedsUpdate: Vault needs to be updated */
-export const JITO_TIP_ROUTER_ERROR__VAULT_NEEDS_UPDATE = 0x2242; // 8770
+export const JITO_TIP_ROUTER_ERROR__VAULT_NEEDS_UPDATE = 0x2243; // 8771
 /** InvalidAccountStatus: Invalid Account Status */
-export const JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS = 0x2243; // 8771
+export const JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS = 0x2244; // 8772
 /** AccountAlreadyInitialized: Account already initialized */
-export const JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED = 0x2244; // 8772
+export const JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED = 0x2245; // 8773
 /** BadBallot: Cannot vote with uninitialized account */
-export const JITO_TIP_ROUTER_ERROR__BAD_BALLOT = 0x2245; // 8773
+export const JITO_TIP_ROUTER_ERROR__BAD_BALLOT = 0x2246; // 8774
 /** VotingIsNotOver: Cannot route until voting is over */
-export const JITO_TIP_ROUTER_ERROR__VOTING_IS_NOT_OVER = 0x2246; // 8774
+export const JITO_TIP_ROUTER_ERROR__VOTING_IS_NOT_OVER = 0x2247; // 8775
 /** OperatorIsNotInSnapshot: Operator is not in snapshot */
-export const JITO_TIP_ROUTER_ERROR__OPERATOR_IS_NOT_IN_SNAPSHOT = 0x2247; // 8775
+export const JITO_TIP_ROUTER_ERROR__OPERATOR_IS_NOT_IN_SNAPSHOT = 0x2248; // 8776
+/** InvalidAccountToCloseDiscriminator: Invalid account_to_close Discriminator */
+export const JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_TO_CLOSE_DISCRIMINATOR = 0x2249; // 8777
+/** CannotCloseAccount: Cannot close account */
+export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT = 0x224a; // 8778
+/** CannotCloseAccountAlreadyClosed: Cannot close account - Already closed */
+export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_ALREADY_CLOSED = 0x224b; // 8779
+/** CannotCloseAccountNotEnoughEpochs: Cannot close account - Not enough epochs have passed since consensus reached */
+export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NOT_ENOUGH_EPOCHS = 0x224c; // 8780
+/** CannotCloseAccountNoReceiverProvided: Cannot close account - No receiver provided */
+export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NO_RECEIVER_PROVIDED = 0x224d; // 8781
+/** CannotCloseEpochStateAccount: Cannot close epoch state account - Epoch state needs all other accounts to be closed first */
+export const JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT = 0x224e; // 8782
+/** InvalidDaoWallet: Invalid DAO wallet */
+export const JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET = 0x224f; // 8783
+/** EpochIsClosingDown: Epoch is closing down */
+export const JITO_TIP_ROUTER_ERROR__EPOCH_IS_CLOSING_DOWN = 0x2250; // 8784
+/** MarkerExists: Marker exists */
+export const JITO_TIP_ROUTER_ERROR__MARKER_EXISTS = 0x2251; // 8785
 
 export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__ACCOUNT_ALREADY_INITIALIZED
@@ -188,6 +208,11 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_EMPTY
   | typeof JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL
+  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT
+  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_ALREADY_CLOSED
+  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NO_RECEIVER_PROVIDED
+  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NOT_ENOUGH_EPOCHS
+  | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT
   | typeof JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR
   | typeof JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR
@@ -202,6 +227,7 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION
   | typeof JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST
+  | typeof JITO_TIP_ROUTER_ERROR__EPOCH_IS_CLOSING_DOWN
   | typeof JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED
   | typeof JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE
@@ -210,12 +236,17 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_TO_CLOSE_DISCRIMINATOR
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLOSE
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP
+  | typeof JITO_TIP_ROUTER_ERROR__INVALID_OPERATOR_VOTER
   | typeof JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS
+  | typeof JITO_TIP_ROUTER_ERROR__MARKER_EXISTS
   | typeof JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND
   | typeof JITO_TIP_ROUTER_ERROR__MINT_IN_TABLE
   | typeof JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW
@@ -227,7 +258,6 @@ export type JitoTipRouterError =
   | typeof JITO_TIP_ROUTER_ERROR__NO_OPERATORS
   | typeof JITO_TIP_ROUTER_ERROR__NO_REWARDS
   | typeof JITO_TIP_ROUTER_ERROR__NO_VAULTS_IN_REGISTRY
-  | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_IS_NOT_IN_SNAPSHOT
   | typeof JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL
@@ -273,6 +303,11 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_FULL]: `Merkle root tally full`,
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_EMPTY]: `Ballot tally not empty`,
     [JITO_TIP_ROUTER_ERROR__BALLOT_TALLY_NOT_FOUND_FULL]: `Ballot tally not found`,
+    [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT]: `Cannot close account`,
+    [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_ALREADY_CLOSED]: `Cannot close account - Already closed`,
+    [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NO_RECEIVER_PROVIDED]: `Cannot close account - No receiver provided`,
+    [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_ACCOUNT_NOT_ENOUGH_EPOCHS]: `Cannot close account - Not enough epochs have passed since consensus reached`,
+    [JITO_TIP_ROUTER_ERROR__CANNOT_CLOSE_EPOCH_STATE_ACCOUNT]: `Cannot close epoch state account - Epoch state needs all other accounts to be closed first`,
     [JITO_TIP_ROUTER_ERROR__CANNOT_CREATE_FUTURE_WEIGHT_TABLES]: `Cannnot create future weight tables`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_IMPRECISE_NUMBER_ERROR]: `Cast to imprecise number error`,
     [JITO_TIP_ROUTER_ERROR__CAST_TO_U128_ERROR]: `Cast to u128 error`,
@@ -287,6 +322,7 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_MINTS_IN_TABLE]: `Duplicate mints in table`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VAULT_OPERATOR_DELEGATION]: `Duplicate vault operator delegation`,
     [JITO_TIP_ROUTER_ERROR__DUPLICATE_VOTE_CAST]: `Duplicate Vote Cast`,
+    [JITO_TIP_ROUTER_ERROR__EPOCH_IS_CLOSING_DOWN]: `Epoch is closing down`,
     [JITO_TIP_ROUTER_ERROR__EPOCH_SNAPSHOT_NOT_FINALIZED]: `Epoch snapshot not finalized`,
     [JITO_TIP_ROUTER_ERROR__FEE_CAP_EXCEEDED]: `Fee cap exceeded`,
     [JITO_TIP_ROUTER_ERROR__FEE_NOT_ACTIVE]: `Fee not active`,
@@ -295,12 +331,17 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__INCORRECT_NCN_ADMIN]: `Incorrect NCN Admin`,
     [JITO_TIP_ROUTER_ERROR__INCORRECT_WEIGHT_TABLE_ADMIN]: `Incorrect weight table admin`,
     [JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_STATUS]: `Invalid Account Status`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_ACCOUNT_TO_CLOSE_DISCRIMINATOR]: `Invalid account_to_close Discriminator`,
     [JITO_TIP_ROUTER_ERROR__INVALID_BASE_FEE_GROUP]: `Not a valid base fee group`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_DAO_WALLET]: `Invalid DAO wallet`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_CLOSE]: `Invalid epochs before accounts can close`,
     [JITO_TIP_ROUTER_ERROR__INVALID_EPOCHS_BEFORE_STALL]: `Invalid epochs before stall`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MERKLE_PROOF]: `Invalid merkle proof`,
     [JITO_TIP_ROUTER_ERROR__INVALID_MINT_FOR_WEIGHT_TABLE]: `Invalid mint for weight table`,
     [JITO_TIP_ROUTER_ERROR__INVALID_NCN_FEE_GROUP]: `Not a valid NCN fee group`,
+    [JITO_TIP_ROUTER_ERROR__INVALID_OPERATOR_VOTER]: `Operator voter needs to sign its vote`,
     [JITO_TIP_ROUTER_ERROR__INVALID_SLOTS_AFTER_CONSENSUS]: `Invalid slots after consensus`,
+    [JITO_TIP_ROUTER_ERROR__MARKER_EXISTS]: `Marker exists`,
     [JITO_TIP_ROUTER_ERROR__MINT_ENTRY_NOT_FOUND]: `Mint Entry not found`,
     [JITO_TIP_ROUTER_ERROR__MINT_IN_TABLE]: `Mint is already in the table`,
     [JITO_TIP_ROUTER_ERROR__MODULO_OVERFLOW]: `Modulo Overflow`,
@@ -312,7 +353,6 @@ if (process.env.NODE_ENV !== 'production') {
     [JITO_TIP_ROUTER_ERROR__NO_OPERATORS]: `No operators in ncn`,
     [JITO_TIP_ROUTER_ERROR__NO_REWARDS]: `No rewards to distribute`,
     [JITO_TIP_ROUTER_ERROR__NO_VAULTS_IN_REGISTRY]: `There are no vaults in the registry`,
-    [JITO_TIP_ROUTER_ERROR__OPERATOR_ADMIN_INVALID]: `Operator admin needs to sign its vote`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_FINALIZED]: `Operator is already finalized - should not happen`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_IS_NOT_IN_SNAPSHOT]: `Operator is not in snapshot`,
     [JITO_TIP_ROUTER_ERROR__OPERATOR_REWARD_LIST_FULL]: `Operator reward list full`,

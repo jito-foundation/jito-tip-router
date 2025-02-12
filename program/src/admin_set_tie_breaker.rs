@@ -20,9 +20,9 @@ pub fn process_admin_set_tie_breaker(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
-    BallotBox::load(program_id, ncn.key, epoch, ballot_box, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
+    BallotBox::load(program_id, ballot_box, ncn.key, epoch, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     load_signer(tie_breaker_admin, false)?;
 
@@ -37,7 +37,8 @@ pub fn process_admin_set_tie_breaker(
     let mut ballot_box_data = ballot_box.data.borrow_mut();
     let ballot_box_account = BallotBox::try_from_slice_unchecked_mut(&mut ballot_box_data)?;
 
-    let current_epoch = Clock::get()?.epoch;
+    let clock = Clock::get()?;
+    let current_epoch = clock.epoch;
 
     ballot_box_account.set_tie_breaker_ballot(
         meta_merkle_root,
@@ -47,9 +48,11 @@ pub fn process_admin_set_tie_breaker(
 
     // Update Epoch State
     {
+        let slot = clock.slot;
         let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
         let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
-        epoch_state_account.update_cast_vote()?;
+        epoch_state_account
+            .update_set_tie_breaker(ballot_box_account.is_consensus_reached(), slot)?;
     }
 
     Ok(())

@@ -1,29 +1,29 @@
 use std::{
-    path::{Path, PathBuf}, str::FromStr, sync::{
+    path::{Path, PathBuf},
+    sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
-    }, time::Instant
+    },
+    time::Instant,
 };
 
 use clap_old::ArgMatches;
 use log::{info, warn};
 use solana_accounts_db::hardened_unpack::{open_genesis_config, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE};
 use solana_ledger::{
-    bank_forks_utils::{self},
     blockstore::{Blockstore, BlockstoreError},
     blockstore_options::{AccessType, BlockstoreOptions},
-    blockstore_processor::{self, ProcessOptions},
+    blockstore_processor::ProcessOptions,
 };
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::{
-    accounts_background_service::AbsRequestSender,
     bank::Bank,
     snapshot_archive_info::SnapshotArchiveInfoGetter,
     snapshot_bank_utils,
     snapshot_config::SnapshotConfig,
     snapshot_utils::{self, SnapshotVersion},
 };
-use solana_sdk::{clock::Slot, pubkey::Pubkey};
+use solana_sdk::clock::Slot;
 
 use crate::{arg_matches, load_and_process_ledger};
 
@@ -242,7 +242,6 @@ pub fn get_bank_from_ledger(
         account_paths,
     );
 
-    let operator_pubkey = Pubkey::from_str(&operator_address).unwrap();
     // Call ledger_utils::load_and_process_ledger here
     let (bank_forks, _starting_snapshot_hashes) =
         match load_and_process_ledger::load_and_process_ledger(
@@ -250,9 +249,9 @@ pub fn get_bank_from_ledger(
             &genesis_config,
             Arc::new(blockstore),
             process_options,
-            Some(full_snapshots_path.clone()),
-            Some(incremental_snapshots_path.clone()),
-            &operator_pubkey,
+            Some(full_snapshots_path),
+            Some(incremental_snapshots_path),
+            operator_address.clone(),
         ) {
             Ok(res) => res,
             Err(e) => {
@@ -302,7 +301,7 @@ pub fn get_bank_from_ledger(
 
     // datapoint_info!(
     //     "tip_router_cli.get_bank",
-    //     ("operator", operator_address, String),
+    //     ("operator", operator_address.to_string(), String),
     //     ("state", "process_blockstore_from_root_start", String),
     //     ("step", 4, i64),
     //     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
@@ -322,7 +321,7 @@ pub fn get_bank_from_ledger(
     //     Err(e) => {
     //         datapoint_error!(
     //             "tip_router_cli.get_bank",
-    //             ("operator", operator_address, String),
+    //             ("operator", operator_address.to_string(), String),
     //             ("status", "error", String),
     //             ("state", "process_blockstore_from_root", String),
     //             ("step", 5, i64),
@@ -356,8 +355,6 @@ pub fn get_bank_from_ledger(
             snapshot_config.full_snapshot_archives_dir,
             snapshot_config.incremental_snapshot_archives_dir,
             snapshot_config.archive_format,
-            snapshot_config.maximum_full_snapshot_archives_to_retain,
-            snapshot_config.maximum_incremental_snapshot_archives_to_retain,
         ) {
             Ok(res) => res,
             Err(e) => {
@@ -403,6 +400,8 @@ pub fn get_bank_from_ledger(
 
 #[cfg(test)]
 mod tests {
+    use crate::load_and_process_ledger::LEDGER_TOOL_DIRECTORY;
+
     use solana_sdk::pubkey::Pubkey;
 
     use super::*;
@@ -435,11 +434,6 @@ mod tests {
         assert!(snapshot_path.exists());
         // Delete the snapshot
         std::fs::remove_file(snapshot_path).unwrap();
-        std::fs::remove_dir_all(
-            ledger_path
-                .as_path()
-                .join(format!("accounts/snapshot/{}", desired_slot)),
-        )
-        .unwrap();
+        std::fs::remove_dir_all(ledger_path.as_path().join(LEDGER_TOOL_DIRECTORY)).unwrap();
     }
 }

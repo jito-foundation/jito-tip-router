@@ -1,3 +1,4 @@
+#![allow(clippy::arithmetic_side_effects)]
 pub mod ledger_utils;
 pub mod stake_meta_generator;
 pub mod tip_router;
@@ -12,7 +13,8 @@ pub mod process_epoch;
 pub mod rpc_utils;
 pub mod submit;
 
-use std::fs;
+use std::fs::{self, File};
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
@@ -26,7 +28,8 @@ use jito_tip_payment_sdk::{
     TIP_ACCOUNT_SEED_7,
 };
 use ledger_utils::get_bank_from_ledger;
-use log::info;
+use log::{error, info};
+use meta_merkle_tree::generated_merkle_tree::MerkleRootGeneratorError;
 use meta_merkle_tree::generated_merkle_tree::StakeMetaCollection;
 use meta_merkle_tree::{
     generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
@@ -131,6 +134,7 @@ pub fn create_stake_meta(
 // STAGE 3 CreateMerkleTreeCollection
 pub fn create_merkle_tree_collection(
     operator_address: String,
+    tip_router_program_id: &Pubkey,
     stake_meta_collection: StakeMetaCollection,
     epoch: u64,
     ncn_address: &Pubkey,
@@ -146,6 +150,7 @@ pub fn create_merkle_tree_collection(
         ncn_address,
         epoch,
         protocol_fee_bps,
+        tip_router_program_id,
     ) {
         Ok(merkle_tree_coll) => merkle_tree_coll,
         Err(e) => {
@@ -316,6 +321,19 @@ fn derive_tip_payment_pubkeys(program_id: &Pubkey) -> TipPaymentPubkeys {
     }
 }
 
+fn write_to_json_file(
+    merkle_tree_coll: &GeneratedMerkleTreeCollection,
+    file_path: &PathBuf,
+) -> std::result::Result<(), MerkleRootGeneratorError> {
+    let file = File::create(file_path)?;
+    let mut writer = BufWriter::new(file);
+    let json = serde_json::to_string_pretty(&merkle_tree_coll).unwrap();
+    writer.write_all(json.as_bytes())?;
+    writer.flush()?;
+
+    Ok(())
+}
+
 /// Convenience wrapper around [TipDistributionAccount]
 pub struct TipDistributionAccountWrapper {
     pub tip_distribution_account: TipDistributionAccount,
@@ -333,12 +351,13 @@ pub fn get_meta_merkle_root(
     tip_distribution_program_id: &Pubkey,
     out_path: &str,
     tip_payment_program_id: &Pubkey,
+    tip_router_program_id: &Pubkey,
     ncn_address: &Pubkey,
     operator_address: &Pubkey,
     epoch: u64,
     protocol_fee_bps: u64,
     snapshots_enabled: bool,
-    meta_merkle_tree_dir: &PathBuf,
+    meta_merkle_tree_dir: &Path,
 ) -> std::result::Result<MetaMerkleTree, MerkleRootError> {
     let start = Instant::now();
 
@@ -352,7 +371,7 @@ pub fn get_meta_merkle_root(
     );
 
     // cleanup tmp files - update with path where stake meta is written
-    match cleanup_tmp_files(&incremental_snapshots_path.clone()) {
+    match cleanup_tmp_files(&incremental_snapshots_path) {
         Ok(_) => {}
         Err(e) => {
             datapoint_info!(
@@ -421,6 +440,7 @@ pub fn get_meta_merkle_root(
         ncn_address,
         epoch,
         protocol_fee_bps,
+        tip_router_program_id,
     )
     .map_err(|_| {
         MerkleRootError::MerkleRootGeneratorError(
@@ -436,6 +456,27 @@ pub fn get_meta_merkle_root(
         merkle_tree_coll.bank_hash
     );
 
+    // Write GeneratedMerkleTreeCollection to file for debugging/verification
+    let generated_merkle_tree_path = incremental_snapshots_path.join(format!(
+        "generated_merkle_tree_{}.json",
+        merkle_tree_coll.epoch
+    ));
+    match write_to_json_file(&merkle_tree_coll, &generated_merkle_tree_path) {
+        Ok(_) => {
+            info!(
+                "Wrote GeneratedMerkleTreeCollection to {}",
+                generated_merkle_tree_path.display()
+            );
+        }
+        Err(e) => {
+            error!(
+                "Failed to write GeneratedMerkleTreeCollection to file {}: {:?}",
+                generated_merkle_tree_path.display(),
+                e
+            );
+        }
+    }
+
     datapoint_info!(
         "tip_router_cli.get_meta_merkle_root",
         ("operator_address", operator_address.to_string(), String),
@@ -450,36 +491,39 @@ pub fn get_meta_merkle_root(
 
     // Write GeneratedMerkleTreeCollection to disk. Required for Claiming
     let merkle_tree_coll_path =
-        meta_merkle_tree_dir.join(format!("merkle_tree_coll_{}.json", epoch));
+        meta_merkle_tree_dir.join(format!("generated_merkle_tree_{}.json", epoch));
     let generated_merkle_tree_col_json = match serde_json::to_string(&merkle_tree_coll) {
         Ok(json) => json,
         Err(e) => {
-            let error_str = format!("{:?}", e);
             datapoint_error!(
                 "tip_router_cli.process_epoch",
                 ("operator_address", operator_address.to_string(), String),
                 ("epoch", epoch, i64),
                 ("status", "error", String),
-                ("error", error_str, String),
+                ("error", format!("{:?}", e), String),
                 ("state", "merkle_root_serialization", String),
                 ("duration_ms", start.elapsed().as_millis() as i64, i64)
             );
-            return Err(MerkleRootError::MerkleRootGeneratorError(error_str));
+            return Err(MerkleRootError::MerkleRootGeneratorError(
+                "Failed to serialize merkle tree collection".to_string(),
+            ));
         }
     };
 
-    if let Err(e) = std::fs::write(&merkle_tree_coll_path, generated_merkle_tree_col_json) {
-        let error_str = format!("{:?}", e);
+    if let Err(e) = std::fs::write(merkle_tree_coll_path, generated_merkle_tree_col_json) {
         datapoint_error!(
             "tip_router_cli.process_epoch",
             ("operator_address", operator_address.to_string(), String),
             ("epoch", epoch, i64),
             ("status", "error", String),
-            ("error", error_str, String),
+            ("error", format!("{:?}", e), String),
             ("state", "merkle_root_file_write", String),
             ("duration_ms", start.elapsed().as_millis() as i64, i64)
         );
-        return Err(MerkleRootError::MerkleRootGeneratorError(error_str));
+        // TODO: propogate error
+        return Err(MerkleRootError::MerkleRootGeneratorError(
+            "Failed to write meta merkle tree to file".to_string(),
+        ));
     }
 
     // Convert to MetaMerkleTree

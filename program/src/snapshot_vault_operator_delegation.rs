@@ -31,8 +31,8 @@ pub fn process_snapshot_vault_operator_delegation(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
-    NcnConfig::load(program_id, ncn.key, ncn_config, false)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
+    NcnConfig::load(program_id, ncn_config, ncn.key, false)?;
     Config::load(&jito_restaking_program::id(), restaking_config, false)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     Operator::load(&jito_restaking_program::id(), operator, false)?;
@@ -70,13 +70,13 @@ pub fn process_snapshot_vault_operator_delegation(
     let (_, ncn_epoch_length) = load_ncn_epoch(restaking_config, current_slot, None)?;
 
     WeightTable::load(program_id, weight_table, ncn.key, epoch, false)?;
-    EpochSnapshot::load(program_id, ncn.key, epoch, epoch_snapshot, true)?;
+    EpochSnapshot::load(program_id, epoch_snapshot, ncn.key, epoch, true)?;
     OperatorSnapshot::load(
         program_id,
+        operator_snapshot,
         operator.key,
         ncn.key,
         epoch,
-        operator_snapshot,
         true,
     )?;
 
@@ -107,7 +107,7 @@ pub fn process_snapshot_vault_operator_delegation(
             // If the NCN removes a vault, it should immediately be barred from the snapshot
             ncn_vault_ticket_account
                 .state
-                .is_active(current_slot, ncn_epoch_length)
+                .is_active(current_slot, ncn_epoch_length)?
         };
 
         let vault_ncn_okay = {
@@ -123,7 +123,7 @@ pub fn process_snapshot_vault_operator_delegation(
                 // from this vault can still participate
                 vault_ncn_ticket_account
                     .state
-                    .is_active_or_cooldown(current_slot, ncn_epoch_length)
+                    .is_active_or_cooldown(current_slot, ncn_epoch_length)?
             }
         };
 

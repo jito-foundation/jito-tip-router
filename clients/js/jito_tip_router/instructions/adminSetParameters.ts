@@ -36,7 +36,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ADMIN_SET_PARAMETERS_DISCRIMINATOR = 27;
+export const ADMIN_SET_PARAMETERS_DISCRIMINATOR = 28;
 
 export function getAdminSetParametersDiscriminatorBytes() {
   return getU8Encoder().encode(ADMIN_SET_PARAMETERS_DISCRIMINATOR);
@@ -66,12 +66,16 @@ export type AdminSetParametersInstruction<
 
 export type AdminSetParametersInstructionData = {
   discriminator: number;
+  startingValidEpoch: Option<bigint>;
   epochsBeforeStall: Option<bigint>;
+  epochsAfterConsensusBeforeClose: Option<bigint>;
   validSlotsAfterConsensus: Option<bigint>;
 };
 
 export type AdminSetParametersInstructionDataArgs = {
+  startingValidEpoch: OptionOrNullable<number | bigint>;
   epochsBeforeStall: OptionOrNullable<number | bigint>;
+  epochsAfterConsensusBeforeClose: OptionOrNullable<number | bigint>;
   validSlotsAfterConsensus: OptionOrNullable<number | bigint>;
 };
 
@@ -79,7 +83,9 @@ export function getAdminSetParametersInstructionDataEncoder(): Encoder<AdminSetP
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
+      ['startingValidEpoch', getOptionEncoder(getU64Encoder())],
       ['epochsBeforeStall', getOptionEncoder(getU64Encoder())],
+      ['epochsAfterConsensusBeforeClose', getOptionEncoder(getU64Encoder())],
       ['validSlotsAfterConsensus', getOptionEncoder(getU64Encoder())],
     ]),
     (value) => ({ ...value, discriminator: ADMIN_SET_PARAMETERS_DISCRIMINATOR })
@@ -89,7 +95,9 @@ export function getAdminSetParametersInstructionDataEncoder(): Encoder<AdminSetP
 export function getAdminSetParametersInstructionDataDecoder(): Decoder<AdminSetParametersInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
+    ['startingValidEpoch', getOptionDecoder(getU64Decoder())],
     ['epochsBeforeStall', getOptionDecoder(getU64Decoder())],
+    ['epochsAfterConsensusBeforeClose', getOptionDecoder(getU64Decoder())],
     ['validSlotsAfterConsensus', getOptionDecoder(getU64Decoder())],
   ]);
 }
@@ -112,7 +120,9 @@ export type AdminSetParametersInput<
   config: Address<TAccountConfig>;
   ncn: Address<TAccountNcn>;
   ncnAdmin: TransactionSigner<TAccountNcnAdmin>;
+  startingValidEpoch: AdminSetParametersInstructionDataArgs['startingValidEpoch'];
   epochsBeforeStall: AdminSetParametersInstructionDataArgs['epochsBeforeStall'];
+  epochsAfterConsensusBeforeClose: AdminSetParametersInstructionDataArgs['epochsAfterConsensusBeforeClose'];
   validSlotsAfterConsensus: AdminSetParametersInstructionDataArgs['validSlotsAfterConsensus'];
 };
 

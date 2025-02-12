@@ -24,7 +24,7 @@ pub struct CastVote {
 
     pub operator: solana_program::pubkey::Pubkey,
 
-    pub operator_admin: solana_program::pubkey::Pubkey,
+    pub operator_voter: solana_program::pubkey::Pubkey,
 }
 
 impl CastVote {
@@ -69,7 +69,7 @@ impl CastVote {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.operator_admin,
+            self.operator_voter,
             true,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -120,7 +120,7 @@ pub struct CastVoteInstructionArgs {
 ///   4. `[]` epoch_snapshot
 ///   5. `[]` operator_snapshot
 ///   6. `[]` operator
-///   7. `[signer]` operator_admin
+///   7. `[signer]` operator_voter
 #[derive(Clone, Debug, Default)]
 pub struct CastVoteBuilder {
     epoch_state: Option<solana_program::pubkey::Pubkey>,
@@ -130,7 +130,7 @@ pub struct CastVoteBuilder {
     epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
     operator_snapshot: Option<solana_program::pubkey::Pubkey>,
     operator: Option<solana_program::pubkey::Pubkey>,
-    operator_admin: Option<solana_program::pubkey::Pubkey>,
+    operator_voter: Option<solana_program::pubkey::Pubkey>,
     meta_merkle_root: Option<[u8; 32]>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -179,8 +179,8 @@ impl CastVoteBuilder {
         self
     }
     #[inline(always)]
-    pub fn operator_admin(&mut self, operator_admin: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.operator_admin = Some(operator_admin);
+    pub fn operator_voter(&mut self, operator_voter: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.operator_voter = Some(operator_voter);
         self
     }
     #[inline(always)]
@@ -223,7 +223,7 @@ impl CastVoteBuilder {
                 .operator_snapshot
                 .expect("operator_snapshot is not set"),
             operator: self.operator.expect("operator is not set"),
-            operator_admin: self.operator_admin.expect("operator_admin is not set"),
+            operator_voter: self.operator_voter.expect("operator_voter is not set"),
         };
         let args = CastVoteInstructionArgs {
             meta_merkle_root: self
@@ -253,7 +253,7 @@ pub struct CastVoteCpiAccounts<'a, 'b> {
 
     pub operator: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub operator_voter: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
 /// `cast_vote` CPI instruction.
@@ -275,7 +275,7 @@ pub struct CastVoteCpi<'a, 'b> {
 
     pub operator: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator_admin: &'b solana_program::account_info::AccountInfo<'a>,
+    pub operator_voter: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: CastVoteInstructionArgs,
 }
@@ -295,7 +295,7 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
             epoch_snapshot: accounts.epoch_snapshot,
             operator_snapshot: accounts.operator_snapshot,
             operator: accounts.operator,
-            operator_admin: accounts.operator_admin,
+            operator_voter: accounts.operator_voter,
             __args: args,
         }
     }
@@ -362,7 +362,7 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.operator_admin.key,
+            *self.operator_voter.key,
             true,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -390,7 +390,7 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
         account_infos.push(self.epoch_snapshot.clone());
         account_infos.push(self.operator_snapshot.clone());
         account_infos.push(self.operator.clone());
-        account_infos.push(self.operator_admin.clone());
+        account_infos.push(self.operator_voter.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -414,7 +414,7 @@ impl<'a, 'b> CastVoteCpi<'a, 'b> {
 ///   4. `[]` epoch_snapshot
 ///   5. `[]` operator_snapshot
 ///   6. `[]` operator
-///   7. `[signer]` operator_admin
+///   7. `[signer]` operator_voter
 #[derive(Clone, Debug)]
 pub struct CastVoteCpiBuilder<'a, 'b> {
     instruction: Box<CastVoteCpiBuilderInstruction<'a, 'b>>,
@@ -431,7 +431,7 @@ impl<'a, 'b> CastVoteCpiBuilder<'a, 'b> {
             epoch_snapshot: None,
             operator_snapshot: None,
             operator: None,
-            operator_admin: None,
+            operator_voter: None,
             meta_merkle_root: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
@@ -492,11 +492,11 @@ impl<'a, 'b> CastVoteCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn operator_admin(
+    pub fn operator_voter(
         &mut self,
-        operator_admin: &'b solana_program::account_info::AccountInfo<'a>,
+        operator_voter: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.operator_admin = Some(operator_admin);
+        self.instruction.operator_voter = Some(operator_voter);
         self
     }
     #[inline(always)]
@@ -584,10 +584,10 @@ impl<'a, 'b> CastVoteCpiBuilder<'a, 'b> {
 
             operator: self.instruction.operator.expect("operator is not set"),
 
-            operator_admin: self
+            operator_voter: self
                 .instruction
-                .operator_admin
-                .expect("operator_admin is not set"),
+                .operator_voter
+                .expect("operator_voter is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -607,7 +607,7 @@ struct CastVoteCpiBuilderInstruction<'a, 'b> {
     epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    operator_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    operator_voter: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     meta_merkle_root: Option<[u8; 32]>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

@@ -7,23 +7,34 @@ use std::{
 use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
 use jito_tip_distribution_sdk::{
-    jito_tip_distribution::accounts::ClaimStatus, TipDistributionAccount, CLAIM_STATUS_SIZE,
-    CONFIG_SEED,
+    jito_tip_distribution::accounts::ClaimStatus, TipDistributionAccount, CLAIM_STATUS_SEED,
+    CLAIM_STATUS_SIZE, CONFIG_SEED,
 };
+use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
+use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
 use log::{info, warn};
 use meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection;
 use rand::{prelude::SliceRandom, thread_rng};
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSimulateTransactionConfig};
-use solana_metrics::datapoint_info;
+use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{
-    account::Account, commitment_config::CommitmentConfig,
+    account::Account,
+    commitment_config::CommitmentConfig,
     compute_budget::ComputeBudgetInstruction,
-    fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE, native_token::LAMPORTS_PER_SOL,
-    pubkey::Pubkey, signature::Keypair, signer::Signer, system_program, transaction::Transaction,
+    fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
+    native_token::LAMPORTS_PER_SOL,
+    pubkey::Pubkey,
+    signature::{read_keypair_file, Keypair},
+    signer::Signer,
+    system_program,
+    transaction::Transaction,
 };
 use thiserror::Error;
 
-use crate::rpc_utils::{get_batched_accounts, send_until_blockhash_expires};
+use crate::{
+    rpc_utils::{get_batched_accounts, send_until_blockhash_expires},
+    Cli,
+};
 
 #[derive(Error, Debug)]
 pub enum ClaimMevError {
@@ -54,18 +65,86 @@ pub enum ClaimMevError {
     UncaughtError { e: String },
 }
 
+#[allow(clippy::too_many_arguments)]
+pub async fn claim_mev_tips_with_emit(
+    cli: &Cli,
+    epoch: u64,
+    tip_distribution_program_id: Pubkey,
+    tip_router_program_id: Pubkey,
+    ncn_address: Pubkey,
+    max_loop_duration: Duration,
+) -> Result<(), anyhow::Error> {
+    let keypair = read_keypair_file(cli.keypair_path.clone())
+        .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {:?}", e))?;
+    let keypair = Arc::new(keypair);
+    let meta_merkle_tree_dir = cli.meta_merkle_tree_dir.clone();
+    let rpc_url = cli.rpc_url.clone();
+    let merkle_tree_coll_path =
+        meta_merkle_tree_dir.join(format!("generated_merkle_tree_{}.json", epoch));
+    let merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
+        .map_err(|e| anyhow::anyhow!(e))?;
+    let start = Instant::now();
+
+    match claim_mev_tips(
+        &merkle_tree_coll,
+        rpc_url.clone(),
+        rpc_url,
+        tip_distribution_program_id,
+        tip_router_program_id,
+        ncn_address,
+        &keypair,
+        max_loop_duration,
+        cli.micro_lamports,
+    )
+    .await
+    {
+        Ok(()) => {
+            datapoint_info!(
+                "claim_mev_workflow",
+                ("operator", cli.operator_address, String),
+                ("epoch", epoch, i64),
+                ("transactions_left", 0, i64),
+                ("elapsed_us", start.elapsed().as_micros(), i64),
+            );
+        }
+        Err(ClaimMevError::NotFinished { transactions_left }) => {
+            datapoint_info!(
+                "claim_mev_workflow",
+                ("operator", cli.operator_address, String),
+                ("epoch", epoch, i64),
+                ("transactions_left", transactions_left, i64),
+                ("elapsed_us", start.elapsed().as_micros(), i64),
+            );
+        }
+        Err(e) => {
+            datapoint_error!(
+                "claim_mev_workflow",
+                ("operator", cli.operator_address, String),
+                ("epoch", epoch, i64),
+                ("error", e.to_string(), String),
+                ("elapsed_us", start.elapsed().as_micros(), i64),
+            );
+        }
+    }
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
 pub async fn claim_mev_tips(
     merkle_trees: &GeneratedMerkleTreeCollection,
     rpc_url: String,
     rpc_sender_url: String,
     tip_distribution_program_id: Pubkey,
-    keypair: Arc<Keypair>,
+    tip_router_program_id: Pubkey,
+    ncn_address: Pubkey,
+    keypair: &Arc<Keypair>,
     max_loop_duration: Duration,
     micro_lamports: u64,
 ) -> Result<(), ClaimMevError> {
     let rpc_client = RpcClient::new_with_timeout_and_commitment(
         rpc_url,
-        Duration::from_secs(300),
+        Duration::from_secs(1800),
         CommitmentConfig::confirmed(),
     );
     let rpc_sender_client = RpcClient::new(rpc_sender_url);
@@ -76,6 +155,8 @@ pub async fn claim_mev_tips(
             &rpc_client,
             merkle_trees,
             tip_distribution_program_id,
+            tip_router_program_id,
+            ncn_address,
             micro_lamports,
             keypair.pubkey(),
         )
@@ -111,7 +192,7 @@ pub async fn claim_mev_tips(
             &rpc_sender_client,
             transactions,
             blockhash,
-            &keypair,
+            keypair,
         )
         .await;
     }
@@ -120,6 +201,8 @@ pub async fn claim_mev_tips(
         &rpc_client,
         merkle_trees,
         tip_distribution_program_id,
+        tip_router_program_id,
+        ncn_address,
         micro_lamports,
         keypair.pubkey(),
     )
@@ -175,17 +258,28 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     rpc_client: &RpcClient,
     merkle_trees: &GeneratedMerkleTreeCollection,
     tip_distribution_program_id: Pubkey,
+    tip_router_program_id: Pubkey,
+    ncn_address: Pubkey,
     micro_lamports: u64,
     payer_pubkey: Pubkey,
 ) -> Result<Vec<Transaction>, ClaimMevError> {
+    let tip_router_config_address =
+        Config::find_program_address(&tip_router_program_id, &ncn_address).0;
     let tree_nodes = merkle_trees
         .generated_merkle_trees
         .iter()
-        .flat_map(|tree| &tree.tree_nodes)
+        .filter_map(|tree| {
+            if tree.merkle_root_upload_authority != tip_router_config_address {
+                return None;
+            }
+            Some(&tree.tree_nodes)
+        })
+        .flatten()
         .collect_vec();
 
     info!(
-        "reading tip distribution related accounts for epoch {}",
+        "reading {} tip distribution related accounts for epoch {}",
+        tree_nodes.len(),
         merkle_trees.epoch
     );
 
@@ -239,12 +333,14 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 
     let transactions = build_mev_claim_transactions(
         tip_distribution_program_id,
+        tip_router_program_id,
         merkle_trees,
         tdas,
         claimants,
         claim_statuses,
         micro_lamports,
         payer_pubkey,
+        ncn_address,
     );
 
     Ok(transactions)
@@ -259,15 +355,23 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 /// - the claimant must have enough lamports post-claim to be rent-exempt.
 ///   - note: there aren't any rent exempt accounts on solana mainnet anymore.
 /// - it must not have already been claimed.
+#[allow(clippy::too_many_arguments)]
 fn build_mev_claim_transactions(
     tip_distribution_program_id: Pubkey,
+    tip_router_program_id: Pubkey,
     merkle_trees: &GeneratedMerkleTreeCollection,
     tdas: HashMap<Pubkey, Account>,
     claimants: HashMap<Pubkey, Account>,
     claim_status: HashMap<Pubkey, Account>,
     micro_lamports: u64,
     payer_pubkey: Pubkey,
+    ncn_address: Pubkey,
 ) -> Vec<Transaction> {
+    let tip_router_config_address =
+        Config::find_program_address(&tip_router_program_id, &ncn_address).0;
+    let tip_router_account_payer =
+        AccountPayer::find_program_address(&tip_router_program_id, &ncn_address).0;
+
     let tip_distribution_accounts: HashMap<Pubkey, TipDistributionAccount> = tdas
         .iter()
         .filter_map(|(pubkey, account)| {
@@ -314,7 +418,9 @@ fn build_mev_claim_transactions(
             .unwrap();
 
         // can continue here, as there might be tip distribution accounts this account doesn't upload for
-        if tip_distribution_account.merkle_root.is_none() {
+        if tip_distribution_account.merkle_root.is_none()
+            || tip_distribution_account.merkle_root_upload_authority != tip_router_config_address
+        {
             continue;
         }
 
@@ -322,24 +428,37 @@ fn build_mev_claim_transactions(
             // doesn't make sense to claim for claimants that don't exist anymore
             // can't claim for something already claimed
             // don't need to claim for claimants that get 0 MEV
-            if claimants.get(&node.claimant).is_none()
-                || claim_statuses.get(&node.claim_status_pubkey).is_some()
+            if !claimants.contains_key(&node.claimant)
+                || claim_statuses.contains_key(&node.claim_status_pubkey)
                 || node.amount == 0
             {
                 continue;
             }
+            let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
+                &[
+                    CLAIM_STATUS_SEED,
+                    &node.claimant.to_bytes(),
+                    &tree.tip_distribution_account.to_bytes(),
+                ],
+                &tip_distribution_program_id,
+            );
 
-            instructions.push(jito_tip_distribution_sdk::instruction::claim_ix(
-                tip_distribution_config,
-                tree.tip_distribution_account,
-                node.claim_status_pubkey,
-                node.claimant,
-                payer_pubkey,
-                system_program::id(),
-                node.proof.clone().unwrap(),
-                node.amount,
-                node.claim_status_bump,
-            ));
+            let claim_with_payer_ix = ClaimWithPayerBuilder::new()
+                .account_payer(tip_router_account_payer)
+                .ncn(ncn_address)
+                .config(tip_router_config_address)
+                .tip_distribution_program(tip_distribution_program_id)
+                .tip_distribution_config(tip_distribution_config)
+                .tip_distribution_account(tree.tip_distribution_account)
+                .claim_status(claim_status_pubkey)
+                .claimant(node.claimant)
+                .system_program(system_program::id())
+                .proof(node.proof.clone().unwrap())
+                .amount(node.amount)
+                .bump(claim_status_bump)
+                .instruction();
+
+            instructions.push(claim_with_payer_ix);
         }
     }
 
@@ -348,7 +467,7 @@ fn build_mev_claim_transactions(
         .into_iter()
         .map(|claim_ix| {
             // helps get txs into block easier since default is 400k CUs
-            let compute_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(60_000);
+            let compute_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(100_000);
             let priority_fee_ix = ComputeBudgetInstruction::set_compute_unit_price(micro_lamports);
             Transaction::new_with_payer(
                 &[compute_limit_ix, priority_fee_ix, claim_ix],

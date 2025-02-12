@@ -31,7 +31,7 @@ pub struct Args {
         long,
         global = true,
         env = "PRIORITY_FEE_MICRO_LAMPORTS",
-        default_value_t = 10_000,
+        default_value_t = 1,
         help = "Priority fee in micro lamports"
     )]
     pub priority_fee_micro_lamports: u64,
@@ -40,7 +40,7 @@ pub struct Args {
         long,
         global = true,
         env = "TRANSACTION_RETRIES",
-        default_value_t = 3,
+        default_value_t = 0,
         help = "Amount of times to retry a transaction"
     )]
     pub transaction_retries: u64,
@@ -114,14 +114,37 @@ pub struct Args {
 #[derive(Subcommand)]
 pub enum ProgramCommand {
     /// Keeper
-    Keeper,
+    Keeper {
+        #[arg(
+            long,
+            env,
+            default_value_t = 600_000, // 10 minutes
+            help = "Keeper error timeout in milliseconds"
+        )]
+        loop_timeout_ms: u64,
+        #[arg(
+            long,
+            env,
+            default_value_t = 10_000, // 10 seconds
+            help = "Keeper error timeout in milliseconds"
+        )]
+        error_timeout_ms: u64,
+        #[arg(long, help = "calls test vote, instead of waiting for a real vote")]
+        test_vote: bool,
+    },
 
-    /// Instructions
+    /// Admin
     AdminCreateConfig {
         #[arg(long, default_value_t = 10 as u64, help = "Epochs before tie breaker can set consensus")]
         epochs_before_stall: u64,
         #[arg(long, default_value_t = (DEFAULT_SLOTS_PER_EPOCH as f64 * 0.1) as u64, help = "Valid slots after consensus")]
         valid_slots_after_consensus: u64,
+        #[arg(
+            long,
+            default_value_t = 10,
+            help = "Epochs after consensus before accounts can be closed"
+        )]
+        epochs_after_consensus_before_close: u64,
         #[arg(long, default_value_t = 300, help = "DAO fee in basis points")]
         dao_fee_bps: u16,
         #[arg(long, default_value_t = 100, help = "Block engine fee in basis points")]
@@ -133,9 +156,6 @@ pub enum ProgramCommand {
         #[arg(long, help = "Tie breaker admin address")]
         tie_breaker_admin: Option<String>,
     },
-
-    CreateVaultRegistry,
-
     AdminRegisterStMint {
         #[arg(long, help = "Vault address")]
         vault: String,
@@ -152,6 +172,55 @@ pub enum ProgramCommand {
         #[arg(long, help = "Weight when no feed is available")]
         no_feed_weight: Option<u128>,
     },
+    AdminSetWeight {
+        #[arg(long, help = "Vault address")]
+        vault: String,
+        #[arg(long, help = "Weight value")]
+        weight: u128,
+    },
+    AdminSetTieBreaker {
+        #[arg(long, help = "Meta merkle root")]
+        meta_merkle_root: String,
+    },
+    AdminSetParameters {
+        #[arg(long, help = "Epochs before tie breaker can set consensus")]
+        epochs_before_stall: Option<u64>,
+        #[arg(long, help = "Epochs after consensus before accounts can be closed")]
+        epochs_after_consensus_before_close: Option<u64>,
+        #[arg(long, help = "Slots to which voting is allowed after consensus")]
+        valid_slots_after_consensus: Option<u64>,
+        #[arg(long, help = "Starting valid epoch")]
+        starting_valid_epoch: Option<u64>,
+    },
+    AdminSetConfigFees {
+        #[arg(long, help = "New block engine fee in basis points")]
+        new_block_engine_fee_bps: Option<u16>,
+        #[arg(long, help = "Base fee group")]
+        base_fee_group: Option<u8>,
+        #[arg(long, help = "New base fee wallet")]
+        new_base_fee_wallet: Option<String>,
+        #[arg(long, help = "New base fee in basis points")]
+        new_base_fee_bps: Option<u16>,
+        #[arg(long, help = "NCN fee group")]
+        ncn_fee_group: Option<u8>,
+        #[arg(long, help = "New NCN fee in basis points")]
+        new_ncn_fee_bps: Option<u16>,
+    },
+    AdminSetNewAdmin {
+        #[arg(long, help = "New admin address")]
+        new_admin: String,
+        #[arg(long, help = "Set fee admin")]
+        set_fee_admin: bool,
+        #[arg(long, help = "Set tie breaker admin")]
+        set_tie_breaker_admin: bool,
+    },
+    AdminFundAccountPayer {
+        #[arg(long, help = "Amount of SOL to fund")]
+        amount_in_sol: f64,
+    },
+
+    /// Instructions
+    CreateVaultRegistry,
 
     RegisterVault {
         #[arg(long, help = "Vault address")]
@@ -162,11 +231,9 @@ pub enum ProgramCommand {
 
     CreateWeightTable,
 
-    AdminSetWeight {
-        #[arg(long, help = "Vault address")]
-        vault: String,
-        #[arg(long, help = "Weight value")]
-        weight: u128,
+    CrankSwitchboard {
+        #[arg(long, help = "Switchboard feed address")]
+        switchboard_feed: String,
     },
 
     SetWeight {
@@ -190,7 +257,7 @@ pub enum ProgramCommand {
 
     CreateBallotBox,
 
-    AdminCastVote {
+    OperatorCastVote {
         #[arg(long, help = "Operator address")]
         operator: String,
         #[arg(long, help = "Meta merkle root")]
@@ -222,11 +289,6 @@ pub enum ProgramCommand {
         ncn_fee_group: u8,
     },
 
-    AdminSetTieBreaker {
-        #[arg(long, help = "Meta merkle root")]
-        meta_merkle_root: String,
-    },
-
     /// Getters
     GetNcn,
     GetNcnOperatorState {
@@ -252,11 +314,30 @@ pub enum ProgramCommand {
     GetAllVaultsInNcn,
     GetTipRouterConfig,
     GetVaultRegistry,
+    GetWeightTable,
     GetEpochState,
-    GetStakePool,
+    GetEpochSnapshot,
+    GetOperatorSnapshot {
+        #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
+        operator: String,
+    },
     GetBallotBox,
     GetBaseRewardRouter,
-    GetBaseRewardReceiver,
+    GetBaseRewardReceiverAddress,
+    GetNcnRewardRouter {
+        #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
+        operator: String,
+        #[arg(long, default_value_t = 0, help = "NCN fee group")]
+        ncn_fee_group: u8,
+    },
+    GetAllNcnRewardRouters,
+    GetAccountPayer,
+    GetTotalEpochRentCost,
+    GetStakePool,
+
+    GetOperatorStakes,
+    GetVaultStakes,
+    GetVaultOperatorStakes,
 
     /// TESTS
     Test,
@@ -295,6 +376,7 @@ pub enum ProgramCommand {
     },
 }
 
+#[rustfmt::skip]
 impl fmt::Display for Args {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "\nMEV Tip Distribution NCN CLI Configuration")?;
@@ -311,46 +393,18 @@ impl fmt::Display for Args {
         writeln!(f, "  • Restaking:         {}", self.restaking_program_id)?;
         writeln!(f, "  • Vault:             {}", self.vault_program_id)?;
         writeln!(f, "  • Token:             {}", self.token_program_id)?;
-        writeln!(
-            f,
-            "  • Tip Distribution:  {}",
-            self.tip_distribution_program_id
-        )?;
+        writeln!(f, "  • Tip Distribution:  {}", self.tip_distribution_program_id)?;
 
         // Solana Settings
         writeln!(f, "\n◎  Solana Settings:")?;
-        writeln!(
-            f,
-            "  • Keypair Path:  {}",
-            self.keypair_path.as_deref().unwrap_or("Not Set")
-        )?;
+        writeln!(f, "  • Keypair Path:  {}", self.keypair_path.as_deref().unwrap_or("Not Set"))?;
         writeln!(f, "  • NCN:  {}", self.ncn.as_deref().unwrap_or("Not Set"))?;
-        writeln!(
-            f,
-            "  • Epoch: {}",
-            if self.epoch.is_some() {
-                format!("{}", self.epoch.unwrap())
-            } else {
-                "Current".to_string()
-            }
-        )?;
+        writeln!(f, "  • Epoch: {}", if self.epoch.is_some() { format!("{}", self.epoch.unwrap()) } else { "Current".to_string() })?;
 
         // Optional Settings
         writeln!(f, "\n⚙️  Additional Settings:")?;
-        writeln!(
-            f,
-            "  • Verbose Mode:  {}",
-            if self.verbose { "Enabled" } else { "Disabled" }
-        )?;
-        writeln!(
-            f,
-            "  • Markdown Help: {}",
-            if self.markdown_help {
-                "Enabled"
-            } else {
-                "Disabled"
-            }
-        )?;
+        writeln!(f, "  • Verbose Mode:  {}", if self.verbose { "Enabled" } else { "Disabled" })?;
+        writeln!(f, "  • Markdown Help: {}", if self.markdown_help { "Enabled" } else { "Disabled" })?;
 
         writeln!(f, "\n")?;
 

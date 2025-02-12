@@ -50,6 +50,8 @@ export type Config = {
   epochsBeforeStall: bigint;
   feeConfig: FeeConfig;
   bump: number;
+  epochsAfterConsensusBeforeClose: bigint;
+  startingValidEpoch: bigint;
   reserved: Array<number>;
 };
 
@@ -62,6 +64,8 @@ export type ConfigArgs = {
   epochsBeforeStall: number | bigint;
   feeConfig: FeeConfigArgs;
   bump: number;
+  epochsAfterConsensusBeforeClose: number | bigint;
+  startingValidEpoch: number | bigint;
   reserved: Array<number>;
 };
 
@@ -75,7 +79,9 @@ export function getConfigEncoder(): Encoder<ConfigArgs> {
     ['epochsBeforeStall', getU64Encoder()],
     ['feeConfig', getFeeConfigEncoder()],
     ['bump', getU8Encoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 127 })],
+    ['epochsAfterConsensusBeforeClose', getU64Encoder()],
+    ['startingValidEpoch', getU64Encoder()],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 111 })],
   ]);
 }
 
@@ -89,7 +95,9 @@ export function getConfigDecoder(): Decoder<Config> {
     ['epochsBeforeStall', getU64Decoder()],
     ['feeConfig', getFeeConfigDecoder()],
     ['bump', getU8Decoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 127 })],
+    ['epochsAfterConsensusBeforeClose', getU64Decoder()],
+    ['startingValidEpoch', getU64Decoder()],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 111 })],
   ]);
 }
 

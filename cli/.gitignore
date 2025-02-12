@@ -1,4 +1,5 @@
 .env
 .env.devnet
 .env.mainnet
+.env.docker
 .DS_Store

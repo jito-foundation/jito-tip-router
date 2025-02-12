@@ -1,28 +1,30 @@
+#![allow(clippy::integer_division)]
 use ::{
     anyhow::Result,
     clap::Parser,
     ellipsis_client::EllipsisClient,
     log::{error, info},
     meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection},
-    solana_metrics::{datapoint_error, datapoint_info, set_host_id},
-    solana_rpc_client::rpc_client::RpcClient,
+    solana_metrics::set_host_id,
+    solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_runtime::bank::Bank,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
     std::{
         path::PathBuf,
         str::FromStr,
         sync::Arc,
-        time::{Duration, Instant},
+        time::Duration,
     },
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
-        claim::claim_mev_tips,
+        claim::claim_mev_tips_with_emit,
         cli::{Cli, Commands},
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_ledger,
         load_bank_from_snapshot,
         process_epoch::{
-            calc_prev_epoch_and_final_slot, get_previous_epoch_last_slot, wait_for_next_epoch, wait_for_optimal_incremental_snapshot,
+            calc_prev_epoch_and_final_slot, get_previous_epoch_last_slot, wait_for_next_epoch,
+            wait_for_optimal_incremental_snapshot,
         },
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         OperatorState,
@@ -38,9 +40,10 @@ async fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
-    let rpc_client = EllipsisClient::from_rpc(
+    let rpc_client = EllipsisClient::from_rpc_with_timeout(
         RpcClient::new(cli.rpc_url.clone()),
         &read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
+        1_800_000, // 30 minutes
     )?;
 
     set_host_id(cli.operator_address.to_string());
@@ -52,13 +55,15 @@ async fn main() -> Result<()> {
         rpc_url: {}
         ledger_path: {}
         full_snapshots_path: {:?}
-        snapshot_output_dir: {}",
+        snapshot_output_dir: {}
+        backup_snapshots_dir: {}",
         cli.keypair_path,
         cli.operator_address,
         cli.rpc_url,
         cli.ledger_path.display(),
         cli.full_snapshots_path,
-        cli.snapshot_output_dir.display()
+        cli.snapshot_output_dir.display(),
+        cli.backup_snapshots_dir.display()
     );
 
     cli.create_save_path();
@@ -74,6 +79,9 @@ async fn main() -> Result<()> {
             override_target_slot,
             starting_stage,
             save_stages,
+            start_next_epoch,
+            set_merkle_roots,
+            claim_tips,
         } => {
             info!("Running Tip Router...");
             info!("starting stage: {:?}", starting_stage);
@@ -84,7 +92,7 @@ async fn main() -> Result<()> {
             let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
             let rpc_url = cli.rpc_url.clone();
             let cli_clone: Cli = cli.clone();
-            let mut current_epoch_info = rpc_client.get_epoch_info()?;
+            let mut current_epoch_info = rpc_client.get_epoch_info().await?;
 
             if !backup_snapshots_dir.exists() {
                 info!(
@@ -96,15 +104,17 @@ async fn main() -> Result<()> {
 
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
+                let keypair_arc = Arc::new(keypair);
                 loop {
                     if let Err(e) = submit_recent_epochs_to_ncn(
                         &rpc_client_clone,
-                        &keypair,
+                        &keypair_arc,
                         &ncn_address,
                         &tip_router_program_id,
                         &tip_distribution_program_id,
                         num_monitored_epochs,
                         &cli_clone,
+                        set_merkle_roots,
                     )
                     .await
                     {
@@ -187,6 +197,7 @@ async fn main() -> Result<()> {
                         // Generate the merkle tree collection
                         merkle_tree_collection = Some(create_merkle_tree_collection(
                             cli.operator_address.clone(),
+                            &tip_router_program_id,
                             some_stake_meta_collection,
                             epoch_to_process,
                             &ncn_address,
@@ -230,18 +241,19 @@ async fn main() -> Result<()> {
                         current_epoch_info =
                             wait_for_next_epoch(&rpc_client, current_epoch_info.epoch).await;
                         // Get the last slot of the previous epoch
-                        let (previous_epoch, previous_epoch_slot) =
-                            if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client) {
-                                (epoch, slot)
-                            } else {
-                                // TODO: Make a datapoint error
-                                error!("Error getting previous epoch slot");
-                                continue;
-                            };
+                        let (previous_epoch, previous_epoch_slot) = if let Ok((epoch, slot)) =
+                            get_previous_epoch_last_slot(&rpc_client).await
+                        {
+                            (epoch, slot)
+                        } else {
+                            // TODO: Make a datapoint error
+                            error!("Error getting previous epoch slot");
+                            continue;
+                        };
                         slot_to_process = previous_epoch_slot;
                         epoch_to_process = previous_epoch;
 
-                        // TODO: When we start with wait for the next epoch, should we always wait 
+                        // TODO: When we start with wait for the next epoch, should we always wait
                         //  for the optimal snapshot?
                         let incremental_snapshots_path = cli.backup_snapshots_dir.clone();
                         wait_for_optimal_incremental_snapshot(
@@ -257,17 +269,14 @@ async fn main() -> Result<()> {
         Commands::SnapshotSlot { slot } => {
             info!("Snapshotting slot...");
 
-            load_bank_from_snapshot(
-                cli,
-                slot,
-                true,
-            );
+            load_bank_from_snapshot(cli, slot, true);
         }
         Commands::SubmitEpoch {
             ncn_address,
             tip_distribution_program_id,
             tip_router_program_id,
             epoch,
+            set_merkle_roots,
         } => {
             let meta_merkle_tree_path = PathBuf::from(format!(
                 "{}/meta_merkle_tree_{}.json",
@@ -289,56 +298,28 @@ async fn main() -> Result<()> {
                 &ncn_address,
                 &tip_router_program_id,
                 &tip_distribution_program_id,
+                cli.submit_as_memo,
+                set_merkle_roots,
             )
             .await?;
         }
         Commands::ClaimTips {
+            tip_router_program_id,
             tip_distribution_program_id,
-            micro_lamports,
+            ncn_address,
             epoch,
         } => {
-            let start = Instant::now();
             info!("Claiming tips...");
 
-            let arc_keypair = Arc::new(keypair);
-            // Load the GeneratedMerkleTreeCollection, which should have been previously generated
-            let merkle_tree_coll_path = PathBuf::from(format!(
-                "{}/merkle_tree_coll_{}.json",
-                cli.meta_merkle_tree_dir.display(),
-                epoch
-            ));
-            let merkle_tree_coll =
-                GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)?;
-            match claim_mev_tips(
-                &merkle_tree_coll,
-                cli.rpc_url.clone(),
-                // TODO: Review if we should offer separate rpc_send_url in CLI. This may be used
-                //  if sending via block engine.
-                cli.rpc_url,
+            claim_mev_tips_with_emit(
+                &cli,
+                epoch,
                 tip_distribution_program_id,
-                arc_keypair,
+                tip_router_program_id,
+                ncn_address,
                 Duration::from_secs(3600),
-                micro_lamports,
             )
-            .await
-            {
-                Err(e) => {
-                    datapoint_error!(
-                        "claim_mev_workflow-claim_error",
-                        ("epoch", epoch, i64),
-                        ("error", 1, i64),
-                        ("err_str", e.to_string(), String),
-                        ("elapsed_us", start.elapsed().as_micros(), i64),
-                    );
-                }
-                Ok(()) => {
-                    datapoint_info!(
-                        "claim_mev_workflow-claim_completion",
-                        ("epoch", epoch, i64),
-                        ("elapsed_us", start.elapsed().as_micros(), i64),
-                    );
-                }
-            }
+            .await?;
         }
         Commands::CreateStakeMeta {
             epoch,
@@ -369,6 +350,7 @@ async fn main() -> Result<()> {
             );
         }
         Commands::CreateMerkleTreeCollection {
+            tip_router_program_id,
             ncn_address,
             epoch,
             save,
@@ -382,6 +364,7 @@ async fn main() -> Result<()> {
             // Generate the merkle tree collection
             create_merkle_tree_collection(
                 cli.operator_address,
+                &tip_router_program_id,
                 stake_meta_collection,
                 epoch,
                 &ncn_address,

@@ -33,6 +33,13 @@ pub struct Cli {
     #[arg(short, long, env)]
     pub meta_merkle_tree_dir: PathBuf,
 
+    #[arg(long, env, default_value = "false")]
+    pub submit_as_memo: bool,
+
+    /// The price to pay for priority fee
+    #[arg(long, env, default_value_t = 1)]
+    pub micro_lamports: u64,
+
     #[arg(long, env)]
     pub save_path: PathBuf,
 
@@ -55,7 +62,7 @@ impl Cli {
 #[derive(clap::Subcommand, Clone)]
 pub enum Commands {
     Run {
-        #[arg(short, long, env)]
+        #[arg(short, long, env, env)]
         ncn_address: Pubkey,
 
         #[arg(long, env)]
@@ -73,8 +80,17 @@ pub enum Commands {
         #[arg(long, env, default_value = "3")]
         num_monitored_epochs: u64,
 
+        #[arg(long, env, default_value = "false")]
+        start_next_epoch: bool,
+
         #[arg(long, env)]
         override_target_slot: Option<u64>,
+
+        #[arg(long, env, default_value = "false")]
+        set_merkle_roots: bool,
+
+        #[arg(long, env, default_value = "false")]
+        claim_tips: bool,
 
         #[arg(long, env, default_value = "wait-for-next-epoch")]
         starting_stage: OperatorState,
@@ -98,15 +114,20 @@ pub enum Commands {
 
         #[arg(long, env)]
         epoch: u64,
+
+        #[arg(long, env, default_value = "false")]
+        set_merkle_roots: bool,
     },
     ClaimTips {
+        #[arg(long, env)]
+        tip_router_program_id: Pubkey,
+
         /// Tip distribution program ID
         #[arg(long, env)]
         tip_distribution_program_id: Pubkey,
 
-        /// The price to pay for priority fee
-        #[arg(long, env, default_value_t = 1)]
-        micro_lamports: u64,
+        #[arg(short, long, env)]
+        ncn_address: Pubkey,
 
         /// The epoch to Claim tips for
         #[arg(long, env)]
@@ -129,6 +150,9 @@ pub enum Commands {
         save: bool,
     },
     CreateMerkleTreeCollection {
+        #[arg(long, env)]
+        tip_router_program_id: Pubkey,
+
         #[arg(short, long, env)]
         ncn_address: Pubkey,
 

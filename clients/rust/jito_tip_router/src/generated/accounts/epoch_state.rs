@@ -23,6 +23,8 @@ pub struct EpochState {
     pub epoch: u64,
     pub bump: u8,
     pub slot_created: u64,
+    pub was_tie_breaker_set: bool,
+    pub slot_consensus_reached: u64,
     pub operator_count: u64,
     pub vault_count: u64,
     pub account_status: EpochAccountStatus,
@@ -37,8 +39,9 @@ pub struct EpochState {
     pub base_distribution_progress: Progress,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub ncn_distribution_progress: [Progress; 2048],
+    pub is_closing: bool,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-    pub reserved: [u8; 1024],
+    pub reserved: [u8; 1023],
 }
 
 impl EpochState {
@@ -82,5 +85,5 @@ impl anchor_lang::IdlBuild for EpochState {}
 
 #[cfg(feature = "anchor-idl-build")]
 impl anchor_lang::Discriminator for EpochState {
-    const DISCRIMINATOR: [u8; 8] = [0; 8];
+    const DISCRIMINATOR: &'static [u8] = &[0; 8];
 }

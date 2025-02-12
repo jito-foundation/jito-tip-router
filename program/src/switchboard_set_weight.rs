@@ -26,7 +26,7 @@ pub fn process_switchboard_set_weight(
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    EpochState::load(program_id, ncn.key, epoch, epoch_state, true)?;
+    EpochState::load(program_id, epoch_state, ncn.key, epoch, true)?;
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     WeightTable::load(program_id, weight_table, ncn.key, epoch, true)?;
 
@@ -59,9 +59,12 @@ pub fn process_switchboard_set_weight(
         let feed = PullFeedAccountData::parse(switchboard_feed.data.borrow())
             .map_err(|_| TipRouterError::BadSwitchboardFeed)?;
 
-        let price: Decimal = feed.value().ok_or(TipRouterError::BadSwitchboardValue)?;
+        let clock = Clock::get()?;
+        let price: Decimal = feed
+            .value(&clock)
+            .map_err(|_| TipRouterError::BadSwitchboardValue)?;
 
-        let current_slot = Clock::get()?.slot;
+        let current_slot = clock.slot;
         let stale_slot = {
             feed.result
                 .slot
@@ -81,7 +84,6 @@ pub fn process_switchboard_set_weight(
             .round();
 
         msg!("Oracle Weight: {}", weight);
-
         weight.to_u128().ok_or(TipRouterError::CastToU128Error)?
     };
 
@@ -89,6 +91,7 @@ pub fn process_switchboard_set_weight(
     let weight_table_account = WeightTable::try_from_slice_unchecked_mut(&mut weight_table_data)?;
 
     weight_table_account.check_table_initialized()?;
+
     if weight_table_account.finalized() {
         msg!("Weight table is finalized");
         return Err(ProgramError::InvalidAccountData);
@@ -100,7 +103,10 @@ pub fn process_switchboard_set_weight(
     {
         let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
         let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
-        epoch_state_account.update_set_weight(weight_table_account.weight_count() as u64);
+        epoch_state_account.update_set_weight(
+            weight_table_account.weight_count() as u64,
+            weight_table_account.st_mint_count() as u64,
+        );
     }
 
     Ok(())

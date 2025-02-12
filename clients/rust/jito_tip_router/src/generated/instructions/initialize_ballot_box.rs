@@ -10,6 +10,8 @@ use borsh::BorshSerialize;
 
 /// Accounts.
 pub struct InitializeBallotBox {
+    pub epoch_marker: solana_program::pubkey::Pubkey,
+
     pub epoch_state: solana_program::pubkey::Pubkey,
 
     pub config: solana_program::pubkey::Pubkey,
@@ -18,7 +20,7 @@ pub struct InitializeBallotBox {
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub payer: solana_program::pubkey::Pubkey,
+    pub account_payer: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
 }
@@ -36,7 +38,11 @@ impl InitializeBallotBox {
         args: InitializeBallotBoxInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.epoch_marker,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.epoch_state,
             false,
@@ -53,7 +59,8 @@ impl InitializeBallotBox {
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.payer, true,
+            self.account_payer,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
@@ -101,19 +108,21 @@ pub struct InitializeBallotBoxInstructionArgs {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` epoch_state
-///   1. `[]` config
-///   2. `[writable]` ballot_box
-///   3. `[]` ncn
-///   4. `[writable, signer]` payer
-///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   0. `[]` epoch_marker
+///   1. `[]` epoch_state
+///   2. `[]` config
+///   3. `[writable]` ballot_box
+///   4. `[]` ncn
+///   5. `[writable]` account_payer
+///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeBallotBoxBuilder {
+    epoch_marker: Option<solana_program::pubkey::Pubkey>,
     epoch_state: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
     ballot_box: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    payer: Option<solana_program::pubkey::Pubkey>,
+    account_payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
@@ -122,6 +131,11 @@ pub struct InitializeBallotBoxBuilder {
 impl InitializeBallotBoxBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+    #[inline(always)]
+    pub fn epoch_marker(&mut self, epoch_marker: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.epoch_marker = Some(epoch_marker);
+        self
     }
     #[inline(always)]
     pub fn epoch_state(&mut self, epoch_state: solana_program::pubkey::Pubkey) -> &mut Self {
@@ -144,8 +158,8 @@ impl InitializeBallotBoxBuilder {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
+    pub fn account_payer(&mut self, account_payer: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.account_payer = Some(account_payer);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -180,11 +194,12 @@ impl InitializeBallotBoxBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         let accounts = InitializeBallotBox {
+            epoch_marker: self.epoch_marker.expect("epoch_marker is not set"),
             epoch_state: self.epoch_state.expect("epoch_state is not set"),
             config: self.config.expect("config is not set"),
             ballot_box: self.ballot_box.expect("ballot_box is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            payer: self.payer.expect("payer is not set"),
+            account_payer: self.account_payer.expect("account_payer is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
@@ -199,6 +214,8 @@ impl InitializeBallotBoxBuilder {
 
 /// `initialize_ballot_box` CPI accounts.
 pub struct InitializeBallotBoxCpiAccounts<'a, 'b> {
+    pub epoch_marker: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
@@ -207,7 +224,7 @@ pub struct InitializeBallotBoxCpiAccounts<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
@@ -217,6 +234,8 @@ pub struct InitializeBallotBoxCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub epoch_marker: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
@@ -225,7 +244,7 @@ pub struct InitializeBallotBoxCpi<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -240,11 +259,12 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
+            epoch_marker: accounts.epoch_marker,
             epoch_state: accounts.epoch_state,
             config: accounts.config,
             ballot_box: accounts.ballot_box,
             ncn: accounts.ncn,
-            payer: accounts.payer,
+            account_payer: accounts.account_payer,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -282,7 +302,11 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.epoch_marker.key,
+            false,
+        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.epoch_state.key,
             false,
@@ -300,8 +324,8 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.payer.key,
-            true,
+            *self.account_payer.key,
+            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
@@ -325,13 +349,14 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
+        account_infos.push(self.epoch_marker.clone());
         account_infos.push(self.epoch_state.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ballot_box.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.payer.clone());
+        account_infos.push(self.account_payer.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -349,12 +374,13 @@ impl<'a, 'b> InitializeBallotBoxCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` epoch_state
-///   1. `[]` config
-///   2. `[writable]` ballot_box
-///   3. `[]` ncn
-///   4. `[writable, signer]` payer
-///   5. `[]` system_program
+///   0. `[]` epoch_marker
+///   1. `[]` epoch_state
+///   2. `[]` config
+///   3. `[writable]` ballot_box
+///   4. `[]` ncn
+///   5. `[writable]` account_payer
+///   6. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeBallotBoxCpiBuilder<'a, 'b> {
     instruction: Box<InitializeBallotBoxCpiBuilderInstruction<'a, 'b>>,
@@ -364,16 +390,25 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(InitializeBallotBoxCpiBuilderInstruction {
             __program: program,
+            epoch_marker: None,
             epoch_state: None,
             config: None,
             ballot_box: None,
             ncn: None,
-            payer: None,
+            account_payer: None,
             system_program: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
+    }
+    #[inline(always)]
+    pub fn epoch_marker(
+        &mut self,
+        epoch_marker: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.epoch_marker = Some(epoch_marker);
+        self
     }
     #[inline(always)]
     pub fn epoch_state(
@@ -405,8 +440,11 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
+    pub fn account_payer(
+        &mut self,
+        account_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.account_payer = Some(account_payer);
         self
     }
     #[inline(always)]
@@ -469,6 +507,11 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
         let instruction = InitializeBallotBoxCpi {
             __program: self.instruction.__program,
 
+            epoch_marker: self
+                .instruction
+                .epoch_marker
+                .expect("epoch_marker is not set"),
+
             epoch_state: self
                 .instruction
                 .epoch_state
@@ -480,7 +523,10 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            payer: self.instruction.payer.expect("payer is not set"),
+            account_payer: self
+                .instruction
+                .account_payer
+                .expect("account_payer is not set"),
 
             system_program: self
                 .instruction
@@ -498,11 +544,12 @@ impl<'a, 'b> InitializeBallotBoxCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct InitializeBallotBoxCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
+    epoch_marker: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    account_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
