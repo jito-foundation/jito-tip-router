@@ -7,33 +7,20 @@ use ::{
     meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection},
     solana_metrics::set_host_id,
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
-    solana_runtime::bank::Bank,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
-    std::{
-        path::PathBuf,
-        str::FromStr,
-        sync::Arc,
-        time::Duration,
-    },
+    std::{path::PathBuf, str::FromStr, sync::Arc, time::Duration},
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
         claim::claim_mev_tips_with_emit,
         cli::{Cli, Commands},
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_ledger,
-        load_bank_from_snapshot,
-        process_epoch::{
-            calc_prev_epoch_and_final_slot, get_previous_epoch_last_slot, wait_for_next_epoch,
-            wait_for_optimal_incremental_snapshot,
-        },
+        load_bank_from_snapshot, process_epoch,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
-        OperatorState,
+        PROTOCOL_FEE_BPS,
     },
     tokio::time::sleep,
 };
-
-// TODO: Should this be loaded from somewhere?
-const PROTOCOL_FEE_BPS: u64 = 300;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -79,20 +66,17 @@ async fn main() -> Result<()> {
             override_target_slot,
             starting_stage,
             save_stages,
-            start_next_epoch,
             set_merkle_roots,
             claim_tips,
         } => {
             info!("Running Tip Router...");
             info!("starting stage: {:?}", starting_stage);
 
-            let operator_address = cli.operator_address.clone();
             let rpc_client_clone = rpc_client.clone();
             let full_snapshots_path = cli.full_snapshots_path.clone().unwrap();
             let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
             let rpc_url = cli.rpc_url.clone();
             let cli_clone: Cli = cli.clone();
-            let mut current_epoch_info = rpc_client.get_epoch_info().await?;
 
             if !backup_snapshots_dir.exists() {
                 info!(
@@ -141,130 +125,49 @@ async fn main() -> Result<()> {
                 }
             });
 
-            // Track runs that are starting right at the beginning of a new epoch
-            let mut stage = starting_stage;
-            let mut bank: Option<Arc<Bank>> = None;
-            let mut stake_meta_collection: Option<StakeMetaCollection> = None;
-            let mut merkle_tree_collection: Option<GeneratedMerkleTreeCollection> = None;
-            let mut epoch_to_process = current_epoch_info.epoch.saturating_sub(1);
-            let mut slot_to_process = if let Some(slot) = override_target_slot {
-                slot
-            } else {
-                let (_, prev_slot) = calc_prev_epoch_and_final_slot(&current_epoch_info)?;
-                prev_slot
-            };
-            loop {
-                match stage {
-                    OperatorState::LoadBankFromSnapshot => {
-                        bank = Some(load_bank_from_snapshot(
-                            cli.clone(),
-                            slot_to_process,
-                            enable_snapshots,
-                        ));
-                        // Transition to the next stage
-                        stage = OperatorState::CreateStakeMeta;
-                    }
-                    OperatorState::CreateStakeMeta => {
-                        // TODO: Determine if we want to allow operators to start from this stage.
-                        //  No matter what a bank has to be loaded from a snapshot, so might as
-                        //  well start from load bank
-                        stake_meta_collection = Some(create_stake_meta(
-                            operator_address.clone(),
-                            epoch_to_process,
-                            bank.as_ref().expect("Bank was not set"),
-                            &tip_distribution_program_id,
-                            &tip_payment_program_id,
-                            &cli.save_path,
-                            save_stages,
-                        ));
-                        // we should be able to safely drop the bank in this loop
-                        bank = None;
-                        // Transition to the next stage
-                        stage = OperatorState::CreateMerkleTreeCollection;
-                    }
-                    OperatorState::CreateMerkleTreeCollection => {
-                        let some_stake_meta_collection = match stake_meta_collection.to_owned() {
-                            Some(collection) => collection,
-                            None => {
-                                let file = cli.save_path.join(format!(
-                                    "{}_stake_meta_collection.json",
-                                    epoch_to_process
-                                ));
-                                StakeMetaCollection::new_from_file(&file)?
-                            }
-                        };
-
-                        // Generate the merkle tree collection
-                        merkle_tree_collection = Some(create_merkle_tree_collection(
-                            cli.operator_address.clone(),
-                            &tip_router_program_id,
-                            some_stake_meta_collection,
-                            epoch_to_process,
-                            &ncn_address,
-                            PROTOCOL_FEE_BPS,
-                            &cli.save_path,
-                            save_stages,
-                        ));
-
-                        stake_meta_collection = None;
-                        // Transition to the next stage
-                        stage = OperatorState::CreateMetaMerkleTree;
-                    }
-                    OperatorState::CreateMetaMerkleTree => {
-                        let some_merkle_tree_collection = match merkle_tree_collection.to_owned() {
-                            Some(collection) => collection,
-                            None => {
-                                let file = cli.save_path.join(format!(
-                                    "{}_merkle_tree_collection.json",
-                                    epoch_to_process
-                                ));
-                                GeneratedMerkleTreeCollection::new_from_file(&file)?
-                            }
-                        };
-
-                        create_meta_merkle_tree(
-                            cli.operator_address.clone(),
-                            some_merkle_tree_collection,
-                            epoch_to_process,
-                            &cli.save_path,
-                            // TODO: If we keep the separate thread for handling NCN submission
-                            //  through files on disk then this needs to be true
-                            save_stages,
-                        );
-                        stage = OperatorState::WaitForNextEpoch;
-                    }
-                    OperatorState::SubmitToNcn => {
-                        // TODO: Determine if this should be a stage given the task that's in a
-                        //  separate thread
-                    }
-                    OperatorState::WaitForNextEpoch => {
-                        current_epoch_info =
-                            wait_for_next_epoch(&rpc_client, current_epoch_info.epoch).await;
-                        // Get the last slot of the previous epoch
-                        let (previous_epoch, previous_epoch_slot) = if let Ok((epoch, slot)) =
-                            get_previous_epoch_last_slot(&rpc_client).await
-                        {
-                            (epoch, slot)
+            // Run claims if enabled
+            if claim_tips {
+                let cli_clone = cli.clone();
+                let rpc_client = rpc_client.clone();
+                tokio::spawn(async move {
+                    loop {
+                        // Slow process with lots of account fetches so run every 30 minutes
+                        sleep(Duration::from_secs(1800)).await;
+                        let epoch = if let Ok(epoch) = rpc_client.get_epoch_info().await {
+                            epoch.epoch.checked_sub(1).unwrap_or(epoch.epoch)
                         } else {
-                            // TODO: Make a datapoint error
-                            error!("Error getting previous epoch slot");
                             continue;
                         };
-                        slot_to_process = previous_epoch_slot;
-                        epoch_to_process = previous_epoch;
-
-                        // TODO: When we start with wait for the next epoch, should we always wait
-                        //  for the optimal snapshot?
-                        let incremental_snapshots_path = cli.backup_snapshots_dir.clone();
-                        wait_for_optimal_incremental_snapshot(
-                            incremental_snapshots_path,
-                            slot_to_process,
+                        if let Err(e) = claim_mev_tips_with_emit(
+                            &cli_clone,
+                            epoch,
+                            tip_distribution_program_id,
+                            tip_router_program_id,
+                            ncn_address,
+                            Duration::from_secs(3600),
                         )
-                        .await?;
-                        stage = OperatorState::LoadBankFromSnapshot;
+                        .await
+                        {
+                            error!("Error claiming tips: {}", e);
+                        }
                     }
-                }
+                });
             }
+
+            // Endless loop that transitions between stages of the operator process.
+            process_epoch::loop_stages(
+                rpc_client,
+                cli,
+                starting_stage,
+                override_target_slot,
+                &tip_router_program_id,
+                &tip_distribution_program_id,
+                &tip_payment_program_id,
+                &ncn_address,
+                enable_snapshots,
+                save_stages,
+            )
+            .await?;
         }
         Commands::SnapshotSlot { slot } => {
             info!("Snapshotting slot...");

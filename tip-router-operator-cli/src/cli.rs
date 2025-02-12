@@ -80,9 +80,6 @@ pub enum Commands {
         #[arg(long, env, default_value = "3")]
         num_monitored_epochs: u64,
 
-        #[arg(long, env, default_value = "false")]
-        start_next_epoch: bool,
-
         #[arg(long, env)]
         override_target_slot: Option<u64>,
 

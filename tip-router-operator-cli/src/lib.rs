@@ -3,11 +3,10 @@ pub mod ledger_utils;
 pub mod stake_meta_generator;
 pub mod tip_router;
 pub use crate::cli::{Cli, Commands};
-pub mod claim;
-pub mod cli;
-pub use crate::process_epoch::process_epoch;
 pub mod arg_matches;
 pub mod backup_snapshots;
+pub mod claim;
+pub mod cli;
 pub mod load_and_process_ledger;
 pub mod process_epoch;
 pub mod rpc_utils;
@@ -38,6 +37,9 @@ use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::bank::Bank;
 use solana_sdk::{account::AccountSharedData, pubkey::Pubkey, slot_history::Slot};
 use stake_meta_generator::generate_stake_meta_collection;
+
+// TODO: Should this be loaded from somewhere?
+pub const PROTOCOL_FEE_BPS: u64 = 300;
 
 #[derive(clap::ValueEnum, Clone, Copy, Debug)]
 pub enum OperatorState {
