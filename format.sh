@@ -14,7 +14,7 @@ cargo fmt --all
 
 print_executing "cargo nextest run --all-features"
 cargo build-sbf --sbf-out-dir integration_tests/tests/fixtures
-SBF_OUT_DIR=integration_tests/tests/fixtures cargo nextest run --all-features -E 'not test(ledger_utils::tests::test_get_bank_from_ledger_success) and not test(test_meta_merkle_creation_from_ledger)'
+SBF_OUT_DIR=integration_tests/tests/fixtures cargo nextest run --all-features -E 'not test(ledger_utils::tests::test_get_bank_from_ledger_success)'
 
 # Code coverage only runs with flag
 if [[ "$*" == *"--code-coverage"* ]]; then

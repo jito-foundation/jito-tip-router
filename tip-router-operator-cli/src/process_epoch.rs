@@ -16,8 +16,8 @@ use tokio::time;
 
 use crate::{
     backup_snapshots::SnapshotInfo, create_merkle_tree_collection, create_meta_merkle_tree,
-    create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot, load_bank_from_snapshot, Cli,
-    OperatorState, PROTOCOL_FEE_BPS,
+    create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot, load_bank_from_snapshot,
+    merkle_tree_collection_file_name, stake_meta_file_name, Cli, OperatorState, PROTOCOL_FEE_BPS,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -191,9 +191,7 @@ pub async fn loop_stages(
                 let some_stake_meta_collection = match stake_meta_collection.to_owned() {
                     Some(collection) => collection,
                     None => {
-                        let file = cli
-                            .save_path
-                            .join(format!("{}_stake_meta_collection.json", epoch_to_process));
+                        let file = cli.save_path.join(stake_meta_file_name(epoch_to_process));
                         StakeMetaCollection::new_from_file(&file)?
                     }
                 };
@@ -220,7 +218,7 @@ pub async fn loop_stages(
                     None => {
                         let file = cli
                             .save_path
-                            .join(format!("{}_merkle_tree_collection.json", epoch_to_process));
+                            .join(merkle_tree_collection_file_name(epoch_to_process));
                         GeneratedMerkleTreeCollection::new_from_file(&file)?
                     }
                 };
@@ -234,7 +232,7 @@ pub async fn loop_stages(
                     //  through files on disk then this needs to be true
                     save_stages,
                 );
-                stage = OperatorState::WaitForNextEpoch;
+                stage = OperatorState::CastVote;
             }
             OperatorState::CastVote => {
                 // TODO: Determine if this should be a stage given the task that's in a

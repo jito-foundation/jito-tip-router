@@ -182,8 +182,8 @@ async fn main() -> Result<()> {
             set_merkle_roots,
         } => {
             let meta_merkle_tree_path = PathBuf::from(format!(
-                "{}/meta_merkle_tree_{}.json",
-                cli.meta_merkle_tree_dir.display(),
+                "{}/{}_meta_merkle_tree.json",
+                cli.save_path.display(),
                 epoch
             ));
             info!(

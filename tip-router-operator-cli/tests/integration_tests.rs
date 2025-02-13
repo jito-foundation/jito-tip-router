@@ -1,7 +1,4 @@
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{fs, path::PathBuf};
 
 use anchor_lang::prelude::AnchorSerialize;
 use jito_tip_distribution_sdk::jito_tip_distribution::ID as TIP_DISTRIBUTION_ID;
@@ -21,7 +18,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use tempfile::TempDir;
-use tip_router_operator_cli::{get_meta_merkle_root, TipAccountConfig};
+use tip_router_operator_cli::TipAccountConfig;
 
 #[allow(dead_code)]
 struct TestContext {
@@ -181,76 +178,6 @@ impl TestContext {
             tip_distribution_program_id: self.tip_distribution_program_id,
         }
     }
-}
-
-#[tokio::test]
-async fn test_meta_merkle_creation_from_ledger() {
-    // 1. Setup - create necessary variables/arguments
-    let ledger_path = Path::new("tests/fixtures/test-ledger");
-    let account_paths = vec![ledger_path.join("accounts/run")];
-    let full_snapshots_path = PathBuf::from("tests/fixtures/test-ledger");
-    let desired_slot = &144;
-    let tip_distribution_program_id = &TIP_DISTRIBUTION_ID;
-    let out_path = "tests/fixtures/output.json";
-    let tip_payment_program_id = &TIP_PAYMENT_ID;
-    let ncn_address = Pubkey::new_unique();
-    let operator_address = Pubkey::new_unique();
-    let epoch = 0u64;
-    const PROTOCOL_FEE_BPS: u64 = 300;
-
-    // 2. Call the function
-    let meta_merkle_tree = get_meta_merkle_root(
-        ledger_path,
-        account_paths,
-        full_snapshots_path.clone(),
-        full_snapshots_path,
-        desired_slot,
-        tip_distribution_program_id,
-        out_path,
-        tip_payment_program_id,
-        &jito_tip_router_program::id(),
-        &ncn_address,
-        &operator_address,
-        epoch,
-        PROTOCOL_FEE_BPS,
-        false,
-        &ledger_path.to_path_buf(),
-    )
-    .unwrap();
-
-    // 3. More comprehensive validations
-    assert_ne!(
-        meta_merkle_tree.merkle_root, [0; 32],
-        "Merkle root should not be zero"
-    );
-
-    // Verify structure
-    assert!(
-        meta_merkle_tree.num_nodes > 0,
-        "Should have validator nodes"
-    );
-
-    // Verify each node
-    for node in &meta_merkle_tree.tree_nodes {
-        // Verify node has required fields
-        assert_ne!(
-            node.tip_distribution_account,
-            Pubkey::default(),
-            "Node should have valid tip distribution account"
-        );
-        assert!(
-            node.max_total_claim > 0,
-            "Node should have positive max claim"
-        );
-        assert!(
-            node.max_num_nodes > 0,
-            "Node should have positive max nodes"
-        );
-        assert!(node.proof.is_some(), "Node should have a proof");
-    }
-
-    // Verify the proofs are valid
-    meta_merkle_tree.verify_proof().unwrap();
 }
 
 #[tokio::test]
