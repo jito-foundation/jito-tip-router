@@ -16,10 +16,10 @@ use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::read_keypair_
 use tokio::time;
 
 use crate::{
-    backup_snapshots::SnapshotInfo, create_merkle_tree_collection, create_meta_merkle_tree,
-    create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot, load_bank_from_snapshot,
-    merkle_tree_collection_file_name, meta_merkle_tree_file_name, stake_meta_file_name,
-    submit::submit_to_ncn, Cli, OperatorState, PROTOCOL_FEE_BPS,
+    backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
+    create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
+    load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
+    stake_meta_file_name, submit::submit_to_ncn, Cli, OperatorState, PROTOCOL_FEE_BPS,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -130,6 +130,10 @@ pub async fn loop_stages(
     loop {
         match stage {
             OperatorState::LoadBankFromSnapshot => {
+                let incremental_snapshots_path = cli.backup_snapshots_dir.clone();
+                wait_for_optimal_incremental_snapshot(incremental_snapshots_path, slot_to_process)
+                    .await?;
+
                 bank = Some(load_bank_from_snapshot(
                     cli.clone(),
                     slot_to_process,
@@ -145,15 +149,13 @@ pub async fn loop_stages(
                     // the typical validator snapshots path? This would save the fight from the
                     // validator process removing snapshots. We'd have to also update the snapshot
                     // process and CLI to handle
+                    let SnapshotPaths {
+                        ledger_path,
+                        account_paths,
+                        full_snapshots_path,
+                        incremental_snapshots_path: _,
+                    } = cli.get_snapshot_paths();
 
-                    // TODO: DRY up these paths from the Cli arguments (duplicate code in load_bank_from_snapshot)
-                    let ledger_path = cli.ledger_path.clone();
-                    let account_paths = None;
-                    let account_paths =
-                        account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
-                    let full_snapshots_path = cli.full_snapshots_path.clone();
-                    let full_snapshots_path =
-                        full_snapshots_path.map_or(ledger_path.clone(), |path| path);
                     let maybe_bank = get_bank_from_snapshot_at_slot(
                         slot_to_process,
                         &full_snapshots_path,
@@ -232,9 +234,9 @@ pub async fn loop_stages(
                     some_merkle_tree_collection,
                     epoch_to_process,
                     &cli.save_path,
-                    // TODO: If we keep the separate thread for handling NCN submission
-                    //  through files on disk then this needs to be true
-                    save_stages,
+                    // This is defaulted to true because the output file is required by the
+                    //  task that sets TipDistributionAccounts' merkle roots
+                    true,
                 );
                 stage = OperatorState::CastVote;
             }
@@ -276,11 +278,6 @@ pub async fn loop_stages(
                 slot_to_process = previous_epoch_slot;
                 epoch_to_process = previous_epoch;
 
-                // TODO: When we start with wait for the next epoch, should we always wait
-                //  for the optimal snapshot?
-                let incremental_snapshots_path = cli.backup_snapshots_dir.clone();
-                wait_for_optimal_incremental_snapshot(incremental_snapshots_path, slot_to_process)
-                    .await?;
                 stage = OperatorState::LoadBankFromSnapshot;
             }
         }

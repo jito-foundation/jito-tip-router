@@ -54,6 +54,28 @@ impl Cli {
             std::fs::create_dir_all(&self.save_path).unwrap();
         }
     }
+
+    pub fn get_snapshot_paths(&self) -> SnapshotPaths {
+        let ledger_path = self.ledger_path.clone();
+        let account_paths = None;
+        let account_paths = account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
+        let full_snapshots_path = self.full_snapshots_path.clone();
+        let full_snapshots_path = full_snapshots_path.map_or(ledger_path.clone(), |path| path);
+        let incremental_snapshots_path = self.backup_snapshots_dir.clone();
+        SnapshotPaths {
+            ledger_path,
+            account_paths,
+            full_snapshots_path,
+            incremental_snapshots_path,
+        }
+    }
+}
+
+pub struct SnapshotPaths {
+    pub ledger_path: PathBuf,
+    pub account_paths: Vec<PathBuf>,
+    pub full_snapshots_path: PathBuf,
+    pub incremental_snapshots_path: PathBuf,
 }
 
 #[derive(clap::Subcommand, Clone)]

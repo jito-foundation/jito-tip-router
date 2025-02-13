@@ -19,6 +19,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anchor_lang::prelude::*;
+use cli::SnapshotPaths;
 use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{
     CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
@@ -64,17 +65,16 @@ pub fn meta_merkle_tree_file_name(epoch: u64) -> String {
 
 // STAGE 1 LoadBankFromSnapshot
 pub fn load_bank_from_snapshot(cli: Cli, slot: u64, store_snapshot: bool) -> Arc<Bank> {
-    let ledger_path = cli.ledger_path.clone();
-    let account_paths = None;
-    let full_snapshots_path = cli.full_snapshots_path.clone();
-    let incremental_snapshots_path = cli.backup_snapshots_dir.clone();
-
-    let account_paths = account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
-    let full_snapshots_path = full_snapshots_path.map_or(ledger_path, |path| path);
+    let SnapshotPaths {
+        ledger_path,
+        account_paths,
+        full_snapshots_path,
+        incremental_snapshots_path,
+    } = cli.get_snapshot_paths();
 
     get_bank_from_ledger(
         cli.operator_address,
-        &cli.ledger_path,
+        &ledger_path,
         account_paths,
         full_snapshots_path,
         incremental_snapshots_path,
