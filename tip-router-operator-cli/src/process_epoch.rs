@@ -96,6 +96,7 @@ pub async fn wait_for_optimal_incremental_snapshot(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn loop_stages(
     rpc_client: EllipsisClient,
     cli: Cli,
@@ -155,7 +156,7 @@ pub async fn loop_stages(
                         &full_snapshots_path,
                         &full_snapshots_path,
                         account_paths,
-                        &ledger_path.as_path(),
+                        ledger_path.as_path(),
                     );
                     match maybe_bank {
                         Ok(some_bank) => bank = Some(Arc::new(some_bank)),
@@ -177,8 +178,8 @@ pub async fn loop_stages(
                     operator_address.clone(),
                     epoch_to_process,
                     bank.as_ref().expect("Bank was not set"),
-                    &tip_distribution_program_id,
-                    &tip_payment_program_id,
+                    tip_distribution_program_id,
+                    tip_payment_program_id,
                     &cli.save_path,
                     save_stages,
                 ));
@@ -199,10 +200,10 @@ pub async fn loop_stages(
                 // Generate the merkle tree collection
                 merkle_tree_collection = Some(create_merkle_tree_collection(
                     cli.operator_address.clone(),
-                    &tip_router_program_id,
+                    tip_router_program_id,
                     some_stake_meta_collection,
                     epoch_to_process,
-                    &ncn_address,
+                    ncn_address,
                     PROTOCOL_FEE_BPS,
                     &cli.save_path,
                     save_stages,

@@ -42,6 +42,7 @@ pub enum LedgerUtilsError {
 
 // TODO: Use Result and propagate errors more gracefully
 /// Create the Bank for a desired slot for given file paths.
+#[allow(clippy::cognitive_complexity)]
 pub fn get_bank_from_ledger(
     operator_address: String,
     ledger_path: &Path,
@@ -437,7 +438,7 @@ pub fn get_bank_from_snapshot_at_slot(
 
     let (bank, _) = snapshot_bank_utils::bank_from_snapshot_archives(
         &account_paths,
-        &bank_snapshots_dir,
+        bank_snapshots_dir,
         full_snapshot_archive_info,
         None,
         &genesis_config,
@@ -454,7 +455,7 @@ pub fn get_bank_from_snapshot_at_slot(
         exit.clone(),
     )?;
     exit.store(true, Ordering::Relaxed);
-    return Ok(bank);
+    Ok(bank)
 }
 
 #[cfg(test)]

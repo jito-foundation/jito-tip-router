@@ -72,7 +72,7 @@ pub fn load_bank_from_snapshot(cli: Cli, slot: u64, store_snapshot: bool) -> Arc
     let account_paths = account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
     let full_snapshots_path = full_snapshots_path.map_or(ledger_path, |path| path);
 
-    let bank = get_bank_from_ledger(
+    get_bank_from_ledger(
         cli.operator_address,
         &cli.ledger_path,
         account_paths,
@@ -80,8 +80,7 @@ pub fn load_bank_from_snapshot(cli: Cli, slot: u64, store_snapshot: bool) -> Arc
         incremental_snapshots_path,
         &slot,
         store_snapshot,
-    );
-    return bank;
+    )
 }
 
 // STAGE 2 CreateStakeMeta
@@ -91,7 +90,7 @@ pub fn create_stake_meta(
     bank: &Arc<Bank>,
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
-    save_path: &PathBuf,
+    save_path: &Path,
     save: bool,
 ) -> StakeMetaCollection {
     let start = Instant::now();
@@ -144,6 +143,7 @@ pub fn create_stake_meta(
 }
 
 // STAGE 3 CreateMerkleTreeCollection
+#[allow(clippy::too_many_arguments)]
 pub fn create_merkle_tree_collection(
     operator_address: String,
     tip_router_program_id: &Pubkey,
@@ -151,7 +151,7 @@ pub fn create_merkle_tree_collection(
     epoch: u64,
     ncn_address: &Pubkey,
     protocol_fee_bps: u64,
-    save_path: &PathBuf,
+    save_path: &Path,
     save: bool,
 ) -> GeneratedMerkleTreeCollection {
     let start = Instant::now();
@@ -233,7 +233,7 @@ pub fn create_meta_merkle_tree(
     operator_address: String,
     merkle_tree_collection: GeneratedMerkleTreeCollection,
     epoch: u64,
-    save_path: &PathBuf,
+    save_path: &Path,
     save: bool,
 ) -> MetaMerkleTree {
     let start = Instant::now();
