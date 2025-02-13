@@ -15,7 +15,7 @@ use ::{
         cli::{Cli, Commands},
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_ledger,
-        load_bank_from_snapshot, process_epoch,
+        load_bank_from_snapshot, meta_merkle_tree_file_name, process_epoch,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         PROTOCOL_FEE_BPS,
     },
@@ -182,9 +182,9 @@ async fn main() -> Result<()> {
             set_merkle_roots,
         } => {
             let meta_merkle_tree_path = PathBuf::from(format!(
-                "{}/{}_meta_merkle_tree.json",
+                "{}/{}",
                 cli.save_path.display(),
-                epoch
+                meta_merkle_tree_file_name(epoch)
             ));
             info!(
                 "Submitting epoch {} from {}...",

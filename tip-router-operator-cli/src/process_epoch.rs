@@ -1,5 +1,6 @@
 use std::{
     path::PathBuf,
+    str::FromStr,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -11,13 +12,14 @@ use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, Sta
 use solana_metrics::datapoint_error;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_runtime::bank::Bank;
-use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey};
+use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::read_keypair_file};
 use tokio::time;
 
 use crate::{
     backup_snapshots::SnapshotInfo, create_merkle_tree_collection, create_meta_merkle_tree,
     create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot, load_bank_from_snapshot,
-    merkle_tree_collection_file_name, stake_meta_file_name, Cli, OperatorState, PROTOCOL_FEE_BPS,
+    merkle_tree_collection_file_name, meta_merkle_tree_file_name, stake_meta_file_name,
+    submit::submit_to_ncn, Cli, OperatorState, PROTOCOL_FEE_BPS,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -109,6 +111,7 @@ pub async fn loop_stages(
     enable_snapshots: bool,
     save_stages: bool,
 ) -> Result<()> {
+    let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
     let mut current_epoch_info = rpc_client.get_epoch_info().await?;
 
     // Track runs that are starting right at the beginning of a new epoch
@@ -236,8 +239,27 @@ pub async fn loop_stages(
                 stage = OperatorState::CastVote;
             }
             OperatorState::CastVote => {
-                // TODO: Determine if this should be a stage given the task that's in a
-                //  separate thread
+                let meta_merkle_tree_path = PathBuf::from(format!(
+                    "{}/{}",
+                    cli.save_path.display(),
+                    meta_merkle_tree_file_name(epoch_to_process)
+                ));
+                let operator_address = Pubkey::from_str(&cli.operator_address)?;
+                submit_to_ncn(
+                    &rpc_client,
+                    &keypair,
+                    &operator_address,
+                    &meta_merkle_tree_path,
+                    epoch_to_process,
+                    ncn_address,
+                    tip_router_program_id,
+                    tip_distribution_program_id,
+                    cli.submit_as_memo,
+                    // We let the submit task handle setting merkle roots
+                    false,
+                )
+                .await?;
+                stage = OperatorState::WaitForNextEpoch;
             }
             OperatorState::WaitForNextEpoch => {
                 current_epoch_info =
