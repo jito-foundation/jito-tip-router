@@ -139,7 +139,17 @@ impl CliHandler {
                 loop_timeout_ms,
                 error_timeout_ms,
                 test_vote,
-            } => startup_keeper(self, loop_timeout_ms, error_timeout_ms, test_vote).await,
+                all_vault_update,
+            } => {
+                startup_keeper(
+                    self,
+                    loop_timeout_ms,
+                    error_timeout_ms,
+                    test_vote,
+                    all_vault_update,
+                )
+                .await
+            }
 
             // Admin
             ProgramCommand::AdminCreateConfig {

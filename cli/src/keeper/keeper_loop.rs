@@ -77,8 +77,16 @@ pub async fn startup_keeper(
     loop_timeout_ms: u64,
     error_timeout_ms: u64,
     test_vote: bool,
+    all_vault_update: bool,
 ) -> Result<()> {
-    run_keeper(handler, loop_timeout_ms, error_timeout_ms, test_vote).await;
+    run_keeper(
+        handler,
+        loop_timeout_ms,
+        error_timeout_ms,
+        test_vote,
+        all_vault_update,
+    )
+    .await;
 
     // Will never reach
     Ok(())
@@ -90,14 +98,31 @@ pub async fn run_keeper(
     loop_timeout_ms: u64,
     error_timeout_ms: u64,
     test_vote: bool,
+    all_vault_update: bool,
 ) {
     let mut state: KeeperState = KeeperState::default();
     let mut epoch_stall = false;
     let mut current_epoch = handler.epoch;
-    let mut is_new_epoch;
+    let mut is_new_epoch = true;
     let (mut last_current_epoch, _) = get_guaranteed_epoch_and_slot(handler).await;
 
     loop {
+        if is_new_epoch && all_vault_update {
+            info!("\n\n-2. Update Vaults - {}\n", current_epoch);
+            let result = update_all_vaults_in_network(handler).await;
+
+            if check_and_timeout_error(
+                "Update Vaults".to_string(),
+                &result,
+                error_timeout_ms,
+                state.epoch,
+            )
+            .await
+            {
+                continue;
+            }
+        }
+
         {
             info!("\n\nA. Progress Epoch - {}\n", current_epoch);
             let starting_epoch = handler.epoch;
@@ -134,22 +159,6 @@ pub async fn run_keeper(
                 state.epoch,
             )
             .await;
-        }
-
-        if is_new_epoch {
-            info!("\n\n-2. Update Vaults - {}\n", current_epoch);
-            let result = update_all_vaults_in_network(handler).await;
-
-            if check_and_timeout_error(
-                "Update Vaults".to_string(),
-                &result,
-                error_timeout_ms,
-                state.epoch,
-            )
-            .await
-            {
-                continue;
-            }
         }
 
         {

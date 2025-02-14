@@ -131,6 +131,12 @@ pub enum ProgramCommand {
         error_timeout_ms: u64,
         #[arg(long, help = "calls test vote, instead of waiting for a real vote")]
         test_vote: bool,
+        #[arg(
+            long,
+            env,
+            help = "at the start of the epoch the keeper will update all vaults in the network"
+        )]
+        all_vault_update: bool,
     },
 
     /// Admin
