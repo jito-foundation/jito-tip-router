@@ -3,7 +3,7 @@ use std::{fmt, time::Duration};
 
 use crate::handler::CliHandler;
 use anyhow::Result;
-use borsh::BorshDeserialize;
+use borsh1::BorshDeserialize;
 use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_restaking_core::{
     config::Config as RestakingConfig, ncn::Ncn, ncn_operator_state::NcnOperatorState,
@@ -775,6 +775,7 @@ pub async fn get_all_vaults(handler: &CliHandler) -> Result<Vec<Pubkey>> {
             min_context_slot: None,
         },
         with_context: Some(false),
+        sort_results: None,
     };
 
     let results = client
