@@ -15,6 +15,9 @@ services:
       - RESTAKING_PROGRAM_ID=${RESTAKING_PROGRAM_ID}
       - TIP_ROUTER_PROGRAM_ID=${TIP_ROUTER_PROGRAM_ID}
       - SOLANA_METRICS_CONFIG=${SOLANA_METRICS_CONFIG}
+      - LOOP_TIMEOUT_MS=${LOOP_TIMEOUT_MS}
+      - ERROR_TIMEOUT_MS=${ERROR_TIMEOUT_MS}
+      - ALL_VAULT_UPDATE=${ALL_VAULT_UPDATE}
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5
