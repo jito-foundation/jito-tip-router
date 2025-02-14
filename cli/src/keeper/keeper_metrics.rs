@@ -101,9 +101,10 @@ pub async fn emit_ncn_metrics_tickets(handler: &CliHandler) -> Result<()> {
             ("operator", ticket.operator.to_string(), String),
             ("vault", ticket.vault.to_string(), String),
             (
-                "vault-operator",
+                "ticket-id",
                 format!(
-                    "{}-{}",
+                    "{}-{}-{}",
+                    ticket.ncn.to_string(),
                     ticket.vault.to_string(),
                     ticket.operator.to_string()
                 ),
