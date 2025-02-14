@@ -3,7 +3,7 @@ use crate::{
     handler::CliHandler,
     instructions::{
         crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
-        crank_snapshot, crank_vote, create_epoch_state,
+        crank_snapshot, crank_vote, create_epoch_state, update_all_vaults_in_network,
     },
     keeper::{
         keeper_metrics::{emit_epoch_metrics, emit_error, emit_ncn_metrics},
@@ -22,25 +22,25 @@ pub async fn progress_epoch(
     last_current_epoch: u64,
     keeper_epoch: u64,
     epoch_stall: bool,
-) -> u64 {
+) -> (u64, bool) {
     let (current_epoch, _) = get_guaranteed_epoch_and_slot(handler).await;
 
     if current_epoch > last_current_epoch {
         // Automatically go to new epoch
-        return current_epoch;
+        return (current_epoch, true);
     }
 
     if is_epoch_completed || epoch_stall {
         // Reset to starting epoch
         if keeper_epoch == current_epoch {
-            return starting_epoch;
+            return (starting_epoch, false);
         }
 
         // Increment keeper epoch
-        return keeper_epoch + 1;
+        return (keeper_epoch + 1, false);
     }
 
-    keeper_epoch
+    (keeper_epoch, false)
 }
 
 #[allow(clippy::future_not_send)]
@@ -94,6 +94,7 @@ pub async fn run_keeper(
     let mut state: KeeperState = KeeperState::default();
     let mut epoch_stall = false;
     let mut current_epoch = handler.epoch;
+    let mut is_new_epoch;
     let (mut last_current_epoch, _) = get_guaranteed_epoch_and_slot(handler).await;
 
     loop {
@@ -102,7 +103,7 @@ pub async fn run_keeper(
             let starting_epoch = handler.epoch;
             let keeper_epoch = current_epoch;
 
-            let result = progress_epoch(
+            let (result, set_is_new_epoch) = progress_epoch(
                 handler,
                 state.is_epoch_completed,
                 starting_epoch,
@@ -116,6 +117,7 @@ pub async fn run_keeper(
                 info!("\n\nPROGRESS EPOCH: {} -> {}\n\n", current_epoch, result);
             }
 
+            is_new_epoch = set_is_new_epoch;
             current_epoch = result;
             last_current_epoch = last_current_epoch.max(current_epoch);
             epoch_stall = false;
@@ -132,6 +134,22 @@ pub async fn run_keeper(
                 state.epoch,
             )
             .await;
+        }
+
+        if is_new_epoch {
+            info!("\n\n-2. Update Vaults - {}\n", current_epoch);
+            let result = update_all_vaults_in_network(handler).await;
+
+            if check_and_timeout_error(
+                "Update Vaults".to_string(),
+                &result,
+                error_timeout_ms,
+                state.epoch,
+            )
+            .await
+            {
+                continue;
+            }
         }
 
         {

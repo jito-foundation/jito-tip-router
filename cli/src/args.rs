@@ -339,6 +339,11 @@ pub enum ProgramCommand {
     GetVaultStakes,
     GetVaultOperatorStakes,
 
+    FullUpdateVaults {
+        #[arg(long, help = "Vault address")]
+        vault: Option<String>,
+    },
+
     /// TESTS
     Test,
     CreateTestNcn,

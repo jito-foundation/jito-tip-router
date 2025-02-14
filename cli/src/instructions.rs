@@ -2,7 +2,7 @@ use std::{str::FromStr, time::Duration};
 
 use crate::{
     getters::{
-        get_account, get_all_operators_in_ncn, get_all_sorted_operators_for_vault,
+        get_account, get_all_operators_in_ncn, get_all_sorted_operators_for_vault, get_all_vaults,
         get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver_rewards,
         get_base_reward_router, get_current_slot, get_epoch_snapshot,
         get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator,
@@ -1991,6 +1991,15 @@ pub async fn check_created(handler: &CliHandler, address: &Pubkey) -> Result<()>
             "Failed to get account after creation {:?}",
             address
         ));
+    }
+
+    Ok(())
+}
+
+pub async fn update_all_vaults_in_network(handler: &CliHandler) -> Result<()> {
+    let vaults = get_all_vaults(handler).await?;
+    for vault in vaults {
+        full_vault_update(handler, &vault).await?;
     }
 
     Ok(())

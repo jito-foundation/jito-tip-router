@@ -4,7 +4,7 @@ use std::{fmt, time::Duration};
 use crate::handler::CliHandler;
 use anyhow::Result;
 use borsh::BorshDeserialize;
-use jito_bytemuck::AccountDeserialize;
+use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_restaking_core::{
     config::Config as RestakingConfig, ncn::Ncn, ncn_operator_state::NcnOperatorState,
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
@@ -747,6 +747,41 @@ pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey
         .collect::<Vec<Pubkey>>();
 
     Ok(operators)
+}
+
+pub async fn get_all_vaults(handler: &CliHandler) -> Result<Vec<Pubkey>> {
+    let client = handler.rpc_client();
+
+    let vault_size = size_of::<Vault>() + 8;
+
+    let size_filter = RpcFilterType::DataSize(vault_size as u64);
+
+    let vault_filter = RpcFilterType::Memcmp(Memcmp::new(
+        0,                                                        // offset
+        MemcmpEncodedBytes::Bytes([Vault::DISCRIMINATOR].into()), // encoded bytes
+    ));
+
+    let config = RpcProgramAccountsConfig {
+        filters: Some(vec![size_filter, vault_filter]),
+        account_config: RpcAccountInfoConfig {
+            encoding: Some(UiAccountEncoding::Base64),
+            data_slice: Some(UiDataSliceConfig {
+                offset: 0,
+                length: 0,
+            }),
+            commitment: Some(handler.commitment),
+            min_context_slot: None,
+        },
+        with_context: Some(false),
+    };
+
+    let results = client
+        .get_program_accounts_with_config(&handler.vault_program_id, config)
+        .await?;
+
+    let vaults: Vec<Pubkey> = results.iter().map(|result| result.0).collect();
+
+    Ok(vaults)
 }
 
 pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
