@@ -204,7 +204,6 @@ pub async fn emit_ncn_metrics_vault_operator_delegation(handler: &CliHandler) ->
             }
             let vault_operator_delegation = result?;
 
-            //TODO add delegation?
             datapoint_info!(
                 "tr-beta-em-vault-operator-delegation",
                 ("current-epoch", current_epoch, i64),
