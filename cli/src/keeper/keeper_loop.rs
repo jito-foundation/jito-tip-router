@@ -117,10 +117,7 @@ pub async fn run_keeper(
                 error_timeout_ms,
                 state.epoch,
             )
-            .await
-            {
-                continue;
-            }
+            .await;
         }
 
         {

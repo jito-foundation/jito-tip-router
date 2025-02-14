@@ -20,7 +20,7 @@ use crate::{
 };
 
 // PDA'd ["epoch_reward_router", NCN, NCN_EPOCH_SLOT]
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct BaseRewardRouter {
     /// NCN the account is associated with

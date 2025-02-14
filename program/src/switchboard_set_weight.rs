@@ -59,9 +59,12 @@ pub fn process_switchboard_set_weight(
         let feed = PullFeedAccountData::parse(switchboard_feed.data.borrow())
             .map_err(|_| TipRouterError::BadSwitchboardFeed)?;
 
-        let price: Decimal = feed.value().ok_or(TipRouterError::BadSwitchboardValue)?;
+        let clock = Clock::get()?;
+        let price: Decimal = feed
+            .value(&clock)
+            .map_err(|_| TipRouterError::BadSwitchboardValue)?;
 
-        let current_slot = Clock::get()?.slot;
+        let current_slot = clock.slot;
         let stale_slot = {
             feed.result
                 .slot

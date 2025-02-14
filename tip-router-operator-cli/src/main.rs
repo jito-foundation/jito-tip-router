@@ -5,7 +5,7 @@ use ::{
     ellipsis_client::EllipsisClient,
     log::{error, info},
     solana_metrics::set_host_id,
-    solana_rpc_client::rpc_client::RpcClient,
+    solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{
         clock::DEFAULT_SLOTS_PER_EPOCH, pubkey::Pubkey, signer::keypair::read_keypair_file,
     },
@@ -90,7 +90,7 @@ async fn main() -> Result<()> {
             let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
             let rpc_url = cli.rpc_url.clone();
             let cli_clone = cli.clone();
-            let mut current_epoch = rpc_client.get_epoch_info()?.epoch;
+            let mut current_epoch = rpc_client.get_epoch_info().await?.epoch;
 
             if !backup_snapshots_dir.exists() {
                 info!(
@@ -147,7 +147,7 @@ async fn main() -> Result<()> {
                     loop {
                         // Slow process with lots of account fetches so run every 30 minutes
                         sleep(Duration::from_secs(1800)).await;
-                        let epoch = if let Ok(epoch) = rpc_client.get_epoch_info() {
+                        let epoch = if let Ok(epoch) = rpc_client.get_epoch_info().await {
                             epoch.epoch.checked_sub(1).unwrap_or(epoch.epoch)
                         } else {
                             continue;
@@ -178,7 +178,7 @@ async fn main() -> Result<()> {
             loop {
                 // Get the last slot of the previous epoch
                 let (previous_epoch, previous_epoch_slot) =
-                    if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client) {
+                    if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client).await {
                         (epoch, slot)
                     } else {
                         error!("Error getting previous epoch slot");
@@ -209,7 +209,7 @@ async fn main() -> Result<()> {
                 }
 
                 // Wait for epoch change
-                current_epoch = wait_for_next_epoch(&rpc_client, current_epoch).await;
+                current_epoch = wait_for_next_epoch(rpc_client.as_ref(), current_epoch).await;
 
                 new_epoch_rollover = true;
             }

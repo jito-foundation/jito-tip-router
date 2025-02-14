@@ -34,7 +34,7 @@ pub async fn submit_recent_epochs_to_ncn(
     cli_args: &Cli,
     set_merkle_roots: bool,
 ) -> Result<(), anyhow::Error> {
-    let epoch = client.get_epoch_info()?;
+    let epoch = client.get_epoch_info().await?;
     let operator_address = Pubkey::from_str(&cli_args.operator_address)?;
 
     for i in 0..num_monitored_epochs {
@@ -82,7 +82,7 @@ pub async fn submit_to_ncn(
     submit_as_memo: bool,
     set_merkle_roots: bool,
 ) -> Result<(), anyhow::Error> {
-    let epoch_info = client.get_epoch_info()?;
+    let epoch_info = client.get_epoch_info().await?;
     let meta_merkle_tree = MetaMerkleTree::new_from_file(meta_merkle_tree_path)?;
     let config_pda = Config::find_program_address(tip_router_program_id, ncn_address).0;
     let config = get_ncn_config(client, tip_router_program_id, ncn_address).await?;

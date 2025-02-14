@@ -83,5 +83,5 @@ impl anchor_lang::IdlBuild for NcnRewardRouter {}
 
 #[cfg(feature = "anchor-idl-build")]
 impl anchor_lang::Discriminator for NcnRewardRouter {
-    const DISCRIMINATOR: [u8; 8] = [0; 8];
+    const DISCRIMINATOR: &'static [u8] = &[0; 8];
 }

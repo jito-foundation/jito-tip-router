@@ -107,7 +107,7 @@ pub fn process_snapshot_vault_operator_delegation(
             // If the NCN removes a vault, it should immediately be barred from the snapshot
             ncn_vault_ticket_account
                 .state
-                .is_active(current_slot, ncn_epoch_length)
+                .is_active(current_slot, ncn_epoch_length)?
         };
 
         let vault_ncn_okay = {
@@ -123,7 +123,7 @@ pub fn process_snapshot_vault_operator_delegation(
                 // from this vault can still participate
                 vault_ncn_ticket_account
                     .state
-                    .is_active_or_cooldown(current_slot, ncn_epoch_length)
+                    .is_active_or_cooldown(current_slot, ncn_epoch_length)?
             }
         };
 

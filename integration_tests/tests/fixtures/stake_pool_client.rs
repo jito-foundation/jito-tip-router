@@ -1,7 +1,7 @@
 #![allow(deprecated)] // using deprecated borsh to align with mainnet stake pool version
 use jito_tip_router_core::constants::JITOSOL_MINT;
 use solana_program::{
-    borsh0_10::{get_instance_packed_len, get_packed_len},
+    borsh1::{get_instance_packed_len, get_packed_len},
     pubkey::Pubkey,
     stake,
 };

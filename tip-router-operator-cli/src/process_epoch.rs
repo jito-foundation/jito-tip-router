@@ -8,7 +8,7 @@ use anyhow::Result;
 use ellipsis_client::EllipsisClient;
 use log::{error, info};
 use solana_metrics::{datapoint_error, datapoint_info};
-use solana_rpc_client::rpc_client::RpcClient;
+use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::pubkey::Pubkey;
 use tokio::time;
 
@@ -22,7 +22,7 @@ const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally dete
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> u64 {
     loop {
         tokio::time::sleep(Duration::from_secs(10)).await; // Check every 10 seconds
-        let new_epoch = match rpc_client.get_epoch_info() {
+        let new_epoch = match rpc_client.get_epoch_info().await {
             Ok(info) => info.epoch,
             Err(e) => {
                 error!("Error getting epoch info: {:?}", e);
@@ -37,8 +37,8 @@ pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> 
     }
 }
 
-pub fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<(u64, u64)> {
-    let epoch_info = rpc_client.get_epoch_info()?;
+pub async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<(u64, u64)> {
+    let epoch_info = rpc_client.get_epoch_info().await?;
     let current_slot = epoch_info.absolute_slot;
     let slot_index = epoch_info.slot_index;
 

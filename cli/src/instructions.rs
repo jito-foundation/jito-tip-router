@@ -2997,7 +2997,7 @@ pub async fn create_and_add_test_vault(
         .base(base.pubkey())
         .vault(vault)
         .vrt_mint(vrt_mint.pubkey())
-        .token_mint(token_mint.pubkey())
+        .st_mint(token_mint.pubkey())
         .reward_fee_bps(reward_fee_bps)
         .withdrawal_fee_bps(withdrawal_fee_bps)
         .decimals(9)

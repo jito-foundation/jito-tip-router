@@ -299,8 +299,6 @@ pub fn get_bank_from_ledger(
             snapshot_config.full_snapshot_archives_dir,
             snapshot_config.incremental_snapshot_archives_dir,
             snapshot_config.archive_format,
-            snapshot_config.maximum_full_snapshot_archives_to_retain,
-            snapshot_config.maximum_incremental_snapshot_archives_to_retain,
         ) {
             Ok(res) => res,
             Err(e) => {
@@ -346,6 +344,8 @@ pub fn get_bank_from_ledger(
 
 #[cfg(test)]
 mod tests {
+    use crate::load_and_process_ledger::LEDGER_TOOL_DIRECTORY;
+
     use super::*;
 
     #[test]
@@ -376,11 +376,6 @@ mod tests {
         assert!(snapshot_path.exists());
         // Delete the snapshot
         std::fs::remove_file(snapshot_path).unwrap();
-        std::fs::remove_dir_all(
-            ledger_path
-                .as_path()
-                .join(format!("accounts/snapshot/{}", desired_slot)),
-        )
-        .unwrap();
+        std::fs::remove_dir_all(ledger_path.as_path().join(LEDGER_TOOL_DIRECTORY)).unwrap();
     }
 }

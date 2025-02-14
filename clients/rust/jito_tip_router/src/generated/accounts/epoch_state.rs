@@ -85,5 +85,5 @@ impl anchor_lang::IdlBuild for EpochState {}
 
 #[cfg(feature = "anchor-idl-build")]
 impl anchor_lang::Discriminator for EpochState {
-    const DISCRIMINATOR: [u8; 8] = [0; 8];
+    const DISCRIMINATOR: &'static [u8] = &[0; 8];
 }

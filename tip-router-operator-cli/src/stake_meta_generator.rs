@@ -293,7 +293,7 @@ pub fn generate_stake_meta_collection(
                 None
             };
 
-            let vote_state = vote_account.vote_state().unwrap();
+            let vote_state = vote_account.vote_state();
             delegations.sort();
             stake_metas.push(StakeMeta {
                 maybe_tip_distribution_meta,
@@ -413,7 +413,10 @@ mod tests {
             vec![INITIAL_VALIDATOR_STAKES; 3],
         );
 
-        let (mut bank, _) = Bank::new_with_bank_forks_for_tests(&genesis_config);
+        let (_, bank_forks) = Bank::new_with_bank_forks_for_tests(&genesis_config);
+        // We have to update to working bank, otherwise cannot get strong pointer (Arc) for
+        //  ProgramCache fork_graph
+        let mut bank = bank_forks.read().unwrap().working_bank();
 
         /* 2. Seed the Bank with [TipDistributionAccount]'s */
         let merkle_root_upload_authority = Pubkey::new_unique();

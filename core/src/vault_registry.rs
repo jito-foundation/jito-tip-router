@@ -151,7 +151,7 @@ impl Default for VaultEntry {
     }
 }
 
-#[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod, AccountDeserialize, ShankAccount)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, AccountDeserialize, ShankAccount)]
 #[repr(C)]
 pub struct VaultRegistry {
     /// The NCN the vault registry is associated with

@@ -11,7 +11,7 @@ base64 = "0.13"
 clap = { workspace = true }
 clap_old = { workspace = true }
 crossbeam-channel = "0.5"
-ellipsis-client = "0.1"
+ellipsis-client = "1.1"
 env_logger = { workspace = true }
 hex = "0.4"
 im = "15.1"
