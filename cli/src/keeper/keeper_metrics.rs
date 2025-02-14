@@ -100,6 +100,15 @@ pub async fn emit_ncn_metrics_tickets(handler: &CliHandler) -> Result<()> {
             ("current-slot", current_slot, i64),
             ("operator", ticket.operator.to_string(), String),
             ("vault", ticket.vault.to_string(), String),
+            (
+                "vault-operator",
+                format!(
+                    "{}-{}",
+                    ticket.vault.to_string(),
+                    ticket.operator.to_string()
+                ),
+                String
+            ),
             ("ncn-vault", ticket.ncn_vault(), i64),
             ("vault-ncn", ticket.vault_ncn(), i64),
             ("ncn-operator", ticket.ncn_operator(), i64),
