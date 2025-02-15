@@ -12,9 +12,9 @@ use ::{
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
         claim::claim_mev_tips_with_emit,
-        cli::{Cli, Commands},
+        cli::{Cli, Commands, SnapshotPaths},
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
-        ledger_utils::get_bank_from_ledger,
+        ledger_utils::get_bank_from_snapshot_at_slot,
         load_bank_from_snapshot, meta_merkle_tree_file_name, process_epoch,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         PROTOCOL_FEE_BPS,
@@ -70,6 +70,17 @@ async fn main() -> Result<()> {
             claim_tips,
         } => {
             info!("Running Tip Router...");
+            info!("NCN Address: {}", ncn_address);
+            info!(
+                "Tip Distribution Program ID: {}",
+                tip_distribution_program_id
+            );
+            info!("Tip Payment Program ID: {}", tip_payment_program_id);
+            info!("Tip Router Program ID: {}", tip_router_program_id);
+            info!("Enable Snapshots: {}", enable_snapshots);
+            info!("Num Monitored Epochs: {}", num_monitored_epochs);
+            info!("Override Target Slot: {:?}", override_target_slot);
+            info!("Submit as Memo: {}", cli.submit_as_memo);
             info!("starting stage: {:?}", starting_stage);
 
             let rpc_client_clone = rpc_client.clone();
@@ -231,21 +242,25 @@ async fn main() -> Result<()> {
             tip_payment_program_id,
             save,
         } => {
-            let account_paths = vec![cli.ledger_path.clone()];
-            let bank = get_bank_from_ledger(
-                cli.operator_address.clone(),
-                &cli.ledger_path,
+            let SnapshotPaths {
+                ledger_path,
                 account_paths,
-                cli.full_snapshots_path.unwrap(),
-                cli.backup_snapshots_dir,
-                &slot,
-                false,
-            );
+                full_snapshots_path,
+                incremental_snapshots_path: _,
+            } = cli.get_snapshot_paths();
+
+            let bank = get_bank_from_snapshot_at_slot(
+                slot,
+                &full_snapshots_path,
+                &full_snapshots_path,
+                account_paths,
+                ledger_path.as_path(),
+            )?;
 
             create_stake_meta(
                 cli.operator_address,
                 epoch,
-                &bank,
+                &Arc::new(bank),
                 &tip_distribution_program_id,
                 &tip_payment_program_id,
                 &cli.save_path,

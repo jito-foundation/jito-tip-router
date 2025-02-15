@@ -81,7 +81,7 @@ pub struct SnapshotPaths {
 #[derive(clap::Subcommand, Clone)]
 pub enum Commands {
     Run {
-        #[arg(short, long, env, env)]
+        #[arg(short, long, env)]
         ncn_address: Pubkey,
 
         #[arg(long, env)]

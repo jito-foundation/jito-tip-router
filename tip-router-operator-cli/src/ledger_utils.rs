@@ -412,6 +412,8 @@ pub fn get_bank_from_ledger(
     working_bank
 }
 
+/// Loads the bank from the snapshot at the exact slot. If the snapshot doesn't exist, result is
+/// an error.
 pub fn get_bank_from_snapshot_at_slot(
     snapshot_slot: u64,
     full_snapshots_path: &PathBuf,
