@@ -7,6 +7,7 @@ use std::{
 };
 
 use anchor_lang::AccountDeserialize;
+use borsh::BorshDeserialize;
 use itertools::Itertools;
 use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, TipDistributionAccount};
 use jito_tip_payment_sdk::{jito_tip_payment::accounts::Config, CONFIG_ACCOUNT_SEED};
@@ -22,12 +23,16 @@ use solana_ledger::{
 };
 use solana_metrics::datapoint_error;
 use solana_program::{stake_history::StakeHistory, sysvar};
-use solana_runtime::{bank::Bank, stakes::StakeAccount};
+use solana_runtime::{
+    bank::Bank,
+    stakes::{StakeAccount, StakesEnum},
+};
 use solana_sdk::{
     account::{from_account, ReadableAccount, WritableAccount},
     clock::Slot,
     pubkey::Pubkey,
 };
+use solana_stake_program::stake_state::{Delegation as SolanaDelegation, StakeStateV2};
 use solana_vote::vote_account::VoteAccount;
 use thiserror::Error;
 
@@ -157,6 +162,11 @@ fn tip_distribution_account_from_tda_wrapper(
     })
 }
 
+struct StakeAndDelegation {
+    delegation: SolanaDelegation,
+    stake_state: StakeStateV2,
+    stake_pubkey: Pubkey,
+}
 /// Creates a collection of [StakeMeta]'s from the given bank.
 #[allow(clippy::significant_drop_tightening)]
 pub fn generate_stake_meta_collection(
@@ -174,10 +184,114 @@ pub fn generate_stake_meta_collection(
         )
     });
 
-    let l_stakes = bank.stakes_cache.stakes();
-    let delegations = l_stakes.stake_delegations();
-
-    let voter_pubkey_to_delegations = group_delegations_by_voter_pubkey(delegations, bank);
+    // We use current epoch stake because the Bank was loaded from the epoch we want information on.
+    let voter_pubkey_to_delegations: HashMap<Pubkey, Vec<Delegation>> = match bank
+        .current_epoch_stakes()
+        .stakes()
+    {
+        StakesEnum::Delegations(stake_delegations) => stake_delegations
+            .stake_delegations
+            .iter()
+            .filter(|(_stake_pubkey, delegation)| {
+                delegation.stake(
+                    bank.epoch(),
+                    &from_account::<StakeHistory, _>(
+                        &bank.get_account(&sysvar::stake_history::id()).unwrap(),
+                    )
+                    .unwrap(),
+                    bank.new_warmup_cooldown_rate_epoch(),
+                ) > 0
+            })
+            .map(|(stake_pubkey, delegation)| {
+                let stake_account = bank.get_account(stake_pubkey).expect("StakeAccountExists");
+                StakeAndDelegation {
+                    delegation: *delegation,
+                    stake_state: <StakeStateV2 as BorshDeserialize>::deserialize(
+                        &mut stake_account.data(),
+                    )
+                    .expect("deserialized"),
+                    stake_pubkey: *stake_pubkey,
+                }
+            })
+            .into_group_map_by(|stake_and_delegation| stake_and_delegation.delegation.voter_pubkey)
+            .into_iter()
+            .map(|(voter_pubkey, group)| {
+                (
+                    voter_pubkey,
+                    group
+                        .into_iter()
+                        .map(|stake_and_delegation| Delegation {
+                            stake_account_pubkey: stake_and_delegation.stake_pubkey,
+                            staker_pubkey: stake_and_delegation
+                                .stake_state
+                                .authorized()
+                                .map(|a| a.staker)
+                                .unwrap_or_default(),
+                            withdrawer_pubkey: stake_and_delegation
+                                .stake_state
+                                .authorized()
+                                .map(|a| a.withdrawer)
+                                .unwrap_or_default(),
+                            lamports_delegated: stake_and_delegation.delegation.stake,
+                        })
+                        .collect::<Vec<Delegation>>(),
+                )
+            })
+            .collect(),
+        StakesEnum::Accounts(stake_accounts) => {
+            let delegations = stake_accounts.stake_delegations();
+            group_delegations_by_voter_pubkey(delegations, bank)
+        }
+        StakesEnum::Stakes(stakes) => stakes
+            .stake_delegations
+            .iter()
+            .filter(|(_stake_pubkey, stake)| {
+                stake.delegation.stake(
+                    bank.epoch(),
+                    &from_account::<StakeHistory, _>(
+                        &bank.get_account(&sysvar::stake_history::id()).unwrap(),
+                    )
+                    .unwrap(),
+                    bank.new_warmup_cooldown_rate_epoch(),
+                ) > 0
+            })
+            .map(|(stake_pubkey, stake)| {
+                let stake_account = bank.get_account(stake_pubkey).expect("StakeAccountExists");
+                StakeAndDelegation {
+                    delegation: stake.delegation,
+                    stake_state: <StakeStateV2 as BorshDeserialize>::deserialize(
+                        &mut stake_account.data(),
+                    )
+                    .expect("deserialized"),
+                    stake_pubkey: *stake_pubkey,
+                }
+            })
+            .into_group_map_by(|stake_and_delegation| stake_and_delegation.delegation.voter_pubkey)
+            .into_iter()
+            .map(|(voter_pubkey, group)| {
+                (
+                    voter_pubkey,
+                    group
+                        .into_iter()
+                        .map(|stake_and_delegation| Delegation {
+                            stake_account_pubkey: stake_and_delegation.stake_pubkey,
+                            staker_pubkey: stake_and_delegation
+                                .stake_state
+                                .authorized()
+                                .map(|a| a.staker)
+                                .unwrap_or_default(),
+                            withdrawer_pubkey: stake_and_delegation
+                                .stake_state
+                                .authorized()
+                                .map(|a| a.withdrawer)
+                                .unwrap_or_default(),
+                            lamports_delegated: stake_and_delegation.delegation.stake,
+                        })
+                        .collect::<Vec<Delegation>>(),
+                )
+            })
+            .collect(),
+    };
 
     // Get config PDA
     let (config_pda, _) =

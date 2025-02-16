@@ -8,6 +8,7 @@ description = "CLI for Jito Tip Router"
 anchor-lang = { workspace = true }
 anyhow = { workspace = true }
 base64 = "0.13"
+borsh = { workspace = true }
 clap = { workspace = true }
 clap_old = { workspace = true }
 crossbeam-channel = "0.5"
