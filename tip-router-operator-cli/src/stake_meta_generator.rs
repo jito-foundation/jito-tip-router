@@ -25,7 +25,7 @@ use solana_metrics::datapoint_error;
 use solana_program::{stake_history::StakeHistory, sysvar};
 use solana_runtime::{
     bank::Bank,
-    stakes::{StakeAccount, StakesEnum},
+    stakes::StakesEnum,
 };
 use solana_sdk::{
     account::{from_account, ReadableAccount, WritableAccount},
@@ -190,7 +190,7 @@ pub fn generate_stake_meta_collection(
         .stakes()
     {
         StakesEnum::Delegations(stake_delegations) => stake_delegations
-            .stake_delegations
+            .stake_delegations()
             .iter()
             .filter(|(_stake_pubkey, delegation)| {
                 delegation.stake(
@@ -243,7 +243,7 @@ pub fn generate_stake_meta_collection(
             group_delegations_by_voter_pubkey(delegations, bank)
         }
         StakesEnum::Stakes(stakes) => stakes
-            .stake_delegations
+            .stake_delegations()
             .iter()
             .filter(|(_stake_pubkey, stake)| {
                 stake.delegation.stake(
