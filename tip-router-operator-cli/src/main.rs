@@ -8,7 +8,7 @@ use ::{
     solana_metrics::set_host_id,
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
-    std::{path::PathBuf, str::FromStr, sync::Arc, time::Duration},
+    std::{str::FromStr, sync::Arc, time::Duration},
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
         claim::claim_mev_tips_with_emit,
@@ -193,11 +193,7 @@ async fn main() -> Result<()> {
             epoch,
             set_merkle_roots,
         } => {
-            let meta_merkle_tree_path = PathBuf::from(format!(
-                "{}/{}",
-                cli.save_path.display(),
-                meta_merkle_tree_file_name(epoch)
-            ));
+            let meta_merkle_tree_path = cli.save_path.join(meta_merkle_tree_file_name(epoch));
             info!(
                 "Submitting epoch {} from {}...",
                 epoch,

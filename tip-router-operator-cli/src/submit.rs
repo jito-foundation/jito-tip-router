@@ -137,6 +137,14 @@ pub async fn submit_to_ncn(
         None => true,
     };
 
+    info!(
+        "Determining if operator needs to vote...\n\
+        should_cast_vote: {}\n\
+        is_voting_valid: {}
+        ",
+        should_cast_vote, is_voting_valid
+    );
+
     if should_cast_vote && is_voting_valid {
         let res = cast_vote(
             client,
