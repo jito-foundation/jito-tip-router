@@ -15,7 +15,8 @@ use ::{
         cli::{Cli, Commands, SnapshotPaths},
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_snapshot_at_slot,
-        load_bank_from_snapshot, meta_merkle_tree_file_name, process_epoch,
+        load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
+        process_epoch, stake_meta_file_name,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         PROTOCOL_FEE_BPS,
     },
@@ -274,7 +275,9 @@ async fn main() -> Result<()> {
             save,
         } => {
             // Load the stake_meta_collection from disk
-            let stake_meta_collection = match StakeMetaCollection::new_from_file(&cli.save_path) {
+            let stake_meta_collection = match StakeMetaCollection::new_from_file(
+                &cli.save_path.join(stake_meta_file_name(epoch)),
+            ) {
                 Ok(stake_meta_collection) => stake_meta_collection,
                 Err(e) => panic!("{}", e), // TODO: should datapoint error be emitted here?
             };
@@ -293,11 +296,12 @@ async fn main() -> Result<()> {
         }
         Commands::CreateMetaMerkleTree { epoch, save } => {
             // Load the stake_meta_collection from disk
-            let merkle_tree_collection =
-                match GeneratedMerkleTreeCollection::new_from_file(&cli.save_path) {
-                    Ok(merkle_tree_collection) => merkle_tree_collection,
-                    Err(e) => panic!("{}", e), // TODO: should datapoint error be emitted here?
-                };
+            let merkle_tree_collection = match GeneratedMerkleTreeCollection::new_from_file(
+                &cli.save_path.join(merkle_tree_collection_file_name(epoch)),
+            ) {
+                Ok(merkle_tree_collection) => merkle_tree_collection,
+                Err(e) => panic!("{}", e), // TODO: should datapoint error be emitted here?
+            };
 
             create_meta_merkle_tree(
                 cli.operator_address,
