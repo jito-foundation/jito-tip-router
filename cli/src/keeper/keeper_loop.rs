@@ -11,7 +11,7 @@ use crate::{
     },
     log::{boring_progress_bar, progress_bar},
 };
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use jito_tip_router_core::epoch_state::State;
 use log::info;
 
@@ -78,28 +78,9 @@ pub async fn startup_keeper(
     error_timeout_ms: u64,
     test_vote: bool,
     all_vault_update: bool,
+    emit_metrics: bool,
+    metrics_only: bool,
 ) -> Result<()> {
-    run_keeper(
-        handler,
-        loop_timeout_ms,
-        error_timeout_ms,
-        test_vote,
-        all_vault_update,
-    )
-    .await;
-
-    // Will never reach
-    Ok(())
-}
-
-#[allow(clippy::large_stack_frames)]
-pub async fn run_keeper(
-    handler: &CliHandler,
-    loop_timeout_ms: u64,
-    error_timeout_ms: u64,
-    test_vote: bool,
-    all_vault_update: bool,
-) {
     let mut state: KeeperState = KeeperState::default();
     let mut epoch_stall = false;
     let mut current_epoch = handler.epoch;
@@ -107,7 +88,7 @@ pub async fn run_keeper(
     let (mut last_current_epoch, _) = get_guaranteed_epoch_and_slot(handler).await;
 
     loop {
-        if is_new_epoch && all_vault_update {
+        if is_new_epoch && all_vault_update && !metrics_only {
             info!("\n\n-2. Update Vaults - {}\n", current_epoch);
             let result = update_all_vaults_in_network(handler).await;
 
@@ -148,7 +129,7 @@ pub async fn run_keeper(
             epoch_stall = false;
         }
 
-        {
+        if emit_metrics || metrics_only {
             info!("\n\nB. Emit NCN Metrics - {}\n", current_epoch);
             let result = emit_ncn_metrics(handler).await;
 
@@ -161,7 +142,7 @@ pub async fn run_keeper(
             .await;
         }
 
-        {
+        if !metrics_only {
             info!("\n\n-1. Register Vaults - {}\n", current_epoch);
             let result = crank_register_vaults(handler).await;
 
@@ -196,7 +177,7 @@ pub async fn run_keeper(
         }
 
         {
-            info!("\n\n1. Update the epoch state - {}\n", current_epoch);
+            info!("\n\n1. Update Epoch State - {}\n", current_epoch);
             let result = state.update_epoch_state(handler).await;
 
             if check_and_timeout_error(
@@ -211,7 +192,7 @@ pub async fn run_keeper(
             }
         }
 
-        {
+        if !metrics_only {
             info!("\n\n2. Create or Complete State - {}\n", current_epoch);
 
             // If complete, reset loop
@@ -236,7 +217,7 @@ pub async fn run_keeper(
             }
         }
 
-        {
+        if emit_metrics || metrics_only {
             info!(
                 "\n\nC. Emit Epoch Metrics ( Before Crank ) - {}\n",
                 current_epoch
@@ -252,7 +233,7 @@ pub async fn run_keeper(
             .await;
         }
 
-        {
+        if !metrics_only {
             let current_state = state.current_state().expect("cannot get current state");
             info!(
                 "\n\n3. Crank State [{:?}] - {}\n",
@@ -279,7 +260,7 @@ pub async fn run_keeper(
             }
         }
 
-        {
+        if emit_metrics || metrics_only {
             info!(
                 "\n\nD. Emit Epoch Metrics ( After Crank ) - {}\n",
                 current_epoch
@@ -311,7 +292,7 @@ pub async fn run_keeper(
                 continue;
             }
 
-            epoch_stall = result.unwrap();
+            epoch_stall = result.unwrap() || metrics_only;
 
             if epoch_stall {
                 info!("\n\nSTALL DETECTED FOR {}\n\n", current_epoch);

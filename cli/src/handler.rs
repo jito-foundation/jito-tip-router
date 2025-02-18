@@ -140,6 +140,8 @@ impl CliHandler {
                 error_timeout_ms,
                 test_vote,
                 all_vault_update,
+                emit_metrics,
+                metrics_only,
             } => {
                 startup_keeper(
                     self,
@@ -147,6 +149,8 @@ impl CliHandler {
                     error_timeout_ms,
                     test_vote,
                     all_vault_update,
+                    emit_metrics,
+                    metrics_only,
                 )
                 .await
             }
