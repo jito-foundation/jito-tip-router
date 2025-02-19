@@ -4,13 +4,14 @@ use std::{collections::HashMap, str::FromStr, sync::Arc};
 use crate::{
     args::{Args, ProgramCommand},
     getters::{
-        get_account_payer, get_all_operators_in_ncn, get_all_tickets, get_all_vaults,
-        get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver, get_base_reward_router,
-        get_current_slot, get_epoch_snapshot, get_epoch_state, get_is_epoch_completed, get_ncn,
-        get_ncn_operator_state, get_ncn_reward_receiver, get_ncn_reward_router,
-        get_ncn_vault_ticket, get_operator_snapshot, get_stake_pool, get_tip_router_config,
-        get_total_epoch_rent_cost, get_total_rewards_to_be_distributed, get_vault_ncn_ticket,
-        get_vault_operator_delegation, get_vault_registry, get_weight_table,
+        get_account_payer, get_all_operators_in_ncn, get_all_opted_in_validators, get_all_tickets,
+        get_all_vaults, get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver,
+        get_base_reward_router, get_current_slot, get_epoch_snapshot, get_epoch_state,
+        get_is_epoch_completed, get_ncn, get_ncn_operator_state, get_ncn_reward_receiver,
+        get_ncn_reward_router, get_ncn_vault_ticket, get_operator_snapshot, get_stake_pool,
+        get_tip_router_config, get_total_epoch_rent_cost, get_total_rewards_to_be_distributed,
+        get_vault_ncn_ticket, get_vault_operator_delegation, get_vault_registry, get_weight_table,
+        OptedInValidatorInfo,
     },
     instructions::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
@@ -736,6 +737,32 @@ impl CliHandler {
                     }
                     println!();
                 }
+
+                Ok(())
+            }
+            ProgramCommand::GetAllOptedInValidators {} => {
+                let results = get_all_opted_in_validators(self).await?;
+
+                fn validators_to_csv_string(validators: &Vec<OptedInValidatorInfo>) -> String {
+                    let mut csv = String::from("identity,stake,active,vote\n");
+
+                    for validator in validators {
+                        csv.push_str(&format!(
+                            "{},{},{},{}\n",
+                            validator.identity.to_string(),
+                            validator.stake,
+                            validator.active,
+                            validator.vote.to_string(),
+                        ));
+                    }
+
+                    csv
+                }
+
+                info!(
+                    "Validator Info: \n\n{}\n\n",
+                    validators_to_csv_string(&results)
+                );
 
                 Ok(())
             }

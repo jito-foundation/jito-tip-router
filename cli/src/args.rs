@@ -352,6 +352,7 @@ pub enum ProgramCommand {
     GetOperatorStakes,
     GetVaultStakes,
     GetVaultOperatorStakes,
+    GetAllOptedInValidators,
 
     FullUpdateVaults {
         #[arg(long, help = "Vault address")]

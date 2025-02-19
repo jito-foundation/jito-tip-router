@@ -11,8 +11,8 @@ use solana_sdk::native_token::lamports_to_sol;
 
 use crate::{
     getters::{
-        get_account_payer, get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn,
-        get_ballot_box, get_base_reward_receiver, get_base_reward_router,
+        get_account_payer, get_all_operators_in_ncn, get_all_opted_in_validators, get_all_tickets,
+        get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver, get_base_reward_router,
         get_current_epoch_and_slot, get_epoch_snapshot, get_epoch_state, get_is_epoch_completed,
         get_ncn_reward_receiver, get_ncn_reward_router, get_operator, get_operator_snapshot,
         get_tip_router_config, get_vault, get_vault_config, get_vault_operator_delegation,
@@ -39,14 +39,43 @@ pub async fn emit_error(title: String, error: String, message: String, keeper_ep
     );
 }
 
-pub async fn emit_ncn_metrics(handler: &CliHandler) -> Result<()> {
-    emit_ncn_metrics_tickets(handler).await?;
-    emit_ncn_metrics_vault_operator_delegation(handler).await?;
-    emit_ncn_metrics_operators(handler).await?;
-    emit_ncn_metrics_vault_registry(handler).await?;
-    emit_ncn_metrics_config(handler).await?;
-    emit_ncn_metrics_account_payer(handler).await?;
-    emit_ncn_metrics_epoch_slot(handler).await?;
+pub async fn emit_heartbeat(tick: u64, metrics_only: bool) {
+    datapoint_info!(
+        "tr-beta-keeper-heartbeat",
+        ("tick", tick, i64),
+        ("metrics-only", metrics_only, bool),
+    );
+}
+
+pub async fn emit_ncn_metrics(handler: &CliHandler, tick: u64) -> Result<()> {
+    if tick % 10 == 0 {
+        emit_ncn_metrics_tickets(handler).await?;
+        emit_ncn_metrics_vault_operator_delegation(handler).await?;
+        emit_ncn_metrics_operators(handler).await?;
+        emit_ncn_metrics_vault_registry(handler).await?;
+        emit_ncn_metrics_config(handler).await?;
+        emit_ncn_metrics_account_payer(handler).await?;
+        emit_ncn_metrics_epoch_slot(handler).await?;
+        emit_ncn_metrics_opted_in_validators(handler).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn emit_ncn_metrics_opted_in_validators(handler: &CliHandler) -> Result<()> {
+    let result = get_all_opted_in_validators(handler).await;
+
+    if let Ok(all_opted_in_validators) = result {
+        for info in all_opted_in_validators {
+            datapoint_info!(
+                "tr-beta-em-opted-in-validator",
+                ("vote", info.vote.to_string(), String),
+                ("identity", info.identity.to_string(), String),
+                ("stake", info.stake, i64),
+                ("active", info.active, bool),
+            );
+        }
+    }
 
     Ok(())
 }

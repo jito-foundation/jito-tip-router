@@ -6,7 +6,7 @@ use crate::{
         crank_snapshot, crank_vote, create_epoch_state, update_all_vaults_in_network,
     },
     keeper::{
-        keeper_metrics::{emit_epoch_metrics, emit_error, emit_ncn_metrics},
+        keeper_metrics::{emit_epoch_metrics, emit_error, emit_heartbeat, emit_ncn_metrics},
         keeper_state::KeeperState,
     },
     log::{boring_progress_bar, progress_bar},
@@ -85,6 +85,7 @@ pub async fn startup_keeper(
     let mut epoch_stall = false;
     let mut current_epoch = handler.epoch;
     let mut is_new_epoch = true;
+    let mut tick = 0;
     let (mut last_current_epoch, _) = get_guaranteed_epoch_and_slot(handler).await;
 
     loop {
@@ -131,7 +132,7 @@ pub async fn startup_keeper(
 
         if emit_metrics || metrics_only {
             info!("\n\nB. Emit NCN Metrics - {}\n", current_epoch);
-            let result = emit_ncn_metrics(handler).await;
+            let result = emit_ncn_metrics(handler, tick).await;
 
             check_and_timeout_error(
                 "Emit NCN Metrics".to_string(),
@@ -303,6 +304,8 @@ pub async fn startup_keeper(
             info!("\n\nF. Timeout - {}\n", current_epoch);
 
             timeout_keeper(loop_timeout_ms).await;
+            emit_heartbeat(tick, metrics_only).await;
+            tick += 1;
         }
     }
 }

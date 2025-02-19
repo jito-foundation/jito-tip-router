@@ -1,4 +1,5 @@
 use std::mem::size_of;
+use std::str::FromStr;
 use std::{fmt, time::Duration};
 
 use crate::handler::CliHandler;
@@ -10,6 +11,7 @@ use jito_restaking_core::{
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
 };
+use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_router_core::{
     account_payer::AccountPayer,
     ballot_box::BallotBox,
@@ -32,10 +34,13 @@ use jito_vault_core::{
 };
 use log::info;
 use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
+use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::rpc_config::RpcGetVoteAccountsConfig;
 use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
 };
+use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::{account::Account, pubkey::Pubkey};
 use spl_associated_token_account::get_associated_token_address;
 use spl_stake_pool::{find_withdraw_authority_program_address, state::StakePool};
@@ -603,6 +608,117 @@ pub async fn get_stake_pool(handler: &CliHandler) -> Result<StakePool> {
         .map_err(|_| anyhow::anyhow!("Invalid stake pool account"))?;
 
     Ok(account)
+}
+
+pub struct OptedInValidatorInfo {
+    pub vote: Pubkey,
+    pub identity: Pubkey,
+    pub stake: u64,
+    pub active: bool,
+}
+
+pub async fn get_all_opted_in_validators(
+    handler: &CliHandler,
+) -> Result<Vec<OptedInValidatorInfo>> {
+    // Vote Account, Validator Identity, Validator Stake, active or not
+    let client = handler.rpc_client();
+    let client = RpcClient::new_with_timeout_and_commitment(
+        client.url(),
+        Duration::from_secs(3600),
+        CommitmentConfig::processed(),
+    );
+
+    let tip_distribution_size = size_of::<TipDistributionAccount>() + 8;
+
+    let size_filter = RpcFilterType::DataSize(tip_distribution_size as u64);
+
+    let discriminator_filter = RpcFilterType::Memcmp(Memcmp::new(
+        0,                                                                       // offset
+        MemcmpEncodedBytes::Bytes([85, 64, 113, 198, 234, 94, 120, 123].into()), // encoded bytes
+    ));
+    let upload_auth_filter = RpcFilterType::Memcmp(Memcmp::new(
+        8 + 32, // offset
+        MemcmpEncodedBytes::Bytes(
+            Pubkey::from_str("8F4jGUmxF36vQ6yabnsxX6AQVXdKBhs8kGSUuRKSg8Xt")
+                .unwrap()
+                .to_bytes()
+                .into(),
+        ), // encoded bytes
+    ));
+
+    let config = RpcProgramAccountsConfig {
+        filters: Some(vec![size_filter, upload_auth_filter, discriminator_filter]),
+        account_config: RpcAccountInfoConfig {
+            encoding: Some(UiAccountEncoding::Base64),
+            data_slice: Some(UiDataSliceConfig {
+                offset: 8,
+                length: 32,
+            }),
+            commitment: Some(CommitmentConfig::processed()),
+            min_context_slot: None,
+        },
+        with_context: Some(false),
+        sort_results: None,
+    };
+
+    let results = client
+        .get_program_accounts_with_config(&handler.tip_distribution_program_id, config)
+        .await?;
+
+    let vote_accounts: Vec<Pubkey> = results
+        .iter()
+        .map(|result| {
+            let data_slice = result.1.data.as_slice();
+            // Convert the slice to a fixed-size array
+            let vote_account = Pubkey::new_from_array(
+                data_slice[..32].try_into().expect("Slice must be 32 bytes"),
+            );
+            vote_account
+        })
+        .collect();
+
+    let mut validator_infos: Vec<OptedInValidatorInfo> = vec![];
+
+    for vote_account in vote_accounts {
+        let config = RpcGetVoteAccountsConfig {
+            vote_pubkey: Some(vote_account.to_string()),
+            ..RpcGetVoteAccountsConfig::default()
+        };
+        let status_result = client.get_vote_accounts_with_config(config).await;
+
+        if status_result.is_err() {
+            continue;
+        }
+
+        let status = status_result.unwrap();
+
+        if !status.current.is_empty() {
+            let info = status.current[0].clone();
+            let identity = Pubkey::from_str(&info.node_pubkey)?;
+
+            validator_infos.push(OptedInValidatorInfo {
+                vote: vote_account,
+                identity,
+                stake: info.activated_stake,
+                active: true,
+            });
+        } else if !status.delinquent.is_empty() {
+            let info = status.delinquent[0].clone();
+            let identity = Pubkey::from_str(&info.node_pubkey)?;
+
+            validator_infos.push(OptedInValidatorInfo {
+                vote: vote_account,
+                identity,
+                stake: info.activated_stake,
+                active: false,
+            });
+        }
+    }
+
+    validator_infos.sort_by(|a, b| a.identity.cmp(&b.identity));
+    validator_infos.dedup_by(|a, b| a.identity.eq(&b.identity));
+
+    Ok(validator_infos)
 }
 
 pub struct StakePoolAccounts {
