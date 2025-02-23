@@ -145,7 +145,7 @@ impl CliHandler {
                     length: data_size,
                 }),
                 commitment: Some(self.commitment),
-                min_context_slot: Some(1234),
+                min_context_slot: None,
             },
             with_context: Some(false),
             sort_results: Some(false),

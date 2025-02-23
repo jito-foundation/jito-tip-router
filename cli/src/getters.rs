@@ -1,4 +1,3 @@
-use std::mem::size_of;
 use std::{fmt, time::Duration};
 
 use crate::handler::CliHandler;
@@ -31,11 +30,6 @@ use jito_vault_core::{
     vault_update_state_tracker::VaultUpdateStateTracker,
 };
 use log::info;
-use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
-use solana_client::{
-    rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
-    rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
-};
 use solana_sdk::{account::Account, pubkey::Pubkey};
 use spl_associated_token_account::get_associated_token_address;
 use spl_stake_pool::{find_withdraw_authority_program_address, state::StakePool};
@@ -645,30 +639,7 @@ pub async fn get_all_sorted_operators_for_vault(
     vault: &Pubkey,
 ) -> Result<Vec<Pubkey>> {
     let client = handler.rpc_client();
-
-    let vault_operator_delegation_size = size_of::<VaultOperatorDelegation>() + 8;
-
-    let size_filter = RpcFilterType::DataSize(vault_operator_delegation_size as u64);
-
-    let vault_filter = RpcFilterType::Memcmp(Memcmp::new(
-        8,                                                  // offset
-        MemcmpEncodedBytes::Bytes(vault.to_bytes().into()), // encoded bytes
-    ));
-
-    let config = RpcProgramAccountsConfig {
-        filters: Some(vec![size_filter, vault_filter]),
-        account_config: RpcAccountInfoConfig {
-            encoding: Some(UiAccountEncoding::Base64),
-            data_slice: Some(UiDataSliceConfig {
-                offset: 0,
-                length: vault_operator_delegation_size,
-            }),
-            commitment: Some(handler.commitment),
-            min_context_slot: None,
-        },
-        with_context: Some(false),
-        sort_results: None,
-    };
+    let config = handler.get_rpc_program_accounts_with_config::<VaultOperatorDelegation>()?;
 
     let results = client
         .get_program_accounts_with_config(&handler.vault_program_id, config)
@@ -733,30 +704,6 @@ pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey
 pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
     let client = handler.rpc_client();
     let config = handler.get_rpc_program_accounts_with_config::<NcnVaultTicket>()?;
-
-    // let ncn_vault_ticket_size = size_of::<NcnVaultTicket>() + 8;
-
-    // let size_filter = RpcFilterType::DataSize(ncn_vault_ticket_size as u64);
-
-    // let ncn_filter = RpcFilterType::Memcmp(Memcmp::new(
-    //     8,                                                           // offset
-    //     MemcmpEncodedBytes::Bytes(handler.ncn()?.to_bytes().into()), // encoded bytes
-    // ));
-
-    // let config = RpcProgramAccountsConfig {
-    //     filters: Some(vec![size_filter, ncn_filter]),
-    //     account_config: RpcAccountInfoConfig {
-    //         encoding: Some(UiAccountEncoding::Base64),
-    //         data_slice: Some(UiDataSliceConfig {
-    //             offset: 0,
-    //             length: ncn_vault_ticket_size,
-    //         }),
-    //         commitment: Some(handler.commitment),
-    //         min_context_slot: None,
-    //     },
-    //     with_context: Some(false),
-    //     sort_results: None,
-    // };
 
     let results = client
         .get_program_accounts_with_config(&handler.restaking_program_id, config)
