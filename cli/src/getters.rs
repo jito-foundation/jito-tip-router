@@ -639,7 +639,7 @@ pub async fn get_all_sorted_operators_for_vault(
     vault: &Pubkey,
 ) -> Result<Vec<Pubkey>> {
     let client = handler.rpc_client();
-    let config = handler.get_rpc_program_accounts_with_config::<VaultOperatorDelegation>()?;
+    let config = handler.get_rpc_program_accounts_with_config::<VaultOperatorDelegation>(vault)?;
 
     let results = client
         .get_program_accounts_with_config(&handler.vault_program_id, config)
@@ -676,7 +676,8 @@ pub async fn get_all_sorted_operators_for_vault(
 
 pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
     let client = handler.rpc_client();
-    let config = handler.get_rpc_program_accounts_with_config::<NcnOperatorState>()?;
+    let config =
+        handler.get_rpc_program_accounts_with_config::<NcnOperatorState>(handler.ncn()?)?;
 
     let results = client
         .get_program_accounts_with_config(&handler.restaking_program_id, config)
@@ -703,7 +704,7 @@ pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey
 
 pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
     let client = handler.rpc_client();
-    let config = handler.get_rpc_program_accounts_with_config::<NcnVaultTicket>()?;
+    let config = handler.get_rpc_program_accounts_with_config::<NcnVaultTicket>(handler.ncn()?)?;
 
     let results = client
         .get_program_accounts_with_config(&handler.restaking_program_id, config)

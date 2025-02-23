@@ -127,9 +127,10 @@ impl CliHandler {
 
     pub fn get_rpc_program_accounts_with_config<T: jito_bytemuck::Discriminator>(
         &self,
+        account_pubkey: &Pubkey,
     ) -> anyhow::Result<RpcProgramAccountsConfig> {
         let data_size = size_of::<T>() + 8;
-        let encoded_discriminator = general_purpose::STANDARD.encode(self.ncn()?.to_bytes());
+        let encoded_discriminator = general_purpose::STANDARD.encode(account_pubkey.to_bytes());
         let size_filter = RpcFilterType::DataSize(data_size as u64);
         let ncn_filter = RpcFilterType::Memcmp(Memcmp::new(
             8,                                                 // offset
