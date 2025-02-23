@@ -697,8 +697,6 @@ pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey
         .map(|(_, ncn_operator_state)| ncn_operator_state.operator)
         .collect::<Vec<Pubkey>>();
 
-    info!("Length operators: {}", operators.len());
-
     Ok(operators)
 }
 
