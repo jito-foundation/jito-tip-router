@@ -24,10 +24,16 @@ use crate::{
     keeper::keeper_loop::startup_keeper,
 };
 use anyhow::{anyhow, Result};
+use base64::{engine::general_purpose, Engine};
 use jito_tip_router_core::{
     account_payer::AccountPayer, base_reward_router::BaseRewardReceiver, ncn_fee_group::NcnFeeGroup,
 };
 use log::info;
+use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
+use solana_client::{
+    rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
+    rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
+};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
@@ -117,6 +123,35 @@ impl CliHandler {
 
     pub const fn rpc_client(&self) -> &RpcClient {
         &self.rpc_client
+    }
+
+    pub fn get_rpc_program_accounts_with_config<T: jito_bytemuck::Discriminator>(
+        &self,
+    ) -> anyhow::Result<RpcProgramAccountsConfig> {
+        let data_size = size_of::<T>() + 8;
+        let encoded_discriminator = general_purpose::STANDARD.encode(self.ncn()?.to_bytes());
+        let size_filter = RpcFilterType::DataSize(data_size as u64);
+        let ncn_filter = RpcFilterType::Memcmp(Memcmp::new(
+            8,                                                 // offset
+            MemcmpEncodedBytes::Base64(encoded_discriminator), // encoded bytes
+        ));
+
+        let config = RpcProgramAccountsConfig {
+            filters: Some(vec![size_filter, ncn_filter]),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                data_slice: Some(UiDataSliceConfig {
+                    offset: 0,
+                    length: data_size,
+                }),
+                commitment: Some(self.commitment),
+                min_context_slot: Some(1234),
+            },
+            with_context: Some(false),
+            sort_results: Some(false),
+        };
+
+        Ok(config)
     }
 
     pub const fn switchboard_context(&self) -> &Arc<SbContext> {

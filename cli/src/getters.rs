@@ -705,30 +705,7 @@ pub async fn get_all_sorted_operators_for_vault(
 
 pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
     let client = handler.rpc_client();
-
-    let ncn_operator_state_size = size_of::<NcnOperatorState>() + 8;
-
-    let size_filter = RpcFilterType::DataSize(ncn_operator_state_size as u64);
-
-    let ncn_filter = RpcFilterType::Memcmp(Memcmp::new(
-        8,                                                           // offset
-        MemcmpEncodedBytes::Bytes(handler.ncn()?.to_bytes().into()), // encoded bytes
-    ));
-
-    let config = RpcProgramAccountsConfig {
-        filters: Some(vec![size_filter, ncn_filter]),
-        account_config: RpcAccountInfoConfig {
-            encoding: Some(UiAccountEncoding::Base64),
-            data_slice: Some(UiDataSliceConfig {
-                offset: 0,
-                length: ncn_operator_state_size,
-            }),
-            commitment: Some(handler.commitment),
-            min_context_slot: None,
-        },
-        with_context: Some(false),
-        sort_results: None,
-    };
+    let config = handler.get_rpc_program_accounts_with_config::<NcnOperatorState>()?;
 
     let results = client
         .get_program_accounts_with_config(&handler.restaking_program_id, config)
@@ -748,35 +725,38 @@ pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey
         .map(|(_, ncn_operator_state)| ncn_operator_state.operator)
         .collect::<Vec<Pubkey>>();
 
+    info!("Length operators: {}", operators.len());
+
     Ok(operators)
 }
 
 pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
     let client = handler.rpc_client();
+    let config = handler.get_rpc_program_accounts_with_config::<NcnVaultTicket>()?;
 
-    let ncn_vault_ticket_size = size_of::<NcnVaultTicket>() + 8;
+    // let ncn_vault_ticket_size = size_of::<NcnVaultTicket>() + 8;
 
-    let size_filter = RpcFilterType::DataSize(ncn_vault_ticket_size as u64);
+    // let size_filter = RpcFilterType::DataSize(ncn_vault_ticket_size as u64);
 
-    let ncn_filter = RpcFilterType::Memcmp(Memcmp::new(
-        8,                                                           // offset
-        MemcmpEncodedBytes::Bytes(handler.ncn()?.to_bytes().into()), // encoded bytes
-    ));
+    // let ncn_filter = RpcFilterType::Memcmp(Memcmp::new(
+    //     8,                                                           // offset
+    //     MemcmpEncodedBytes::Bytes(handler.ncn()?.to_bytes().into()), // encoded bytes
+    // ));
 
-    let config = RpcProgramAccountsConfig {
-        filters: Some(vec![size_filter, ncn_filter]),
-        account_config: RpcAccountInfoConfig {
-            encoding: Some(UiAccountEncoding::Base64),
-            data_slice: Some(UiDataSliceConfig {
-                offset: 0,
-                length: ncn_vault_ticket_size,
-            }),
-            commitment: Some(handler.commitment),
-            min_context_slot: None,
-        },
-        with_context: Some(false),
-        sort_results: None,
-    };
+    // let config = RpcProgramAccountsConfig {
+    //     filters: Some(vec![size_filter, ncn_filter]),
+    //     account_config: RpcAccountInfoConfig {
+    //         encoding: Some(UiAccountEncoding::Base64),
+    //         data_slice: Some(UiDataSliceConfig {
+    //             offset: 0,
+    //             length: ncn_vault_ticket_size,
+    //         }),
+    //         commitment: Some(handler.commitment),
+    //         min_context_slot: None,
+    //     },
+    //     with_context: Some(false),
+    //     sort_results: None,
+    // };
 
     let results = client
         .get_program_accounts_with_config(&handler.restaking_program_id, config)
