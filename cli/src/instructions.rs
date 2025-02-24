@@ -2070,57 +2070,59 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
     // Crank Vault Update State Tracker
     let all_operators = get_all_sorted_operators_for_vault(handler, vault).await?;
 
-    let starting_index = {
-        let vault_update_state_tracker_account =
-            get_vault_update_state_tracker(handler, vault, ncn_epoch).await?;
-        let last_updated_index = vault_update_state_tracker_account.last_updated_index();
+    if !all_operators.is_empty() {
+        let starting_index = {
+            let vault_update_state_tracker_account =
+                get_vault_update_state_tracker(handler, vault, ncn_epoch).await?;
+            let last_updated_index = vault_update_state_tracker_account.last_updated_index();
 
-        if last_updated_index == u64::MAX {
-            ncn_epoch % all_operators.len() as u64
-        } else {
-            (last_updated_index + 1) % all_operators.len() as u64
-        }
-    };
+            if last_updated_index == u64::MAX {
+                ncn_epoch % all_operators.len() as u64
+            } else {
+                (last_updated_index + 1) % all_operators.len() as u64
+            }
+        };
 
-    for index in 0..all_operators.len() {
-        let current_index = (starting_index as usize + index) % all_operators.len();
-        let operator = all_operators.get(current_index).unwrap();
+        for index in 0..all_operators.len() {
+            let current_index = (starting_index as usize + index) % all_operators.len();
+            let operator = all_operators.get(current_index).unwrap();
 
-        let (vault_operator_delegation, _, _) = VaultOperatorDelegation::find_program_address(
-            &handler.vault_program_id,
-            vault,
-            operator,
-        );
+            let (vault_operator_delegation, _, _) = VaultOperatorDelegation::find_program_address(
+                &handler.vault_program_id,
+                vault,
+                operator,
+            );
 
-        let crank_vault_update_state_tracker_ix = CrankVaultUpdateStateTrackerBuilder::new()
-            .vault(*vault)
-            .operator(*operator)
-            .config(vault_config)
-            .vault_operator_delegation(vault_operator_delegation)
-            .vault_update_state_tracker(vault_update_state_tracker)
-            .instruction();
+            let crank_vault_update_state_tracker_ix = CrankVaultUpdateStateTrackerBuilder::new()
+                .vault(*vault)
+                .operator(*operator)
+                .config(vault_config)
+                .vault_operator_delegation(vault_operator_delegation)
+                .vault_update_state_tracker(vault_update_state_tracker)
+                .instruction();
 
-        let result = send_and_log_transaction(
-            handler,
-            &[crank_vault_update_state_tracker_ix],
-            &[payer],
-            "Crank Vault Update State Tracker",
-            &[
-                format!("VAULT: {:?}", vault),
-                format!("Operator: {:?}", operator),
-                format!("Vault Epoch: {:?}", ncn_epoch),
-            ],
-        )
-        .await;
+            let result = send_and_log_transaction(
+                handler,
+                &[crank_vault_update_state_tracker_ix],
+                &[payer],
+                "Crank Vault Update State Tracker",
+                &[
+                    format!("VAULT: {:?}", vault),
+                    format!("Operator: {:?}", operator),
+                    format!("Vault Epoch: {:?}", ncn_epoch),
+                ],
+            )
+            .await;
 
-        if result.is_err() {
-            log::error!(
+            if result.is_err() {
+                log::error!(
                 "Failed to crank Vault Update State Tracker for Vault: {:?} and Operator: {:?} at NCN Epoch: {:?} with error: {:?}",
                 vault,
                 operator,
                 ncn_epoch,
                 result.err().unwrap()
             );
+            }
         }
     }
 
