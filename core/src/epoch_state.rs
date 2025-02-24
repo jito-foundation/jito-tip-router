@@ -808,6 +808,15 @@ impl EpochState {
         epochs_after_consensus_before_close: u64,
         current_slot: u64,
     ) -> Result<State, ProgramError> {
+        let can_close_epoch_accounts = self.can_close_epoch_accounts(
+            epoch_schedule,
+            epochs_after_consensus_before_close,
+            current_slot,
+        )?;
+        if can_close_epoch_accounts {
+            return Ok(State::Close);
+        }
+
         if self.account_status.weight_table()? == AccountStatus::DNE
             || !self.set_weight_progress.is_complete()
         {
@@ -826,16 +835,6 @@ impl EpochState {
             return Ok(State::Vote);
         }
 
-        // The upload state is not required to progress to the next state
-        let can_close_epoch_accounts = self.can_close_epoch_accounts(
-            epoch_schedule,
-            epochs_after_consensus_before_close,
-            current_slot,
-        )?;
-        if can_close_epoch_accounts {
-            return Ok(State::Close);
-        }
-
         Ok(State::Distribute)
     }
 
@@ -847,6 +846,15 @@ impl EpochState {
         st_mint_count: u64,
         current_slot: u64,
     ) -> Result<State, ProgramError> {
+        let can_close_epoch_accounts = self.can_close_epoch_accounts(
+            epoch_schedule,
+            epochs_after_consensus_before_close,
+            current_slot,
+        )?;
+        if can_close_epoch_accounts {
+            return Ok(State::Close);
+        }
+
         if self.account_status.weight_table()? == AccountStatus::DNE
             || self.set_weight_progress.tally() < st_mint_count
         {

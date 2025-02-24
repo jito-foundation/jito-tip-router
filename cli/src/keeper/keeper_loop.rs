@@ -88,8 +88,13 @@ pub async fn startup_keeper(
     let mut tick = 0;
     let (mut last_current_epoch, _) = get_guaranteed_epoch_and_slot(handler).await;
 
+    let run_operations = !metrics_only;
+    let emit_metrics = emit_metrics || metrics_only;
+
     loop {
-        if is_new_epoch && all_vault_update && !metrics_only {
+        // If there is a new epoch, this will do a full vault update on *all* vaults
+        // created with restaking - this adds some extra redundancy
+        if is_new_epoch && all_vault_update && run_operations {
             info!("\n\n-2. Update Vaults - {}\n", current_epoch);
             let result = update_all_vaults_in_network(handler).await;
 
@@ -105,6 +110,11 @@ pub async fn startup_keeper(
             }
         }
 
+        // This will progress the epoch:
+        // If a new Epoch turns over, it will automatically progress to it
+        // If there has been a stall, it will automatically progress to the next epoch
+        // If there is still work to be done on the given epoch, it will stay
+        // Note: This will loop around and start back at the beginning
         {
             info!("\n\nA. Progress Epoch - {}\n", current_epoch);
             let starting_epoch = handler.epoch;
@@ -130,7 +140,9 @@ pub async fn startup_keeper(
             epoch_stall = false;
         }
 
-        if emit_metrics || metrics_only {
+        // Emits metrics for the NCN state
+        // This includes validators info, epoch info, ticket states and more
+        if emit_metrics {
             info!("\n\nB. Emit NCN Metrics - {}\n", current_epoch);
             let result = emit_ncn_metrics(handler, tick).await;
 
@@ -143,7 +155,10 @@ pub async fn startup_keeper(
             .await;
         }
 
-        if !metrics_only {
+        // Before any work can be done, if there are any outstanding vaults
+        // that need to be registered, this will do it. Since vaults are registered
+        // with the Global Vault Registry, timing does not matter
+        if run_operations {
             info!("\n\n-1. Register Vaults - {}\n", current_epoch);
             let result = crank_register_vaults(handler).await;
 
@@ -159,8 +174,10 @@ pub async fn startup_keeper(
             }
         }
 
+        // Fetches the current state of the keeper, which holds the Epoch State
+        // and other helpful information for the keeper to function
         {
-            info!("\n\n0. Update Keeper State - {}\n", current_epoch);
+            info!("\n\n0. Fetch Keeper State - {}\n", current_epoch);
             if state.epoch != current_epoch {
                 let result = state.fetch(handler, current_epoch).await;
 
@@ -177,6 +194,8 @@ pub async fn startup_keeper(
             }
         }
 
+        // Updates the Epoch State - pulls from the Epoch State account from on chain
+        // and further updates the keeper state
         {
             info!("\n\n1. Update Epoch State - {}\n", current_epoch);
             let result = state.update_epoch_state(handler).await;
@@ -193,7 +212,9 @@ pub async fn startup_keeper(
             }
         }
 
-        if !metrics_only {
+        // If there is no state found for the given epoch, this will create it, or
+        // detect if its already been closed. Then the epoch will progress to the next
+        if run_operations {
             info!("\n\n2. Create or Complete State - {}\n", current_epoch);
 
             // If complete, reset loop
@@ -218,23 +239,9 @@ pub async fn startup_keeper(
             }
         }
 
-        if emit_metrics || metrics_only {
-            info!(
-                "\n\nC. Emit Epoch Metrics ( Before Crank ) - {}\n",
-                current_epoch
-            );
-            let result = emit_epoch_metrics(handler, state.epoch).await;
-
-            check_and_timeout_error(
-                "Emit NCN Metrics ( Before Crank )".to_string(),
-                &result,
-                error_timeout_ms,
-                state.epoch,
-            )
-            .await;
-        }
-
-        if !metrics_only {
+        // This is where the real work is done. Depending on the state, the keeper will crank through
+        // whatever is needed to be done for the given epoch.
+        if run_operations {
             let current_state = state.current_state().expect("cannot get current state");
             info!(
                 "\n\n3. Crank State [{:?}] - {}\n",
@@ -261,15 +268,13 @@ pub async fn startup_keeper(
             }
         }
 
-        if emit_metrics || metrics_only {
-            info!(
-                "\n\nD. Emit Epoch Metrics ( After Crank ) - {}\n",
-                current_epoch
-            );
+        // Emits metrics for the Epoch State
+        if emit_metrics {
+            info!("\n\nC. Emit Epoch Metrics - {}\n", current_epoch);
             let result = emit_epoch_metrics(handler, state.epoch).await;
 
             check_and_timeout_error(
-                "Emit NCN Metrics ( After Crank )".to_string(),
+                "Emit NCN Metrics".to_string(),
                 &result,
                 error_timeout_ms,
                 state.epoch,
@@ -277,8 +282,12 @@ pub async fn startup_keeper(
             .await;
         }
 
+        // Detects a stall in the keeper. More specifically in the Epoch State.
+        // For example:
+        // Waiting for voting to finish
+        // Not enough rewards to distribute
         {
-            info!("\n\nE. Detect Stall - {}\n", current_epoch);
+            info!("\n\nD. Detect Stall - {}\n", current_epoch);
 
             let result = state.detect_stall(handler).await;
 
@@ -300,8 +309,9 @@ pub async fn startup_keeper(
             }
         }
 
+        // Times out the keeper - this is the main loop timeout
         {
-            info!("\n\nF. Timeout - {}\n", current_epoch);
+            info!("\n\nE. Timeout - {}\n", current_epoch);
 
             timeout_keeper(loop_timeout_ms).await;
             emit_heartbeat(tick, metrics_only).await;
