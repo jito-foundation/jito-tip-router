@@ -50,7 +50,7 @@ pub async fn emit_heartbeat(tick: u64, metrics_only: bool) {
 pub async fn emit_ncn_metrics(handler: &CliHandler, tick: u64) -> Result<()> {
     emit_ncn_metrics_epoch_slot(handler).await?;
 
-    if tick % 10 == 0 {
+    if tick % 3 == 0 {
         emit_ncn_metrics_tickets(handler).await?;
         emit_ncn_metrics_vault_operator_delegation(handler).await?;
         emit_ncn_metrics_operators(handler).await?;
