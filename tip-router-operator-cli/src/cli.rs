@@ -69,6 +69,14 @@ impl Cli {
             incremental_snapshots_path,
         }
     }
+
+    pub fn force_different_backup_snapshot_dir(&self) {
+        let snapshot_paths = self.get_snapshot_paths();
+        assert_ne!(
+            snapshot_paths.full_snapshots_path,
+            snapshot_paths.incremental_snapshots_path
+        );
+    }
 }
 
 pub struct SnapshotPaths {

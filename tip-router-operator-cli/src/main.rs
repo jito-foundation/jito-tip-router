@@ -27,6 +27,10 @@ use ::{
 async fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
+
+    // Ensure backup directory and
+    cli.force_different_backup_snapshot_dir();
+
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
     let rpc_client = EllipsisClient::from_rpc_with_timeout(
         RpcClient::new(cli.rpc_url.clone()),
