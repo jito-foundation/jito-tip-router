@@ -695,7 +695,6 @@ pub async fn get_all_opted_in_validators(
         if !status.current.is_empty() {
             let info = status.current[0].clone();
             let identity = Pubkey::from_str(&info.node_pubkey)?;
-
             validator_infos.push(OptedInValidatorInfo {
                 vote: vote_account,
                 identity,
@@ -1049,8 +1048,14 @@ pub struct NcnTickets {
 
 impl NcnTickets {
     const DNE: u8 = 0;
-    const NOT_ACTIVE: u8 = 1;
-    const ACTIVE: u8 = 2;
+    const STAKE: u8 = 10;
+    const NO_STAKE: u8 = 11;
+    // To allow for legacy state to exist in database
+    const STATE_OFFSET: u8 = 100;
+    const INACTIVE: u8 = Self::STATE_OFFSET + 0;
+    const WARM_UP: u8 = Self::STATE_OFFSET + 1;
+    const ACTIVE: u8 = Self::STATE_OFFSET + 2;
+    const COOLDOWN: u8 = Self::STATE_OFFSET + 3;
 
     pub async fn fetch(
         handler: &CliHandler,
@@ -1142,18 +1147,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .ncn_operator_state
             .as_ref()
             .unwrap()
             .ncn_opt_in_state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn operator_ncn(&self) -> u8 {
@@ -1161,18 +1163,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .ncn_operator_state
             .as_ref()
             .unwrap()
             .operator_opt_in_state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn ncn_vault(&self) -> u8 {
@@ -1180,18 +1179,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .ncn_vault_ticket
             .as_ref()
             .unwrap()
             .state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn vault_ncn(&self) -> u8 {
@@ -1199,18 +1195,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .vault_ncn_ticket
             .as_ref()
             .unwrap()
             .state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn operator_vault(&self) -> u8 {
@@ -1218,18 +1211,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .operator_vault_ticket
             .as_ref()
             .unwrap()
             .state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn vault_operator(&self) -> u8 {
@@ -1246,10 +1236,10 @@ impl NcnTickets {
             .unwrap()
             > 0
         {
-            return Self::ACTIVE;
+            return Self::STAKE;
         }
 
-        Self::NOT_ACTIVE
+        Self::NO_STAKE
     }
 }
 
@@ -1259,8 +1249,12 @@ impl fmt::Display for NcnTickets {
         let check = |state: u8| -> &str {
             match state {
                 Self::DNE => "❌",
-                Self::NOT_ACTIVE => "🕘",
+                Self::STAKE => "🔋",
+                Self::NO_STAKE => "🪫",
+                Self::INACTIVE => "💤",
+                Self::WARM_UP => "🔥",
                 Self::ACTIVE => "✅",
+                Self::COOLDOWN => "🥶",
                 _ => "",
             }
         };
@@ -1270,6 +1264,18 @@ impl fmt::Display for NcnTickets {
         writeln!(f, "NCN:      {}", self.ncn)?;
         writeln!(f, "Operator: {}", self.operator)?;
         writeln!(f, "Vault:    {}", self.vault)?;
+        writeln!(f, "\n")?;
+        writeln!(
+            f,
+            "DNE[{}] INACTIVE[{}] WARM_UP[{}] ACTIVE[{}] COOLDOWN[{}] NO_STAKE[{}] STAKE[{}]",
+            check(Self::DNE),
+            check(Self::INACTIVE),
+            check(Self::WARM_UP),
+            check(Self::ACTIVE),
+            check(Self::COOLDOWN),
+            check(Self::NO_STAKE),
+            check(Self::STAKE),
+        )?;
         writeln!(f, "\n")?;
         writeln!(
             f,
