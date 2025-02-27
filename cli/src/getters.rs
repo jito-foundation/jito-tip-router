@@ -670,10 +670,7 @@ pub async fn get_all_opted_in_validators(
         .map(|result| {
             let data_slice = result.1.data.as_slice();
             // Convert the slice to a fixed-size array
-            let vote_account = Pubkey::new_from_array(
-                data_slice[..32].try_into().expect("Slice must be 32 bytes"),
-            );
-            vote_account
+            Pubkey::new_from_array(data_slice[..32].try_into().expect("Slice must be 32 bytes"))
         })
         .collect();
 
@@ -1052,7 +1049,7 @@ impl NcnTickets {
     const NO_STAKE: u8 = 11;
     // To allow for legacy state to exist in database
     const STATE_OFFSET: u8 = 100;
-    const INACTIVE: u8 = Self::STATE_OFFSET + 0;
+    const INACTIVE: u8 = Self::STATE_OFFSET;
     const WARM_UP: u8 = Self::STATE_OFFSET + 1;
     const ACTIVE: u8 = Self::STATE_OFFSET + 2;
     const COOLDOWN: u8 = Self::STATE_OFFSET + 3;

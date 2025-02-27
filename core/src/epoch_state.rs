@@ -808,13 +808,13 @@ impl EpochState {
         epochs_after_consensus_before_close: u64,
         current_slot: u64,
     ) -> Result<State, ProgramError> {
-        match self.can_close_epoch_accounts(
+        if self.can_close_epoch_accounts(
             epoch_schedule,
             epochs_after_consensus_before_close,
             current_slot,
-        ) {
-            Ok(true) => return Ok(State::Close),
-            _ => (), // Continue with the rest of the function
+        ) == Ok(true)
+        {
+            return Ok(State::Close);
         }
 
         if self.account_status.weight_table()? == AccountStatus::DNE
@@ -846,13 +846,13 @@ impl EpochState {
         st_mint_count: u64,
         current_slot: u64,
     ) -> Result<State, ProgramError> {
-        match self.can_close_epoch_accounts(
+        if self.can_close_epoch_accounts(
             epoch_schedule,
             epochs_after_consensus_before_close,
             current_slot,
-        ) {
-            Ok(true) => return Ok(State::Close),
-            _ => (), // Continue with the rest of the function
+        ) == Ok(true)
+        {
+            return Ok(State::Close);
         }
 
         if self.account_status.weight_table()? == AccountStatus::DNE

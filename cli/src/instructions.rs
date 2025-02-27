@@ -2530,7 +2530,7 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
 
-            if let Err(_) = result {
+            if result.is_err() {
                 // Note this error might be important, but has not shown itself to be
                 info!(
                     "Failed to get or create ncn reward router: {:?} in epoch: {:?}",

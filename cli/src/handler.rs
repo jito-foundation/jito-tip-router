@@ -749,10 +749,7 @@ impl CliHandler {
                     for validator in validators {
                         csv.push_str(&format!(
                             "{},{},{},{}\n",
-                            validator.identity.to_string(),
-                            validator.stake,
-                            validator.active,
-                            validator.vote.to_string(),
+                            validator.identity, validator.stake, validator.active, validator.vote,
                         ));
                     }
 
