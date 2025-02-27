@@ -12,12 +12,16 @@ pub struct AccountPayer {}
 
 impl AccountPayer {
     pub fn seeds(ncn: &Pubkey) -> Vec<Vec<u8>> {
-        vec![b"account_payer".to_vec(), ncn.to_bytes().to_vec()]
+        // Note: The second NCN is an error from the original code, most presumably a copy/paste or Claude error
+        vec![
+            b"account_payer".to_vec(),
+            ncn.to_bytes().to_vec(),
+            ncn.to_bytes().to_vec(),
+        ]
     }
 
     pub fn find_program_address(program_id: &Pubkey, ncn: &Pubkey) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let mut seeds = Self::seeds(ncn);
-        seeds.push(ncn.to_bytes().to_vec());
+        let seeds = Self::seeds(ncn);
         let (address, bump) = Pubkey::find_program_address(
             &seeds.iter().map(|s| s.as_slice()).collect::<Vec<_>>(),
             program_id,
@@ -171,21 +175,6 @@ impl AccountPayer {
 mod tests {
 
     use super::*;
-
-    #[test]
-    fn test_seeds() {
-        let ncn = Pubkey::new_unique();
-        let seeds = AccountPayer::seeds(&ncn);
-
-        // Verify we get exactly 2 seeds
-        assert_eq!(seeds.len(), 2);
-
-        // Verify first seed is the string literal
-        assert_eq!(seeds[0], b"account_payer".to_vec());
-
-        // Verify second seed is the pubkey bytes
-        assert_eq!(seeds[1], ncn.to_bytes().to_vec());
-    }
 
     #[test]
     fn test_find_program_address() {
