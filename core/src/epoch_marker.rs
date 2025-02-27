@@ -44,10 +44,12 @@ impl EpochMarker {
     }
 
     pub fn seeds(ncn: &Pubkey, epoch: u64) -> Vec<Vec<u8>> {
+        // Note: The second NCN is an error from the original code, most presumably a copy/paste or Claude error
         vec![
             b"epoch_marker".to_vec(),
             ncn.to_bytes().to_vec(),
             epoch.to_le_bytes().to_vec(),
+            ncn.to_bytes().to_vec(),
         ]
     }
 
@@ -56,8 +58,7 @@ impl EpochMarker {
         ncn: &Pubkey,
         epoch: u64,
     ) -> (Pubkey, u8, Vec<Vec<u8>>) {
-        let mut seeds = Self::seeds(ncn, epoch);
-        seeds.push(ncn.to_bytes().to_vec());
+        let seeds = Self::seeds(ncn, epoch);
         let (address, bump) = Pubkey::find_program_address(
             &seeds.iter().map(|s| s.as_slice()).collect::<Vec<_>>(),
             program_id,
