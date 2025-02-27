@@ -2433,6 +2433,11 @@ pub async fn crank_vote(handler: &CliHandler, epoch: u64, test_vote: bool) -> Re
 }
 
 #[allow(clippy::large_stack_frames)]
+pub async fn crank_post_vote_cooldown(_: &CliHandler, _: u64) -> Result<()> {
+    Ok(())
+}
+
+#[allow(clippy::large_stack_frames)]
 pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
     let voter = handler.keypair()?.pubkey();
     let meta_merkle_root = [8; 32];

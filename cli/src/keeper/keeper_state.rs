@@ -375,7 +375,7 @@ impl KeeperState {
     pub async fn detect_stall(&mut self, handler: &CliHandler) -> Result<bool> {
         let current_state = self.current_state()?;
 
-        if current_state == State::Vote {
+        if current_state == State::Vote || current_state == State::PostVoteCooldown {
             return Ok(true);
         }
 

@@ -2,8 +2,9 @@ use crate::{
     getters::get_guaranteed_epoch_and_slot,
     handler::CliHandler,
     instructions::{
-        crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
-        crank_snapshot, crank_vote, create_epoch_state, update_all_vaults_in_network,
+        crank_close_epoch_accounts, crank_distribute, crank_post_vote_cooldown,
+        crank_register_vaults, crank_set_weight, crank_snapshot, crank_vote, create_epoch_state,
+        update_all_vaults_in_network,
     },
     keeper::{
         keeper_metrics::{emit_epoch_metrics, emit_error, emit_heartbeat, emit_ncn_metrics},
@@ -262,6 +263,7 @@ pub async fn startup_keeper(
                 State::SetWeight => crank_set_weight(handler, state.epoch).await,
                 State::Snapshot => crank_snapshot(handler, state.epoch).await,
                 State::Vote => crank_vote(handler, state.epoch, test_vote).await,
+                State::PostVoteCooldown => crank_post_vote_cooldown(handler, state.epoch).await,
                 State::Distribute => crank_distribute(handler, state.epoch).await,
                 State::Close => crank_close_epoch_accounts(handler, state.epoch).await,
             };
