@@ -2,7 +2,6 @@ use std::{
     collections::HashMap,
     fmt::{Debug, Display, Formatter},
     mem::size_of,
-    path::{Path, PathBuf},
     sync::Arc,
 };
 
@@ -20,20 +19,16 @@ use solana_ledger::{
     bank_forks_utils::BankForksUtilsError, blockstore::BlockstoreError,
     blockstore_processor::BlockstoreProcessorError,
 };
-use solana_metrics::datapoint_error;
 use solana_program::{stake_history::StakeHistory, sysvar};
 use solana_runtime::{bank::Bank, stakes::StakeAccount};
 use solana_sdk::{
     account::{from_account, ReadableAccount, WritableAccount},
-    clock::Slot,
     pubkey::Pubkey,
 };
 use solana_vote::vote_account::VoteAccount;
 use thiserror::Error;
 
-use crate::{
-    derive_tip_payment_pubkeys, ledger_utils::get_bank_from_ledger, TipDistributionAccountWrapper,
-};
+use crate::{derive_tip_payment_pubkeys, TipDistributionAccountWrapper};
 
 #[derive(Error, Debug)]
 pub enum StakeMetaGeneratorError {
@@ -70,70 +65,6 @@ impl Display for StakeMetaGeneratorError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Debug::fmt(&self, f)
     }
-}
-
-/// Creates a bank from the paths at the desired slot and generates the StakeMetaCollection for
-/// that slot. Optionally writing the result as JSON file to disk.
-#[allow(clippy::too_many_arguments)]
-pub fn generate_stake_meta(
-    operator_address: &Pubkey,
-    ledger_path: &Path,
-    account_paths: Vec<PathBuf>,
-    full_snapshots_path: PathBuf,
-    incremental_snapshots_path: PathBuf,
-    desired_slot: &Slot,
-    tip_distribution_program_id: &Pubkey,
-    _out_path: &str,
-    tip_payment_program_id: &Pubkey,
-    snapshots_enabled: bool,
-) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
-    info!("Creating bank from ledger path...");
-    let res = std::panic::catch_unwind(|| {
-        get_bank_from_ledger(
-            operator_address.to_string(),
-            ledger_path,
-            account_paths,
-            full_snapshots_path,
-            incremental_snapshots_path,
-            desired_slot,
-            snapshots_enabled,
-        )
-    });
-    let bank = match res {
-        Ok(bank) => bank,
-        Err(e) => {
-            #[allow(clippy::option_if_let_else)]
-            let error_str = if let Some(s) = e.downcast_ref::<String>() {
-                s.to_string()
-            } else if let Some(s) = e.downcast_ref::<&'static str>() {
-                s.to_string()
-            } else {
-                // If we can't get a string, try to get any Debug implementation
-                match e.downcast_ref::<Box<dyn std::fmt::Debug + Send>>() {
-                    Some(debug_val) => format!("{:?}", debug_val),
-                    None => "Unknown panic payload".to_string(),
-                }
-            };
-            error!("Panicked while creating bank from ledger: {}", error_str);
-            datapoint_error!(
-                "tip_router_cli.get_bank",
-                ("operator", operator_address.to_string(), String),
-                ("status", "error", String),
-                ("state", "get_bank_from_ledger", String),
-                ("error", error_str, String),
-            );
-            return Err(StakeMetaGeneratorError::PanicError(error_str));
-        }
-    };
-
-    info!("Generating stake_meta_collection object...");
-    let stake_meta_coll =
-        generate_stake_meta_collection(&bank, tip_distribution_program_id, tip_payment_program_id)?;
-
-    // Explicity drop to clean up disk space
-    drop(bank);
-
-    Ok(stake_meta_coll)
 }
 
 fn tip_distribution_account_from_tda_wrapper(

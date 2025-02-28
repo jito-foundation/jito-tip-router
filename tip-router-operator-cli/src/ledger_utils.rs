@@ -42,7 +42,7 @@ pub enum LedgerUtilsError {
 
 // TODO: Use Result and propagate errors more gracefully
 /// Create the Bank for a desired slot for given file paths.
-#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::cognitive_complexity, clippy::too_many_arguments)]
 pub fn get_bank_from_ledger(
     operator_address: String,
     ledger_path: &Path,
@@ -50,7 +50,8 @@ pub fn get_bank_from_ledger(
     full_snapshots_path: PathBuf,
     incremental_snapshots_path: PathBuf,
     desired_slot: &Slot,
-    take_snapshot: bool,
+    save_snapshot: bool,
+    snapshot_save_path: PathBuf,
 ) -> Arc<Bank> {
     let start_time = Instant::now();
 
@@ -361,12 +362,14 @@ pub fn get_bank_from_ledger(
 
     exit.store(true, Ordering::Relaxed);
 
-    if take_snapshot {
+    if save_snapshot {
         let full_snapshot_archive_info = match snapshot_bank_utils::bank_to_full_snapshot_archive(
             ledger_path,
             &working_bank,
             Some(SnapshotVersion::default()),
-            snapshot_config.full_snapshot_archives_dir,
+            // Use the snapshot_save_path path so the snapshot is stored in a directory different 
+            // than the node's primary snapshot directory
+            snapshot_save_path,
             snapshot_config.incremental_snapshot_archives_dir,
             snapshot_config.archive_format,
         ) {
@@ -518,6 +521,7 @@ mod tests {
             full_snapshots_path.clone(),
             &desired_slot,
             true,
+            full_snapshots_path.clone(),
         );
         assert_eq!(res.slot(), desired_slot);
         // Assert that the snapshot was created

@@ -72,6 +72,7 @@ impl Cli {
             account_paths,
             full_snapshots_path,
             incremental_snapshots_path,
+            backup_snapshots_dir: self.backup_snapshots_dir.clone(),
         }
     }
 
@@ -79,7 +80,7 @@ impl Cli {
         let snapshot_paths = self.get_snapshot_paths();
         assert_ne!(
             snapshot_paths.full_snapshots_path,
-            snapshot_paths.incremental_snapshots_path
+            snapshot_paths.backup_snapshots_dir
         );
     }
 }
@@ -89,6 +90,8 @@ pub struct SnapshotPaths {
     pub account_paths: Vec<PathBuf>,
     pub full_snapshots_path: PathBuf,
     pub incremental_snapshots_path: PathBuf,
+    /// Used when storing or loading snapshots that the operator CLI is workign with
+    pub backup_snapshots_dir: PathBuf,
 }
 
 #[derive(clap::Subcommand, Clone)]

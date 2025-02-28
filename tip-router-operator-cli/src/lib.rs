@@ -61,12 +61,13 @@ pub fn meta_merkle_tree_file_name(epoch: u64) -> String {
 }
 
 // STAGE 1 LoadBankFromSnapshot
-pub fn load_bank_from_snapshot(cli: Cli, slot: u64, store_snapshot: bool) -> Arc<Bank> {
+pub fn load_bank_from_snapshot(cli: Cli, slot: u64, save_snapshot: bool) -> Arc<Bank> {
     let SnapshotPaths {
         ledger_path,
         account_paths,
         full_snapshots_path,
-        incremental_snapshots_path,
+        incremental_snapshots_path: _,
+        backup_snapshots_dir,
     } = cli.get_snapshot_paths();
 
     get_bank_from_ledger(
@@ -74,9 +75,10 @@ pub fn load_bank_from_snapshot(cli: Cli, slot: u64, store_snapshot: bool) -> Arc
         &ledger_path,
         account_paths,
         full_snapshots_path,
-        incremental_snapshots_path,
+        backup_snapshots_dir.clone(),
         &slot,
-        store_snapshot,
+        save_snapshot,
+        backup_snapshots_dir,
     )
 }
 

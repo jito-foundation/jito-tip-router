@@ -246,14 +246,18 @@ async fn main() -> Result<()> {
             let SnapshotPaths {
                 ledger_path,
                 account_paths,
-                full_snapshots_path,
+                full_snapshots_path: _,
                 incremental_snapshots_path: _,
+                backup_snapshots_dir,
             } = cli.get_snapshot_paths();
 
+            // We can safely expect to use the backup_snapshots_dir as the full snapshot path because
+            //  _get_bank_from_snapshot_at_slot_ expects the snapshot at the exact `slot` to have
+            //  already been taken.
             let bank = get_bank_from_snapshot_at_slot(
                 slot,
-                &full_snapshots_path,
-                &full_snapshots_path,
+                &backup_snapshots_dir,
+                &backup_snapshots_dir,
                 account_paths,
                 ledger_path.as_path(),
             )?;
