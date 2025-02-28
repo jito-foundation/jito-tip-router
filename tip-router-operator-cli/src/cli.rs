@@ -37,7 +37,7 @@ pub struct Cli {
     #[arg(long, env, default_value_t = 1)]
     pub micro_lamports: u64,
 
-    #[arg(long, env)]
+    #[arg(long, env, alias = "meta-merkle-tree-dir", help = "Path to save data (formerly meta-merkle-tree-dir)")]
     pub save_path: PathBuf,
 
     #[command(subcommand)]
