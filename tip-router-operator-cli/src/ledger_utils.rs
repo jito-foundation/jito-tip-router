@@ -367,7 +367,7 @@ pub fn get_bank_from_ledger(
             ledger_path,
             &working_bank,
             Some(SnapshotVersion::default()),
-            // Use the snapshot_save_path path so the snapshot is stored in a directory different 
+            // Use the snapshot_save_path path so the snapshot is stored in a directory different
             // than the node's primary snapshot directory
             snapshot_save_path,
             snapshot_config.incremental_snapshot_archives_dir,

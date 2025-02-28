@@ -74,6 +74,11 @@ async fn main() -> Result<()> {
             set_merkle_roots,
             claim_tips,
         } => {
+            assert!(
+                num_monitored_epochs > 0,
+                "num-monitored-epochs must be greater than 0"
+            );
+
             info!("Running Tip Router...");
             info!("NCN Address: {}", ncn_address);
             info!(

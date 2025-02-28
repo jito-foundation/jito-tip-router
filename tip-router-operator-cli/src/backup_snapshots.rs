@@ -14,7 +14,7 @@ const MAXIMUM_BACKUP_INCREMENTAL_SNAPSHOTS_PER_EPOCH: usize = 3;
 #[derive(Debug)]
 pub struct SnapshotInfo {
     path: PathBuf,
-    _start_slot: u64,
+    _start_slot: Option<u64>,
     pub end_slot: u64,
 }
 
@@ -23,27 +23,33 @@ impl SnapshotInfo {
     pub fn from_path(path: PathBuf) -> Option<Self> {
         let file_name = path.file_name()?.to_str()?;
 
-        // Only try to parse if it's an incremental snapshot
-        if !file_name.starts_with("incremental-snapshot-") {
-            return None;
-        }
-
         // Split on hyphens and take the slot numbers
-        // Format: incremental-snapshot-<start>-<end>-<hash>.tar.zst
         let parts: Vec<&str> = file_name.split('-').collect();
-        if parts.len() < 5 {
-            return None;
+        if parts.len() == 5 {
+            // incremental snapshot
+            // Format: incremental-snapshot-<start>-<end>-<hash>.tar.zst
+            // Parse start and end slots
+            let start_slot: u64 = parts[2].parse().ok()?;
+            let end_slot = parts[3].parse().ok()?;
+
+            Some(Self {
+                path,
+                _start_slot: Some(start_slot),
+                end_slot,
+            })
+        } else if parts.len() == 3 {
+            // Full snapshot
+            // Format: snapshot-<end>-<hash>.tar.zst
+            let end_slot = parts[1].parse().ok()?;
+
+            Some(Self {
+                path,
+                _start_slot: None,
+                end_slot,
+            })
+        } else {
+            None
         }
-
-        // Parse start and end slots
-        let start_slot = parts[2].parse().ok()?;
-        let end_slot = parts[3].parse().ok()?;
-
-        Some(Self {
-            path,
-            _start_slot: start_slot,
-            end_slot,
-        })
     }
 }
 
@@ -311,8 +317,17 @@ mod tests {
             .join("incremental-snapshot-100-150-hash1.tar.zst");
 
         let info = SnapshotInfo::from_path(path.clone()).unwrap();
-        assert_eq!(info._start_slot, 100);
+        assert_eq!(info._start_slot.unwrap(), 100);
         assert_eq!(info.end_slot, 150);
+        assert_eq!(info.path, path);
+
+        // Full snapshot
+        let temp_dir = TempDir::new().unwrap();
+        let path = temp_dir.path().join("snapshot-323710005-hash.tar.zst");
+
+        let info = SnapshotInfo::from_path(path.clone()).unwrap();
+        assert_eq!(info._start_slot, None);
+        assert_eq!(info.end_slot, 323710005);
         assert_eq!(info.path, path);
 
         // Test invalid cases
