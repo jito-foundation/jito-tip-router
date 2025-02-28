@@ -327,20 +327,27 @@ impl KeeperState {
         };
 
         let epoch_state = self.epoch_state()?;
+        let weight_table_result = self.weight_table(handler).await?;
 
         let state = if epoch_state.set_weight_progress().tally() > 0 {
-            let weight_table_result = self.weight_table(handler).await?;
-
-            if weight_table_result.is_none() {
-                return Err(anyhow!("Weight table does not exist"));
-            }
-
-            epoch_state.current_state_patched(
-                &epoch_schedule,
-                valid_slots_after_consensus,
-                epochs_after_consensus_before_close,
-                weight_table_result.unwrap().st_mint_count() as u64,
-                current_slot,
+            weight_table_result.map_or_else(
+                || {
+                    epoch_state.current_state(
+                        &epoch_schedule,
+                        valid_slots_after_consensus,
+                        epochs_after_consensus_before_close,
+                        current_slot,
+                    )
+                },
+                |weight_table| {
+                    epoch_state.current_state_patched(
+                        &epoch_schedule,
+                        valid_slots_after_consensus,
+                        epochs_after_consensus_before_close,
+                        weight_table.st_mint_count() as u64,
+                        current_slot,
+                    )
+                },
             )
         } else {
             epoch_state.current_state(
@@ -368,7 +375,7 @@ impl KeeperState {
     pub async fn detect_stall(&mut self, handler: &CliHandler) -> Result<bool> {
         let current_state = self.current_state()?;
 
-        if current_state == State::Vote {
+        if current_state == State::Vote || current_state == State::PostVoteCooldown {
             return Ok(true);
         }
 
