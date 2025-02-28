@@ -106,9 +106,6 @@ pub enum Commands {
         #[arg(long, env)]
         tip_router_program_id: Pubkey,
 
-        #[arg(long, env, default_value = "false")]
-        enable_snapshots: bool,
-
         #[arg(long, env, default_value = "3")]
         num_monitored_epochs: u64,
 
@@ -126,6 +123,15 @@ pub enum Commands {
 
         #[arg(long, env, default_value = "true")]
         save_stages: bool,
+
+        #[arg(
+            long,
+            env,
+            alias = "enable-snapshots",
+            help = "Flag to enable storing created snapshots (formerly enable-snapshots)",
+            default_value = "false"
+        )]
+        save_snapshot: bool,
     },
     SnapshotSlot {
         #[arg(long, env)]

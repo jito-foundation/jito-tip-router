@@ -66,7 +66,7 @@ async fn main() -> Result<()> {
             tip_distribution_program_id,
             tip_payment_program_id,
             tip_router_program_id,
-            enable_snapshots,
+            save_snapshot,
             num_monitored_epochs,
             override_target_slot,
             starting_stage,
@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
             );
             info!("Tip Payment Program ID: {}", tip_payment_program_id);
             info!("Tip Router Program ID: {}", tip_router_program_id);
-            info!("Enable Snapshots: {}", enable_snapshots);
+            info!("Save Snapshots: {}", save_snapshot);
             info!("Num Monitored Epochs: {}", num_monitored_epochs);
             info!("Override Target Slot: {:?}", override_target_slot);
             info!("Submit as Memo: {}", cli.submit_as_memo);
@@ -180,7 +180,7 @@ async fn main() -> Result<()> {
                 &tip_distribution_program_id,
                 &tip_payment_program_id,
                 &ncn_address,
-                enable_snapshots,
+                save_snapshot,
                 save_stages,
             )
             .await?;
