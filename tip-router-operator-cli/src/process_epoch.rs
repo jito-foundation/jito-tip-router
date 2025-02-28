@@ -19,7 +19,7 @@ use crate::{
     backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
     create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
     load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
-    stake_meta_file_name, submit::submit_to_ncn, Cli, OperatorState, PROTOCOL_FEE_BPS,
+    stake_meta_file_name, submit::submit_to_ncn, tip_router::get_ncn_config, Cli, OperatorState,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -201,6 +201,9 @@ pub async fn loop_stages(
                         StakeMetaCollection::new_from_file(&file)?
                     }
                 };
+                let config =
+                    get_ncn_config(&rpc_client, tip_router_program_id, ncn_address).await?;
+                let current_fees = config.fee_config.current_fees(epoch_to_process);
 
                 // Generate the merkle tree collection
                 merkle_tree_collection = Some(create_merkle_tree_collection(
@@ -209,7 +212,7 @@ pub async fn loop_stages(
                     some_stake_meta_collection,
                     epoch_to_process,
                     ncn_address,
-                    PROTOCOL_FEE_BPS,
+                    current_fees.total_fees_bps()?,
                     &cli.save_path,
                     save_stages,
                 ));

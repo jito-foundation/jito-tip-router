@@ -37,9 +37,6 @@ use solana_runtime::bank::Bank;
 use solana_sdk::{account::AccountSharedData, pubkey::Pubkey};
 use stake_meta_generator::generate_stake_meta_collection;
 
-// TODO: Should this be loaded from somewhere?
-pub const PROTOCOL_FEE_BPS: u64 = 300;
-
 #[derive(clap::ValueEnum, Clone, Copy, Debug)]
 pub enum OperatorState {
     // Allows the operator to load from a snapshot created externally

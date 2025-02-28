@@ -18,7 +18,7 @@ use ::{
         load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
         process_epoch, stake_meta_file_name,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
-        PROTOCOL_FEE_BPS,
+        tip_router::get_ncn_config,
     },
     tokio::time::sleep,
 };
@@ -281,6 +281,8 @@ async fn main() -> Result<()> {
                 Ok(stake_meta_collection) => stake_meta_collection,
                 Err(e) => panic!("{}", e), // TODO: should datapoint error be emitted here?
             };
+            let config = get_ncn_config(&rpc_client, &tip_router_program_id, &ncn_address).await?;
+            let current_fees = config.fee_config.current_fees(epoch);
 
             // Generate the merkle tree collection
             create_merkle_tree_collection(
@@ -289,7 +291,7 @@ async fn main() -> Result<()> {
                 stake_meta_collection,
                 epoch,
                 &ncn_address,
-                PROTOCOL_FEE_BPS,
+                current_fees.total_fees_bps()?,
                 &cli.save_path,
                 save,
             );
