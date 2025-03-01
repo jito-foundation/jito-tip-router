@@ -65,12 +65,10 @@ impl SavedTipRouterFile {
     /// Try to parse a TipRouter saved filename with epoch information
     pub fn from_path(path: PathBuf) -> Option<Self> {
         let file_name = path.file_name()?.to_str()?;
-        println!("file {}", file_name);
 
         // Split on underscore to get epoch
         let parts: Vec<&str> = file_name.split('_').collect();
         let epoch: u64 = parts[0].parse().ok()?;
-        println!("epoch {}", epoch);
 
         let is_tip_router_file = [
             stake_meta_file_name(epoch),
@@ -79,7 +77,7 @@ impl SavedTipRouterFile {
         ]
         .iter()
         .any(|x| *x == file_name);
-        println!("is_tip_router_file {}", is_tip_router_file);
+
         if is_tip_router_file {
             Some(Self { path, epoch })
         } else {
@@ -230,7 +228,7 @@ impl BackupSnapshotMonitor {
             .filter_map(|entry| SavedTipRouterFile::from_path(entry.path()))
             .filter(|saved_file| saved_file.epoch <= epoch)
             .try_for_each(|saved_file| {
-                println!(
+                log::debug!(
                     "Removing old asved file from epoch {}: {:?}",
                     saved_file.epoch, saved_file.path
                 );
