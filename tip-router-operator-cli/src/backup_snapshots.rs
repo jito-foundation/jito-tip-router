@@ -230,7 +230,8 @@ impl BackupSnapshotMonitor {
             .try_for_each(|saved_file| {
                 log::debug!(
                     "Removing old asved file from epoch {}: {:?}",
-                    saved_file.epoch, saved_file.path
+                    saved_file.epoch,
+                    saved_file.path
                 );
                 std::fs::remove_file(saved_file.path.as_path())
             })?;
