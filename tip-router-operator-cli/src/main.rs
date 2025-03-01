@@ -129,14 +129,18 @@ async fn main() -> Result<()> {
                 }
             });
 
+            let cli_clone: Cli = cli.clone();
             // Track incremental snapshots and backup to `backup_snapshots_dir`
             tokio::spawn(async move {
+                let save_path = cli_clone.save_path;
                 loop {
                     if let Err(e) = BackupSnapshotMonitor::new(
                         &rpc_url,
                         full_snapshots_path.clone(),
                         backup_snapshots_dir.clone(),
                         override_target_slot,
+                        save_path.clone(),
+                        num_monitored_epochs,
                     )
                     .run()
                     .await

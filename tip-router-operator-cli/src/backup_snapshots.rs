@@ -7,6 +7,7 @@ use std::time::Duration;
 use tokio::time;
 
 use crate::process_epoch::get_previous_epoch_last_slot;
+use crate::{merkle_tree_collection_file_name, meta_merkle_tree_file_name, stake_meta_file_name};
 
 const MAXIMUM_BACKUP_INCREMENTAL_SNAPSHOTS_PER_EPOCH: usize = 3;
 
@@ -53,11 +54,47 @@ impl SnapshotInfo {
     }
 }
 
+/// Represents a parsed incremental snapshot filename
+#[derive(Debug)]
+pub struct SavedTipRouterFile {
+    path: PathBuf,
+    epoch: u64,
+}
+
+impl SavedTipRouterFile {
+    /// Try to parse a TipRouter saved filename with epoch information
+    pub fn from_path(path: PathBuf) -> Option<Self> {
+        let file_name = path.file_name()?.to_str()?;
+        println!("file {}", file_name);
+
+        // Split on underscore to get epoch
+        let parts: Vec<&str> = file_name.split('_').collect();
+        let epoch: u64 = parts[0].parse().ok()?;
+        println!("epoch {}", epoch);
+
+        let is_tip_router_file = [
+            stake_meta_file_name(epoch),
+            merkle_tree_collection_file_name(epoch),
+            meta_merkle_tree_file_name(epoch),
+        ]
+        .iter()
+        .any(|x| *x == file_name);
+        println!("is_tip_router_file {}", is_tip_router_file);
+        if is_tip_router_file {
+            Some(Self { path, epoch })
+        } else {
+            None
+        }
+    }
+}
+
 pub struct BackupSnapshotMonitor {
     rpc_client: RpcClient,
     snapshots_dir: PathBuf,
     backup_dir: PathBuf,
     override_target_slot: Option<u64>,
+    save_path: PathBuf,
+    num_monitored_epochs: u64,
 }
 
 impl BackupSnapshotMonitor {
@@ -66,12 +103,16 @@ impl BackupSnapshotMonitor {
         snapshots_dir: PathBuf,
         backup_dir: PathBuf,
         override_target_slot: Option<u64>,
+        save_path: PathBuf,
+        num_monitored_epochs: u64,
     ) -> Self {
         Self {
             rpc_client: RpcClient::new(rpc_url.to_string()),
             snapshots_dir,
             backup_dir,
             override_target_slot,
+            save_path,
+            num_monitored_epochs,
         }
     }
 
@@ -180,6 +221,24 @@ impl BackupSnapshotMonitor {
         Ok(())
     }
 
+    /// Deletes TipRouter saved files that were created <= epoch
+    fn evict_saved_files(&self, epoch: u64) -> Result<()> {
+        let dir_entries = std::fs::read_dir(&self.save_path)?;
+        // Filter the files and evict files that are <= epoch
+        dir_entries
+            .filter_map(Result::ok)
+            .filter_map(|entry| SavedTipRouterFile::from_path(entry.path()))
+            .filter(|saved_file| saved_file.epoch <= epoch)
+            .try_for_each(|saved_file| {
+                println!(
+                    "Removing old asved file from epoch {}: {:?}",
+                    saved_file.epoch, saved_file.path
+                );
+                std::fs::remove_file(saved_file.path.as_path())
+            })?;
+        Ok(())
+    }
+
     fn evict_same_epoch_incremental(&self, target_slot: u64) -> Result<()> {
         let slots_per_epoch = DEFAULT_SLOTS_PER_EPOCH;
         let target_epoch = target_slot / slots_per_epoch;
@@ -263,8 +322,14 @@ impl BackupSnapshotMonitor {
                 last_epoch_backup_path = this_epoch_backup_path;
                 this_epoch_backup_path = None;
                 let current_epoch = this_epoch_target_slot / DEFAULT_SLOTS_PER_EPOCH;
-                if let Err(e) = self.evict_all_epoch_snapshots(current_epoch - 2) {
+                if let Err(e) = self.evict_all_epoch_snapshots(
+                    current_epoch - self.num_monitored_epochs.saturating_sub(1),
+                ) {
                     log::error!("Failed to evict old snapshots: {}", e);
+                }
+                // evict all saved files
+                if let Err(e) = self.evict_saved_files(current_epoch - self.num_monitored_epochs) {
+                    log::error!("Failed to evict old TipRouter saved files: {}", e);
                 }
             }
 
@@ -285,6 +350,10 @@ impl BackupSnapshotMonitor {
 mod tests {
     use std::fs::File;
 
+    use crate::{
+        merkle_tree_collection_file_name, meta_merkle_tree_file_name, stake_meta_file_name,
+    };
+
     use super::*;
     use std::io::Write;
     use tempfile::TempDir;
@@ -300,6 +369,8 @@ mod tests {
             temp_dir.path().to_path_buf(),
             backup_dir.path().to_path_buf(),
             None,
+            backup_dir.path().to_path_buf(),
+            3,
         );
 
         // The test version will use the fixed slot from cfg(test) get_target_slot
@@ -346,6 +417,8 @@ mod tests {
             temp_dir.path().to_path_buf(),
             temp_dir.path().to_path_buf(),
             None,
+            temp_dir.path().to_path_buf(),
+            3,
         );
 
         // Create test snapshot files
@@ -389,6 +462,8 @@ mod tests {
             source_dir.path().to_path_buf(),
             backup_dir.path().to_path_buf(),
             None,
+            backup_dir.path().to_path_buf(),
+            3,
         );
 
         // Create test snapshot with some content
@@ -427,6 +502,8 @@ mod tests {
             source_dir.path().to_path_buf(),
             backup_dir.path().to_path_buf(),
             None,
+            backup_dir.path().to_path_buf(),
+            3,
         );
 
         let missing_path = source_dir.path().join("nonexistent.tar.zst");
@@ -436,5 +513,56 @@ mod tests {
             .backup_incremental_snapshot(&missing_path)
             .await
             .is_err());
+    }
+
+    #[test]
+    fn test_evict_saved_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let monitor = BackupSnapshotMonitor::new(
+            "http://localhost:8899",
+            temp_dir.path().to_path_buf(),
+            temp_dir.path().to_path_buf(),
+            None,
+            temp_dir.path().to_path_buf(),
+            3,
+        );
+        let current_epoch = 749;
+        let first_epoch = current_epoch - 5;
+
+        for i in first_epoch..current_epoch {
+            let mut file = File::create(&monitor.save_path.join(stake_meta_file_name(i))).unwrap();
+            file.write_all(b"test").unwrap();
+            let mut file =
+                File::create(&monitor.save_path.join(merkle_tree_collection_file_name(i))).unwrap();
+            file.write_all(b"test").unwrap();
+            let mut file =
+                File::create(&monitor.save_path.join(meta_merkle_tree_file_name(i))).unwrap();
+            file.write_all(b"test").unwrap();
+        }
+        let dir_entries: Vec<PathBuf> = std::fs::read_dir(&monitor.save_path)
+            .unwrap()
+            .map(|x| x.unwrap().path())
+            .collect();
+        assert_eq!(dir_entries.len(), 5 * 3);
+
+        monitor
+            .evict_saved_files(current_epoch - monitor.num_monitored_epochs)
+            .unwrap();
+        let dir_entries: Vec<PathBuf> = std::fs::read_dir(&monitor.save_path)
+            .unwrap()
+            .map(|x| x.unwrap().path())
+            .collect();
+        assert_eq!(dir_entries.len(), 6);
+
+        // test not evicting some other similar file in the same directory
+        let file_path = monitor
+            .save_path
+            .join(format!("{first_epoch}_other_similar_file.json"));
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(b"test").unwrap();
+        monitor
+            .evict_saved_files(current_epoch - monitor.num_monitored_epochs)
+            .unwrap();
+        assert!(File::open(file_path).is_ok());
     }
 }
