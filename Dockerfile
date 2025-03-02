@@ -55,4 +55,4 @@ ENV RUST_LOG=info
 RUN ulimit -n 2000000
 
 # Command will be provided by docker-compose
-ENTRYPOINT ["tip-router-operator-cli"]
+ENTRYPOINT ["jito-tip-router-cli", "keeper"]
