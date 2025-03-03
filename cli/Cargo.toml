@@ -10,6 +10,7 @@ edition = { workspace = true }
 readme = { workspace = true }
 
 [dependencies]
+anchor-lang = { workspace = true }
 anyhow = { workspace = true }
 borsh = { workspace = true }
 borsh1 = { package = "borsh", version = "1.5.3" }

@@ -262,6 +262,7 @@ impl TipDistributionClient {
         amount: u64,
         claimant: Pubkey,
         epoch: u64,
+        merkle_root_upload_authority: Pubkey,
     ) -> TestResult<()> {
         let (config, _) =
             jito_tip_distribution_sdk::derive_config_account_address(&jito_tip_distribution::ID);
@@ -285,6 +286,7 @@ impl TipDistributionClient {
             amount,
             config,
             tip_distribution_account,
+            merkle_root_upload_authority,
             claim_status,
             claimant,
             payer,
@@ -301,6 +303,7 @@ impl TipDistributionClient {
         amount: u64,
         config: Pubkey,
         tip_distribution_account: Pubkey,
+        merkle_root_upload_authority: Pubkey,
         claim_status: Pubkey,
         claimant: Pubkey,
         payer: Pubkey,
@@ -310,6 +313,7 @@ impl TipDistributionClient {
         let ix = jito_tip_distribution_sdk::instruction::claim_ix(
             config,
             tip_distribution_account,
+            merkle_root_upload_authority,
             claim_status,
             claimant,
             payer,
