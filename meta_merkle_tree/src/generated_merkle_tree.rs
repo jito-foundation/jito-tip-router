@@ -277,33 +277,21 @@ impl TreeNode {
                         let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
                             &[
                                 CLAIM_STATUS_SEED,
-                                &delegation.staker_pubkey.to_bytes(),
+                                &delegation.stake_account_pubkey.to_bytes(),
                                 &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
                             ],
                             &TIP_DISTRIBUTION_ID,
                         );
-                        // Time-gated fix so slow rollout won't affect consensus
-                        if tip_router_target_epoch > 737 {
-                            Ok(Self {
-                                claimant: delegation.stake_account_pubkey,
-                                claim_status_pubkey,
-                                claim_status_bump,
-                                staker_pubkey: delegation.staker_pubkey,
-                                withdrawer_pubkey: delegation.withdrawer_pubkey,
-                                amount: reward_amount,
-                                proof: None,
-                            })
-                        } else {
-                            Ok(Self {
-                                claimant: delegation.staker_pubkey,
-                                claim_status_pubkey,
-                                claim_status_bump,
-                                staker_pubkey: delegation.staker_pubkey,
-                                withdrawer_pubkey: delegation.withdrawer_pubkey,
-                                amount: reward_amount,
-                                proof: None,
-                            })
-                        }
+
+                        Ok(Self {
+                            claimant: delegation.stake_account_pubkey,
+                            claim_status_pubkey,
+                            claim_status_bump,
+                            staker_pubkey: delegation.staker_pubkey,
+                            withdrawer_pubkey: delegation.withdrawer_pubkey,
+                            amount: reward_amount,
+                            proof: None,
+                        })
                     })
                     .collect::<Result<Vec<Self>, MerkleRootGeneratorError>>()?,
             );

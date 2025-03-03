@@ -308,8 +308,19 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 
     let claim_status_pubkeys = tree_nodes
         .iter()
-        .map(|tree_node| tree_node.claim_status_pubkey)
+        .map(|tree_node| {
+            let (claim_status_pubkey, _) = Pubkey::find_program_address(
+                &[
+                    CLAIM_STATUS_SEED,
+                    &tree_node.claimant.to_bytes(),
+                    &tip_distribution_program_id.to_bytes(),
+                ],
+                &tip_distribution_program_id,
+            );
+            claim_status_pubkey
+        })
         .collect_vec();
+
     let claim_statuses: HashMap<Pubkey, Account> =
         get_batched_accounts(rpc_client, &claim_status_pubkeys)
             .await?
@@ -425,15 +436,6 @@ fn build_mev_claim_transactions(
         }
 
         for node in &tree.tree_nodes {
-            // doesn't make sense to claim for claimants that don't exist anymore
-            // can't claim for something already claimed
-            // don't need to claim for claimants that get 0 MEV
-            if !claimants.contains_key(&node.claimant)
-                || claim_statuses.contains_key(&node.claim_status_pubkey)
-                || node.amount == 0
-            {
-                continue;
-            }
             let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
                 &[
                     CLAIM_STATUS_SEED,
@@ -442,6 +444,16 @@ fn build_mev_claim_transactions(
                 ],
                 &tip_distribution_program_id,
             );
+
+            // doesn't make sense to claim for claimants that don't exist anymore
+            // can't claim for something already claimed
+            // don't need to claim for claimants that get 0 MEV
+            if !claimants.contains_key(&node.claimant)
+                || claim_statuses.contains_key(&claim_status_pubkey)
+                || node.amount == 0
+            {
+                continue;
+            }
 
             let claim_with_payer_ix = ClaimWithPayerBuilder::new()
                 .account_payer(tip_router_account_payer)
