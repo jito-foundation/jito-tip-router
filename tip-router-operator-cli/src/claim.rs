@@ -256,22 +256,43 @@ pub async fn claim_mev_tips(
 
 pub async fn get_claim_transactions_for_valid_unclaimed(
     rpc_client: &RpcClient,
-    merkle_trees: &GeneratedMerkleTreeCollection,
+    merkle_trees: &mut GeneratedMerkleTreeCollection,
     tip_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn_address: Pubkey,
     micro_lamports: u64,
     payer_pubkey: Pubkey,
 ) -> Result<Vec<Transaction>, ClaimMevError> {
-    let tip_router_config_address =
-        Config::find_program_address(&tip_router_program_id, &ncn_address).0;
-    let tree_nodes = merkle_trees
+    let tda_pubkeys = merkle_trees
         .generated_merkle_trees
         .iter()
+        .map(|tree| tree.tip_distribution_account)
+        .collect_vec();
+
+    let tip_router_config_address =
+        Config::find_program_address(&tip_router_program_id, &ncn_address).0;
+
+    let tree_nodes = merkle_trees
+        .generated_merkle_trees
+        .iter_mut()
         .filter_map(|tree| {
             if tree.merkle_root_upload_authority != tip_router_config_address {
                 return None;
             }
+
+            for node in tree.tree_nodes.iter_mut() {
+                let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
+                    &[
+                        CLAIM_STATUS_SEED,
+                        &node.claimant.to_bytes(),
+                        &tree.tip_distribution_account.to_bytes(),
+                    ],
+                    &tip_distribution_program_id,
+                );
+                node.claim_status_pubkey = claim_status_pubkey;
+                node.claim_status_bump = claim_status_bump;
+            }
+
             Some(&tree.tree_nodes)
         })
         .flatten()
@@ -285,11 +306,6 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 
     let start = Instant::now();
 
-    let tda_pubkeys = merkle_trees
-        .generated_merkle_trees
-        .iter()
-        .map(|tree| tree.tip_distribution_account)
-        .collect_vec();
     let tdas: HashMap<Pubkey, Account> = get_batched_accounts(rpc_client, &tda_pubkeys)
         .await?
         .into_iter()
@@ -308,17 +324,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 
     let claim_status_pubkeys = tree_nodes
         .iter()
-        .map(|tree_node| {
-            let (claim_status_pubkey, _) = Pubkey::find_program_address(
-                &[
-                    CLAIM_STATUS_SEED,
-                    &tree_node.claimant.to_bytes(),
-                    &tip_distribution_program_id.to_bytes(),
-                ],
-                &tip_distribution_program_id,
-            );
-            claim_status_pubkey
-        })
+        .map(|tree_node| tree_node.claim_status_pubkey)
         .collect_vec();
 
     let claim_statuses: HashMap<Pubkey, Account> =
