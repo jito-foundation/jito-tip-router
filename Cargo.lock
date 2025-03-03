@@ -3660,6 +3660,7 @@ dependencies = [
 name = "jito-tip-router-cli"
 version = "0.0.1"
 dependencies = [
+ "anchor-lang 0.30.1",
  "anyhow",
  "assert_matches",
  "borsh 0.10.4",

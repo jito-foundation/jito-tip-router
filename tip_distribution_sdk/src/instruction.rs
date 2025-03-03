@@ -139,3 +139,18 @@ pub fn close_claim_status_ix(
         data: jito_tip_distribution::client::args::CloseClaimStatus {}.data(),
     }
 }
+
+pub fn migrate_tda_merkle_root_upload_authority_ix(
+    tip_distribution_account: Pubkey,
+    merkle_root_upload_config: Pubkey,
+) -> Instruction {
+    Instruction {
+        program_id: jito_tip_distribution::ID,
+        accounts: jito_tip_distribution::client::accounts::MigrateTdaMerkleRootUploadAuthority {
+            tip_distribution_account,
+            merkle_root_upload_config,
+        }
+        .to_account_metas(None),
+        data: jito_tip_distribution::client::args::MigrateTdaMerkleRootUploadAuthority {}.data(),
+    }
+}
