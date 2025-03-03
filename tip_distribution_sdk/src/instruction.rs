@@ -68,6 +68,7 @@ pub fn initialize_tip_distribution_account_ix(
 pub fn claim_ix(
     config: Pubkey,
     tip_distribution_account: Pubkey,
+    merkle_root_upload_authority: Pubkey,
     claim_status: Pubkey,
     claimant: Pubkey,
     payer: Pubkey,
@@ -81,6 +82,7 @@ pub fn claim_ix(
         accounts: jito_tip_distribution::client::accounts::Claim {
             config,
             tip_distribution_account,
+            merkle_root_upload_authority,
             claim_status,
             claimant,
             payer,
