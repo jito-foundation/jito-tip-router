@@ -7,8 +7,8 @@ use std::{
 use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
 use jito_tip_distribution_sdk::{
-    jito_tip_distribution::accounts::ClaimStatus, TipDistributionAccount, CLAIM_STATUS_SEED,
-    CLAIM_STATUS_SIZE, CONFIG_SEED,
+    derive_claim_status_account_address, jito_tip_distribution::accounts::ClaimStatus,
+    TipDistributionAccount, CLAIM_STATUS_SEED, CLAIM_STATUS_SIZE, CONFIG_SEED,
 };
 use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
@@ -81,12 +81,26 @@ pub async fn claim_mev_tips_with_emit(
     let rpc_url = cli.rpc_url.clone();
     let merkle_tree_coll_path =
         meta_merkle_tree_dir.join(format!("generated_merkle_tree_{}.json", epoch));
-    let merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
+    let mut merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
         .map_err(|e| anyhow::anyhow!(e))?;
+
+    // Fix wrong claim status pubkeys for 1 epoch
+    for tree in merkle_tree_coll.generated_merkle_trees.iter_mut() {
+        for node in tree.tree_nodes.iter_mut() {
+            let (claim_status_pubkey, claim_status_bump) = derive_claim_status_account_address(
+                &tip_distribution_program_id,
+                &node.claimant,
+                &tree.tip_distribution_account,
+            );
+            node.claim_status_pubkey = claim_status_pubkey;
+            node.claim_status_bump = claim_status_bump;
+        }
+    }
+
     let start = Instant::now();
 
     match claim_mev_tips(
-        &merkle_tree_coll,
+        &mut merkle_tree_coll,
         rpc_url.clone(),
         rpc_url,
         tip_distribution_program_id,
@@ -153,7 +167,7 @@ pub async fn claim_mev_tips(
     while start.elapsed() <= max_loop_duration {
         let mut all_claim_transactions = get_claim_transactions_for_valid_unclaimed(
             &rpc_client,
-            merkle_trees,
+            &merkle_trees,
             tip_distribution_program_id,
             tip_router_program_id,
             ncn_address,
@@ -199,7 +213,7 @@ pub async fn claim_mev_tips(
 
     let transactions = get_claim_transactions_for_valid_unclaimed(
         &rpc_client,
-        merkle_trees,
+        &merkle_trees,
         tip_distribution_program_id,
         tip_router_program_id,
         ncn_address,
@@ -256,41 +270,22 @@ pub async fn claim_mev_tips(
 
 pub async fn get_claim_transactions_for_valid_unclaimed(
     rpc_client: &RpcClient,
-    merkle_trees: &mut GeneratedMerkleTreeCollection,
+    merkle_trees: &GeneratedMerkleTreeCollection,
     tip_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn_address: Pubkey,
     micro_lamports: u64,
     payer_pubkey: Pubkey,
 ) -> Result<Vec<Transaction>, ClaimMevError> {
-    let tda_pubkeys = merkle_trees
-        .generated_merkle_trees
-        .iter()
-        .map(|tree| tree.tip_distribution_account)
-        .collect_vec();
-
     let tip_router_config_address =
         Config::find_program_address(&tip_router_program_id, &ncn_address).0;
 
     let tree_nodes = merkle_trees
         .generated_merkle_trees
-        .iter_mut()
+        .iter()
         .filter_map(|tree| {
             if tree.merkle_root_upload_authority != tip_router_config_address {
                 return None;
-            }
-
-            for node in tree.tree_nodes.iter_mut() {
-                let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
-                    &[
-                        CLAIM_STATUS_SEED,
-                        &node.claimant.to_bytes(),
-                        &tree.tip_distribution_account.to_bytes(),
-                    ],
-                    &tip_distribution_program_id,
-                );
-                node.claim_status_pubkey = claim_status_pubkey;
-                node.claim_status_bump = claim_status_bump;
             }
 
             Some(&tree.tree_nodes)
@@ -305,6 +300,12 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     );
 
     let start = Instant::now();
+
+    let tda_pubkeys = merkle_trees
+        .generated_merkle_trees
+        .iter()
+        .map(|tree| tree.tip_distribution_account)
+        .collect_vec();
 
     let tdas: HashMap<Pubkey, Account> = get_batched_accounts(rpc_client, &tda_pubkeys)
         .await?
