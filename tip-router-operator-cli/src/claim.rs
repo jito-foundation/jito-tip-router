@@ -84,8 +84,14 @@ pub async fn claim_mev_tips_with_emit(
     let mut merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
         .map_err(|e| anyhow::anyhow!(e))?;
 
+    let tip_router_config_address =
+        Config::find_program_address(&tip_router_program_id, &ncn_address).0;
+
     // Fix wrong claim status pubkeys for 1 epoch
     for tree in merkle_tree_coll.generated_merkle_trees.iter_mut() {
+        if tree.merkle_root_upload_authority != tip_router_config_address {
+            continue;
+        }
         for node in tree.tree_nodes.iter_mut() {
             let (claim_status_pubkey, claim_status_bump) = derive_claim_status_account_address(
                 &tip_distribution_program_id,
