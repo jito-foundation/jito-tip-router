@@ -29,7 +29,7 @@ pub fn process_claim_with_payer(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    let (_, config_bump, mut config_seeds) = Config::find_program_address(program_id, &ncn.key);
+    let (_, config_bump, mut config_seeds) = Config::find_program_address(program_id, ncn.key);
     config_seeds.push(vec![config_bump]);
     let (_, account_payer_bump, mut account_payer_seeds) =
         AccountPayer::find_program_address(program_id, ncn.key);
