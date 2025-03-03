@@ -31,29 +31,36 @@ pub fn process_claim_with_payer(
 
     //NOTE: The Config will be signing as the merkle_root_upload_authority when the tip distribution program is upgraded
 
-    // let (_, config_bump, mut config_seeds) =
-    //     AccountPayer::find_program_address(program_id, &jito_tip_distribution::ID);
-    // config_seeds.push(vec![config_bump]);
+    let (_, config_bump, mut config_seeds) = Config::find_program_address(program_id, &ncn.key);
+    config_seeds.push(vec![config_bump]);
     let (_, account_payer_bump, mut account_payer_seeds) =
         AccountPayer::find_program_address(program_id, ncn.key);
     account_payer_seeds.push(vec![account_payer_bump]);
 
+    msg!("Config address: {}", config.key);
+
+    let ix = claim_ix(
+        *tip_distribution_config.key,
+        *tip_distribution_account.key,
+        *config.key,
+        *claim_status.key,
+        *claimant.key,
+        *account_payer.key,
+        *system_program.key,
+        proof,
+        amount,
+        bump,
+    );
+
+    println!("Claim instruction: {:?}", ix);
+
     // Invoke the claim instruction with our program as the payer
     invoke_signed(
-        &claim_ix(
-            *tip_distribution_config.key,
-            *tip_distribution_account.key,
-            *claim_status.key,
-            *claimant.key,
-            *account_payer.key,
-            *system_program.key,
-            proof,
-            amount,
-            bump,
-        ),
+        &ix,
         &[
             tip_distribution_config.clone(),
             tip_distribution_account.clone(),
+            config.clone(),
             claim_status.clone(),
             claimant.clone(),
             account_payer.clone(),
@@ -66,12 +73,11 @@ pub fn process_claim_with_payer(
                 .collect::<Vec<&[u8]>>()
                 .as_slice(),
             //NOTE: The Config will be signing as the merkle_root_upload_authority when the tip distribution program is upgraded
-
-            // config_seeds
-            //     .iter()
-            //     .map(|s| s.as_slice())
-            //     .collect::<Vec<&[u8]>>()
-            //     .as_slice(),
+            config_seeds
+                .iter()
+                .map(|s| s.as_slice())
+                .collect::<Vec<&[u8]>>()
+                .as_slice(),
         ],
     )?;
 
