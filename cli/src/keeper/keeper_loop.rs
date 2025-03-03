@@ -3,7 +3,7 @@ use crate::{
     handler::CliHandler,
     instructions::{
         crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
-        crank_snapshot, crank_vote, create_epoch_state,
+        crank_snapshot, crank_vote, create_epoch_state, migrate_tda_merkle_root_upload_authorities,
     },
     keeper::{
         keeper_metrics::{emit_epoch_metrics, emit_error, emit_ncn_metrics},
@@ -122,7 +122,23 @@ pub async fn run_keeper(
         }
 
         {
-            info!("\n\nB. Emit NCN Metrics - {}\n", current_epoch);
+            info!(
+                "\n\nB. Migrate TDA Merkle Root Upload Authorities - {}\n",
+                current_epoch
+            );
+            let result = migrate_tda_merkle_root_upload_authorities(handler, current_epoch).await;
+
+            check_and_timeout_error(
+                "Migrate TDA Merkle Root Upload Authorities".to_string(),
+                &result,
+                error_timeout_ms,
+                state.epoch,
+            )
+            .await;
+        }
+
+        {
+            info!("\n\nC. Emit NCN Metrics - {}\n", current_epoch);
             let result = emit_ncn_metrics(handler).await;
 
             check_and_timeout_error(

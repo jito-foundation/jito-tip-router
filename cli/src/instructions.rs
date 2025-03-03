@@ -6,8 +6,9 @@ use crate::{
         get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver_rewards,
         get_base_reward_router, get_current_slot, get_epoch_snapshot,
         get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator,
-        get_operator_snapshot, get_stake_pool_accounts, get_tip_router_config, get_vault,
-        get_vault_config, get_vault_registry, get_vault_update_state_tracker, get_weight_table,
+        get_operator_snapshot, get_stake_pool_accounts, get_tip_distribution_accounts_to_migrate,
+        get_tip_router_config, get_vault, get_vault_config, get_vault_registry,
+        get_vault_update_state_tracker, get_weight_table,
     },
     handler::CliHandler,
     log::boring_progress_bar,
@@ -22,6 +23,10 @@ use jito_restaking_core::{
     config::Config as RestakingConfig, ncn::Ncn, ncn_operator_state::NcnOperatorState,
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
+};
+use jito_tip_distribution_sdk::{
+    derive_merkle_root_upload_authority_address,
+    instruction::migrate_tda_merkle_root_upload_authority_ix,
 };
 use jito_tip_router_client::{
     instructions::{
@@ -3318,4 +3323,35 @@ pub fn log_transaction(title: &str, signature: Signature, log_items: &[String]) 
 
     log_message.push('\n');
     info!("{}", log_message);
+}
+
+pub async fn migrate_tda_merkle_root_upload_authorities(
+    handler: &CliHandler,
+    epoch: u64,
+) -> Result<()> {
+    let old_merkle_root_upload_authority =
+        Pubkey::from_str("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib").unwrap();
+
+    let tip_distribution_accounts = get_tip_distribution_accounts_to_migrate(
+        handler,
+        &jito_tip_distribution_sdk::id(),
+        &old_merkle_root_upload_authority,
+        epoch,
+    )
+    .await?;
+
+    let (merkle_root_upload_config, _) =
+        derive_merkle_root_upload_authority_address(&jito_tip_distribution_sdk::id());
+
+    let ixs = tip_distribution_accounts
+        .into_iter()
+        .map(|pubkey| {
+            migrate_tda_merkle_root_upload_authority_ix(pubkey, merkle_root_upload_config)
+        })
+        .collect::<Vec<_>>();
+
+    for ix in ixs {
+        send_and_log_transaction(handler, &[ix], &[], "Migrated TDA", &[]).await?;
+    }
+    Ok(())
 }
