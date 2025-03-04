@@ -292,10 +292,10 @@ async fn main() -> Result<()> {
                 &cli.save_path.join(stake_meta_file_name(epoch)),
             ) {
                 Ok(stake_meta_collection) => stake_meta_collection,
-                Err(e) => panic!("{}", e), // TODO: should datapoint error be emitted here?
+                Err(e) => panic!("{}", e),
             };
             let config = get_ncn_config(&rpc_client, &tip_router_program_id, &ncn_address).await?;
-            let current_fees = config.fee_config.current_fees(epoch);
+            let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(epoch)?;
 
             // Generate the merkle tree collection
             create_merkle_tree_collection(
@@ -304,7 +304,7 @@ async fn main() -> Result<()> {
                 stake_meta_collection,
                 epoch,
                 &ncn_address,
-                current_fees.total_fees_bps()?,
+                protocol_fee_bps,
                 &cli.save_path,
                 save,
             );
@@ -315,7 +315,7 @@ async fn main() -> Result<()> {
                 &cli.save_path.join(merkle_tree_collection_file_name(epoch)),
             ) {
                 Ok(merkle_tree_collection) => merkle_tree_collection,
-                Err(e) => panic!("{}", e), // TODO: should datapoint error be emitted here?
+                Err(e) => panic!("{}", e),
             };
 
             create_meta_merkle_tree(
