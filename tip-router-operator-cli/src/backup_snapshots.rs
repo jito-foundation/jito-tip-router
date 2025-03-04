@@ -52,6 +52,10 @@ impl SnapshotInfo {
             None
         }
     }
+
+    pub fn is_incremental(&self) -> bool {
+        self._start_slot.is_some()
+    }
 }
 
 /// Represents a parsed incremental snapshot filename
@@ -248,7 +252,7 @@ impl BackupSnapshotMonitor {
         let mut same_epoch_snapshots: Vec<SnapshotInfo> = dir_entries
             .filter_map(Result::ok)
             .filter_map(|entry| SnapshotInfo::from_path(entry.path()))
-            .filter(|snap| snap.end_slot / slots_per_epoch == target_epoch)
+            .filter(|snap| snap.is_incremental() && snap.end_slot / slots_per_epoch == target_epoch)
             .collect();
 
         // Sort by end_slot ascending so we can remove oldest
@@ -321,6 +325,7 @@ impl BackupSnapshotMonitor {
                 last_epoch_backup_path = this_epoch_backup_path;
                 this_epoch_backup_path = None;
                 let current_epoch = this_epoch_target_slot / DEFAULT_SLOTS_PER_EPOCH;
+                // TODO: We probably want to add a separate deletion of full snapshots so operators can keep a lower number.
                 if let Err(e) = self.evict_all_epoch_snapshots(
                     current_epoch - self.num_monitored_epochs.saturating_sub(1),
                 ) {
@@ -529,14 +534,9 @@ mod tests {
         let first_epoch = current_epoch - 5;
 
         for i in first_epoch..current_epoch {
-            let mut file = File::create(&monitor.save_path.join(stake_meta_file_name(i))).unwrap();
-            file.write_all(b"test").unwrap();
-            let mut file =
-                File::create(&monitor.save_path.join(merkle_tree_collection_file_name(i))).unwrap();
-            file.write_all(b"test").unwrap();
-            let mut file =
-                File::create(&monitor.save_path.join(meta_merkle_tree_file_name(i))).unwrap();
-            file.write_all(b"test").unwrap();
+            File::create(&monitor.save_path.join(stake_meta_file_name(i))).unwrap();
+            File::create(&monitor.save_path.join(merkle_tree_collection_file_name(i))).unwrap();
+            File::create(&monitor.save_path.join(meta_merkle_tree_file_name(i))).unwrap();
         }
         let dir_entries: Vec<PathBuf> = std::fs::read_dir(&monitor.save_path)
             .unwrap()
@@ -563,5 +563,42 @@ mod tests {
             .evict_saved_files(current_epoch - monitor.num_monitored_epochs)
             .unwrap();
         assert!(File::open(file_path).is_ok());
+    }
+
+    #[test]
+    fn test_evict_same_epoch_incremental() {
+        let temp_dir = TempDir::new().unwrap();
+        let monitor = BackupSnapshotMonitor::new(
+            "http://localhost:8899",
+            temp_dir.path().to_path_buf(),
+            temp_dir.path().to_path_buf(),
+            None,
+            temp_dir.path().to_path_buf(),
+            3,
+        );
+
+        // Create test snapshot files
+        let snapshots = [
+            "incremental-snapshot-100-324431477-hash1.tar.zst",
+            "incremental-snapshot-200-324431877-hash2.tar.zst",
+            "incremental-snapshot-300-324431977-hash3.tar.zst",
+            "incremental-snapshot-100-324589366-hash1.tar.zst",
+            "incremental-snapshot-200-324589866-hash2.tar.zst",
+            "incremental-snapshot-300-324590366-hash3.tar.zst",
+            "snapshot-324431977-hash.tar.zst",
+        ];
+
+        for name in snapshots.iter() {
+            let path = temp_dir.path().join(name);
+            File::create(path).unwrap();
+        }
+
+        // Test that it only keeps 3 incrementals when there's a full snapshot
+        monitor.evict_same_epoch_incremental(324431977).unwrap();
+        let dir_entries: Vec<PathBuf> = std::fs::read_dir(&monitor.backup_dir)
+            .unwrap()
+            .map(|x| x.unwrap().path())
+            .collect();
+        assert_eq!(dir_entries.len(), snapshots.len());
     }
 }
