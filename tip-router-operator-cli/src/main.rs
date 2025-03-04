@@ -295,7 +295,11 @@ async fn main() -> Result<()> {
                 Err(e) => panic!("{}", e),
             };
             let config = get_ncn_config(&rpc_client, &tip_router_program_id, &ncn_address).await?;
-            let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(epoch)?;
+            // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
+            //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
+            //  use epoch + 1 here
+            let ballot_epoch = epoch.checked_add(1).unwrap();
+            let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 
             // Generate the merkle tree collection
             create_merkle_tree_collection(
