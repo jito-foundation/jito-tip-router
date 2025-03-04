@@ -53,7 +53,7 @@ impl SnapshotInfo {
         }
     }
 
-    pub fn is_incremental(&self) -> bool {
+    pub const fn is_incremental(&self) -> bool {
         self._start_slot.is_some()
     }
 }
@@ -325,7 +325,6 @@ impl BackupSnapshotMonitor {
                 last_epoch_backup_path = this_epoch_backup_path;
                 this_epoch_backup_path = None;
                 let current_epoch = this_epoch_target_slot / DEFAULT_SLOTS_PER_EPOCH;
-                // TODO: We probably want to add a separate deletion of full snapshots so operators can keep a lower number.
                 if let Err(e) = self.evict_all_epoch_snapshots(
                     current_epoch - self.num_monitored_epochs.saturating_sub(1),
                 ) {
