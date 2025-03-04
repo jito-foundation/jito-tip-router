@@ -87,7 +87,7 @@ pub async fn claim_mev_tips_with_emit(
     let tip_router_config_address =
         Config::find_program_address(&tip_router_program_id, &ncn_address).0;
 
-    // Fix wrong claim status pubkeys for 1 epoch
+    // Fix wrong claim status pubkeys for 1 epoch -- noop if already correct
     for tree in merkle_tree_coll.generated_merkle_trees.iter_mut() {
         if tree.merkle_root_upload_authority != tip_router_config_address {
             continue;
@@ -106,7 +106,7 @@ pub async fn claim_mev_tips_with_emit(
     let start = Instant::now();
 
     match claim_mev_tips(
-        &mut merkle_tree_coll,
+        &merkle_tree_coll,
         rpc_url.clone(),
         rpc_url,
         tip_distribution_program_id,
@@ -449,20 +449,11 @@ fn build_mev_claim_transactions(
         }
 
         for node in &tree.tree_nodes {
-            let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
-                &[
-                    CLAIM_STATUS_SEED,
-                    &node.claimant.to_bytes(),
-                    &tree.tip_distribution_account.to_bytes(),
-                ],
-                &tip_distribution_program_id,
-            );
-
             // doesn't make sense to claim for claimants that don't exist anymore
             // can't claim for something already claimed
             // don't need to claim for claimants that get 0 MEV
             if !claimants.contains_key(&node.claimant)
-                || claim_statuses.contains_key(&claim_status_pubkey)
+                || claim_statuses.contains_key(&node.claim_status_pubkey)
                 || node.amount == 0
             {
                 continue;
@@ -475,12 +466,12 @@ fn build_mev_claim_transactions(
                 .tip_distribution_program(tip_distribution_program_id)
                 .tip_distribution_config(tip_distribution_config)
                 .tip_distribution_account(tree.tip_distribution_account)
-                .claim_status(claim_status_pubkey)
+                .claim_status(node.claim_status_pubkey)
                 .claimant(node.claimant)
                 .system_program(system_program::id())
                 .proof(node.proof.clone().unwrap())
                 .amount(node.amount)
-                .bump(claim_status_bump)
+                .bump(node.claim_status_bump)
                 .instruction();
 
             instructions.push(claim_with_payer_ix);
