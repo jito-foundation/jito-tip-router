@@ -203,7 +203,9 @@ pub async fn loop_stages(
                 };
                 let config =
                     get_ncn_config(&rpc_client, tip_router_program_id, ncn_address).await?;
-                let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(epoch_to_process)?;
+                let protocol_fee_bps = config
+                    .fee_config
+                    .adjusted_total_fees_bps(epoch_to_process)?;
 
                 // Generate the merkle tree collection
                 merkle_tree_collection = Some(create_merkle_tree_collection(
