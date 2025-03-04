@@ -32,6 +32,7 @@ use solana_sdk::{
 use thiserror::Error;
 
 use crate::{
+    merkle_tree_collection_file_name,
     rpc_utils::{get_batched_accounts, send_until_blockhash_expires},
     Cli,
 };
@@ -77,10 +78,9 @@ pub async fn claim_mev_tips_with_emit(
     let keypair = read_keypair_file(cli.keypair_path.clone())
         .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {:?}", e))?;
     let keypair = Arc::new(keypair);
-    let meta_merkle_tree_dir = cli.meta_merkle_tree_dir.clone();
+    let meta_merkle_tree_dir = cli.save_path.clone();
     let rpc_url = cli.rpc_url.clone();
-    let merkle_tree_coll_path =
-        meta_merkle_tree_dir.join(format!("generated_merkle_tree_{}.json", epoch));
+    let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
     let merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
         .map_err(|e| anyhow::anyhow!(e))?;
     let start = Instant::now();
