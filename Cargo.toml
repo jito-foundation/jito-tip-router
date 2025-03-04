@@ -7,7 +7,9 @@ members = [
     "program",
     "shank_cli",
     "tip-router-operator-cli",
-    "tip_distribution_sdk", "tip_payment_sdk",
+    "tip_distribution_sdk",
+    "tip_payment_sdk",
+    "gcp_uploader",
 ]
 
 resolver = "2"
