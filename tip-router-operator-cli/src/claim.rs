@@ -416,18 +416,10 @@ fn build_mev_claim_transactions(
         })
         .collect();
 
-    datapoint_info!(
-        "tip_router_cli.build_mev_claim_transactions",
-        (
-            "tip_distribution_accounts",
-            tip_distribution_accounts.len(),
-            i64
-        ),
-        ("claim_statuses", claim_statuses.len(), i64),
-    );
-
     let tip_distribution_config =
         Pubkey::find_program_address(&[CONFIG_SEED], &tip_distribution_program_id).0;
+
+    let mut zero_amount_claimants = 0;
 
     let mut instructions = Vec::with_capacity(claimants.len());
     for tree in &merkle_trees.generated_merkle_trees {
@@ -456,6 +448,9 @@ fn build_mev_claim_transactions(
                 || claim_statuses.contains_key(&node.claim_status_pubkey)
                 || node.amount == 0
             {
+                if node.amount == 0 {
+                    zero_amount_claimants += 1;
+                }
                 continue;
             }
 
@@ -491,6 +486,18 @@ fn build_mev_claim_transactions(
             )
         })
         .collect();
+
+    info!("zero amount claimants: {}", zero_amount_claimants);
+    datapoint_info!(
+        "tip_router_cli.build_mev_claim_transactions",
+        (
+            "tip_distribution_accounts",
+            tip_distribution_accounts.len(),
+            i64
+        ),
+        ("claim_statuses", claim_statuses.len(), i64),
+        ("claim_transactions", transactions.len(), i64),
+    );
 
     transactions
 }
