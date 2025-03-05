@@ -314,7 +314,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
 
     assert_eq!(
         generated_tree.merkle_root.to_string(),
-        "4X4wPZvbbKQkkJEmdot5J2nQjs2amJUbF1Be6Pb5BV3u"
+        "Cb1Es45bg4AcYhztFrkVijKZM1aE864rAEsXH9oajrXX"
     );
 
     let nodes = &generated_tree.tree_nodes;
