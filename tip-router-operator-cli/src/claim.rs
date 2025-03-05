@@ -8,7 +8,7 @@ use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
 use jito_tip_distribution_sdk::{
     derive_claim_status_account_address, jito_tip_distribution::accounts::ClaimStatus,
-    TipDistributionAccount, CLAIM_STATUS_SEED, CLAIM_STATUS_SIZE, CONFIG_SEED,
+    TipDistributionAccount, CLAIM_STATUS_SIZE, CONFIG_SEED,
 };
 use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
@@ -173,7 +173,7 @@ pub async fn claim_mev_tips(
     while start.elapsed() <= max_loop_duration {
         let mut all_claim_transactions = get_claim_transactions_for_valid_unclaimed(
             &rpc_client,
-            &merkle_trees,
+            merkle_trees,
             tip_distribution_program_id,
             tip_router_program_id,
             ncn_address,
@@ -219,7 +219,7 @@ pub async fn claim_mev_tips(
 
     let transactions = get_claim_transactions_for_valid_unclaimed(
         &rpc_client,
-        &merkle_trees,
+        merkle_trees,
         tip_distribution_program_id,
         tip_router_program_id,
         ncn_address,
