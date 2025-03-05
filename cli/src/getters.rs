@@ -2,7 +2,6 @@ use std::mem::size_of;
 use std::{fmt, time::Duration};
 
 use crate::handler::CliHandler;
-use anchor_lang::AccountDeserialize as AnchorTryDeserialize;
 use anyhow::Result;
 use borsh1::BorshDeserialize;
 use jito_bytemuck::AccountDeserialize;
@@ -11,7 +10,6 @@ use jito_restaking_core::{
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
 };
-use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_router_core::{
     account_payer::AccountPayer,
     ballot_box::BallotBox,
