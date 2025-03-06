@@ -4,7 +4,7 @@ use crate::{
     instructions::{
         crank_close_epoch_accounts, crank_distribute, crank_post_vote_cooldown,
         crank_register_vaults, crank_set_weight, crank_snapshot, crank_vote, create_epoch_state,
-        update_all_vaults_in_network, migrate_tda_merkle_root_upload_authorities,
+        migrate_tda_merkle_root_upload_authorities, update_all_vaults_in_network,
     },
     keeper::{
         keeper_metrics::{emit_epoch_metrics, emit_error, emit_heartbeat, emit_ncn_metrics},
@@ -147,14 +147,15 @@ pub async fn startup_keeper(
             start_of_loop = current_keeper_epoch == handler.epoch;
             end_of_loop = current_keeper_epoch == current_epoch;
         }
-      
+
         // Calls the migrate TDA Merkle Root
         {
             info!(
                 "\n\nB. Migrate TDA Merkle Root Upload Authorities - {}\n",
-                current_epoch
+                current_keeper_epoch
             );
-            let result = migrate_tda_merkle_root_upload_authorities(handler, current_epoch).await;
+            let result =
+                migrate_tda_merkle_root_upload_authorities(handler, current_keeper_epoch).await;
 
             check_and_timeout_error(
                 "Migrate TDA Merkle Root Upload Authorities".to_string(),
