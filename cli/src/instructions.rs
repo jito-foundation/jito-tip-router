@@ -11,6 +11,7 @@ use crate::{
     },
     handler::CliHandler,
     log::boring_progress_bar,
+    utils::print_base58_tx,
 };
 use anyhow::{anyhow, Ok, Result};
 use jito_restaking_client::instructions::{
@@ -3235,10 +3236,15 @@ pub async fn send_and_log_transaction(
     log_items: &[String],
 ) -> Result<()> {
     sleep(Duration::from_secs(1)).await;
+    info!("Printing TX for {}", title);
 
-    let signature = send_transactions(handler, instructions, signing_keypairs).await?;
-
-    log_transaction(title, signature, log_items);
+    if handler.print_tx {
+        log_transaction(title, log_items, None);
+        print_base58_tx(instructions);
+    } else {
+        let signature = send_transactions(handler, instructions, signing_keypairs).await?;
+        log_transaction(title, log_items, Some(signature));
+    }
 
     Ok(())
 }
@@ -3321,11 +3327,12 @@ pub async fn send_transactions(
     Ok(result?)
 }
 
-pub fn log_transaction(title: &str, signature: Signature, log_items: &[String]) {
-    let mut log_message = format!(
-        "\n\n---------- {} ----------\nSignature: {:?}",
-        title, signature
-    );
+pub fn log_transaction(title: &str, log_items: &[String], signature: Option<Signature>) {
+    let mut log_message = format!("\n\n---------- {} ----------\n", title);
+
+    if let Some(signature) = signature {
+        log_message.push_str(&format!("\nSignature: {:?}\n", signature));
+    }
 
     for item in log_items {
         log_message.push_str(&format!("\n{}", item));

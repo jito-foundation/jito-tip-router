@@ -104,6 +104,9 @@ pub struct Args {
     #[arg(long, global = true, env = "KEYPAIR_PATH", help = "keypair path")]
     pub keypair_path: Option<String>,
 
+    #[arg(long, global = true, help = "Print TX instead of sending")]
+    pub print_tx: bool,
+
     #[arg(long, global = true, help = "Verbose mode")]
     pub verbose: bool,
 
