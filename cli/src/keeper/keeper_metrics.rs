@@ -1,26 +1,37 @@
 use anyhow::Result;
 use jito_tip_router_core::{
-    account_payer::AccountPayer, base_fee_group::BaseFeeGroup, constants::MAX_OPERATORS,
-    epoch_state::AccountStatus, ncn_fee_group::NcnFeeGroup,
+    account_payer::AccountPayer,
+    base_fee_group::{BaseFeeGroup, BaseFeeGroupType},
+    constants::MAX_OPERATORS,
+    epoch_state::AccountStatus,
+    ncn_fee_group::{NcnFeeGroup, NcnFeeGroupType},
 };
 use solana_metrics::datapoint_info;
-use solana_sdk::native_token::lamports_to_sol;
+use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, native_token::lamports_to_sol};
 
 use crate::{
     getters::{
-        get_account_payer, get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn,
-        get_ballot_box, get_base_reward_receiver, get_base_reward_router,
+        get_account_payer, get_all_operators_in_ncn, get_all_opted_in_validators, get_all_tickets,
+        get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver, get_base_reward_router,
         get_current_epoch_and_slot, get_epoch_snapshot, get_epoch_state, get_is_epoch_completed,
         get_ncn_reward_receiver, get_ncn_reward_router, get_operator, get_operator_snapshot,
-        get_tip_router_config, get_vault, get_vault_operator_delegation, get_vault_registry,
-        get_weight_table,
+        get_tip_router_config, get_vault, get_vault_config, get_vault_operator_delegation,
+        get_vault_registry, get_weight_table,
     },
     handler::CliHandler,
 };
 
+pub const fn format_stake_weight(value: u128) -> f64 {
+    value as f64
+}
+
+pub fn format_token_amount(value: u64) -> f64 {
+    lamports_to_sol(value)
+}
+
 pub async fn emit_error(title: String, error: String, message: String, keeper_epoch: u64) {
     datapoint_info!(
-        "trk-error",
+        "tr-beta-error",
         ("command-title", title, String),
         ("error", error, String),
         ("message", message, String),
@@ -28,25 +39,58 @@ pub async fn emit_error(title: String, error: String, message: String, keeper_ep
     );
 }
 
-pub async fn emit_ncn_metrics(handler: &CliHandler) -> Result<()> {
-    emit_ncn_metrics_vault_tickets(handler).await?;
-    emit_ncn_metrics_vault_operator_delegation(handler).await?;
-    emit_ncn_metrics_operators(handler).await?;
-    emit_ncn_metrics_vault_registry(handler).await?;
-    emit_ncn_metrics_config(handler).await?;
-    emit_ncn_metrics_account_payer(handler).await?;
+pub async fn emit_heartbeat(tick: u64, metrics_only: bool) {
+    if metrics_only {
+        datapoint_info!("tr-beta-keeper-heartbeat-metrics", ("tick", tick, i64),);
+    } else {
+        datapoint_info!("tr-beta-keeper-heartbeat-operations", ("tick", tick, i64),);
+    }
+}
+
+pub async fn emit_ncn_metrics(handler: &CliHandler, start_of_loop: bool) -> Result<()> {
     emit_ncn_metrics_epoch_slot(handler).await?;
+
+    if start_of_loop {
+        emit_ncn_metrics_tickets(handler).await?;
+        emit_ncn_metrics_vault_operator_delegation(handler).await?;
+        emit_ncn_metrics_operators(handler).await?;
+        emit_ncn_metrics_vault_registry(handler).await?;
+        emit_ncn_metrics_config(handler).await?;
+        emit_ncn_metrics_account_payer(handler).await?;
+        emit_ncn_metrics_opted_in_validators(handler).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn emit_ncn_metrics_opted_in_validators(handler: &CliHandler) -> Result<()> {
+    let result = get_all_opted_in_validators(handler).await;
+
+    if let Ok(all_opted_in_validators) = result {
+        for info in all_opted_in_validators {
+            datapoint_info!(
+                "tr-beta-em-opted-in-validator",
+                ("vote", info.vote.to_string(), String),
+                ("identity", info.identity.to_string(), String),
+                ("stake", info.stake, i64),
+                ("active", info.active, bool),
+            );
+        }
+    }
 
     Ok(())
 }
 
 pub async fn emit_ncn_metrics_epoch_slot(handler: &CliHandler) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    let epoch_percentage =
+        (current_slot as f64 % DEFAULT_SLOTS_PER_EPOCH as f64) / DEFAULT_SLOTS_PER_EPOCH as f64;
 
     datapoint_info!(
-        "trk-em-epoch-slot",
+        "tr-beta-em-epoch-slot",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
+        ("epoch-percentage", epoch_percentage, f64),
     );
 
     Ok(())
@@ -60,7 +104,7 @@ pub async fn emit_ncn_metrics_account_payer(handler: &CliHandler) -> Result<()> 
     let account_payer = get_account_payer(handler).await?;
 
     datapoint_info!(
-        "trk-em-vault-ticket",
+        "tr-beta-em-account-payer",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         ("account-payer", account_payer_address.to_string(), String),
@@ -71,23 +115,109 @@ pub async fn emit_ncn_metrics_account_payer(handler: &CliHandler) -> Result<()> 
     Ok(())
 }
 
-pub async fn emit_ncn_metrics_vault_tickets(handler: &CliHandler) -> Result<()> {
+pub async fn emit_ncn_metrics_tickets(handler: &CliHandler) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    let vault_epoch_length = {
+        let vault_config = get_vault_config(handler).await?;
+        vault_config.epoch_length()
+    };
     let all_tickets = get_all_tickets(handler).await?;
 
     for ticket in all_tickets {
+        let (staked_amount, cooling_down_amount, total_security) = ticket.delegation();
+        let vault_delegation_state = ticket.vault_account.delegation_state;
+
         datapoint_info!(
-            "trk-em-vault-ticket",
+            "tr-beta-em-ticket",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("operator", ticket.operator.to_string(), String),
             ("vault", ticket.vault.to_string(), String),
+            (
+                "ticket-id",
+                format!(
+                    "{}-{}-{}",
+                    ticket.ncn.to_string(),
+                    ticket.vault.to_string(),
+                    ticket.operator.to_string()
+                ),
+                String
+            ),
             ("ncn-vault", ticket.ncn_vault(), i64),
             ("vault-ncn", ticket.vault_ncn(), i64),
             ("ncn-operator", ticket.ncn_operator(), i64),
             ("operator-ncn", ticket.operator_ncn(), i64),
             ("operator-vault", ticket.operator_vault(), i64),
             ("vault-operator", ticket.vault_operator(), i64),
+            // Delegation Info
+            ("vod-staked-amount", format_token_amount(staked_amount), f64),
+            (
+                "vod-cooling-down-amount",
+                format_token_amount(cooling_down_amount),
+                f64
+            ),
+            (
+                "vod-total-security",
+                format_token_amount(total_security),
+                f64
+            ),
+            // Vault Info
+            (
+                "vault-st-mint",
+                ticket.vault_account.supported_mint.to_string(),
+                String
+            ),
+            (
+                "vault-tokens-deposited",
+                format_token_amount(ticket.vault_account.tokens_deposited()),
+                f64
+            ),
+            ("vault-vrt-supply", ticket.vault_account.vrt_supply(), i64),
+            (
+                "vault-vrt-cooling-down-amount",
+                format_token_amount(ticket.vault_account.vrt_cooling_down_amount()),
+                f64
+            ),
+            (
+                "vault-vrt-enqueued-for-cooldown-amount",
+                format_token_amount(ticket.vault_account.vrt_enqueued_for_cooldown_amount()),
+                f64
+            ),
+            (
+                "vault-vrt-ready-to-claim-amount",
+                format_token_amount(ticket.vault_account.vrt_ready_to_claim_amount()),
+                f64
+            ),
+            (
+                "vault-is-update-needed",
+                ticket
+                    .vault_account
+                    .is_update_needed(current_slot, vault_epoch_length)?,
+                bool
+            ),
+            (
+                "vault-operator-count",
+                ticket.vault_account.operator_count(),
+                i64
+            ),
+            ("vault-ncn-count", ticket.vault_account.ncn_count(), i64),
+            ("vault-config-epoch-length", vault_epoch_length, i64),
+            // Vault Total Delegation
+            (
+                "vault-total-staked-amount",
+                format_token_amount(vault_delegation_state.staked_amount()),
+                f64
+            ),
+            (
+                "vod-total-cooling-down-amount",
+                format_token_amount(vault_delegation_state.cooling_down_amount()),
+                f64
+            ),
+            (
+                "vod-total-total-security",
+                format_token_amount(vault_delegation_state.total_security()?),
+                f64
+            ),
         );
     }
 
@@ -108,19 +238,20 @@ pub async fn emit_ncn_metrics_vault_operator_delegation(handler: &CliHandler) ->
             }
             let vault_operator_delegation = result?;
 
-            //TODO add delegation?
             datapoint_info!(
-                "trk-em-vault-operator-delegation",
+                "tr-beta-em-vault-operator-delegation",
                 ("current-epoch", current_epoch, i64),
                 ("current-slot", current_slot, i64),
                 ("vault", vault.to_string(), String),
                 ("operator", operator.to_string(), String),
                 (
                     "delegation",
-                    vault_operator_delegation
-                        .delegation_state
-                        .total_security()?,
-                    i64
+                    format_token_amount(
+                        vault_operator_delegation
+                            .delegation_state
+                            .total_security()?
+                    ),
+                    f64
                 ),
             );
         }
@@ -137,7 +268,7 @@ pub async fn emit_ncn_metrics_operators(handler: &CliHandler) -> Result<()> {
         let operator_account = get_operator(handler, &operator).await?;
 
         datapoint_info!(
-            "trk-em-operator",
+            "tr-beta-em-operator",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("operator", operator.to_string(), String),
@@ -159,7 +290,7 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
     let vault_registry = get_vault_registry(handler).await?;
 
     datapoint_info!(
-        "trk-em-vault-registry",
+        "tr-beta-em-vault-registry",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         ("st-mints", vault_registry.st_mint_count(), i64),
@@ -174,14 +305,22 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
         let vault_account = get_vault(handler, vault.vault()).await?;
 
         datapoint_info!(
-            "trk-em-vault-registry-vault",
+            "tr-beta-em-vault-registry-vault",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("vault", vault.vault().to_string(), String),
             ("st-mint", vault.st_mint().to_string(), String),
             ("index", vault.vault_index(), i64),
-            ("tokens-deposited", vault_account.tokens_deposited(), i64),
-            ("vrt-supply", vault_account.vrt_supply(), i64),
+            (
+                "tokens-deposited",
+                format_token_amount(vault_account.tokens_deposited()),
+                f64
+            ),
+            (
+                "vrt-supply",
+                format_token_amount(vault_account.vrt_supply()),
+                f64
+            ),
             ("operator-count", vault_account.operator_count(), i64),
             ("ncn-count", vault_account.ncn_count(), i64),
         );
@@ -189,7 +328,7 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
 
     for st_mint in vault_registry.st_mint_list {
         datapoint_info!(
-            "trk-em-vault-registry-st-mint",
+            "tr-beta-em-vault-registry-st-mint",
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("st-mint", st_mint.st_mint().to_string(), String),
@@ -223,7 +362,7 @@ pub async fn emit_ncn_metrics_config(handler: &CliHandler) -> Result<()> {
     let current_fees = fee_config.current_fees(current_epoch);
 
     datapoint_info!(
-        "trk-em-config",
+        "tr-beta-em-config",
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         (
@@ -278,6 +417,22 @@ pub async fn emit_ncn_metrics_config(handler: &CliHandler) -> Result<()> {
     Ok(())
 }
 
+macro_rules! emit_epoch_datapoint {
+    ($name:expr, $is_current_epoch:expr, $($fields:tt),*) => {
+        // Always emit the standard metric
+        datapoint_info!($name, $($fields),*);
+
+        // If it's the current epoch, also emit with "-current" suffix
+        if $is_current_epoch {
+            datapoint_info!(
+                concat!($name, "-current"),
+                $($fields),*
+            );
+        }
+    };
+}
+
+#[allow(clippy::large_stack_frames)]
 pub async fn emit_epoch_metrics(handler: &CliHandler, epoch: u64) -> Result<()> {
     emit_epoch_metrics_state(handler, epoch).await?;
     emit_epoch_metrics_weight_table(handler, epoch).await?;
@@ -292,6 +447,7 @@ pub async fn emit_epoch_metrics(handler: &CliHandler, epoch: u64) -> Result<()> 
 
 pub async fn emit_epoch_metrics_ncn_rewards(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    let is_current_epoch = current_epoch == epoch;
 
     let all_operators = get_all_operators_in_ncn(handler).await?;
     for operator in all_operators {
@@ -312,20 +468,23 @@ pub async fn emit_epoch_metrics_ncn_rewards(handler: &CliHandler, epoch: u64) ->
                     if route.is_empty() {
                         continue;
                     }
-                    datapoint_info!(
-                        "trk-ee-epoch-ncn-vault-rewards",
+
+                    emit_epoch_datapoint!(
+                        "tr-beta-ee-epoch-ncn-vault-rewards",
+                        is_current_epoch,
                         ("current-epoch", current_epoch, i64),
                         ("current-slot", current_slot, i64),
                         ("keeper-epoch", epoch, i64),
                         ("group", group.group, i64),
                         ("operator", operator.to_string(), String),
                         ("vault", route.vault().to_string(), String),
-                        ("rewards", route.rewards(), i64),
+                        ("rewards", format_token_amount(route.rewards()), f64)
                     );
                 }
 
-                datapoint_info!(
-                    "trk-ee-epoch-ncn-rewards",
+                emit_epoch_datapoint!(
+                    "tr-beta-ee-epoch-ncn-rewards",
+                    is_current_epoch,
                     ("current-epoch", current_epoch, i64),
                     ("current-slot", current_slot, i64),
                     ("keeper-epoch", epoch, i64),
@@ -343,22 +502,30 @@ pub async fn emit_epoch_metrics_ncn_rewards(handler: &CliHandler, epoch: u64) ->
                     ),
                     (
                         "receiver-balance-sol",
-                        lamports_to_sol(ncn_reward_receiver_account.lamports),
+                        format_token_amount(ncn_reward_receiver_account.lamports),
                         f64
                     ),
                     ("still-routing", ncn_reward_router.still_routing(), bool),
-                    ("total-rewards", ncn_reward_router.total_rewards(), i64),
+                    (
+                        "total-rewards",
+                        format_token_amount(ncn_reward_router.total_rewards()),
+                        f64
+                    ),
                     (
                         "rewards-processed",
-                        ncn_reward_router.rewards_processed(),
-                        i64
+                        format_token_amount(ncn_reward_router.rewards_processed()),
+                        f64
                     ),
                     (
                         "operator-rewards",
-                        ncn_reward_router.operator_rewards(),
-                        i64
+                        format_token_amount(ncn_reward_router.operator_rewards()),
+                        f64
                     ),
-                    ("total-vault-rewards", total_vault_rewards, i64),
+                    (
+                        "total-vault-rewards",
+                        format_token_amount(total_vault_rewards),
+                        f64
+                    )
                 );
             }
         }
@@ -369,6 +536,7 @@ pub async fn emit_epoch_metrics_ncn_rewards(handler: &CliHandler, epoch: u64) ->
 
 pub async fn emit_epoch_metrics_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    let is_current_epoch = current_epoch == epoch;
 
     let result = get_base_reward_router(handler, epoch).await;
 
@@ -376,8 +544,9 @@ pub async fn emit_epoch_metrics_base_rewards(handler: &CliHandler, epoch: u64) -
         let (base_reward_receiver_address, base_reward_receiver_account) =
             get_base_reward_receiver(handler, epoch).await?;
 
-        datapoint_info!(
-            "trk-ee-epoch-base-rewards",
+        emit_epoch_datapoint!(
+            "tr-beta-ee-epoch-base-rewards",
+            is_current_epoch,
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("keeper-epoch", epoch, i64),
@@ -393,31 +562,163 @@ pub async fn emit_epoch_metrics_base_rewards(handler: &CliHandler, epoch: u64) -
             ),
             (
                 "receiver-balance-sol",
-                lamports_to_sol(base_reward_receiver_account.lamports),
+                format_token_amount(base_reward_receiver_account.lamports),
                 f64
             ),
             ("still-routing", base_reward_router.still_routing(), bool),
-            ("total-rewards", base_reward_router.total_rewards(), i64),
+            (
+                "total-rewards",
+                format_token_amount(base_reward_router.total_rewards()),
+                f64
+            ),
             (
                 "rewards-processed",
-                base_reward_router.rewards_processed(),
-                i64
+                format_token_amount(base_reward_router.rewards_processed()),
+                f64
             ),
             (
                 "dao-rewards",
-                base_reward_router.base_fee_group_reward(BaseFeeGroup::dao())?,
-                i64
+                format_token_amount(base_reward_router.base_fee_group_reward(BaseFeeGroup::dao())?),
+                f64
             ),
             (
                 "lst-rewards",
-                base_reward_router.ncn_fee_group_rewards(NcnFeeGroup::lst())?,
-                i64
+                format_token_amount(base_reward_router.ncn_fee_group_rewards(NcnFeeGroup::lst())?),
+                f64
             ),
             (
                 "jto-rewards",
-                base_reward_router.ncn_fee_group_rewards(NcnFeeGroup::jto())?,
-                i64
+                format_token_amount(base_reward_router.ncn_fee_group_rewards(NcnFeeGroup::jto())?),
+                f64
             ),
+            (
+                "base-rewards-0",
+                format_token_amount(
+                    base_reward_router
+                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::DAO))?
+                ),
+                f64
+            ),
+            (
+                "base-rewards-1",
+                format_token_amount(
+                    base_reward_router
+                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved1))?
+                ),
+                f64
+            ),
+            (
+                "base-rewards-2",
+                format_token_amount(
+                    base_reward_router
+                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved2))?
+                ),
+                f64
+            ),
+            (
+                "base-rewards-3",
+                format_token_amount(
+                    base_reward_router
+                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved3))?
+                ),
+                f64
+            ),
+            (
+                "base-rewards-4",
+                format_token_amount(
+                    base_reward_router
+                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved4))?
+                ),
+                f64
+            ),
+            (
+                "base-rewards-5",
+                format_token_amount(
+                    base_reward_router
+                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved5))?
+                ),
+                f64
+            ),
+            (
+                "base-rewards-6",
+                format_token_amount(
+                    base_reward_router
+                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved6))?
+                ),
+                f64
+            ),
+            (
+                "base-rewards-7",
+                format_token_amount(
+                    base_reward_router
+                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved7))?
+                ),
+                f64
+            ),
+            (
+                "ncn-rewards-0",
+                format_token_amount(
+                    base_reward_router
+                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Default))?
+                ),
+                f64
+            ),
+            (
+                "ncn-rewards-1",
+                format_token_amount(
+                    base_reward_router
+                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::JTO))?
+                ),
+                f64
+            ),
+            (
+                "ncn-rewards-2",
+                format_token_amount(
+                    base_reward_router
+                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved2))?
+                ),
+                f64
+            ),
+            (
+                "ncn-rewards-3",
+                format_token_amount(
+                    base_reward_router
+                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved3))?
+                ),
+                f64
+            ),
+            (
+                "ncn-rewards-4",
+                format_token_amount(
+                    base_reward_router
+                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved4))?
+                ),
+                f64
+            ),
+            (
+                "ncn-rewards-5",
+                format_token_amount(
+                    base_reward_router
+                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved5))?
+                ),
+                f64
+            ),
+            (
+                "ncn-rewards-6",
+                format_token_amount(
+                    base_reward_router
+                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved6))?
+                ),
+                f64
+            ),
+            (
+                "ncn-rewards-7",
+                format_token_amount(
+                    base_reward_router
+                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved7))?
+                ),
+                f64
+            )
         );
     }
 
@@ -427,60 +728,129 @@ pub async fn emit_epoch_metrics_base_rewards(handler: &CliHandler, epoch: u64) -
 #[allow(clippy::large_stack_frames)]
 pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    let is_current_epoch = current_epoch == epoch;
+
     let valid_slots_after_consensus = {
         let config = get_tip_router_config(handler).await?;
 
         config.valid_slots_after_consensus()
     };
 
-    let result = get_ballot_box(handler, epoch).await;
+    let ballot_box_result = get_ballot_box(handler, epoch).await;
+    let epoch_snapshot_result = get_epoch_snapshot(handler, epoch).await;
 
-    if let Ok(ballot_box) = result {
-        for operator_vote in ballot_box.operator_votes() {
-            if operator_vote.is_empty() {
-                continue;
+    if let Ok(ballot_box) = ballot_box_result {
+        if let Ok(epoch_snapshot) = epoch_snapshot_result {
+            let total_stake_weight = epoch_snapshot.stake_weights().stake_weight();
+
+            for operator_vote in ballot_box.operator_votes() {
+                if operator_vote.is_empty() {
+                    continue;
+                }
+
+                let ballot_index = operator_vote.ballot_index();
+                let ballot_tally = ballot_box.ballot_tallies()[ballot_index as usize];
+                let vote = format!("{:?}", ballot_tally.ballot().root());
+                ballot_tally.stake_weights().stake_weight();
+
+                emit_epoch_datapoint!(
+                    "tr-beta-ee-ballot-box-votes",
+                    is_current_epoch,
+                    ("current-epoch", current_epoch, i64),
+                    ("current-slot", current_slot, i64),
+                    ("keeper-epoch", epoch, i64),
+                    ("operator", operator_vote.operator().to_string(), String),
+                    ("slot-voted", operator_vote.slot_voted(), i64),
+                    ("ballot-index", ballot_index, i64),
+                    (
+                        "operator-stake-weight",
+                        format_stake_weight(operator_vote.stake_weights().stake_weight()),
+                        f64
+                    ),
+                    (
+                        "ballot-stake-weight",
+                        format_stake_weight(ballot_tally.stake_weights().stake_weight()),
+                        f64
+                    ),
+                    (
+                        "total-stake-weight",
+                        format_stake_weight(total_stake_weight),
+                        f64
+                    ),
+                    ("vote", vote, String)
+                );
             }
 
-            let ballot_index = operator_vote.ballot_index();
-            let ballot_tally = ballot_box.ballot_tallies()[ballot_index as usize];
-            let vote = format!("{:?}", ballot_tally.ballot().root());
-            ballot_tally.stake_weights().stake_weight();
+            for tally in ballot_box.ballot_tallies() {
+                if !tally.is_valid() {
+                    continue;
+                }
 
-            datapoint_info!(
-                "trk-ee-ballot-box-votes",
+                let vote = format!("{:?}", tally.ballot().root());
+
+                emit_epoch_datapoint!(
+                    "tr-beta-ee-ballot-box-tally",
+                    is_current_epoch,
+                    ("current-epoch", current_epoch, i64),
+                    ("current-slot", current_slot, i64),
+                    ("keeper-epoch", epoch, i64),
+                    ("ballot-index", tally.index(), i64),
+                    ("tally", tally.tally(), i64),
+                    (
+                        "stake-weight",
+                        format_stake_weight(tally.stake_weights().stake_weight()),
+                        f64
+                    ),
+                    (
+                        "total-stake-weight",
+                        format_stake_weight(total_stake_weight),
+                        f64
+                    ),
+                    ("vote", vote, String)
+                );
+            }
+
+            let (winning_ballot_string, winning_stake_weight, winning_tally) = {
+                if ballot_box.has_winning_ballot() {
+                    let ballot_tally = ballot_box.get_winning_ballot_tally().unwrap();
+                    (
+                        format!("{:?}", ballot_tally.ballot().root()),
+                        ballot_tally.stake_weights().stake_weight(),
+                        ballot_tally.tally(),
+                    )
+                } else {
+                    ("None".to_string(), 0, 0)
+                }
+            };
+
+            emit_epoch_datapoint!(
+                "tr-beta-ee-ballot-box",
+                is_current_epoch,
                 ("current-epoch", current_epoch, i64),
                 ("current-slot", current_slot, i64),
                 ("keeper-epoch", epoch, i64),
-                ("operator", operator_vote.operator().to_string(), String),
-                ("slot-voted", operator_vote.slot_voted(), i64),
+                ("unique-ballots", ballot_box.unique_ballots(), i64),
+                ("operators-voted", ballot_box.operators_voted(), i64),
+                ("has-winning-ballot", ballot_box.has_winning_ballot(), bool),
+                ("winning-ballot", winning_ballot_string, String),
                 (
-                    "operator-stake-weight",
-                    operator_vote.stake_weights().stake_weight(),
-                    i64
+                    "winning-stake-weight",
+                    format_stake_weight(winning_stake_weight),
+                    f64
+                ),
+                ("winning-tally", winning_tally, i64),
+                (
+                    "total-stake-weight",
+                    format_stake_weight(total_stake_weight),
+                    f64
                 ),
                 (
-                    "ballot-stake-weight",
-                    ballot_tally.stake_weights().stake_weight(),
-                    i64
-                ),
-                ("vote", vote, String),
+                    "is-voting-valid",
+                    ballot_box.is_voting_valid(current_slot, valid_slots_after_consensus)?,
+                    bool
+                )
             );
         }
-
-        datapoint_info!(
-            "trk-ee-ballot-box",
-            ("current-epoch", current_epoch, i64),
-            ("current-slot", current_slot, i64),
-            ("keeper-epoch", epoch, i64),
-            ("unique-ballots", ballot_box.unique_ballots(), i64),
-            ("operators-voted", ballot_box.operators_voted(), i64),
-            ("has-winning-ballot", ballot_box.has_winning_ballot(), bool),
-            (
-                "is-voting-valid",
-                ballot_box.is_voting_valid(current_slot, valid_slots_after_consensus)?,
-                bool
-            ),
-        );
     }
 
     Ok(())
@@ -488,6 +858,7 @@ pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> 
 
 pub async fn emit_epoch_metrics_operator_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    let is_current_epoch = current_epoch == epoch;
 
     let all_operators = get_all_operators_in_ncn(handler).await?;
 
@@ -495,8 +866,9 @@ pub async fn emit_epoch_metrics_operator_snapshot(handler: &CliHandler, epoch: u
         let result = get_operator_snapshot(handler, operator, epoch).await;
 
         if let Ok(operator_snapshot) = result {
-            datapoint_info!(
-                "trk-ee-operator-snapshot",
+            emit_epoch_datapoint!(
+                "tr-beta-ee-operator-snapshot",
+                is_current_epoch,
                 ("current-epoch", current_epoch, i64),
                 ("current-slot", current_slot, i64),
                 ("keeper-epoch", epoch, i64),
@@ -530,10 +902,10 @@ pub async fn emit_epoch_metrics_operator_snapshot(handler: &CliHandler, epoch: u
                 ),
                 (
                     "stake-weight",
-                    operator_snapshot.stake_weights().stake_weight(),
-                    i64
+                    format_stake_weight(operator_snapshot.stake_weights().stake_weight()),
+                    f64
                 ),
-                ("slot-finalized", operator_snapshot.slot_finalized(), i64),
+                ("slot-finalized", operator_snapshot.slot_finalized(), i64)
             );
         }
     }
@@ -543,21 +915,23 @@ pub async fn emit_epoch_metrics_operator_snapshot(handler: &CliHandler, epoch: u
 
 pub async fn emit_epoch_metrics_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    let is_current_epoch = current_epoch == epoch;
 
     let result = get_epoch_snapshot(handler, epoch).await;
 
     if let Ok(epoch_snapshot) = result {
         let fees = epoch_snapshot.fees();
 
-        datapoint_info!(
-            "trk-ee-epoch-snapshot",
+        emit_epoch_datapoint!(
+            "tr-beta-ee-epoch-snapshot",
+            is_current_epoch,
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("keeper-epoch", epoch, i64),
             (
                 "total-stake-weight",
-                epoch_snapshot.stake_weights().stake_weight(),
-                i64
+                format_stake_weight(epoch_snapshot.stake_weights().stake_weight()),
+                f64
             ),
             (
                 "valid-operator-vault-delegations",
@@ -588,6 +962,7 @@ pub async fn emit_epoch_metrics_epoch_snapshot(handler: &CliHandler, epoch: u64)
 
 pub async fn emit_epoch_metrics_weight_table(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    let is_current_epoch = current_epoch == epoch;
 
     let result = get_weight_table(handler, epoch).await;
 
@@ -597,24 +972,26 @@ pub async fn emit_epoch_metrics_weight_table(handler: &CliHandler, epoch: u64) -
                 continue;
             }
 
-            datapoint_info!(
-                "trk-ee-weight-table-entry",
+            emit_epoch_datapoint!(
+                "tr-beta-ee-weight-table-entry",
+                is_current_epoch,
                 ("current-epoch", current_epoch, i64),
                 ("current-slot", current_slot, i64),
                 ("keeper-epoch", epoch, i64),
                 ("st-mint", entry.st_mint().to_string(), String),
-                ("weight", entry.weight() as u64, i64),
+                ("weight", format_stake_weight(entry.weight()), f64)
             );
         }
 
-        datapoint_info!(
-            "trk-ee-weight-table",
+        emit_epoch_datapoint!(
+            "tr-beta-ee-weight-table",
+            is_current_epoch,
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("keeper-epoch", epoch, i64),
             ("weight-count", weight_table.mint_count(), i64),
             ("vault-count", weight_table.vault_count(), i64),
-            ("weight-count", weight_table.weight_count(), i64),
+            ("weight-count", weight_table.weight_count(), i64)
         );
     }
 
@@ -624,18 +1001,20 @@ pub async fn emit_epoch_metrics_weight_table(handler: &CliHandler, epoch: u64) -
 #[allow(clippy::large_stack_frames)]
 pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    let is_current_epoch = current_epoch == epoch;
 
     let is_epoch_completed = get_is_epoch_completed(handler, epoch).await?;
 
     if is_epoch_completed {
-        datapoint_info!(
-            "trk-ee-state",
+        emit_epoch_datapoint!(
+            "tr-beta-ee-state",
+            is_current_epoch,
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("keeper-epoch", epoch, i64),
             ("current-state-string", "Complete", String),
-            ("current-state", u8::MAX, i64),
-            ("is-complete", true, bool),
+            ("current-state", -1, i64),
+            ("is-complete", true, bool)
         );
 
         return Ok(());
@@ -697,8 +1076,9 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
         }
     }
 
-    datapoint_info!(
-        "trk-ee-state",
+    emit_epoch_datapoint!(
+        "tr-beta-ee-state",
+        is_current_epoch,
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         ("keeper-epoch", epoch, i64),
@@ -711,6 +1091,11 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
         ("current-state", current_state as u8, i64),
         ("operator-count", state.operator_count(), i64),
         ("vault-count", state.vault_count(), i64),
+        (
+            "slot-consensus-reached",
+            state.slot_consensus_reached(),
+            i64
+        ),
         (
             "set-weight-progress-tally",
             state.set_weight_progress().tally(),
@@ -820,7 +1205,7 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
         ),
         ("ncn-reward-router-account-dne", ncn_router_dne, i64),
         ("ncn-reward-router-account-open", ncn_router_open, i64),
-        ("ncn-reward-router-account-closed", ncn_router_closed, i64),
+        ("ncn-reward-router-account-closed", ncn_router_closed, i64)
     );
 
     Ok(())

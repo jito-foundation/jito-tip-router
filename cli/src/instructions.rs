@@ -2,7 +2,7 @@ use std::{str::FromStr, time::Duration};
 
 use crate::{
     getters::{
-        get_account, get_all_operators_in_ncn, get_all_sorted_operators_for_vault,
+        get_account, get_all_operators_in_ncn, get_all_sorted_operators_for_vault, get_all_vaults,
         get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver_rewards,
         get_base_reward_router, get_current_slot, get_epoch_snapshot,
         get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator,
@@ -48,7 +48,7 @@ use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
-    constants::MAX_REALLOC_BYTES,
+    constants::{MAX_REALLOC_BYTES, SWITCHBOARD_QUEUE},
     epoch_marker::EpochMarker,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
@@ -793,7 +793,7 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
     wait_for_x_slots_after_epoch(handler, 400).await?;
 
     // STATIC PUBKEY
-    let queue_key = Pubkey::from_str("A43DyUGA7s8eXPxqEjJY6EBu1KKbNgfxF8h17VAHn13w").unwrap();
+    let queue_key = SWITCHBOARD_QUEUE;
 
     let queue = QueueAccountData::load(client, &queue_key).await?;
     let gateways = &queue.fetch_gateways(client).await?;
@@ -1939,8 +1939,7 @@ pub async fn close_epoch_account(
     let config_account = get_tip_router_config(handler).await?;
     let dao_wallet = *config_account
         .fee_config
-        .base_fee_wallet(BaseFeeGroup::dao())
-        .expect("No DAO wallet ( close_epoch_account )");
+        .base_fee_wallet(BaseFeeGroup::dao())?;
 
     let mut ix = CloseEpochAccountBuilder::new();
 
@@ -1992,6 +1991,15 @@ pub async fn check_created(handler: &CliHandler, address: &Pubkey) -> Result<()>
             "Failed to get account after creation {:?}",
             address
         ));
+    }
+
+    Ok(())
+}
+
+pub async fn update_all_vaults_in_network(handler: &CliHandler) -> Result<()> {
+    let vaults = get_all_vaults(handler).await?;
+    for vault in vaults {
+        full_vault_update(handler, &vault).await?;
     }
 
     Ok(())
@@ -2062,57 +2070,59 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
     // Crank Vault Update State Tracker
     let all_operators = get_all_sorted_operators_for_vault(handler, vault).await?;
 
-    let starting_index = {
-        let vault_update_state_tracker_account =
-            get_vault_update_state_tracker(handler, vault, ncn_epoch).await?;
-        let last_updated_index = vault_update_state_tracker_account.last_updated_index();
+    if !all_operators.is_empty() {
+        let starting_index = {
+            let vault_update_state_tracker_account =
+                get_vault_update_state_tracker(handler, vault, ncn_epoch).await?;
+            let last_updated_index = vault_update_state_tracker_account.last_updated_index();
 
-        if last_updated_index == u64::MAX {
-            ncn_epoch % all_operators.len() as u64
-        } else {
-            (last_updated_index + 1) % all_operators.len() as u64
-        }
-    };
+            if last_updated_index == u64::MAX {
+                ncn_epoch % all_operators.len() as u64
+            } else {
+                (last_updated_index + 1) % all_operators.len() as u64
+            }
+        };
 
-    for index in 0..all_operators.len() {
-        let current_index = (starting_index as usize + index) % all_operators.len();
-        let operator = all_operators.get(current_index).unwrap();
+        for index in 0..all_operators.len() {
+            let current_index = (starting_index as usize + index) % all_operators.len();
+            let operator = all_operators.get(current_index).unwrap();
 
-        let (vault_operator_delegation, _, _) = VaultOperatorDelegation::find_program_address(
-            &handler.vault_program_id,
-            vault,
-            operator,
-        );
+            let (vault_operator_delegation, _, _) = VaultOperatorDelegation::find_program_address(
+                &handler.vault_program_id,
+                vault,
+                operator,
+            );
 
-        let crank_vault_update_state_tracker_ix = CrankVaultUpdateStateTrackerBuilder::new()
-            .vault(*vault)
-            .operator(*operator)
-            .config(vault_config)
-            .vault_operator_delegation(vault_operator_delegation)
-            .vault_update_state_tracker(vault_update_state_tracker)
-            .instruction();
+            let crank_vault_update_state_tracker_ix = CrankVaultUpdateStateTrackerBuilder::new()
+                .vault(*vault)
+                .operator(*operator)
+                .config(vault_config)
+                .vault_operator_delegation(vault_operator_delegation)
+                .vault_update_state_tracker(vault_update_state_tracker)
+                .instruction();
 
-        let result = send_and_log_transaction(
-            handler,
-            &[crank_vault_update_state_tracker_ix],
-            &[payer],
-            "Crank Vault Update State Tracker",
-            &[
-                format!("VAULT: {:?}", vault),
-                format!("Operator: {:?}", operator),
-                format!("Vault Epoch: {:?}", ncn_epoch),
-            ],
-        )
-        .await;
+            let result = send_and_log_transaction(
+                handler,
+                &[crank_vault_update_state_tracker_ix],
+                &[payer],
+                "Crank Vault Update State Tracker",
+                &[
+                    format!("VAULT: {:?}", vault),
+                    format!("Operator: {:?}", operator),
+                    format!("Vault Epoch: {:?}", ncn_epoch),
+                ],
+            )
+            .await;
 
-        if result.is_err() {
-            log::error!(
+            if result.is_err() {
+                log::error!(
                 "Failed to crank Vault Update State Tracker for Vault: {:?} and Operator: {:?} at NCN Epoch: {:?} with error: {:?}",
                 vault,
                 operator,
                 ncn_epoch,
                 result.err().unwrap()
             );
+            }
         }
     }
 
@@ -2423,6 +2433,11 @@ pub async fn crank_vote(handler: &CliHandler, epoch: u64, test_vote: bool) -> Re
 }
 
 #[allow(clippy::large_stack_frames)]
+pub async fn crank_post_vote_cooldown(_: &CliHandler, _: u64) -> Result<()> {
+    Ok(())
+}
+
+#[allow(clippy::large_stack_frames)]
 pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
     let voter = handler.keypair()?.pubkey();
     let meta_merkle_root = [8; 32];
@@ -2453,7 +2468,7 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
     if ballot_box.is_consensus_reached() {
         let (base_reward_receiver_address, _, _) = BaseRewardReceiver::find_program_address(
             &handler.tip_router_program_id,
-            handler.ncn().unwrap(),
+            handler.ncn()?,
             epoch,
         );
 
@@ -2520,12 +2535,11 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
 
-            if let Err(err) = result {
-                log::error!(
-                    "Failed to get or create ncn reward router: {:?} in epoch: {:?} with error: {:?}",
-                    operator,
-                    epoch,
-                    err
+            if result.is_err() {
+                // Note this error might be important, but has not shown itself to be
+                info!(
+                    "Failed to get or create ncn reward router: {:?} in epoch: {:?}",
+                    operator, epoch
                 );
                 continue;
             }
@@ -2951,8 +2965,7 @@ pub async fn create_and_add_test_vault(
         &keypair.pubkey(),
         None,
         9,
-    )
-    .unwrap();
+    )?;
     let create_admin_ata_ix =
         spl_associated_token_account::instruction::create_associated_token_account_idempotent(
             &keypair.pubkey(),
@@ -2967,8 +2980,7 @@ pub async fn create_and_add_test_vault(
         &keypair.pubkey(),
         &[],
         1_000_000,
-    )
-    .unwrap();
+    )?;
 
     send_and_log_transaction(
         handler,
@@ -3283,7 +3295,7 @@ pub async fn send_transactions(
             continue;
         }
 
-        return Ok(result.unwrap());
+        return Ok(result?);
     }
 
     // last retry
@@ -3306,7 +3318,7 @@ pub async fn send_transactions(
         return Err(anyhow!("\nError: \n\n{:?}\n\n", e));
     }
 
-    Ok(result.unwrap())
+    Ok(result?)
 }
 
 pub fn log_transaction(title: &str, signature: Signature, log_items: &[String]) {

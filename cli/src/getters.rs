@@ -1,15 +1,17 @@
-use std::fmt;
 use std::mem::size_of;
+use std::str::FromStr;
+use std::{fmt, time::Duration};
 
 use crate::handler::CliHandler;
 use anyhow::Result;
 use borsh1::BorshDeserialize;
-use jito_bytemuck::AccountDeserialize;
+use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_restaking_core::{
     config::Config as RestakingConfig, ncn::Ncn, ncn_operator_state::NcnOperatorState,
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
 };
+use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_router_core::{
     account_payer::AccountPayer,
     ballot_box::BallotBox,
@@ -30,14 +32,19 @@ use jito_vault_core::{
     vault_operator_delegation::VaultOperatorDelegation,
     vault_update_state_tracker::VaultUpdateStateTracker,
 };
+use log::info;
 use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
+use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::rpc_config::RpcGetVoteAccountsConfig;
 use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
 };
+use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::{account::Account, pubkey::Pubkey};
 use spl_associated_token_account::get_associated_token_address;
 use spl_stake_pool::{find_withdraw_authority_program_address, state::StakePool};
+use tokio::time::sleep;
 
 // ---------------------- HELPERS ----------------------
 // So we can switch between the two implementations
@@ -68,10 +75,17 @@ pub async fn get_current_epoch_and_slot(handler: &CliHandler) -> Result<(u64, u6
     Ok((epoch, slot))
 }
 
-pub async fn get_current_epoch_and_slot_unsafe(handler: &CliHandler) -> (u64, u64) {
-    get_current_epoch_and_slot(handler)
-        .await
-        .expect("Failed to get epoch and slot")
+pub async fn get_guaranteed_epoch_and_slot(handler: &CliHandler) -> (u64, u64) {
+    loop {
+        let current_epoch_and_slot_result = get_current_epoch_and_slot(handler).await;
+
+        if let Ok(result) = current_epoch_and_slot_result {
+            return result;
+        }
+
+        info!("Could not fetch current epoch and slot. Retrying...");
+        sleep(Duration::from_secs(1)).await;
+    }
 }
 
 // ---------------------- TIP ROUTER ----------------------
@@ -406,25 +420,12 @@ pub async fn get_is_epoch_completed(handler: &CliHandler, epoch: u64) -> Result<
 
 // ---------------------- RESTAKING ----------------------
 
-pub async fn get_restaking_config(handler: &CliHandler) -> Result<RestakingConfig> {
-    let (address, _, _) = RestakingConfig::find_program_address(&handler.restaking_program_id);
-    let account = get_account(handler, &address).await?;
-
-    if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
-    }
-    let account = account.unwrap();
-
-    let account = RestakingConfig::try_from_slice_unchecked(account.data.as_slice())?;
-    Ok(*account)
-}
-
 pub async fn get_vault_config(handler: &CliHandler) -> Result<VaultConfig> {
     let (address, _, _) = VaultConfig::find_program_address(&handler.vault_program_id);
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("Vault Config account not found"));
     }
     let account = account.unwrap();
 
@@ -432,11 +433,24 @@ pub async fn get_vault_config(handler: &CliHandler) -> Result<VaultConfig> {
     Ok(*account)
 }
 
+pub async fn get_restaking_config(handler: &CliHandler) -> Result<RestakingConfig> {
+    let (address, _, _) = RestakingConfig::find_program_address(&handler.restaking_program_id);
+    let account = get_account(handler, &address).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Restaking Config Account not found"));
+    }
+    let account = account.unwrap();
+
+    let account = RestakingConfig::try_from_slice_unchecked(account.data.as_slice())?;
+    Ok(*account)
+}
+
 pub async fn get_ncn(handler: &CliHandler) -> Result<Ncn> {
     let account = get_account(handler, handler.ncn()?).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("NCN account not found"));
     }
     let account = account.unwrap();
 
@@ -445,9 +459,13 @@ pub async fn get_ncn(handler: &CliHandler) -> Result<Ncn> {
 }
 
 pub async fn get_vault(handler: &CliHandler, vault: &Pubkey) -> Result<Vault> {
-    let account = get_account(handler, vault)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, vault).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Vault account not found"));
+    }
+    let account = account.unwrap();
+
     let account = Vault::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -460,9 +478,15 @@ pub async fn get_vault_update_state_tracker(
     let (vault_update_state_tracker, _, _) =
         VaultUpdateStateTracker::find_program_address(&handler.vault_program_id, vault, ncn_epoch);
 
-    let account = get_account(handler, &vault_update_state_tracker)
-        .await?
-        .expect("Account not found");
+    let account = get_account(handler, &vault_update_state_tracker).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!(
+            "Vault Update State Tracker account not found"
+        ));
+    }
+    let account = account.unwrap();
+
     let account = VaultUpdateStateTracker::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
 }
@@ -471,7 +495,7 @@ pub async fn get_operator(handler: &CliHandler, operator: &Pubkey) -> Result<Ope
     let account = get_account(handler, operator).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("Operator account not found"));
     }
     let account = account.unwrap();
 
@@ -492,7 +516,7 @@ pub async fn get_ncn_operator_state(
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("NCN Operator State account not found"));
     }
     let account = account.unwrap();
 
@@ -507,7 +531,7 @@ pub async fn get_vault_ncn_ticket(handler: &CliHandler, vault: &Pubkey) -> Resul
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("Vault NCN Ticket account not found"));
     }
     let account = account.unwrap();
 
@@ -522,7 +546,7 @@ pub async fn get_ncn_vault_ticket(handler: &CliHandler, vault: &Pubkey) -> Resul
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("NCN Vault Ticket account not found"));
     }
     let account = account.unwrap();
 
@@ -541,7 +565,9 @@ pub async fn get_vault_operator_delegation(
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!(
+            "Vault Operator Delegation account not found"
+        ));
     }
     let account = account.unwrap();
 
@@ -560,7 +586,7 @@ pub async fn get_operator_vault_ticket(
     let account = get_account(handler, &address).await?;
 
     if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
+        return Err(anyhow::anyhow!("Operator Vault Ticket account not found"));
     }
     let account = account.unwrap();
 
@@ -570,12 +596,125 @@ pub async fn get_operator_vault_ticket(
 
 pub async fn get_stake_pool(handler: &CliHandler) -> Result<StakePool> {
     let stake_pool = JITOSOL_POOL_ADDRESS;
-    let account = get_account(handler, &stake_pool).await?.unwrap();
+    let account = get_account(handler, &stake_pool).await?;
+
+    if account.is_none() {
+        return Err(anyhow::anyhow!("Stake Pool account not found"));
+    }
+    let account = account.unwrap();
+
     let mut data_slice = account.data.as_slice();
     let account = StakePool::deserialize(&mut data_slice)
         .map_err(|_| anyhow::anyhow!("Invalid stake pool account"))?;
 
     Ok(account)
+}
+
+pub struct OptedInValidatorInfo {
+    pub vote: Pubkey,
+    pub identity: Pubkey,
+    pub stake: u64,
+    pub active: bool,
+}
+
+pub async fn get_all_opted_in_validators(
+    handler: &CliHandler,
+) -> Result<Vec<OptedInValidatorInfo>> {
+    // Vote Account, Validator Identity, Validator Stake, active or not
+    let client = handler.rpc_client();
+    let client = RpcClient::new_with_timeout_and_commitment(
+        client.url(),
+        Duration::from_secs(3600),
+        CommitmentConfig::processed(),
+    );
+
+    let tip_distribution_size = size_of::<TipDistributionAccount>() + 8;
+
+    let size_filter = RpcFilterType::DataSize(tip_distribution_size as u64);
+
+    let discriminator_filter = RpcFilterType::Memcmp(Memcmp::new(
+        0,                                                                       // offset
+        MemcmpEncodedBytes::Bytes([85, 64, 113, 198, 234, 94, 120, 123].into()), // encoded bytes
+    ));
+    let upload_auth_filter = RpcFilterType::Memcmp(Memcmp::new(
+        8 + 32, // offset
+        MemcmpEncodedBytes::Bytes(
+            Pubkey::from_str("8F4jGUmxF36vQ6yabnsxX6AQVXdKBhs8kGSUuRKSg8Xt")
+                .unwrap()
+                .to_bytes()
+                .into(),
+        ), // encoded bytes
+    ));
+
+    let config = RpcProgramAccountsConfig {
+        filters: Some(vec![size_filter, upload_auth_filter, discriminator_filter]),
+        account_config: RpcAccountInfoConfig {
+            encoding: Some(UiAccountEncoding::Base64),
+            data_slice: Some(UiDataSliceConfig {
+                offset: 8,
+                length: 32,
+            }),
+            commitment: Some(CommitmentConfig::processed()),
+            min_context_slot: None,
+        },
+        with_context: Some(false),
+        sort_results: None,
+    };
+
+    let results = client
+        .get_program_accounts_with_config(&handler.tip_distribution_program_id, config)
+        .await?;
+
+    let vote_accounts: Vec<Pubkey> = results
+        .iter()
+        .map(|result| {
+            let data_slice = result.1.data.as_slice();
+            // Convert the slice to a fixed-size array
+            Pubkey::new_from_array(data_slice[..32].try_into().expect("Slice must be 32 bytes"))
+        })
+        .collect();
+
+    let mut validator_infos: Vec<OptedInValidatorInfo> = vec![];
+
+    for vote_account in vote_accounts {
+        let config = RpcGetVoteAccountsConfig {
+            vote_pubkey: Some(vote_account.to_string()),
+            ..RpcGetVoteAccountsConfig::default()
+        };
+        let status_result = client.get_vote_accounts_with_config(config).await;
+
+        if status_result.is_err() {
+            continue;
+        }
+
+        let status = status_result.unwrap();
+
+        if !status.current.is_empty() {
+            let info = status.current[0].clone();
+            let identity = Pubkey::from_str(&info.node_pubkey)?;
+            validator_infos.push(OptedInValidatorInfo {
+                vote: vote_account,
+                identity,
+                stake: info.activated_stake,
+                active: true,
+            });
+        } else if !status.delinquent.is_empty() {
+            let info = status.delinquent[0].clone();
+            let identity = Pubkey::from_str(&info.node_pubkey)?;
+
+            validator_infos.push(OptedInValidatorInfo {
+                vote: vote_account,
+                identity,
+                stake: info.activated_stake,
+                active: false,
+            });
+        }
+    }
+
+    validator_infos.sort_by(|a, b| a.identity.cmp(&b.identity));
+    validator_infos.dedup_by(|a, b| a.identity.eq(&b.identity));
+
+    Ok(validator_infos)
 }
 
 pub struct StakePoolAccounts {
@@ -724,6 +863,42 @@ pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey
     Ok(operators)
 }
 
+pub async fn get_all_vaults(handler: &CliHandler) -> Result<Vec<Pubkey>> {
+    let client = handler.rpc_client();
+
+    let vault_size = size_of::<Vault>() + 8;
+
+    let size_filter = RpcFilterType::DataSize(vault_size as u64);
+
+    let vault_filter = RpcFilterType::Memcmp(Memcmp::new(
+        0,                                                        // offset
+        MemcmpEncodedBytes::Bytes([Vault::DISCRIMINATOR].into()), // encoded bytes
+    ));
+
+    let config = RpcProgramAccountsConfig {
+        filters: Some(vec![size_filter, vault_filter]),
+        account_config: RpcAccountInfoConfig {
+            encoding: Some(UiAccountEncoding::Base64),
+            data_slice: Some(UiDataSliceConfig {
+                offset: 0,
+                length: 0,
+            }),
+            commitment: Some(handler.commitment),
+            min_context_slot: None,
+        },
+        with_context: Some(false),
+        sort_results: None,
+    };
+
+    let results = client
+        .get_program_accounts_with_config(&handler.vault_program_id, config)
+        .await?;
+
+    let vaults: Vec<Pubkey> = results.iter().map(|result| result.0).collect();
+
+    Ok(vaults)
+}
+
 pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
     let client = handler.rpc_client();
 
@@ -870,8 +1045,14 @@ pub struct NcnTickets {
 
 impl NcnTickets {
     const DNE: u8 = 0;
-    const NOT_ACTIVE: u8 = 1;
-    const ACTIVE: u8 = 2;
+    const STAKE: u8 = 10;
+    const NO_STAKE: u8 = 11;
+    // To allow for legacy state to exist in database
+    const STATE_OFFSET: u8 = 100;
+    const INACTIVE: u8 = Self::STATE_OFFSET;
+    const WARM_UP: u8 = Self::STATE_OFFSET + 1;
+    const ACTIVE: u8 = Self::STATE_OFFSET + 2;
+    const COOLDOWN: u8 = Self::STATE_OFFSET + 3;
 
     pub async fn fetch(
         handler: &CliHandler,
@@ -880,39 +1061,18 @@ impl NcnTickets {
         slot: u64,
         epoch_length: u64,
     ) -> Result<Self> {
-        let ncn = handler.ncn().expect("NCN not found");
+        let ncn = handler.ncn()?;
+        let vault_account = get_vault(handler, vault).await?;
 
         let (ncn_vault_ticket_address, _, _) =
             NcnVaultTicket::find_program_address(&handler.restaking_program_id, ncn, vault);
         let ncn_vault_ticket = get_ncn_vault_ticket(handler, vault).await;
-        let ncn_vault_ticket = {
-            match ncn_vault_ticket {
-                Ok(account) => Some(account),
-                Err(e) => {
-                    if e.to_string().contains("Account not found") {
-                        None
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        };
+        let ncn_vault_ticket = ncn_vault_ticket.ok();
 
         let (vault_ncn_ticket_address, _, _) =
             VaultNcnTicket::find_program_address(&handler.vault_program_id, vault, ncn);
         let vault_ncn_ticket = get_vault_ncn_ticket(handler, vault).await;
-        let vault_ncn_ticket = {
-            match vault_ncn_ticket {
-                Ok(account) => Some(account),
-                Err(e) => {
-                    if e.to_string().contains("Account not found") {
-                        None
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        };
+        let vault_ncn_ticket = vault_ncn_ticket.ok();
 
         let (vault_operator_delegation_address, _, _) =
             VaultOperatorDelegation::find_program_address(
@@ -922,18 +1082,7 @@ impl NcnTickets {
             );
         let vault_operator_delegation =
             get_vault_operator_delegation(handler, vault, operator).await;
-        let vault_operator_delegation = {
-            match vault_operator_delegation {
-                Ok(account) => Some(account),
-                Err(e) => {
-                    if e.to_string().contains("Account not found") {
-                        None
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        };
+        let vault_operator_delegation = vault_operator_delegation.ok();
 
         let (operator_vault_ticket_address, _, _) = OperatorVaultTicket::find_program_address(
             &handler.restaking_program_id,
@@ -941,36 +1090,12 @@ impl NcnTickets {
             vault,
         );
         let operator_vault_ticket = get_operator_vault_ticket(handler, vault, operator).await;
-        let operator_vault_ticket = {
-            match operator_vault_ticket {
-                Ok(account) => Some(account),
-                Err(e) => {
-                    if e.to_string().contains("Account not found") {
-                        None
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        };
+        let operator_vault_ticket = operator_vault_ticket.ok();
 
         let (ncn_operator_state_address, _, _) =
             NcnOperatorState::find_program_address(&handler.restaking_program_id, ncn, operator);
         let ncn_operator_state = get_ncn_operator_state(handler, operator).await;
-        let ncn_operator_state = {
-            match ncn_operator_state {
-                Ok(account) => Some(account),
-                Err(e) => {
-                    if e.to_string().contains("Account not found") {
-                        None
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        };
-
-        let vault_account = get_vault(handler, vault).await.expect("Vault not found");
+        let ncn_operator_state = ncn_operator_state.ok();
 
         Ok(Self {
             slot,
@@ -992,23 +1117,42 @@ impl NcnTickets {
         })
     }
 
+    pub const fn st_mint(&self) -> Pubkey {
+        self.vault_account.supported_mint
+    }
+
+    pub fn delegation(&self) -> (u64, u64, u64) {
+        if self.vault_operator_delegation.is_none() {
+            return (0, 0, 0);
+        }
+
+        let delegation_state = self
+            .vault_operator_delegation
+            .as_ref()
+            .unwrap()
+            .delegation_state;
+
+        (
+            delegation_state.staked_amount(),
+            delegation_state.cooling_down_amount(),
+            delegation_state.total_security().unwrap(),
+        )
+    }
+
     pub fn ncn_operator(&self) -> u8 {
         if self.ncn_operator_state.is_none() {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .ncn_operator_state
             .as_ref()
             .unwrap()
             .ncn_opt_in_state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn operator_ncn(&self) -> u8 {
@@ -1016,18 +1160,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .ncn_operator_state
             .as_ref()
             .unwrap()
             .operator_opt_in_state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn ncn_vault(&self) -> u8 {
@@ -1035,18 +1176,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .ncn_vault_ticket
             .as_ref()
             .unwrap()
             .state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn vault_ncn(&self) -> u8 {
@@ -1054,18 +1192,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .vault_ncn_ticket
             .as_ref()
             .unwrap()
             .state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn operator_vault(&self) -> u8 {
@@ -1073,18 +1208,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .operator_vault_ticket
             .as_ref()
             .unwrap()
             .state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn vault_operator(&self) -> u8 {
@@ -1101,10 +1233,10 @@ impl NcnTickets {
             .unwrap()
             > 0
         {
-            return Self::ACTIVE;
+            return Self::STAKE;
         }
 
-        Self::NOT_ACTIVE
+        Self::NO_STAKE
     }
 }
 
@@ -1114,8 +1246,12 @@ impl fmt::Display for NcnTickets {
         let check = |state: u8| -> &str {
             match state {
                 Self::DNE => "❌",
-                Self::NOT_ACTIVE => "🕘",
+                Self::STAKE => "🔋",
+                Self::NO_STAKE => "🪫",
+                Self::INACTIVE => "💤",
+                Self::WARM_UP => "🔥",
                 Self::ACTIVE => "✅",
+                Self::COOLDOWN => "🥶",
                 _ => "",
             }
         };
@@ -1125,6 +1261,18 @@ impl fmt::Display for NcnTickets {
         writeln!(f, "NCN:      {}", self.ncn)?;
         writeln!(f, "Operator: {}", self.operator)?;
         writeln!(f, "Vault:    {}", self.vault)?;
+        writeln!(f, "\n")?;
+        writeln!(
+            f,
+            "DNE[{}] INACTIVE[{}] WARM_UP[{}] ACTIVE[{}] COOLDOWN[{}] NO_STAKE[{}] STAKE[{}]",
+            check(Self::DNE),
+            check(Self::INACTIVE),
+            check(Self::WARM_UP),
+            check(Self::ACTIVE),
+            check(Self::COOLDOWN),
+            check(Self::NO_STAKE),
+            check(Self::STAKE),
+        )?;
         writeln!(f, "\n")?;
         writeln!(
             f,
@@ -1157,26 +1305,13 @@ impl fmt::Display for NcnTickets {
             self.operator_vault_ticket_address
         )?;
 
-        let st_mint = self.vault_account.supported_mint;
-        let delegation = {
-            if self.vault_operator_delegation.is_some() {
-                self.vault_operator_delegation
-                    .unwrap()
-                    .delegation_state
-                    .total_security()
-                    .unwrap()
-            } else {
-                0
-            }
-        };
-
         writeln!(
             f,
             "Vault    -> Operator: {} {} {}: {}",
             check(self.vault_operator()),
             self.vault_operator_delegation_address,
-            st_mint,
-            delegation
+            self.st_mint(),
+            self.delegation().2
         )?;
         writeln!(f, "\n")?;
 

@@ -35,3 +35,10 @@
 - Close Buffers: `solana program close --buffers`
 
 - Upgrade Program Size: `solana program extend $(solana address --keypair target/deploy/jito_tip_router_program-keypair.json) 100000`
+
+## Security Audits
+
+| Group    | Date       | Commit                                                                 |
+|----------|------------|------------------------------------------------------------------------|
+| Certora  | 2025-01-05 | [ac76352](security_audits/certora.pdf)                                 |
+| Offside  | 2024-10-25 | [443368a](security_audits/offside.pdf)                                 |

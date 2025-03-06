@@ -7,8 +7,8 @@ use std::{
 use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
 use jito_tip_distribution_sdk::{
-    jito_tip_distribution::accounts::ClaimStatus, TipDistributionAccount, CLAIM_STATUS_SEED,
-    CLAIM_STATUS_SIZE, CONFIG_SEED,
+    derive_claim_status_account_address, jito_tip_distribution::accounts::ClaimStatus,
+    TipDistributionAccount, CLAIM_STATUS_SIZE, CONFIG_SEED,
 };
 use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
@@ -81,8 +81,28 @@ pub async fn claim_mev_tips_with_emit(
     let meta_merkle_tree_dir = cli.save_path.clone();
     let rpc_url = cli.rpc_url.clone();
     let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
-    let merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
+    let mut merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
         .map_err(|e| anyhow::anyhow!(e))?;
+
+    let tip_router_config_address =
+        Config::find_program_address(&tip_router_program_id, &ncn_address).0;
+
+    // Fix wrong claim status pubkeys for 1 epoch -- noop if already correct
+    for tree in merkle_tree_coll.generated_merkle_trees.iter_mut() {
+        if tree.merkle_root_upload_authority != tip_router_config_address {
+            continue;
+        }
+        for node in tree.tree_nodes.iter_mut() {
+            let (claim_status_pubkey, claim_status_bump) = derive_claim_status_account_address(
+                &tip_distribution_program_id,
+                &node.claimant,
+                &tree.tip_distribution_account,
+            );
+            node.claim_status_pubkey = claim_status_pubkey;
+            node.claim_status_bump = claim_status_bump;
+        }
+    }
+
     let start = Instant::now();
 
     match claim_mev_tips(
@@ -265,6 +285,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 ) -> Result<Vec<Transaction>, ClaimMevError> {
     let tip_router_config_address =
         Config::find_program_address(&tip_router_program_id, &ncn_address).0;
+
     let tree_nodes = merkle_trees
         .generated_merkle_trees
         .iter()
@@ -272,6 +293,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
             if tree.merkle_root_upload_authority != tip_router_config_address {
                 return None;
             }
+
             Some(&tree.tree_nodes)
         })
         .flatten()
@@ -290,6 +312,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .iter()
         .map(|tree| tree.tip_distribution_account)
         .collect_vec();
+
     let tdas: HashMap<Pubkey, Account> = get_batched_accounts(rpc_client, &tda_pubkeys)
         .await?
         .into_iter()
@@ -310,6 +333,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .iter()
         .map(|tree_node| tree_node.claim_status_pubkey)
         .collect_vec();
+
     let claim_statuses: HashMap<Pubkey, Account> =
         get_batched_accounts(rpc_client, &claim_status_pubkeys)
             .await?
@@ -392,18 +416,10 @@ fn build_mev_claim_transactions(
         })
         .collect();
 
-    datapoint_info!(
-        "tip_router_cli.build_mev_claim_transactions",
-        (
-            "tip_distribution_accounts",
-            tip_distribution_accounts.len(),
-            i64
-        ),
-        ("claim_statuses", claim_statuses.len(), i64),
-    );
-
     let tip_distribution_config =
         Pubkey::find_program_address(&[CONFIG_SEED], &tip_distribution_program_id).0;
+
+    let mut zero_amount_claimants = 0;
 
     let mut instructions = Vec::with_capacity(claimants.len());
     for tree in &merkle_trees.generated_merkle_trees {
@@ -432,16 +448,11 @@ fn build_mev_claim_transactions(
                 || claim_statuses.contains_key(&node.claim_status_pubkey)
                 || node.amount == 0
             {
+                if node.amount == 0 {
+                    zero_amount_claimants += 1;
+                }
                 continue;
             }
-            let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
-                &[
-                    CLAIM_STATUS_SEED,
-                    &node.claimant.to_bytes(),
-                    &tree.tip_distribution_account.to_bytes(),
-                ],
-                &tip_distribution_program_id,
-            );
 
             let claim_with_payer_ix = ClaimWithPayerBuilder::new()
                 .account_payer(tip_router_account_payer)
@@ -450,12 +461,12 @@ fn build_mev_claim_transactions(
                 .tip_distribution_program(tip_distribution_program_id)
                 .tip_distribution_config(tip_distribution_config)
                 .tip_distribution_account(tree.tip_distribution_account)
-                .claim_status(claim_status_pubkey)
+                .claim_status(node.claim_status_pubkey)
                 .claimant(node.claimant)
                 .system_program(system_program::id())
                 .proof(node.proof.clone().unwrap())
                 .amount(node.amount)
-                .bump(claim_status_bump)
+                .bump(node.claim_status_bump)
                 .instruction();
 
             instructions.push(claim_with_payer_ix);
@@ -475,6 +486,18 @@ fn build_mev_claim_transactions(
             )
         })
         .collect();
+
+    info!("zero amount claimants: {}", zero_amount_claimants);
+    datapoint_info!(
+        "tip_router_cli.build_mev_claim_transactions",
+        (
+            "tip_distribution_accounts",
+            tip_distribution_accounts.len(),
+            i64
+        ),
+        ("claim_statuses", claim_statuses.len(), i64),
+        ("claim_transactions", transactions.len(), i64),
+    );
 
     transactions
 }
