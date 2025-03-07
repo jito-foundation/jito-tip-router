@@ -92,7 +92,7 @@ pub async fn startup_keeper(
     let mut start_of_loop;
     let mut end_of_loop;
 
-    let run_operations = !metrics_only;
+    let run_operations = !metrics_only && !run_migration;
     let emit_metrics = emit_metrics || metrics_only;
 
     loop {
