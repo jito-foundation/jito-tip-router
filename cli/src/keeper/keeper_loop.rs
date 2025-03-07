@@ -340,7 +340,7 @@ pub async fn startup_keeper(
                 continue;
             }
 
-            epoch_stall = metrics_only || result.unwrap();
+            epoch_stall = !run_operations || result.unwrap();
 
             if epoch_stall {
                 info!("\n\nSTALL DETECTED FOR {}\n\n", current_keeper_epoch);
