@@ -21,6 +21,7 @@ services:
       - EMIT_METRICS=false
       - METRICS_ONLY=false
       - RUN_MIGRATION=true
+      - TRANSACTION_RETRIES=2
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5
@@ -71,6 +72,7 @@ services:
       - EMIT_METRICS=false
       - METRICS_ONLY=false
       - RUN_MIGRATION=true
+      - TRANSACTION_RETRIES=5
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5
