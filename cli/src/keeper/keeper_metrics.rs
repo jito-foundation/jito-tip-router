@@ -82,6 +82,7 @@ pub async fn emit_ncn_metrics_opted_in_validators(handler: &CliHandler) -> Resul
 }
 
 pub async fn emit_ncn_metrics_epoch_slot(handler: &CliHandler) -> Result<()> {
+    let ncn = handler.ncn()?;
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let epoch_percentage =
         (current_slot as f64 % DEFAULT_SLOTS_PER_EPOCH as f64) / DEFAULT_SLOTS_PER_EPOCH as f64;
@@ -91,6 +92,7 @@ pub async fn emit_ncn_metrics_epoch_slot(handler: &CliHandler) -> Result<()> {
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         ("epoch-percentage", epoch_percentage, f64),
+        ("ncn", ncn.to_string(), String),
     );
 
     Ok(())
