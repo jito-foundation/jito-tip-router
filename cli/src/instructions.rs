@@ -3365,8 +3365,18 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
         })
         .collect::<Vec<_>>();
 
+    info!(
+        "Migrating TDA Merkle Root Upload Authorities: {}",
+        ixs.len()
+    );
     for ix in ixs {
-        send_and_log_transaction(handler, &[ix], &[], "Migrated TDA", &[]).await?;
+        let result = send_and_log_transaction(handler, &[ix], &[], "Migrated TDA", &[]).await;
+        if result.is_err() {
+            log::error!(
+                "Failed to migrate TDA with error: {:?}",
+                result.err().unwrap()
+            );
+        }
     }
     Ok(())
 }
