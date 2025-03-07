@@ -71,6 +71,7 @@ pub async fn timeout_keeper(duration_ms: u64) {
 }
 
 #[allow(clippy::large_stack_frames)]
+#[allow(clippy::too_many_arguments)]
 pub async fn startup_keeper(
     handler: &CliHandler,
     loop_timeout_ms: u64,
