@@ -143,6 +143,7 @@ impl CliHandler {
                 all_vault_update,
                 emit_metrics,
                 metrics_only,
+                run_migration,
             } => {
                 startup_keeper(
                     self,
@@ -152,6 +153,7 @@ impl CliHandler {
                     all_vault_update,
                     emit_metrics,
                     metrics_only,
+                    run_migration,
                 )
                 .await
             }

@@ -1326,6 +1326,7 @@ pub async fn get_tip_distribution_accounts_to_migrate(
     epoch: u64,
 ) -> Result<Vec<Pubkey>> {
     let rpc_client = handler.rpc_client();
+    let rpc_client = RpcClient::new_with_timeout(rpc_client.url(), Duration::from_secs(3600));
 
     // Filters assume merkle root is None
     let filters = vec![

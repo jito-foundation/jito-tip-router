@@ -20,6 +20,7 @@ services:
       - ALL_VAULT_UPDATE=${ALL_VAULT_UPDATE}
       - EMIT_METRICS=false
       - METRICS_ONLY=false
+      - RUN_MIGRATION=true
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5
@@ -44,6 +45,7 @@ services:
       - ALL_VAULT_UPDATE=${ALL_VAULT_UPDATE}
       - EMIT_METRICS=true
       - METRICS_ONLY=true
+      - RUN_MIGRATION=false
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5

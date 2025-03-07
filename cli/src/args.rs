@@ -145,6 +145,8 @@ pub enum ProgramCommand {
         emit_metrics: bool,
         #[arg(long, env, help = "Only emit metrics")]
         metrics_only: bool,
+        #[arg(long, env, help = "Run migration")]
+        run_migration: bool,
     },
 
     /// Admin

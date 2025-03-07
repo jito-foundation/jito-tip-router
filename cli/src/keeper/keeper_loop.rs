@@ -79,6 +79,7 @@ pub async fn startup_keeper(
     all_vault_update: bool,
     emit_metrics: bool,
     metrics_only: bool,
+    run_migration: bool,
 ) -> Result<()> {
     let mut state: KeeperState = KeeperState::default();
     let mut epoch_stall = false;
@@ -149,7 +150,7 @@ pub async fn startup_keeper(
         }
 
         // Calls the migrate TDA Merkle Root
-        {
+        if run_migration {
             info!(
                 "\n\nB. Migrate TDA Merkle Root Upload Authorities - {}\n",
                 current_keeper_epoch
