@@ -3369,8 +3369,12 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
         "Migrating TDA Merkle Root Upload Authorities: {}",
         ixs.len()
     );
-    for ix in ixs {
-        let result = send_and_log_transaction(handler, &[ix], &[], "Migrated TDA", &[]).await;
+    for chunk in ixs.chunks(8) {
+        let tx_ixs = std::iter::once(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000))
+            .chain(chunk.iter().cloned())
+            .collect::<Vec<_>>();
+
+        let result = send_and_log_transaction(handler, &tx_ixs, &[], "Migrated TDA", &[]).await;
         if result.is_err() {
             log::error!(
                 "Failed to migrate TDA with error: {:?}",
