@@ -20,7 +20,7 @@ services:
       - ALL_VAULT_UPDATE=${ALL_VAULT_UPDATE}
       - EMIT_METRICS=false
       - METRICS_ONLY=false
-      - RUN_MIGRATION=true
+      - RUN_MIGRATION=false
       - TRANSACTION_RETRIES=2
     volumes:
       - ./credentials:/credentials
