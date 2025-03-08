@@ -191,30 +191,34 @@ pub async fn claim_mev_tips(
             return Ok(());
         }
 
-        all_claim_transactions.shuffle(&mut thread_rng());
-        let transactions: Vec<_> = all_claim_transactions.into_iter().take(300).collect();
+        for transactions in all_claim_transactions.chunks(2_000) {
+            let transactions: Vec<_> = transactions.iter().cloned().collect();
+            // only check balance for the ones we need to currently send since reclaim rent running in parallel
+            if let Some((start_balance, desired_balance, sol_to_deposit)) =
+                is_sufficient_balance(&keypair.pubkey(), &rpc_client, transactions.len() as u64)
+                    .await
+            {
+                return Err(ClaimMevError::InsufficientBalance {
+                    desired_balance,
+                    payer: keypair.pubkey(),
+                    start_balance,
+                    sol_to_deposit,
+                });
+            }
 
-        // only check balance for the ones we need to currently send since reclaim rent running in parallel
-        if let Some((start_balance, desired_balance, sol_to_deposit)) =
-            is_sufficient_balance(&keypair.pubkey(), &rpc_client, transactions.len() as u64).await
-        {
-            return Err(ClaimMevError::InsufficientBalance {
-                desired_balance,
-                payer: keypair.pubkey(),
-                start_balance,
-                sol_to_deposit,
-            });
+            let blockhash = rpc_client.get_latest_blockhash().await?;
+            if let Err(e) = send_until_blockhash_expires(
+                &rpc_client,
+                &rpc_sender_client,
+                transactions,
+                blockhash,
+                keypair,
+            )
+            .await
+            {
+                info!("send_until_blockhash_expires failed: {:?}", e);
+            }
         }
-
-        let blockhash = rpc_client.get_latest_blockhash().await?;
-        let _ = send_until_blockhash_expires(
-            &rpc_client,
-            &rpc_sender_client,
-            transactions,
-            blockhash,
-            keypair,
-        )
-        .await;
     }
 
     let transactions = get_claim_transactions_for_valid_unclaimed(
