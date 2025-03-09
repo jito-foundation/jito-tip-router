@@ -143,7 +143,7 @@ impl BackupSnapshotMonitor {
                 let before_target_slot = snap.end_slot <= target_slot;
                 let in_same_epoch = (snap.end_slot / DEFAULT_SLOTS_PER_EPOCH)
                     == (target_slot / DEFAULT_SLOTS_PER_EPOCH);
-                before_target_slot && in_same_epoch
+                snap.is_incremental() && before_target_slot && in_same_epoch
             })
             .max_by_key(|snap| snap.end_slot)
             .map(|snap| snap.path)
