@@ -50,6 +50,7 @@ export type SnapshotVaultOperatorDelegationInstruction<
   TAccountVaultOperatorDelegation extends
     | string
     | IAccountMeta<string> = string,
+  TAccountOperatorVaultTicket extends string | IAccountMeta<string> = string,
   TAccountWeightTable extends string | IAccountMeta<string> = string,
   TAccountEpochSnapshot extends string | IAccountMeta<string> = string,
   TAccountOperatorSnapshot extends string | IAccountMeta<string> = string,
@@ -83,6 +84,9 @@ export type SnapshotVaultOperatorDelegationInstruction<
       TAccountVaultOperatorDelegation extends string
         ? ReadonlyAccount<TAccountVaultOperatorDelegation>
         : TAccountVaultOperatorDelegation,
+      TAccountOperatorVaultTicket extends string
+        ? ReadonlyAccount<TAccountOperatorVaultTicket>
+        : TAccountOperatorVaultTicket,
       TAccountWeightTable extends string
         ? ReadonlyAccount<TAccountWeightTable>
         : TAccountWeightTable,
@@ -145,6 +149,7 @@ export type SnapshotVaultOperatorDelegationInput<
   TAccountVaultNcnTicket extends string = string,
   TAccountNcnVaultTicket extends string = string,
   TAccountVaultOperatorDelegation extends string = string,
+  TAccountOperatorVaultTicket extends string = string,
   TAccountWeightTable extends string = string,
   TAccountEpochSnapshot extends string = string,
   TAccountOperatorSnapshot extends string = string,
@@ -158,6 +163,7 @@ export type SnapshotVaultOperatorDelegationInput<
   vaultNcnTicket: Address<TAccountVaultNcnTicket>;
   ncnVaultTicket: Address<TAccountNcnVaultTicket>;
   vaultOperatorDelegation: Address<TAccountVaultOperatorDelegation>;
+  operatorVaultTicket: Address<TAccountOperatorVaultTicket>;
   weightTable: Address<TAccountWeightTable>;
   epochSnapshot: Address<TAccountEpochSnapshot>;
   operatorSnapshot: Address<TAccountOperatorSnapshot>;
@@ -174,6 +180,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
   TAccountVaultNcnTicket extends string,
   TAccountNcnVaultTicket extends string,
   TAccountVaultOperatorDelegation extends string,
+  TAccountOperatorVaultTicket extends string,
   TAccountWeightTable extends string,
   TAccountEpochSnapshot extends string,
   TAccountOperatorSnapshot extends string,
@@ -189,6 +196,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
     TAccountVaultNcnTicket,
     TAccountNcnVaultTicket,
     TAccountVaultOperatorDelegation,
+    TAccountOperatorVaultTicket,
     TAccountWeightTable,
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot
@@ -205,6 +213,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
   TAccountVaultNcnTicket,
   TAccountNcnVaultTicket,
   TAccountVaultOperatorDelegation,
+  TAccountOperatorVaultTicket,
   TAccountWeightTable,
   TAccountEpochSnapshot,
   TAccountOperatorSnapshot
@@ -228,6 +237,10 @@ export function getSnapshotVaultOperatorDelegationInstruction<
     ncnVaultTicket: { value: input.ncnVaultTicket ?? null, isWritable: false },
     vaultOperatorDelegation: {
       value: input.vaultOperatorDelegation ?? null,
+      isWritable: false,
+    },
+    operatorVaultTicket: {
+      value: input.operatorVaultTicket ?? null,
       isWritable: false,
     },
     weightTable: { value: input.weightTable ?? null, isWritable: false },
@@ -257,6 +270,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
       getAccountMeta(accounts.vaultNcnTicket),
       getAccountMeta(accounts.ncnVaultTicket),
       getAccountMeta(accounts.vaultOperatorDelegation),
+      getAccountMeta(accounts.operatorVaultTicket),
       getAccountMeta(accounts.weightTable),
       getAccountMeta(accounts.epochSnapshot),
       getAccountMeta(accounts.operatorSnapshot),
@@ -276,6 +290,7 @@ export function getSnapshotVaultOperatorDelegationInstruction<
     TAccountVaultNcnTicket,
     TAccountNcnVaultTicket,
     TAccountVaultOperatorDelegation,
+    TAccountOperatorVaultTicket,
     TAccountWeightTable,
     TAccountEpochSnapshot,
     TAccountOperatorSnapshot
@@ -299,9 +314,10 @@ export type ParsedSnapshotVaultOperatorDelegationInstruction<
     vaultNcnTicket: TAccountMetas[6];
     ncnVaultTicket: TAccountMetas[7];
     vaultOperatorDelegation: TAccountMetas[8];
-    weightTable: TAccountMetas[9];
-    epochSnapshot: TAccountMetas[10];
-    operatorSnapshot: TAccountMetas[11];
+    operatorVaultTicket: TAccountMetas[9];
+    weightTable: TAccountMetas[10];
+    epochSnapshot: TAccountMetas[11];
+    operatorSnapshot: TAccountMetas[12];
   };
   data: SnapshotVaultOperatorDelegationInstructionData;
 };
@@ -314,7 +330,7 @@ export function parseSnapshotVaultOperatorDelegationInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedSnapshotVaultOperatorDelegationInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 12) {
+  if (instruction.accounts.length < 13) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -336,6 +352,7 @@ export function parseSnapshotVaultOperatorDelegationInstruction<
       vaultNcnTicket: getNextAccount(),
       ncnVaultTicket: getNextAccount(),
       vaultOperatorDelegation: getNextAccount(),
+      operatorVaultTicket: getNextAccount(),
       weightTable: getNextAccount(),
       epochSnapshot: getNextAccount(),
       operatorSnapshot: getNextAccount(),

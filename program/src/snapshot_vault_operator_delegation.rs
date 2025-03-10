@@ -1,6 +1,7 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{
     config::Config, ncn::Ncn, ncn_vault_ticket::NcnVaultTicket, operator::Operator,
+    operator_vault_ticket::OperatorVaultTicket,
 };
 use jito_tip_router_core::{
     config::Config as NcnConfig,
@@ -25,7 +26,7 @@ pub fn process_snapshot_vault_operator_delegation(
     accounts: &[AccountInfo],
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, weight_table, epoch_snapshot, operator_snapshot] =
+    let [epoch_state, ncn_config, restaking_config, ncn, operator, vault, vault_ncn_ticket, ncn_vault_ticket, vault_operator_delegation, operator_vault_ticket, weight_table, epoch_snapshot, operator_snapshot] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -37,6 +38,13 @@ pub fn process_snapshot_vault_operator_delegation(
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     Operator::load(&jito_restaking_program::id(), operator, false)?;
     Vault::load(&jito_vault_program::id(), vault, false)?;
+    OperatorVaultTicket::load(
+        &jito_restaking_program::id(),
+        operator_vault_ticket,
+        operator,
+        vault,
+        false,
+    )?;
 
     NcnVaultTicket::load(
         &jito_restaking_program::id(),
