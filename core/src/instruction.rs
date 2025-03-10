@@ -164,9 +164,10 @@ pub enum TipRouterInstruction {
     #[account(6, name = "vault_ncn_ticket")]
     #[account(7, name = "ncn_vault_ticket")]
     #[account(8, name = "vault_operator_delegation")]
-    #[account(9, name = "weight_table")]
-    #[account(10, writable, name = "epoch_snapshot")]
-    #[account(11, writable, name = "operator_snapshot")]
+    #[account(9, name = "operator_vault_ticket")]
+    #[account(10, name = "weight_table")]
+    #[account(11, writable, name = "epoch_snapshot")]
+    #[account(12, writable, name = "operator_snapshot")]
     SnapshotVaultOperatorDelegation{
         epoch: u64,
     },

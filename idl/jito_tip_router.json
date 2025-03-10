@@ -635,6 +635,11 @@
           "isSigner": false
         },
         {
+          "name": "operatorVaultTicket",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "weightTable",
           "isMut": false,
           "isSigner": false
