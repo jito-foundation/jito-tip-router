@@ -16,11 +16,13 @@ use crate::{
     instructions::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
         admin_set_config_fees, admin_set_new_admin, admin_set_parameters, admin_set_weight,
-        crank_switchboard, create_and_add_test_operator, create_and_add_test_vault,
+        crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
+        crank_snapshot, crank_switchboard, create_and_add_test_operator, create_and_add_test_vault,
         create_ballot_box, create_base_reward_router, create_epoch_snapshot, create_epoch_state,
         create_ncn_reward_router, create_operator_snapshot, create_test_ncn, create_vault_registry,
         create_weight_table, distribute_base_ncn_rewards, full_vault_update, register_vault,
         route_base_rewards, route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
+        update_all_vaults_in_network,
     },
     keeper::keeper_loop::startup_keeper,
 };
@@ -156,6 +158,16 @@ impl CliHandler {
                     run_migration,
                 )
                 .await
+            }
+            // Cranks
+            ProgramCommand::CrankRegisterVaults {} => crank_register_vaults(self).await,
+            ProgramCommand::CrankUpdateAllVaults {} => update_all_vaults_in_network(self).await,
+
+            ProgramCommand::CrankSetWeight {} => crank_set_weight(self, self.epoch).await,
+            ProgramCommand::CrankSnapshot {} => crank_snapshot(self, self.epoch).await,
+            ProgramCommand::CrankDistribute {} => crank_distribute(self, self.epoch).await,
+            ProgramCommand::CrankCloseEpochAccounts {} => {
+                crank_close_epoch_accounts(self, self.epoch).await
             }
 
             // Admin

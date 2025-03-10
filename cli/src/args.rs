@@ -148,6 +148,13 @@ pub enum ProgramCommand {
         #[arg(long, env, help = "Run migration")]
         run_migration: bool,
     },
+    /// Crank Functions
+    CrankUpdateAllVaults {},
+    CrankRegisterVaults {},
+    CrankSetWeight {},
+    CrankSnapshot {},
+    CrankDistribute {},
+    CrankCloseEpochAccounts {},
 
     /// Admin
     AdminCreateConfig {

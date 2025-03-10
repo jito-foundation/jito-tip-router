@@ -2811,15 +2811,6 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
     Ok(())
 }
 
-// --------------------- NCN SETUP ------------------------------
-
-//TODO create NCN
-//TODO create Operator
-//TODO add vault to NCN
-//TODO add operator to NCN
-//TODO remove vault from NCN
-//TODO remove operator from NCN
-
 // --------------------- TEST NCN --------------------------------
 
 pub async fn create_test_ncn(handler: &CliHandler) -> Result<()> {
