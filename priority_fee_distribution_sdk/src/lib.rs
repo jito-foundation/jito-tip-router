@@ -12,8 +12,8 @@ pub const TIP_DISTRIBUTION_SEED: &[u8] = b"TIP_DISTRIBUTION_ACCOUNT";
 pub const MERKLE_ROOT_UPLOAD_CONFIG_SEED: &[u8] = b"ROOT_UPLOAD_CONFIG";
 
 pub const HEADER_SIZE: usize = 8;
-pub const TIP_DISTRIBUTION_SIZE: usize =
-    HEADER_SIZE + std::mem::size_of::<jito_priority_fee_distribution::accounts::TipDistributionAccount>();
+pub const TIP_DISTRIBUTION_SIZE: usize = HEADER_SIZE
+    + std::mem::size_of::<jito_priority_fee_distribution::accounts::TipDistributionAccount>();
 pub const CLAIM_STATUS_SIZE: usize =
     HEADER_SIZE + std::mem::size_of::<jito_priority_fee_distribution::accounts::ClaimStatus>();
 pub const CONFIG_SIZE: usize =
@@ -34,7 +34,9 @@ pub fn derive_tip_distribution_account_address(
     )
 }
 
-pub fn derive_config_account_address(priority_fee_distribution_program_id: &Pubkey) -> (Pubkey, u8) {
+pub fn derive_config_account_address(
+    priority_fee_distribution_program_id: &Pubkey,
+) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[CONFIG_SEED], priority_fee_distribution_program_id)
 }
 

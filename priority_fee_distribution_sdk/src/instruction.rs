@@ -47,14 +47,15 @@ pub fn initialize_tip_distribution_account_ix(
 ) -> Instruction {
     Instruction {
         program_id: jito_priority_fee_distribution::ID,
-        accounts: jito_priority_fee_distribution::client::accounts::InitializeTipDistributionAccount {
-            config,
-            tip_distribution_account,
-            system_program,
-            validator_vote_account,
-            signer,
-        }
-        .to_account_metas(None),
+        accounts:
+            jito_priority_fee_distribution::client::accounts::InitializeTipDistributionAccount {
+                config,
+                tip_distribution_account,
+                system_program,
+                validator_vote_account,
+                signer,
+            }
+            .to_account_metas(None),
         data: jito_priority_fee_distribution::client::args::InitializeTipDistributionAccount {
             merkle_root_upload_authority,
             validator_commission_bps,
@@ -146,11 +147,13 @@ pub fn migrate_tda_merkle_root_upload_authority_ix(
 ) -> Instruction {
     Instruction {
         program_id: jito_priority_fee_distribution::ID,
-        accounts: jito_priority_fee_distribution::client::accounts::MigrateTdaMerkleRootUploadAuthority {
-            tip_distribution_account,
-            merkle_root_upload_config,
-        }
-        .to_account_metas(None),
-        data: jito_priority_fee_distribution::client::args::MigrateTdaMerkleRootUploadAuthority {}.data(),
+        accounts:
+            jito_priority_fee_distribution::client::accounts::MigrateTdaMerkleRootUploadAuthority {
+                tip_distribution_account,
+                merkle_root_upload_config,
+            }
+            .to_account_metas(None),
+        data: jito_priority_fee_distribution::client::args::MigrateTdaMerkleRootUploadAuthority {}
+            .data(),
     }
 }

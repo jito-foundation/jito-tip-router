@@ -3760,6 +3760,7 @@ dependencies = [
  "bytemuck",
  "jito-bytemuck",
  "jito-jsm-core",
+ "jito-priority-fee-distribution-sdk",
  "jito-restaking-core",
  "jito-restaking-program",
  "jito-restaking-sdk",
