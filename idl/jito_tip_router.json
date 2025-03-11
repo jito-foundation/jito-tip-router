@@ -904,6 +904,89 @@
       }
     },
     {
+      "name": "SetPriorityFeeMerkleRoot",
+      "accounts": [
+        {
+          "name": "epochState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ballotBox",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "voteAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "priorityFeeDistributionProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "merkleRoot",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "maxTotalClaim",
+          "type": "u64"
+        },
+        {
+          "name": "maxNumNodes",
+          "type": "u64"
+        },
+        {
+          "name": "epoch",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 17
+      }
+    },
+    {
       "name": "InitializeBaseRewardRouter",
       "accounts": [
         {
@@ -950,7 +1033,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 17
+        "value": 18
       }
     },
     {
@@ -995,7 +1078,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 18
+        "value": 19
       }
     },
     {
@@ -1059,7 +1142,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 19
+        "value": 20
       }
     },
     {
@@ -1113,7 +1196,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 20
+        "value": 21
       }
     },
     {
@@ -1166,7 +1249,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 21
+        "value": 22
       }
     },
     {
@@ -1265,7 +1348,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 22
+        "value": 23
       }
     },
     {
@@ -1329,7 +1412,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 23
+        "value": 24
       }
     },
     {
@@ -1433,7 +1516,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 24
+        "value": 25
       }
     },
     {
@@ -1542,7 +1625,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 25
+        "value": 26
       }
     },
     {
@@ -1617,7 +1700,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 26
+        "value": 27
       }
     },
     {
@@ -1678,7 +1761,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 27
+        "value": 28
       }
     },
     {
@@ -1728,7 +1811,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 28
+        "value": 29
       }
     },
     {
@@ -1790,7 +1873,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 29
+        "value": 30
       }
     },
     {
@@ -1827,7 +1910,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 30
+        "value": 31
       }
     },
     {
@@ -1876,7 +1959,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 31
+        "value": 32
       }
     },
     {
@@ -1919,7 +2002,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 32
+        "value": 33
       }
     },
     {
@@ -1975,7 +2058,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 33
+        "value": 34
       }
     },
     {
@@ -2034,7 +2117,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 34
+        "value": 35
       }
     }
   ],

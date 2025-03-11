@@ -29,7 +29,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const CLOSE_EPOCH_ACCOUNT_DISCRIMINATOR = 27;
+export const CLOSE_EPOCH_ACCOUNT_DISCRIMINATOR = 28;
 
 export function getCloseEpochAccountDiscriminatorBytes() {
   return getU8Encoder().encode(CLOSE_EPOCH_ACCOUNT_DISCRIMINATOR);

@@ -39,5 +39,6 @@ export * from './registerVault';
 export * from './routeBaseRewards';
 export * from './routeNcnRewards';
 export * from './setMerkleRoot';
+export * from './setPriorityFeeMerkleRoot';
 export * from './snapshotVaultOperatorDelegation';
 export * from './switchboardSetWeight';

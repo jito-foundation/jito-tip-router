@@ -9,45 +9,43 @@ use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 
 /// Accounts.
-pub struct DistributeBaseNcnRewardRoute {
+pub struct SetPriorityFeeMerkleRoot {
     pub epoch_state: solana_program::pubkey::Pubkey,
 
     pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub operator: solana_program::pubkey::Pubkey,
+    pub ballot_box: solana_program::pubkey::Pubkey,
 
-    pub base_reward_router: solana_program::pubkey::Pubkey,
+    pub vote_account: solana_program::pubkey::Pubkey,
 
-    pub base_reward_receiver: solana_program::pubkey::Pubkey,
+    pub tip_distribution_account: solana_program::pubkey::Pubkey,
 
-    pub ncn_reward_router: solana_program::pubkey::Pubkey,
+    pub tip_distribution_config: solana_program::pubkey::Pubkey,
 
-    pub ncn_reward_receiver: solana_program::pubkey::Pubkey,
-
-    pub system_program: solana_program::pubkey::Pubkey,
+    pub priority_fee_distribution_program: solana_program::pubkey::Pubkey,
 }
 
-impl DistributeBaseNcnRewardRoute {
+impl SetPriorityFeeMerkleRoot {
     pub fn instruction(
         &self,
-        args: DistributeBaseNcnRewardRouteInstructionArgs,
+        args: SetPriorityFeeMerkleRootInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: DistributeBaseNcnRewardRouteInstructionArgs,
+        args: SetPriorityFeeMerkleRootInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.epoch_state,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        accounts.push(solana_program::instruction::AccountMeta::new(
             self.config,
             false,
         ));
@@ -55,31 +53,27 @@ impl DistributeBaseNcnRewardRoute {
             self.ncn, false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.operator,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.base_reward_router,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.base_reward_receiver,
+            self.ballot_box,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.ncn_reward_router,
+            self.vote_account,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.ncn_reward_receiver,
+            self.tip_distribution_account,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.system_program,
+            self.tip_distribution_config,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.priority_fee_distribution_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = DistributeBaseNcnRewardRouteInstructionData::new()
+        let mut data = SetPriorityFeeMerkleRootInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -94,17 +88,17 @@ impl DistributeBaseNcnRewardRoute {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct DistributeBaseNcnRewardRouteInstructionData {
+pub struct SetPriorityFeeMerkleRootInstructionData {
     discriminator: u8,
 }
 
-impl DistributeBaseNcnRewardRouteInstructionData {
+impl SetPriorityFeeMerkleRootInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 24 }
+        Self { discriminator: 17 }
     }
 }
 
-impl Default for DistributeBaseNcnRewardRouteInstructionData {
+impl Default for SetPriorityFeeMerkleRootInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -112,41 +106,45 @@ impl Default for DistributeBaseNcnRewardRouteInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DistributeBaseNcnRewardRouteInstructionArgs {
-    pub ncn_fee_group: u8,
+pub struct SetPriorityFeeMerkleRootInstructionArgs {
+    pub proof: Vec<[u8; 32]>,
+    pub merkle_root: [u8; 32],
+    pub max_total_claim: u64,
+    pub max_num_nodes: u64,
     pub epoch: u64,
 }
 
-/// Instruction builder for `DistributeBaseNcnRewardRoute`.
+/// Instruction builder for `SetPriorityFeeMerkleRoot`.
 ///
 /// ### Accounts:
 ///
 ///   0. `[writable]` epoch_state
-///   1. `[]` config
+///   1. `[writable]` config
 ///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[writable]` base_reward_router
-///   5. `[writable]` base_reward_receiver
-///   6. `[]` ncn_reward_router
-///   7. `[writable]` ncn_reward_receiver
-///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   3. `[]` ballot_box
+///   4. `[]` vote_account
+///   5. `[writable]` tip_distribution_account
+///   6. `[]` tip_distribution_config
+///   7. `[]` priority_fee_distribution_program
 #[derive(Clone, Debug, Default)]
-pub struct DistributeBaseNcnRewardRouteBuilder {
+pub struct SetPriorityFeeMerkleRootBuilder {
     epoch_state: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    operator: Option<solana_program::pubkey::Pubkey>,
-    base_reward_router: Option<solana_program::pubkey::Pubkey>,
-    base_reward_receiver: Option<solana_program::pubkey::Pubkey>,
-    ncn_reward_router: Option<solana_program::pubkey::Pubkey>,
-    ncn_reward_receiver: Option<solana_program::pubkey::Pubkey>,
-    system_program: Option<solana_program::pubkey::Pubkey>,
-    ncn_fee_group: Option<u8>,
+    ballot_box: Option<solana_program::pubkey::Pubkey>,
+    vote_account: Option<solana_program::pubkey::Pubkey>,
+    tip_distribution_account: Option<solana_program::pubkey::Pubkey>,
+    tip_distribution_config: Option<solana_program::pubkey::Pubkey>,
+    priority_fee_distribution_program: Option<solana_program::pubkey::Pubkey>,
+    proof: Option<Vec<[u8; 32]>>,
+    merkle_root: Option<[u8; 32]>,
+    max_total_claim: Option<u64>,
+    max_num_nodes: Option<u64>,
     epoch: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl DistributeBaseNcnRewardRouteBuilder {
+impl SetPriorityFeeMerkleRootBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -166,51 +164,57 @@ impl DistributeBaseNcnRewardRouteBuilder {
         self
     }
     #[inline(always)]
-    pub fn operator(&mut self, operator: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.operator = Some(operator);
+    pub fn ballot_box(&mut self, ballot_box: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.ballot_box = Some(ballot_box);
         self
     }
     #[inline(always)]
-    pub fn base_reward_router(
+    pub fn vote_account(&mut self, vote_account: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.vote_account = Some(vote_account);
+        self
+    }
+    #[inline(always)]
+    pub fn tip_distribution_account(
         &mut self,
-        base_reward_router: solana_program::pubkey::Pubkey,
+        tip_distribution_account: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.base_reward_router = Some(base_reward_router);
+        self.tip_distribution_account = Some(tip_distribution_account);
         self
     }
     #[inline(always)]
-    pub fn base_reward_receiver(
+    pub fn tip_distribution_config(
         &mut self,
-        base_reward_receiver: solana_program::pubkey::Pubkey,
+        tip_distribution_config: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.base_reward_receiver = Some(base_reward_receiver);
+        self.tip_distribution_config = Some(tip_distribution_config);
         self
     }
     #[inline(always)]
-    pub fn ncn_reward_router(
+    pub fn priority_fee_distribution_program(
         &mut self,
-        ncn_reward_router: solana_program::pubkey::Pubkey,
+        priority_fee_distribution_program: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.ncn_reward_router = Some(ncn_reward_router);
+        self.priority_fee_distribution_program = Some(priority_fee_distribution_program);
         self
     }
     #[inline(always)]
-    pub fn ncn_reward_receiver(
-        &mut self,
-        ncn_reward_receiver: solana_program::pubkey::Pubkey,
-    ) -> &mut Self {
-        self.ncn_reward_receiver = Some(ncn_reward_receiver);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.system_program = Some(system_program);
+    pub fn proof(&mut self, proof: Vec<[u8; 32]>) -> &mut Self {
+        self.proof = Some(proof);
         self
     }
     #[inline(always)]
-    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
-        self.ncn_fee_group = Some(ncn_fee_group);
+    pub fn merkle_root(&mut self, merkle_root: [u8; 32]) -> &mut Self {
+        self.merkle_root = Some(merkle_root);
+        self
+    }
+    #[inline(always)]
+    pub fn max_total_claim(&mut self, max_total_claim: u64) -> &mut Self {
+        self.max_total_claim = Some(max_total_claim);
+        self
+    }
+    #[inline(always)]
+    pub fn max_num_nodes(&mut self, max_num_nodes: u64) -> &mut Self {
+        self.max_num_nodes = Some(max_num_nodes);
         self
     }
     #[inline(always)]
@@ -238,32 +242,33 @@ impl DistributeBaseNcnRewardRouteBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = DistributeBaseNcnRewardRoute {
+        let accounts = SetPriorityFeeMerkleRoot {
             epoch_state: self.epoch_state.expect("epoch_state is not set"),
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            operator: self.operator.expect("operator is not set"),
-            base_reward_router: self
-                .base_reward_router
-                .expect("base_reward_router is not set"),
-            base_reward_receiver: self
-                .base_reward_receiver
-                .expect("base_reward_receiver is not set"),
-            ncn_reward_router: self
-                .ncn_reward_router
-                .expect("ncn_reward_router is not set"),
-            ncn_reward_receiver: self
-                .ncn_reward_receiver
-                .expect("ncn_reward_receiver is not set"),
-            system_program: self
-                .system_program
-                .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
+            ballot_box: self.ballot_box.expect("ballot_box is not set"),
+            vote_account: self.vote_account.expect("vote_account is not set"),
+            tip_distribution_account: self
+                .tip_distribution_account
+                .expect("tip_distribution_account is not set"),
+            tip_distribution_config: self
+                .tip_distribution_config
+                .expect("tip_distribution_config is not set"),
+            priority_fee_distribution_program: self
+                .priority_fee_distribution_program
+                .expect("priority_fee_distribution_program is not set"),
         };
-        let args = DistributeBaseNcnRewardRouteInstructionArgs {
-            ncn_fee_group: self
-                .ncn_fee_group
+        let args = SetPriorityFeeMerkleRootInstructionArgs {
+            proof: self.proof.clone().expect("proof is not set"),
+            merkle_root: self.merkle_root.clone().expect("merkle_root is not set"),
+            max_total_claim: self
+                .max_total_claim
                 .clone()
-                .expect("ncn_fee_group is not set"),
+                .expect("max_total_claim is not set"),
+            max_num_nodes: self
+                .max_num_nodes
+                .clone()
+                .expect("max_num_nodes is not set"),
             epoch: self.epoch.clone().expect("epoch is not set"),
         };
 
@@ -271,29 +276,27 @@ impl DistributeBaseNcnRewardRouteBuilder {
     }
 }
 
-/// `distribute_base_ncn_reward_route` CPI accounts.
-pub struct DistributeBaseNcnRewardRouteCpiAccounts<'a, 'b> {
+/// `set_priority_fee_merkle_root` CPI accounts.
+pub struct SetPriorityFeeMerkleRootCpiAccounts<'a, 'b> {
     pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vote_account: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub base_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
+    pub tip_distribution_account: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+    pub tip_distribution_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
+    pub priority_fee_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `distribute_base_ncn_reward_route` CPI instruction.
-pub struct DistributeBaseNcnRewardRouteCpi<'a, 'b> {
+/// `set_priority_fee_merkle_root` CPI instruction.
+pub struct SetPriorityFeeMerkleRootCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -303,38 +306,35 @@ pub struct DistributeBaseNcnRewardRouteCpi<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub operator: &'b solana_program::account_info::AccountInfo<'a>,
+    pub ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vote_account: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub base_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
+    pub tip_distribution_account: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+    pub tip_distribution_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub ncn_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
+    pub priority_fee_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: DistributeBaseNcnRewardRouteInstructionArgs,
+    pub __args: SetPriorityFeeMerkleRootInstructionArgs,
 }
 
-impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
+impl<'a, 'b> SetPriorityFeeMerkleRootCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: DistributeBaseNcnRewardRouteCpiAccounts<'a, 'b>,
-        args: DistributeBaseNcnRewardRouteInstructionArgs,
+        accounts: SetPriorityFeeMerkleRootCpiAccounts<'a, 'b>,
+        args: SetPriorityFeeMerkleRootInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
             epoch_state: accounts.epoch_state,
             config: accounts.config,
             ncn: accounts.ncn,
-            operator: accounts.operator,
-            base_reward_router: accounts.base_reward_router,
-            base_reward_receiver: accounts.base_reward_receiver,
-            ncn_reward_router: accounts.ncn_reward_router,
-            ncn_reward_receiver: accounts.ncn_reward_receiver,
-            system_program: accounts.system_program,
+            ballot_box: accounts.ballot_box,
+            vote_account: accounts.vote_account,
+            tip_distribution_account: accounts.tip_distribution_account,
+            tip_distribution_config: accounts.tip_distribution_config,
+            priority_fee_distribution_program: accounts.priority_fee_distribution_program,
             __args: args,
         }
     }
@@ -371,12 +371,12 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.epoch_state.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        accounts.push(solana_program::instruction::AccountMeta::new(
             *self.config.key,
             false,
         ));
@@ -385,27 +385,23 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.operator.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.base_reward_router.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.base_reward_receiver.key,
+            *self.ballot_box.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.ncn_reward_router.key,
+            *self.vote_account.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.ncn_reward_receiver.key,
+            *self.tip_distribution_account.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.system_program.key,
+            *self.tip_distribution_config.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.priority_fee_distribution_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -415,7 +411,7 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = DistributeBaseNcnRewardRouteInstructionData::new()
+        let mut data = SetPriorityFeeMerkleRootInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
@@ -426,17 +422,16 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(9 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(8 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.epoch_state.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.operator.clone());
-        account_infos.push(self.base_reward_router.clone());
-        account_infos.push(self.base_reward_receiver.clone());
-        account_infos.push(self.ncn_reward_router.clone());
-        account_infos.push(self.ncn_reward_receiver.clone());
-        account_infos.push(self.system_program.clone());
+        account_infos.push(self.ballot_box.clone());
+        account_infos.push(self.vote_account.clone());
+        account_infos.push(self.tip_distribution_account.clone());
+        account_infos.push(self.tip_distribution_config.clone());
+        account_infos.push(self.priority_fee_distribution_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -449,38 +444,39 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `DistributeBaseNcnRewardRoute` via CPI.
+/// Instruction builder for `SetPriorityFeeMerkleRoot` via CPI.
 ///
 /// ### Accounts:
 ///
 ///   0. `[writable]` epoch_state
-///   1. `[]` config
+///   1. `[writable]` config
 ///   2. `[]` ncn
-///   3. `[]` operator
-///   4. `[writable]` base_reward_router
-///   5. `[writable]` base_reward_receiver
-///   6. `[]` ncn_reward_router
-///   7. `[writable]` ncn_reward_receiver
-///   8. `[]` system_program
+///   3. `[]` ballot_box
+///   4. `[]` vote_account
+///   5. `[writable]` tip_distribution_account
+///   6. `[]` tip_distribution_config
+///   7. `[]` priority_fee_distribution_program
 #[derive(Clone, Debug)]
-pub struct DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
-    instruction: Box<DistributeBaseNcnRewardRouteCpiBuilderInstruction<'a, 'b>>,
+pub struct SetPriorityFeeMerkleRootCpiBuilder<'a, 'b> {
+    instruction: Box<SetPriorityFeeMerkleRootCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
+impl<'a, 'b> SetPriorityFeeMerkleRootCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(DistributeBaseNcnRewardRouteCpiBuilderInstruction {
+        let instruction = Box::new(SetPriorityFeeMerkleRootCpiBuilderInstruction {
             __program: program,
             epoch_state: None,
             config: None,
             ncn: None,
-            operator: None,
-            base_reward_router: None,
-            base_reward_receiver: None,
-            ncn_reward_router: None,
-            ncn_reward_receiver: None,
-            system_program: None,
-            ncn_fee_group: None,
+            ballot_box: None,
+            vote_account: None,
+            tip_distribution_account: None,
+            tip_distribution_config: None,
+            priority_fee_distribution_program: None,
+            proof: None,
+            merkle_root: None,
+            max_total_claim: None,
+            max_num_nodes: None,
             epoch: None,
             __remaining_accounts: Vec::new(),
         });
@@ -508,56 +504,64 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn operator(
+    pub fn ballot_box(
         &mut self,
-        operator: &'b solana_program::account_info::AccountInfo<'a>,
+        ballot_box: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.operator = Some(operator);
+        self.instruction.ballot_box = Some(ballot_box);
         self
     }
     #[inline(always)]
-    pub fn base_reward_router(
+    pub fn vote_account(
         &mut self,
-        base_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+        vote_account: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.base_reward_router = Some(base_reward_router);
+        self.instruction.vote_account = Some(vote_account);
         self
     }
     #[inline(always)]
-    pub fn base_reward_receiver(
+    pub fn tip_distribution_account(
         &mut self,
-        base_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
+        tip_distribution_account: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.base_reward_receiver = Some(base_reward_receiver);
+        self.instruction.tip_distribution_account = Some(tip_distribution_account);
         self
     }
     #[inline(always)]
-    pub fn ncn_reward_router(
+    pub fn tip_distribution_config(
         &mut self,
-        ncn_reward_router: &'b solana_program::account_info::AccountInfo<'a>,
+        tip_distribution_config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_reward_router = Some(ncn_reward_router);
+        self.instruction.tip_distribution_config = Some(tip_distribution_config);
         self
     }
     #[inline(always)]
-    pub fn ncn_reward_receiver(
+    pub fn priority_fee_distribution_program(
         &mut self,
-        ncn_reward_receiver: &'b solana_program::account_info::AccountInfo<'a>,
+        priority_fee_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.ncn_reward_receiver = Some(ncn_reward_receiver);
+        self.instruction.priority_fee_distribution_program =
+            Some(priority_fee_distribution_program);
         self
     }
     #[inline(always)]
-    pub fn system_program(
-        &mut self,
-        system_program: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.system_program = Some(system_program);
+    pub fn proof(&mut self, proof: Vec<[u8; 32]>) -> &mut Self {
+        self.instruction.proof = Some(proof);
         self
     }
     #[inline(always)]
-    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
-        self.instruction.ncn_fee_group = Some(ncn_fee_group);
+    pub fn merkle_root(&mut self, merkle_root: [u8; 32]) -> &mut Self {
+        self.instruction.merkle_root = Some(merkle_root);
+        self
+    }
+    #[inline(always)]
+    pub fn max_total_claim(&mut self, max_total_claim: u64) -> &mut Self {
+        self.instruction.max_total_claim = Some(max_total_claim);
+        self
+    }
+    #[inline(always)]
+    pub fn max_num_nodes(&mut self, max_num_nodes: u64) -> &mut Self {
+        self.instruction.max_num_nodes = Some(max_num_nodes);
         self
     }
     #[inline(always)]
@@ -606,15 +610,26 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = DistributeBaseNcnRewardRouteInstructionArgs {
-            ncn_fee_group: self
+        let args = SetPriorityFeeMerkleRootInstructionArgs {
+            proof: self.instruction.proof.clone().expect("proof is not set"),
+            merkle_root: self
                 .instruction
-                .ncn_fee_group
+                .merkle_root
                 .clone()
-                .expect("ncn_fee_group is not set"),
+                .expect("merkle_root is not set"),
+            max_total_claim: self
+                .instruction
+                .max_total_claim
+                .clone()
+                .expect("max_total_claim is not set"),
+            max_num_nodes: self
+                .instruction
+                .max_num_nodes
+                .clone()
+                .expect("max_num_nodes is not set"),
             epoch: self.instruction.epoch.clone().expect("epoch is not set"),
         };
-        let instruction = DistributeBaseNcnRewardRouteCpi {
+        let instruction = SetPriorityFeeMerkleRootCpi {
             __program: self.instruction.__program,
 
             epoch_state: self
@@ -626,32 +641,27 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
 
-            operator: self.instruction.operator.expect("operator is not set"),
+            ballot_box: self.instruction.ballot_box.expect("ballot_box is not set"),
 
-            base_reward_router: self
+            vote_account: self
                 .instruction
-                .base_reward_router
-                .expect("base_reward_router is not set"),
+                .vote_account
+                .expect("vote_account is not set"),
 
-            base_reward_receiver: self
+            tip_distribution_account: self
                 .instruction
-                .base_reward_receiver
-                .expect("base_reward_receiver is not set"),
+                .tip_distribution_account
+                .expect("tip_distribution_account is not set"),
 
-            ncn_reward_router: self
+            tip_distribution_config: self
                 .instruction
-                .ncn_reward_router
-                .expect("ncn_reward_router is not set"),
+                .tip_distribution_config
+                .expect("tip_distribution_config is not set"),
 
-            ncn_reward_receiver: self
+            priority_fee_distribution_program: self
                 .instruction
-                .ncn_reward_receiver
-                .expect("ncn_reward_receiver is not set"),
-
-            system_program: self
-                .instruction
-                .system_program
-                .expect("system_program is not set"),
+                .priority_fee_distribution_program
+                .expect("priority_fee_distribution_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -662,18 +672,20 @@ impl<'a, 'b> DistributeBaseNcnRewardRouteCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct DistributeBaseNcnRewardRouteCpiBuilderInstruction<'a, 'b> {
+struct SetPriorityFeeMerkleRootCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    base_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    base_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_reward_router: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_reward_receiver: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_fee_group: Option<u8>,
+    ballot_box: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    vote_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    tip_distribution_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    tip_distribution_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    priority_fee_distribution_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    proof: Option<Vec<[u8; 32]>>,
+    merkle_root: Option<[u8; 32]>,
+    max_total_claim: Option<u64>,
+    max_num_nodes: Option<u64>,
     epoch: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(

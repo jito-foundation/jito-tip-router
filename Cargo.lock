@@ -3796,6 +3796,7 @@ dependencies = [
  "const_str_to_pubkey",
  "jito-bytemuck",
  "jito-jsm-core",
+ "jito-priority-fee-distribution-sdk",
  "jito-restaking-core",
  "jito-restaking-program",
  "jito-restaking-sdk",

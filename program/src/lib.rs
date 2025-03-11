@@ -31,6 +31,7 @@ mod register_vault;
 mod route_base_rewards;
 mod route_ncn_rewards;
 mod set_merkle_root;
+mod set_priority_fee_merkle_root;
 mod snapshot_vault_operator_delegation;
 mod switchboard_set_weight;
 
@@ -73,6 +74,7 @@ use crate::{
     realloc_weight_table::process_realloc_weight_table, register_vault::process_register_vault,
     route_base_rewards::process_route_base_rewards, route_ncn_rewards::process_route_ncn_rewards,
     set_merkle_root::process_set_merkle_root,
+    set_priority_fee_merkle_root::process_set_priority_fee_merkle_root,
     snapshot_vault_operator_delegation::process_snapshot_vault_operator_delegation,
     switchboard_set_weight::process_switchboard_set_weight,
 };
@@ -209,6 +211,24 @@ pub fn process_instruction(
         } => {
             msg!("Instruction: SetMerkleRoot");
             process_set_merkle_root(
+                program_id,
+                accounts,
+                proof,
+                merkle_root,
+                max_total_claim,
+                max_num_nodes,
+                epoch,
+            )
+        }
+        TipRouterInstruction::SetPriorityFeeMerkleRoot {
+            proof,
+            merkle_root,
+            max_total_claim,
+            max_num_nodes,
+            epoch,
+        } => {
+            msg!("Instruction: SetPriorityFeeMerkleRoot");
+            process_set_priority_fee_merkle_root(
                 program_id,
                 accounts,
                 proof,

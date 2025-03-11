@@ -38,6 +38,7 @@ pub(crate) mod r#register_vault;
 pub(crate) mod r#route_base_rewards;
 pub(crate) mod r#route_ncn_rewards;
 pub(crate) mod r#set_merkle_root;
+pub(crate) mod r#set_priority_fee_merkle_root;
 pub(crate) mod r#snapshot_vault_operator_delegation;
 pub(crate) mod r#switchboard_set_weight;
 
@@ -74,5 +75,6 @@ pub use self::r#register_vault::*;
 pub use self::r#route_base_rewards::*;
 pub use self::r#route_ncn_rewards::*;
 pub use self::r#set_merkle_root::*;
+pub use self::r#set_priority_fee_merkle_root::*;
 pub use self::r#snapshot_vault_operator_delegation::*;
 pub use self::r#switchboard_set_weight::*;

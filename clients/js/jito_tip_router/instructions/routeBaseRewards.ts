@@ -31,7 +31,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ROUTE_BASE_REWARDS_DISCRIMINATOR = 20;
+export const ROUTE_BASE_REWARDS_DISCRIMINATOR = 21;
 
 export function getRouteBaseRewardsDiscriminatorBytes() {
   return getU8Encoder().encode(ROUTE_BASE_REWARDS_DISCRIMINATOR);
