@@ -140,8 +140,9 @@ impl PriorityFeeDistributionClient {
     }
 
     pub async fn do_initialize(&mut self, authority: Pubkey) -> TestResult<()> {
-        let (config, bump) =
-            jito_priority_fee_distribution_sdk::derive_config_account_address(&jito_priority_fee_distribution::ID);
+        let (config, bump) = jito_priority_fee_distribution_sdk::derive_config_account_address(
+            &jito_priority_fee_distribution::ID,
+        );
         let system_program = solana_program::system_program::id();
         let initializer = self.payer.pubkey();
         let expired_funds_account = authority;
@@ -200,8 +201,9 @@ impl PriorityFeeDistributionClient {
         epoch: u64,
         validator_commission_bps: u16,
     ) -> TestResult<()> {
-        let (config, _) =
-            jito_priority_fee_distribution_sdk::derive_config_account_address(&jito_priority_fee_distribution::ID);
+        let (config, _) = jito_priority_fee_distribution_sdk::derive_config_account_address(
+            &jito_priority_fee_distribution::ID,
+        );
         let system_program = solana_program::system_program::id();
         let validator_vote_account = vote_keypair.pubkey();
         self.airdrop(&validator_vote_account, 1.0).await?;
@@ -234,16 +236,17 @@ impl PriorityFeeDistributionClient {
         validator_vote_account: Pubkey,
         bump: u8,
     ) -> TestResult<()> {
-        let ix = jito_priority_fee_distribution_sdk::instruction::initialize_tip_distribution_account_ix(
-            config,
-            tip_distribution_account,
-            system_program,
-            validator_vote_account,
-            self.payer.pubkey(),
-            merkle_root_upload_authority,
-            validator_commission_bps,
-            bump,
-        );
+        let ix =
+            jito_priority_fee_distribution_sdk::instruction::initialize_tip_distribution_account_ix(
+                config,
+                tip_distribution_account,
+                system_program,
+                validator_vote_account,
+                self.payer.pubkey(),
+                merkle_root_upload_authority,
+                validator_commission_bps,
+                bump,
+            );
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;
         self.process_transaction(&Transaction::new_signed_with_payer(
@@ -264,8 +267,9 @@ impl PriorityFeeDistributionClient {
         epoch: u64,
         merkle_root_upload_authority: Pubkey,
     ) -> TestResult<()> {
-        let (config, _) =
-            jito_priority_fee_distribution_sdk::derive_config_account_address(&jito_priority_fee_distribution::ID);
+        let (config, _) = jito_priority_fee_distribution_sdk::derive_config_account_address(
+            &jito_priority_fee_distribution::ID,
+        );
         let system_program = solana_program::system_program::id();
         let (tip_distribution_account, _) =
             jito_priority_fee_distribution_sdk::derive_tip_distribution_account_address(

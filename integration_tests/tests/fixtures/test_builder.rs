@@ -35,7 +35,12 @@ use solana_sdk::{
 use spl_stake_pool::find_withdraw_authority_program_address;
 
 use super::{
-    generated_switchboard_accounts::get_switchboard_accounts, priority_fee_distribution_client::PriorityFeeDistributionClient, restaking_client::NcnRoot, stake_pool_client::{PoolRoot, StakePoolClient}, tip_distribution_client::TipDistributionClient, tip_router_client::TipRouterClient
+    generated_switchboard_accounts::get_switchboard_accounts,
+    priority_fee_distribution_client::PriorityFeeDistributionClient,
+    restaking_client::NcnRoot,
+    stake_pool_client::{PoolRoot, StakePoolClient},
+    tip_distribution_client::TipDistributionClient,
+    tip_router_client::TipRouterClient,
 };
 use crate::fixtures::{
     restaking_client::{OperatorRoot, RestakingProgramClient},
