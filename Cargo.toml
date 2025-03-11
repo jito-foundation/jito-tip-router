@@ -4,10 +4,12 @@ members = [
     "clients/rust/jito_tip_router",
     "core",
     "integration_tests",
+    "priority_fee_distribution_sdk",
     "program",
     "shank_cli",
     "tip-router-operator-cli",
-    "tip_distribution_sdk", "tip_payment_sdk",
+    "tip_distribution_sdk", 
+    "tip_payment_sdk",
 ]
 
 resolver = "2"
