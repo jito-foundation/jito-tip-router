@@ -1,10 +1,7 @@
-use jito_priority_fee_distribution_sdk::{instruction::claim_ix, jito_priority_fee_distribution};
-use jito_restaking_core::ncn::Ncn;
-use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
-    program_error::ProgramError, pubkey::Pubkey,
-};
+use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution;
+use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
+
+use crate::claim_with_payer::_process_claim_with_payer;
 
 pub fn process_claim_with_payer_priority_fee(
     program_id: &Pubkey,
@@ -13,67 +10,12 @@ pub fn process_claim_with_payer_priority_fee(
     amount: u64,
     bump: u8,
 ) -> ProgramResult {
-    let [account_payer, config, ncn, tip_distribution_config, tip_distribution_account, claim_status, claimant, tip_distribution_program, system_program] =
-        accounts
-    else {
-        return Err(ProgramError::NotEnoughAccountKeys);
-    };
-
-    // Verify claim status address
-    Ncn::load(&jito_restaking_program::id(), ncn, false)?;
-    Config::load(program_id, config, ncn.key, false)?;
-    AccountPayer::load(program_id, account_payer, ncn.key, true)?;
-
-    if tip_distribution_program
-        .key
-        .ne(&jito_priority_fee_distribution::ID)
-    {
-        msg!("Incorrect priority fee distribution program");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    let (_, config_bump, mut config_seeds) = Config::find_program_address(program_id, ncn.key);
-    config_seeds.push(vec![config_bump]);
-    let (_, account_payer_bump, mut account_payer_seeds) =
-        AccountPayer::find_program_address(program_id, ncn.key);
-    account_payer_seeds.push(vec![account_payer_bump]);
-
-    // Invoke the claim instruction with our program as the payer
-    invoke_signed(
-        &claim_ix(
-            *tip_distribution_config.key,
-            *tip_distribution_account.key,
-            *config.key,
-            *claim_status.key,
-            *claimant.key,
-            *account_payer.key,
-            *system_program.key,
-            proof,
-            amount,
-            bump,
-        ),
-        &[
-            tip_distribution_config.clone(),
-            tip_distribution_account.clone(),
-            config.clone(),
-            claim_status.clone(),
-            claimant.clone(),
-            account_payer.clone(),
-            system_program.clone(),
-        ],
-        &[
-            account_payer_seeds
-                .iter()
-                .map(|s| s.as_slice())
-                .collect::<Vec<&[u8]>>()
-                .as_slice(),
-            config_seeds
-                .iter()
-                .map(|s| s.as_slice())
-                .collect::<Vec<&[u8]>>()
-                .as_slice(),
-        ],
-    )?;
-
-    Ok(())
+    _process_claim_with_payer(
+        program_id,
+        &jito_priority_fee_distribution::ID,
+        accounts,
+        proof,
+        amount,
+        bump,
+    )
 }
