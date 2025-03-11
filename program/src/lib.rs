@@ -8,6 +8,7 @@ mod admin_set_tie_breaker;
 mod admin_set_weight;
 mod cast_vote;
 mod claim_with_payer;
+mod claim_with_payer_priority_fee;
 mod close_epoch_account;
 mod distribute_base_ncn_reward_route;
 mod distribute_base_rewards;
@@ -37,6 +38,7 @@ mod switchboard_set_weight;
 
 use admin_set_new_admin::process_admin_set_new_admin;
 use borsh::BorshDeserialize;
+use claim_with_payer_priority_fee::process_claim_with_payer_priority_fee;
 use initialize_epoch_state::process_initialize_epoch_state;
 use jito_tip_router_core::instruction::TipRouterInstruction;
 use realloc_epoch_state::process_realloc_epoch_state;
@@ -307,6 +309,14 @@ pub fn process_instruction(
         } => {
             msg!("Instruction: ClaimWithPayer");
             process_claim_with_payer(program_id, accounts, proof, amount, bump)
+        }
+        TipRouterInstruction::ClaimWithPayerPriorityFee {
+            proof,
+            amount,
+            bump,
+        } => {
+            msg!("Instruction: ClaimWithPayerPriorityFee");
+            process_claim_with_payer_priority_fee(program_id, accounts, proof, amount, bump)
         }
         TipRouterInstruction::CloseEpochAccount { epoch } => {
             msg!("Instruction: CloseEpochAccount");

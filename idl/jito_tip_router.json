@@ -1704,6 +1704,81 @@
       }
     },
     {
+      "name": "ClaimWithPayerPriorityFee",
+      "accounts": [
+        {
+          "name": "accountPayer",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "claimStatus",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "claimant",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "priorityFeeDistributionProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 28
+      }
+    },
+    {
       "name": "CloseEpochAccount",
       "accounts": [
         {
@@ -1761,7 +1836,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 28
+        "value": 29
       }
     },
     {
@@ -1811,7 +1886,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 29
+        "value": 30
       }
     },
     {
@@ -1873,7 +1948,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 30
+        "value": 31
       }
     },
     {
@@ -1910,7 +1985,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 31
+        "value": 32
       }
     },
     {
@@ -1959,7 +2034,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 32
+        "value": 33
       }
     },
     {
@@ -2002,7 +2077,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 33
+        "value": 34
       }
     },
     {
@@ -2058,7 +2133,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 34
+        "value": 35
       }
     },
     {
@@ -2117,7 +2192,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 35
+        "value": 36
       }
     }
   ],

@@ -340,7 +340,7 @@ mod set_merkle_root {
 
         // Run passthrough claim
         tip_router_client
-            .do_claim_with_payer(
+            .do_claim_with_payer_priority_fee(
                 ncn_address,
                 target_claimant,
                 tip_distribution_account,

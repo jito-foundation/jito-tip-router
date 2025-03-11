@@ -8,7 +8,8 @@ use jito_tip_router_client::{
     instructions::{
         AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
         AdminSetParametersBuilder, AdminSetStMintBuilder, AdminSetTieBreakerBuilder,
-        AdminSetWeightBuilder, CastVoteBuilder, ClaimWithPayerBuilder, CloseEpochAccountBuilder,
+        AdminSetWeightBuilder, CastVoteBuilder, ClaimWithPayerBuilder,
+        ClaimWithPayerPriorityFeeBuilder, CloseEpochAccountBuilder,
         DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
         DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
         InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder, InitializeConfigBuilder,
@@ -2513,6 +2514,88 @@ impl TipRouterClient {
             .tip_distribution_config(tip_distribution_config)
             .tip_distribution_account(tip_distribution_account)
             .tip_distribution_program(tip_distribution_program)
+            .claim_status(claim_status)
+            .claimant(claimant)
+            .system_program(system_program::id())
+            .proof(proof)
+            .amount(amount)
+            .bump(bump)
+            .instruction();
+
+        let blockhash = self.banks_client.get_latest_blockhash().await?;
+        let tx = Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&self.payer.pubkey()),
+            &[&self.payer],
+            blockhash,
+        );
+
+        self.process_transaction(&tx).await
+    }
+
+    pub async fn do_claim_with_payer_priority_fee(
+        &mut self,
+        ncn: Pubkey,
+        claimant: Pubkey,
+        tip_distribution_account: Pubkey,
+        proof: Vec<[u8; 32]>,
+        amount: u64,
+    ) -> TestResult<()> {
+        let (account_payer, _, _) =
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
+
+        let (config, _, _) = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
+
+        let priority_fee_distribution_program = jito_priority_fee_distribution::ID;
+        let tip_distribution_config = jito_tip_distribution_sdk::derive_config_account_address(
+            &priority_fee_distribution_program,
+        )
+        .0;
+
+        let (claim_status, claim_status_bump) =
+            jito_tip_distribution_sdk::derive_claim_status_account_address(
+                &priority_fee_distribution_program,
+                &claimant,
+                &tip_distribution_account,
+            );
+
+        self.claim_with_payer_priority_fee(
+            ncn,
+            config,
+            account_payer,
+            tip_distribution_config,
+            tip_distribution_account,
+            priority_fee_distribution_program,
+            claim_status,
+            claimant,
+            proof,
+            amount,
+            claim_status_bump,
+        )
+        .await
+    }
+
+    pub async fn claim_with_payer_priority_fee(
+        &mut self,
+        ncn: Pubkey,
+        config: Pubkey,
+        account_payer: Pubkey,
+        tip_distribution_config: Pubkey,
+        tip_distribution_account: Pubkey,
+        priority_fee_distribution_program: Pubkey,
+        claim_status: Pubkey,
+        claimant: Pubkey,
+        proof: Vec<[u8; 32]>,
+        amount: u64,
+        bump: u8,
+    ) -> TestResult<()> {
+        let ix = ClaimWithPayerPriorityFeeBuilder::new()
+            .account_payer(account_payer)
+            .ncn(ncn)
+            .config(config)
+            .tip_distribution_config(tip_distribution_config)
+            .tip_distribution_account(tip_distribution_account)
+            .priority_fee_distribution_program(priority_fee_distribution_program)
             .claim_status(claim_status)
             .claimant(claimant)
             .system_program(system_program::id())

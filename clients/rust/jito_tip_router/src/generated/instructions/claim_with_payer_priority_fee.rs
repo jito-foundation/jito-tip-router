@@ -9,46 +9,42 @@ use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 
 /// Accounts.
-pub struct CloseEpochAccount {
-    pub epoch_marker: solana_program::pubkey::Pubkey,
-
-    pub epoch_state: solana_program::pubkey::Pubkey,
+pub struct ClaimWithPayerPriorityFee {
+    pub account_payer: solana_program::pubkey::Pubkey,
 
     pub config: solana_program::pubkey::Pubkey,
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub account_to_close: solana_program::pubkey::Pubkey,
+    pub tip_distribution_config: solana_program::pubkey::Pubkey,
 
-    pub account_payer: solana_program::pubkey::Pubkey,
+    pub tip_distribution_account: solana_program::pubkey::Pubkey,
 
-    pub dao_wallet: solana_program::pubkey::Pubkey,
+    pub claim_status: solana_program::pubkey::Pubkey,
+
+    pub claimant: solana_program::pubkey::Pubkey,
+
+    pub priority_fee_distribution_program: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
-
-    pub receiver_to_close: Option<solana_program::pubkey::Pubkey>,
 }
 
-impl CloseEpochAccount {
+impl ClaimWithPayerPriorityFee {
     pub fn instruction(
         &self,
-        args: CloseEpochAccountInstructionArgs,
+        args: ClaimWithPayerPriorityFeeInstructionArgs,
     ) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: CloseEpochAccountInstructionArgs,
+        args: ClaimWithPayerPriorityFeeInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
         let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.epoch_marker,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.epoch_state,
+            self.account_payer,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -58,35 +54,32 @@ impl CloseEpochAccount {
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.account_to_close,
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.tip_distribution_config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.account_payer,
+            self.tip_distribution_account,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            self.dao_wallet,
+            self.claim_status,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            self.claimant,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.priority_fee_distribution_program,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.system_program,
             false,
         ));
-        if let Some(receiver_to_close) = self.receiver_to_close {
-            accounts.push(solana_program::instruction::AccountMeta::new(
-                receiver_to_close,
-                false,
-            ));
-        } else {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                crate::JITO_TIP_ROUTER_ID,
-                false,
-            ));
-        }
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = CloseEpochAccountInstructionData::new()
+        let mut data = ClaimWithPayerPriorityFeeInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -101,17 +94,17 @@ impl CloseEpochAccount {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct CloseEpochAccountInstructionData {
+pub struct ClaimWithPayerPriorityFeeInstructionData {
     discriminator: u8,
 }
 
-impl CloseEpochAccountInstructionData {
+impl ClaimWithPayerPriorityFeeInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 29 }
+        Self { discriminator: 28 }
     }
 }
 
-impl Default for CloseEpochAccountInstructionData {
+impl Default for ClaimWithPayerPriorityFeeInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -119,50 +112,49 @@ impl Default for CloseEpochAccountInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct CloseEpochAccountInstructionArgs {
-    pub epoch: u64,
+pub struct ClaimWithPayerPriorityFeeInstructionArgs {
+    pub proof: Vec<[u8; 32]>,
+    pub amount: u64,
+    pub bump: u8,
 }
 
-/// Instruction builder for `CloseEpochAccount`.
+/// Instruction builder for `ClaimWithPayerPriorityFee`.
 ///
 /// ### Accounts:
 ///
-///   0. `[writable]` epoch_marker
-///   1. `[writable]` epoch_state
-///   2. `[]` config
-///   3. `[]` ncn
-///   4. `[writable]` account_to_close
-///   5. `[writable]` account_payer
-///   6. `[writable]` dao_wallet
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
-///   8. `[writable, optional]` receiver_to_close
+///   0. `[writable]` account_payer
+///   1. `[]` config
+///   2. `[]` ncn
+///   3. `[]` tip_distribution_config
+///   4. `[writable]` tip_distribution_account
+///   5. `[writable]` claim_status
+///   6. `[writable]` claimant
+///   7. `[]` priority_fee_distribution_program
+///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
-pub struct CloseEpochAccountBuilder {
-    epoch_marker: Option<solana_program::pubkey::Pubkey>,
-    epoch_state: Option<solana_program::pubkey::Pubkey>,
+pub struct ClaimWithPayerPriorityFeeBuilder {
+    account_payer: Option<solana_program::pubkey::Pubkey>,
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    account_to_close: Option<solana_program::pubkey::Pubkey>,
-    account_payer: Option<solana_program::pubkey::Pubkey>,
-    dao_wallet: Option<solana_program::pubkey::Pubkey>,
+    tip_distribution_config: Option<solana_program::pubkey::Pubkey>,
+    tip_distribution_account: Option<solana_program::pubkey::Pubkey>,
+    claim_status: Option<solana_program::pubkey::Pubkey>,
+    claimant: Option<solana_program::pubkey::Pubkey>,
+    priority_fee_distribution_program: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
-    receiver_to_close: Option<solana_program::pubkey::Pubkey>,
-    epoch: Option<u64>,
+    proof: Option<Vec<[u8; 32]>>,
+    amount: Option<u64>,
+    bump: Option<u8>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl CloseEpochAccountBuilder {
+impl ClaimWithPayerPriorityFeeBuilder {
     pub fn new() -> Self {
         Self::default()
     }
     #[inline(always)]
-    pub fn epoch_marker(&mut self, epoch_marker: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.epoch_marker = Some(epoch_marker);
-        self
-    }
-    #[inline(always)]
-    pub fn epoch_state(&mut self, epoch_state: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.epoch_state = Some(epoch_state);
+    pub fn account_payer(&mut self, account_payer: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.account_payer = Some(account_payer);
         self
     }
     #[inline(always)]
@@ -176,21 +168,37 @@ impl CloseEpochAccountBuilder {
         self
     }
     #[inline(always)]
-    pub fn account_to_close(
+    pub fn tip_distribution_config(
         &mut self,
-        account_to_close: solana_program::pubkey::Pubkey,
+        tip_distribution_config: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.account_to_close = Some(account_to_close);
+        self.tip_distribution_config = Some(tip_distribution_config);
         self
     }
     #[inline(always)]
-    pub fn account_payer(&mut self, account_payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.account_payer = Some(account_payer);
+    pub fn tip_distribution_account(
+        &mut self,
+        tip_distribution_account: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.tip_distribution_account = Some(tip_distribution_account);
         self
     }
     #[inline(always)]
-    pub fn dao_wallet(&mut self, dao_wallet: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.dao_wallet = Some(dao_wallet);
+    pub fn claim_status(&mut self, claim_status: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.claim_status = Some(claim_status);
+        self
+    }
+    #[inline(always)]
+    pub fn claimant(&mut self, claimant: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.claimant = Some(claimant);
+        self
+    }
+    #[inline(always)]
+    pub fn priority_fee_distribution_program(
+        &mut self,
+        priority_fee_distribution_program: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.priority_fee_distribution_program = Some(priority_fee_distribution_program);
         self
     }
     /// `[optional account, default to '11111111111111111111111111111111']`
@@ -199,18 +207,19 @@ impl CloseEpochAccountBuilder {
         self.system_program = Some(system_program);
         self
     }
-    /// `[optional account]`
     #[inline(always)]
-    pub fn receiver_to_close(
-        &mut self,
-        receiver_to_close: Option<solana_program::pubkey::Pubkey>,
-    ) -> &mut Self {
-        self.receiver_to_close = receiver_to_close;
+    pub fn proof(&mut self, proof: Vec<[u8; 32]>) -> &mut Self {
+        self.proof = Some(proof);
         self
     }
     #[inline(always)]
-    pub fn epoch(&mut self, epoch: u64) -> &mut Self {
-        self.epoch = Some(epoch);
+    pub fn amount(&mut self, amount: u64) -> &mut Self {
+        self.amount = Some(amount);
+        self
+    }
+    #[inline(always)]
+    pub fn bump(&mut self, bump: u8) -> &mut Self {
+        self.bump = Some(bump);
         self
     }
     /// Add an additional account to the instruction.
@@ -233,91 +242,99 @@ impl CloseEpochAccountBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = CloseEpochAccount {
-            epoch_marker: self.epoch_marker.expect("epoch_marker is not set"),
-            epoch_state: self.epoch_state.expect("epoch_state is not set"),
+        let accounts = ClaimWithPayerPriorityFee {
+            account_payer: self.account_payer.expect("account_payer is not set"),
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            account_to_close: self.account_to_close.expect("account_to_close is not set"),
-            account_payer: self.account_payer.expect("account_payer is not set"),
-            dao_wallet: self.dao_wallet.expect("dao_wallet is not set"),
+            tip_distribution_config: self
+                .tip_distribution_config
+                .expect("tip_distribution_config is not set"),
+            tip_distribution_account: self
+                .tip_distribution_account
+                .expect("tip_distribution_account is not set"),
+            claim_status: self.claim_status.expect("claim_status is not set"),
+            claimant: self.claimant.expect("claimant is not set"),
+            priority_fee_distribution_program: self
+                .priority_fee_distribution_program
+                .expect("priority_fee_distribution_program is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
-            receiver_to_close: self.receiver_to_close,
         };
-        let args = CloseEpochAccountInstructionArgs {
-            epoch: self.epoch.clone().expect("epoch is not set"),
+        let args = ClaimWithPayerPriorityFeeInstructionArgs {
+            proof: self.proof.clone().expect("proof is not set"),
+            amount: self.amount.clone().expect("amount is not set"),
+            bump: self.bump.clone().expect("bump is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
     }
 }
 
-/// `close_epoch_account` CPI accounts.
-pub struct CloseEpochAccountCpiAccounts<'a, 'b> {
-    pub epoch_marker: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+/// `claim_with_payer_priority_fee` CPI accounts.
+pub struct ClaimWithPayerPriorityFeeCpiAccounts<'a, 'b> {
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub account_to_close: &'b solana_program::account_info::AccountInfo<'a>,
+    pub tip_distribution_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub tip_distribution_account: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub dao_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+    pub claim_status: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub claimant: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub priority_fee_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub receiver_to_close: Option<&'b solana_program::account_info::AccountInfo<'a>>,
 }
 
-/// `close_epoch_account` CPI instruction.
-pub struct CloseEpochAccountCpi<'a, 'b> {
+/// `claim_with_payer_priority_fee` CPI instruction.
+pub struct ClaimWithPayerPriorityFeeCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub epoch_marker: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
+    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub account_to_close: &'b solana_program::account_info::AccountInfo<'a>,
+    pub tip_distribution_config: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub account_payer: &'b solana_program::account_info::AccountInfo<'a>,
+    pub tip_distribution_account: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub dao_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+    pub claim_status: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub claimant: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub priority_fee_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub receiver_to_close: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     /// The arguments for the instruction.
-    pub __args: CloseEpochAccountInstructionArgs,
+    pub __args: ClaimWithPayerPriorityFeeInstructionArgs,
 }
 
-impl<'a, 'b> CloseEpochAccountCpi<'a, 'b> {
+impl<'a, 'b> ClaimWithPayerPriorityFeeCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: CloseEpochAccountCpiAccounts<'a, 'b>,
-        args: CloseEpochAccountInstructionArgs,
+        accounts: ClaimWithPayerPriorityFeeCpiAccounts<'a, 'b>,
+        args: ClaimWithPayerPriorityFeeInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
-            epoch_marker: accounts.epoch_marker,
-            epoch_state: accounts.epoch_state,
+            account_payer: accounts.account_payer,
             config: accounts.config,
             ncn: accounts.ncn,
-            account_to_close: accounts.account_to_close,
-            account_payer: accounts.account_payer,
-            dao_wallet: accounts.dao_wallet,
+            tip_distribution_config: accounts.tip_distribution_config,
+            tip_distribution_account: accounts.tip_distribution_account,
+            claim_status: accounts.claim_status,
+            claimant: accounts.claimant,
+            priority_fee_distribution_program: accounts.priority_fee_distribution_program,
             system_program: accounts.system_program,
-            receiver_to_close: accounts.receiver_to_close,
             __args: args,
         }
     }
@@ -356,11 +373,7 @@ impl<'a, 'b> CloseEpochAccountCpi<'a, 'b> {
     ) -> solana_program::entrypoint::ProgramResult {
         let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.epoch_marker.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.epoch_state.key,
+            *self.account_payer.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -371,33 +384,30 @@ impl<'a, 'b> CloseEpochAccountCpi<'a, 'b> {
             *self.ncn.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.account_to_close.key,
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.tip_distribution_config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.account_payer.key,
+            *self.tip_distribution_account.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.dao_wallet.key,
+            *self.claim_status.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new(
+            *self.claimant.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.priority_fee_distribution_program.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.system_program.key,
             false,
         ));
-        if let Some(receiver_to_close) = self.receiver_to_close {
-            accounts.push(solana_program::instruction::AccountMeta::new(
-                *receiver_to_close.key,
-                false,
-            ));
-        } else {
-            accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-                crate::JITO_TIP_ROUTER_ID,
-                false,
-            ));
-        }
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_program::instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -405,7 +415,7 @@ impl<'a, 'b> CloseEpochAccountCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = CloseEpochAccountInstructionData::new()
+        let mut data = ClaimWithPayerPriorityFeeInstructionData::new()
             .try_to_vec()
             .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
@@ -418,17 +428,15 @@ impl<'a, 'b> CloseEpochAccountCpi<'a, 'b> {
         };
         let mut account_infos = Vec::with_capacity(9 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.epoch_marker.clone());
-        account_infos.push(self.epoch_state.clone());
+        account_infos.push(self.account_payer.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.account_to_close.clone());
-        account_infos.push(self.account_payer.clone());
-        account_infos.push(self.dao_wallet.clone());
+        account_infos.push(self.tip_distribution_config.clone());
+        account_infos.push(self.tip_distribution_account.clone());
+        account_infos.push(self.claim_status.clone());
+        account_infos.push(self.claimant.clone());
+        account_infos.push(self.priority_fee_distribution_program.clone());
         account_infos.push(self.system_program.clone());
-        if let Some(receiver_to_close) = self.receiver_to_close {
-            account_infos.push(receiver_to_close.clone());
-        }
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -441,56 +449,50 @@ impl<'a, 'b> CloseEpochAccountCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `CloseEpochAccount` via CPI.
+/// Instruction builder for `ClaimWithPayerPriorityFee` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[writable]` epoch_marker
-///   1. `[writable]` epoch_state
-///   2. `[]` config
-///   3. `[]` ncn
-///   4. `[writable]` account_to_close
-///   5. `[writable]` account_payer
-///   6. `[writable]` dao_wallet
-///   7. `[]` system_program
-///   8. `[writable, optional]` receiver_to_close
+///   0. `[writable]` account_payer
+///   1. `[]` config
+///   2. `[]` ncn
+///   3. `[]` tip_distribution_config
+///   4. `[writable]` tip_distribution_account
+///   5. `[writable]` claim_status
+///   6. `[writable]` claimant
+///   7. `[]` priority_fee_distribution_program
+///   8. `[]` system_program
 #[derive(Clone, Debug)]
-pub struct CloseEpochAccountCpiBuilder<'a, 'b> {
-    instruction: Box<CloseEpochAccountCpiBuilderInstruction<'a, 'b>>,
+pub struct ClaimWithPayerPriorityFeeCpiBuilder<'a, 'b> {
+    instruction: Box<ClaimWithPayerPriorityFeeCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> CloseEpochAccountCpiBuilder<'a, 'b> {
+impl<'a, 'b> ClaimWithPayerPriorityFeeCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(CloseEpochAccountCpiBuilderInstruction {
+        let instruction = Box::new(ClaimWithPayerPriorityFeeCpiBuilderInstruction {
             __program: program,
-            epoch_marker: None,
-            epoch_state: None,
+            account_payer: None,
             config: None,
             ncn: None,
-            account_to_close: None,
-            account_payer: None,
-            dao_wallet: None,
+            tip_distribution_config: None,
+            tip_distribution_account: None,
+            claim_status: None,
+            claimant: None,
+            priority_fee_distribution_program: None,
             system_program: None,
-            receiver_to_close: None,
-            epoch: None,
+            proof: None,
+            amount: None,
+            bump: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
     }
     #[inline(always)]
-    pub fn epoch_marker(
+    pub fn account_payer(
         &mut self,
-        epoch_marker: &'b solana_program::account_info::AccountInfo<'a>,
+        account_payer: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.epoch_marker = Some(epoch_marker);
-        self
-    }
-    #[inline(always)]
-    pub fn epoch_state(
-        &mut self,
-        epoch_state: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.epoch_state = Some(epoch_state);
+        self.instruction.account_payer = Some(account_payer);
         self
     }
     #[inline(always)]
@@ -507,27 +509,44 @@ impl<'a, 'b> CloseEpochAccountCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn account_to_close(
+    pub fn tip_distribution_config(
         &mut self,
-        account_to_close: &'b solana_program::account_info::AccountInfo<'a>,
+        tip_distribution_config: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.account_to_close = Some(account_to_close);
+        self.instruction.tip_distribution_config = Some(tip_distribution_config);
         self
     }
     #[inline(always)]
-    pub fn account_payer(
+    pub fn tip_distribution_account(
         &mut self,
-        account_payer: &'b solana_program::account_info::AccountInfo<'a>,
+        tip_distribution_account: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.account_payer = Some(account_payer);
+        self.instruction.tip_distribution_account = Some(tip_distribution_account);
         self
     }
     #[inline(always)]
-    pub fn dao_wallet(
+    pub fn claim_status(
         &mut self,
-        dao_wallet: &'b solana_program::account_info::AccountInfo<'a>,
+        claim_status: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.dao_wallet = Some(dao_wallet);
+        self.instruction.claim_status = Some(claim_status);
+        self
+    }
+    #[inline(always)]
+    pub fn claimant(
+        &mut self,
+        claimant: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.claimant = Some(claimant);
+        self
+    }
+    #[inline(always)]
+    pub fn priority_fee_distribution_program(
+        &mut self,
+        priority_fee_distribution_program: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.priority_fee_distribution_program =
+            Some(priority_fee_distribution_program);
         self
     }
     #[inline(always)]
@@ -538,18 +557,19 @@ impl<'a, 'b> CloseEpochAccountCpiBuilder<'a, 'b> {
         self.instruction.system_program = Some(system_program);
         self
     }
-    /// `[optional account]`
     #[inline(always)]
-    pub fn receiver_to_close(
-        &mut self,
-        receiver_to_close: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ) -> &mut Self {
-        self.instruction.receiver_to_close = receiver_to_close;
+    pub fn proof(&mut self, proof: Vec<[u8; 32]>) -> &mut Self {
+        self.instruction.proof = Some(proof);
         self
     }
     #[inline(always)]
-    pub fn epoch(&mut self, epoch: u64) -> &mut Self {
-        self.instruction.epoch = Some(epoch);
+    pub fn amount(&mut self, amount: u64) -> &mut Self {
+        self.instruction.amount = Some(amount);
+        self
+    }
+    #[inline(always)]
+    pub fn bump(&mut self, bump: u8) -> &mut Self {
+        self.instruction.bump = Some(bump);
         self
     }
     /// Add an additional account to the instruction.
@@ -593,44 +613,49 @@ impl<'a, 'b> CloseEpochAccountCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let args = CloseEpochAccountInstructionArgs {
-            epoch: self.instruction.epoch.clone().expect("epoch is not set"),
+        let args = ClaimWithPayerPriorityFeeInstructionArgs {
+            proof: self.instruction.proof.clone().expect("proof is not set"),
+            amount: self.instruction.amount.clone().expect("amount is not set"),
+            bump: self.instruction.bump.clone().expect("bump is not set"),
         };
-        let instruction = CloseEpochAccountCpi {
+        let instruction = ClaimWithPayerPriorityFeeCpi {
             __program: self.instruction.__program,
-
-            epoch_marker: self
-                .instruction
-                .epoch_marker
-                .expect("epoch_marker is not set"),
-
-            epoch_state: self
-                .instruction
-                .epoch_state
-                .expect("epoch_state is not set"),
-
-            config: self.instruction.config.expect("config is not set"),
-
-            ncn: self.instruction.ncn.expect("ncn is not set"),
-
-            account_to_close: self
-                .instruction
-                .account_to_close
-                .expect("account_to_close is not set"),
 
             account_payer: self
                 .instruction
                 .account_payer
                 .expect("account_payer is not set"),
 
-            dao_wallet: self.instruction.dao_wallet.expect("dao_wallet is not set"),
+            config: self.instruction.config.expect("config is not set"),
+
+            ncn: self.instruction.ncn.expect("ncn is not set"),
+
+            tip_distribution_config: self
+                .instruction
+                .tip_distribution_config
+                .expect("tip_distribution_config is not set"),
+
+            tip_distribution_account: self
+                .instruction
+                .tip_distribution_account
+                .expect("tip_distribution_account is not set"),
+
+            claim_status: self
+                .instruction
+                .claim_status
+                .expect("claim_status is not set"),
+
+            claimant: self.instruction.claimant.expect("claimant is not set"),
+
+            priority_fee_distribution_program: self
+                .instruction
+                .priority_fee_distribution_program
+                .expect("priority_fee_distribution_program is not set"),
 
             system_program: self
                 .instruction
                 .system_program
                 .expect("system_program is not set"),
-
-            receiver_to_close: self.instruction.receiver_to_close,
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -641,18 +666,20 @@ impl<'a, 'b> CloseEpochAccountCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct CloseEpochAccountCpiBuilderInstruction<'a, 'b> {
+struct ClaimWithPayerPriorityFeeCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    epoch_marker: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    epoch_state: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    account_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    account_to_close: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    account_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    dao_wallet: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    tip_distribution_config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    tip_distribution_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    claim_status: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    claimant: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    priority_fee_distribution_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    receiver_to_close: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    epoch: Option<u64>,
+    proof: Option<Vec<[u8; 32]>>,
+    amount: Option<u64>,
+    bump: Option<u8>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,
