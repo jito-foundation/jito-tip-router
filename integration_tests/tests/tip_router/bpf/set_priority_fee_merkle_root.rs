@@ -184,7 +184,7 @@ mod set_merkle_root {
     async fn test_set_priority_fee_merkle_root_ok() -> TestResult<()> {
         let mut fixture: TestBuilder = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut tip_distribution_client = fixture.tip_distribution_client();
+        let mut tip_distribution_client = fixture.priority_fee_distribution_client();
 
         fixture.warp_epoch_incremental(10).await?;
 
@@ -353,13 +353,9 @@ mod set_merkle_root {
             .get_claim_status_account(target_claimant, tip_distribution_account)
             .await?;
 
-        let clock = fixture.clock().await;
-        let slot = clock.slot;
-
         assert!(claim_status_account.is_claimed);
         assert_eq!(claim_status_account.claimant, target_claimant);
         assert_eq!(claim_status_account.amount, target_claimant_node_amount);
-        assert_eq!(claim_status_account.slot_claimed_at, slot);
 
         Ok(())
     }
@@ -369,7 +365,7 @@ mod set_merkle_root {
     async fn test_set_priority_fee_merkle_root_no_fixture() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut tip_distribution_client = fixture.tip_distribution_client();
+        let mut tip_distribution_client = fixture.priority_fee_distribution_client();
 
         fixture.warp_epoch_incremental(10).await?;
 
@@ -475,7 +471,7 @@ mod set_merkle_root {
     async fn test_set_priority_fee_merkle_root_before_consensus() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut tip_distribution_client = fixture.tip_distribution_client();
+        let mut tip_distribution_client = fixture.priority_fee_distribution_client();
 
         fixture.warp_epoch_incremental(500).await?;
 

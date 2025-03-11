@@ -35,11 +35,7 @@ use solana_sdk::{
 use spl_stake_pool::find_withdraw_authority_program_address;
 
 use super::{
-    generated_switchboard_accounts::get_switchboard_accounts,
-    restaking_client::NcnRoot,
-    stake_pool_client::{PoolRoot, StakePoolClient},
-    tip_distribution_client::TipDistributionClient,
-    tip_router_client::TipRouterClient,
+    generated_switchboard_accounts::get_switchboard_accounts, priority_fee_distribution_client::PriorityFeeDistributionClient, restaking_client::NcnRoot, stake_pool_client::{PoolRoot, StakePoolClient}, tip_distribution_client::TipDistributionClient, tip_router_client::TipRouterClient
 };
 use crate::fixtures::{
     restaking_client::{OperatorRoot, RestakingProgramClient},
@@ -258,6 +254,13 @@ impl TestBuilder {
 
     pub fn tip_distribution_client(&self) -> TipDistributionClient {
         TipDistributionClient::new(
+            self.context.banks_client.clone(),
+            self.context.payer.insecure_clone(),
+        )
+    }
+
+    pub fn priority_fee_distribution_client(&self) -> PriorityFeeDistributionClient {
+        PriorityFeeDistributionClient::new(
             self.context.banks_client.clone(),
             self.context.payer.insecure_clone(),
         )

@@ -5,6 +5,7 @@ use solana_sdk::transaction::TransactionError;
 use thiserror::Error;
 
 pub mod generated_switchboard_accounts;
+pub mod priority_fee_distribution_client;
 pub mod restaking_client;
 pub mod stake_pool_client;
 pub mod test_builder;
