@@ -485,7 +485,7 @@ impl BallotBox {
                         self.unique_ballots = PodU64::from(
                             unique_ballots
                                 .checked_sub(1)
-                                .ok_or(TipRouterError::ArithmeticOverflow)?,
+                                .ok_or(TipRouterError::ArithmeticUnderflowError)?,
                         );
                     }
                 }
