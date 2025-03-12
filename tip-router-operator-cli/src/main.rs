@@ -40,6 +40,9 @@ async fn main() -> Result<()> {
 
     set_host_id(cli.operator_address.to_string());
 
+    // Will panic if the user did not set --save-path or the deprecated --meta-merkle-tree-dir
+    let save_path = cli.get_save_path();
+
     info!(
         "CLI Arguments:
         keypair_path: {}
@@ -48,14 +51,16 @@ async fn main() -> Result<()> {
         ledger_path: {}
         full_snapshots_path: {:?}
         snapshot_output_dir: {}
-        backup_snapshots_dir: {}",
+        backup_snapshots_dir: {}
+        save_path: {}",
         cli.keypair_path,
         cli.operator_address,
         cli.rpc_url,
         cli.ledger_path.display(),
         cli.full_snapshots_path,
         cli.snapshot_output_dir.display(),
-        cli.backup_snapshots_dir.display()
+        cli.backup_snapshots_dir.display(),
+        save_path.display(),
     );
 
     cli.create_save_path();
@@ -132,7 +137,7 @@ async fn main() -> Result<()> {
             let cli_clone: Cli = cli.clone();
             // Track incremental snapshots and backup to `backup_snapshots_dir`
             tokio::spawn(async move {
-                let save_path = cli_clone.save_path;
+                let save_path = cli_clone.get_save_path();
                 loop {
                     if let Err(e) = BackupSnapshotMonitor::new(
                         &rpc_url,
@@ -206,7 +211,7 @@ async fn main() -> Result<()> {
             epoch,
             set_merkle_roots,
         } => {
-            let meta_merkle_tree_path = cli.save_path.join(meta_merkle_tree_file_name(epoch));
+            let meta_merkle_tree_path = cli.get_save_path().join(meta_merkle_tree_file_name(epoch));
             info!(
                 "Submitting epoch {} from {}...",
                 epoch,
@@ -277,7 +282,7 @@ async fn main() -> Result<()> {
                 &Arc::new(bank),
                 &tip_distribution_program_id,
                 &tip_payment_program_id,
-                &cli.save_path,
+                &save_path,
                 save,
             );
         }
@@ -289,7 +294,7 @@ async fn main() -> Result<()> {
         } => {
             // Load the stake_meta_collection from disk
             let stake_meta_collection = match StakeMetaCollection::new_from_file(
-                &cli.save_path.join(stake_meta_file_name(epoch)),
+                &cli.get_save_path().join(stake_meta_file_name(epoch)),
             ) {
                 Ok(stake_meta_collection) => stake_meta_collection,
                 Err(e) => panic!("{}", e),
@@ -309,14 +314,14 @@ async fn main() -> Result<()> {
                 epoch,
                 &ncn_address,
                 protocol_fee_bps,
-                &cli.save_path,
+                &save_path,
                 save,
             );
         }
         Commands::CreateMetaMerkleTree { epoch, save } => {
             // Load the stake_meta_collection from disk
             let merkle_tree_collection = match GeneratedMerkleTreeCollection::new_from_file(
-                &cli.save_path.join(merkle_tree_collection_file_name(epoch)),
+                &save_path.join(merkle_tree_collection_file_name(epoch)),
             ) {
                 Ok(merkle_tree_collection) => merkle_tree_collection,
                 Err(e) => panic!("{}", e),
@@ -326,7 +331,7 @@ async fn main() -> Result<()> {
                 cli.operator_address,
                 merkle_tree_collection,
                 epoch,
-                &cli.save_path,
+                &save_path,
                 save,
             );
         }

@@ -41,7 +41,7 @@ pub async fn submit_recent_epochs_to_ncn(
     for i in 0..num_monitored_epochs {
         let process_epoch = epoch.epoch.checked_sub(i).unwrap();
 
-        let meta_merkle_tree_dir = cli_args.save_path.clone();
+        let meta_merkle_tree_dir = cli_args.get_save_path();
         let target_meta_merkle_tree_file = meta_merkle_tree_file_name(process_epoch);
         let target_meta_merkle_tree_path = meta_merkle_tree_dir.join(target_meta_merkle_tree_file);
         if !target_meta_merkle_tree_path.exists() {

@@ -37,26 +37,37 @@ pub struct Cli {
     #[arg(long, env, default_value_t = 1)]
     pub micro_lamports: u64,
 
-    #[arg(
-        long,
-        env,
-        alias = "meta-merkle-tree-dir",
-        help = "Path to save data (formerly meta-merkle-tree-dir)"
-    )]
-    pub save_path: PathBuf,
+    #[arg(long, env, help = "Path to save data (formerly meta-merkle-tree-dir)")]
+    pub save_path: Option<PathBuf>,
+
+    #[arg(short, long, env, help = "Path to save data (deprecated)")]
+    #[deprecated(since = "1.1.0", note = "use --save-path instead")]
+    pub meta_merkle_tree_dir: Option<PathBuf>,
 
     #[command(subcommand)]
     pub command: Commands,
 }
 
 impl Cli {
+    #[allow(deprecated)]
+    pub fn get_save_path(&self) -> PathBuf {
+        if let Some(save_path) = self.save_path.to_owned() {
+            save_path
+        } else if let Some(save_path) = self.meta_merkle_tree_dir.to_owned() {
+            save_path
+        } else {
+            panic!("--save-path argument must be set");
+        }
+    }
+
     pub fn create_save_path(&self) {
-        if !self.save_path.exists() {
+        let save_path = self.get_save_path();
+        if !save_path.exists() {
             info!(
                 "Creating Tip Router save directory at {}",
-                self.save_path.display()
+                save_path.display()
             );
-            std::fs::create_dir_all(&self.save_path).unwrap();
+            std::fs::create_dir_all(&save_path).unwrap();
         }
     }
 

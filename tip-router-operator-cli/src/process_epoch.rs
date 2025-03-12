@@ -185,7 +185,7 @@ pub async fn loop_stages(
                     bank.as_ref().expect("Bank was not set"),
                     tip_distribution_program_id,
                     tip_payment_program_id,
-                    &cli.save_path,
+                    &cli.get_save_path(),
                     save_stages,
                 ));
                 // we should be able to safely drop the bank in this loop
@@ -197,7 +197,9 @@ pub async fn loop_stages(
                 let some_stake_meta_collection = match stake_meta_collection.to_owned() {
                     Some(collection) => collection,
                     None => {
-                        let file = cli.save_path.join(stake_meta_file_name(epoch_to_process));
+                        let file = cli
+                            .get_save_path()
+                            .join(stake_meta_file_name(epoch_to_process));
                         StakeMetaCollection::new_from_file(&file)?
                     }
                 };
@@ -217,7 +219,7 @@ pub async fn loop_stages(
                     epoch_to_process,
                     ncn_address,
                     protocol_fee_bps,
-                    &cli.save_path,
+                    &cli.get_save_path(),
                     save_stages,
                 ));
 
@@ -230,7 +232,7 @@ pub async fn loop_stages(
                     Some(collection) => collection,
                     None => {
                         let file = cli
-                            .save_path
+                            .get_save_path()
                             .join(merkle_tree_collection_file_name(epoch_to_process));
                         GeneratedMerkleTreeCollection::new_from_file(&file)?
                     }
@@ -240,7 +242,7 @@ pub async fn loop_stages(
                     cli.operator_address.clone(),
                     some_merkle_tree_collection,
                     epoch_to_process,
-                    &cli.save_path,
+                    &cli.get_save_path(),
                     // This is defaulted to true because the output file is required by the
                     //  task that sets TipDistributionAccounts' merkle roots
                     true,
@@ -250,7 +252,7 @@ pub async fn loop_stages(
             OperatorState::CastVote => {
                 let meta_merkle_tree_path = PathBuf::from(format!(
                     "{}/{}",
-                    cli.save_path.display(),
+                    cli.get_save_path().display(),
                     meta_merkle_tree_file_name(epoch_to_process)
                 ));
                 let operator_address = Pubkey::from_str(&cli.operator_address)?;
