@@ -2,10 +2,10 @@ use std::{str::FromStr, time::Duration};
 
 use crate::{
     getters::{
-        get_account, get_all_operators_in_ncn, get_all_sorted_operators_for_vault, get_all_vaults,
-        get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver_rewards,
-        get_base_reward_router, get_current_slot, get_epoch_snapshot,
-        get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator,
+        get_account, get_all_active_operators_in_ncn, get_all_operators_in_ncn,
+        get_all_sorted_operators_for_vault, get_all_vaults, get_all_vaults_in_ncn, get_ballot_box,
+        get_base_reward_receiver_rewards, get_base_reward_router, get_current_slot,
+        get_epoch_snapshot, get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator,
         get_operator_snapshot, get_stake_pool_accounts, get_tip_distribution_accounts_to_migrate,
         get_tip_router_config, get_vault, get_vault_config, get_vault_registry,
         get_vault_update_state_tracker, get_weight_table,
@@ -1381,7 +1381,7 @@ pub async fn create_ncn_reward_router(
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
     let (epoch_marker, _, _) =
-        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
     let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
         .epoch_marker(epoch_marker)
@@ -2351,7 +2351,7 @@ pub async fn crank_set_weight(handler: &CliHandler, epoch: u64) -> Result<()> {
 pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
     let vault_registry = get_vault_registry(handler).await?;
 
-    let operators = get_all_operators_in_ncn(handler).await?;
+    let operators = get_all_active_operators_in_ncn(handler, epoch).await?;
     let all_vaults: Vec<Pubkey> = vault_registry
         .get_valid_vault_entries()
         .iter()
@@ -2501,7 +2501,7 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
 
 //TODO Multi-thread sending the TXs
 pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let operators = get_all_operators_in_ncn(handler).await?;
+    let operators = get_all_active_operators_in_ncn(handler, epoch).await?;
 
     let epoch_snapshot = get_or_create_epoch_snapshot(handler, epoch).await?;
     let fees = epoch_snapshot.fees();
@@ -2663,8 +2663,8 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
     }
 
     // Close NCN Reward Routers
-    let all_operators = get_all_operators_in_ncn(handler).await?;
-    for operator in all_operators.iter() {
+    let operators = get_all_operators_in_ncn(handler).await?;
+    for operator in operators.iter() {
         for group in NcnFeeGroup::all_groups() {
             let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
                 &handler.tip_router_program_id,
@@ -2743,7 +2743,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
     }
 
     // Close Operator Snapshots
-    for operator in all_operators.iter() {
+    for operator in operators.iter() {
         let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
             &handler.tip_router_program_id,
             operator,
@@ -2810,15 +2810,6 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
     Ok(())
 }
-
-// --------------------- NCN SETUP ------------------------------
-
-//TODO create NCN
-//TODO create Operator
-//TODO add vault to NCN
-//TODO add operator to NCN
-//TODO remove vault from NCN
-//TODO remove operator from NCN
 
 // --------------------- TEST NCN --------------------------------
 
@@ -3365,8 +3356,22 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
         })
         .collect::<Vec<_>>();
 
-    for ix in ixs {
-        send_and_log_transaction(handler, &[ix], &[], "Migrated TDA", &[]).await?;
+    info!(
+        "Migrating TDA Merkle Root Upload Authorities: {}",
+        ixs.len()
+    );
+    for chunk in ixs.chunks(8) {
+        let tx_ixs = std::iter::once(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000))
+            .chain(chunk.iter().cloned())
+            .collect::<Vec<_>>();
+
+        let result = send_and_log_transaction(handler, &tx_ixs, &[], "Migrated TDA", &[]).await;
+        if result.is_err() {
+            log::error!(
+                "Failed to migrate TDA with error: {:?}",
+                result.err().unwrap()
+            );
+        }
     }
     Ok(())
 }

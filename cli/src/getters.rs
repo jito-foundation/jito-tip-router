@@ -40,6 +40,7 @@ use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
 };
+use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::{account::Account, pubkey::Pubkey};
 use spl_associated_token_account::get_associated_token_address;
@@ -861,6 +862,34 @@ pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey
         .collect::<Vec<Pubkey>>();
 
     Ok(operators)
+}
+
+pub async fn get_all_active_operators_in_ncn(
+    handler: &CliHandler,
+    epoch: u64,
+) -> Result<Vec<Pubkey>> {
+    let active_slot = epoch * DEFAULT_SLOTS_PER_EPOCH + 1;
+    let operators = get_all_operators_in_ncn(handler).await?;
+
+    let mut active_operators = vec![];
+    for operator in operators {
+        let result = get_ncn_operator_state(handler, &operator).await;
+
+        if result.is_err() {
+            continue;
+        }
+
+        let ncn_operator_state = result.unwrap();
+
+        if ncn_operator_state
+            .ncn_opt_in_state
+            .is_active(active_slot, DEFAULT_SLOTS_PER_EPOCH)?
+        {
+            active_operators.push(operator);
+        }
+    }
+
+    Ok(active_operators)
 }
 
 pub async fn get_all_vaults(handler: &CliHandler) -> Result<Vec<Pubkey>> {
