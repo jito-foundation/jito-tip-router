@@ -53,11 +53,12 @@ impl Cli {
     pub fn get_save_path(&self) -> PathBuf {
         self.save_path.to_owned().map_or_else(
             || {
-                if let Some(save_path) = self.meta_merkle_tree_dir.to_owned() {
-                    save_path
-                } else {
-                    panic!("--save-path argument must be set");
-                }
+                self.meta_merkle_tree_dir.to_owned().map_or_else(
+                    || {
+                        panic!("--save-path argument must be set");
+                    },
+                    |save_path| save_path,
+                )
             },
             |save_path| save_path,
         )
