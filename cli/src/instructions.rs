@@ -2663,7 +2663,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
     }
 
     // Close NCN Reward Routers
-    let operators = get_all_active_operators_in_ncn(handler, epoch).await?;
+    let operators = get_all_operators_in_ncn(handler).await?;
     for operator in operators.iter() {
         for group in NcnFeeGroup::all_groups() {
             let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
