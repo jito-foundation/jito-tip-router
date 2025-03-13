@@ -1,9 +1,3 @@
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::{Duration, Instant},
-};
-
 use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
 use jito_tip_distribution_sdk::{
@@ -29,7 +23,19 @@ use solana_sdk::{
     system_program,
     transaction::Transaction,
 };
+use std::path::Path;
+use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 use thiserror::Error;
+use tokio::fs::File;
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncBufReadExt;
+use tokio::io::AsyncWriteExt;
+use tokio::io::BufReader;
+use tokio::sync::Mutex;
 
 use crate::{
     merkle_tree_collection_file_name,
@@ -62,6 +68,9 @@ pub enum ClaimMevError {
     #[error("Not finished with job, transactions left {transactions_left}")]
     NotFinished { transactions_left: usize },
 
+    #[error("Failed to check or update completed epochs: {0}")]
+    CompletedEpochsError(String),
+
     #[error("UncaughtError {e:?}")]
     UncaughtError { e: String },
 }
@@ -74,6 +83,7 @@ pub async fn claim_mev_tips_with_emit(
     tip_router_program_id: Pubkey,
     ncn_address: Pubkey,
     max_loop_duration: Duration,
+    file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), anyhow::Error> {
     let keypair = read_keypair_file(cli.keypair_path.clone())
         .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {:?}", e))?;
@@ -115,6 +125,7 @@ pub async fn claim_mev_tips_with_emit(
         &keypair,
         max_loop_duration,
         cli.micro_lamports,
+        file_mutex,
     )
     .await
     {
@@ -161,7 +172,13 @@ pub async fn claim_mev_tips(
     keypair: &Arc<Keypair>,
     max_loop_duration: Duration,
     micro_lamports: u64,
+    file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), ClaimMevError> {
+    let epoch = merkle_trees.epoch;
+    if is_epoch_completed(epoch, file_mutex).await? {
+        return Ok(());
+    }
+
     let rpc_client = RpcClient::new_with_timeout_and_commitment(
         rpc_url,
         Duration::from_secs(1800),
@@ -234,6 +251,7 @@ pub async fn claim_mev_tips(
     )
     .await?;
     if transactions.is_empty() {
+        add_completed_epoch(epoch, file_mutex).await?;
         return Ok(());
     }
 
@@ -545,4 +563,79 @@ async fn is_sufficient_balance(
     } else {
         None
     }
+}
+
+/// Helper function to check if an epoch is in the completed_claim_epochs.txt file
+pub async fn is_epoch_completed(
+    epoch: u64,
+    file_mutex: &Arc<Mutex<()>>,
+) -> Result<bool, ClaimMevError> {
+    // Acquire the mutex lock before file operations
+    let _lock = file_mutex.lock().await;
+
+    let path = Path::new("completed_claim_epochs.txt");
+
+    // If file doesn't exist, no epochs are completed
+    if !path.exists() {
+        return Ok(false);
+    }
+
+    // Open and read file
+    let file = File::open(path).await.map_err(|e| {
+        ClaimMevError::CompletedEpochsError(format!("Failed to open completed epochs file: {}", e))
+    })?;
+
+    let mut reader = BufReader::new(file);
+    let mut line = String::new();
+
+    // Read lines asynchronously
+    while reader.read_line(&mut line).await.map_err(|e| {
+        ClaimMevError::CompletedEpochsError(format!("Failed to read line from epochs file: {}", e))
+    })? > 0
+    {
+        // Try to parse the line as a u64 and compare with our epoch
+        if let Ok(completed_epoch) = line.trim().parse::<u64>() {
+            if completed_epoch == epoch {
+                return Ok(true);
+            }
+        }
+
+        // Clear the line for the next iteration
+        line.clear();
+    }
+
+    Ok(false)
+}
+
+/// Helper function to add an epoch to the completed_claim_epochs.txt file
+pub async fn add_completed_epoch(
+    epoch: u64,
+    file_mutex: &Arc<Mutex<()>>,
+) -> Result<(), ClaimMevError> {
+    // Acquire the mutex lock before file operations
+    let _lock = file_mutex.lock().await;
+
+    let path = Path::new("completed_claim_epochs.txt");
+
+    // Create or open file in append mode
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .await
+        .map_err(|e| {
+            ClaimMevError::CompletedEpochsError(format!(
+                "Failed to open epochs file for writing: {}",
+                e
+            ))
+        })?;
+
+    // Write epoch followed by newline
+    file.write_all(format!("{}\n", epoch).as_bytes())
+        .await
+        .map_err(|e| {
+            ClaimMevError::CompletedEpochsError(format!("Failed to write epoch to file: {}", e))
+        })?;
+
+    Ok(())
 }
