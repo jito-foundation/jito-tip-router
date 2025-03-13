@@ -20,7 +20,7 @@ use ::{
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         tip_router::get_ncn_config,
     },
-    tokio::time::sleep,
+    tokio::{sync::Mutex, time::sleep},
 };
 
 #[tokio::main]
@@ -159,26 +159,80 @@ async fn main() -> Result<()> {
             if claim_tips {
                 let cli_clone = cli.clone();
                 let rpc_client = rpc_client.clone();
+                let file_mutex = Arc::new(Mutex::new(()));
+
                 tokio::spawn(async move {
                     loop {
-                        // Slow process with lots of account fetches so run every 30 minutes
-                        let epoch = if let Ok(epoch) = rpc_client.get_epoch_info().await {
-                            epoch.epoch.checked_sub(1).unwrap_or(epoch.epoch)
-                        } else {
-                            continue;
+                        // Get current epoch
+                        let current_epoch = match rpc_client.get_epoch_info().await {
+                            Ok(epoch_info) => epoch_info.epoch,
+                            Err(_) => {
+                                // If we can't get the epoch, wait and retry
+                                sleep(Duration::from_secs(60)).await;
+                                continue;
+                            }
                         };
-                        if let Err(e) = claim_mev_tips_with_emit(
-                            &cli_clone,
-                            epoch,
-                            tip_distribution_program_id,
-                            tip_router_program_id,
-                            ncn_address,
-                            Duration::from_secs(3600),
-                        )
-                        .await
-                        {
-                            error!("Error claiming tips: {}", e);
+
+                        // Create a vector to hold all our handles
+                        let mut join_handles = Vec::new();
+
+                        // Process current epoch and the previous two epochs
+                        for epoch_offset in 0..3 {
+                            // Make sure we don't go below epoch 0
+                            if epoch_offset > current_epoch {
+                                continue;
+                            }
+
+                            let epoch_to_process = current_epoch - epoch_offset;
+                            let cli_ref = cli_clone.clone();
+                            let file_mutex_ref = file_mutex.clone();
+
+                            // Create a task for each epoch and add its handle to our vector
+                            let handle = tokio::spawn(async move {
+                                let result = claim_mev_tips_with_emit(
+                                    &cli_ref,
+                                    epoch_to_process,
+                                    tip_distribution_program_id,
+                                    tip_router_program_id,
+                                    ncn_address,
+                                    Duration::from_secs(3600),
+                                    &file_mutex_ref,
+                                )
+                                .await;
+
+                                if let Err(e) = result {
+                                    error!(
+                                        "Error claiming tips for epoch {}: {}",
+                                        epoch_to_process, e
+                                    );
+                                } else {
+                                    info!(
+                                        "Successfully processed claims for epoch {}",
+                                        epoch_to_process
+                                    );
+                                }
+
+                                epoch_to_process
+                            });
+
+                            join_handles.push(handle);
                         }
+
+                        // Wait for all tasks to complete
+                        let mut completed_epochs = Vec::new();
+                        for handle in join_handles {
+                            if let Ok(epoch) = handle.await {
+                                completed_epochs.push(epoch);
+                            }
+                        }
+
+                        info!(
+                            "Completed processing claims for epochs: {:?}",
+                            completed_epochs
+                        );
+
+                        // Sleep before the next iteration
+                        info!("Sleeping for 30 minutes before next claim cycle");
                         sleep(Duration::from_secs(1800)).await;
                     }
                 });
@@ -239,7 +293,7 @@ async fn main() -> Result<()> {
             epoch,
         } => {
             info!("Claiming tips...");
-
+            let file_mutex = Arc::new(Mutex::new(()));
             claim_mev_tips_with_emit(
                 &cli,
                 epoch,
@@ -247,6 +301,7 @@ async fn main() -> Result<()> {
                 tip_router_program_id,
                 ncn_address,
                 Duration::from_secs(3600),
+                &file_mutex,
             )
             .await?;
         }
