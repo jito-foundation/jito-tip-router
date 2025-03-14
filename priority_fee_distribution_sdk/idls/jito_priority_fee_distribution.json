@@ -109,7 +109,8 @@
         {
           "name": "claim_status_payer",
           "docs": [
-            "Receiver of the funds."
+            "Receiver of the funds.",
+            ""
           ],
           "writable": true
         }
@@ -717,39 +718,12 @@
     {
       "name": "ClaimStatus",
       "docs": [
-        "Gives us an audit trail of who and what was claimed; also enforces and only-once claim by any party."
+        "A PDA uniquely derived by the Tip Distribution account and claimant, which enforces an only-",
+        "once claim by each claimant."
       ],
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "is_claimed",
-            "docs": [
-              "If true, the tokens have been claimed."
-            ],
-            "type": "bool"
-          },
-          {
-            "name": "claimant",
-            "docs": [
-              "Authority that claimed the tokens. Allows for delegated rewards claiming."
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "claim_status_payer",
-            "docs": [
-              "The payer who created the claim."
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "amount",
-            "docs": [
-              "Amount of funds claimed."
-            ],
-            "type": "u64"
-          },
           {
             "name": "expires_at",
             "docs": [

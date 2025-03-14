@@ -321,7 +321,7 @@ mod set_merkle_root {
         assert_eq!(merkle_root.max_num_nodes, node.max_num_nodes);
         assert_eq!(merkle_root.max_total_claim, node.max_total_claim);
 
-        let tip_distribution_account = meta_merkle_tree_fixture
+        let tip_distribution_account_pubkey = meta_merkle_tree_fixture
             .generated_merkle_tree_fixture
             .test_generated_merkle_tree
             .tip_distribution_account;
@@ -343,19 +343,19 @@ mod set_merkle_root {
             .do_claim_with_payer_priority_fee(
                 ncn_address,
                 target_claimant,
-                tip_distribution_account,
+                tip_distribution_account_pubkey,
                 target_claimant_node_proof.clone(),
                 target_claimant_node_amount,
             )
             .await?;
 
         let claim_status_account = tip_distribution_client
-            .get_claim_status_account(target_claimant, tip_distribution_account)
+            .get_claim_status_account(target_claimant, tip_distribution_account_pubkey)
             .await?;
-
-        assert!(claim_status_account.is_claimed);
-        assert_eq!(claim_status_account.claimant, target_claimant);
-        assert_eq!(claim_status_account.amount, target_claimant_node_amount);
+        assert_eq!(
+            claim_status_account.expires_at,
+            tip_distribution_account.expires_at
+        );
 
         Ok(())
     }
