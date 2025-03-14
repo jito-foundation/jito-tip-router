@@ -1,44 +1,57 @@
 use std::{
     path::PathBuf,
     str::FromStr,
+    sync::Arc,
     time::{Duration, Instant},
 };
 
 use anyhow::Result;
 use ellipsis_client::EllipsisClient;
 use log::{error, info};
-use solana_metrics::{datapoint_error, datapoint_info};
+use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
+use solana_metrics::datapoint_error;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::pubkey::Pubkey;
+use solana_runtime::bank::Bank;
+use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::read_keypair_file};
 use tokio::time;
 
 use crate::{
-    backup_snapshots::SnapshotInfo, get_meta_merkle_root, tip_router::get_ncn_config, Cli,
+    backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
+    create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
+    load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
+    stake_meta_file_name, submit::submit_to_ncn, tip_router::get_ncn_config, Cli, OperatorState,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
 const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined
 
-pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> u64 {
+pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> EpochInfo {
     loop {
         tokio::time::sleep(Duration::from_secs(10)).await; // Check every 10 seconds
-        let new_epoch = match rpc_client.get_epoch_info().await {
-            Ok(info) => info.epoch,
+        let new_epoch_info = match rpc_client.get_epoch_info().await {
+            Ok(info) => info,
             Err(e) => {
                 error!("Error getting epoch info: {:?}", e);
                 continue;
             }
         };
 
-        if new_epoch > current_epoch {
-            info!("New epoch detected: {} -> {}", current_epoch, new_epoch);
-            return new_epoch;
+        if new_epoch_info.epoch > current_epoch {
+            info!(
+                "New epoch detected: {} -> {}",
+                current_epoch, new_epoch_info.epoch
+            );
+            return new_epoch_info;
         }
     }
 }
 
 pub async fn get_previous_epoch_last_slot(rpc_client: &RpcClient) -> Result<(u64, u64)> {
     let epoch_info = rpc_client.get_epoch_info().await?;
+    calc_prev_epoch_and_final_slot(&epoch_info)
+}
+
+pub fn calc_prev_epoch_and_final_slot(epoch_info: &EpochInfo) -> Result<(u64, u64)> {
     let current_slot = epoch_info.absolute_slot;
     let slot_index = epoch_info.slot_index;
 
@@ -86,144 +99,196 @@ pub async fn wait_for_optimal_incremental_snapshot(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn process_epoch(
-    client: &EllipsisClient,
-    target_slot: u64,
-    target_epoch: u64,
+pub async fn loop_stages(
+    rpc_client: EllipsisClient,
+    cli: Cli,
+    starting_stage: OperatorState,
+    override_target_slot: Option<u64>,
+    tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
-    tip_router_program_id: &Pubkey,
     ncn_address: &Pubkey,
-    snapshots_enabled: bool,
-    new_epoch_rollover: bool,
-    cli_args: &Cli,
+    enable_snapshots: bool,
+    save_stages: bool,
 ) -> Result<()> {
-    info!("Processing epoch {:?}", target_epoch);
+    let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
+    let mut current_epoch_info = rpc_client.get_epoch_info().await?;
 
-    let start = Instant::now();
-
-    let ledger_path = cli_args.ledger_path.clone();
-    let account_paths = None;
-    let full_snapshots_path = cli_args.full_snapshots_path.clone();
-    let incremental_snapshots_path = cli_args.backup_snapshots_dir.clone();
-    let operator_address = Pubkey::from_str(&cli_args.operator_address).unwrap();
-    let meta_merkle_tree_dir = cli_args.meta_merkle_tree_dir.clone();
-
-    // Get the protocol fees
-    let ncn_config = get_ncn_config(client, tip_router_program_id, ncn_address).await?;
-    let tip_router_target_epoch = target_epoch
-        .checked_add(1)
-        .ok_or_else(|| anyhow::anyhow!("tip_router_target_epoch overflow"))?;
-    let adjusted_total_fees = ncn_config
-        .fee_config
-        .adjusted_total_fees_bps(tip_router_target_epoch)?;
-
-    let account_paths = account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
-    let full_snapshots_path = full_snapshots_path.map_or(ledger_path, |path| path);
-
-    // Wait for optimal incremental snapshot to be available since they can be delayed in a new epoch
-    if new_epoch_rollover {
-        wait_for_optimal_incremental_snapshot(incremental_snapshots_path.clone(), target_slot)
-            .await?;
-    }
-
-    // Generate merkle root from ledger
-    let meta_merkle_tree = match get_meta_merkle_root(
-        cli_args.ledger_path.as_path(),
-        account_paths,
-        full_snapshots_path,
-        incremental_snapshots_path,
-        &target_slot,
-        tip_distribution_program_id,
-        "", // TODO out_path is not used, unsure what should be put here. Maybe `snapshot_output_dir` from cli args?
-        tip_payment_program_id,
-        tip_router_program_id,
-        ncn_address,
-        &operator_address,
-        target_epoch,
-        adjusted_total_fees,
-        snapshots_enabled,
-        &meta_merkle_tree_dir,
-    ) {
-        Ok(tree) => {
-            datapoint_info!(
-                "tip_router_cli.process_epoch",
-                ("operator_address", operator_address.to_string(), String),
-                ("epoch", target_epoch, i64),
-                ("status", "success", String),
-                ("state", "merkle_root_generation", String),
-                ("duration_ms", start.elapsed().as_millis() as i64, i64)
-            );
-            tree
-        }
-        Err(e) => {
-            datapoint_error!(
-                "tip_router_cli.process_epoch",
-                ("operator_address", operator_address.to_string(), String),
-                ("epoch", target_epoch, i64),
-                ("status", "error", String),
-                ("error", format!("{:?}", e), String),
-                ("state", "merkle_root_generation", String),
-                ("duration_ms", start.elapsed().as_millis() as i64, i64)
-            );
-            return Err(anyhow::anyhow!("Failed to generate merkle root: {:?}", e));
-        }
+    // Track runs that are starting right at the beginning of a new epoch
+    let operator_address = cli.operator_address.clone();
+    let mut stage = starting_stage;
+    let mut bank: Option<Arc<Bank>> = None;
+    let mut stake_meta_collection: Option<StakeMetaCollection> = None;
+    let mut merkle_tree_collection: Option<GeneratedMerkleTreeCollection> = None;
+    let mut epoch_to_process = current_epoch_info.epoch.saturating_sub(1);
+    let mut slot_to_process = if let Some(slot) = override_target_slot {
+        slot
+    } else {
+        let (_, prev_slot) = calc_prev_epoch_and_final_slot(&current_epoch_info)?;
+        prev_slot
     };
+    loop {
+        match stage {
+            OperatorState::LoadBankFromSnapshot => {
+                let incremental_snapshots_path = cli.backup_snapshots_dir.clone();
+                wait_for_optimal_incremental_snapshot(incremental_snapshots_path, slot_to_process)
+                    .await?;
 
-    // Write meta merkle tree to file
-    let meta_merkle_tree_path =
-        meta_merkle_tree_dir.join(format!("meta_merkle_tree_{}.json", target_epoch));
-    let meta_merkle_tree_json = match serde_json::to_string(&meta_merkle_tree) {
-        Ok(json) => json,
-        Err(e) => {
-            datapoint_error!(
-                "tip_router_cli.process_epoch",
-                ("operator_address", operator_address.to_string(), String),
-                ("epoch", target_epoch, i64),
-                ("status", "error", String),
-                ("error", format!("{:?}", e), String),
-                ("state", "merkle_root_serialization", String),
-                ("duration_ms", start.elapsed().as_millis() as i64, i64)
-            );
-            return Err(anyhow::anyhow!(
-                "Failed to serialize meta merkle tree: {}",
-                e
-            ));
+                bank = Some(load_bank_from_snapshot(
+                    cli.clone(),
+                    slot_to_process,
+                    enable_snapshots,
+                ));
+                // Transition to the next stage
+                stage = OperatorState::CreateStakeMeta;
+            }
+            OperatorState::CreateStakeMeta => {
+                let start = Instant::now();
+                if bank.is_none() {
+                    let SnapshotPaths {
+                        ledger_path,
+                        account_paths,
+                        full_snapshots_path: _,
+                        incremental_snapshots_path: _,
+                        backup_snapshots_dir,
+                    } = cli.get_snapshot_paths();
+
+                    // We can safely expect to use the backup_snapshots_dir as the full snapshot path because
+                    //  _get_bank_from_snapshot_at_slot_ expects the snapshot at the exact `slot` to have
+                    //  already been taken.
+                    let maybe_bank = get_bank_from_snapshot_at_slot(
+                        slot_to_process,
+                        &backup_snapshots_dir,
+                        &backup_snapshots_dir,
+                        account_paths,
+                        ledger_path.as_path(),
+                    );
+                    match maybe_bank {
+                        Ok(some_bank) => bank = Some(Arc::new(some_bank)),
+                        Err(e) => {
+                            datapoint_error!(
+                                "tip_router_cli.create_stake_meta",
+                                ("operator_address", operator_address, String),
+                                ("epoch", epoch_to_process, i64),
+                                ("status", "error", String),
+                                ("error", e.to_string(), String),
+                                ("state", "create_stake_meta", String),
+                                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                            );
+                            panic!("{}", e.to_string());
+                        }
+                    }
+                }
+                stake_meta_collection = Some(create_stake_meta(
+                    operator_address.clone(),
+                    epoch_to_process,
+                    bank.as_ref().expect("Bank was not set"),
+                    tip_distribution_program_id,
+                    tip_payment_program_id,
+                    &cli.get_save_path(),
+                    save_stages,
+                ));
+                // we should be able to safely drop the bank in this loop
+                bank = None;
+                // Transition to the next stage
+                stage = OperatorState::CreateMerkleTreeCollection;
+            }
+            OperatorState::CreateMerkleTreeCollection => {
+                let some_stake_meta_collection = match stake_meta_collection.to_owned() {
+                    Some(collection) => collection,
+                    None => {
+                        let file = cli
+                            .get_save_path()
+                            .join(stake_meta_file_name(epoch_to_process));
+                        StakeMetaCollection::new_from_file(&file)?
+                    }
+                };
+                let config =
+                    get_ncn_config(&rpc_client, tip_router_program_id, ncn_address).await?;
+                // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
+                //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
+                //  use epoch + 1 here
+                let ballot_epoch = epoch_to_process.checked_add(1).unwrap();
+                let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
+
+                // Generate the merkle tree collection
+                merkle_tree_collection = Some(create_merkle_tree_collection(
+                    cli.operator_address.clone(),
+                    tip_router_program_id,
+                    some_stake_meta_collection,
+                    epoch_to_process,
+                    ncn_address,
+                    protocol_fee_bps,
+                    &cli.get_save_path(),
+                    save_stages,
+                ));
+
+                stake_meta_collection = None;
+                // Transition to the next stage
+                stage = OperatorState::CreateMetaMerkleTree;
+            }
+            OperatorState::CreateMetaMerkleTree => {
+                let some_merkle_tree_collection = match merkle_tree_collection.to_owned() {
+                    Some(collection) => collection,
+                    None => {
+                        let file = cli
+                            .get_save_path()
+                            .join(merkle_tree_collection_file_name(epoch_to_process));
+                        GeneratedMerkleTreeCollection::new_from_file(&file)?
+                    }
+                };
+
+                create_meta_merkle_tree(
+                    cli.operator_address.clone(),
+                    some_merkle_tree_collection,
+                    epoch_to_process,
+                    &cli.get_save_path(),
+                    // This is defaulted to true because the output file is required by the
+                    //  task that sets TipDistributionAccounts' merkle roots
+                    true,
+                );
+                stage = OperatorState::CastVote;
+            }
+            OperatorState::CastVote => {
+                let meta_merkle_tree_path = PathBuf::from(format!(
+                    "{}/{}",
+                    cli.get_save_path().display(),
+                    meta_merkle_tree_file_name(epoch_to_process)
+                ));
+                let operator_address = Pubkey::from_str(&cli.operator_address)?;
+                submit_to_ncn(
+                    &rpc_client,
+                    &keypair,
+                    &operator_address,
+                    &meta_merkle_tree_path,
+                    epoch_to_process,
+                    ncn_address,
+                    tip_router_program_id,
+                    tip_distribution_program_id,
+                    cli.submit_as_memo,
+                    // We let the submit task handle setting merkle roots
+                    false,
+                )
+                .await?;
+                stage = OperatorState::WaitForNextEpoch;
+            }
+            OperatorState::WaitForNextEpoch => {
+                current_epoch_info =
+                    wait_for_next_epoch(&rpc_client, current_epoch_info.epoch).await;
+                // Get the last slot of the previous epoch
+                let (previous_epoch, previous_epoch_slot) =
+                    if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client).await {
+                        (epoch, slot)
+                    } else {
+                        // TODO: Make a datapoint error
+                        error!("Error getting previous epoch slot");
+                        continue;
+                    };
+                slot_to_process = previous_epoch_slot;
+                epoch_to_process = previous_epoch;
+
+                stage = OperatorState::LoadBankFromSnapshot;
+            }
         }
-    };
-
-    if let Err(e) = std::fs::write(meta_merkle_tree_path, meta_merkle_tree_json) {
-        datapoint_error!(
-            "tip_router_cli.process_epoch",
-            ("operator_address", operator_address.to_string(), String),
-            ("epoch", target_epoch, i64),
-            ("status", "error", String),
-            ("error", format!("{:?}", e), String),
-            ("state", "merkle_root_file_write", String),
-            ("duration_ms", start.elapsed().as_millis() as i64, i64)
-        );
-        return Err(anyhow::anyhow!(
-            "Failed to write meta merkle tree to file: {}",
-            e
-        ));
     }
-
-    // Emit a datapoint for starting the epoch processing
-    datapoint_info!(
-        "tip_router_cli.process_epoch",
-        ("operator_address", operator_address.to_string(), String),
-        ("epoch", target_epoch, i64),
-        ("status", "success", String),
-        ("state", "epoch_processing_completed", String),
-        (
-            "meta_merkle_root",
-            format!("{:?}", meta_merkle_tree.merkle_root),
-            String
-        ),
-        ("duration_ms", start.elapsed().as_millis() as i64, i64)
-    );
-
-    solana_metrics::flush();
-
-    Ok(())
 }

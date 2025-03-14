@@ -32,6 +32,7 @@ use solana_sdk::{
 use thiserror::Error;
 
 use crate::{
+    merkle_tree_collection_file_name,
     rpc_utils::{get_batched_accounts, send_until_blockhash_expires},
     Cli,
 };
@@ -77,10 +78,9 @@ pub async fn claim_mev_tips_with_emit(
     let keypair = read_keypair_file(cli.keypair_path.clone())
         .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {:?}", e))?;
     let keypair = Arc::new(keypair);
-    let meta_merkle_tree_dir = cli.meta_merkle_tree_dir.clone();
+    let meta_merkle_tree_dir = cli.get_save_path().clone();
     let rpc_url = cli.rpc_url.clone();
-    let merkle_tree_coll_path =
-        meta_merkle_tree_dir.join(format!("generated_merkle_tree_{}.json", epoch));
+    let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
     let mut merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
         .map_err(|e| anyhow::anyhow!(e))?;
 
@@ -192,29 +192,35 @@ pub async fn claim_mev_tips(
         }
 
         all_claim_transactions.shuffle(&mut thread_rng());
-        let transactions: Vec<_> = all_claim_transactions.into_iter().take(300).collect();
 
-        // only check balance for the ones we need to currently send since reclaim rent running in parallel
-        if let Some((start_balance, desired_balance, sol_to_deposit)) =
-            is_sufficient_balance(&keypair.pubkey(), &rpc_client, transactions.len() as u64).await
-        {
-            return Err(ClaimMevError::InsufficientBalance {
-                desired_balance,
-                payer: keypair.pubkey(),
-                start_balance,
-                sol_to_deposit,
-            });
+        for transactions in all_claim_transactions.chunks(2_000) {
+            let transactions: Vec<_> = transactions.to_vec();
+            // only check balance for the ones we need to currently send since reclaim rent running in parallel
+            if let Some((start_balance, desired_balance, sol_to_deposit)) =
+                is_sufficient_balance(&keypair.pubkey(), &rpc_client, transactions.len() as u64)
+                    .await
+            {
+                return Err(ClaimMevError::InsufficientBalance {
+                    desired_balance,
+                    payer: keypair.pubkey(),
+                    start_balance,
+                    sol_to_deposit,
+                });
+            }
+
+            let blockhash = rpc_client.get_latest_blockhash().await?;
+            if let Err(e) = send_until_blockhash_expires(
+                &rpc_client,
+                &rpc_sender_client,
+                transactions,
+                blockhash,
+                keypair,
+            )
+            .await
+            {
+                info!("send_until_blockhash_expires failed: {:?}", e);
+            }
         }
-
-        let blockhash = rpc_client.get_latest_blockhash().await?;
-        let _ = send_until_blockhash_expires(
-            &rpc_client,
-            &rpc_sender_client,
-            transactions,
-            blockhash,
-            keypair,
-        )
-        .await;
     }
 
     let transactions = get_claim_transactions_for_valid_unclaimed(

@@ -1,6 +1,6 @@
 [package]
 name = "tip-router-operator-cli"
-version = "0.1.0"
+version = "1.1.1"
 edition = "2021"
 description = "CLI for Jito Tip Router"
 
@@ -17,7 +17,6 @@ hex = "0.4"
 im = "15.1"
 itertools = "0.11"
 jito-bytemuck = { workspace = true }
-jito-restaking-program = { workspace = true }
 jito-tip-distribution-sdk = { workspace = true }
 jito-tip-payment-sdk = { workspace = true }
 jito-tip-router-client = { workspace = true }
