@@ -92,6 +92,7 @@ mod set_merkle_root {
             delegations: vec![test_delegation.clone()],
             total_delegated: 50,
             commission: 0,
+            maybe_priority_fee_distribution_meta: None,
         };
 
         let other_validator = Pubkey::new_unique();
@@ -112,6 +113,7 @@ mod set_merkle_root {
             delegations: vec![test_delegation],
             total_delegated: 50,
             commission: 0,
+            maybe_priority_fee_distribution_meta: None,
         };
 
         let stake_meta_collection = StakeMetaCollection {

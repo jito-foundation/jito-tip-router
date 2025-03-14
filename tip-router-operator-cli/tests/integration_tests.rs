@@ -168,6 +168,7 @@ impl TestContext {
             }],
             total_delegated: 1_000_000,
             commission: 10,
+            maybe_priority_fee_distribution_meta: None,
         };
 
         StakeMetaCollection {

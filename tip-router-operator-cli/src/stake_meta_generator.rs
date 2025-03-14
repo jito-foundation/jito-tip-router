@@ -7,11 +7,12 @@ use std::{
 
 use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
+use jito_priority_fee_distribution_sdk::derive_tip_distribution_account_address as derive_priority_fee_tda;
 use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, TipDistributionAccount};
 use jito_tip_payment_sdk::{jito_tip_payment::accounts::Config, CONFIG_ACCOUNT_SEED};
 use log::*;
 use meta_merkle_tree::generated_merkle_tree::{
-    Delegation, StakeMeta, StakeMetaCollection, TipDistributionMeta,
+    Delegation, PriorityFeeDistributionMeta, StakeMeta, StakeMetaCollection, TipDistributionMeta,
 };
 use solana_accounts_db::hardened_unpack::OpenGenesisConfigError;
 use solana_client::client_error::ClientError;
@@ -88,11 +89,40 @@ fn tip_distribution_account_from_tda_wrapper(
     })
 }
 
+/// Converts the `TipDistributionAccountWrapper` to StakeMeta's exptected `PriorityFeeDistributionMeta`
+fn pf_tip_distribution_account_from_tda_wrapper(
+    tda_wrapper: TipDistributionAccountWrapper,
+    // The amount that will be left remaining in the tda to maintain rent exemption status.
+    rent_exempt_amount: u64,
+) -> Result<PriorityFeeDistributionMeta, StakeMetaGeneratorError> {
+    Ok(PriorityFeeDistributionMeta {
+        priority_fee_distribution_pubkey: tda_wrapper.tip_distribution_pubkey,
+        total_tips: tda_wrapper
+            .account_data
+            .lamports()
+            .checked_sub(rent_exempt_amount)
+            .ok_or(StakeMetaGeneratorError::CheckedMathError)?,
+        validator_fee_bps: tda_wrapper
+            .tip_distribution_account
+            .validator_commission_bps,
+        merkle_root_upload_authority: tda_wrapper
+            .tip_distribution_account
+            .merkle_root_upload_authority,
+    })
+}
+
+type VoteInfoAndTdas<'a> = Vec<(
+    (Pubkey, &'a VoteAccount),
+    Option<TipDistributionAccountWrapper>,
+    Option<TipDistributionAccountWrapper>,
+)>;
+
 /// Creates a collection of [StakeMeta]'s from the given bank.
 #[allow(clippy::significant_drop_tightening)]
 pub fn generate_stake_meta_collection(
     bank: &Arc<Bank>,
     tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     assert!(bank.is_frozen());
@@ -157,14 +187,17 @@ pub fn generate_stake_meta_collection(
         .checked_sub(block_builder_tips)
         .expect("tip_receiver_fee doesnt underflow");
 
-    let vote_pk_and_maybe_tdas: Vec<(
-        (Pubkey, &VoteAccount),
-        Option<TipDistributionAccountWrapper>,
-    )> = epoch_vote_accounts
+    let vote_pk_and_maybe_tdas: VoteInfoAndTdas<'_> = epoch_vote_accounts
         .iter()
         .map(|(vote_pubkey, (_total_stake, vote_account))| {
             let tip_distribution_pubkey = derive_tip_distribution_account_address(
                 tip_distribution_program_id,
+                vote_pubkey,
+                bank.epoch(),
+            )
+            .0;
+            let priority_fee_distribution_pubkey = derive_priority_fee_tda(
+                priority_fee_distribution_program_id,
                 vote_pubkey,
                 bank.epoch(),
             )
@@ -196,12 +229,42 @@ pub fn generate_stake_meta_collection(
                     )
                 },
             );
-            Ok(((*vote_pubkey, vote_account), tda))
+            let pf_tda = bank
+                .get_account(&priority_fee_distribution_pubkey)
+                .map_or_else(
+                    || None,
+                    |mut account_data| {
+                        // TDAs may be funded with lamports and therefore exist in the bank, but would fail the deserialization step
+                        // if the buffer is yet to be allocated thru the init call to the program.
+                        TipDistributionAccount::try_deserialize(&mut account_data.data())
+                            .map_or_else(
+                                |_| None,
+                                |tip_distribution_account| {
+                                    // this snapshot might have tips that weren't claimed by the time the epoch is over
+                                    // assume that it will eventually be cranked and credit the excess to this account
+                                    if tip_distribution_pubkey == tip_receiver {
+                                        account_data.set_lamports(
+                                            account_data
+                                                .lamports()
+                                                .checked_add(tip_receiver_fee)
+                                                .expect("tip overflow"),
+                                        );
+                                    }
+                                    Some(TipDistributionAccountWrapper {
+                                        tip_distribution_account,
+                                        account_data,
+                                        tip_distribution_pubkey,
+                                    })
+                                },
+                            )
+                    },
+                );
+            Ok(((*vote_pubkey, vote_account), tda, pf_tda))
         })
         .collect::<Result<_, StakeMetaGeneratorError>>()?;
 
     let mut stake_metas = vec![];
-    for ((vote_pubkey, vote_account), maybe_tda) in vote_pk_and_maybe_tdas {
+    for ((vote_pubkey, vote_account), maybe_tda, maybe_pf_tda) in vote_pk_and_maybe_tdas {
         if let Some(mut delegations) = voter_pubkey_to_delegations.get(&vote_pubkey).cloned() {
             let total_delegated = delegations.iter().fold(0u64, |sum, delegation| {
                 sum.checked_add(delegation.lamports_delegated).unwrap()
@@ -224,10 +287,29 @@ pub fn generate_stake_meta_collection(
                 None
             };
 
+            // TODO: DRY this up
+            let maybe_priority_fee_distribution_meta = if let Some(tda) = maybe_pf_tda {
+                let actual_len = tda.account_data.data().len();
+                let expected_len = 8_usize.saturating_add(size_of::<TipDistributionAccount>());
+                if actual_len != expected_len {
+                    warn!("len mismatch actual={actual_len}, expected={expected_len}");
+                }
+                let rent_exempt_amount =
+                    bank.get_minimum_balance_for_rent_exemption(tda.account_data.data().len());
+
+                Some(pf_tip_distribution_account_from_tda_wrapper(
+                    tda,
+                    rent_exempt_amount,
+                )?)
+            } else {
+                None
+            };
+
             let vote_state = vote_account.vote_state();
             delegations.sort();
             stake_metas.push(StakeMeta {
                 maybe_tip_distribution_meta,
+                maybe_priority_fee_distribution_meta,
                 validator_node_pubkey: vote_state.node_pubkey,
                 validator_vote_account: vote_pubkey,
                 delegations,
@@ -352,6 +434,7 @@ mod tests {
         /* 2. Seed the Bank with [TipDistributionAccount]'s */
         let merkle_root_upload_authority = Pubkey::new_unique();
         let tip_distribution_program_id = Pubkey::new_unique();
+        let priorty_fee_distribution_program_id = Pubkey::new_unique();
         let tip_payment_program_id = Pubkey::new_unique();
 
         let delegator_0 = Keypair::new();
@@ -628,10 +711,48 @@ mod tests {
         bank.store_account(&tip_distribution_account_1.0, &data_1);
         bank.store_account(&tip_distribution_account_2.0, &data_2);
 
+        // TODO: Add in information for the PriorityFeeDistributions
+        let pf_tip_distribution_account_0 = derive_tip_distribution_account_address(
+            &priorty_fee_distribution_program_id,
+            &validator_keypairs_0.vote_keypair.pubkey(),
+            bank.epoch(),
+        );
+        let expires_at = bank.epoch() + 3;
+
+        let pf_tda_0 = TipDistributionAccount {
+            validator_vote_account: validator_keypairs_0.vote_keypair.pubkey(),
+            merkle_root_upload_authority,
+            merkle_root: None,
+            epoch_created_at: bank.epoch(),
+            validator_commission_bps: 50,
+            expires_at,
+            bump: pf_tip_distribution_account_0.1,
+        };
+
+        let pf_tip_distro_0_tips = 1_000_000 * 10;
+
+        let pf_tda_0_fields = (
+            pf_tip_distribution_account_0.0,
+            pf_tda_0.validator_commission_bps,
+        );
+        let pf_data_0 = tda_to_account_shared_data(
+            &priorty_fee_distribution_program_id,
+            pf_tip_distro_0_tips,
+            pf_tda_0,
+        );
+
+        let accounts_data = create_config_account_data(&priorty_fee_distribution_program_id, &bank);
+        for (pubkey, data) in accounts_data {
+            bank.store_account(&pubkey, &data);
+        }
+
+        bank.store_account(&pf_tip_distribution_account_0.0, &pf_data_0);
+
         bank.freeze();
         let stake_meta_collection = generate_stake_meta_collection(
             &bank,
             &tip_distribution_program_id,
+            &priorty_fee_distribution_program_id,
             &tip_payment_program_id,
         )
         .unwrap();
@@ -663,6 +784,16 @@ mod tests {
                         .unwrap(),
                     validator_fee_bps: tda_0_fields.1,
                 }),
+                maybe_priority_fee_distribution_meta: Some(PriorityFeeDistributionMeta {
+                    merkle_root_upload_authority,
+                    priority_fee_distribution_pubkey: pf_tda_0_fields.0,
+                    total_tips: pf_tip_distro_0_tips
+                        .checked_sub(
+                            bank.get_minimum_balance_for_rent_exemption(TIP_DISTRIBUTION_SIZE),
+                        )
+                        .unwrap(),
+                    validator_fee_bps: pf_tda_0_fields.1,
+                }),
                 commission: 0,
                 validator_node_pubkey: validator_keypairs_0.node_keypair.pubkey(),
             },
@@ -687,6 +818,7 @@ mod tests {
                         .unwrap(),
                     validator_fee_bps: tda_1_fields.1,
                 }),
+                maybe_priority_fee_distribution_meta: None,
                 commission: 0,
                 validator_node_pubkey: validator_keypairs_1.node_keypair.pubkey(),
             },
@@ -711,6 +843,7 @@ mod tests {
                         .unwrap(),
                     validator_fee_bps: tda_2_fields.1,
                 }),
+                maybe_priority_fee_distribution_meta: None,
                 commission: 0,
                 validator_node_pubkey: validator_keypairs_2.node_keypair.pubkey(),
             },

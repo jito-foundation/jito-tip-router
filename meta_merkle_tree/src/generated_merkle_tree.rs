@@ -380,6 +380,9 @@ pub struct StakeMeta {
     /// The validator's tip-distribution meta if it exists.
     pub maybe_tip_distribution_meta: Option<TipDistributionMeta>,
 
+    /// The validator's priority-fee-distribution meta if it exists.
+    pub maybe_priority_fee_distribution_meta: Option<PriorityFeeDistributionMeta>,
+
     /// Delegations to this validator.
     pub delegations: Vec<Delegation>,
 
@@ -410,6 +413,22 @@ pub struct TipDistributionMeta {
 
     #[serde(with = "pubkey_string_conversion")]
     pub tip_distribution_pubkey: Pubkey,
+
+    /// The validator's total tips in the [TipDistributionAccount].
+    pub total_tips: u64,
+
+    /// The validator's cut of tips from [TipDistributionAccount], calculated from the on-chain
+    /// commission fee bps.
+    pub validator_fee_bps: u16,
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
+pub struct PriorityFeeDistributionMeta {
+    #[serde(with = "pubkey_string_conversion")]
+    pub merkle_root_upload_authority: Pubkey,
+
+    #[serde(with = "pubkey_string_conversion")]
+    pub priority_fee_distribution_pubkey: Pubkey,
 
     /// The validator's total tips in the [TipDistributionAccount].
     pub total_tips: u64,
@@ -591,6 +610,7 @@ mod tests {
                     ],
                     total_delegated: 1_555_123_000_333_454_000,
                     commission: 100,
+                    maybe_priority_fee_distribution_meta: None,
                 },
                 StakeMeta {
                     validator_vote_account: validator_vote_account_1,
@@ -617,6 +637,7 @@ mod tests {
                     ],
                     total_delegated: 2_565_318_909_444_123,
                     commission: 10,
+                    maybe_priority_fee_distribution_meta: None,
                 },
             ],
             tip_distribution_program_id: Pubkey::new_unique(),

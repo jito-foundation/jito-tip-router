@@ -69,6 +69,7 @@ async fn main() -> Result<()> {
         Commands::Run {
             ncn_address,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             tip_payment_program_id,
             tip_router_program_id,
             save_snapshot,
@@ -192,6 +193,7 @@ async fn main() -> Result<()> {
                 override_target_slot,
                 &tip_router_program_id,
                 &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
                 &tip_payment_program_id,
                 &ncn_address,
                 save_snapshot,
@@ -254,6 +256,7 @@ async fn main() -> Result<()> {
             epoch,
             slot,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             tip_payment_program_id,
             save,
         } => {
@@ -281,6 +284,7 @@ async fn main() -> Result<()> {
                 epoch,
                 &Arc::new(bank),
                 &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
                 &tip_payment_program_id,
                 &save_path,
                 save,
