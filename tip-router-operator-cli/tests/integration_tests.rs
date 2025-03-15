@@ -1,6 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use anchor_lang::prelude::AnchorSerialize;
+use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID as PRIORITY_FEE_DISTRIBUTION_ID;
 use jito_tip_distribution_sdk::jito_tip_distribution::ID as TIP_DISTRIBUTION_ID;
 use jito_tip_payment_sdk::jito_tip_payment::ID as TIP_PAYMENT_ID;
 use jito_tip_router_program::ID as TIP_ROUTER_ID;
@@ -24,6 +25,7 @@ use tip_router_operator_cli::TipAccountConfig;
 struct TestContext {
     pub context: ProgramTestContext,
     pub tip_distribution_program_id: Pubkey,
+    pub priority_fee_distribution_program_id: Pubkey,
     pub tip_payment_program_id: Pubkey,
     pub payer: Keypair,
     pub stake_accounts: Vec<Keypair>,
@@ -137,6 +139,7 @@ impl TestContext {
         Ok(Self {
             context,
             tip_distribution_program_id: TIP_DISTRIBUTION_ID,
+            priority_fee_distribution_program_id: PRIORITY_FEE_DISTRIBUTION_ID,
             tip_payment_program_id: TIP_PAYMENT_ID,
             payer,
             stake_accounts, // Store all stake accounts instead of just one
@@ -177,6 +180,7 @@ impl TestContext {
             bank_hash: "test_bank_hash".to_string(),
             slot: 0,
             tip_distribution_program_id: self.tip_distribution_program_id,
+            priority_fee_distribution_program_id: self.priority_fee_distribution_program_id,
         }
     }
 }

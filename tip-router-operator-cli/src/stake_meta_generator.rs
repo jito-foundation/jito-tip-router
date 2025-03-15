@@ -327,7 +327,8 @@ pub fn generate_stake_meta_collection(
 
     Ok(StakeMetaCollection {
         stake_metas,
-        tip_distribution_program_id: *tip_distribution_program_id,
+        tip_distribution_program_id: tip_distribution_program_id.to_owned(),
+        priority_fee_distribution_program_id: priority_fee_distribution_program_id.to_owned(),
         bank_hash: bank.hash().to_string(),
         epoch: bank.epoch(),
         slot: bank.slot(),

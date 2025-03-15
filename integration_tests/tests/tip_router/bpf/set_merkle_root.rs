@@ -34,6 +34,7 @@ mod set_merkle_root {
     }
 
     fn _create_tree_node(
+        tip_distribution_program_id: Pubkey,
         claimant_staker_withdrawer: Pubkey,
         amount: u64,
         epoch: u64,
@@ -50,6 +51,7 @@ mod set_merkle_root {
         );
 
         generated_merkle_tree::TreeNode {
+            distributor_program: tip_distribution_program_id,
             claimant: claimant_staker_withdrawer,
             claim_status_pubkey,
             claim_status_bump,
@@ -119,6 +121,7 @@ mod set_merkle_root {
         let stake_meta_collection = StakeMetaCollection {
             stake_metas: vec![vote_account_stake_meta, other_stake_meta],
             tip_distribution_program_id: Pubkey::new_unique(),
+            priority_fee_distribution_program_id: Pubkey::new_unique(),
             bank_hash: String::default(),
             epoch: target_epoch,
             slot: 0,

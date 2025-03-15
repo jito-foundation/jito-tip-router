@@ -290,9 +290,11 @@ mod tests {
 
     #[test]
     fn test_new_from_generated_merkle_tree_collection() {
+        let tip_distribution_program_id = Pubkey::new_unique();
         // Create test tree nodes for each generated tree
         let tree1_nodes = vec![
             generated_merkle_tree::TreeNode {
+                distributor_program: tip_distribution_program_id,
                 claimant: Pubkey::new_unique(),
                 claim_status_pubkey: Pubkey::new_unique(),
                 claim_status_bump: 255,
@@ -302,6 +304,7 @@ mod tests {
                 proof: None, // Will be filled in by the tree generation
             },
             generated_merkle_tree::TreeNode {
+                distributor_program: tip_distribution_program_id,
                 claimant: Pubkey::new_unique(),
                 claim_status_pubkey: Pubkey::new_unique(),
                 claim_status_bump: 255,
@@ -314,6 +317,7 @@ mod tests {
 
         let tree2_nodes = vec![
             generated_merkle_tree::TreeNode {
+                distributor_program: tip_distribution_program_id,
                 claimant: Pubkey::new_unique(),
                 claim_status_pubkey: Pubkey::new_unique(),
                 claim_status_bump: 255,
@@ -323,6 +327,7 @@ mod tests {
                 proof: None,
             },
             generated_merkle_tree::TreeNode {
+                distributor_program: tip_distribution_program_id,
                 claimant: Pubkey::new_unique(),
                 claim_status_pubkey: Pubkey::new_unique(),
                 claim_status_bump: 255,
@@ -337,6 +342,7 @@ mod tests {
         let generated_trees = vec![
             GeneratedMerkleTree {
                 tip_distribution_account: Pubkey::new_unique(),
+                priority_fee_distribution_account: Some(Pubkey::new_unique()),
                 merkle_root_upload_authority: Pubkey::new_unique(),
                 merkle_root: Hash::new_unique(),
                 tree_nodes: tree1_nodes,
@@ -345,6 +351,7 @@ mod tests {
             },
             GeneratedMerkleTree {
                 tip_distribution_account: Pubkey::new_unique(),
+                priority_fee_distribution_account: Some(Pubkey::new_unique()),
                 merkle_root_upload_authority: Pubkey::new_unique(),
                 merkle_root: Hash::new_unique(),
                 tree_nodes: tree2_nodes,
