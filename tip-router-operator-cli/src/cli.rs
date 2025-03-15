@@ -166,6 +166,9 @@ pub enum Commands {
         tip_distribution_program_id: Pubkey,
 
         #[arg(long, env)]
+        priority_fee_distribution_program_id: Pubkey,
+
+        #[arg(long, env)]
         tip_router_program_id: Pubkey,
 
         #[arg(long, env)]

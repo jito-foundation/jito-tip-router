@@ -123,6 +123,7 @@ async fn main() -> Result<()> {
                         &ncn_address,
                         &tip_router_program_id,
                         &tip_distribution_program_id,
+                        &priority_fee_distribution_program_id,
                         num_monitored_epochs,
                         &cli_clone,
                         set_merkle_roots,
@@ -209,6 +210,7 @@ async fn main() -> Result<()> {
         Commands::SubmitEpoch {
             ncn_address,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             tip_router_program_id,
             epoch,
             set_merkle_roots,
@@ -229,6 +231,7 @@ async fn main() -> Result<()> {
                 &ncn_address,
                 &tip_router_program_id,
                 &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
                 cli.submit_as_memo,
                 set_merkle_roots,
             )
