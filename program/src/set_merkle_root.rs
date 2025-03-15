@@ -1,4 +1,5 @@
 use jito_bytemuck::AccountDeserialize;
+use jito_priority_fee_distribution_sdk::instruction::upload_merkle_root_ix as pf_upload_merkle_root_ix;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{
     derive_tip_distribution_account_address, instruction::upload_merkle_root_ix,
@@ -13,8 +14,10 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey,
 };
 
-pub fn process_set_merkle_root(
+#[allow(clippy::too_many_arguments)]
+pub fn _process_set_merkle_root(
     program_id: &Pubkey,
+    distribution_program_id: &Pubkey,
     accounts: &[AccountInfo],
     proof: Vec<[u8; 32]>,
     merkle_root: [u8; 32],
@@ -33,7 +36,7 @@ pub fn process_set_merkle_root(
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     BallotBox::load(program_id, ballot_box, ncn.key, epoch, false)?;
 
-    if tip_distribution_program.key.ne(&jito_tip_distribution::ID) {
+    if tip_distribution_program.key.ne(distribution_program_id) {
         msg!("Incorrect tip distribution program");
         return Err(ProgramError::InvalidAccountData);
     }
@@ -71,15 +74,28 @@ pub fn process_set_merkle_root(
     let (_, bump, mut ncn_config_seeds) = NcnConfig::find_program_address(program_id, ncn.key);
     ncn_config_seeds.push(vec![bump]);
 
-    invoke_signed(
-        &upload_merkle_root_ix(
+    let ix = if distribution_program_id.eq(&jito_tip_distribution::ID) {
+        upload_merkle_root_ix(
             *tip_distribution_config.key,
             *ncn_config.key,
             *tip_distribution_account.key,
             merkle_root,
             max_total_claim,
             max_num_nodes,
-        ),
+        )
+    } else {
+        pf_upload_merkle_root_ix(
+            *tip_distribution_config.key,
+            *ncn_config.key,
+            *tip_distribution_account.key,
+            merkle_root,
+            max_total_claim,
+            max_num_nodes,
+        )
+    };
+
+    invoke_signed(
+        &ix,
         &[
             tip_distribution_config.clone(),
             tip_distribution_account.clone(),
@@ -100,4 +116,25 @@ pub fn process_set_merkle_root(
     }
 
     Ok(())
+}
+
+pub fn process_set_merkle_root(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    proof: Vec<[u8; 32]>,
+    merkle_root: [u8; 32],
+    max_total_claim: u64,
+    max_num_nodes: u64,
+    epoch: u64,
+) -> ProgramResult {
+    _process_set_merkle_root(
+        program_id,
+        &jito_tip_distribution::ID,
+        accounts,
+        proof,
+        merkle_root,
+        max_total_claim,
+        max_num_nodes,
+        epoch,
+    )
 }

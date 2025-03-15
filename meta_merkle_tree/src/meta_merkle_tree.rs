@@ -68,7 +68,6 @@ impl MetaMerkleTree {
         Ok(tree)
     }
 
-    // TODO replace this with the GeneratedMerkleTreeCollection from the Operator module once that's created
     pub fn new_from_generated_merkle_tree_collection(
         generated_merkle_tree_collection: GeneratedMerkleTreeCollection,
     ) -> Result<Self> {
@@ -290,6 +289,7 @@ mod tests {
 
     #[test]
     fn test_new_from_generated_merkle_tree_collection() {
+        let tip_distribution_program_id = Pubkey::new_unique();
         // Create test tree nodes for each generated tree
         let tree1_nodes = vec![
             generated_merkle_tree::TreeNode {
@@ -336,6 +336,7 @@ mod tests {
         // Create test data with proper tree nodes
         let generated_trees = vec![
             GeneratedMerkleTree {
+                distribution_program: tip_distribution_program_id,
                 tip_distribution_account: Pubkey::new_unique(),
                 merkle_root_upload_authority: Pubkey::new_unique(),
                 merkle_root: Hash::new_unique(),
@@ -344,6 +345,7 @@ mod tests {
                 max_num_nodes: 5,
             },
             GeneratedMerkleTree {
+                distribution_program: tip_distribution_program_id,
                 tip_distribution_account: Pubkey::new_unique(),
                 merkle_root_upload_authority: Pubkey::new_unique(),
                 merkle_root: Hash::new_unique(),

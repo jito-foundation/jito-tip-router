@@ -1,3 +1,4 @@
+use jito_priority_fee_distribution_sdk::instruction::claim_ix as priority_fee_distribution_claim_ix;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{instruction::claim_ix, jito_tip_distribution};
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
@@ -6,8 +7,9 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey,
 };
 
-pub fn process_claim_with_payer(
+pub fn _process_claim_with_payer(
     program_id: &Pubkey,
+    distirbution_program_id: &Pubkey,
     accounts: &[AccountInfo],
     proof: Vec<[u8; 32]>,
     amount: u64,
@@ -24,7 +26,7 @@ pub fn process_claim_with_payer(
     Config::load(program_id, config, ncn.key, false)?;
     AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
-    if tip_distribution_program.key.ne(&jito_tip_distribution::ID) {
+    if tip_distribution_program.key.ne(distirbution_program_id) {
         msg!("Incorrect tip distribution program");
         return Err(ProgramError::InvalidAccountData);
     }
@@ -35,9 +37,8 @@ pub fn process_claim_with_payer(
         AccountPayer::find_program_address(program_id, ncn.key);
     account_payer_seeds.push(vec![account_payer_bump]);
 
-    // Invoke the claim instruction with our program as the payer
-    invoke_signed(
-        &claim_ix(
+    let ix = if distirbution_program_id.eq(&jito_tip_distribution::ID) {
+        claim_ix(
             *tip_distribution_config.key,
             *tip_distribution_account.key,
             *config.key,
@@ -48,7 +49,25 @@ pub fn process_claim_with_payer(
             proof,
             amount,
             bump,
-        ),
+        )
+    } else {
+        priority_fee_distribution_claim_ix(
+            *tip_distribution_config.key,
+            *tip_distribution_account.key,
+            *config.key,
+            *claim_status.key,
+            *claimant.key,
+            *account_payer.key,
+            *system_program.key,
+            proof,
+            amount,
+            bump,
+        )
+    };
+
+    // Invoke the claim instruction with our program as the payer
+    invoke_signed(
+        &ix,
         &[
             tip_distribution_config.clone(),
             tip_distribution_account.clone(),
@@ -73,4 +92,21 @@ pub fn process_claim_with_payer(
     )?;
 
     Ok(())
+}
+
+pub fn process_claim_with_payer(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    proof: Vec<[u8; 32]>,
+    amount: u64,
+    bump: u8,
+) -> ProgramResult {
+    _process_claim_with_payer(
+        program_id,
+        &jito_tip_distribution::ID,
+        accounts,
+        proof,
+        amount,
+        bump,
+    )
 }
