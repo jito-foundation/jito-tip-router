@@ -66,6 +66,7 @@ pub enum ClaimMevError {
     UncaughtError { e: String },
 }
 
+// TODO: Update to handle claiming tips for Priority Fee Distributor
 #[allow(clippy::too_many_arguments)]
 pub async fn claim_mev_tips_with_emit(
     cli: &Cli,

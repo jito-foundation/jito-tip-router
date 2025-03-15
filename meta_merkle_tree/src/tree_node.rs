@@ -6,6 +6,8 @@ use solana_program::{
 
 use crate::generated_merkle_tree::GeneratedMerkleTree;
 
+// REVIEW: This structure seems fine for multiple distribution programs. Need to see if upstream
+// dependencies make assumptions about _tip_distribution_account_'s owner
 /// Represents the information for activating a tip distribution account.
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct TreeNode {
@@ -47,7 +49,6 @@ impl TreeNode {
     }
 }
 
-// TODO replace this with the GeneratedMerkleTree from the Operator module once that's created
 impl From<GeneratedMerkleTree> for TreeNode {
     fn from(generated_merkle_tree: GeneratedMerkleTree) -> Self {
         Self {

@@ -68,7 +68,6 @@ impl MetaMerkleTree {
         Ok(tree)
     }
 
-    // TODO replace this with the GeneratedMerkleTreeCollection from the Operator module once that's created
     pub fn new_from_generated_merkle_tree_collection(
         generated_merkle_tree_collection: GeneratedMerkleTreeCollection,
     ) -> Result<Self> {

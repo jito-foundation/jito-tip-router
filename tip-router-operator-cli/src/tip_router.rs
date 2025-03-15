@@ -88,6 +88,7 @@ pub async fn cast_vote(
         .await
 }
 
+// TODO: Update to handle setting merkle root for Priority Fee Distributor
 #[allow(clippy::too_many_arguments)]
 pub async fn set_merkle_roots_batched(
     client: &EllipsisClient,
