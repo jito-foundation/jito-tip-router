@@ -34,7 +34,6 @@ mod set_merkle_root {
     }
 
     fn _create_tree_node(
-        tip_distribution_program_id: Pubkey,
         claimant_staker_withdrawer: Pubkey,
         amount: u64,
         epoch: u64,
@@ -51,7 +50,6 @@ mod set_merkle_root {
         );
 
         generated_merkle_tree::TreeNode {
-            distributor_program: tip_distribution_program_id,
             claimant: claimant_staker_withdrawer,
             claim_status_pubkey,
             claim_status_bump,

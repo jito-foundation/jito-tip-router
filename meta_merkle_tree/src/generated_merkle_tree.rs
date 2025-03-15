@@ -1,3 +1,4 @@
+use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID as PRIORITY_FEE_DISTRIBUTION_ID;
 use jito_tip_distribution_sdk::{
     jito_tip_distribution::ID as TIP_DISTRIBUTION_ID, CLAIM_STATUS_SEED,
 };
@@ -33,6 +34,8 @@ pub enum MerkleRootGeneratorError {
     MerkleTreeTestError,
     #[error("Checked math error")]
     CheckedMathError,
+    #[error("Distribution program not known")]
+    UnknownDistributionProgram,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -45,12 +48,12 @@ pub struct GeneratedMerkleTreeCollection {
 
 #[derive(Clone, Eq, Debug, Hash, PartialEq, Deserialize, Serialize)]
 pub struct GeneratedMerkleTree {
+    /// The distribution program this node came from (E.g. Tip Distributor OR Priority Fee
+    /// Distributor)
+    #[serde(with = "pubkey_string_conversion")]
+    pub distribution_program: Pubkey,
     #[serde(with = "pubkey_string_conversion")]
     pub tip_distribution_account: Pubkey,
-    // REVIEW: Is optional pubkey acceptable here? Or will this operate in an environment where 
-    //  all validators with tip distribution accounts will also have priority fee distributions?
-    #[serde(with = "optional_pubkey_string_conversion")]
-    pub priority_fee_distribution_account: Option<Pubkey>,
     #[serde(with = "pubkey_string_conversion")]
     pub merkle_root_upload_authority: Pubkey,
     pub merkle_root: Hash,
@@ -59,7 +62,97 @@ pub struct GeneratedMerkleTree {
     pub max_num_nodes: u64,
 }
 
+impl GeneratedMerkleTree {
+    fn new_from_stake_meta_for_distirbution_program(
+        stake_meta: &StakeMeta,
+        tip_router_program_id: &Pubkey,
+        distribution_program: &Pubkey,
+        ncn_address: &Pubkey,
+        protocol_fee_bps: u64,
+        epoch: u64,
+    ) -> Result<Self, MerkleRootGeneratorError> {
+        let (mut tree_nodes, tip_distribution_pubkey, merkle_root_upload_authority, total_tips) =
+            if distribution_program.eq(&TIP_DISTRIBUTION_ID) {
+                let tip_distribution_meta =
+                    stake_meta.maybe_tip_distribution_meta.as_ref().unwrap();
+
+                let tree_nodes = match TreeNode::vec_from_stake_meta_for_distribution_meta(
+                    stake_meta,
+                    tip_router_program_id,
+                    distribution_program,
+                    &tip_distribution_meta.tip_distribution_pubkey,
+                    ncn_address,
+                    tip_distribution_meta.total_tips,
+                    protocol_fee_bps,
+                    tip_distribution_meta.validator_fee_bps,
+                    epoch,
+                ) {
+                    Err(e) => return Err(e),
+                    Ok(maybe_tree_nodes) => maybe_tree_nodes.unwrap_or_default(),
+                };
+
+                (
+                    tree_nodes,
+                    tip_distribution_meta.tip_distribution_pubkey,
+                    tip_distribution_meta.merkle_root_upload_authority,
+                    tip_distribution_meta.total_tips,
+                )
+            } else if distribution_program.eq(&PRIORITY_FEE_DISTRIBUTION_ID) {
+                let priority_fee_distribution_meta = stake_meta
+                    .maybe_priority_fee_distribution_meta
+                    .as_ref()
+                    .unwrap();
+
+                let tree_nodes = match TreeNode::vec_from_stake_meta_for_distribution_meta(
+                    stake_meta,
+                    tip_router_program_id,
+                    distribution_program,
+                    &priority_fee_distribution_meta.priority_fee_distribution_pubkey,
+                    ncn_address,
+                    priority_fee_distribution_meta.total_tips,
+                    protocol_fee_bps,
+                    priority_fee_distribution_meta.validator_fee_bps,
+                    epoch,
+                ) {
+                    Err(e) => return Err(e),
+                    Ok(maybe_tree_nodes) => maybe_tree_nodes.unwrap_or_default(),
+                };
+
+                (
+                    tree_nodes,
+                    priority_fee_distribution_meta.priority_fee_distribution_pubkey,
+                    priority_fee_distribution_meta.merkle_root_upload_authority,
+                    priority_fee_distribution_meta.total_tips,
+                )
+            } else {
+                return Err(MerkleRootGeneratorError::UnknownDistributionProgram);
+            };
+
+        // Create merkle tree and add proofs
+        let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
+
+        let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
+        let max_num_nodes = tree_nodes.len() as u64;
+
+        for (i, tree_node) in tree_nodes.iter_mut().enumerate() {
+            tree_node.proof = Some(get_proof(&merkle_tree, i));
+        }
+
+        Ok(Self {
+            distribution_program: distribution_program.to_owned(),
+            max_num_nodes,
+            tip_distribution_account: tip_distribution_pubkey,
+            merkle_root_upload_authority,
+            merkle_root: *merkle_tree.get_root().unwrap(),
+            tree_nodes,
+            max_total_claim: total_tips,
+        })
+    }
+}
+
 impl GeneratedMerkleTreeCollection {
+    /// Create a collection of Generated Merkle Trees that includes both the MEV Tip Distributions
+    /// and the Priority Fee Distributions.
     pub fn new_from_stake_meta_collection(
         stake_meta_collection: StakeMetaCollection,
         ncn_address: &Pubkey,
@@ -70,51 +163,39 @@ impl GeneratedMerkleTreeCollection {
         let generated_merkle_trees = stake_meta_collection
             .stake_metas
             .into_iter()
-            .filter(|stake_meta| stake_meta.maybe_tip_distribution_meta.is_some())
-            .filter_map(|stake_meta| {
-                // Use the helper function to create tree nodes
-                let mut tree_nodes = match TreeNode::vec_from_stake_meta(
-                    &stake_meta,
-                    protocol_fee_bps,
-                    ncn_address,
-                    epoch,
-                    &stake_meta_collection.tip_distribution_program_id, // Pass the program ID
-                    &stake_meta_collection.priority_fee_distribution_program_id, // Pass the program ID
-                    tip_router_program_id,
-                ) {
-                    Err(e) => return Some(Err(e)),
-                    Ok(maybe_tree_nodes) => maybe_tree_nodes,
-                }?;
-
-                // Create merkle tree and add proofs
-                let hashed_nodes: Vec<[u8; 32]> =
-                    tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
-
-                let tip_distribution_meta = stake_meta.maybe_tip_distribution_meta.unwrap();
-
-                let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
-                let max_num_nodes = tree_nodes.len() as u64;
-
-                for (i, tree_node) in tree_nodes.iter_mut().enumerate() {
-                    tree_node.proof = Some(get_proof(&merkle_tree, i));
+            .filter(|stake_meta| {
+                stake_meta.maybe_tip_distribution_meta.is_some()
+                    || stake_meta.maybe_priority_fee_distribution_meta.is_some()
+            })
+            .flat_map(|stake_meta| {
+                let mut res = Vec::new();
+                if stake_meta.maybe_tip_distribution_meta.is_some() {
+                    let tip_distribution_tree =
+                        GeneratedMerkleTree::new_from_stake_meta_for_distirbution_program(
+                            &stake_meta,
+                            tip_router_program_id,
+                            // REVIEW: Safe to have constant TIP_DISTRIBUTION_ID? Or keep consistent with drilling down arguments?
+                            &TIP_DISTRIBUTION_ID,
+                            ncn_address,
+                            protocol_fee_bps,
+                            epoch,
+                        );
+                    res.push(tip_distribution_tree);
                 }
 
-                let maybe_priority_fee_distribution_pubkey = stake_meta
-                    .maybe_priority_fee_distribution_meta
-                    .map(|priority_fee_distribution_meta| {
-                        priority_fee_distribution_meta.priority_fee_distribution_pubkey
-                    });
-
-                Some(Ok(GeneratedMerkleTree {
-                    max_num_nodes,
-                    tip_distribution_account: tip_distribution_meta.tip_distribution_pubkey,
-                    priority_fee_distribution_account: maybe_priority_fee_distribution_pubkey,
-                    merkle_root_upload_authority: tip_distribution_meta
-                        .merkle_root_upload_authority,
-                    merkle_root: *merkle_tree.get_root().unwrap(),
-                    tree_nodes,
-                    max_total_claim: tip_distribution_meta.total_tips,
-                }))
+                if stake_meta.maybe_priority_fee_distribution_meta.is_some() {
+                    let priority_fee_distribution_tree =
+                        GeneratedMerkleTree::new_from_stake_meta_for_distirbution_program(
+                            &stake_meta,
+                            tip_router_program_id,
+                            &PRIORITY_FEE_DISTRIBUTION_ID,
+                            ncn_address,
+                            protocol_fee_bps,
+                            epoch,
+                        );
+                    res.push(priority_fee_distribution_tree);
+                }
+                res
             })
             .collect::<Result<Vec<_>, MerkleRootGeneratorError>>()?;
 
@@ -146,11 +227,6 @@ impl GeneratedMerkleTreeCollection {
 
 #[derive(Clone, Eq, Debug, Hash, PartialEq, Deserialize, Serialize)]
 pub struct TreeNode {
-    /// The distribution program this node came from (E.g. Tip Distributor OR Priority Fee
-    /// Distributor)
-    #[serde(with = "pubkey_string_conversion")]
-    pub distributor_program: Pubkey,
-
     /// The stake account entitled to redeem.
     #[serde(with = "pubkey_string_conversion")]
     pub claimant: Pubkey,
@@ -176,6 +252,9 @@ pub struct TreeNode {
 }
 
 impl TreeNode {
+    /// Given a StakeMeta for a validator, extract the tree nodes for a given
+    /// _distribution_program_. _distribution_program_ should match
+    /// _tip_distribution_program_id_ or _priority_fee_distribution_program_id_.
     #[allow(clippy::too_many_arguments)]
     fn vec_from_stake_meta_for_distribution_meta(
         stake_meta: &StakeMeta,
@@ -259,7 +338,6 @@ impl TreeNode {
             );
 
         let mut tree_nodes = vec![Self {
-            distributor_program: distribution_program_id.to_owned(),
             claimant: base_reward_receiver,
             claim_status_pubkey: protocol_claim_status_pubkey,
             claim_status_bump: protocol_claim_status_bump,
@@ -291,7 +369,6 @@ impl TreeNode {
         };
 
         tree_nodes.push(Self {
-            distributor_program: distribution_program_id.to_owned(),
             claimant: stake_meta.validator_node_pubkey,
             claim_status_pubkey: validator_claim_status_pubkey,
             claim_status_bump: validator_claim_status_bump,
@@ -326,7 +403,6 @@ impl TreeNode {
                     );
 
                     Ok(Self {
-                        distributor_program: distribution_program_id.to_owned(),
                         claimant: delegation.stake_account_pubkey,
                         claim_status_pubkey,
                         claim_status_bump,
@@ -340,59 +416,6 @@ impl TreeNode {
         );
 
         Ok(Some(tree_nodes))
-    }
-
-    fn vec_from_stake_meta(
-        stake_meta: &StakeMeta,
-        protocol_fee_bps: u64,
-        ncn_address: &Pubkey,
-        epoch: u64,
-        tip_distribution_program_id: &Pubkey,
-        priority_fee_distribution_program_id: &Pubkey,
-        tip_router_program_id: &Pubkey,
-    ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
-        let mut tip_distribution_tree_nodes =
-            if let Some(tip_distribution_meta) = stake_meta.maybe_tip_distribution_meta.as_ref() {
-                Self::vec_from_stake_meta_for_distribution_meta(
-                    stake_meta,
-                    tip_router_program_id,
-                    tip_distribution_program_id,
-                    &tip_distribution_meta.tip_distribution_pubkey,
-                    ncn_address,
-                    tip_distribution_meta.total_tips,
-                    protocol_fee_bps,
-                    tip_distribution_meta.validator_fee_bps,
-                    epoch,
-                )?
-            } else {
-                None
-            };
-
-        if let Some(tip_distribution_meta) =
-            stake_meta.maybe_priority_fee_distribution_meta.as_ref()
-        {
-            let priority_fee_distribution_tree_nodes: Option<Vec<Self>> =
-                Self::vec_from_stake_meta_for_distribution_meta(
-                    stake_meta,
-                    tip_router_program_id,
-                    priority_fee_distribution_program_id,
-                    &tip_distribution_meta.priority_fee_distribution_pubkey,
-                    ncn_address,
-                    tip_distribution_meta.total_tips,
-                    protocol_fee_bps,
-                    tip_distribution_meta.validator_fee_bps,
-                    epoch,
-                )?;
-            match &mut tip_distribution_tree_nodes {
-                Some(nodes) => {
-                    nodes.extend(priority_fee_distribution_tree_nodes.unwrap_or_default());
-                    Ok(Some(nodes.to_vec()))
-                }
-                None => Ok(priority_fee_distribution_tree_nodes),
-            }
-        } else {
-            Ok(tip_distribution_tree_nodes)
-        }
     }
 
     fn hash(&self) -> Hash {
@@ -573,36 +596,6 @@ mod pubkey_string_conversion {
     }
 }
 
-mod optional_pubkey_string_conversion {
-    use std::str::FromStr;
-
-    use serde::{self, Deserialize, Deserializer, Serializer};
-    use solana_program::pubkey::Pubkey;
-
-    pub fn serialize<S>(maybe_pubkey: &Option<Pubkey>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match maybe_pubkey {
-            Some(pubkey) => serializer.serialize_str(&pubkey.to_string()),
-            None => serializer.serialize_str(&Pubkey::default().to_string()),
-        }
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Pubkey>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        let key = Pubkey::from_str(&s).map_err(serde::de::Error::custom)?;
-        if key.eq(&Pubkey::default()) {
-            Ok(None)
-        } else {
-            Ok(Some(key))
-        }
-    }
-}
-
 pub fn read_json_from_file<T>(path: &PathBuf) -> serde_json::Result<T>
 where
     T: DeserializeOwned,
@@ -620,7 +613,6 @@ mod tests {
 
     #[test]
     fn test_merkle_tree_verify() {
-        let tip_distribution_program_id = Pubkey::new_unique();
         // Create the merkle tree and proofs
         let tda = Pubkey::new_unique();
         let (acct_0, acct_1) = (Pubkey::new_unique(), Pubkey::new_unique());
@@ -635,7 +627,6 @@ mod tests {
             .collect::<Vec<(Pubkey, u8)>>();
         let tree_nodes = vec![
             TreeNode {
-                distributor_program: tip_distribution_program_id,
                 claimant: acct_0,
                 claim_status_pubkey: claim_statuses[0].0,
                 claim_status_bump: claim_statuses[0].1,
@@ -645,7 +636,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: tip_distribution_program_id,
                 claimant: acct_1,
                 claim_status_pubkey: claim_statuses[1].0,
                 claim_status_bump: claim_statuses[1].1,
@@ -785,7 +775,7 @@ mod tests {
         );
         assert_eq!(stake_meta_collection.slot, merkle_tree_collection.slot);
         assert_eq!(
-            stake_meta_collection.stake_metas.len(),
+            stake_meta_collection.stake_metas.len() * 2,
             merkle_tree_collection.generated_merkle_trees.len()
         );
 
@@ -839,7 +829,6 @@ mod tests {
 
         let tree_nodes = vec![
             TreeNode {
-                distributor_program: tip_distribution_program_id,
                 claimant: protocol_fee_recipient,
                 claim_status_pubkey: claim_statuses[0].0,
                 claim_status_bump: claim_statuses[0].1,
@@ -849,7 +838,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: tip_distribution_program_id,
                 claimant: validator_id_0, // Changed from validator_vote_account_0 to validator_id_0
                 claim_status_pubkey: claim_statuses[1].0,
                 claim_status_bump: claim_statuses[1].1,
@@ -859,7 +847,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: tip_distribution_program_id,
                 claimant: stake_account_0,
                 claim_status_pubkey: claim_statuses[2].0,
                 claim_status_bump: claim_statuses[2].1,
@@ -869,7 +856,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: tip_distribution_program_id,
                 claimant: stake_account_1,
                 claim_status_pubkey: claim_statuses[3].0,
                 claim_status_bump: claim_statuses[3].1,
@@ -878,8 +864,26 @@ mod tests {
                 amount: 169_559, // Update to match actual amount
                 proof: None,
             },
+        ];
+
+        let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
+        let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
+        let gmt_0 = GeneratedMerkleTree {
+            distribution_program: TIP_DISTRIBUTION_ID,
+            tip_distribution_account: tda_0,
+            merkle_root_upload_authority,
+            merkle_root: *merkle_tree.get_root().unwrap(),
+            tree_nodes,
+            max_total_claim: stake_meta_collection.stake_metas[0]
+                .clone()
+                .maybe_tip_distribution_meta
+                .unwrap()
+                .total_tips,
+            max_num_nodes: 4,
+        };
+
+        let tree_nodes = vec![
             TreeNode {
-                distributor_program: PRIORITY_FEE_DISTRIBUTION_ID,
                 claimant: protocol_fee_recipient,
                 claim_status_pubkey: pf_claim_statuses[0].0,
                 claim_status_bump: pf_claim_statuses[0].1,
@@ -889,7 +893,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: PRIORITY_FEE_DISTRIBUTION_ID,
                 claimant: validator_id_0,
                 claim_status_pubkey: pf_claim_statuses[1].0,
                 claim_status_bump: pf_claim_statuses[1].1,
@@ -899,7 +902,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: PRIORITY_FEE_DISTRIBUTION_ID,
                 claimant: stake_account_0,
                 claim_status_pubkey: pf_claim_statuses[2].0,
                 claim_status_bump: pf_claim_statuses[2].1,
@@ -909,7 +911,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: PRIORITY_FEE_DISTRIBUTION_ID,
                 claimant: stake_account_1,
                 claim_status_pubkey: pf_claim_statuses[3].0,
                 claim_status_bump: pf_claim_statuses[3].1,
@@ -920,25 +921,25 @@ mod tests {
             },
         ];
 
+        // Handle creating expected PF GMT
         let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
-        let gmt_0 = GeneratedMerkleTree {
-            tip_distribution_account: tda_0,
-            priority_fee_distribution_account: Some(pf_tda_0),
+        let gmt_1 = GeneratedMerkleTree {
+            distribution_program: PRIORITY_FEE_DISTRIBUTION_ID,
+            tip_distribution_account: pf_tda_0,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
             tree_nodes,
             max_total_claim: stake_meta_collection.stake_metas[0]
                 .clone()
-                .maybe_tip_distribution_meta
+                .maybe_priority_fee_distribution_meta
                 .unwrap()
                 .total_tips,
-            max_num_nodes: 8,
+            max_num_nodes: 4,
         };
 
         let tree_nodes = vec![
             TreeNode {
-                distributor_program: tip_distribution_program_id,
                 claimant: protocol_fee_recipient,
                 claim_status_pubkey: claim_statuses[4].0,
                 claim_status_bump: claim_statuses[4].1,
@@ -948,7 +949,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: tip_distribution_program_id,
                 claimant: validator_id_1,
                 claim_status_pubkey: claim_statuses[5].0,
                 claim_status_bump: claim_statuses[5].1,
@@ -958,7 +958,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: tip_distribution_program_id,
                 claimant: stake_account_2,
                 claim_status_pubkey: claim_statuses[6].0,
                 claim_status_bump: claim_statuses[6].1,
@@ -968,7 +967,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: tip_distribution_program_id,
                 claimant: stake_account_3,
                 claim_status_pubkey: claim_statuses[7].0,
                 claim_status_bump: claim_statuses[7].1,
@@ -977,8 +975,25 @@ mod tests {
                 amount: 493_188_526, // Updated from 508_762_900
                 proof: None,
             },
+        ];
+        let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
+        let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
+        let gmt_2 = GeneratedMerkleTree {
+            distribution_program: TIP_DISTRIBUTION_ID,
+            tip_distribution_account: tda_1,
+            merkle_root_upload_authority,
+            merkle_root: *merkle_tree.get_root().unwrap(),
+            tree_nodes,
+            max_total_claim: stake_meta_collection.stake_metas[1]
+                .clone()
+                .maybe_tip_distribution_meta
+                .unwrap()
+                .total_tips,
+            max_num_nodes: 4,
+        };
+
+        let tree_nodes = vec![
             TreeNode {
-                distributor_program: PRIORITY_FEE_DISTRIBUTION_ID,
                 claimant: protocol_fee_recipient,
                 claim_status_pubkey: pf_claim_statuses[4].0,
                 claim_status_bump: pf_claim_statuses[4].1,
@@ -988,7 +1003,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: PRIORITY_FEE_DISTRIBUTION_ID,
                 claimant: validator_id_1,
                 claim_status_pubkey: pf_claim_statuses[5].0,
                 claim_status_bump: pf_claim_statuses[5].1,
@@ -998,7 +1012,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: PRIORITY_FEE_DISTRIBUTION_ID,
                 claimant: stake_account_2,
                 claim_status_pubkey: pf_claim_statuses[6].0,
                 claim_status_bump: pf_claim_statuses[6].1,
@@ -1008,7 +1021,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                distributor_program: PRIORITY_FEE_DISTRIBUTION_ID,
                 claimant: stake_account_3,
                 claim_status_pubkey: pf_claim_statuses[7].0,
                 claim_status_bump: pf_claim_statuses[7].1,
@@ -1018,23 +1030,24 @@ mod tests {
                 proof: None,
             },
         ];
+        // TODO: Handle creating expected PF GMT
         let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
-        let gmt_1 = GeneratedMerkleTree {
-            tip_distribution_account: tda_1,
-            priority_fee_distribution_account: Some(pf_tda_1),
+        let gmt_3 = GeneratedMerkleTree {
+            distribution_program: PRIORITY_FEE_DISTRIBUTION_ID,
+            tip_distribution_account: pf_tda_1,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
             tree_nodes,
             max_total_claim: stake_meta_collection.stake_metas[1]
                 .clone()
-                .maybe_tip_distribution_meta
+                .maybe_priority_fee_distribution_meta
                 .unwrap()
                 .total_tips,
-            max_num_nodes: 8,
+            max_num_nodes: 4,
         };
 
-        let expected_generated_merkle_trees = vec![gmt_0, gmt_1];
+        let expected_generated_merkle_trees = vec![gmt_0, gmt_1, gmt_2, gmt_3];
         let actual_generated_merkle_trees = merkle_tree_collection.generated_merkle_trees;
         expected_generated_merkle_trees
             .iter()
@@ -1043,6 +1056,7 @@ mod tests {
                     .iter()
                     .find(|gmt| {
                         gmt.tip_distribution_account == expected_gmt.tip_distribution_account
+                            && gmt.distribution_program == expected_gmt.distribution_program
                     })
                     .unwrap();
 
@@ -1060,12 +1074,7 @@ mod tests {
                         let actual_tree_node = actual_gmt
                             .tree_nodes
                             .iter()
-                            .find(|tree_node| {
-                                tree_node.claimant == expected_tree_node.claimant
-                                    && tree_node
-                                        .distributor_program
-                                        .eq(&expected_tree_node.distributor_program)
-                            })
+                            .find(|tree_node| tree_node.claimant == expected_tree_node.claimant)
                             .unwrap();
                         assert!(
                             (expected_tree_node.amount as i128 - actual_tree_node.amount as i128)
