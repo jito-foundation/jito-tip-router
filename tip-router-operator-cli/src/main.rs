@@ -173,6 +173,7 @@ async fn main() -> Result<()> {
                             &cli_clone,
                             epoch,
                             tip_distribution_program_id,
+                            priority_fee_distribution_program_id,
                             tip_router_program_id,
                             ncn_address,
                             Duration::from_secs(3600),
@@ -240,6 +241,7 @@ async fn main() -> Result<()> {
         Commands::ClaimTips {
             tip_router_program_id,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             ncn_address,
             epoch,
         } => {
@@ -249,6 +251,7 @@ async fn main() -> Result<()> {
                 &cli,
                 epoch,
                 tip_distribution_program_id,
+                priority_fee_distribution_program_id,
                 tip_router_program_id,
                 ncn_address,
                 Duration::from_secs(3600),

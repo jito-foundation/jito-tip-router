@@ -10,7 +10,9 @@ use jito_tip_distribution_sdk::{
     derive_claim_status_account_address, jito_tip_distribution::accounts::ClaimStatus,
     TipDistributionAccount, CLAIM_STATUS_SIZE, CONFIG_SEED,
 };
-use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
+use jito_tip_router_client::instructions::{
+    ClaimWithPayerBuilder, ClaimWithPayerPriorityFeeBuilder,
+};
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
 use log::{info, warn};
 use meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection;
@@ -66,12 +68,12 @@ pub enum ClaimMevError {
     UncaughtError { e: String },
 }
 
-// TODO: Update to handle claiming tips for Priority Fee Distributor
 #[allow(clippy::too_many_arguments)]
 pub async fn claim_mev_tips_with_emit(
     cli: &Cli,
     epoch: u64,
     tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn_address: Pubkey,
     max_loop_duration: Duration,
@@ -95,7 +97,7 @@ pub async fn claim_mev_tips_with_emit(
         }
         for node in tree.tree_nodes.iter_mut() {
             let (claim_status_pubkey, claim_status_bump) = derive_claim_status_account_address(
-                &tip_distribution_program_id,
+                &tree.distribution_program,
                 &node.claimant,
                 &tree.tip_distribution_account,
             );
@@ -111,6 +113,7 @@ pub async fn claim_mev_tips_with_emit(
         rpc_url.clone(),
         rpc_url,
         tip_distribution_program_id,
+        priority_fee_distribution_program_id,
         tip_router_program_id,
         ncn_address,
         &keypair,
@@ -157,6 +160,7 @@ pub async fn claim_mev_tips(
     rpc_url: String,
     rpc_sender_url: String,
     tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn_address: Pubkey,
     keypair: &Arc<Keypair>,
@@ -176,6 +180,7 @@ pub async fn claim_mev_tips(
             &rpc_client,
             merkle_trees,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             tip_router_program_id,
             ncn_address,
             micro_lamports,
@@ -228,6 +233,7 @@ pub async fn claim_mev_tips(
         &rpc_client,
         merkle_trees,
         tip_distribution_program_id,
+        priority_fee_distribution_program_id,
         tip_router_program_id,
         ncn_address,
         micro_lamports,
@@ -281,10 +287,12 @@ pub async fn claim_mev_tips(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn get_claim_transactions_for_valid_unclaimed(
     rpc_client: &RpcClient,
     merkle_trees: &GeneratedMerkleTreeCollection,
     tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn_address: Pubkey,
     micro_lamports: u64,
@@ -364,6 +372,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 
     let transactions = build_mev_claim_transactions(
         tip_distribution_program_id,
+        priority_fee_distribution_program_id,
         tip_router_program_id,
         merkle_trees,
         tdas,
@@ -389,6 +398,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 #[allow(clippy::too_many_arguments)]
 fn build_mev_claim_transactions(
     tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     merkle_trees: &GeneratedMerkleTreeCollection,
     tdas: HashMap<Pubkey, Account>,
@@ -426,6 +436,9 @@ fn build_mev_claim_transactions(
     let tip_distribution_config =
         Pubkey::find_program_address(&[CONFIG_SEED], &tip_distribution_program_id).0;
 
+    let priority_fee_distribution_config =
+        Pubkey::find_program_address(&[CONFIG_SEED], &priority_fee_distribution_program_id).0;
+
     let mut zero_amount_claimants = 0;
 
     let mut instructions = Vec::with_capacity(claimants.len());
@@ -461,20 +474,43 @@ fn build_mev_claim_transactions(
                 continue;
             }
 
-            let claim_with_payer_ix = ClaimWithPayerBuilder::new()
-                .account_payer(tip_router_account_payer)
-                .ncn(ncn_address)
-                .config(tip_router_config_address)
-                .tip_distribution_program(tip_distribution_program_id)
-                .tip_distribution_config(tip_distribution_config)
-                .tip_distribution_account(tree.tip_distribution_account)
-                .claim_status(node.claim_status_pubkey)
-                .claimant(node.claimant)
-                .system_program(system_program::id())
-                .proof(node.proof.clone().unwrap())
-                .amount(node.amount)
-                .bump(node.claim_status_bump)
-                .instruction();
+            let claim_with_payer_ix = if tree.distribution_program.eq(&tip_distribution_program_id)
+            {
+                ClaimWithPayerBuilder::new()
+                    .account_payer(tip_router_account_payer)
+                    .ncn(ncn_address)
+                    .tip_distribution_config(tip_distribution_config)
+                    .tip_distribution_account(tree.tip_distribution_account)
+                    .claim_status(node.claim_status_pubkey)
+                    .claimant(node.claimant)
+                    .system_program(system_program::id())
+                    .proof(node.proof.clone().unwrap())
+                    .amount(node.amount)
+                    .bump(node.claim_status_bump)
+                    .config(tip_router_config_address)
+                    .tip_distribution_program(tree.distribution_program)
+                    .instruction()
+            } else if tree
+                .distribution_program
+                .eq(&priority_fee_distribution_program_id)
+            {
+                ClaimWithPayerPriorityFeeBuilder::new()
+                    .account_payer(tip_router_account_payer)
+                    .ncn(ncn_address)
+                    .tip_distribution_config(tip_distribution_config)
+                    .tip_distribution_account(tree.tip_distribution_account)
+                    .claim_status(node.claim_status_pubkey)
+                    .claimant(node.claimant)
+                    .system_program(system_program::id())
+                    .proof(node.proof.clone().unwrap())
+                    .amount(node.amount)
+                    .bump(node.claim_status_bump)
+                    .config(priority_fee_distribution_config)
+                    .priority_fee_distribution_program(tree.distribution_program)
+                    .instruction()
+            } else {
+                panic!("Unknown distribution program for tree");
+            };
 
             instructions.push(claim_with_payer_ix);
         }

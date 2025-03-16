@@ -185,6 +185,10 @@ pub enum Commands {
         #[arg(long, env)]
         tip_distribution_program_id: Pubkey,
 
+        /// Priority fee distribution program ID
+        #[arg(long, env)]
+        priority_fee_distribution_program_id: Pubkey,
+
         #[arg(short, long, env)]
         ncn_address: Pubkey,
 
