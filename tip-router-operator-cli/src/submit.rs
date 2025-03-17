@@ -18,6 +18,7 @@ use solana_client::{
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 
+use crate::meta_merkle_tree_file_name;
 use crate::{
     tip_router::{cast_vote, get_ncn_config, set_merkle_roots_batched},
     Cli,
@@ -40,8 +41,8 @@ pub async fn submit_recent_epochs_to_ncn(
     for i in 0..num_monitored_epochs {
         let process_epoch = epoch.epoch.checked_sub(i).unwrap();
 
-        let meta_merkle_tree_dir = cli_args.meta_merkle_tree_dir.clone();
-        let target_meta_merkle_tree_file = format!("meta_merkle_tree_{}.json", process_epoch);
+        let meta_merkle_tree_dir = cli_args.get_save_path();
+        let target_meta_merkle_tree_file = meta_merkle_tree_file_name(process_epoch);
         let target_meta_merkle_tree_path = meta_merkle_tree_dir.join(target_meta_merkle_tree_file);
         if !target_meta_merkle_tree_path.exists() {
             continue;
@@ -135,6 +136,14 @@ pub async fn submit_to_ncn(
         }
         None => true,
     };
+
+    info!(
+        "Determining if operator needs to vote...\n\
+        should_cast_vote: {}\n\
+        is_voting_valid: {}
+        ",
+        should_cast_vote, is_voting_valid
+    );
 
     if should_cast_vote && is_voting_valid {
         let res = cast_vote(

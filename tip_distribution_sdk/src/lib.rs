@@ -9,6 +9,7 @@ pub mod instruction;
 pub const CONFIG_SEED: &[u8] = b"CONFIG_ACCOUNT";
 pub const CLAIM_STATUS_SEED: &[u8] = b"CLAIM_STATUS";
 pub const TIP_DISTRIBUTION_SEED: &[u8] = b"TIP_DISTRIBUTION_ACCOUNT";
+pub const MERKLE_ROOT_UPLOAD_CONFIG_SEED: &[u8] = b"ROOT_UPLOAD_CONFIG";
 
 pub const HEADER_SIZE: usize = 8;
 pub const TIP_DISTRIBUTION_SIZE: usize =
@@ -50,4 +51,17 @@ pub fn derive_claim_status_account_address(
         ],
         tip_distribution_program_id,
     )
+}
+
+pub fn derive_merkle_root_upload_authority_address(
+    tip_distribution_program_id: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[MERKLE_ROOT_UPLOAD_CONFIG_SEED],
+        tip_distribution_program_id,
+    )
+}
+
+pub fn id() -> Pubkey {
+    jito_tip_distribution::ID
 }

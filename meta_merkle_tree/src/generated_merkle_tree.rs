@@ -1,4 +1,8 @@
-use std::{fs::File, io::BufReader, path::PathBuf};
+use std::{
+    fs::File,
+    io::{BufReader, Write},
+    path::PathBuf,
+};
 
 use jito_tip_distribution_sdk::{
     jito_tip_distribution::ID as TIP_DISTRIBUTION_ID, CLAIM_STATUS_SEED,
@@ -118,6 +122,14 @@ impl GeneratedMerkleTreeCollection {
         let tree: Self = serde_json::from_reader(reader)?;
 
         Ok(tree)
+    }
+
+    /// Write a GeneratedMerkleTreeCollection to a filepath
+    pub fn write_to_file(&self, path: &PathBuf) -> Result<(), MerkleRootGeneratorError> {
+        let serialized = serde_json::to_string_pretty(&self)?;
+        let mut file = File::create(path)?;
+        file.write_all(serialized.as_bytes())?;
+        Ok(())
     }
 }
 
@@ -239,7 +251,16 @@ impl TreeNode {
                 proof: None,
             }];
 
-            let (validator_claim_status_pubkey, validator_claim_status_bump) =
+            let (validator_claim_status_pubkey, validator_claim_status_bump) = if epoch > 756 {
+                Pubkey::find_program_address(
+                    &[
+                        CLAIM_STATUS_SEED,
+                        &stake_meta.validator_vote_account.to_bytes(),
+                        &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
+                    ],
+                    tip_distribution_program_id,
+                )
+            } else {
                 Pubkey::find_program_address(
                     &[
                         CLAIM_STATUS_SEED,
@@ -247,7 +268,8 @@ impl TreeNode {
                         &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
                     ],
                     tip_distribution_program_id,
-                );
+                )
+            };
 
             tree_nodes.push(Self {
                 claimant: stake_meta.validator_node_pubkey,
@@ -277,33 +299,21 @@ impl TreeNode {
                         let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
                             &[
                                 CLAIM_STATUS_SEED,
-                                &delegation.staker_pubkey.to_bytes(),
+                                &delegation.stake_account_pubkey.to_bytes(),
                                 &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
                             ],
                             &TIP_DISTRIBUTION_ID,
                         );
-                        // Time-gated fix so slow rollout won't affect consensus
-                        if tip_router_target_epoch > 737 {
-                            Ok(Self {
-                                claimant: delegation.stake_account_pubkey,
-                                claim_status_pubkey,
-                                claim_status_bump,
-                                staker_pubkey: delegation.staker_pubkey,
-                                withdrawer_pubkey: delegation.withdrawer_pubkey,
-                                amount: reward_amount,
-                                proof: None,
-                            })
-                        } else {
-                            Ok(Self {
-                                claimant: delegation.staker_pubkey,
-                                claim_status_pubkey,
-                                claim_status_bump,
-                                staker_pubkey: delegation.staker_pubkey,
-                                withdrawer_pubkey: delegation.withdrawer_pubkey,
-                                amount: reward_amount,
-                                proof: None,
-                            })
-                        }
+
+                        Ok(Self {
+                            claimant: delegation.stake_account_pubkey,
+                            claim_status_pubkey,
+                            claim_status_bump,
+                            staker_pubkey: delegation.staker_pubkey,
+                            withdrawer_pubkey: delegation.withdrawer_pubkey,
+                            amount: reward_amount,
+                            proof: None,
+                        })
                     })
                     .collect::<Result<Vec<Self>, MerkleRootGeneratorError>>()?,
             );
@@ -339,6 +349,24 @@ pub struct StakeMetaCollection {
 
     /// Slot at which this object was generated.
     pub slot: Slot,
+}
+
+impl StakeMetaCollection {
+    /// Load a serialized merkle tree from file path
+    pub fn new_from_file(path: &PathBuf) -> Result<Self, MerkleRootGeneratorError> {
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        let tree: Self = serde_json::from_reader(reader)?;
+
+        Ok(tree)
+    }
+
+    /// Write a merkle tree to a filepath
+    pub fn write_to_file(&self, path: &PathBuf) {
+        let serialized = serde_json::to_string_pretty(&self).unwrap();
+        let mut file = File::create(path).unwrap();
+        file.write_all(serialized.as_bytes()).unwrap();
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]

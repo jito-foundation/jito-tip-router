@@ -1,15 +1,17 @@
 use std::mem::size_of;
+use std::str::FromStr;
 use std::{fmt, time::Duration};
 
 use crate::handler::CliHandler;
 use anyhow::Result;
 use borsh1::BorshDeserialize;
-use jito_bytemuck::AccountDeserialize;
+use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_restaking_core::{
     config::Config as RestakingConfig, ncn::Ncn, ncn_operator_state::NcnOperatorState,
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
 };
+use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_router_core::{
     account_payer::AccountPayer,
     ballot_box::BallotBox,
@@ -32,10 +34,13 @@ use jito_vault_core::{
 };
 use log::info;
 use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
+use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::rpc_config::RpcGetVoteAccountsConfig;
 use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
 };
+use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::{account::Account, pubkey::Pubkey};
 use spl_associated_token_account::get_associated_token_address;
 use spl_stake_pool::{find_withdraw_authority_program_address, state::StakePool};
@@ -605,6 +610,113 @@ pub async fn get_stake_pool(handler: &CliHandler) -> Result<StakePool> {
     Ok(account)
 }
 
+pub struct OptedInValidatorInfo {
+    pub vote: Pubkey,
+    pub identity: Pubkey,
+    pub stake: u64,
+    pub active: bool,
+}
+
+pub async fn get_all_opted_in_validators(
+    handler: &CliHandler,
+) -> Result<Vec<OptedInValidatorInfo>> {
+    // Vote Account, Validator Identity, Validator Stake, active or not
+    let client = handler.rpc_client();
+    let client = RpcClient::new_with_timeout_and_commitment(
+        client.url(),
+        Duration::from_secs(3600),
+        CommitmentConfig::processed(),
+    );
+
+    let tip_distribution_size = size_of::<TipDistributionAccount>() + 8;
+
+    let size_filter = RpcFilterType::DataSize(tip_distribution_size as u64);
+
+    let discriminator_filter = RpcFilterType::Memcmp(Memcmp::new(
+        0,                                                                       // offset
+        MemcmpEncodedBytes::Bytes([85, 64, 113, 198, 234, 94, 120, 123].into()), // encoded bytes
+    ));
+    let upload_auth_filter = RpcFilterType::Memcmp(Memcmp::new(
+        8 + 32, // offset
+        MemcmpEncodedBytes::Bytes(
+            Pubkey::from_str("8F4jGUmxF36vQ6yabnsxX6AQVXdKBhs8kGSUuRKSg8Xt")
+                .unwrap()
+                .to_bytes()
+                .into(),
+        ), // encoded bytes
+    ));
+
+    let config = RpcProgramAccountsConfig {
+        filters: Some(vec![size_filter, upload_auth_filter, discriminator_filter]),
+        account_config: RpcAccountInfoConfig {
+            encoding: Some(UiAccountEncoding::Base64),
+            data_slice: Some(UiDataSliceConfig {
+                offset: 8,
+                length: 32,
+            }),
+            commitment: Some(CommitmentConfig::processed()),
+            min_context_slot: None,
+        },
+        with_context: Some(false),
+        sort_results: None,
+    };
+
+    let results = client
+        .get_program_accounts_with_config(&handler.tip_distribution_program_id, config)
+        .await?;
+
+    let vote_accounts: Vec<Pubkey> = results
+        .iter()
+        .map(|result| {
+            let data_slice = result.1.data.as_slice();
+            // Convert the slice to a fixed-size array
+            Pubkey::new_from_array(data_slice[..32].try_into().expect("Slice must be 32 bytes"))
+        })
+        .collect();
+
+    let mut validator_infos: Vec<OptedInValidatorInfo> = vec![];
+
+    for vote_account in vote_accounts {
+        let config = RpcGetVoteAccountsConfig {
+            vote_pubkey: Some(vote_account.to_string()),
+            ..RpcGetVoteAccountsConfig::default()
+        };
+        let status_result = client.get_vote_accounts_with_config(config).await;
+
+        if status_result.is_err() {
+            continue;
+        }
+
+        let status = status_result.unwrap();
+
+        if !status.current.is_empty() {
+            let info = status.current[0].clone();
+            let identity = Pubkey::from_str(&info.node_pubkey)?;
+            validator_infos.push(OptedInValidatorInfo {
+                vote: vote_account,
+                identity,
+                stake: info.activated_stake,
+                active: true,
+            });
+        } else if !status.delinquent.is_empty() {
+            let info = status.delinquent[0].clone();
+            let identity = Pubkey::from_str(&info.node_pubkey)?;
+
+            validator_infos.push(OptedInValidatorInfo {
+                vote: vote_account,
+                identity,
+                stake: info.activated_stake,
+                active: false,
+            });
+        }
+    }
+
+    validator_infos.sort_by(|a, b| a.identity.cmp(&b.identity));
+    validator_infos.dedup_by(|a, b| a.identity.eq(&b.identity));
+
+    Ok(validator_infos)
+}
+
 pub struct StakePoolAccounts {
     pub stake_pool_program_id: Pubkey,
     pub stake_pool_address: Pubkey,
@@ -749,6 +861,42 @@ pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey
         .collect::<Vec<Pubkey>>();
 
     Ok(operators)
+}
+
+pub async fn get_all_vaults(handler: &CliHandler) -> Result<Vec<Pubkey>> {
+    let client = handler.rpc_client();
+
+    let vault_size = size_of::<Vault>() + 8;
+
+    let size_filter = RpcFilterType::DataSize(vault_size as u64);
+
+    let vault_filter = RpcFilterType::Memcmp(Memcmp::new(
+        0,                                                        // offset
+        MemcmpEncodedBytes::Bytes([Vault::DISCRIMINATOR].into()), // encoded bytes
+    ));
+
+    let config = RpcProgramAccountsConfig {
+        filters: Some(vec![size_filter, vault_filter]),
+        account_config: RpcAccountInfoConfig {
+            encoding: Some(UiAccountEncoding::Base64),
+            data_slice: Some(UiDataSliceConfig {
+                offset: 0,
+                length: 0,
+            }),
+            commitment: Some(handler.commitment),
+            min_context_slot: None,
+        },
+        with_context: Some(false),
+        sort_results: None,
+    };
+
+    let results = client
+        .get_program_accounts_with_config(&handler.vault_program_id, config)
+        .await?;
+
+    let vaults: Vec<Pubkey> = results.iter().map(|result| result.0).collect();
+
+    Ok(vaults)
 }
 
 pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
@@ -897,8 +1045,14 @@ pub struct NcnTickets {
 
 impl NcnTickets {
     const DNE: u8 = 0;
-    const NOT_ACTIVE: u8 = 1;
-    const ACTIVE: u8 = 2;
+    const STAKE: u8 = 10;
+    const NO_STAKE: u8 = 11;
+    // To allow for legacy state to exist in database
+    const STATE_OFFSET: u8 = 100;
+    const INACTIVE: u8 = Self::STATE_OFFSET;
+    const WARM_UP: u8 = Self::STATE_OFFSET + 1;
+    const ACTIVE: u8 = Self::STATE_OFFSET + 2;
+    const COOLDOWN: u8 = Self::STATE_OFFSET + 3;
 
     pub async fn fetch(
         handler: &CliHandler,
@@ -990,18 +1144,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .ncn_operator_state
             .as_ref()
             .unwrap()
             .ncn_opt_in_state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn operator_ncn(&self) -> u8 {
@@ -1009,18 +1160,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .ncn_operator_state
             .as_ref()
             .unwrap()
             .operator_opt_in_state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn ncn_vault(&self) -> u8 {
@@ -1028,18 +1176,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .ncn_vault_ticket
             .as_ref()
             .unwrap()
             .state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn vault_ncn(&self) -> u8 {
@@ -1047,18 +1192,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .vault_ncn_ticket
             .as_ref()
             .unwrap()
             .state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn operator_vault(&self) -> u8 {
@@ -1066,18 +1208,15 @@ impl NcnTickets {
             return Self::DNE;
         }
 
-        if self
+        let state = self
             .operator_vault_ticket
             .as_ref()
             .unwrap()
             .state
-            .is_active(self.slot, self.epoch_length)
-            .unwrap()
-        {
-            return Self::ACTIVE;
-        }
+            .state(self.slot, self.epoch_length)
+            .unwrap() as u8;
 
-        Self::NOT_ACTIVE
+        state + Self::STATE_OFFSET
     }
 
     pub fn vault_operator(&self) -> u8 {
@@ -1094,10 +1233,10 @@ impl NcnTickets {
             .unwrap()
             > 0
         {
-            return Self::ACTIVE;
+            return Self::STAKE;
         }
 
-        Self::NOT_ACTIVE
+        Self::NO_STAKE
     }
 }
 
@@ -1107,8 +1246,12 @@ impl fmt::Display for NcnTickets {
         let check = |state: u8| -> &str {
             match state {
                 Self::DNE => "❌",
-                Self::NOT_ACTIVE => "🕘",
+                Self::STAKE => "🔋",
+                Self::NO_STAKE => "🪫",
+                Self::INACTIVE => "💤",
+                Self::WARM_UP => "🔥",
                 Self::ACTIVE => "✅",
+                Self::COOLDOWN => "🥶",
                 _ => "",
             }
         };
@@ -1118,6 +1261,18 @@ impl fmt::Display for NcnTickets {
         writeln!(f, "NCN:      {}", self.ncn)?;
         writeln!(f, "Operator: {}", self.operator)?;
         writeln!(f, "Vault:    {}", self.vault)?;
+        writeln!(f, "\n")?;
+        writeln!(
+            f,
+            "DNE[{}] INACTIVE[{}] WARM_UP[{}] ACTIVE[{}] COOLDOWN[{}] NO_STAKE[{}] STAKE[{}]",
+            check(Self::DNE),
+            check(Self::INACTIVE),
+            check(Self::WARM_UP),
+            check(Self::ACTIVE),
+            check(Self::COOLDOWN),
+            check(Self::NO_STAKE),
+            check(Self::STAKE),
+        )?;
         writeln!(f, "\n")?;
         writeln!(
             f,
@@ -1162,4 +1317,54 @@ impl fmt::Display for NcnTickets {
 
         Ok(())
     }
+}
+
+pub async fn get_tip_distribution_accounts_to_migrate(
+    handler: &CliHandler,
+    tip_distribution_program_id: &Pubkey,
+    old_merkle_root_upload_authority: &Pubkey,
+    epoch: u64,
+) -> Result<Vec<Pubkey>> {
+    let rpc_client = handler.rpc_client();
+    let rpc_client = RpcClient::new_with_timeout(rpc_client.url(), Duration::from_secs(3600));
+
+    // Filters assume merkle root is None
+    let filters = vec![
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            8     // Discriminator
+                + 32, // Pubkey - validator_vote_account
+            old_merkle_root_upload_authority.to_bytes().to_vec(),
+        )),
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            8    // Discriminator
+                + 32 // Pubkey - validator_vote_account
+                + 32 // Pubkey - merkle_root_upload_authority
+                + 1, // Option - "None" merkle_root
+            epoch.to_le_bytes().to_vec(),
+        )),
+    ];
+
+    let tip_distribution_accounts = rpc_client
+        .get_program_accounts_with_config(
+            tip_distribution_program_id,
+            RpcProgramAccountsConfig {
+                filters: Some(filters),
+                account_config: RpcAccountInfoConfig {
+                    encoding: Some(UiAccountEncoding::Base64),
+                    data_slice: Some(UiDataSliceConfig {
+                        offset: 0,
+                        length: 0,
+                    }),
+                    commitment: Some(handler.commitment),
+                    min_context_slot: None,
+                },
+                ..RpcProgramAccountsConfig::default()
+            },
+        )
+        .await?;
+
+    Ok(tip_distribution_accounts
+        .into_iter()
+        .map(|(pubkey, _)| pubkey)
+        .collect())
 }
