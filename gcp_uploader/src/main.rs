@@ -6,6 +6,7 @@ use hostname::get as get_hostname_raw;
 use regex::Regex;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::Duration;
 use tokio::fs::{read_dir, File};
 use tokio::io::AsyncReadExt;
@@ -58,27 +59,23 @@ async fn main() -> Result<()> {
         .bucket
         .unwrap_or_else(|| format!("jito-{}", args.cluster));
 
-    // Create GCS client with explicit authentication
-    let client = create_gcs_client(&args.service_account_key);
-
     // Track already uploaded files
     let mut uploaded_files = HashSet::new();
 
     // Compile regex patterns for epoch files
-    let merkle_pattern = Regex::new(r"^(\d+)_generated_merkle_tree\.json$").unwrap();
-    let stake_pattern = Regex::new(r"^(\d+)_stake_meta\.json$").unwrap();
+    let merkle_pattern = Regex::new(r"^(\d+)_merkle_tree_collection\.json$").unwrap();
+    let stake_pattern = Regex::new(r"^(\d+)_stake_meta_collection\.json$").unwrap();
 
     println!(
         "Starting file monitor in {} with {} second polling interval",
         args.directory, args.interval
     );
-    println!("Looking for files matching patterns: '*_generated_merkle_tree.json' and '*_stake_meta.json'");
+    println!("Looking for files matching patterns: '*_merkle_tree_collection.json' and '*_stake_meta_collection.json'");
 
     // Main monitoring loop
     loop {
         match scan_and_upload_files(
             &dir_path,
-            &client,
             &bucket_name,
             &hostname,
             &mut uploaded_files,
@@ -105,7 +102,6 @@ async fn main() -> Result<()> {
 /// Scans directory for matching files and uploads new ones
 async fn scan_and_upload_files(
     dir_path: &Path,
-    client: &Client,
     bucket_name: &str,
     hostname: &str,
     uploaded_files: &mut HashSet<String>,
@@ -145,9 +141,7 @@ async fn scan_and_upload_files(
 
         if let Some(epoch) = epoch {
             // We found a matching file, upload it
-            if let Err(e) =
-                upload_file(&path, &filename, &epoch, client, bucket_name, hostname).await
-            {
+            if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname).await {
                 eprintln!("Failed to upload {}: {}", filename, e);
                 continue;
             }
@@ -161,87 +155,59 @@ async fn scan_and_upload_files(
     Ok(uploaded_count)
 }
 
-/// Uploads a single file to GCS
+/// Uploads a single file to GCS using gcloud CLI
 async fn upload_file(
     file_path: &PathBuf,
     filename: &str,
     epoch: &str,
-    client: &Client,
     bucket_name: &str,
     hostname: &str,
 ) -> Result<()> {
     // Create GCS object path (without bucket name)
+    let filename = filename.replace("_", "-");
     let object_name = format!("{}/{}/{}", epoch, hostname, filename);
-
     println!("Uploading file: {}", file_path.display());
     println!("To GCS bucket: {}, object: {}", bucket_name, object_name);
 
-    // Check if object already exists by using list with prefix
-    let mut list_request = ListRequest::default();
-    list_request.prefix = Some(object_name.clone());
-    list_request.max_results = Some(1); // We only need to check existence
+    // Check if object already exists
+    let check_output = Command::new("/opt/gcloud/google-cloud-sdk/bin/gcloud")
+        .args([
+            "storage",
+            "objects",
+            "describe",
+            &format!("gs://{}/{}", bucket_name, object_name),
+            "--format=json",
+        ])
+        .output()
+        .with_context(|| "Failed to execute gcloud command to check if object exists")?;
 
-    let objects_stream = client.object().list(bucket_name, list_request).await?;
-
-    // Pin the stream to the stack to handle the Unpin requirement
-    let mut pinned_stream = Box::pin(objects_stream);
-
-    // Process the stream items
-    let exists = if let Some(result) = pinned_stream.next().await {
-        match result {
-            Ok(object_list) => object_list
-                .items
-                .iter()
-                .any(|object| object.name == object_name),
-            Err(_) => false,
-        }
-    } else {
-        false
-    };
-
-    if exists {
+    // If exit code is 0, file exists
+    if check_output.status.success() {
         println!("File already exists in GCS. Skipping upload.");
         return Ok(());
     }
 
-    // Read file content
-    let mut file = File::open(file_path)
-        .await
-        .with_context(|| format!("Failed to open file: {}", file_path.display()))?;
-
-    let mut content = Vec::new();
-    file.read_to_end(&mut content)
-        .await
-        .with_context(|| format!("Failed to read file: {}", file_path.display()))?;
-
     // Upload to GCS
-    client
-        .object()
-        .create(
-            bucket_name,
-            content,
-            &object_name,
-            "application/json", // JSON mime type
-        )
-        .await?;
+    let upload_status = Command::new("/opt/gcloud/google-cloud-sdk/bin/gcloud")
+        .args([
+            "storage",
+            "cp",
+            file_path.to_str().unwrap(),
+            &format!("gs://{}/{}", bucket_name, object_name),
+            "--content-type=application/json",
+        ])
+        .status()
+        .with_context(|| format!("Failed to upload file to GCS: {}", file_path.display()))?;
 
-    println!("Upload successful for {}", filename);
-
-    Ok(())
-}
-
-/// Creates a GCS client with explicit authentication
-fn create_gcs_client(service_account_path: &Option<String>) -> Client {
-    // If a service account key path is provided, set the environment variable
-    if let Some(key_path) = service_account_path {
-        std::env::set_var("GOOGLE_APPLICATION_CREDENTIALS", key_path);
-        println!("Using service account key from: {}", key_path);
-    } else {
-        println!("No service account key provided. Using default credentials.");
+    if !upload_status.success() {
+        return Err(anyhow::anyhow!(
+            "Failed to upload file: {}",
+            file_path.display()
+        ));
     }
 
-    // Create client using the environment variable
-    Client::new()
+    println!("Upload successful for {}", filename);
+    Ok(())
 }
 
 fn get_hostname() -> Result<String> {
