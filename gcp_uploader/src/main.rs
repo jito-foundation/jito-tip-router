@@ -65,14 +65,14 @@ async fn main() -> Result<()> {
     let mut uploaded_files = HashSet::new();
 
     // Compile regex patterns for epoch files
-    let merkle_pattern = Regex::new(r"^(\d+)_generated_merkle_tree\.json$").unwrap();
-    let stake_pattern = Regex::new(r"^(\d+)_stake_meta\.json$").unwrap();
+    let merkle_pattern = Regex::new(r"^(\d+)_merkle_tree_collection\.json$").unwrap();
+    let stake_pattern = Regex::new(r"^(\d+)_stake_meta_collection\.json$").unwrap();
 
     println!(
         "Starting file monitor in {} with {} second polling interval",
         args.directory, args.interval
     );
-    println!("Looking for files matching patterns: '*_generated_merkle_tree.json' and '*_stake_meta.json'");
+    println!("Looking for files matching patterns: '*_merkle_tree_collection.json' and '*_stake_meta_collection.json'");
 
     // Main monitoring loop
     loop {
@@ -171,6 +171,7 @@ async fn upload_file(
     hostname: &str,
 ) -> Result<()> {
     // Create GCS object path (without bucket name)
+    let filename = filename.replace("_", "-");
     let object_name = format!("{}/{}/{}", epoch, hostname, filename);
 
     println!("Uploading file: {}", file_path.display());
