@@ -20,6 +20,7 @@ use std::time::Instant;
 
 use anchor_lang::prelude::*;
 use cli::SnapshotPaths;
+use jito_priority_fee_distribution_sdk::TipDistributionAccount as PfTipDistributionAccount;
 use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{
     CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
@@ -83,11 +84,13 @@ pub fn load_bank_from_snapshot(cli: Cli, slot: u64, save_snapshot: bool) -> Arc<
 }
 
 // STAGE 2 CreateStakeMeta
+#[allow(clippy::too_many_arguments)]
 pub fn create_stake_meta(
     operator_address: String,
     epoch: u64,
     bank: &Arc<Bank>,
     tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     save_path: &Path,
     save: bool,
@@ -98,6 +101,7 @@ pub fn create_stake_meta(
     let stake_meta_coll = match generate_stake_meta_collection(
         bank,
         tip_distribution_program_id,
+        priority_fee_distribution_program_id,
         tip_payment_program_id,
     ) {
         Ok(stake_meta) => stake_meta,
@@ -335,6 +339,13 @@ fn derive_tip_payment_pubkeys(program_id: &Pubkey) -> TipPaymentPubkeys {
 /// Convenience wrapper around [TipDistributionAccount]
 pub struct TipDistributionAccountWrapper {
     pub tip_distribution_account: TipDistributionAccount,
+    pub account_data: AccountSharedData,
+    pub tip_distribution_pubkey: Pubkey,
+}
+
+/// Convenience wrapper around [PfTipDistributionAccount]
+pub struct PfTipDistributionAccountWrapper {
+    pub tip_distribution_account: PfTipDistributionAccount,
     pub account_data: AccountSharedData,
     pub tip_distribution_pubkey: Pubkey,
 }

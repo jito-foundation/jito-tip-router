@@ -47,7 +47,6 @@ impl TreeNode {
     }
 }
 
-// TODO replace this with the GeneratedMerkleTree from the Operator module once that's created
 impl From<GeneratedMerkleTree> for TreeNode {
     fn from(generated_merkle_tree: GeneratedMerkleTree) -> Self {
         Self {

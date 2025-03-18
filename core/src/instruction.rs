@@ -211,7 +211,7 @@ pub enum TipRouterInstruction {
         epoch: u64,
     },
 
-    /// Set the merkle root after consensus is reached
+    /// Set the [tip distributor] merkle root after consensus is reached
     #[account(0, writable, name = "epoch_state")]
     #[account(1, writable, name = "config")]
     #[account(2, name = "ncn")]
@@ -221,6 +221,23 @@ pub enum TipRouterInstruction {
     #[account(6, name = "tip_distribution_config")]
     #[account(7, name = "tip_distribution_program")]
     SetMerkleRoot {
+        proof: Vec<[u8; 32]>,
+        merkle_root: [u8; 32],
+        max_total_claim: u64,
+        max_num_nodes: u64,
+        epoch: u64,
+    },
+
+    /// Set the [priority fee distributor] merkle root after consensus is reached
+    #[account(0, writable, name = "epoch_state")]
+    #[account(1, writable, name = "config")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "ballot_box")]
+    #[account(4, name = "vote_account")]
+    #[account(5, writable, name = "tip_distribution_account")]
+    #[account(6, name = "tip_distribution_config")]
+    #[account(7, name = "priority_fee_distribution_program")]
+    SetPriorityFeeMerkleRoot {
         proof: Vec<[u8; 32]>,
         merkle_root: [u8; 32],
         max_total_claim: u64,
@@ -393,6 +410,22 @@ pub enum TipRouterInstruction {
     #[account(7, name = "tip_distribution_program")]
     #[account(8, name = "system_program")]
     ClaimWithPayer {
+        proof: Vec<[u8; 32]>,
+        amount: u64,
+        bump: u8,
+    },
+
+    /// Claim priority fee distributions with the program as the payer
+    #[account(0, writable, name = "account_payer")]
+    #[account(1, name = "config")]
+    #[account(2, name = "ncn")]
+    #[account(3, name = "tip_distribution_config")]
+    #[account(4, writable, name = "tip_distribution_account")]
+    #[account(5, writable, name = "claim_status")]
+    #[account(6, writable, name = "claimant")]
+    #[account(7, name = "priority_fee_distribution_program")]
+    #[account(8, name = "system_program")]
+    ClaimWithPayerPriorityFee {
         proof: Vec<[u8; 32]>,
         amount: u64,
         bump: u8,

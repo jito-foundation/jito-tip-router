@@ -69,6 +69,7 @@ async fn main() -> Result<()> {
         Commands::Run {
             ncn_address,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             tip_payment_program_id,
             tip_router_program_id,
             save_snapshot,
@@ -122,6 +123,7 @@ async fn main() -> Result<()> {
                         &ncn_address,
                         &tip_router_program_id,
                         &tip_distribution_program_id,
+                        &priority_fee_distribution_program_id,
                         num_monitored_epochs,
                         &cli_clone,
                         set_merkle_roots,
@@ -171,6 +173,7 @@ async fn main() -> Result<()> {
                             &cli_clone,
                             epoch,
                             tip_distribution_program_id,
+                            priority_fee_distribution_program_id,
                             tip_router_program_id,
                             ncn_address,
                             Duration::from_secs(3600),
@@ -192,6 +195,7 @@ async fn main() -> Result<()> {
                 override_target_slot,
                 &tip_router_program_id,
                 &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
                 &tip_payment_program_id,
                 &ncn_address,
                 save_snapshot,
@@ -207,6 +211,7 @@ async fn main() -> Result<()> {
         Commands::SubmitEpoch {
             ncn_address,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             tip_router_program_id,
             epoch,
             set_merkle_roots,
@@ -227,6 +232,7 @@ async fn main() -> Result<()> {
                 &ncn_address,
                 &tip_router_program_id,
                 &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
                 cli.submit_as_memo,
                 set_merkle_roots,
             )
@@ -235,6 +241,7 @@ async fn main() -> Result<()> {
         Commands::ClaimTips {
             tip_router_program_id,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             ncn_address,
             epoch,
         } => {
@@ -244,6 +251,7 @@ async fn main() -> Result<()> {
                 &cli,
                 epoch,
                 tip_distribution_program_id,
+                priority_fee_distribution_program_id,
                 tip_router_program_id,
                 ncn_address,
                 Duration::from_secs(3600),
@@ -254,6 +262,7 @@ async fn main() -> Result<()> {
             epoch,
             slot,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             tip_payment_program_id,
             save,
         } => {
@@ -281,6 +290,7 @@ async fn main() -> Result<()> {
                 epoch,
                 &Arc::new(bank),
                 &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
                 &tip_payment_program_id,
                 &save_path,
                 save,

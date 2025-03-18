@@ -8,6 +8,7 @@ mod admin_set_tie_breaker;
 mod admin_set_weight;
 mod cast_vote;
 mod claim_with_payer;
+mod claim_with_payer_priority_fee;
 mod close_epoch_account;
 mod distribute_base_ncn_reward_route;
 mod distribute_base_rewards;
@@ -31,6 +32,7 @@ mod register_vault;
 mod route_base_rewards;
 mod route_ncn_rewards;
 mod set_merkle_root;
+mod set_priority_fee_merkle_root;
 mod snapshot_vault_operator_delegation;
 mod switchboard_set_weight;
 
@@ -54,7 +56,9 @@ use crate::{
     admin_set_st_mint::process_admin_set_st_mint,
     admin_set_tie_breaker::process_admin_set_tie_breaker,
     admin_set_weight::process_admin_set_weight, cast_vote::process_cast_vote,
-    claim_with_payer::process_claim_with_payer, close_epoch_account::process_close_epoch_account,
+    claim_with_payer::process_claim_with_payer,
+    claim_with_payer_priority_fee::process_claim_with_payer_priority_fee,
+    close_epoch_account::process_close_epoch_account,
     distribute_base_ncn_reward_route::process_distribute_base_ncn_reward_route,
     distribute_base_rewards::process_distribute_base_rewards,
     distribute_ncn_operator_rewards::process_distribute_ncn_operator_rewards,
@@ -73,6 +77,7 @@ use crate::{
     realloc_weight_table::process_realloc_weight_table, register_vault::process_register_vault,
     route_base_rewards::process_route_base_rewards, route_ncn_rewards::process_route_ncn_rewards,
     set_merkle_root::process_set_merkle_root,
+    set_priority_fee_merkle_root::process_set_priority_fee_merkle_root,
     snapshot_vault_operator_delegation::process_snapshot_vault_operator_delegation,
     switchboard_set_weight::process_switchboard_set_weight,
 };
@@ -218,6 +223,24 @@ pub fn process_instruction(
                 epoch,
             )
         }
+        TipRouterInstruction::SetPriorityFeeMerkleRoot {
+            proof,
+            merkle_root,
+            max_total_claim,
+            max_num_nodes,
+            epoch,
+        } => {
+            msg!("Instruction: SetPriorityFeeMerkleRoot");
+            process_set_priority_fee_merkle_root(
+                program_id,
+                accounts,
+                proof,
+                merkle_root,
+                max_total_claim,
+                max_num_nodes,
+                epoch,
+            )
+        }
 
         // ---------------------------------------------------- //
         //                ROUTE AND DISTRIBUTE                  //
@@ -287,6 +310,14 @@ pub fn process_instruction(
         } => {
             msg!("Instruction: ClaimWithPayer");
             process_claim_with_payer(program_id, accounts, proof, amount, bump)
+        }
+        TipRouterInstruction::ClaimWithPayerPriorityFee {
+            proof,
+            amount,
+            bump,
+        } => {
+            msg!("Instruction: ClaimWithPayerPriorityFee");
+            process_claim_with_payer_priority_fee(program_id, accounts, proof, amount, bump)
         }
         TipRouterInstruction::CloseEpochAccount { epoch } => {
             msg!("Instruction: CloseEpochAccount");

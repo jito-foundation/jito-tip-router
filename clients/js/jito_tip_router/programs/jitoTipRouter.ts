@@ -22,6 +22,7 @@ import {
   type ParsedAdminSetWeightInstruction,
   type ParsedCastVoteInstruction,
   type ParsedClaimWithPayerInstruction,
+  type ParsedClaimWithPayerPriorityFeeInstruction,
   type ParsedCloseEpochAccountInstruction,
   type ParsedDistributeBaseNcnRewardRouteInstruction,
   type ParsedDistributeBaseRewardsInstruction,
@@ -46,6 +47,7 @@ import {
   type ParsedRouteBaseRewardsInstruction,
   type ParsedRouteNcnRewardsInstruction,
   type ParsedSetMerkleRootInstruction,
+  type ParsedSetPriorityFeeMerkleRootInstruction,
   type ParsedSnapshotVaultOperatorDelegationInstruction,
   type ParsedSwitchboardSetWeightInstruction,
 } from '../instructions';
@@ -84,6 +86,7 @@ export enum JitoTipRouterInstruction {
   ReallocBallotBox,
   CastVote,
   SetMerkleRoot,
+  SetPriorityFeeMerkleRoot,
   InitializeBaseRewardRouter,
   ReallocBaseRewardRouter,
   InitializeNcnRewardRouter,
@@ -94,6 +97,7 @@ export enum JitoTipRouterInstruction {
   DistributeNcnOperatorRewards,
   DistributeNcnVaultRewards,
   ClaimWithPayer,
+  ClaimWithPayerPriorityFee,
   CloseEpochAccount,
   AdminSetParameters,
   AdminSetConfigFees,
@@ -160,57 +164,63 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.SetMerkleRoot;
   }
   if (containsBytes(data, getU8Encoder().encode(17), 0)) {
-    return JitoTipRouterInstruction.InitializeBaseRewardRouter;
+    return JitoTipRouterInstruction.SetPriorityFeeMerkleRoot;
   }
   if (containsBytes(data, getU8Encoder().encode(18), 0)) {
-    return JitoTipRouterInstruction.ReallocBaseRewardRouter;
+    return JitoTipRouterInstruction.InitializeBaseRewardRouter;
   }
   if (containsBytes(data, getU8Encoder().encode(19), 0)) {
-    return JitoTipRouterInstruction.InitializeNcnRewardRouter;
+    return JitoTipRouterInstruction.ReallocBaseRewardRouter;
   }
   if (containsBytes(data, getU8Encoder().encode(20), 0)) {
-    return JitoTipRouterInstruction.RouteBaseRewards;
+    return JitoTipRouterInstruction.InitializeNcnRewardRouter;
   }
   if (containsBytes(data, getU8Encoder().encode(21), 0)) {
-    return JitoTipRouterInstruction.RouteNcnRewards;
+    return JitoTipRouterInstruction.RouteBaseRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(22), 0)) {
-    return JitoTipRouterInstruction.DistributeBaseRewards;
+    return JitoTipRouterInstruction.RouteNcnRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(23), 0)) {
-    return JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
+    return JitoTipRouterInstruction.DistributeBaseRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(24), 0)) {
-    return JitoTipRouterInstruction.DistributeNcnOperatorRewards;
+    return JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
   }
   if (containsBytes(data, getU8Encoder().encode(25), 0)) {
-    return JitoTipRouterInstruction.DistributeNcnVaultRewards;
+    return JitoTipRouterInstruction.DistributeNcnOperatorRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(26), 0)) {
-    return JitoTipRouterInstruction.ClaimWithPayer;
+    return JitoTipRouterInstruction.DistributeNcnVaultRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(27), 0)) {
-    return JitoTipRouterInstruction.CloseEpochAccount;
+    return JitoTipRouterInstruction.ClaimWithPayer;
   }
   if (containsBytes(data, getU8Encoder().encode(28), 0)) {
-    return JitoTipRouterInstruction.AdminSetParameters;
+    return JitoTipRouterInstruction.ClaimWithPayerPriorityFee;
   }
   if (containsBytes(data, getU8Encoder().encode(29), 0)) {
-    return JitoTipRouterInstruction.AdminSetConfigFees;
+    return JitoTipRouterInstruction.CloseEpochAccount;
   }
   if (containsBytes(data, getU8Encoder().encode(30), 0)) {
-    return JitoTipRouterInstruction.AdminSetNewAdmin;
+    return JitoTipRouterInstruction.AdminSetParameters;
   }
   if (containsBytes(data, getU8Encoder().encode(31), 0)) {
-    return JitoTipRouterInstruction.AdminSetTieBreaker;
+    return JitoTipRouterInstruction.AdminSetConfigFees;
   }
   if (containsBytes(data, getU8Encoder().encode(32), 0)) {
-    return JitoTipRouterInstruction.AdminSetWeight;
+    return JitoTipRouterInstruction.AdminSetNewAdmin;
   }
   if (containsBytes(data, getU8Encoder().encode(33), 0)) {
-    return JitoTipRouterInstruction.AdminRegisterStMint;
+    return JitoTipRouterInstruction.AdminSetTieBreaker;
   }
   if (containsBytes(data, getU8Encoder().encode(34), 0)) {
+    return JitoTipRouterInstruction.AdminSetWeight;
+  }
+  if (containsBytes(data, getU8Encoder().encode(35), 0)) {
+    return JitoTipRouterInstruction.AdminRegisterStMint;
+  }
+  if (containsBytes(data, getU8Encoder().encode(36), 0)) {
     return JitoTipRouterInstruction.AdminSetStMint;
   }
   throw new Error(
@@ -273,6 +283,9 @@ export type ParsedJitoTipRouterInstruction<
       instructionType: JitoTipRouterInstruction.SetMerkleRoot;
     } & ParsedSetMerkleRootInstruction<TProgram>)
   | ({
+      instructionType: JitoTipRouterInstruction.SetPriorityFeeMerkleRoot;
+    } & ParsedSetPriorityFeeMerkleRootInstruction<TProgram>)
+  | ({
       instructionType: JitoTipRouterInstruction.InitializeBaseRewardRouter;
     } & ParsedInitializeBaseRewardRouterInstruction<TProgram>)
   | ({
@@ -302,6 +315,9 @@ export type ParsedJitoTipRouterInstruction<
   | ({
       instructionType: JitoTipRouterInstruction.ClaimWithPayer;
     } & ParsedClaimWithPayerInstruction<TProgram>)
+  | ({
+      instructionType: JitoTipRouterInstruction.ClaimWithPayerPriorityFee;
+    } & ParsedClaimWithPayerPriorityFeeInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.CloseEpochAccount;
     } & ParsedCloseEpochAccountInstruction<TProgram>)
