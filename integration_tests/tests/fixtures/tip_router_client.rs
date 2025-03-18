@@ -1,6 +1,7 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_core::{
     config::Config, ncn_operator_state::NcnOperatorState, ncn_vault_ticket::NcnVaultTicket,
+    operator_vault_ticket::OperatorVaultTicket,
 };
 use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, jito_tip_distribution};
 use jito_tip_router_client::{
@@ -1142,6 +1143,13 @@ impl TipRouterClient {
         )
         .0;
 
+        let operator_vault_ticket = OperatorVaultTicket::find_program_address(
+            &jito_restaking_program::id(),
+            &operator,
+            &vault,
+        )
+        .0;
+
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
@@ -1155,6 +1163,7 @@ impl TipRouterClient {
             .vault_ncn_ticket(vault_ncn_ticket)
             .ncn_vault_ticket(ncn_vault_ticket)
             .vault_operator_delegation(vault_operator_delegation)
+            .operator_vault_ticket(operator_vault_ticket)
             .weight_table(weight_table)
             .epoch_snapshot(epoch_snapshot)
             .operator_snapshot(operator_snapshot)

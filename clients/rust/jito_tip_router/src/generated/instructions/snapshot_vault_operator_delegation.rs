@@ -28,6 +28,8 @@ pub struct SnapshotVaultOperatorDelegation {
 
     pub vault_operator_delegation: solana_program::pubkey::Pubkey,
 
+    pub operator_vault_ticket: solana_program::pubkey::Pubkey,
+
     pub weight_table: solana_program::pubkey::Pubkey,
 
     pub epoch_snapshot: solana_program::pubkey::Pubkey,
@@ -48,7 +50,7 @@ impl SnapshotVaultOperatorDelegation {
         args: SnapshotVaultOperatorDelegationInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(12 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(13 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.epoch_state,
             false,
@@ -81,6 +83,10 @@ impl SnapshotVaultOperatorDelegation {
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.vault_operator_delegation,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.operator_vault_ticket,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -146,9 +152,10 @@ pub struct SnapshotVaultOperatorDelegationInstructionArgs {
 ///   6. `[]` vault_ncn_ticket
 ///   7. `[]` ncn_vault_ticket
 ///   8. `[]` vault_operator_delegation
-///   9. `[]` weight_table
-///   10. `[writable]` epoch_snapshot
-///   11. `[writable]` operator_snapshot
+///   9. `[]` operator_vault_ticket
+///   10. `[]` weight_table
+///   11. `[writable]` epoch_snapshot
+///   12. `[writable]` operator_snapshot
 #[derive(Clone, Debug, Default)]
 pub struct SnapshotVaultOperatorDelegationBuilder {
     epoch_state: Option<solana_program::pubkey::Pubkey>,
@@ -160,6 +167,7 @@ pub struct SnapshotVaultOperatorDelegationBuilder {
     vault_ncn_ticket: Option<solana_program::pubkey::Pubkey>,
     ncn_vault_ticket: Option<solana_program::pubkey::Pubkey>,
     vault_operator_delegation: Option<solana_program::pubkey::Pubkey>,
+    operator_vault_ticket: Option<solana_program::pubkey::Pubkey>,
     weight_table: Option<solana_program::pubkey::Pubkey>,
     epoch_snapshot: Option<solana_program::pubkey::Pubkey>,
     operator_snapshot: Option<solana_program::pubkey::Pubkey>,
@@ -229,6 +237,14 @@ impl SnapshotVaultOperatorDelegationBuilder {
         self
     }
     #[inline(always)]
+    pub fn operator_vault_ticket(
+        &mut self,
+        operator_vault_ticket: solana_program::pubkey::Pubkey,
+    ) -> &mut Self {
+        self.operator_vault_ticket = Some(operator_vault_ticket);
+        self
+    }
+    #[inline(always)]
     pub fn weight_table(&mut self, weight_table: solana_program::pubkey::Pubkey) -> &mut Self {
         self.weight_table = Some(weight_table);
         self
@@ -283,6 +299,9 @@ impl SnapshotVaultOperatorDelegationBuilder {
             vault_operator_delegation: self
                 .vault_operator_delegation
                 .expect("vault_operator_delegation is not set"),
+            operator_vault_ticket: self
+                .operator_vault_ticket
+                .expect("operator_vault_ticket is not set"),
             weight_table: self.weight_table.expect("weight_table is not set"),
             epoch_snapshot: self.epoch_snapshot.expect("epoch_snapshot is not set"),
             operator_snapshot: self
@@ -317,6 +336,8 @@ pub struct SnapshotVaultOperatorDelegationCpiAccounts<'a, 'b> {
 
     pub vault_operator_delegation: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub operator_vault_ticket: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
@@ -347,6 +368,8 @@ pub struct SnapshotVaultOperatorDelegationCpi<'a, 'b> {
 
     pub vault_operator_delegation: &'b solana_program::account_info::AccountInfo<'a>,
 
+    pub operator_vault_ticket: &'b solana_program::account_info::AccountInfo<'a>,
+
     pub weight_table: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub epoch_snapshot: &'b solana_program::account_info::AccountInfo<'a>,
@@ -373,6 +396,7 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpi<'a, 'b> {
             vault_ncn_ticket: accounts.vault_ncn_ticket,
             ncn_vault_ticket: accounts.ncn_vault_ticket,
             vault_operator_delegation: accounts.vault_operator_delegation,
+            operator_vault_ticket: accounts.operator_vault_ticket,
             weight_table: accounts.weight_table,
             epoch_snapshot: accounts.epoch_snapshot,
             operator_snapshot: accounts.operator_snapshot,
@@ -412,7 +436,7 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(12 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(13 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.epoch_state.key,
             false,
@@ -450,6 +474,10 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.operator_vault_ticket.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.weight_table.key,
             false,
         ));
@@ -479,7 +507,7 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(12 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(13 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.epoch_state.clone());
         account_infos.push(self.config.clone());
@@ -490,6 +518,7 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpi<'a, 'b> {
         account_infos.push(self.vault_ncn_ticket.clone());
         account_infos.push(self.ncn_vault_ticket.clone());
         account_infos.push(self.vault_operator_delegation.clone());
+        account_infos.push(self.operator_vault_ticket.clone());
         account_infos.push(self.weight_table.clone());
         account_infos.push(self.epoch_snapshot.clone());
         account_infos.push(self.operator_snapshot.clone());
@@ -518,9 +547,10 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpi<'a, 'b> {
 ///   6. `[]` vault_ncn_ticket
 ///   7. `[]` ncn_vault_ticket
 ///   8. `[]` vault_operator_delegation
-///   9. `[]` weight_table
-///   10. `[writable]` epoch_snapshot
-///   11. `[writable]` operator_snapshot
+///   9. `[]` operator_vault_ticket
+///   10. `[]` weight_table
+///   11. `[writable]` epoch_snapshot
+///   12. `[writable]` operator_snapshot
 #[derive(Clone, Debug)]
 pub struct SnapshotVaultOperatorDelegationCpiBuilder<'a, 'b> {
     instruction: Box<SnapshotVaultOperatorDelegationCpiBuilderInstruction<'a, 'b>>,
@@ -539,6 +569,7 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpiBuilder<'a, 'b> {
             vault_ncn_ticket: None,
             ncn_vault_ticket: None,
             vault_operator_delegation: None,
+            operator_vault_ticket: None,
             weight_table: None,
             epoch_snapshot: None,
             operator_snapshot: None,
@@ -611,6 +642,14 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpiBuilder<'a, 'b> {
         vault_operator_delegation: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.vault_operator_delegation = Some(vault_operator_delegation);
+        self
+    }
+    #[inline(always)]
+    pub fn operator_vault_ticket(
+        &mut self,
+        operator_vault_ticket: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.operator_vault_ticket = Some(operator_vault_ticket);
         self
     }
     #[inline(always)]
@@ -722,6 +761,11 @@ impl<'a, 'b> SnapshotVaultOperatorDelegationCpiBuilder<'a, 'b> {
                 .vault_operator_delegation
                 .expect("vault_operator_delegation is not set"),
 
+            operator_vault_ticket: self
+                .instruction
+                .operator_vault_ticket
+                .expect("operator_vault_ticket is not set"),
+
             weight_table: self
                 .instruction
                 .weight_table
@@ -757,6 +801,7 @@ struct SnapshotVaultOperatorDelegationCpiBuilderInstruction<'a, 'b> {
     vault_ncn_ticket: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_vault_ticket: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault_operator_delegation: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    operator_vault_ticket: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     weight_table: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     epoch_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     operator_snapshot: Option<&'b solana_program::account_info::AccountInfo<'a>>,
