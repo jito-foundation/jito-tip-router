@@ -18,7 +18,7 @@ use solana_client::{
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 
-use crate::meta_merkle_tree_file_name;
+use crate::{meta_merkle_tree_file_name, Version};
 use crate::{
     tip_router::{cast_vote, get_ncn_config, set_merkle_roots_batched},
     Cli,
@@ -170,6 +170,7 @@ pub async fn submit_to_ncn(
                         format!("{:?}", meta_merkle_tree.merkle_root),
                         String
                     ),
+                    ("version", Version::default().to_string(), String),
                     ("tx_sig", format!("{:?}", signature), String)
                 );
                 info!(

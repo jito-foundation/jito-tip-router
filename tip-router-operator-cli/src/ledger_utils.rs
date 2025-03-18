@@ -28,7 +28,7 @@ use solana_runtime::{
 use solana_sdk::clock::Slot;
 use thiserror::Error;
 
-use crate::{arg_matches, load_and_process_ledger};
+use crate::{arg_matches, load_and_process_ledger, Version};
 
 #[derive(Error, Debug)]
 pub enum LedgerUtilsError {
@@ -61,6 +61,7 @@ pub fn get_bank_from_ledger(
         ("operator", operator_address, String),
         ("state", "validate_path_start", String),
         ("step", 0, i64),
+        ("version", Version::default().to_string(), String),
     );
 
     // STEP 1: Load genesis config //

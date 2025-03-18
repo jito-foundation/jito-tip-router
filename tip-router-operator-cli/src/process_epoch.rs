@@ -9,7 +9,7 @@ use anyhow::Result;
 use ellipsis_client::EllipsisClient;
 use log::{error, info};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
-use solana_metrics::datapoint_error;
+use solana_metrics::{datapoint_error, datapoint_info};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_runtime::bank::Bank;
 use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::read_keypair_file};
@@ -20,6 +20,7 @@ use crate::{
     create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
     load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
     stake_meta_file_name, submit::submit_to_ncn, tip_router::get_ncn_config, Cli, OperatorState,
+    Version,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -238,7 +239,7 @@ pub async fn loop_stages(
                     }
                 };
 
-                create_meta_merkle_tree(
+                let merkle_tree = create_meta_merkle_tree(
                     cli.operator_address.clone(),
                     some_merkle_tree_collection,
                     epoch_to_process,
@@ -246,6 +247,19 @@ pub async fn loop_stages(
                     // This is defaulted to true because the output file is required by the
                     //  task that sets TipDistributionAccounts' merkle roots
                     true,
+                );
+                datapoint_info!(
+                    "tip_router_cli.process_epoch",
+                    ("operator_address", operator_address, String),
+                    ("epoch", epoch_to_process, i64),
+                    ("status", "success", String),
+                    ("state", "epoch_processing_completed", String),
+                    (
+                        "meta_merkle_root",
+                        format!("{:?}", merkle_tree.merkle_root),
+                        String
+                    ),
+                    ("version", Version::default().to_string(), String),
                 );
                 stage = OperatorState::CastVote;
             }
