@@ -17,7 +17,7 @@ use solana_program::{
 #[allow(clippy::too_many_arguments)]
 pub fn _process_set_merkle_root(
     program_id: &Pubkey,
-    distribution_program_id: &Pubkey,
+    expected_distribution_program_id: &Pubkey,
     accounts: &[AccountInfo],
     proof: Vec<[u8; 32]>,
     merkle_root: [u8; 32],
@@ -36,7 +36,7 @@ pub fn _process_set_merkle_root(
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     BallotBox::load(program_id, ballot_box, ncn.key, epoch, false)?;
 
-    if tip_distribution_program.key.ne(distribution_program_id) {
+    if tip_distribution_program.key.ne(expected_distribution_program_id) {
         msg!("Incorrect tip distribution program");
         return Err(ProgramError::InvalidAccountData);
     }
@@ -74,7 +74,7 @@ pub fn _process_set_merkle_root(
     let (_, bump, mut ncn_config_seeds) = NcnConfig::find_program_address(program_id, ncn.key);
     ncn_config_seeds.push(vec![bump]);
 
-    let ix = if distribution_program_id.eq(&jito_tip_distribution::ID) {
+    let ix = if expected_distribution_program_id.eq(&jito_tip_distribution::ID) {
         upload_merkle_root_ix(
             *tip_distribution_config.key,
             *ncn_config.key,

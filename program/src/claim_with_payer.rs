@@ -26,7 +26,10 @@ pub fn _process_claim_with_payer(
     Config::load(program_id, config, ncn.key, false)?;
     AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
-    if tip_distribution_program.key.ne(expected_distribution_program_id) {
+    if tip_distribution_program
+        .key
+        .ne(expected_distribution_program_id)
+    {
         msg!("Incorrect tip distribution program");
         return Err(ProgramError::InvalidAccountData);
     }

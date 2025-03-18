@@ -38,7 +38,6 @@ mod switchboard_set_weight;
 
 use admin_set_new_admin::process_admin_set_new_admin;
 use borsh::BorshDeserialize;
-use claim_with_payer_priority_fee::process_claim_with_payer_priority_fee;
 use initialize_epoch_state::process_initialize_epoch_state;
 use jito_tip_router_core::instruction::TipRouterInstruction;
 use realloc_epoch_state::process_realloc_epoch_state;
@@ -57,7 +56,9 @@ use crate::{
     admin_set_st_mint::process_admin_set_st_mint,
     admin_set_tie_breaker::process_admin_set_tie_breaker,
     admin_set_weight::process_admin_set_weight, cast_vote::process_cast_vote,
-    claim_with_payer::process_claim_with_payer, close_epoch_account::process_close_epoch_account,
+    claim_with_payer::process_claim_with_payer,
+    claim_with_payer_priority_fee::process_claim_with_payer_priority_fee,
+    close_epoch_account::process_close_epoch_account,
     distribute_base_ncn_reward_route::process_distribute_base_ncn_reward_route,
     distribute_base_rewards::process_distribute_base_rewards,
     distribute_ncn_operator_rewards::process_distribute_ncn_operator_rewards,
