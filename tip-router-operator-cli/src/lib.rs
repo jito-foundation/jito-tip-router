@@ -133,7 +133,6 @@ pub fn create_stake_meta(
                 ("status", "error", String),
                 ("error", error_str, String),
                 ("state", "stake_meta_generation", String),
-                ("version", Version::default().to_string(), String),
                 ("duration_ms", start.elapsed().as_millis() as i64, i64)
             );
             panic!("{}", error_str);
@@ -160,7 +159,6 @@ pub fn create_stake_meta(
         ("state", "create_stake_meta", String),
         ("step", 2, i64),
         ("epoch", stake_meta_coll.epoch, i64),
-        ("version", Version::default().to_string(), String),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
     stake_meta_coll
@@ -198,7 +196,6 @@ pub fn create_merkle_tree_collection(
                 ("status", "error", String),
                 ("error", error_str, String),
                 ("state", "merkle_tree_generation", String),
-                ("version", Version::default().to_string(), String),
                 ("duration_ms", start.elapsed().as_millis() as i64, i64)
             );
             panic!("{}", error_str);
@@ -239,7 +236,6 @@ pub fn create_merkle_tree_collection(
         ("state", "meta_merkle_tree_creation", String),
         ("step", 3, i64),
         ("epoch", epoch, i64),
-        ("version", Version::default().to_string(), String),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
     merkle_tree_coll
@@ -266,7 +262,6 @@ pub fn create_meta_merkle_tree(
                     ("status", "error", String),
                     ("error", error_str, String),
                     ("state", "merkle_tree_generation", String),
-                    ("version", Version::default().to_string(), String),
                     ("duration_ms", start.elapsed().as_millis() as i64, i64)
                 );
                 panic!("{}", error_str);
@@ -306,7 +301,6 @@ pub fn create_meta_merkle_tree(
         ("state", "meta_merkle_tree_creation", String),
         ("step", 4, i64),
         ("epoch", epoch, i64),
-        ("version", Version::default().to_string(), String),
         ("duration_ms", start.elapsed().as_millis() as i64, i64)
     );
 

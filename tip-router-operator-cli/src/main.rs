@@ -39,6 +39,11 @@ async fn main() -> Result<()> {
     )?;
 
     set_host_id(cli.operator_address.to_string());
+    datapoint_info!(
+        "tip_router_cli.version",
+        ("operator_address", cli.operator_address.to_string(), String),
+        ("version", Version::default().to_string(), String)
+    );
 
     // Will panic if the user did not set --save-path or the deprecated --meta-merkle-tree-dir
     let save_path = cli.get_save_path();
