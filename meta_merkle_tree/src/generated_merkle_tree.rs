@@ -251,28 +251,35 @@ impl TreeNode {
                 proof: None,
             }];
 
-            let (validator_claim_status_pubkey, validator_claim_status_bump) = if epoch > 756 {
-                Pubkey::find_program_address(
-                    &[
-                        CLAIM_STATUS_SEED,
-                        &stake_meta.validator_vote_account.to_bytes(),
-                        &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
-                    ],
-                    tip_distribution_program_id,
-                )
-            } else {
-                Pubkey::find_program_address(
-                    &[
-                        CLAIM_STATUS_SEED,
-                        &stake_meta.validator_node_pubkey.to_bytes(),
-                        &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
-                    ],
-                    tip_distribution_program_id,
-                )
-            };
+            let (validator_claimant, (validator_claim_status_pubkey, validator_claim_status_bump)) =
+                if epoch > 760 {
+                    (
+                        stake_meta.validator_vote_account,
+                        Pubkey::find_program_address(
+                            &[
+                                CLAIM_STATUS_SEED,
+                                &stake_meta.validator_vote_account.to_bytes(),
+                                &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
+                            ],
+                            tip_distribution_program_id,
+                        ),
+                    )
+                } else {
+                    (
+                        stake_meta.validator_node_pubkey,
+                        Pubkey::find_program_address(
+                            &[
+                                CLAIM_STATUS_SEED,
+                                &stake_meta.validator_node_pubkey.to_bytes(),
+                                &tip_distribution_meta.tip_distribution_pubkey.to_bytes(),
+                            ],
+                            tip_distribution_program_id,
+                        ),
+                    )
+                };
 
             tree_nodes.push(Self {
-                claimant: stake_meta.validator_node_pubkey,
+                claimant: validator_claimant,
                 claim_status_pubkey: validator_claim_status_pubkey,
                 claim_status_bump: validator_claim_status_bump,
                 staker_pubkey: Pubkey::default(),
