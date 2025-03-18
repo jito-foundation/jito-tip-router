@@ -9,7 +9,7 @@ use solana_program::{
 
 pub fn _process_claim_with_payer(
     program_id: &Pubkey,
-    distirbution_program_id: &Pubkey,
+    expected_distribution_program_id: &Pubkey,
     accounts: &[AccountInfo],
     proof: Vec<[u8; 32]>,
     amount: u64,
@@ -26,7 +26,7 @@ pub fn _process_claim_with_payer(
     Config::load(program_id, config, ncn.key, false)?;
     AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
-    if tip_distribution_program.key.ne(distirbution_program_id) {
+    if tip_distribution_program.key.ne(expected_distribution_program_id) {
         msg!("Incorrect tip distribution program");
         return Err(ProgramError::InvalidAccountData);
     }
@@ -37,7 +37,7 @@ pub fn _process_claim_with_payer(
         AccountPayer::find_program_address(program_id, ncn.key);
     account_payer_seeds.push(vec![account_payer_bump]);
 
-    let ix = if distirbution_program_id.eq(&jito_tip_distribution::ID) {
+    let ix = if expected_distribution_program_id.eq(&jito_tip_distribution::ID) {
         claim_ix(
             *tip_distribution_config.key,
             *tip_distribution_account.key,
