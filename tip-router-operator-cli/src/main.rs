@@ -5,7 +5,7 @@ use ::{
     ellipsis_client::EllipsisClient,
     log::{error, info},
     meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection},
-    solana_metrics::set_host_id,
+    solana_metrics::{datapoint_info, set_host_id},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
     std::{str::FromStr, sync::Arc, time::Duration},
