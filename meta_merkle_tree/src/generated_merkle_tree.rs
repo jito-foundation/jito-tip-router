@@ -692,7 +692,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: validator_id_0, // Changed from validator_vote_account_0 to validator_id_0
+                claimant: validator_id_0,
                 claim_status_pubkey: claim_statuses[1].0,
                 claim_status_bump: claim_statuses[1].1,
                 staker_pubkey: Pubkey::default(),
@@ -825,6 +825,34 @@ mod tests {
                         );
                     });
                 assert_eq!(expected_gmt.merkle_root, actual_gmt.merkle_root);
+            });
+
+        let epoch = 761;
+        let merkle_tree_collection = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
+            stake_meta_collection.clone(),
+            &ncn_address,
+            epoch,
+            300,
+            &tip_router_program_id,
+        )
+        .unwrap();
+        // Ensure that validator vote account exists as a claimant in the new merkle tree collection and identity account does not
+        merkle_tree_collection
+            .generated_merkle_trees
+            .iter()
+            .for_each(|gmt| {
+                assert!(gmt
+                    .tree_nodes
+                    .iter()
+                    .any(|node| node.claimant == validator_vote_account_0
+                        || node.claimant == validator_vote_account_1));
+                assert!(
+                    !(gmt
+                        .tree_nodes
+                        .iter()
+                        .any(|node| node.claimant == validator_id_0
+                            || node.claimant == validator_id_1))
+                );
             });
     }
 }
