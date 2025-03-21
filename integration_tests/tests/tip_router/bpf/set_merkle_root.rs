@@ -154,7 +154,7 @@ mod set_merkle_root {
         let test_generated_merkle_tree = collection
             .generated_merkle_trees
             .iter()
-            .find(|tree| tree.tip_distribution_account == test_tip_distribution_account)
+            .find(|tree| tree.distribution_account == test_tip_distribution_account)
             .unwrap();
 
         Ok(GeneratedMerkleTreeCollectionFixture {
@@ -338,7 +338,7 @@ mod set_merkle_root {
         let tip_distribution_account = meta_merkle_tree_fixture
             .generated_merkle_tree_fixture
             .test_generated_merkle_tree
-            .tip_distribution_account;
+            .distribution_account;
 
         let target_claimant_node = meta_merkle_tree_fixture
             .generated_merkle_tree_fixture

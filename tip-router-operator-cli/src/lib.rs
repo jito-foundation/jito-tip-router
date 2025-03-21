@@ -20,7 +20,7 @@ use std::time::Instant;
 
 use anchor_lang::prelude::*;
 use cli::SnapshotPaths;
-use jito_priority_fee_distribution_sdk::TipDistributionAccount as PfTipDistributionAccount;
+use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{
     CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
@@ -343,11 +343,11 @@ pub struct TipDistributionAccountWrapper {
     pub tip_distribution_pubkey: Pubkey,
 }
 
-/// Convenience wrapper around [PfTipDistributionAccount]
-pub struct PfTipDistributionAccountWrapper {
-    pub tip_distribution_account: PfTipDistributionAccount,
+/// Convenience wrapper around [PriorityFeeDistributionAccount]
+pub struct PriorityFeeDistributionAccountWrapper {
+    pub priority_fee_distribution_account: PriorityFeeDistributionAccount,
     pub account_data: AccountSharedData,
-    pub tip_distribution_pubkey: Pubkey,
+    pub priority_fee_distribution_pubkey: Pubkey,
 }
 
 fn get_validator_cmdline() -> Result<String> {

@@ -35,9 +35,9 @@ pub fn initialize_ix(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn initialize_tip_distribution_account_ix(
+pub fn initialize_priority_fee_distribution_account_ix(
     config: Pubkey,
-    tip_distribution_account: Pubkey,
+    priority_fee_distribution_account: Pubkey,
     system_program: Pubkey,
     validator_vote_account: Pubkey,
     signer: Pubkey,
@@ -48,15 +48,15 @@ pub fn initialize_tip_distribution_account_ix(
     Instruction {
         program_id: jito_priority_fee_distribution::ID,
         accounts:
-            jito_priority_fee_distribution::client::accounts::InitializeTipDistributionAccount {
+            jito_priority_fee_distribution::client::accounts::InitializePriorityFeeDistributionAccount {
                 config,
-                tip_distribution_account,
+                priority_fee_distribution_account,
                 system_program,
                 validator_vote_account,
                 signer,
             }
             .to_account_metas(None),
-        data: jito_priority_fee_distribution::client::args::InitializeTipDistributionAccount {
+        data: jito_priority_fee_distribution::client::args::InitializePriorityFeeDistributionAccount {
             merkle_root_upload_authority,
             validator_commission_bps,
             bump,
@@ -68,7 +68,7 @@ pub fn initialize_tip_distribution_account_ix(
 #[allow(clippy::too_many_arguments)]
 pub fn claim_ix(
     config: Pubkey,
-    tip_distribution_account: Pubkey,
+    priority_fee_distribution_account: Pubkey,
     merkle_root_upload_authority: Pubkey,
     claim_status: Pubkey,
     claimant: Pubkey,
@@ -82,7 +82,7 @@ pub fn claim_ix(
         program_id: jito_priority_fee_distribution::ID,
         accounts: jito_priority_fee_distribution::client::accounts::Claim {
             config,
-            tip_distribution_account,
+            priority_fee_distribution_account,
             merkle_root_upload_authority,
             claim_status,
             claimant,
@@ -102,7 +102,7 @@ pub fn claim_ix(
 pub fn upload_merkle_root_ix(
     config: Pubkey,
     merkle_root_upload_authority: Pubkey,
-    tip_distribution_account: Pubkey,
+    priority_fee_distribution_account: Pubkey,
     root: [u8; 32],
     max_total_claim: u64,
     max_num_nodes: u64,
@@ -112,7 +112,7 @@ pub fn upload_merkle_root_ix(
         accounts: jito_priority_fee_distribution::client::accounts::UploadMerkleRoot {
             config,
             merkle_root_upload_authority,
-            tip_distribution_account,
+            priority_fee_distribution_account,
         }
         .to_account_metas(None),
         data: jito_priority_fee_distribution::client::args::UploadMerkleRoot {
@@ -142,14 +142,14 @@ pub fn close_claim_status_ix(
 }
 
 pub fn migrate_tda_merkle_root_upload_authority_ix(
-    tip_distribution_account: Pubkey,
+    priority_fee_distribution_account: Pubkey,
     merkle_root_upload_config: Pubkey,
 ) -> Instruction {
     Instruction {
         program_id: jito_priority_fee_distribution::ID,
         accounts:
             jito_priority_fee_distribution::client::accounts::MigrateTdaMerkleRootUploadAuthority {
-                tip_distribution_account,
+                priority_fee_distribution_account,
                 merkle_root_upload_config,
             }
             .to_account_metas(None),

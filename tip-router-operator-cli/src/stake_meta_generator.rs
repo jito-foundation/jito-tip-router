@@ -7,7 +7,9 @@ use std::{
 
 use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
-use jito_priority_fee_distribution_sdk::derive_tip_distribution_account_address as derive_priority_fee_tda;
+use jito_priority_fee_distribution_sdk::{
+    derive_priority_fee_distribution_account_address, PriorityFeeDistributionAccount,
+};
 use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, TipDistributionAccount};
 use jito_tip_payment_sdk::{jito_tip_payment::accounts::Config, CONFIG_ACCOUNT_SEED};
 use log::*;
@@ -29,7 +31,10 @@ use solana_sdk::{
 use solana_vote::vote_account::VoteAccount;
 use thiserror::Error;
 
-use crate::{derive_tip_payment_pubkeys, TipDistributionAccountWrapper};
+use crate::{
+    derive_tip_payment_pubkeys, PriorityFeeDistributionAccountWrapper,
+    TipDistributionAccountWrapper,
+};
 
 #[derive(Error, Debug)]
 pub enum StakeMetaGeneratorError {
@@ -89,24 +94,25 @@ fn tip_distribution_account_from_tda_wrapper(
     })
 }
 
-/// Converts the `TipDistributionAccountWrapper` to StakeMeta's exptected `PriorityFeeDistributionMeta`
+/// Converts the `PriorityFeeDistributionAccountWrapper` to StakeMeta's exptected `PriorityFeeDistributionMeta`
 fn pf_tip_distribution_account_from_tda_wrapper(
-    tda_wrapper: TipDistributionAccountWrapper,
+    pf_distribution_account_wrapper: PriorityFeeDistributionAccountWrapper,
     // The amount that will be left remaining in the tda to maintain rent exemption status.
     rent_exempt_amount: u64,
 ) -> Result<PriorityFeeDistributionMeta, StakeMetaGeneratorError> {
     Ok(PriorityFeeDistributionMeta {
-        priority_fee_distribution_pubkey: tda_wrapper.tip_distribution_pubkey,
-        total_tips: tda_wrapper
+        priority_fee_distribution_pubkey: pf_distribution_account_wrapper
+            .priority_fee_distribution_pubkey,
+        total_tips: pf_distribution_account_wrapper
             .account_data
             .lamports()
             .checked_sub(rent_exempt_amount)
             .ok_or(StakeMetaGeneratorError::CheckedMathError)?,
-        validator_fee_bps: tda_wrapper
-            .tip_distribution_account
+        validator_fee_bps: pf_distribution_account_wrapper
+            .priority_fee_distribution_account
             .validator_commission_bps,
-        merkle_root_upload_authority: tda_wrapper
-            .tip_distribution_account
+        merkle_root_upload_authority: pf_distribution_account_wrapper
+            .priority_fee_distribution_account
             .merkle_root_upload_authority,
     })
 }
@@ -114,7 +120,7 @@ fn pf_tip_distribution_account_from_tda_wrapper(
 type VoteInfoAndTdas<'a> = Vec<(
     (Pubkey, &'a VoteAccount),
     Option<TipDistributionAccountWrapper>,
-    Option<TipDistributionAccountWrapper>,
+    Option<PriorityFeeDistributionAccountWrapper>,
 )>;
 
 /// Creates a collection of [StakeMeta]'s from the given bank.
@@ -196,12 +202,13 @@ pub fn generate_stake_meta_collection(
                 bank.epoch(),
             )
             .0;
-            let priority_fee_distribution_pubkey = derive_priority_fee_tda(
-                priority_fee_distribution_program_id,
-                vote_pubkey,
-                bank.epoch(),
-            )
-            .0;
+            let priority_fee_distribution_pubkey =
+                derive_priority_fee_distribution_account_address(
+                    priority_fee_distribution_program_id,
+                    vote_pubkey,
+                    bank.epoch(),
+                )
+                .0;
             let tda = bank.get_account(&tip_distribution_pubkey).map_or_else(
                 || None,
                 |mut account_data| {
@@ -236,13 +243,13 @@ pub fn generate_stake_meta_collection(
                     |mut account_data| {
                         // TDAs may be funded with lamports and therefore exist in the bank, but would fail the deserialization step
                         // if the buffer is yet to be allocated thru the init call to the program.
-                        TipDistributionAccount::try_deserialize(&mut account_data.data())
+                        PriorityFeeDistributionAccount::try_deserialize(&mut account_data.data())
                             .map_or_else(
                                 |_| None,
-                                |tip_distribution_account| {
+                                |priority_fee_distribution_account| {
                                     // this snapshot might have tips that weren't claimed by the time the epoch is over
                                     // assume that it will eventually be cranked and credit the excess to this account
-                                    if tip_distribution_pubkey == tip_receiver {
+                                    if priority_fee_distribution_pubkey == tip_receiver {
                                         account_data.set_lamports(
                                             account_data
                                                 .lamports()
@@ -250,10 +257,10 @@ pub fn generate_stake_meta_collection(
                                                 .expect("tip overflow"),
                                         );
                                     }
-                                    Some(TipDistributionAccountWrapper {
-                                        tip_distribution_account,
+                                    Some(PriorityFeeDistributionAccountWrapper {
+                                        priority_fee_distribution_account,
                                         account_data,
-                                        tip_distribution_pubkey,
+                                        priority_fee_distribution_pubkey,
                                     })
                                 },
                             )

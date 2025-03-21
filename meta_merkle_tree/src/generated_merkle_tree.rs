@@ -53,7 +53,7 @@ pub struct GeneratedMerkleTree {
     #[serde(with = "pubkey_string_conversion")]
     pub distribution_program: Pubkey,
     #[serde(with = "pubkey_string_conversion")]
-    pub tip_distribution_account: Pubkey,
+    pub distribution_account: Pubkey,
     #[serde(with = "pubkey_string_conversion")]
     pub merkle_root_upload_authority: Pubkey,
     pub merkle_root: Hash,
@@ -141,7 +141,7 @@ impl GeneratedMerkleTree {
         Ok(Self {
             distribution_program: distribution_program.to_owned(),
             max_num_nodes,
-            tip_distribution_account: tip_distribution_pubkey,
+            distribution_account: tip_distribution_pubkey,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
             tree_nodes,
@@ -260,7 +260,7 @@ impl TreeNode {
         stake_meta: &StakeMeta,
         tip_router_program_id: &Pubkey,
         distribution_program_id: &Pubkey,
-        tip_distribution_pubkey: &Pubkey,
+        distribution_account_pubkey: &Pubkey,
         ncn_address: &Pubkey,
         total_tips: u64,
         protocol_fee_bps: u64,
@@ -332,7 +332,7 @@ impl TreeNode {
                 &[
                     CLAIM_STATUS_SEED,
                     &base_reward_receiver.to_bytes(),
-                    &tip_distribution_pubkey.to_bytes(),
+                    &distribution_account_pubkey.to_bytes(),
                 ],
                 distribution_program_id,
             );
@@ -353,7 +353,7 @@ impl TreeNode {
                 &[
                     CLAIM_STATUS_SEED,
                     &stake_meta.validator_vote_account.to_bytes(),
-                    &tip_distribution_pubkey.to_bytes(),
+                    &distribution_account_pubkey.to_bytes(),
                 ],
                 distribution_program_id,
             )
@@ -362,7 +362,7 @@ impl TreeNode {
                 &[
                     CLAIM_STATUS_SEED,
                     &stake_meta.validator_node_pubkey.to_bytes(),
-                    &tip_distribution_pubkey.to_bytes(),
+                    &distribution_account_pubkey.to_bytes(),
                 ],
                 distribution_program_id,
             )
@@ -397,7 +397,7 @@ impl TreeNode {
                         &[
                             CLAIM_STATUS_SEED,
                             &delegation.stake_account_pubkey.to_bytes(),
-                            &tip_distribution_pubkey.to_bytes(),
+                            &distribution_account_pubkey.to_bytes(),
                         ],
                         &TIP_DISTRIBUTION_ID,
                     );
@@ -870,7 +870,7 @@ mod tests {
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
         let gmt_0 = GeneratedMerkleTree {
             distribution_program: TIP_DISTRIBUTION_ID,
-            tip_distribution_account: tda_0,
+            distribution_account: tda_0,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
             tree_nodes,
@@ -926,7 +926,7 @@ mod tests {
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
         let gmt_1 = GeneratedMerkleTree {
             distribution_program: PRIORITY_FEE_DISTRIBUTION_ID,
-            tip_distribution_account: pf_tda_0,
+            distribution_account: pf_tda_0,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
             tree_nodes,
@@ -980,7 +980,7 @@ mod tests {
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
         let gmt_2 = GeneratedMerkleTree {
             distribution_program: TIP_DISTRIBUTION_ID,
-            tip_distribution_account: tda_1,
+            distribution_account: tda_1,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
             tree_nodes,
@@ -1035,7 +1035,7 @@ mod tests {
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
         let gmt_3 = GeneratedMerkleTree {
             distribution_program: PRIORITY_FEE_DISTRIBUTION_ID,
-            tip_distribution_account: pf_tda_1,
+            distribution_account: pf_tda_1,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
             tree_nodes,
@@ -1055,7 +1055,7 @@ mod tests {
                 let actual_gmt = actual_generated_merkle_trees
                     .iter()
                     .find(|gmt| {
-                        gmt.tip_distribution_account == expected_gmt.tip_distribution_account
+                        gmt.distribution_account == expected_gmt.distribution_account
                             && gmt.distribution_program == expected_gmt.distribution_program
                     })
                     .unwrap();
@@ -1063,8 +1063,8 @@ mod tests {
                 assert_eq!(expected_gmt.max_num_nodes, actual_gmt.max_num_nodes);
                 assert_eq!(expected_gmt.max_total_claim, actual_gmt.max_total_claim);
                 assert_eq!(
-                    expected_gmt.tip_distribution_account,
-                    actual_gmt.tip_distribution_account
+                    expected_gmt.distribution_account,
+                    actual_gmt.distribution_account
                 );
                 assert_eq!(expected_gmt.tree_nodes.len(), actual_gmt.tree_nodes.len());
                 expected_gmt

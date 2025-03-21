@@ -1,7 +1,7 @@
 use anchor_lang::AccountDeserialize;
 use jito_priority_fee_distribution_sdk::{
     jito_priority_fee_distribution::{self, accounts::ClaimStatus},
-    TipDistributionAccount,
+    PriorityFeeDistributionAccount,
 };
 use solana_program::{pubkey::Pubkey, system_instruction::transfer};
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
@@ -62,38 +62,39 @@ impl PriorityFeeDistributionClient {
         Ok(())
     }
 
-    pub async fn get_tip_distribution_account(
+    pub async fn get_priority_fee_distribution_account(
         &mut self,
         vote_account: Pubkey,
         target_epoch: u64,
-    ) -> TestResult<TipDistributionAccount> {
-        let (tip_distribution_address, _) =
-            jito_priority_fee_distribution_sdk::derive_tip_distribution_account_address(
+    ) -> TestResult<PriorityFeeDistributionAccount> {
+        let (priority_fee_distribution_address, _) =
+            jito_priority_fee_distribution_sdk::derive_priority_fee_distribution_account_address(
                 &jito_priority_fee_distribution::ID,
                 &vote_account,
                 target_epoch,
             );
-        let tip_distribution_account = self
+        let priority_fee_distribution_account = self
             .banks_client
-            .get_account(tip_distribution_address)
+            .get_account(priority_fee_distribution_address)
             .await?
             .unwrap();
-        let mut tip_distribution_data = tip_distribution_account.data.as_slice();
-        let tip_distribution = TipDistributionAccount::try_deserialize(&mut tip_distribution_data)?;
+        let mut priority_fee_distribution_data = priority_fee_distribution_account.data.as_slice();
+        let priority_fee_distribution =
+            PriorityFeeDistributionAccount::try_deserialize(&mut priority_fee_distribution_data)?;
 
-        Ok(tip_distribution)
+        Ok(priority_fee_distribution)
     }
 
     pub async fn get_claim_status_account(
         &mut self,
         claimant: Pubkey,
-        tip_distribution_account: Pubkey,
+        priority_fee_distribution_account: Pubkey,
     ) -> TestResult<ClaimStatus> {
         let (claim_status_address, _) =
             jito_priority_fee_distribution_sdk::derive_claim_status_account_address(
                 &jito_priority_fee_distribution::ID,
                 &claimant,
-                &tip_distribution_account,
+                &priority_fee_distribution_account,
             );
         let claim_status_account = self
             .banks_client
@@ -194,7 +195,7 @@ impl PriorityFeeDistributionClient {
         .await
     }
 
-    pub async fn do_initialize_tip_distribution_account(
+    pub async fn do_initialize_priority_fee_distribution_account(
         &mut self,
         merkle_root_upload_authority: Pubkey,
         vote_keypair: Keypair,
@@ -207,18 +208,18 @@ impl PriorityFeeDistributionClient {
         let system_program = solana_program::system_program::id();
         let validator_vote_account = vote_keypair.pubkey();
         self.airdrop(&validator_vote_account, 1.0).await?;
-        let (tip_distribution_account, account_bump) =
-            jito_priority_fee_distribution_sdk::derive_tip_distribution_account_address(
+        let (priority_fee_distribution_account, account_bump) =
+            jito_priority_fee_distribution_sdk::derive_priority_fee_distribution_account_address(
                 &jito_priority_fee_distribution::ID,
                 &validator_vote_account,
                 epoch,
             );
 
-        self.initialize_tip_distribution_account(
+        self.initialize_priority_fee_distribution_account(
             merkle_root_upload_authority,
             validator_commission_bps,
             config,
-            tip_distribution_account,
+            priority_fee_distribution_account,
             system_program,
             validator_vote_account,
             account_bump,
@@ -226,20 +227,20 @@ impl PriorityFeeDistributionClient {
         .await
     }
 
-    pub async fn initialize_tip_distribution_account(
+    pub async fn initialize_priority_fee_distribution_account(
         &mut self,
         merkle_root_upload_authority: Pubkey,
         validator_commission_bps: u16,
         config: Pubkey,
-        tip_distribution_account: Pubkey,
+        priority_fee_distribution_account: Pubkey,
         system_program: Pubkey,
         validator_vote_account: Pubkey,
         bump: u8,
     ) -> TestResult<()> {
         let ix =
-            jito_priority_fee_distribution_sdk::instruction::initialize_tip_distribution_account_ix(
+            jito_priority_fee_distribution_sdk::instruction::initialize_priority_fee_distribution_account_ix(
                 config,
-                tip_distribution_account,
+                priority_fee_distribution_account,
                 system_program,
                 validator_vote_account,
                 self.payer.pubkey(),
@@ -271,8 +272,8 @@ impl PriorityFeeDistributionClient {
             &jito_priority_fee_distribution::ID,
         );
         let system_program = solana_program::system_program::id();
-        let (tip_distribution_account, _) =
-            jito_priority_fee_distribution_sdk::derive_tip_distribution_account_address(
+        let (priority_fee_distribution_account, _) =
+            jito_priority_fee_distribution_sdk::derive_priority_fee_distribution_account_address(
                 &jito_priority_fee_distribution::ID,
                 &claimant,
                 epoch,
@@ -281,7 +282,7 @@ impl PriorityFeeDistributionClient {
             jito_priority_fee_distribution_sdk::derive_claim_status_account_address(
                 &jito_priority_fee_distribution::ID,
                 &claimant,
-                &tip_distribution_account,
+                &priority_fee_distribution_account,
             );
         let payer = self.payer.pubkey();
 
@@ -289,7 +290,7 @@ impl PriorityFeeDistributionClient {
             proof,
             amount,
             config,
-            tip_distribution_account,
+            priority_fee_distribution_account,
             merkle_root_upload_authority,
             claim_status,
             claimant,
@@ -306,7 +307,7 @@ impl PriorityFeeDistributionClient {
         proof: Vec<[u8; 32]>,
         amount: u64,
         config: Pubkey,
-        tip_distribution_account: Pubkey,
+        priority_fee_distribution_account: Pubkey,
         merkle_root_upload_authority: Pubkey,
         claim_status: Pubkey,
         claimant: Pubkey,
@@ -316,7 +317,7 @@ impl PriorityFeeDistributionClient {
     ) -> TestResult<()> {
         let ix = jito_priority_fee_distribution_sdk::instruction::claim_ix(
             config,
-            tip_distribution_account,
+            priority_fee_distribution_account,
             merkle_root_upload_authority,
             claim_status,
             claimant,

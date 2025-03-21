@@ -1,6 +1,6 @@
 mod set_merkle_root {
     use jito_priority_fee_distribution_sdk::{
-        derive_claim_status_account_address, derive_tip_distribution_account_address,
+        derive_claim_status_account_address, derive_priority_fee_distribution_account_address,
         jito_priority_fee_distribution,
     };
     use jito_tip_router_core::{
@@ -41,7 +41,7 @@ mod set_merkle_root {
         let (claim_status_pubkey, claim_status_bump) = derive_claim_status_account_address(
             &jito_priority_fee_distribution::ID,
             &claimant_staker_withdrawer,
-            &derive_tip_distribution_account_address(
+            &derive_priority_fee_distribution_account_address(
                 &jito_priority_fee_distribution::ID,
                 &claimant_staker_withdrawer,
                 epoch - 1,
@@ -80,7 +80,7 @@ mod set_merkle_root {
             validator_node_pubkey: Pubkey::new_unique(),
             maybe_tip_distribution_meta: Some(TipDistributionMeta {
                 merkle_root_upload_authority,
-                tip_distribution_pubkey: derive_tip_distribution_account_address(
+                tip_distribution_pubkey: derive_priority_fee_distribution_account_address(
                     &jito_priority_fee_distribution::ID,
                     &vote_account,
                     target_epoch,
@@ -101,7 +101,7 @@ mod set_merkle_root {
             validator_node_pubkey: Pubkey::new_unique(),
             maybe_tip_distribution_meta: Some(TipDistributionMeta {
                 merkle_root_upload_authority: other_validator,
-                tip_distribution_pubkey: derive_tip_distribution_account_address(
+                tip_distribution_pubkey: derive_priority_fee_distribution_account_address(
                     &jito_priority_fee_distribution::ID,
                     &other_validator,
                     target_epoch,
@@ -134,16 +134,17 @@ mod set_merkle_root {
         )
         .map_err(TestError::from)?;
 
-        let test_tip_distribution_account = derive_tip_distribution_account_address(
-            &jito_priority_fee_distribution::ID,
-            &vote_account,
-            target_epoch,
-        )
-        .0;
+        let test_priority_fee_distribution_account =
+            derive_priority_fee_distribution_account_address(
+                &jito_priority_fee_distribution::ID,
+                &vote_account,
+                target_epoch,
+            )
+            .0;
         let test_generated_merkle_tree = collection
             .generated_merkle_trees
             .iter()
-            .find(|tree| tree.tip_distribution_account == test_tip_distribution_account)
+            .find(|tree| tree.distribution_account == test_priority_fee_distribution_account)
             .unwrap();
 
         Ok(GeneratedMerkleTreeCollectionFixture {
@@ -187,7 +188,7 @@ mod set_merkle_root {
     async fn test_set_priority_fee_merkle_root_ok() -> TestResult<()> {
         let mut fixture: TestBuilder = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut tip_distribution_client = fixture.priority_fee_distribution_client();
+        let mut priority_fee_distribution_client = fixture.priority_fee_distribution_client();
 
         fixture.warp_epoch_incremental(10).await?;
 
@@ -198,22 +199,30 @@ mod set_merkle_root {
 
         let epoch = fixture.clock().await.epoch;
 
-        tip_distribution_client
+        priority_fee_distribution_client
             .do_initialize(ncn_config_address)
             .await?;
-        let vote_keypair = tip_distribution_client.setup_vote_account().await?;
+        let vote_keypair = priority_fee_distribution_client
+            .setup_vote_account()
+            .await?;
         let vote_account = vote_keypair.pubkey();
 
-        tip_distribution_client
-            .do_initialize_tip_distribution_account(ncn_config_address, vote_keypair, epoch, 100)
+        priority_fee_distribution_client
+            .do_initialize_priority_fee_distribution_account(
+                ncn_config_address,
+                vote_keypair,
+                epoch,
+                100,
+            )
             .await?;
-        let (tip_distribution_account, _) = derive_tip_distribution_account_address(
-            &jito_priority_fee_distribution::ID,
-            &vote_account,
-            epoch,
-        );
+        let (priority_fee_distribution_account, _) =
+            derive_priority_fee_distribution_account_address(
+                &jito_priority_fee_distribution::ID,
+                &vote_account,
+                epoch,
+            );
         tip_router_client
-            .airdrop(&tip_distribution_account, 10.0)
+            .airdrop(&priority_fee_distribution_account, 10.0)
             .await?;
 
         let meta_merkle_tree_fixture =
@@ -263,7 +272,7 @@ mod set_merkle_root {
             )
             .await;
 
-        let tip_distribution_address = derive_tip_distribution_account_address(
+        let tip_distribution_address = derive_priority_fee_distribution_account_address(
             &jito_priority_fee_distribution::ID,
             &vote_account,
             epoch - 1,
@@ -314,20 +323,20 @@ mod set_merkle_root {
             .await?;
 
         // Fetch the tip distribution account and check root
-        let tip_distribution_account = tip_distribution_client
-            .get_tip_distribution_account(vote_account, epoch - 1)
+        let priority_fee_distribution_account = priority_fee_distribution_client
+            .get_priority_fee_distribution_account(vote_account, epoch - 1)
             .await?;
 
-        let merkle_root = tip_distribution_account.merkle_root.unwrap();
+        let merkle_root = priority_fee_distribution_account.merkle_root.unwrap();
 
         assert_eq!(merkle_root.root, node.validator_merkle_root);
         assert_eq!(merkle_root.max_num_nodes, node.max_num_nodes);
         assert_eq!(merkle_root.max_total_claim, node.max_total_claim);
 
-        let tip_distribution_account_pubkey = meta_merkle_tree_fixture
+        let priority_fee_distribution_account_pubkey = meta_merkle_tree_fixture
             .generated_merkle_tree_fixture
             .test_generated_merkle_tree
-            .tip_distribution_account;
+            .distribution_account;
 
         let target_claimant_node = meta_merkle_tree_fixture
             .generated_merkle_tree_fixture
@@ -346,18 +355,18 @@ mod set_merkle_root {
             .do_claim_with_payer_priority_fee(
                 ncn_address,
                 target_claimant,
-                tip_distribution_account_pubkey,
+                priority_fee_distribution_account_pubkey,
                 target_claimant_node_proof.clone(),
                 target_claimant_node_amount,
             )
             .await?;
 
-        let claim_status_account = tip_distribution_client
-            .get_claim_status_account(target_claimant, tip_distribution_account_pubkey)
+        let claim_status_account = priority_fee_distribution_client
+            .get_claim_status_account(target_claimant, priority_fee_distribution_account_pubkey)
             .await?;
         assert_eq!(
             claim_status_account.expires_at,
-            tip_distribution_account.expires_at
+            priority_fee_distribution_account.expires_at
         );
 
         Ok(())
@@ -368,7 +377,7 @@ mod set_merkle_root {
     async fn test_set_priority_fee_merkle_root_no_fixture() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut tip_distribution_client = fixture.priority_fee_distribution_client();
+        let mut priority_fee_distribution_client = fixture.priority_fee_distribution_client();
 
         fixture.warp_epoch_incremental(10).await?;
 
@@ -379,14 +388,21 @@ mod set_merkle_root {
         let ncn_config_address =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
 
-        tip_distribution_client
+        priority_fee_distribution_client
             .do_initialize(ncn_config_address)
             .await?;
-        let vote_keypair = tip_distribution_client.setup_vote_account().await?;
+        let vote_keypair = priority_fee_distribution_client
+            .setup_vote_account()
+            .await?;
         let vote_account = vote_keypair.pubkey();
 
-        tip_distribution_client
-            .do_initialize_tip_distribution_account(ncn_config_address, vote_keypair, epoch, 100)
+        priority_fee_distribution_client
+            .do_initialize_priority_fee_distribution_account(
+                ncn_config_address,
+                vote_keypair,
+                epoch,
+                100,
+            )
             .await?;
 
         fixture.warp_epoch_incremental(1).await?;
@@ -412,7 +428,7 @@ mod set_merkle_root {
         tip_router_client
             .do_cast_vote(ncn, operator, operator_admin, winning_root, epoch)
             .await?;
-        let tip_distribution_address = derive_tip_distribution_account_address(
+        let tip_distribution_address = derive_priority_fee_distribution_account_address(
             &jito_priority_fee_distribution::ID,
             &vote_account,
             epoch - 1,
@@ -457,11 +473,11 @@ mod set_merkle_root {
             .await?;
 
         // Fetch the tip distribution account and check root
-        let tip_distribution_account = tip_distribution_client
-            .get_tip_distribution_account(vote_account, epoch - 1)
+        let priority_fee_distribution_account = priority_fee_distribution_client
+            .get_priority_fee_distribution_account(vote_account, epoch - 1)
             .await?;
 
-        let merkle_root = tip_distribution_account.merkle_root.unwrap();
+        let merkle_root = priority_fee_distribution_account.merkle_root.unwrap();
 
         assert_eq!(merkle_root.root, node.validator_merkle_root);
         assert_eq!(merkle_root.max_num_nodes, node.max_num_nodes);
@@ -474,7 +490,7 @@ mod set_merkle_root {
     async fn test_set_priority_fee_merkle_root_before_consensus() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut tip_distribution_client = fixture.priority_fee_distribution_client();
+        let mut priority_fee_distribution_client = fixture.priority_fee_distribution_client();
 
         fixture.warp_epoch_incremental(500).await?;
 
@@ -486,20 +502,27 @@ mod set_merkle_root {
         let clock = fixture.clock().await;
         let epoch = clock.epoch;
 
-        tip_distribution_client
+        priority_fee_distribution_client
             .do_initialize(ncn_config_address)
             .await?;
-        let vote_keypair = tip_distribution_client.setup_vote_account().await?;
+        let vote_keypair = priority_fee_distribution_client
+            .setup_vote_account()
+            .await?;
         let vote_account = vote_keypair.pubkey();
 
-        tip_distribution_client
-            .do_initialize_tip_distribution_account(ncn_config_address, vote_keypair, epoch, 100)
+        priority_fee_distribution_client
+            .do_initialize_priority_fee_distribution_account(
+                ncn_config_address,
+                vote_keypair,
+                epoch,
+                100,
+            )
             .await?;
 
         let meta_merkle_tree_fixture =
             create_meta_merkle_tree(vote_account, ncn_config_address, ncn, epoch)?;
 
-        let tip_distribution_address = derive_tip_distribution_account_address(
+        let tip_distribution_address = derive_priority_fee_distribution_account_address(
             &jito_priority_fee_distribution::ID,
             &vote_account,
             epoch,

@@ -1,5 +1,7 @@
 use jito_bytemuck::AccountDeserialize;
-use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution;
+use jito_priority_fee_distribution_sdk::{
+    derive_priority_fee_distribution_account_address, jito_priority_fee_distribution,
+};
 use jito_restaking_core::{
     config::Config, ncn_operator_state::NcnOperatorState, ncn_vault_ticket::NcnVaultTicket,
 };
@@ -1479,7 +1481,7 @@ impl TipRouterClient {
             BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let priority_fee_distribution_program = jito_priority_fee_distribution::ID;
-        let tip_distribution_account = derive_tip_distribution_account_address(
+        let distribution_account = derive_priority_fee_distribution_account_address(
             &priority_fee_distribution_program,
             &vote_account,
             epoch - 1,
@@ -1496,7 +1498,7 @@ impl TipRouterClient {
             ncn,
             ballot_box,
             vote_account,
-            tip_distribution_account,
+            distribution_account,
             tip_distribution_config,
             priority_fee_distribution_program,
             proof,
@@ -1514,8 +1516,8 @@ impl TipRouterClient {
         ncn: Pubkey,
         ballot_box: Pubkey,
         vote_account: Pubkey,
-        tip_distribution_account: Pubkey,
-        tip_distribution_config: Pubkey,
+        distribution_account: Pubkey,
+        distribution_config: Pubkey,
         priority_fee_distribution_program: Pubkey,
         proof: Vec<[u8; 32]>,
         merkle_root: [u8; 32],
@@ -1532,8 +1534,8 @@ impl TipRouterClient {
             .ncn(ncn)
             .ballot_box(ballot_box)
             .vote_account(vote_account)
-            .tip_distribution_account(tip_distribution_account)
-            .tip_distribution_config(tip_distribution_config)
+            .tip_distribution_account(distribution_account)
+            .tip_distribution_config(distribution_config)
             .priority_fee_distribution_program(priority_fee_distribution_program)
             .proof(proof)
             .merkle_root(merkle_root)

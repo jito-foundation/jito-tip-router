@@ -337,7 +337,7 @@ mod tests {
         let generated_trees = vec![
             GeneratedMerkleTree {
                 distribution_program: tip_distribution_program_id,
-                tip_distribution_account: Pubkey::new_unique(),
+                distribution_account: Pubkey::new_unique(),
                 merkle_root_upload_authority: Pubkey::new_unique(),
                 merkle_root: Hash::new_unique(),
                 tree_nodes: tree1_nodes,
@@ -346,7 +346,7 @@ mod tests {
             },
             GeneratedMerkleTree {
                 distribution_program: tip_distribution_program_id,
-                tip_distribution_account: Pubkey::new_unique(),
+                distribution_account: Pubkey::new_unique(),
                 merkle_root_upload_authority: Pubkey::new_unique(),
                 merkle_root: Hash::new_unique(),
                 tree_nodes: tree2_nodes,
@@ -383,11 +383,11 @@ mod tests {
             let matched_tree = generated_collection
                 .generated_merkle_trees
                 .iter()
-                .find(|x| x.tip_distribution_account == node.tip_distribution_account)
+                .find(|x| x.distribution_account == node.tip_distribution_account)
                 .unwrap();
             assert_eq!(
                 node.tip_distribution_account,
-                matched_tree.tip_distribution_account
+                matched_tree.distribution_account
             );
             assert_eq!(node.max_total_claim, matched_tree.max_total_claim);
             assert_eq!(node.max_num_nodes, matched_tree.max_num_nodes);

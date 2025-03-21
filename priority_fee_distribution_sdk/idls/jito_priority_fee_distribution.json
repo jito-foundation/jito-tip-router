@@ -10,7 +10,7 @@
     {
       "name": "claim",
       "docs": [
-        "Claims tokens from the [TipDistributionAccount]."
+        "Claims tokens from the [PriorityFeeDistributionAccount]."
       ],
       "discriminator": [
         62,
@@ -27,7 +27,7 @@
           "name": "config"
         },
         {
-          "name": "tip_distribution_account",
+          "name": "priority_fee_distribution_account",
           "writable": true
         },
         {
@@ -85,7 +85,7 @@
     {
       "name": "close_claim_status",
       "docs": [
-        "Anyone can invoke this only after the [TipDistributionAccount] has expired.",
+        "Anyone can invoke this only after the [PriorityFeeDistributionAccount] has expired.",
         "This instruction will return any rent back to `claimant` and close the account"
       ],
       "discriminator": [
@@ -118,21 +118,21 @@
       "args": []
     },
     {
-      "name": "close_tip_distribution_account",
+      "name": "close_priority_fee_distribution_account",
       "docs": [
-        "Anyone can invoke this only after the [TipDistributionAccount] has expired.",
+        "Anyone can invoke this only after the [PriorityFeeDistributionAccount] has expired.",
         "This instruction will send any unclaimed funds to the designated `expired_funds_account`",
         "before closing and returning the rent exempt funds to the validator."
       ],
       "discriminator": [
-        47,
+        127,
+        143,
+        71,
         136,
-        208,
-        190,
-        125,
-        243,
-        74,
-        227
+        78,
+        181,
+        210,
+        101
       ],
       "accounts": [
         {
@@ -143,7 +143,7 @@
           "writable": true
         },
         {
-          "name": "tip_distribution_account",
+          "name": "priority_fee_distribution_account",
           "writable": true
         },
         {
@@ -264,27 +264,27 @@
       ]
     },
     {
-      "name": "initialize_tip_distribution_account",
+      "name": "initialize_priority_fee_distribution_account",
       "docs": [
-        "Initialize a new [TipDistributionAccount] associated with the given validator vote key",
+        "Initialize a new [PriorityFeeDistributionAccount] associated with the given validator vote key",
         "and current epoch."
       ],
       "discriminator": [
-        120,
-        191,
-        25,
-        182,
-        111,
         49,
-        179,
-        55
+        128,
+        247,
+        162,
+        140,
+        2,
+        193,
+        87
       ],
       "accounts": [
         {
           "name": "config"
         },
         {
-          "name": "tip_distribution_account",
+          "name": "priority_fee_distribution_account",
           "writable": true
         },
         {
@@ -334,7 +334,7 @@
       ],
       "accounts": [
         {
-          "name": "tip_distribution_account",
+          "name": "priority_fee_distribution_account",
           "writable": true
         },
         {
@@ -422,7 +422,7 @@
     {
       "name": "upload_merkle_root",
       "docs": [
-        "Uploads a merkle root to the provided [TipDistributionAccount]. This instruction may be",
+        "Uploads a merkle root to the provided [PriorityFeeDistributionAccount]. This instruction may be",
         "invoked many times as long as the account is at least one epoch old and not expired; and",
         "no funds have already been claimed. Only the `merkle_root_upload_authority` has the",
         "authority to invoke."
@@ -442,7 +442,7 @@
           "name": "config"
         },
         {
-          "name": "tip_distribution_account",
+          "name": "priority_fee_distribution_account",
           "writable": true
         },
         {
@@ -513,16 +513,16 @@
       ]
     },
     {
-      "name": "TipDistributionAccount",
+      "name": "PriorityFeeDistributionAccount",
       "discriminator": [
-        85,
-        64,
-        113,
-        198,
-        234,
-        94,
-        120,
-        123
+        163,
+        183,
+        254,
+        12,
+        121,
+        137,
+        235,
+        27
       ]
     }
   ],
@@ -593,29 +593,29 @@
       ]
     },
     {
-      "name": "TipDistributionAccountClosedEvent",
+      "name": "PriorityFeeDistributionAccountClosedEvent",
       "discriminator": [
-        246,
-        152,
-        49,
-        154,
-        9,
-        79,
-        25,
-        58
+        68,
+        223,
+        157,
+        170,
+        253,
+        184,
+        95,
+        244
       ]
     },
     {
-      "name": "TipDistributionAccountInitializedEvent",
+      "name": "PriorityFeeDistributionAccountInitializedEvent",
       "discriminator": [
-        39,
-        165,
-        224,
-        61,
-        40,
-        140,
-        139,
-        255
+        99,
+        255,
+        192,
+        133,
+        37,
+        151,
+        232,
+        9
       ]
     },
     {
@@ -655,13 +655,13 @@
     },
     {
       "code": 6004,
-      "name": "ExpiredTipDistributionAccount",
-      "msg": "The given TipDistributionAccount has expired."
+      "name": "ExpiredPriorityFeeDistributionAccount",
+      "msg": "The given PriorityFeeDistributionAccount has expired."
     },
     {
       "code": 6005,
       "name": "FundsAlreadyClaimed",
-      "msg": "The funds for the given index and TipDistributionAccount have already been claimed."
+      "msg": "The funds for the given index and PriorityFeeDistributionAccount have already been claimed."
     },
     {
       "code": 6006,
@@ -685,8 +685,8 @@
     },
     {
       "code": 6010,
-      "name": "PrematureCloseTipDistributionAccount",
-      "msg": "The given TipDistributionAccount is not ready to be closed."
+      "name": "PrematureClosePriorityFeeDistributionAccount",
+      "msg": "The given PriorityFeeDistributionAccount is not ready to be closed."
     },
     {
       "code": 6011,
@@ -701,7 +701,7 @@
     {
       "code": 6013,
       "name": "RootNotUploaded",
-      "msg": "No merkle root has been uploaded to the given TipDistributionAccount."
+      "msg": "No merkle root has been uploaded to the given PriorityFeeDistributionAccount."
     },
     {
       "code": 6014,
@@ -718,8 +718,9 @@
     {
       "name": "ClaimStatus",
       "docs": [
-        "A PDA uniquely derived by the Tip Distribution account and claimant, which enforces an only-",
-        "once claim by each claimant."
+        "A PDA uniquely derived by the PriorityFeeDistributionAccount and claimant, which enforces an only-",
+        "once claim by each claimant.",
+        "@dev **this is very different than TipDistributor's ClaimStatus structure**"
       ],
       "type": {
         "kind": "struct",
@@ -763,9 +764,9 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "tip_distribution_account",
+            "name": "priority_fee_distribution_account",
             "docs": [
-              "[TipDistributionAccount] claimed from."
+              "[PriorityFeeDistributionAccount] claimed from."
             ],
             "type": "pubkey"
           },
@@ -927,7 +928,7 @@
           {
             "name": "override_authority",
             "docs": [
-              "The authority that overrides the TipDistributionAccount merkle_root_upload_authority"
+              "The authority that overrides the PriorityFeeDistributionAccount merkle_root_upload_authority"
             ],
             "type": "pubkey"
           },
@@ -962,7 +963,7 @@
             "type": "pubkey"
           },
           {
-            "name": "tip_distribution_account",
+            "name": "priority_fee_distribution_account",
             "docs": [
               "Where the root was uploaded to."
             ],
@@ -972,7 +973,7 @@
       }
     },
     {
-      "name": "TipDistributionAccount",
+      "name": "PriorityFeeDistributionAccount",
       "docs": [
         "The account that validators register as **tip_receiver** with the tip-payment program."
       ],
@@ -1039,7 +1040,7 @@
       }
     },
     {
-      "name": "TipDistributionAccountClosedEvent",
+      "name": "PriorityFeeDistributionAccountClosedEvent",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1051,9 +1052,9 @@
             "type": "pubkey"
           },
           {
-            "name": "tip_distribution_account",
+            "name": "priority_fee_distribution_account",
             "docs": [
-              "[TipDistributionAccount] closed."
+              "[PriorityFeeDistributionAccount] closed."
             ],
             "type": "pubkey"
           },
@@ -1068,12 +1069,12 @@
       }
     },
     {
-      "name": "TipDistributionAccountInitializedEvent",
+      "name": "PriorityFeeDistributionAccountInitializedEvent",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "tip_distribution_account",
+            "name": "priority_fee_distribution_account",
             "type": "pubkey"
           }
         ]
@@ -1085,7 +1086,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "tip_distribution_account",
+            "name": "priority_fee_distribution_account",
             "type": "pubkey"
           },
           {
