@@ -1,5 +1,7 @@
 mod set_merkle_root {
-    use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution;
+    use jito_priority_fee_distribution_sdk::{
+        derive_priority_fee_distribution_account_address, jito_priority_fee_distribution,
+    };
     use jito_tip_distribution_sdk::{
         derive_claim_status_account_address, derive_tip_distribution_account_address,
         jito_tip_distribution,
@@ -95,7 +97,7 @@ mod set_merkle_root {
             commission: 0,
             maybe_priority_fee_distribution_meta: Some(PriorityFeeDistributionMeta {
                 merkle_root_upload_authority,
-                priority_fee_distribution_pubkey: derive_tip_distribution_account_address(
+                priority_fee_distribution_pubkey: derive_priority_fee_distribution_account_address(
                     &jito_priority_fee_distribution::ID,
                     &vote_account,
                     target_epoch,

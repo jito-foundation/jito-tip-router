@@ -24,7 +24,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
-const MAX_SET_MERKLE_ROOT_IXS_PER_TX: usize = 3;
+const MAX_SET_MERKLE_ROOT_IXS_PER_TX: usize = 2;
 
 /// Fetch and deserialize
 pub async fn get_ncn_config(
@@ -184,6 +184,7 @@ pub async fn send_set_merkle_root_txs(
         .chunks(MAX_SET_MERKLE_ROOT_IXS_PER_TX)
         .enumerate()
     {
+        // TODO: Add compute unit instructions
         let mut tx = Transaction::new_with_payer(ixs, Some(&keypair.pubkey()));
         // Simple retry logic
         for _ in 0..5 {
