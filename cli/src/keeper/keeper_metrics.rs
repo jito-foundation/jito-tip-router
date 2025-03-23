@@ -39,11 +39,22 @@ pub async fn emit_error(title: String, error: String, message: String, keeper_ep
     );
 }
 
-pub async fn emit_heartbeat(tick: u64, metrics_only: bool) {
-    if metrics_only {
-        datapoint_info!("tr-beta-keeper-heartbeat-metrics", ("tick", tick, i64),);
-    } else {
+pub async fn emit_heartbeat(
+    tick: u64,
+    run_operations: bool,
+    emit_metrics: bool,
+    run_migration: bool,
+) {
+    if run_operations {
         datapoint_info!("tr-beta-keeper-heartbeat-operations", ("tick", tick, i64),);
+    }
+
+    if emit_metrics {
+        datapoint_info!("tr-beta-keeper-heartbeat-metrics", ("tick", tick, i64),);
+    }
+
+    if run_migration {
+        datapoint_info!("tr-beta-keeper-heartbeat-migrate", ("tick", tick, i64),);
     }
 }
 

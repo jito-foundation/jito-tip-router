@@ -92,7 +92,7 @@ pub async fn startup_keeper(
     let mut start_of_loop;
     let mut end_of_loop;
 
-    let run_operations = !metrics_only;
+    let run_operations = !metrics_only && !run_migration;
     let emit_metrics = emit_metrics || metrics_only;
 
     loop {
@@ -150,28 +150,10 @@ pub async fn startup_keeper(
             end_of_loop = current_keeper_epoch == current_epoch;
         }
 
-        // Calls the migrate TDA Merkle Root
-        if run_migration {
-            info!(
-                "\n\nB. Migrate TDA Merkle Root Upload Authorities - {}\n",
-                current_keeper_epoch
-            );
-            let result =
-                migrate_tda_merkle_root_upload_authorities(handler, current_keeper_epoch).await;
-
-            check_and_timeout_error(
-                "Migrate TDA Merkle Root Upload Authorities".to_string(),
-                &result,
-                error_timeout_ms,
-                state.epoch,
-            )
-            .await;
-        }
-
         // Emits metrics for the NCN state
         // This includes validators info, epoch info, ticket states and more
         if emit_metrics {
-            info!("\n\nC. Emit NCN Metrics - {}\n", current_keeper_epoch);
+            info!("\n\nB. Emit NCN Metrics - {}\n", current_keeper_epoch);
             let result = emit_ncn_metrics(handler, start_of_loop).await;
 
             check_and_timeout_error(
@@ -270,6 +252,30 @@ pub async fn startup_keeper(
             }
         }
 
+        // Calls the migrate TDA Merkle Root
+        if run_migration {
+            info!(
+                "\n\nC. Migrate TDA Merkle Root Upload Authorities - {}\n",
+                current_keeper_epoch
+            );
+
+            // If complete, reset loop
+            if state.is_epoch_completed {
+                continue;
+            }
+
+            let result =
+                migrate_tda_merkle_root_upload_authorities(handler, current_keeper_epoch).await;
+
+            check_and_timeout_error(
+                "Migrate TDA Merkle Root Upload Authorities".to_string(),
+                &result,
+                error_timeout_ms,
+                state.epoch,
+            )
+            .await;
+        }
+
         // This is where the real work is done. Depending on the state, the keeper will crank through
         // whatever is needed to be done for the given epoch.
         if run_operations {
@@ -334,7 +340,7 @@ pub async fn startup_keeper(
                 continue;
             }
 
-            epoch_stall = result.unwrap() || metrics_only;
+            epoch_stall = !run_operations || result.unwrap();
 
             if epoch_stall {
                 info!("\n\nSTALL DETECTED FOR {}\n\n", current_keeper_epoch);
@@ -346,7 +352,7 @@ pub async fn startup_keeper(
             info!("\n\nF. Timeout - {}\n", current_keeper_epoch);
 
             timeout_keeper(loop_timeout_ms).await;
-            emit_heartbeat(tick, metrics_only).await;
+            emit_heartbeat(tick, run_operations, emit_metrics, run_migration).await;
             tick += 1;
         }
     }
