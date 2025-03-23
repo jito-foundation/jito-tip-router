@@ -58,6 +58,7 @@ pub async fn emit_heartbeat(
     }
 }
 
+#[allow(clippy::large_stack_frames)]
 pub async fn emit_ncn_metrics(handler: &CliHandler, start_of_loop: bool) -> Result<()> {
     emit_ncn_metrics_epoch_slot(handler).await?;
 
