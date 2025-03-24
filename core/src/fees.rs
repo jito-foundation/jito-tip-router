@@ -402,6 +402,8 @@ impl FeeConfig {
 pub struct Fees {
     activation_epoch: PodU64,
 
+    // REVIEW: Should we use this for the PriorityFee Distribution fees? Allows us to keep the 
+    //  same group pattern without affecting code or requiring account re-allocations
     reserved: [u8; 128],
     base_fee_groups_bps: [Fee; 8],
     ncn_fee_groups_bps: [Fee; 8],

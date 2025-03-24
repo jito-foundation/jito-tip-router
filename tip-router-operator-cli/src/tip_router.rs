@@ -24,7 +24,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
-const MAX_SET_MERKLE_ROOT_IXS_PER_TX: usize = 2;
+const MAX_SET_MERKLE_ROOT_IXS_PER_TX: usize = 1;
 
 /// Fetch and deserialize
 pub async fn get_ncn_config(
