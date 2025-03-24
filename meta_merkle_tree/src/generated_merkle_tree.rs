@@ -111,7 +111,9 @@ impl GeneratedMerkleTree {
                     ncn_address,
                     priority_fee_distribution_meta.total_tips,
                     protocol_fee_bps,
-                    priority_fee_distribution_meta.validator_fee_bps,
+                    // Priority fee distributions always have 0 protocol commissions because they
+                    // retain their portion and transfer the rest of the priority fees after each epoch.
+                    0,
                     epoch,
                 ) {
                     Err(e) => return Err(e),
@@ -158,6 +160,7 @@ impl GeneratedMerkleTreeCollection {
         ncn_address: &Pubkey,
         epoch: u64,
         protocol_fee_bps: u64,
+        pf_distribution_protocol_fee_bps: u64,
         tip_router_program_id: &Pubkey,
     ) -> Result<Self, MerkleRootGeneratorError> {
         let generated_merkle_trees = stake_meta_collection
@@ -190,7 +193,7 @@ impl GeneratedMerkleTreeCollection {
                             tip_router_program_id,
                             &PRIORITY_FEE_DISTRIBUTION_ID,
                             ncn_address,
-                            protocol_fee_bps,
+                            pf_distribution_protocol_fee_bps,
                             epoch,
                         );
                     res.push(priority_fee_distribution_tree);
@@ -267,6 +270,7 @@ impl TreeNode {
         validator_fee_bps: u16,
         epoch: u64,
     ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
+        // TODO: Update for PriorityFee distributions. This could be as easy as passing in appropritate protocol_fee_bps.
         let protocol_fee_amount = u128::checked_div(
             (total_tips as u128)
                 .checked_mul(protocol_fee_bps as u128)
@@ -278,6 +282,7 @@ impl TreeNode {
         let protocol_fee_amount = u64::try_from(protocol_fee_amount)
             .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
 
+        // TODO: For Priority Fee Distributions, there is no validator amount. Pass in 0 for validator_fee_bps
         let validator_amount = u64::try_from(
             (total_tips as u128)
                 .checked_mul(validator_fee_bps as u128)
@@ -368,6 +373,7 @@ impl TreeNode {
             )
         };
 
+        // REVIEW: Should we remove this node if validator_amount is 0 or leave it?
         tree_nodes.push(Self {
             claimant: stake_meta.validator_node_pubkey,
             claim_status_pubkey: validator_claim_status_pubkey,
@@ -764,6 +770,7 @@ mod tests {
             &ncn_address,
             epoch,
             300,
+            150,
             &tip_router_program_id,
         )
         .unwrap();
@@ -882,6 +889,7 @@ mod tests {
             max_num_nodes: 4,
         };
 
+        // Priority Fee Distribution nodes for Validator 0
         let tree_nodes = vec![
             TreeNode {
                 claimant: protocol_fee_recipient,
@@ -889,7 +897,7 @@ mod tests {
                 claim_status_bump: pf_claim_statuses[0].1,
                 staker_pubkey: Pubkey::default(),
                 withdrawer_pubkey: Pubkey::default(),
-                amount: 76380000,
+                amount: 38_190_000, // 1.5% of 2_546_000_000
                 proof: None,
             },
             TreeNode {
@@ -898,7 +906,7 @@ mod tests {
                 claim_status_bump: pf_claim_statuses[1].1,
                 staker_pubkey: Pubkey::default(),
                 withdrawer_pubkey: Pubkey::default(),
-                amount: 1273000000,
+                amount: 0, // Validators won't need to claim from Priority Fee distributions
                 proof: None,
             },
             TreeNode {
@@ -907,7 +915,7 @@ mod tests {
                 claim_status_bump: pf_claim_statuses[2].1,
                 staker_pubkey: staker_account_0,
                 withdrawer_pubkey: staker_account_0,
-                amount: 95,
+                amount: 199,
                 proof: None,
             },
             TreeNode {
@@ -916,7 +924,7 @@ mod tests {
                 claim_status_bump: pf_claim_statuses[3].1,
                 staker_pubkey: staker_account_1,
                 withdrawer_pubkey: staker_account_1,
-                amount: 111, // Update to match actual amount
+                amount: 233,
                 proof: None,
             },
         ];
@@ -992,6 +1000,7 @@ mod tests {
             max_num_nodes: 4,
         };
 
+        // Priority Fee Distribution nodes for Validator 1
         let tree_nodes = vec![
             TreeNode {
                 claimant: protocol_fee_recipient,
@@ -999,7 +1008,7 @@ mod tests {
                 claim_status_bump: pf_claim_statuses[4].1,
                 staker_pubkey: Pubkey::default(),
                 withdrawer_pubkey: Pubkey::default(),
-                amount: 96_300_000,
+                amount: 48_150_000, // 1.5% of 3_210_000_000
                 proof: None,
             },
             TreeNode {
@@ -1008,7 +1017,7 @@ mod tests {
                 claim_status_bump: pf_claim_statuses[5].1,
                 staker_pubkey: Pubkey::default(),
                 withdrawer_pubkey: Pubkey::default(),
-                amount: 321_000_000,
+                amount: 0, // Validators won't need to claim from Priority Fee distributions
                 proof: None,
             },
             TreeNode {
@@ -1017,7 +1026,7 @@ mod tests {
                 claim_status_bump: pf_claim_statuses[6].1,
                 staker_pubkey: staker_account_2,
                 withdrawer_pubkey: staker_account_2,
-                amount: 244,
+                amount: 276,
                 proof: None,
             },
             TreeNode {
@@ -1026,7 +1035,7 @@ mod tests {
                 claim_status_bump: pf_claim_statuses[7].1,
                 staker_pubkey: staker_account_3,
                 withdrawer_pubkey: staker_account_3,
-                amount: 763_013,
+                amount: 863_871,
                 proof: None,
             },
         ];

@@ -238,6 +238,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         &ncn_address,
         epoch,
         PROTOCOL_FEE_BPS,
+        0, // TODO: Update for Priority Fee distributions
         &jito_tip_router_program::id(),
     )?;
 
