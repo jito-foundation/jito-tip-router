@@ -78,6 +78,7 @@ async fn main() -> Result<()> {
             save_stages,
             set_merkle_roots,
             claim_tips,
+            claim_tips_metrics,
         } => {
             assert!(
                 num_monitored_epochs > 0,
@@ -156,7 +157,7 @@ async fn main() -> Result<()> {
             });
 
             // Run claims if enabled
-            if claim_tips {
+            if claim_tips_metrics {
                 let cli_clone = cli.clone();
                 let rpc_client_clone = rpc_client.clone();
 
@@ -200,7 +201,9 @@ async fn main() -> Result<()> {
                         sleep(Duration::from_secs(1800)).await;
                     }
                 });
+            }
 
+            if claim_tips {
                 let cli_clone = cli.clone();
                 let rpc_client_clone = rpc_client.clone();
                 let file_mutex = Arc::new(Mutex::new(()));

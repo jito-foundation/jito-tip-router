@@ -458,6 +458,7 @@ fn build_mev_claim_transactions(
     payer_pubkey: Pubkey,
     ncn_address: Pubkey,
 ) -> Vec<Transaction> {
+    let epoch = merkle_trees.epoch;
     let tip_router_config_address =
         Config::find_program_address(&tip_router_program_id, &ncn_address).0;
     let tip_router_account_payer =
@@ -564,6 +565,7 @@ fn build_mev_claim_transactions(
         ),
         ("claim_statuses", claim_statuses.len(), i64),
         ("claim_transactions", transactions.len(), i64),
+        ("epoch", epoch, i64)
     );
 
     transactions
