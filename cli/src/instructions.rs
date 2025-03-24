@@ -2,10 +2,10 @@ use std::{str::FromStr, time::Duration};
 
 use crate::{
     getters::{
-        get_account, get_all_active_operators_in_ncn, get_all_operators_in_ncn,
-        get_all_sorted_operators_for_vault, get_all_vaults, get_all_vaults_in_ncn, get_ballot_box,
-        get_base_reward_receiver_rewards, get_base_reward_router, get_current_slot,
-        get_epoch_snapshot, get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator,
+        get_account, get_all_operators_in_ncn, get_all_sorted_operators_for_vault, get_all_vaults,
+        get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver_rewards,
+        get_base_reward_router, get_current_slot, get_epoch_snapshot,
+        get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator,
         get_operator_snapshot, get_stake_pool_accounts, get_tip_distribution_accounts_to_migrate,
         get_tip_router_config, get_vault, get_vault_config, get_vault_registry,
         get_vault_update_state_tracker, get_weight_table,
@@ -2351,7 +2351,7 @@ pub async fn crank_set_weight(handler: &CliHandler, epoch: u64) -> Result<()> {
 pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
     let vault_registry = get_vault_registry(handler).await?;
 
-    let operators = get_all_active_operators_in_ncn(handler, epoch).await?;
+    let operators = get_all_operators_in_ncn(handler).await?;
     let all_vaults: Vec<Pubkey> = vault_registry
         .get_valid_vault_entries()
         .iter()
@@ -2501,7 +2501,7 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
 
 //TODO Multi-thread sending the TXs
 pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let operators = get_all_active_operators_in_ncn(handler, epoch).await?;
+    let operators = get_all_operators_in_ncn(handler).await?;
 
     let epoch_snapshot = get_or_create_epoch_snapshot(handler, epoch).await?;
     let fees = epoch_snapshot.fees();
@@ -2654,11 +2654,11 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
     // One last distribution crank
     let result = crank_distribute(handler, epoch).await;
-    if result.is_err() {
+    if let Err(err) = result {
         log::error!(
             "Failed to distribute rewards before closing for epoch: {:?} with error: {:?}",
             epoch,
-            result.err().unwrap()
+            err
         );
     }
 

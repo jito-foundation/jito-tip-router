@@ -6,6 +6,7 @@ use crate::handler::CliHandler;
 use anyhow::Result;
 use borsh1::BorshDeserialize;
 use jito_bytemuck::{AccountDeserialize, Discriminator};
+use jito_jsm_core::slot_toggle::SlotToggleState;
 use jito_restaking_core::{
     config::Config as RestakingConfig, ncn::Ncn, ncn_operator_state::NcnOperatorState,
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
@@ -880,13 +881,15 @@ pub async fn get_all_active_operators_in_ncn(
         }
 
         let ncn_operator_state = result.unwrap();
-
-        if ncn_operator_state
+        let ncn_operator_state_toggle_state = ncn_operator_state
             .ncn_opt_in_state
-            .is_active(active_slot, DEFAULT_SLOTS_PER_EPOCH)?
-        {
-            active_operators.push(operator);
-        }
+            .state(active_slot, DEFAULT_SLOTS_PER_EPOCH)
+            .unwrap();
+
+        match ncn_operator_state_toggle_state {
+            SlotToggleState::Active => active_operators.push(operator),
+            _ => continue,
+        };
     }
 
     Ok(active_operators)
