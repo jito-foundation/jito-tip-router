@@ -81,7 +81,7 @@ pub async fn emit_claim_mev_tips_metrics(
     epoch: u64,
     tip_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
-    ncn_address: Pubkey,
+    ncn: Pubkey,
 ) -> Result<(), anyhow::Error> {
     let meta_merkle_tree_dir = cli.get_save_path().clone();
     let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
@@ -100,9 +100,10 @@ pub async fn emit_claim_mev_tips_metrics(
         &merkle_trees,
         tip_distribution_program_id,
         tip_router_program_id,
-        ncn_address,
+        ncn,
         0,
         Pubkey::new_unique(),
+        &cli.operator_address,
     )
     .await?;
 
@@ -121,7 +122,7 @@ pub async fn claim_mev_tips_with_emit(
     epoch: u64,
     tip_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
-    ncn_address: Pubkey,
+    ncn: Pubkey,
     max_loop_duration: Duration,
     file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), anyhow::Error> {
@@ -134,8 +135,7 @@ pub async fn claim_mev_tips_with_emit(
     let mut merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
         .map_err(|e| anyhow::anyhow!(e))?;
 
-    let tip_router_config_address =
-        Config::find_program_address(&tip_router_program_id, &ncn_address).0;
+    let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
 
     // Fix wrong claim status pubkeys for 1 epoch -- noop if already correct
     for tree in merkle_tree_coll.generated_merkle_trees.iter_mut() {
@@ -161,11 +161,12 @@ pub async fn claim_mev_tips_with_emit(
         rpc_url,
         tip_distribution_program_id,
         tip_router_program_id,
-        ncn_address,
+        ncn,
         &keypair,
         max_loop_duration,
         cli.micro_lamports,
         file_mutex,
+        &cli.operator_address,
     )
     .await
     {
@@ -208,11 +209,12 @@ pub async fn claim_mev_tips(
     rpc_sender_url: String,
     tip_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
-    ncn_address: Pubkey,
+    ncn: Pubkey,
     keypair: &Arc<Keypair>,
     max_loop_duration: Duration,
     micro_lamports: u64,
     file_mutex: &Arc<Mutex<()>>,
+    operator_address: &String,
 ) -> Result<(), ClaimMevError> {
     let epoch = merkle_trees.epoch;
     if is_epoch_completed(epoch, file_mutex).await? {
@@ -233,9 +235,10 @@ pub async fn claim_mev_tips(
             merkle_trees,
             tip_distribution_program_id,
             tip_router_program_id,
-            ncn_address,
+            ncn,
             micro_lamports,
             keypair.pubkey(),
+            operator_address,
         )
         .await?;
 
@@ -243,6 +246,7 @@ pub async fn claim_mev_tips(
             "tip_router_cli.claim_mev_tips-send_summary",
             ("claim_transactions_left", all_claim_transactions.len(), i64),
             ("epoch", epoch, i64),
+            ("operator", operator_address, String),
         );
 
         if all_claim_transactions.is_empty() {
@@ -286,9 +290,10 @@ pub async fn claim_mev_tips(
         merkle_trees,
         tip_distribution_program_id,
         tip_router_program_id,
-        ncn_address,
+        ncn,
         micro_lamports,
         keypair.pubkey(),
+        operator_address,
     )
     .await?;
     if transactions.is_empty() {
@@ -339,18 +344,19 @@ pub async fn claim_mev_tips(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn get_claim_transactions_for_valid_unclaimed(
     rpc_client: &RpcClient,
     merkle_trees: &GeneratedMerkleTreeCollection,
     tip_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
-    ncn_address: Pubkey,
+    ncn: Pubkey,
     micro_lamports: u64,
     payer_pubkey: Pubkey,
+    operator_address: &String,
 ) -> Result<Vec<Transaction>, ClaimMevError> {
     let epoch = merkle_trees.epoch;
-    let tip_router_config_address =
-        Config::find_program_address(&tip_router_program_id, &ncn_address).0;
+    let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
 
     let tree_nodes = merkle_trees
         .generated_merkle_trees
@@ -419,7 +425,8 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         ("claimants_onchain", claimants.len(), i64),
         ("claim_statuses", claim_status_pubkeys.len(), i64),
         ("claim_statuses_onchain", claim_statuses.len(), i64),
-        ("epoch", epoch, i64)
+        ("epoch", epoch, i64),
+        ("operator", operator_address, String),
     );
 
     let transactions = build_mev_claim_transactions(
@@ -431,7 +438,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         claim_statuses,
         micro_lamports,
         payer_pubkey,
-        ncn_address,
+        ncn,
     );
 
     Ok(transactions)
