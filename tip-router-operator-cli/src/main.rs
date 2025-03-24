@@ -11,7 +11,7 @@ use ::{
     std::{str::FromStr, sync::Arc, time::Duration},
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
-        claim::claim_mev_tips_with_emit,
+        claim::{claim_mev_tips_with_emit, emit_claim_mev_tips_metrics},
         cli::{Cli, Commands, SnapshotPaths},
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_snapshot_at_slot,
@@ -158,13 +158,57 @@ async fn main() -> Result<()> {
             // Run claims if enabled
             if claim_tips {
                 let cli_clone = cli.clone();
-                let rpc_client = rpc_client.clone();
+                let rpc_client_clone = rpc_client.clone();
+
+                tokio::spawn(async move {
+                    loop {
+                        // Get current epoch
+                        let current_epoch = match rpc_client_clone.get_epoch_info().await {
+                            Ok(epoch_info) => epoch_info.epoch,
+                            Err(_) => {
+                                // If we can't get the epoch, wait and retry
+                                sleep(Duration::from_secs(60)).await;
+                                continue;
+                            }
+                        };
+
+                        let cli_ref = cli_clone.clone();
+                        match emit_claim_mev_tips_metrics(
+                            &cli_ref,
+                            current_epoch,
+                            tip_distribution_program_id,
+                            tip_router_program_id,
+                            ncn_address,
+                        )
+                        .await
+                        {
+                            Ok(_) => {
+                                info!(
+                                    "Successfully emitted claim metrics for epoch {}",
+                                    current_epoch
+                                );
+                            }
+                            Err(e) => {
+                                error!(
+                                    "Error emitting claim metrics for epoch {}: {}",
+                                    current_epoch, e
+                                );
+                            }
+                        }
+
+                        info!("Sleeping for 30 minutes before next emit claim cycle");
+                        sleep(Duration::from_secs(1800)).await;
+                    }
+                });
+
+                let cli_clone = cli.clone();
+                let rpc_client_clone = rpc_client.clone();
                 let file_mutex = Arc::new(Mutex::new(()));
 
                 tokio::spawn(async move {
                     loop {
                         // Get current epoch
-                        let current_epoch = match rpc_client.get_epoch_info().await {
+                        let current_epoch = match rpc_client_clone.get_epoch_info().await {
                             Ok(epoch_info) => epoch_info.epoch,
                             Err(_) => {
                                 // If we can't get the epoch, wait and retry
@@ -178,12 +222,9 @@ async fn main() -> Result<()> {
 
                         // Process current epoch and the previous two epochs
                         for epoch_offset in 0..3 {
-                            // Make sure we don't go below epoch 0
-                            if epoch_offset > current_epoch {
-                                continue;
-                            }
-
-                            let epoch_to_process = current_epoch - epoch_offset;
+                            let epoch_to_process = current_epoch
+                                .checked_sub(epoch_offset)
+                                .expect("Epoch underflow");
                             let cli_ref = cli_clone.clone();
                             let file_mutex_ref = file_mutex.clone();
 
@@ -200,16 +241,19 @@ async fn main() -> Result<()> {
                                 )
                                 .await;
 
-                                if let Err(e) = result {
-                                    error!(
-                                        "Error claiming tips for epoch {}: {}",
-                                        epoch_to_process, e
-                                    );
-                                } else {
-                                    info!(
-                                        "Successfully processed claims for epoch {}",
-                                        epoch_to_process
-                                    );
+                                match result {
+                                    Err(e) => {
+                                        error!(
+                                            "Error claiming tips for epoch {}: {}",
+                                            epoch_to_process, e
+                                        );
+                                    }
+                                    Ok(_) => {
+                                        info!(
+                                            "Successfully processed claims for epoch {}",
+                                            epoch_to_process
+                                        );
+                                    }
                                 }
 
                                 epoch_to_process

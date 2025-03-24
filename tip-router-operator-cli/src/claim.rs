@@ -76,6 +76,46 @@ pub enum ClaimMevError {
 }
 
 #[allow(clippy::too_many_arguments)]
+pub async fn emit_claim_mev_tips_metrics(
+    cli: &Cli,
+    epoch: u64,
+    tip_distribution_program_id: Pubkey,
+    tip_router_program_id: Pubkey,
+    ncn_address: Pubkey,
+) -> Result<(), anyhow::Error> {
+    let meta_merkle_tree_dir = cli.get_save_path().clone();
+    let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
+    let merkle_trees = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    let rpc_url = cli.rpc_url.clone();
+    let rpc_client = RpcClient::new_with_timeout_and_commitment(
+        rpc_url,
+        Duration::from_secs(1800),
+        CommitmentConfig::confirmed(),
+    );
+
+    let all_claim_transactions = get_claim_transactions_for_valid_unclaimed(
+        &rpc_client,
+        &merkle_trees,
+        tip_distribution_program_id,
+        tip_router_program_id,
+        ncn_address,
+        0,
+        Pubkey::new_unique(),
+    )
+    .await?;
+
+    datapoint_info!(
+        "tip_router_cli.claim_mev_tips-send_summary",
+        ("claim_transactions_left", all_claim_transactions.len(), i64),
+        ("epoch", epoch, i64),
+    );
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
 pub async fn claim_mev_tips_with_emit(
     cli: &Cli,
     epoch: u64,
@@ -202,6 +242,7 @@ pub async fn claim_mev_tips(
         datapoint_info!(
             "tip_router_cli.claim_mev_tips-send_summary",
             ("claim_transactions_left", all_claim_transactions.len(), i64),
+            ("epoch", epoch, i64),
         );
 
         if all_claim_transactions.is_empty() {
@@ -307,6 +348,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     micro_lamports: u64,
     payer_pubkey: Pubkey,
 ) -> Result<Vec<Transaction>, ClaimMevError> {
+    let epoch = merkle_trees.epoch;
     let tip_router_config_address =
         Config::find_program_address(&tip_router_program_id, &ncn_address).0;
 
@@ -326,7 +368,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     info!(
         "reading {} tip distribution related accounts for epoch {}",
         tree_nodes.len(),
-        merkle_trees.epoch
+        epoch
     );
 
     let start = Instant::now();
@@ -377,6 +419,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         ("claimants_onchain", claimants.len(), i64),
         ("claim_statuses", claim_status_pubkeys.len(), i64),
         ("claim_statuses_onchain", claim_statuses.len(), i64),
+        ("epoch", epoch, i64)
     );
 
     let transactions = build_mev_claim_transactions(
