@@ -3329,11 +3329,17 @@
             }
           },
           {
+            "name": "priorityFeeDistributionFeeBps",
+            "type": {
+              "defined": "Fee"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                128
+                112
               ]
             }
           },
