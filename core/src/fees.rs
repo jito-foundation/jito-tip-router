@@ -439,6 +439,10 @@ impl Fees {
         self.activation_epoch.into()
     }
 
+    pub fn priority_fee_distribution_fee_bps(&self) -> u64 {
+        self.priority_fee_distribution_fee_bps.fee().into()
+    }
+
     pub fn base_fee_bps(&self, base_fee_group: BaseFeeGroup) -> Result<u16, TipRouterError> {
         let group_index = base_fee_group.group_index()?;
 

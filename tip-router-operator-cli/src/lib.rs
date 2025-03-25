@@ -154,6 +154,7 @@ pub fn create_merkle_tree_collection(
     epoch: u64,
     ncn_address: &Pubkey,
     protocol_fee_bps: u64,
+    pf_distribution_protocol_fee_bps: u64,
     save_path: &Path,
     save: bool,
 ) -> GeneratedMerkleTreeCollection {
@@ -165,7 +166,7 @@ pub fn create_merkle_tree_collection(
         ncn_address,
         epoch,
         protocol_fee_bps,
-        0, // TODO: Update for Priority Fee distributions
+        pf_distribution_protocol_fee_bps,
         tip_router_program_id,
     ) {
         Ok(merkle_tree_coll) => merkle_tree_coll,

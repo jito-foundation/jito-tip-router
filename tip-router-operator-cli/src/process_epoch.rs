@@ -211,6 +211,7 @@ pub async fn loop_stages(
                 //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
                 //  use epoch + 1 here
                 let ballot_epoch = epoch_to_process.checked_add(1).unwrap();
+                let fees = config.fee_config.current_fees(ballot_epoch);
                 let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 
                 // Generate the merkle tree collection
@@ -221,6 +222,7 @@ pub async fn loop_stages(
                     epoch_to_process,
                     ncn_address,
                     protocol_fee_bps,
+                    fees.priority_fee_distribution_fee_bps(),
                     &cli.get_save_path(),
                     save_stages,
                 ));
