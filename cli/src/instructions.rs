@@ -2270,6 +2270,13 @@ pub async fn get_or_create_ncn_reward_router(
     epoch: u64,
 ) -> Result<NcnRewardRouter> {
     let ncn = *handler.ncn()?;
+    let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+        &handler.tip_router_program_id,
+        operator,
+        &ncn,
+        epoch,
+    );
+
     let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
         &handler.tip_router_program_id,
         ncn_fee_group,
@@ -2277,6 +2284,11 @@ pub async fn get_or_create_ncn_reward_router(
         &ncn,
         epoch,
     );
+
+    // If operator snapshot does not exist, we cannot create the ncn reward router
+    if get_account(handler, &operator_snapshot).await?.is_none() {
+        return Err(anyhow!("Invalid Route"));
+    }
 
     if get_account(handler, &ncn_reward_router)
         .await?
@@ -2539,12 +2551,12 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
             }
 
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
-
-            if result.is_err() {
-                // Note this error might be important, but has not shown itself to be
-                info!(
-                    "Failed to get or create ncn reward router: {:?} in epoch: {:?}",
-                    operator, epoch
+            if let Err(err) = result {
+                log::info!(
+                    "Skipping ncn reward router: {:?} in epoch: {:?} ( {:?} )",
+                    operator,
+                    epoch,
+                    err
                 );
                 continue;
             }
@@ -2553,8 +2565,9 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
             if result.is_err() {
                 log::info!(
-                    "Could not find route for operator: {:?} in epoch: {:?}",
+                    "Skipping route for operator: {:?} for group: {:?} in epoch: {:?} ( No Route )",
                     operator,
+                    group,
                     epoch,
                 );
                 continue;
@@ -2596,10 +2609,9 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
             }
 
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
-
             if let Err(err) = result {
-                log::error!(
-                    "Failed to get or create ncn reward router: {:?} in epoch: {:?} with error: {:?}",
+                log::info!(
+                    "Skipping ncn reward router: {:?} in epoch: {:?} ( {:?} )",
                     operator,
                     epoch,
                     err
