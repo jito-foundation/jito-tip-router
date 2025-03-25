@@ -68,6 +68,7 @@ pub fn initialize_tip_distribution_account_ix(
 pub fn claim_ix(
     config: Pubkey,
     tip_distribution_account: Pubkey,
+    merkle_root_upload_authority: Pubkey,
     claim_status: Pubkey,
     claimant: Pubkey,
     payer: Pubkey,
@@ -81,6 +82,7 @@ pub fn claim_ix(
         accounts: jito_tip_distribution::client::accounts::Claim {
             config,
             tip_distribution_account,
+            merkle_root_upload_authority,
             claim_status,
             claimant,
             payer,
@@ -135,5 +137,20 @@ pub fn close_claim_status_ix(
         }
         .to_account_metas(None),
         data: jito_tip_distribution::client::args::CloseClaimStatus {}.data(),
+    }
+}
+
+pub fn migrate_tda_merkle_root_upload_authority_ix(
+    tip_distribution_account: Pubkey,
+    merkle_root_upload_config: Pubkey,
+) -> Instruction {
+    Instruction {
+        program_id: jito_tip_distribution::ID,
+        accounts: jito_tip_distribution::client::accounts::MigrateTdaMerkleRootUploadAuthority {
+            tip_distribution_account,
+            merkle_root_upload_config,
+        }
+        .to_account_metas(None),
+        data: jito_tip_distribution::client::args::MigrateTdaMerkleRootUploadAuthority {}.data(),
     }
 }

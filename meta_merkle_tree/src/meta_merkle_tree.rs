@@ -90,10 +90,11 @@ impl MetaMerkleTree {
     }
 
     /// Write a merkle tree to a filepath
-    pub fn write_to_file(&self, path: &PathBuf) {
-        let serialized = serde_json::to_string_pretty(&self).unwrap();
-        let mut file = File::create(path).unwrap();
-        file.write_all(serialized.as_bytes()).unwrap();
+    pub fn write_to_file(&self, path: &PathBuf) -> Result<()> {
+        let serialized = serde_json::to_string_pretty(&self)?;
+        let mut file = File::create(path)?;
+        file.write_all(serialized.as_bytes())?;
+        Ok(())
     }
 
     pub fn get_node(&self, tip_distribution_account: &Pubkey) -> TreeNode {
@@ -241,7 +242,7 @@ mod tests {
         let path = PathBuf::from("merkle_tree.json");
 
         // serialize merkle distributor to file
-        merkle_distributor_info.write_to_file(&path);
+        merkle_distributor_info.write_to_file(&path).unwrap();
         // now test we can successfully read from file
         let merkle_distributor_read: MetaMerkleTree = MetaMerkleTree::new_from_file(&path).unwrap();
 

@@ -4,22 +4,25 @@ use std::{collections::HashMap, str::FromStr, sync::Arc};
 use crate::{
     args::{Args, ProgramCommand},
     getters::{
-        get_account_payer, get_all_operators_in_ncn, get_all_tickets, get_all_vaults_in_ncn,
-        get_ballot_box, get_base_reward_receiver, get_base_reward_router, get_current_slot,
-        get_epoch_snapshot, get_epoch_state, get_is_epoch_completed, get_ncn,
-        get_ncn_operator_state, get_ncn_reward_receiver, get_ncn_reward_router,
-        get_ncn_vault_ticket, get_operator_snapshot, get_stake_pool, get_tip_router_config,
-        get_total_epoch_rent_cost, get_total_rewards_to_be_distributed, get_vault_ncn_ticket,
-        get_vault_operator_delegation, get_vault_registry, get_weight_table,
+        get_account_payer, get_all_operators_in_ncn, get_all_opted_in_validators, get_all_tickets,
+        get_all_vaults, get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver,
+        get_base_reward_router, get_current_slot, get_epoch_snapshot, get_epoch_state,
+        get_is_epoch_completed, get_ncn, get_ncn_operator_state, get_ncn_reward_receiver,
+        get_ncn_reward_router, get_ncn_vault_ticket, get_operator_snapshot, get_stake_pool,
+        get_tip_router_config, get_total_epoch_rent_cost, get_total_rewards_to_be_distributed,
+        get_vault_ncn_ticket, get_vault_operator_delegation, get_vault_registry, get_weight_table,
+        OptedInValidatorInfo,
     },
     instructions::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
         admin_set_config_fees, admin_set_new_admin, admin_set_parameters, admin_set_weight,
-        crank_switchboard, create_and_add_test_operator, create_and_add_test_vault,
+        crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
+        crank_snapshot, crank_switchboard, create_and_add_test_operator, create_and_add_test_vault,
         create_ballot_box, create_base_reward_router, create_epoch_snapshot, create_epoch_state,
         create_ncn_reward_router, create_operator_snapshot, create_test_ncn, create_vault_registry,
-        create_weight_table, distribute_base_ncn_rewards, register_vault, route_base_rewards,
-        route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
+        create_weight_table, distribute_base_ncn_rewards, full_vault_update, register_vault,
+        route_base_rewards, route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
+        update_all_vaults_in_network,
     },
     keeper::keeper_loop::startup_keeper,
 };
@@ -175,7 +178,33 @@ impl CliHandler {
                 loop_timeout_ms,
                 error_timeout_ms,
                 test_vote,
-            } => startup_keeper(self, loop_timeout_ms, error_timeout_ms, test_vote).await,
+                all_vault_update,
+                emit_metrics,
+                metrics_only,
+                run_migration,
+            } => {
+                startup_keeper(
+                    self,
+                    loop_timeout_ms,
+                    error_timeout_ms,
+                    test_vote,
+                    all_vault_update,
+                    emit_metrics,
+                    metrics_only,
+                    run_migration,
+                )
+                .await
+            }
+            // Cranks
+            ProgramCommand::CrankRegisterVaults {} => crank_register_vaults(self).await,
+            ProgramCommand::CrankUpdateAllVaults {} => update_all_vaults_in_network(self).await,
+
+            ProgramCommand::CrankSetWeight {} => crank_set_weight(self, self.epoch).await,
+            ProgramCommand::CrankSnapshot {} => crank_snapshot(self, self.epoch).await,
+            ProgramCommand::CrankDistribute {} => crank_distribute(self, self.epoch).await,
+            ProgramCommand::CrankCloseEpochAccounts {} => {
+                crank_close_epoch_accounts(self, self.epoch).await
+            }
 
             // Admin
             ProgramCommand::AdminCreateConfig {
@@ -759,6 +788,47 @@ impl CliHandler {
                     println!();
                 }
 
+                Ok(())
+            }
+            ProgramCommand::GetAllOptedInValidators {} => {
+                let results = get_all_opted_in_validators(self).await?;
+
+                fn validators_to_csv_string(validators: &Vec<OptedInValidatorInfo>) -> String {
+                    let mut csv = String::from("identity,stake,active,vote\n");
+
+                    for validator in validators {
+                        csv.push_str(&format!(
+                            "{},{},{},{}\n",
+                            validator.identity, validator.stake, validator.active, validator.vote,
+                        ));
+                    }
+
+                    csv
+                }
+
+                info!(
+                    "Validator Info: \n\n{}\n\n",
+                    validators_to_csv_string(&results)
+                );
+
+                Ok(())
+            }
+            ProgramCommand::FullUpdateVaults { vault } => {
+                let mut vaults_to_update = vec![];
+
+                if let Some(vault) = vault {
+                    let vault = Pubkey::from_str(&vault).expect("error parsing vault");
+                    vaults_to_update.push(vault);
+                } else {
+                    let vaults = get_all_vaults(self).await?;
+                    println!("Updating {:?} Vaults", vaults.len());
+                    vaults_to_update.extend(vaults.iter().cloned());
+                }
+
+                for vault in vaults_to_update.iter() {
+                    println!("Updating {:?}", vault);
+                    full_vault_update(self, vault).await?;
+                }
                 Ok(())
             }
 

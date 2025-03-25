@@ -2,12 +2,13 @@ use std::{str::FromStr, time::Duration};
 
 use crate::{
     getters::{
-        get_account, get_all_operators_in_ncn, get_all_sorted_operators_for_vault,
+        get_account, get_all_operators_in_ncn, get_all_sorted_operators_for_vault, get_all_vaults,
         get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver_rewards,
         get_base_reward_router, get_current_slot, get_epoch_snapshot,
         get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator,
-        get_operator_snapshot, get_stake_pool_accounts, get_tip_router_config, get_vault,
-        get_vault_config, get_vault_registry, get_vault_update_state_tracker, get_weight_table,
+        get_operator_snapshot, get_stake_pool_accounts, get_tip_distribution_accounts_to_migrate,
+        get_tip_router_config, get_vault, get_vault_config, get_vault_registry,
+        get_vault_update_state_tracker, get_weight_table,
     },
     handler::CliHandler,
     log::boring_progress_bar,
@@ -22,6 +23,10 @@ use jito_restaking_core::{
     config::Config as RestakingConfig, ncn::Ncn, ncn_operator_state::NcnOperatorState,
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
     operator_vault_ticket::OperatorVaultTicket,
+};
+use jito_tip_distribution_sdk::{
+    derive_merkle_root_upload_authority_address,
+    instruction::migrate_tda_merkle_root_upload_authority_ix,
 };
 use jito_tip_router_client::{
     instructions::{
@@ -1376,7 +1381,7 @@ pub async fn create_ncn_reward_router(
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
     let (epoch_marker, _, _) =
-        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
     let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
         .epoch_marker(epoch_marker)
@@ -1996,6 +2001,15 @@ pub async fn check_created(handler: &CliHandler, address: &Pubkey) -> Result<()>
     Ok(())
 }
 
+pub async fn update_all_vaults_in_network(handler: &CliHandler) -> Result<()> {
+    let vaults = get_all_vaults(handler).await?;
+    for vault in vaults {
+        full_vault_update(handler, &vault).await?;
+    }
+
+    Ok(())
+}
+
 pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<()> {
     let payer = handler.keypair()?;
 
@@ -2061,57 +2075,59 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
     // Crank Vault Update State Tracker
     let all_operators = get_all_sorted_operators_for_vault(handler, vault).await?;
 
-    let starting_index = {
-        let vault_update_state_tracker_account =
-            get_vault_update_state_tracker(handler, vault, ncn_epoch).await?;
-        let last_updated_index = vault_update_state_tracker_account.last_updated_index();
+    if !all_operators.is_empty() {
+        let starting_index = {
+            let vault_update_state_tracker_account =
+                get_vault_update_state_tracker(handler, vault, ncn_epoch).await?;
+            let last_updated_index = vault_update_state_tracker_account.last_updated_index();
 
-        if last_updated_index == u64::MAX {
-            ncn_epoch % all_operators.len() as u64
-        } else {
-            (last_updated_index + 1) % all_operators.len() as u64
-        }
-    };
+            if last_updated_index == u64::MAX {
+                ncn_epoch % all_operators.len() as u64
+            } else {
+                (last_updated_index + 1) % all_operators.len() as u64
+            }
+        };
 
-    for index in 0..all_operators.len() {
-        let current_index = (starting_index as usize + index) % all_operators.len();
-        let operator = all_operators.get(current_index).unwrap();
+        for index in 0..all_operators.len() {
+            let current_index = (starting_index as usize + index) % all_operators.len();
+            let operator = all_operators.get(current_index).unwrap();
 
-        let (vault_operator_delegation, _, _) = VaultOperatorDelegation::find_program_address(
-            &handler.vault_program_id,
-            vault,
-            operator,
-        );
+            let (vault_operator_delegation, _, _) = VaultOperatorDelegation::find_program_address(
+                &handler.vault_program_id,
+                vault,
+                operator,
+            );
 
-        let crank_vault_update_state_tracker_ix = CrankVaultUpdateStateTrackerBuilder::new()
-            .vault(*vault)
-            .operator(*operator)
-            .config(vault_config)
-            .vault_operator_delegation(vault_operator_delegation)
-            .vault_update_state_tracker(vault_update_state_tracker)
-            .instruction();
+            let crank_vault_update_state_tracker_ix = CrankVaultUpdateStateTrackerBuilder::new()
+                .vault(*vault)
+                .operator(*operator)
+                .config(vault_config)
+                .vault_operator_delegation(vault_operator_delegation)
+                .vault_update_state_tracker(vault_update_state_tracker)
+                .instruction();
 
-        let result = send_and_log_transaction(
-            handler,
-            &[crank_vault_update_state_tracker_ix],
-            &[payer],
-            "Crank Vault Update State Tracker",
-            &[
-                format!("VAULT: {:?}", vault),
-                format!("Operator: {:?}", operator),
-                format!("Vault Epoch: {:?}", ncn_epoch),
-            ],
-        )
-        .await;
+            let result = send_and_log_transaction(
+                handler,
+                &[crank_vault_update_state_tracker_ix],
+                &[payer],
+                "Crank Vault Update State Tracker",
+                &[
+                    format!("VAULT: {:?}", vault),
+                    format!("Operator: {:?}", operator),
+                    format!("Vault Epoch: {:?}", ncn_epoch),
+                ],
+            )
+            .await;
 
-        if result.is_err() {
-            log::error!(
+            if result.is_err() {
+                log::error!(
                 "Failed to crank Vault Update State Tracker for Vault: {:?} and Operator: {:?} at NCN Epoch: {:?} with error: {:?}",
                 vault,
                 operator,
                 ncn_epoch,
                 result.err().unwrap()
             );
+            }
         }
     }
 
@@ -2422,6 +2438,11 @@ pub async fn crank_vote(handler: &CliHandler, epoch: u64, test_vote: bool) -> Re
 }
 
 #[allow(clippy::large_stack_frames)]
+pub async fn crank_post_vote_cooldown(_: &CliHandler, _: u64) -> Result<()> {
+    Ok(())
+}
+
+#[allow(clippy::large_stack_frames)]
 pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
     let voter = handler.keypair()?.pubkey();
     let meta_merkle_root = [8; 32];
@@ -2519,12 +2540,11 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
 
-            if let Err(err) = result {
-                log::error!(
-                    "Failed to get or create ncn reward router: {:?} in epoch: {:?} with error: {:?}",
-                    operator,
-                    epoch,
-                    err
+            if result.is_err() {
+                // Note this error might be important, but has not shown itself to be
+                info!(
+                    "Failed to get or create ncn reward router: {:?} in epoch: {:?}",
+                    operator, epoch
                 );
                 continue;
             }
@@ -2634,17 +2654,17 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
     // One last distribution crank
     let result = crank_distribute(handler, epoch).await;
-    if result.is_err() {
+    if let Err(err) = result {
         log::error!(
             "Failed to distribute rewards before closing for epoch: {:?} with error: {:?}",
             epoch,
-            result.err().unwrap()
+            err
         );
     }
 
     // Close NCN Reward Routers
-    let all_operators = get_all_operators_in_ncn(handler).await?;
-    for operator in all_operators.iter() {
+    let operators = get_all_operators_in_ncn(handler).await?;
+    for operator in operators.iter() {
         for group in NcnFeeGroup::all_groups() {
             let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
                 &handler.tip_router_program_id,
@@ -2723,7 +2743,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
     }
 
     // Close Operator Snapshots
-    for operator in all_operators.iter() {
+    for operator in operators.iter() {
         let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
             &handler.tip_router_program_id,
             operator,
@@ -2790,15 +2810,6 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
     Ok(())
 }
-
-// --------------------- NCN SETUP ------------------------------
-
-//TODO create NCN
-//TODO create Operator
-//TODO add vault to NCN
-//TODO add operator to NCN
-//TODO remove vault from NCN
-//TODO remove operator from NCN
 
 // --------------------- TEST NCN --------------------------------
 
@@ -3318,4 +3329,49 @@ pub fn log_transaction(title: &str, signature: Signature, log_items: &[String]) 
 
     log_message.push('\n');
     info!("{}", log_message);
+}
+
+pub async fn migrate_tda_merkle_root_upload_authorities(
+    handler: &CliHandler,
+    epoch: u64,
+) -> Result<()> {
+    let old_merkle_root_upload_authority =
+        Pubkey::from_str("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib").unwrap();
+
+    let tip_distribution_accounts = get_tip_distribution_accounts_to_migrate(
+        handler,
+        &jito_tip_distribution_sdk::id(),
+        &old_merkle_root_upload_authority,
+        epoch,
+    )
+    .await?;
+
+    let (merkle_root_upload_config, _) =
+        derive_merkle_root_upload_authority_address(&jito_tip_distribution_sdk::id());
+
+    let ixs = tip_distribution_accounts
+        .into_iter()
+        .map(|pubkey| {
+            migrate_tda_merkle_root_upload_authority_ix(pubkey, merkle_root_upload_config)
+        })
+        .collect::<Vec<_>>();
+
+    info!(
+        "Migrating TDA Merkle Root Upload Authorities: {}",
+        ixs.len()
+    );
+    for chunk in ixs.chunks(8) {
+        let tx_ixs = std::iter::once(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000))
+            .chain(chunk.iter().cloned())
+            .collect::<Vec<_>>();
+
+        let result = send_and_log_transaction(handler, &tx_ixs, &[], "Migrated TDA", &[]).await;
+        if result.is_err() {
+            log::error!(
+                "Failed to migrate TDA with error: {:?}",
+                result.err().unwrap()
+            );
+        }
+    }
+    Ok(())
 }
