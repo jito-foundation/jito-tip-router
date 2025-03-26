@@ -25,10 +25,6 @@ struct Args {
     #[arg(short, long)]
     bucket: Option<String>,
 
-    /// Path to service account key JSON file for GCP authentication
-    #[arg(short, long, env = "GOOGLE_APPLICATION_CREDENTIALS")]
-    service_account_key: Option<String>,
-
     /// Polling interval in seconds (defaults to 600 seconds / 10 minutes)
     #[arg(short, long, default_value = "600")]
     interval: u64,

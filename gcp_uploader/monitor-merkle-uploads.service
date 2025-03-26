@@ -6,9 +6,8 @@ After=network.target
 Type=simple
 User=core
 ExecStart=/home/core/gcp_uploader \
-    --directory /solana/snapshots/autosnapshot \
+    --directory /solana/snapshots/operator-saves \
     --cluster mainnet \
-    --service-account-key /etc/secrets/gcp-service-account.json \
     --interval 600
 Restart=always
 RestartSec=10
