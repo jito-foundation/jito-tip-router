@@ -16,7 +16,7 @@ This section focuses on two main components:
 1. **Ballot Box**: A critical account that tracks operator votes, ballot tallies, and consensus progress for each epoch.
 2. **Voting and Consensus Mechanism**: The process of casting votes, updating tallies, and reaching a 2/3 consensus based on stake weights.
 
-Once consensus is achieved, the `meta_merkle_root` is finalized, and the system facilitates the seamless integration of this result into downstream processes, such as setting the merkle root for validator accounts and enabling stakers to claim rewards.
+Once consensus is achieved, the `meta_merkle_root` is finalized, and the system facilitates the seamless integration of this result into downstream processes, such as setting the merkle root for validator Tip Distribution Accounts which enables stakers to claim rewards.
 
 ![alt text](/assets/images/core_logic.png)
 *Figure: Overview of the Core Logic
