@@ -651,6 +651,7 @@ pub async fn is_epoch_completed(
     // If file doesn't exist, no epochs are completed
     if !file_path.exists() {
         info!("No completed epochs file found - creating empty");
+        drop(_lock);
         add_completed_epoch(0, file_path, &file_mutex).await?;
 
         return Ok(false);
@@ -695,7 +696,6 @@ pub async fn add_completed_epoch(
     let _lock = file_mutex.lock().await;
 
     // let path = Path::new("completed_claim_epochs.txt");
-    info!("Writing to file {}", file_path.display());
 
     // Create or open file in append mode
     let mut file = OpenOptions::new()
@@ -710,8 +710,6 @@ pub async fn add_completed_epoch(
             ))
         })?;
 
-    info!("Created File {}", file_path.display());
-
     // Write epoch followed by newline
     file.write_all(format!("{}\n", epoch).as_bytes())
         .await
@@ -719,6 +717,10 @@ pub async fn add_completed_epoch(
             ClaimMevError::CompletedEpochsError(format!("Failed to write epoch to file: {}", e))
         })?;
 
-    info!("Epoch {} added to completed epochs file", epoch);
+    info!(
+        "Epoch {} added to completed epochs file ( {} )",
+        epoch,
+        file_path.display()
+    );
     Ok(())
 }
