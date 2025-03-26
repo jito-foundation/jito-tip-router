@@ -7,10 +7,10 @@ description = "A tool to continuously monitor and upload epoch-related files to 
 
 [dependencies]
 anyhow = { workspace = true }
-clap = {  workspace = true, features = ["derive"] }
+clap = { workspace = true, features = ["derive"] }
 cloud-storage = "0.11"
-tokio = { workspace = true, features = ["full"] }
+futures-util = "0.3.31"
 hostname = "0.3"
 regex = "1.10"
 serde_json = { workspace = true }
-futures-util = "0.3.31"
+tokio = { workspace = true, features = ["full"] }

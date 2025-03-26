@@ -3,13 +3,13 @@ members = [
     "cli",
     "clients/rust/jito_tip_router",
     "core",
+    "gcp_uploader",
     "integration_tests",
     "program",
     "shank_cli",
     "tip-router-operator-cli",
     "tip_distribution_sdk",
     "tip_payment_sdk",
-    "gcp_uploader",
 ]
 
 resolver = "2"
