@@ -12,7 +12,7 @@ The Pricing section of the Jito Tip Router defines the mechanisms for managing a
 Accurate and efficient pricing is critical for ensuring fair and transparent reward distribution across participants.
 This section introduces key components, such as the `VaultRegistry` and `WeightTable`, which are used to store metadata, pricing information, and asset weights.
 
-The pricing architecture leverages oracle feeds, such as Switchboard, to provide real-time price updates for supported tokens and vaults.
+The pricing architecture leverages oracle feeds, (currently Switchboard), to provide real-time price updates for supported tokens from vaults.
 Additionally, it includes fallback mechanisms for scenarios where feeds are unavailable, ensuring continuous operation.
 The system supports permissionless interactions for certain roles, such as Crankers, to initialize and update accounts, making the pricing process both robust and decentralized.
 
