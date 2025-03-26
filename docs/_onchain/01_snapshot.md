@@ -25,7 +25,7 @@ Fees are also stored. This is performed in a top-down approach:
 
 ### Initialize & Realloc EpochSnapshot
 
-A Permissionless Cranker initialize and realloc `EpochSnapshot` account to store snapshot which is summary of current epoch.
+A Permissionless Cranker initializes and reallocs `EpochSnapshot` account to store snapshot which is summary of current epoch.
 
 - `fees`: Snapshot of the NCN Fees for the epoch 
 - `operator_count`: The count of operator is associated with Jito Tip Router
