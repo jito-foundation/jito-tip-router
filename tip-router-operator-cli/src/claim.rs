@@ -339,6 +339,11 @@ pub async fn claim_mev_tips(
     if is_error {
         Err(ClaimMevError::UncaughtError { e: error_str })
     } else {
+        info!(
+            "Not finished claiming for epoch {}, transactions left {}",
+            epoch,
+            transactions.len()
+        );
         Err(ClaimMevError::NotFinished {
             transactions_left: transactions.len(),
         })
