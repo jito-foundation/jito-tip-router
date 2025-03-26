@@ -187,7 +187,7 @@ async fn main() -> Result<()> {
                             let epoch_to_emit = current_epoch
                                 .checked_sub(epoch_offset)
                                 .expect("Epoch underflow")
-                                .checked_add(1)
+                                .checked_sub(1)
                                 .expect("Epoch overflow");
 
                             info!("Emitting Claim Metrics for epoch {}", epoch_to_emit);
@@ -247,7 +247,7 @@ async fn main() -> Result<()> {
                             let epoch_to_process = current_epoch
                                 .checked_sub(epoch_offset)
                                 .expect("Epoch underflow")
-                                .checked_add(1)
+                                .checked_sub(1)
                                 .expect("Epoch overflow");
                             let cli_ref = cli_clone.clone();
                             let file_mutex_ref = file_mutex.clone();
