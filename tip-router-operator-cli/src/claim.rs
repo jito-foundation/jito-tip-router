@@ -695,6 +695,7 @@ pub async fn add_completed_epoch(
     let _lock = file_mutex.lock().await;
 
     // let path = Path::new("completed_claim_epochs.txt");
+    info!("Writing to file {}", file_path.display());
 
     // Create or open file in append mode
     let mut file = OpenOptions::new()
@@ -708,6 +709,8 @@ pub async fn add_completed_epoch(
                 e
             ))
         })?;
+
+    info!("Created File {}", file_path.display());
 
     // Write epoch followed by newline
     file.write_all(format!("{}\n", epoch).as_bytes())
