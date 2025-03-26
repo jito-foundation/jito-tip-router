@@ -23,7 +23,7 @@ use solana_sdk::{
     system_program,
     transaction::Transaction,
 };
-use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::{
     collections::HashMap,
@@ -82,9 +82,10 @@ pub async fn emit_claim_mev_tips_metrics(
     tip_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn: Pubkey,
+    file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), anyhow::Error> {
-    if is_epoch_completed(epoch, file_mutex).await? {
+    if is_epoch_completed(epoch, file_path, file_mutex).await? {
         return Ok(());
     }
 
@@ -120,7 +121,7 @@ pub async fn emit_claim_mev_tips_metrics(
 
     if all_claim_transactions.is_empty() {
         info!("Adding epoch {} to completed epochs", epoch);
-        add_completed_epoch(epoch, &file_mutex).await?;
+        add_completed_epoch(epoch, file_path, &file_mutex).await?;
     }
 
     Ok(())
@@ -134,6 +135,7 @@ pub async fn claim_mev_tips_with_emit(
     tip_router_program_id: Pubkey,
     ncn: Pubkey,
     max_loop_duration: Duration,
+    file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), anyhow::Error> {
     let keypair = read_keypair_file(cli.keypair_path.clone())
@@ -175,6 +177,7 @@ pub async fn claim_mev_tips_with_emit(
         &keypair,
         max_loop_duration,
         cli.micro_lamports,
+        file_path,
         file_mutex,
         &cli.operator_address,
     )
@@ -223,11 +226,12 @@ pub async fn claim_mev_tips(
     keypair: &Arc<Keypair>,
     max_loop_duration: Duration,
     micro_lamports: u64,
+    file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
     operator_address: &String,
 ) -> Result<(), ClaimMevError> {
     let epoch = merkle_trees.epoch;
-    if is_epoch_completed(epoch, file_mutex).await? {
+    if is_epoch_completed(epoch, file_path, file_mutex).await? {
         return Ok(());
     }
 
@@ -308,7 +312,7 @@ pub async fn claim_mev_tips(
     .await?;
     if transactions.is_empty() {
         info!("Adding epoch {} to completed epochs", epoch);
-        add_completed_epoch(epoch, file_mutex).await?;
+        add_completed_epoch(epoch, file_path, file_mutex).await?;
         return Ok(());
     }
 
@@ -636,21 +640,24 @@ async fn is_sufficient_balance(
 /// Helper function to check if an epoch is in the completed_claim_epochs.txt file
 pub async fn is_epoch_completed(
     epoch: u64,
+    file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
 ) -> Result<bool, ClaimMevError> {
     // Acquire the mutex lock before file operations
     let _lock = file_mutex.lock().await;
 
-    let path = Path::new("completed_claim_epochs.txt");
+    // let path = Path::new("completed_claim_epochs.txt");
 
     // If file doesn't exist, no epochs are completed
-    if !path.exists() {
-        info!("No completed epochs file found");
+    if !file_path.exists() {
+        info!("No completed epochs file found - creating empty");
+        add_completed_epoch(0, file_path, &file_mutex).await?;
+
         return Ok(false);
     }
 
     // Open and read file
-    let file = File::open(path).await.map_err(|e| {
+    let file = File::open(file_path).await.map_err(|e| {
         ClaimMevError::CompletedEpochsError(format!("Failed to open completed epochs file: {}", e))
     })?;
 
@@ -681,18 +688,19 @@ pub async fn is_epoch_completed(
 /// Helper function to add an epoch to the completed_claim_epochs.txt file
 pub async fn add_completed_epoch(
     epoch: u64,
+    file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), ClaimMevError> {
     // Acquire the mutex lock before file operations
     let _lock = file_mutex.lock().await;
 
-    let path = Path::new("completed_claim_epochs.txt");
+    // let path = Path::new("completed_claim_epochs.txt");
 
     // Create or open file in append mode
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(path)
+        .open(file_path)
         .await
         .map_err(|e| {
             ClaimMevError::CompletedEpochsError(format!(

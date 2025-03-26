@@ -110,6 +110,7 @@ async fn main() -> Result<()> {
             let full_snapshots_path = cli.full_snapshots_path.clone().unwrap();
             let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
             let rpc_url = cli.rpc_url.clone();
+            let claim_tips_epoch_filepath = cli.claim_tips_epoch_filepath.clone();
             let cli_clone: Cli = cli.clone();
 
             if !backup_snapshots_dir.exists() {
@@ -170,6 +171,7 @@ async fn main() -> Result<()> {
             if claim_tips_metrics {
                 let cli_clone = cli.clone();
                 let rpc_client_clone = rpc_client.clone();
+                let file_path_ref = claim_tips_epoch_filepath.clone();
                 let file_mutex_ref = file_mutex.clone();
 
                 tokio::spawn(async move {
@@ -198,6 +200,7 @@ async fn main() -> Result<()> {
                                 tip_distribution_program_id,
                                 tip_router_program_id,
                                 ncn_address,
+                                &file_path_ref,
                                 &file_mutex_ref,
                             )
                             .await
@@ -250,6 +253,7 @@ async fn main() -> Result<()> {
                                 .checked_sub(1)
                                 .expect("Epoch overflow");
                             let cli_ref = cli_clone.clone();
+                            let file_path_ref = claim_tips_epoch_filepath.clone();
                             let file_mutex_ref = file_mutex.clone();
 
                             // Create a task for each epoch and add its handle to our vector
@@ -261,6 +265,7 @@ async fn main() -> Result<()> {
                                     tip_router_program_id,
                                     ncn_address,
                                     Duration::from_secs(3600),
+                                    &file_path_ref,
                                     &file_mutex_ref,
                                 )
                                 .await;
@@ -361,6 +366,7 @@ async fn main() -> Result<()> {
             epoch,
         } => {
             info!("Claiming tips...");
+            let claim_tips_epoch_filepath = cli.claim_tips_epoch_filepath.clone();
             let file_mutex = Arc::new(Mutex::new(()));
             claim_mev_tips_with_emit(
                 &cli,
@@ -369,6 +375,7 @@ async fn main() -> Result<()> {
                 tip_router_program_id,
                 ncn_address,
                 Duration::from_secs(3600),
+                &claim_tips_epoch_filepath,
                 &file_mutex,
             )
             .await?;
