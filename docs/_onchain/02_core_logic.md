@@ -61,6 +61,7 @@ pub struct BallotBox {
 ## Cast Vote
 
 Operators determine their 32-byte meta_merkle_root off-chain.
+This represents a compressed version of the distribution of all tips to all stakers for the target epoch.
 They call `cast_vote` instruction with this root, and it is deposited as a `Ballot` into the `BallotBox` account, assuming we are within the valid window of voting.
 Tallies are stored for each ballot and continuously updated as votes come in, automatically setting the winning ballot once consensus is reached.
 
