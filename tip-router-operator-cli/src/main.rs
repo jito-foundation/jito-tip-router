@@ -178,11 +178,13 @@ async fn main() -> Result<()> {
                                 continue;
                             }
                         };
+                        let epoch_to_emit = current_epoch.checked_sub(1).expect("Epoch underflow");
 
+                        info!("Emitting Claim Metrics for epoch {}", epoch_to_emit);
                         let cli_ref = cli_clone.clone();
                         match emit_claim_mev_tips_metrics(
                             &cli_ref,
-                            current_epoch,
+                            epoch_to_emit,
                             tip_distribution_program_id,
                             tip_router_program_id,
                             ncn_address,
@@ -192,13 +194,13 @@ async fn main() -> Result<()> {
                             Ok(_) => {
                                 info!(
                                     "Successfully emitted claim metrics for epoch {}",
-                                    current_epoch
+                                    epoch_to_emit
                                 );
                             }
                             Err(e) => {
                                 error!(
                                     "Error emitting claim metrics for epoch {}: {}",
-                                    current_epoch, e
+                                    epoch_to_emit, e
                                 );
                             }
                         }
@@ -230,7 +232,7 @@ async fn main() -> Result<()> {
                         let mut join_handles = Vec::new();
 
                         // Process current epoch and the previous two epochs
-                        for epoch_offset in 0..3 {
+                        for epoch_offset in 1..4 {
                             let epoch_to_process = current_epoch
                                 .checked_sub(epoch_offset)
                                 .expect("Epoch underflow");

@@ -297,6 +297,7 @@ pub async fn claim_mev_tips(
     )
     .await?;
     if transactions.is_empty() {
+        info!("Adding epoch {} to completed epochs", epoch);
         add_completed_epoch(epoch, file_mutex).await?;
         return Ok(());
     }
@@ -629,6 +630,7 @@ pub async fn is_epoch_completed(
 
     // If file doesn't exist, no epochs are completed
     if !path.exists() {
+        info!("No completed epochs file found");
         return Ok(false);
     }
 
@@ -648,6 +650,7 @@ pub async fn is_epoch_completed(
         // Try to parse the line as a u64 and compare with our epoch
         if let Ok(completed_epoch) = line.trim().parse::<u64>() {
             if completed_epoch == epoch {
+                info!("Skipping epoch {} ( already completed )", epoch);
                 return Ok(true);
             }
         }
@@ -656,6 +659,7 @@ pub async fn is_epoch_completed(
         line.clear();
     }
 
+    info!("Epoch {} not found in completed epochs file", epoch);
     Ok(false)
 }
 
@@ -689,5 +693,6 @@ pub async fn add_completed_epoch(
             ClaimMevError::CompletedEpochsError(format!("Failed to write epoch to file: {}", e))
         })?;
 
+    info!("Epoch {} added to completed epochs file", epoch);
     Ok(())
 }
