@@ -1,15 +1,12 @@
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
-use cloud_storage::{Client, ListRequest};
-use futures_util::StreamExt;
 use hostname::get as get_hostname_raw;
 use regex::Regex;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
-use tokio::fs::{read_dir, File};
-use tokio::io::AsyncReadExt;
+use tokio::fs::read_dir;
 use tokio::time::sleep;
 
 /// A tool to continuously monitor and upload epoch-related files to Google Cloud Storage
