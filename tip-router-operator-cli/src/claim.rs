@@ -120,7 +120,6 @@ pub async fn emit_claim_mev_tips_metrics(
     );
 
     if all_claim_transactions.is_empty() {
-        info!("Adding epoch {} to completed epochs", epoch);
         add_completed_epoch(epoch, file_path, &file_mutex).await?;
     }
 
@@ -264,6 +263,7 @@ pub async fn claim_mev_tips(
         );
 
         if all_claim_transactions.is_empty() {
+            add_completed_epoch(epoch, file_path, file_mutex).await?;
             return Ok(());
         }
 
@@ -311,7 +311,6 @@ pub async fn claim_mev_tips(
     )
     .await?;
     if transactions.is_empty() {
-        info!("Adding epoch {} to completed epochs", epoch);
         add_completed_epoch(epoch, file_path, file_mutex).await?;
         return Ok(());
     }
