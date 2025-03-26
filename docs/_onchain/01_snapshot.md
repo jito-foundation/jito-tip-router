@@ -57,7 +57,7 @@ pub struct EpochSnapshot {
 
 ### Initialize & Realloc OperatorSnapshot  
 
-A Permissionless Cranker initialize and realloc `OperatorSnapshot` account each epoch.
+A Permissionless Cranker initializes and reallocs`OperatorSnapshot` account each epoch.
 
 ```rust
 pub struct OperatorSnapshot {
