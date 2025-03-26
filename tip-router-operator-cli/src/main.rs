@@ -85,6 +85,7 @@ async fn main() -> Result<()> {
             set_merkle_roots,
             claim_tips,
             claim_tips_metrics,
+            claim_tips_epoch_lookback,
         } => {
             assert!(
                 num_monitored_epochs > 0,
@@ -162,10 +163,14 @@ async fn main() -> Result<()> {
                 }
             });
 
+            // Claim tips and emit metrics
+            let file_mutex = Arc::new(Mutex::new(()));
+
             // Run claims if enabled
             if claim_tips_metrics {
                 let cli_clone = cli.clone();
                 let rpc_client_clone = rpc_client.clone();
+                let file_mutex_ref = file_mutex.clone();
 
                 tokio::spawn(async move {
                     loop {
@@ -178,30 +183,37 @@ async fn main() -> Result<()> {
                                 continue;
                             }
                         };
-                        let epoch_to_emit = current_epoch.checked_sub(1).expect("Epoch underflow");
+                        for epoch_offset in 0..claim_tips_epoch_lookback {
+                            let epoch_to_emit = current_epoch
+                                .checked_sub(epoch_offset)
+                                .expect("Epoch underflow")
+                                .checked_add(1)
+                                .expect("Epoch overflow");
 
-                        info!("Emitting Claim Metrics for epoch {}", epoch_to_emit);
-                        let cli_ref = cli_clone.clone();
-                        match emit_claim_mev_tips_metrics(
-                            &cli_ref,
-                            epoch_to_emit,
-                            tip_distribution_program_id,
-                            tip_router_program_id,
-                            ncn_address,
-                        )
-                        .await
-                        {
-                            Ok(_) => {
-                                info!(
-                                    "Successfully emitted claim metrics for epoch {}",
-                                    epoch_to_emit
-                                );
-                            }
-                            Err(e) => {
-                                error!(
-                                    "Error emitting claim metrics for epoch {}: {}",
-                                    epoch_to_emit, e
-                                );
+                            info!("Emitting Claim Metrics for epoch {}", epoch_to_emit);
+                            let cli_ref = cli_clone.clone();
+                            match emit_claim_mev_tips_metrics(
+                                &cli_ref,
+                                epoch_to_emit,
+                                tip_distribution_program_id,
+                                tip_router_program_id,
+                                ncn_address,
+                                &file_mutex_ref,
+                            )
+                            .await
+                            {
+                                Ok(_) => {
+                                    info!(
+                                        "Successfully emitted claim metrics for epoch {}",
+                                        epoch_to_emit
+                                    );
+                                }
+                                Err(e) => {
+                                    error!(
+                                        "Error emitting claim metrics for epoch {}: {}",
+                                        epoch_to_emit, e
+                                    );
+                                }
                             }
                         }
 
@@ -214,7 +226,6 @@ async fn main() -> Result<()> {
             if claim_tips {
                 let cli_clone = cli.clone();
                 let rpc_client_clone = rpc_client.clone();
-                let file_mutex = Arc::new(Mutex::new(()));
 
                 tokio::spawn(async move {
                     loop {
@@ -232,10 +243,12 @@ async fn main() -> Result<()> {
                         let mut join_handles = Vec::new();
 
                         // Process current epoch and the previous two epochs
-                        for epoch_offset in 1..4 {
+                        for epoch_offset in 0..claim_tips_epoch_lookback {
                             let epoch_to_process = current_epoch
                                 .checked_sub(epoch_offset)
-                                .expect("Epoch underflow");
+                                .expect("Epoch underflow")
+                                .checked_add(1)
+                                .expect("Epoch overflow");
                             let cli_ref = cli_clone.clone();
                             let file_mutex_ref = file_mutex.clone();
 

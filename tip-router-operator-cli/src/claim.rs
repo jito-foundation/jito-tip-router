@@ -82,7 +82,12 @@ pub async fn emit_claim_mev_tips_metrics(
     tip_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn: Pubkey,
+    file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), anyhow::Error> {
+    if is_epoch_completed(epoch, file_mutex).await? {
+        return Ok(());
+    }
+
     let meta_merkle_tree_dir = cli.get_save_path().clone();
     let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
     let merkle_trees = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
@@ -112,6 +117,11 @@ pub async fn emit_claim_mev_tips_metrics(
         ("claim_transactions_left", all_claim_transactions.len(), i64),
         ("epoch", epoch, i64),
     );
+
+    if all_claim_transactions.is_empty() {
+        info!("Adding epoch {} to completed epochs", epoch);
+        add_completed_epoch(epoch, &file_mutex).await?;
+    }
 
     Ok(())
 }

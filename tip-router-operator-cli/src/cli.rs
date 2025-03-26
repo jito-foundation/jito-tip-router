@@ -139,6 +139,9 @@ pub enum Commands {
         #[arg(long, env, default_value = "false")]
         claim_tips_metrics: bool,
 
+        #[arg(long, env, default_value_t = 3)]
+        claim_tips_epoch_lookback: u64,
+
         #[arg(long, env, default_value = "wait-for-next-epoch")]
         starting_stage: OperatorState,
 
