@@ -32,7 +32,7 @@ The pricing system ensures that all registered vaults and tokens within the Jito
 
 ### Initialize VaultRegistry
 
-A Permissionless Cranker initializes the `VaultRegistry` account to store metadata about vaults registered for the Jito Tip Router NCN and inoformation about underlying tokens.
+A Permissionless Cranker initializes the `VaultRegistry` account to store metadata about vaults registered for the Jito Tip Router NCN and information about underlying tokens.
 While the [Jito Vault Program] stores all on-chain vault information, the Permissionless Cranker manages key details, quotes important data, and uploads it to the `VaultRegistry`.
 
 ```rust
