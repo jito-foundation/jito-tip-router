@@ -127,11 +127,9 @@ async fn scan_and_upload_files(
         // Check if file matches our patterns
         let epoch = merkle_pattern.captures(&filename).map_or_else(
             || {
-                if let Some(captures) = stake_pattern.captures(&filename) {
-                    captures.get(1).map(|m| m.as_str().to_string())
-                } else {
-                    None
-                }
+                stake_pattern
+                    .captures(&filename)
+                    .and_then(|captures| captures.get(1).map(|m| m.as_str().to_string()))
             },
             |captures| captures.get(1).map(|m| m.as_str().to_string()),
         );
