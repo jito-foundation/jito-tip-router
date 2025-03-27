@@ -18,7 +18,7 @@ This section details the routing and distribution process, critical instructions
 ## Reward Payment Workflow Overview
 
 1. Rewards ( in lamports ) are sent to the PDA of the `BaseRewardReceiver` (Permissionless cranker will claim the rewards).
-2. The `route_base_rewards` instruction is caleed *x* times until `still_routing` becomes `false`. (This is typically only once but may require multiple calls at higher levels of operators and vaults within the network due to CU limitations).
+2. The `route_base_rewards` instruction is called *x* times until `still_routing` becomes `false`. (This is typically only once but may require multiple calls at higher levels of operators and vaults within the network due to CU limitations).
 3. Once routing is complete, rewards can be distributed:
     a. Use `distribute_base_rewards` instruction to allocate to the base reward recipients. (in JitoSOL).
     b. Use `distribute_ncn_operator_rewards` to send rewards to the next router, specifically the `NcnRewardReceiver` (in lamports), which corresponds to one per operator per NCN fee group.
