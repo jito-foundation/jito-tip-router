@@ -3,7 +3,7 @@ use clap::Parser;
 use hostname::get as get_hostname_raw;
 use regex::Regex;
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 use tokio::fs::read_dir;
@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
     // Main monitoring loop
     loop {
         match scan_and_upload_files(
-            &dir_path,
+            dir_path,
             &bucket_name,
             &hostname,
             &mut uploaded_files,
@@ -93,6 +93,7 @@ async fn main() -> Result<()> {
 }
 
 /// Scans directory for matching files and uploads new ones
+#[allow(clippy::arithmetic_side_effects)]
 async fn scan_and_upload_files(
     dir_path: &Path,
     bucket_name: &str,
@@ -124,13 +125,16 @@ async fn scan_and_upload_files(
         }
 
         // Check if file matches our patterns
-        let epoch = if let Some(captures) = merkle_pattern.captures(&filename) {
-            captures.get(1).map(|m| m.as_str().to_string())
-        } else if let Some(captures) = stake_pattern.captures(&filename) {
-            captures.get(1).map(|m| m.as_str().to_string())
-        } else {
-            None
-        };
+        let epoch = merkle_pattern.captures(&filename).map_or_else(
+            || {
+                if let Some(captures) = stake_pattern.captures(&filename) {
+                    captures.get(1).map(|m| m.as_str().to_string())
+                } else {
+                    None
+                }
+            },
+            |captures| captures.get(1).map(|m| m.as_str().to_string()),
+        );
 
         if let Some(epoch) = epoch {
             // We found a matching file, upload it
@@ -150,7 +154,7 @@ async fn scan_and_upload_files(
 
 /// Uploads a single file to GCS using gcloud CLI
 async fn upload_file(
-    file_path: &PathBuf,
+    file_path: &Path,
     filename: &str,
     epoch: &str,
     bucket_name: &str,
@@ -185,7 +189,9 @@ async fn upload_file(
         .args([
             "storage",
             "cp",
-            file_path.to_str().unwrap(),
+            file_path
+                .to_str()
+                .ok_or_else(|| anyhow!("Invalid Unicode in file path: {}", file_path.display()))?,
             &format!("gs://{}/{}", bucket_name, object_name),
             "--content-type=application/json",
         ])
