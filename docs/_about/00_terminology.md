@@ -5,7 +5,7 @@ layout: post
 weight: 1
 ---
 
-- **MEV (Maxium Extractable Value) Tips**: Tips paid by users participating in a blockspace auction powered by Jito-Solana.
+- **MEV (Maximum Extractable Value) Tips**: Tips paid by users participating in a blockspace auction powered by Jito-Solana.
 - **Jito Tip Router NCN (Node Consensus Network)**: A decentralized network that takes responsibility for programmatically handling the distribution of tips collected by the Tip Distribution Protocol.
 - **Tip Distribution Protocol**: A mechanism that aggregates SOL, generates a merkle tree and merkle root for distribution, and transfers SOL to the appropriate users/accounts.
 - **Merkle Root**: A cryptographic representation of a set of data (in this case, validator tips) that is used to verify the integrity of data stored or transmitted in the network.
