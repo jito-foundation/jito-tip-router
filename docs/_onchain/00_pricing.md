@@ -79,7 +79,7 @@ pub struct StMintEntry {
 }
 ```
 
-This field enables the storage of an oracle feed for each underlying asset (supported token or ST) along with a backup price. Initially, the mints permitted for vaults include **LSTs** and **JTO**. Prices will be quoted in SOL. 
+This field enables the storage of an oracle feed for each underlying asset (supported token or ST) along with a backup price. The `reward_multiplier_bps` is used for mints that receive a multiplier on their relative reward amounts (for example, JitoSOL gets 2x the rewards of other LSTs). Initially, the mints permitted for vaults include **LSTs** and **JTO**. Prices will be quoted in SOL. 
 
 ### Register Vault (vault_list)
 
