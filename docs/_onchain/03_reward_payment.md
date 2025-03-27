@@ -91,44 +91,6 @@ This instruction integrates with the Solana Stake Pool program to deposit reward
 ![alt text](/assets/images/distribute_base_rewards.png)
 *Figure: Overview of the Distribute Base Rewards
 
-```rust
-let deposit_ix = deposit_sol(
-    stake_pool_program.key,
-    stake_pool.key,
-    stake_pool_withdraw_authority.key,
-    reserve_stake.key,
-    base_reward_receiver.key,
-    base_fee_wallet_ata.key,
-    manager_fee_account.key,
-    referrer_pool_tokens_account.key,
-    pool_mint.key,
-    token_program.key,
-    rewards,
-);
-
-// Invoke the deposit instruction with base_reward_router as signer
-invoke_signed(
-    &deposit_ix,
-    &[
-        stake_pool.clone(),
-        stake_pool_withdraw_authority.clone(),
-        reserve_stake.clone(),
-        base_reward_receiver.clone(),
-        base_fee_wallet_ata.clone(),
-        manager_fee_account.clone(),
-        referrer_pool_tokens_account.clone(),
-        pool_mint.clone(),
-        system_program.clone(),
-        token_program.clone(),
-    ],
-    &[base_reward_receiver_seeds
-        .iter()
-        .map(|s| s.as_slice())
-        .collect::<Vec<&[u8]>>()
-        .as_slice()],
-)?;
-```
-
 ### 3. Distribute NCN Reward Route
 
 It handles the distribution of rewards from the `BaseRewardReceiver` to the `NcnRewardReceiver` for a specific NCN fee group and operator.
@@ -154,25 +116,7 @@ let rewards = {
 };
 
 // Send rewards
-if rewards > 0 {
-    let (_, base_reward_receiver_bump, mut base_reward_receiver_seeds) =
-        BaseRewardReceiver::find_program_address(program_id, ncn.key, epoch);
-    base_reward_receiver_seeds.push(vec![base_reward_receiver_bump]);
-
-    solana_program::program::invoke_signed(
-        &solana_program::system_instruction::transfer(
-            base_reward_receiver.key,
-            ncn_reward_receiver.key,
-            rewards,
-        ),
-        &[base_reward_receiver.clone(), ncn_reward_receiver.clone()],
-        &[base_reward_receiver_seeds
-            .iter()
-            .map(|s| s.as_slice())
-            .collect::<Vec<&[u8]>>()
-            .as_slice()],
-    )?;
-}
+...
 ```
 
 ### 4. Route NCN Reward
@@ -251,110 +195,12 @@ It moves rewards from the NcnRewardReceiver to the operator's associated token a
 ![alt text](/assets/images/distribute_ncn_operator_rewards.png)
 *Figure: Overview of the Distribute NCN Operator Rewards
 
-```rust
-let (_, ncn_reward_receiver_bump, mut ncn_reward_receiver_seeds) =
-    NcnRewardReceiver::find_program_address(
-        program_id,
-        ncn_fee_group,
-        operator.key,
-        ncn.key,
-        epoch,
-    );
-ncn_reward_receiver_seeds.push(vec![ncn_reward_receiver_bump]);
-
-let deposit_ix = deposit_sol(
-    stake_pool_program.key,
-    stake_pool.key,
-    stake_pool_withdraw_authority.key,
-    reserve_stake.key,
-    ncn_reward_receiver.key,
-    operator_ata.key,
-    manager_fee_account.key,
-    referrer_pool_tokens_account.key,
-    pool_mint.key,
-    token_program.key,
-    rewards,
-);
-
-// Invoke the deposit instruction with ncn_reward_receiver as signer
-invoke_signed(
-    &deposit_ix,
-    &[
-        stake_pool.clone(),
-        stake_pool_withdraw_authority.clone(),
-        reserve_stake.clone(),
-        ncn_reward_receiver.clone(),
-        operator_ata.clone(),
-        manager_fee_account.clone(),
-        referrer_pool_tokens_account.clone(),
-        pool_mint.clone(),
-        system_program.clone(),
-        token_program.clone(),
-    ],
-    &[ncn_reward_receiver_seeds
-        .iter()
-        .map(|s| s.as_slice())
-        .collect::<Vec<&[u8]>>()
-        .as_slice()],
-)?;
-```
-
 ### 6. Distribute NCN Vault Rewards
 
 This instruction calculates the rewards for a vault within a particular NCN fee group and operator, transfers the rewards, and integrates them into the stake pool system (e.g., depositing them as JitoSOL).
 
 ![alt text](/assets/images/distribute_ncn_vault_rewards.png)
 *Figure: Overview of the Distribute NCN Vault Rewards
-
-```rust
-let (_, ncn_reward_receiver_bump, mut ncn_reward_receiver_seeds) =
-    NcnRewardReceiver::find_program_address(
-        program_id,
-        ncn_fee_group,
-        operator.key,
-        ncn.key,
-        epoch,
-    );
-ncn_reward_receiver_seeds.push(vec![ncn_reward_receiver_bump]);
-
-let deposit_ix = deposit_sol(
-    stake_pool_program.key,
-    stake_pool.key,
-    stake_pool_withdraw_authority.key,
-    reserve_stake.key,
-    ncn_reward_receiver.key,
-    vault_ata.key,
-    manager_fee_account.key,
-    referrer_pool_tokens_account.key,
-    pool_mint.key,
-    token_program.key,
-    rewards,
-);
-
-// Invoke the deposit instruction with ncn_reward_receiver as signer
-invoke_signed(
-    &deposit_ix,
-    &[
-        stake_pool.clone(),
-        stake_pool_withdraw_authority.clone(),
-        reserve_stake.clone(),
-        ncn_reward_receiver.clone(),
-        vault_ata.clone(),
-        manager_fee_account.clone(),
-        referrer_pool_tokens_account.clone(),
-        pool_mint.clone(),
-        system_program.clone(),
-        token_program.clone(),
-        stake_pool_program.clone(),
-    ],
-    &[ncn_reward_receiver_seeds
-        .iter()
-        .map(|s| s.as_slice())
-        .collect::<Vec<&[u8]>>()
-        .as_slice()],
-)?;
-```
-
 
 ## Key Components
 
@@ -366,7 +212,7 @@ The `BaseRewardRouter` is designed to:
 
 - **Manage Rewards**: Keep track of rewards to be distributed across different groups and operators.
 - **Route Rewards**: Handle the allocation and routing of rewards from a reward pool to various fee groups and operators.
-- **Support State Persistence**: Save and resume the state of routing operations to handle large computaions and ensure continuity.
+- **Support State Persistence**: Save and resume the state of routing operations to handle large computations and ensure continuity.
 
 2. Key Concepts
 
