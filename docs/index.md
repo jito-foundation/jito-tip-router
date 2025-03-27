@@ -8,10 +8,9 @@ Jito Tip Router NCN will assume programmatic operations related to the distribut
 
 ### Addresses
 
-| Network | Program   | Address                                      | Version |
-|---------|-----------|----------------------------------------------|---------|
-| Testnet | Restaking | Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaS  | 0.0.1   |
-| Devnet  | Restaking | Fv9aHCgvPQSr4jg9W8eTS6Ys1SNmh2qjyATrbsjEMaS  | 0.0.1   |
+| Network | Program    | Address                                      | Version   |
+|---------|------------|----------------------------------------------| --------- |
+| Mainnet | Tip Router | RouterBmuRBkPUbgEDMtdvTZ75GBdSREZR5uGUxxxpb  | 0.0.1     |
 
 
 ## License
