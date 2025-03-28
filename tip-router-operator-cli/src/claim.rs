@@ -656,6 +656,9 @@ pub async fn is_epoch_completed(
         return Ok(false);
     }
 
+    // Hack for now
+    return Ok(false);
+
     // Open and read file
     let file = File::open(file_path).await.map_err(|e| {
         ClaimMevError::CompletedEpochsError(format!("Failed to open completed epochs file: {}", e))
