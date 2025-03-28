@@ -258,6 +258,7 @@ async fn main() -> Result<()> {
 
                             // Create a task for each epoch and add its handle to our vector
                             let handle = tokio::spawn(async move {
+                                info!("Processing claims for epoch {}", epoch_to_process);
                                 let result = claim_mev_tips_with_emit(
                                     &cli_ref,
                                     epoch_to_process,
