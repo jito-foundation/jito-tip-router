@@ -80,7 +80,7 @@ pub struct RouteNcnRewardsInstructionData {
 
 impl RouteNcnRewardsInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 22 }
+        Self { discriminator: 21 }
     }
 }
 

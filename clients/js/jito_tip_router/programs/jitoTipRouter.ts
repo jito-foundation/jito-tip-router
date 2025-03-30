@@ -46,7 +46,6 @@ import {
   type ParsedRouteBaseRewardsInstruction,
   type ParsedRouteNcnRewardsInstruction,
   type ParsedSetMerkleRootInstruction,
-  type ParsedSetPriorityFeeMerkleRootInstruction,
   type ParsedSnapshotVaultOperatorDelegationInstruction,
   type ParsedSwitchboardSetWeightInstruction,
 } from '../instructions';
@@ -85,7 +84,6 @@ export enum JitoTipRouterInstruction {
   ReallocBallotBox,
   CastVote,
   SetMerkleRoot,
-  SetPriorityFeeMerkleRoot,
   InitializeBaseRewardRouter,
   ReallocBaseRewardRouter,
   InitializeNcnRewardRouter,
@@ -162,60 +160,57 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.SetMerkleRoot;
   }
   if (containsBytes(data, getU8Encoder().encode(17), 0)) {
-    return JitoTipRouterInstruction.SetPriorityFeeMerkleRoot;
-  }
-  if (containsBytes(data, getU8Encoder().encode(18), 0)) {
     return JitoTipRouterInstruction.InitializeBaseRewardRouter;
   }
-  if (containsBytes(data, getU8Encoder().encode(19), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(18), 0)) {
     return JitoTipRouterInstruction.ReallocBaseRewardRouter;
   }
-  if (containsBytes(data, getU8Encoder().encode(20), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(19), 0)) {
     return JitoTipRouterInstruction.InitializeNcnRewardRouter;
   }
-  if (containsBytes(data, getU8Encoder().encode(21), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(20), 0)) {
     return JitoTipRouterInstruction.RouteBaseRewards;
   }
-  if (containsBytes(data, getU8Encoder().encode(22), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(21), 0)) {
     return JitoTipRouterInstruction.RouteNcnRewards;
   }
-  if (containsBytes(data, getU8Encoder().encode(23), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(22), 0)) {
     return JitoTipRouterInstruction.DistributeBaseRewards;
   }
-  if (containsBytes(data, getU8Encoder().encode(24), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(23), 0)) {
     return JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
   }
-  if (containsBytes(data, getU8Encoder().encode(25), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(24), 0)) {
     return JitoTipRouterInstruction.DistributeNcnOperatorRewards;
   }
-  if (containsBytes(data, getU8Encoder().encode(26), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(25), 0)) {
     return JitoTipRouterInstruction.DistributeNcnVaultRewards;
   }
-  if (containsBytes(data, getU8Encoder().encode(27), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(26), 0)) {
     return JitoTipRouterInstruction.ClaimWithPayer;
   }
-  if (containsBytes(data, getU8Encoder().encode(28), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(27), 0)) {
     return JitoTipRouterInstruction.CloseEpochAccount;
   }
-  if (containsBytes(data, getU8Encoder().encode(29), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(28), 0)) {
     return JitoTipRouterInstruction.AdminSetParameters;
   }
-  if (containsBytes(data, getU8Encoder().encode(30), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(29), 0)) {
     return JitoTipRouterInstruction.AdminSetConfigFees;
   }
-  if (containsBytes(data, getU8Encoder().encode(31), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(30), 0)) {
     return JitoTipRouterInstruction.AdminSetNewAdmin;
   }
-  if (containsBytes(data, getU8Encoder().encode(32), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(31), 0)) {
     return JitoTipRouterInstruction.AdminSetTieBreaker;
   }
-  if (containsBytes(data, getU8Encoder().encode(33), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(32), 0)) {
     return JitoTipRouterInstruction.AdminSetWeight;
   }
-  if (containsBytes(data, getU8Encoder().encode(34), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(33), 0)) {
     return JitoTipRouterInstruction.AdminRegisterStMint;
   }
-  if (containsBytes(data, getU8Encoder().encode(35), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(34), 0)) {
     return JitoTipRouterInstruction.AdminSetStMint;
   }
   throw new Error(
@@ -277,9 +272,6 @@ export type ParsedJitoTipRouterInstruction<
   | ({
       instructionType: JitoTipRouterInstruction.SetMerkleRoot;
     } & ParsedSetMerkleRootInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.SetPriorityFeeMerkleRoot;
-    } & ParsedSetPriorityFeeMerkleRootInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.InitializeBaseRewardRouter;
     } & ParsedInitializeBaseRewardRouterInstruction<TProgram>)

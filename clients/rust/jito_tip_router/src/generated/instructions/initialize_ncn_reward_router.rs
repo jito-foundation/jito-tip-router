@@ -100,7 +100,7 @@ pub struct InitializeNcnRewardRouterInstructionData {
 
 impl InitializeNcnRewardRouterInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 20 }
+        Self { discriminator: 19 }
     }
 }
 

@@ -142,7 +142,7 @@ pub struct DistributeBaseRewardsInstructionData {
 
 impl DistributeBaseRewardsInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 23 }
+        Self { discriminator: 22 }
     }
 }
 

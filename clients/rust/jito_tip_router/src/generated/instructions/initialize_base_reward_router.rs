@@ -88,7 +88,7 @@ pub struct InitializeBaseRewardRouterInstructionData {
 
 impl InitializeBaseRewardRouterInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 18 }
+        Self { discriminator: 17 }
     }
 }
 

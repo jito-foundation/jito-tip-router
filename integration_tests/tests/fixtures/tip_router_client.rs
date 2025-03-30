@@ -1,7 +1,5 @@
 use jito_bytemuck::AccountDeserialize;
-use jito_priority_fee_distribution_sdk::{
-    derive_priority_fee_distribution_account_address, jito_priority_fee_distribution,
-};
+use jito_priority_fee_distribution_sdk::derive_priority_fee_distribution_account_address;
 use jito_restaking_core::{
     config::Config, ncn_operator_state::NcnOperatorState, ncn_vault_ticket::NcnVaultTicket,
 };
@@ -20,8 +18,7 @@ use jito_tip_router_client::{
         ReallocBaseRewardRouterBuilder, ReallocEpochStateBuilder, ReallocOperatorSnapshotBuilder,
         ReallocVaultRegistryBuilder, ReallocWeightTableBuilder, RegisterVaultBuilder,
         RouteBaseRewardsBuilder, RouteNcnRewardsBuilder, SetMerkleRootBuilder,
-        SetPriorityFeeMerkleRootBuilder, SnapshotVaultOperatorDelegationBuilder,
-        SwitchboardSetWeightBuilder,
+        SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
     },
     types::ConfigAdminRole,
 };
@@ -1383,6 +1380,7 @@ impl TipRouterClient {
         &mut self,
         ncn: Pubkey,
         vote_account: Pubkey,
+        distribution_program: Pubkey,
         proof: Vec<[u8; 32]>,
         merkle_root: [u8; 32],
         max_total_claim: u64,
@@ -1393,25 +1391,42 @@ impl TipRouterClient {
         let ballot_box =
             BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let tip_distribution_program = jito_tip_distribution::ID;
-        let tip_distribution_account = derive_tip_distribution_account_address(
-            &tip_distribution_program,
-            &vote_account,
-            epoch - 1,
-        )
-        .0;
+        let (distribution_account, distribution_config) = if distribution_program
+            .eq(&jito_tip_distribution::ID)
+        {
+            let tip_distribution_account = derive_tip_distribution_account_address(
+                &distribution_program,
+                &vote_account,
+                epoch - 1,
+            )
+            .0;
 
-        let tip_distribution_config =
-            jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program).0;
+            let tip_distribution_config =
+                jito_tip_distribution_sdk::derive_config_account_address(&distribution_program).0;
+            (tip_distribution_account, tip_distribution_config)
+        } else {
+            let distribution_account = derive_priority_fee_distribution_account_address(
+                &distribution_program,
+                &vote_account,
+                epoch - 1,
+            )
+            .0;
+
+            let config = jito_priority_fee_distribution_sdk::derive_config_account_address(
+                &distribution_program,
+            )
+            .0;
+            (distribution_account, config)
+        };
 
         self.set_merkle_root(
             config,
             ncn,
             ballot_box,
             vote_account,
-            tip_distribution_account,
-            tip_distribution_config,
-            tip_distribution_program,
+            distribution_account,
+            distribution_config,
+            distribution_program,
             proof,
             merkle_root,
             max_total_claim,
@@ -1427,9 +1442,9 @@ impl TipRouterClient {
         ncn: Pubkey,
         ballot_box: Pubkey,
         vote_account: Pubkey,
-        tip_distribution_account: Pubkey,
-        tip_distribution_config: Pubkey,
-        tip_distribution_program: Pubkey,
+        distribution_account: Pubkey,
+        distribution_config: Pubkey,
+        distribution_program: Pubkey,
         proof: Vec<[u8; 32]>,
         merkle_root: [u8; 32],
         max_total_claim: u64,
@@ -1445,97 +1460,9 @@ impl TipRouterClient {
             .ncn(ncn)
             .ballot_box(ballot_box)
             .vote_account(vote_account)
-            .tip_distribution_account(tip_distribution_account)
-            .tip_distribution_config(tip_distribution_config)
-            .tip_distribution_program(tip_distribution_program)
-            .proof(proof)
-            .merkle_root(merkle_root)
-            .max_total_claim(max_total_claim)
-            .max_num_nodes(max_num_nodes)
-            .epoch(epoch)
-            .instruction();
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
-            &[ix],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        ))
-        .await
-    }
-
-    pub async fn do_set_priority_fee_merkle_root(
-        &mut self,
-        ncn: Pubkey,
-        vote_account: Pubkey,
-        proof: Vec<[u8; 32]>,
-        merkle_root: [u8; 32],
-        max_total_claim: u64,
-        max_num_nodes: u64,
-        epoch: u64,
-    ) -> Result<(), TestError> {
-        let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
-        let ballot_box =
-            BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        let priority_fee_distribution_program = jito_priority_fee_distribution::ID;
-        let distribution_account = derive_priority_fee_distribution_account_address(
-            &priority_fee_distribution_program,
-            &vote_account,
-            epoch - 1,
-        )
-        .0;
-
-        let tip_distribution_config = jito_tip_distribution_sdk::derive_config_account_address(
-            &priority_fee_distribution_program,
-        )
-        .0;
-
-        self.set_priority_fee_merkle_root(
-            config,
-            ncn,
-            ballot_box,
-            vote_account,
-            distribution_account,
-            tip_distribution_config,
-            priority_fee_distribution_program,
-            proof,
-            merkle_root,
-            max_total_claim,
-            max_num_nodes,
-            epoch,
-        )
-        .await
-    }
-
-    pub async fn set_priority_fee_merkle_root(
-        &mut self,
-        config: Pubkey,
-        ncn: Pubkey,
-        ballot_box: Pubkey,
-        vote_account: Pubkey,
-        distribution_account: Pubkey,
-        distribution_config: Pubkey,
-        priority_fee_distribution_program: Pubkey,
-        proof: Vec<[u8; 32]>,
-        merkle_root: [u8; 32],
-        max_total_claim: u64,
-        max_num_nodes: u64,
-        epoch: u64,
-    ) -> Result<(), TestError> {
-        let epoch_state =
-            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        let ix = SetPriorityFeeMerkleRootBuilder::new()
-            .epoch_state(epoch_state)
-            .config(config)
-            .ncn(ncn)
-            .ballot_box(ballot_box)
-            .vote_account(vote_account)
             .tip_distribution_account(distribution_account)
             .tip_distribution_config(distribution_config)
-            .priority_fee_distribution_program(priority_fee_distribution_program)
+            .tip_distribution_program(distribution_program)
             .proof(proof)
             .merkle_root(merkle_root)
             .max_total_claim(max_total_claim)

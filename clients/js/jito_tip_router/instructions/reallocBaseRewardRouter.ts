@@ -29,7 +29,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const REALLOC_BASE_REWARD_ROUTER_DISCRIMINATOR = 19;
+export const REALLOC_BASE_REWARD_ROUTER_DISCRIMINATOR = 18;
 
 export function getReallocBaseRewardRouterDiscriminatorBytes() {
   return getU8Encoder().encode(REALLOC_BASE_REWARD_ROUTER_DISCRIMINATOR);

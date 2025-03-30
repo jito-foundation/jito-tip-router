@@ -305,6 +305,7 @@ mod set_merkle_root {
             .do_set_merkle_root(
                 ncn_address,
                 vote_account,
+                jito_tip_distribution::ID,
                 vec![[1; 32]],
                 node.validator_merkle_root,
                 node.max_total_claim,
@@ -319,6 +320,7 @@ mod set_merkle_root {
             .do_set_merkle_root(
                 ncn_address,
                 vote_account,
+                jito_tip_distribution::ID,
                 proof,
                 node.validator_merkle_root,
                 node.max_total_claim,
@@ -467,6 +469,7 @@ mod set_merkle_root {
             .do_set_merkle_root(
                 ncn,
                 vote_account,
+                jito_tip_distribution::ID,
                 proof,
                 node.validator_merkle_root,
                 node.max_total_claim,
@@ -547,6 +550,7 @@ mod set_merkle_root {
             .do_set_merkle_root(
                 ncn,
                 vote_account,
+                jito_tip_distribution::ID,
                 proof,
                 node.validator_merkle_root,
                 node.max_total_claim,

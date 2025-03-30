@@ -2,12 +2,9 @@ use anyhow::Result;
 use ellipsis_client::{ClientSubset, EllipsisClient, EllipsisClientError, EllipsisClientResult};
 use jito_bytemuck::AccountDeserialize;
 use jito_tip_distribution_sdk::{
-    derive_config_account_address,
-    jito_tip_distribution::{accounts::TipDistributionAccount, ID as TIP_DISTRIBUTION_ID},
+    derive_config_account_address, jito_tip_distribution::accounts::TipDistributionAccount,
 };
-use jito_tip_router_client::instructions::{
-    CastVoteBuilder, SetMerkleRootBuilder, SetPriorityFeeMerkleRootBuilder,
-};
+use jito_tip_router_client::instructions::{CastVoteBuilder, SetMerkleRootBuilder};
 use jito_tip_router_core::{
     ballot_box::BallotBox,
     config::Config,
@@ -127,39 +124,21 @@ pub fn set_merkle_root_instructions(
 
             let vote_account = tip_distribution_account.validator_vote_account;
 
-            let ix = if distribution_program.eq(&TIP_DISTRIBUTION_ID) {
-                SetMerkleRootBuilder::new()
-                    .epoch_state(epoch_state)
-                    .config(config)
-                    .ncn(*ncn_address)
-                    .ballot_box(ballot_box)
-                    .vote_account(vote_account)
-                    .tip_distribution_account(*key)
-                    .tip_distribution_config(tip_distribution_config)
-                    .tip_distribution_program(*distribution_program)
-                    .proof(proof)
-                    .merkle_root(meta_merkle_node.validator_merkle_root)
-                    .max_total_claim(meta_merkle_node.max_total_claim)
-                    .max_num_nodes(meta_merkle_node.max_num_nodes)
-                    .epoch(epoch)
-                    .instruction()
-            } else {
-                SetPriorityFeeMerkleRootBuilder::new()
-                    .epoch_state(epoch_state)
-                    .config(config)
-                    .ncn(*ncn_address)
-                    .ballot_box(ballot_box)
-                    .vote_account(vote_account)
-                    .tip_distribution_account(*key)
-                    .tip_distribution_config(tip_distribution_config)
-                    .priority_fee_distribution_program(*distribution_program)
-                    .proof(proof)
-                    .merkle_root(meta_merkle_node.validator_merkle_root)
-                    .max_total_claim(meta_merkle_node.max_total_claim)
-                    .max_num_nodes(meta_merkle_node.max_num_nodes)
-                    .epoch(epoch)
-                    .instruction()
-            };
+            let ix = SetMerkleRootBuilder::new()
+                .epoch_state(epoch_state)
+                .config(config)
+                .ncn(*ncn_address)
+                .ballot_box(ballot_box)
+                .vote_account(vote_account)
+                .tip_distribution_account(*key)
+                .tip_distribution_config(tip_distribution_config)
+                .tip_distribution_program(*distribution_program)
+                .proof(proof)
+                .merkle_root(meta_merkle_node.validator_merkle_root)
+                .max_total_claim(meta_merkle_node.max_total_claim)
+                .max_num_nodes(meta_merkle_node.max_num_nodes)
+                .epoch(epoch)
+                .instruction();
 
             Some(ix)
         })

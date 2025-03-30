@@ -27,7 +27,6 @@ pub fn process_claim_with_payer(
     AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
     let distibution_program_id = tip_distribution_program.key;
-    msg!("DPI {}", distibution_program_id);
 
     if [
         jito_tip_distribution::ID,

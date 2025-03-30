@@ -321,9 +321,10 @@ mod set_merkle_root {
 
         // Test wrong proof
         let res = tip_router_client
-            .do_set_priority_fee_merkle_root(
+            .do_set_merkle_root(
                 ncn_address,
                 vote_account,
+                jito_priority_fee_distribution::ID,
                 vec![[1; 32]],
                 node.validator_merkle_root,
                 node.max_total_claim,
@@ -335,9 +336,10 @@ mod set_merkle_root {
 
         // Invoke set_merkle_root
         tip_router_client
-            .do_set_priority_fee_merkle_root(
+            .do_set_merkle_root(
                 ncn_address,
                 vote_account,
+                jito_priority_fee_distribution::ID,
                 proof,
                 node.validator_merkle_root,
                 node.max_total_claim,
@@ -486,9 +488,10 @@ mod set_merkle_root {
 
         // Invoke set_merkle_root
         tip_router_client
-            .do_set_priority_fee_merkle_root(
+            .do_set_merkle_root(
                 ncn,
                 vote_account,
+                jito_priority_fee_distribution::ID,
                 proof,
                 node.validator_merkle_root,
                 node.max_total_claim,
@@ -573,9 +576,10 @@ mod set_merkle_root {
 
         // Try setting merkle root before consensus
         let res = tip_router_client
-            .do_set_priority_fee_merkle_root(
+            .do_set_merkle_root(
                 ncn,
                 vote_account,
+                jito_priority_fee_distribution::ID,
                 proof,
                 node.validator_merkle_root,
                 node.max_total_claim,

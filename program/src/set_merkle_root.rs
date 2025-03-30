@@ -1,7 +1,7 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_priority_fee_distribution_sdk::{
     derive_priority_fee_distribution_account_address,
-    instruction::upload_merkle_root_ix as pf_upload_merkle_root_ix,
+    instruction::upload_merkle_root_ix as pf_upload_merkle_root_ix, jito_priority_fee_distribution,
 };
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{
@@ -18,9 +18,8 @@ use solana_program::{
 };
 
 #[allow(clippy::too_many_arguments)]
-pub fn _process_set_merkle_root(
+pub fn process_set_merkle_root(
     program_id: &Pubkey,
-    expected_distribution_program_id: &Pubkey,
     accounts: &[AccountInfo],
     proof: Vec<[u8; 32]>,
     merkle_root: [u8; 32],
@@ -39,9 +38,13 @@ pub fn _process_set_merkle_root(
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     BallotBox::load(program_id, ballot_box, ncn.key, epoch, false)?;
 
-    if tip_distribution_program
-        .key
-        .ne(expected_distribution_program_id)
+    let distibution_program_id = tip_distribution_program.key;
+    if [
+        jito_tip_distribution::ID,
+        jito_priority_fee_distribution::ID,
+    ]
+    .iter()
+    .all(|supported_program_id| distibution_program_id.ne(supported_program_id))
     {
         msg!("Incorrect tip distribution program");
         return Err(ProgramError::InvalidAccountData);
@@ -50,20 +53,20 @@ pub fn _process_set_merkle_root(
     let tip_distribution_epoch = epoch
         .checked_sub(1)
         .ok_or(TipRouterError::ArithmeticUnderflowError)?;
-    let (distribution_account_address, _) =
-        if expected_distribution_program_id.eq(&jito_tip_distribution::ID) {
-            derive_tip_distribution_account_address(
-                tip_distribution_program.key,
-                vote_account.key,
-                tip_distribution_epoch,
-            )
-        } else {
-            derive_priority_fee_distribution_account_address(
-                tip_distribution_program.key,
-                vote_account.key,
-                tip_distribution_epoch,
-            )
-        };
+    let (distribution_account_address, _) = if distibution_program_id.eq(&jito_tip_distribution::ID)
+    {
+        derive_tip_distribution_account_address(
+            tip_distribution_program.key,
+            vote_account.key,
+            tip_distribution_epoch,
+        )
+    } else {
+        derive_priority_fee_distribution_account_address(
+            tip_distribution_program.key,
+            vote_account.key,
+            tip_distribution_epoch,
+        )
+    };
     if distribution_account_address.ne(distribution_account.key) {
         msg!("Incorrect tip distribution account");
         return Err(ProgramError::InvalidAccountData);
@@ -88,7 +91,7 @@ pub fn _process_set_merkle_root(
     let (_, bump, mut ncn_config_seeds) = NcnConfig::find_program_address(program_id, ncn.key);
     ncn_config_seeds.push(vec![bump]);
 
-    let ix = if expected_distribution_program_id.eq(&jito_tip_distribution::ID) {
+    let ix = if distibution_program_id.eq(&jito_tip_distribution::ID) {
         upload_merkle_root_ix(
             *tip_distribution_config.key,
             *ncn_config.key,
@@ -130,25 +133,4 @@ pub fn _process_set_merkle_root(
     }
 
     Ok(())
-}
-
-pub fn process_set_merkle_root(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    proof: Vec<[u8; 32]>,
-    merkle_root: [u8; 32],
-    max_total_claim: u64,
-    max_num_nodes: u64,
-    epoch: u64,
-) -> ProgramResult {
-    _process_set_merkle_root(
-        program_id,
-        &jito_tip_distribution::ID,
-        accounts,
-        proof,
-        merkle_root,
-        max_total_claim,
-        max_num_nodes,
-        epoch,
-    )
 }

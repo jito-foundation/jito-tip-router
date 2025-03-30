@@ -69,7 +69,7 @@ pub struct AdminSetWeightInstructionData {
 
 impl AdminSetWeightInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 33 }
+        Self { discriminator: 32 }
     }
 }
 

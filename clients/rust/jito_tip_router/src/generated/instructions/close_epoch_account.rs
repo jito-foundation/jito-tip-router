@@ -107,7 +107,7 @@ pub struct CloseEpochAccountInstructionData {
 
 impl CloseEpochAccountInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 28 }
+        Self { discriminator: 27 }
     }
 }
 
