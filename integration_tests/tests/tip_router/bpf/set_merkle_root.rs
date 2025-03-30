@@ -361,6 +361,7 @@ mod set_merkle_root {
                 ncn_address,
                 target_claimant,
                 tip_distribution_account,
+                jito_tip_distribution::ID,
                 target_claimant_node_proof.clone(),
                 target_claimant_node_amount,
             )

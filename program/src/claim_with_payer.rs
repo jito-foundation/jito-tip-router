@@ -1,4 +1,5 @@
 use jito_priority_fee_distribution_sdk::instruction::claim_ix as priority_fee_distribution_claim_ix;
+use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{instruction::claim_ix, jito_tip_distribution};
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
@@ -7,9 +8,8 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey,
 };
 
-pub fn _process_claim_with_payer(
+pub fn process_claim_with_payer(
     program_id: &Pubkey,
-    expected_distribution_program_id: &Pubkey,
     accounts: &[AccountInfo],
     proof: Vec<[u8; 32]>,
     amount: u64,
@@ -26,9 +26,15 @@ pub fn _process_claim_with_payer(
     Config::load(program_id, config, ncn.key, false)?;
     AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
-    if tip_distribution_program
-        .key
-        .ne(expected_distribution_program_id)
+    let distibution_program_id = tip_distribution_program.key;
+    msg!("DPI {}", distibution_program_id);
+
+    if [
+        jito_tip_distribution::ID,
+        jito_priority_fee_distribution::ID,
+    ]
+    .iter()
+    .all(|supported_program_id| distibution_program_id.ne(supported_program_id))
     {
         msg!("Incorrect tip distribution program");
         return Err(ProgramError::InvalidAccountData);
@@ -40,7 +46,7 @@ pub fn _process_claim_with_payer(
         AccountPayer::find_program_address(program_id, ncn.key);
     account_payer_seeds.push(vec![account_payer_bump]);
 
-    let ix = if expected_distribution_program_id.eq(&jito_tip_distribution::ID) {
+    let ix = if distibution_program_id.eq(&jito_tip_distribution::ID) {
         claim_ix(
             *tip_distribution_config.key,
             *tip_distribution_account.key,
@@ -95,21 +101,4 @@ pub fn _process_claim_with_payer(
     )?;
 
     Ok(())
-}
-
-pub fn process_claim_with_payer(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    proof: Vec<[u8; 32]>,
-    amount: u64,
-    bump: u8,
-) -> ProgramResult {
-    _process_claim_with_payer(
-        program_id,
-        &jito_tip_distribution::ID,
-        accounts,
-        proof,
-        amount,
-        bump,
-    )
 }

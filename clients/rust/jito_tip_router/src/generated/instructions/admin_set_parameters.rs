@@ -64,7 +64,7 @@ pub struct AdminSetParametersInstructionData {
 
 impl AdminSetParametersInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 30 }
+        Self { discriminator: 29 }
     }
 }
 

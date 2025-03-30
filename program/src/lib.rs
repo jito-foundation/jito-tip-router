@@ -8,7 +8,6 @@ mod admin_set_tie_breaker;
 mod admin_set_weight;
 mod cast_vote;
 mod claim_with_payer;
-mod claim_with_payer_priority_fee;
 mod close_epoch_account;
 mod distribute_base_ncn_reward_route;
 mod distribute_base_rewards;
@@ -56,9 +55,7 @@ use crate::{
     admin_set_st_mint::process_admin_set_st_mint,
     admin_set_tie_breaker::process_admin_set_tie_breaker,
     admin_set_weight::process_admin_set_weight, cast_vote::process_cast_vote,
-    claim_with_payer::process_claim_with_payer,
-    claim_with_payer_priority_fee::process_claim_with_payer_priority_fee,
-    close_epoch_account::process_close_epoch_account,
+    claim_with_payer::process_claim_with_payer, close_epoch_account::process_close_epoch_account,
     distribute_base_ncn_reward_route::process_distribute_base_ncn_reward_route,
     distribute_base_rewards::process_distribute_base_rewards,
     distribute_ncn_operator_rewards::process_distribute_ncn_operator_rewards,
@@ -310,14 +307,6 @@ pub fn process_instruction(
         } => {
             msg!("Instruction: ClaimWithPayer");
             process_claim_with_payer(program_id, accounts, proof, amount, bump)
-        }
-        TipRouterInstruction::ClaimWithPayerPriorityFee {
-            proof,
-            amount,
-            bump,
-        } => {
-            msg!("Instruction: ClaimWithPayerPriorityFee");
-            process_claim_with_payer_priority_fee(program_id, accounts, proof, amount, bump)
         }
         TipRouterInstruction::CloseEpochAccount { epoch } => {
             msg!("Instruction: CloseEpochAccount");

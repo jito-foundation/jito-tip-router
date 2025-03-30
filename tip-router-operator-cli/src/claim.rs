@@ -10,9 +10,7 @@ use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::{
     derive_claim_status_account_address, TipDistributionAccount, CLAIM_STATUS_SIZE, CONFIG_SEED,
 };
-use jito_tip_router_client::instructions::{
-    ClaimWithPayerBuilder, ClaimWithPayerPriorityFeeBuilder,
-};
+use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
 use log::{info, warn};
 use meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection;
@@ -481,43 +479,31 @@ fn build_mev_claim_transactions(
                 continue;
             }
 
-            let claim_with_payer_ix = if tree.distribution_program.eq(&tip_distribution_program_id)
-            {
-                ClaimWithPayerBuilder::new()
-                    .account_payer(tip_router_account_payer)
-                    .ncn(ncn_address)
-                    .tip_distribution_config(tip_distribution_config)
-                    .tip_distribution_account(tree.distribution_account)
-                    .claim_status(node.claim_status_pubkey)
-                    .claimant(node.claimant)
-                    .system_program(system_program::id())
-                    .proof(node.proof.clone().unwrap())
-                    .amount(node.amount)
-                    .bump(node.claim_status_bump)
-                    .config(tip_router_config_address)
-                    .tip_distribution_program(tree.distribution_program)
-                    .instruction()
+            let mut claim_with_payer_builder = ClaimWithPayerBuilder::new();
+            claim_with_payer_builder
+                .account_payer(tip_router_account_payer)
+                .ncn(ncn_address)
+                .tip_distribution_config(tip_distribution_config)
+                .tip_distribution_account(tree.distribution_account)
+                .claim_status(node.claim_status_pubkey)
+                .claimant(node.claimant)
+                .system_program(system_program::id())
+                .proof(node.proof.clone().unwrap())
+                .amount(node.amount)
+                .bump(node.claim_status_bump)
+                .tip_distribution_program(tree.distribution_program);
+
+            if tree.distribution_program.eq(&tip_distribution_program_id) {
+                claim_with_payer_builder.config(tip_router_config_address);
             } else if tree
                 .distribution_program
                 .eq(&priority_fee_distribution_program_id)
             {
-                ClaimWithPayerPriorityFeeBuilder::new()
-                    .account_payer(tip_router_account_payer)
-                    .ncn(ncn_address)
-                    .tip_distribution_config(tip_distribution_config)
-                    .tip_distribution_account(tree.distribution_account)
-                    .claim_status(node.claim_status_pubkey)
-                    .claimant(node.claimant)
-                    .system_program(system_program::id())
-                    .proof(node.proof.clone().unwrap())
-                    .amount(node.amount)
-                    .bump(node.claim_status_bump)
-                    .config(priority_fee_distribution_config)
-                    .priority_fee_distribution_program(tree.distribution_program)
-                    .instruction()
+                claim_with_payer_builder.config(priority_fee_distribution_config);
             } else {
                 panic!("Unknown distribution program for tree");
-            };
+            }
+            let claim_with_payer_ix = claim_with_payer_builder.instruction();
 
             instructions.push(claim_with_payer_ix);
         }

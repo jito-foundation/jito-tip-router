@@ -376,10 +376,11 @@ mod set_merkle_root {
 
         // Run passthrough claim
         tip_router_client
-            .do_claim_with_payer_priority_fee(
+            .do_claim_with_payer(
                 ncn_address,
                 target_claimant,
                 priority_fee_distribution_account_pubkey,
+                jito_priority_fee_distribution::ID,
                 target_claimant_node_proof.clone(),
                 target_claimant_node_amount,
             )
