@@ -654,6 +654,9 @@ pub async fn is_epoch_completed(
                 "Epoch underflow".to_string(),
             ))?;
 
+    // Hack
+    return Ok(false);
+
     if current_claim_epoch == epoch {
         info!("Do not skip the current claim epoch ( {} )", epoch);
         return Ok(false);
