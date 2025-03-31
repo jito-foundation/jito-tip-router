@@ -122,7 +122,7 @@ pub async fn emit_claim_mev_tips_metrics(
     );
 
     if all_claim_transactions.is_empty() {
-        add_completed_epoch(epoch, file_path, &file_mutex).await?;
+        add_completed_epoch(epoch, current_epoch, file_path, &file_mutex).await?;
     }
 
     Ok(())
@@ -266,7 +266,7 @@ pub async fn claim_mev_tips(
         );
 
         if all_claim_transactions.is_empty() {
-            add_completed_epoch(epoch, file_path, file_mutex).await?;
+            add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
             return Ok(());
         }
 
@@ -314,7 +314,7 @@ pub async fn claim_mev_tips(
     )
     .await?;
     if transactions.is_empty() {
-        add_completed_epoch(epoch, file_path, file_mutex).await?;
+        add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
         return Ok(());
     }
 
@@ -654,9 +654,6 @@ pub async fn is_epoch_completed(
                 "Epoch underflow".to_string(),
             ))?;
 
-    // Hack
-    return Ok(false);
-
     if current_claim_epoch == epoch {
         info!("Do not skip the current claim epoch ( {} )", epoch);
         return Ok(false);
@@ -669,7 +666,7 @@ pub async fn is_epoch_completed(
     if !file_path.exists() {
         info!("No completed epochs file found - creating empty");
         drop(_lock);
-        add_completed_epoch(0, file_path, &file_mutex).await?;
+        add_completed_epoch(0, current_epoch, file_path, &file_mutex).await?;
 
         return Ok(false);
     }
@@ -706,9 +703,23 @@ pub async fn is_epoch_completed(
 /// Helper function to add an epoch to the completed_claim_epochs.txt file
 pub async fn add_completed_epoch(
     epoch: u64,
+    current_epoch: u64,
     file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), ClaimMevError> {
+    // If we're still on the current epoch, it can't be completed
+    let current_claim_epoch =
+        current_epoch
+            .checked_sub(1)
+            .ok_or(ClaimMevError::CompletedEpochsError(
+                "Epoch underflow".to_string(),
+            ))?;
+
+    if current_claim_epoch == epoch {
+        info!("Do not write file for current epoch ( {} )", epoch);
+        return Ok(());
+    }
+
     // Acquire the mutex lock before file operations
     let _lock = file_mutex.lock().await;
 
