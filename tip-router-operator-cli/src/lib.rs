@@ -8,6 +8,7 @@ pub mod backup_snapshots;
 pub mod claim;
 pub mod cli;
 pub mod load_and_process_ledger;
+pub mod priority_fee_utils;
 pub mod process_epoch;
 pub mod rpc_utils;
 pub mod submit;
