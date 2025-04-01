@@ -1381,7 +1381,7 @@ pub async fn create_ncn_reward_router(
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
     let (epoch_marker, _, _) =
-        EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
+        EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
     let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
         .epoch_marker(epoch_marker)
@@ -2270,6 +2270,13 @@ pub async fn get_or_create_ncn_reward_router(
     epoch: u64,
 ) -> Result<NcnRewardRouter> {
     let ncn = *handler.ncn()?;
+    let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
+        &handler.tip_router_program_id,
+        operator,
+        &ncn,
+        epoch,
+    );
+
     let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
         &handler.tip_router_program_id,
         ncn_fee_group,
@@ -2277,6 +2284,11 @@ pub async fn get_or_create_ncn_reward_router(
         &ncn,
         epoch,
     );
+
+    // If operator snapshot does not exist, we cannot create the ncn reward router
+    if get_account(handler, &operator_snapshot).await?.is_none() {
+        return Err(anyhow!("Invalid Route"));
+    }
 
     if get_account(handler, &ncn_reward_router)
         .await?
@@ -2539,12 +2551,12 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
             }
 
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
-
-            if result.is_err() {
-                // Note this error might be important, but has not shown itself to be
-                info!(
-                    "Failed to get or create ncn reward router: {:?} in epoch: {:?}",
-                    operator, epoch
+            if let Err(err) = result {
+                log::info!(
+                    "Skipping ncn reward router: {:?} in epoch: {:?} ( {:?} )",
+                    operator,
+                    epoch,
+                    err
                 );
                 continue;
             }
@@ -2553,8 +2565,9 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
             if result.is_err() {
                 log::info!(
-                    "Could not find route for operator: {:?} in epoch: {:?}",
+                    "Skipping route for operator: {:?} for group: {:?} in epoch: {:?} ( No Route )",
                     operator,
+                    group,
                     epoch,
                 );
                 continue;
@@ -2596,10 +2609,9 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
             }
 
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
-
             if let Err(err) = result {
-                log::error!(
-                    "Failed to get or create ncn reward router: {:?} in epoch: {:?} with error: {:?}",
+                log::info!(
+                    "Skipping ncn reward router: {:?} in epoch: {:?} ( {:?} )",
                     operator,
                     epoch,
                     err
@@ -2654,17 +2666,17 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
     // One last distribution crank
     let result = crank_distribute(handler, epoch).await;
-    if result.is_err() {
+    if let Err(err) = result {
         log::error!(
             "Failed to distribute rewards before closing for epoch: {:?} with error: {:?}",
             epoch,
-            result.err().unwrap()
+            err
         );
     }
 
     // Close NCN Reward Routers
-    let all_operators = get_all_operators_in_ncn(handler).await?;
-    for operator in all_operators.iter() {
+    let operators = get_all_operators_in_ncn(handler).await?;
+    for operator in operators.iter() {
         for group in NcnFeeGroup::all_groups() {
             let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
                 &handler.tip_router_program_id,
@@ -2743,7 +2755,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
     }
 
     // Close Operator Snapshots
-    for operator in all_operators.iter() {
+    for operator in operators.iter() {
         let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
             &handler.tip_router_program_id,
             operator,
@@ -2810,15 +2822,6 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
     Ok(())
 }
-
-// --------------------- NCN SETUP ------------------------------
-
-//TODO create NCN
-//TODO create Operator
-//TODO add vault to NCN
-//TODO add operator to NCN
-//TODO remove vault from NCN
-//TODO remove operator from NCN
 
 // --------------------- TEST NCN --------------------------------
 
@@ -3365,8 +3368,22 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
         })
         .collect::<Vec<_>>();
 
-    for ix in ixs {
-        send_and_log_transaction(handler, &[ix], &[], "Migrated TDA", &[]).await?;
+    info!(
+        "Migrating TDA Merkle Root Upload Authorities: {}",
+        ixs.len()
+    );
+    for chunk in ixs.chunks(8) {
+        let tx_ixs = std::iter::once(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000))
+            .chain(chunk.iter().cloned())
+            .collect::<Vec<_>>();
+
+        let result = send_and_log_transaction(handler, &tx_ixs, &[], "Migrated TDA", &[]).await;
+        if result.is_err() {
+            log::error!(
+                "Failed to migrate TDA with error: {:?}",
+                result.err().unwrap()
+            );
+        }
     }
     Ok(())
 }

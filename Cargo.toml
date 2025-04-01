@@ -3,12 +3,13 @@ members = [
     "cli",
     "clients/rust/jito_tip_router",
     "core",
+    "gcp_uploader",
     "integration_tests",
     "priority_fee_distribution_sdk",
     "program",
     "shank_cli",
     "tip-router-operator-cli",
-    "tip_distribution_sdk", 
+    "tip_distribution_sdk",
     "tip_payment_sdk",
 ]
 
@@ -37,6 +38,7 @@ readme = "README.md"
 anchor-lang = { git = "https://github.com/coral-xyz/anchor", rev = "96ed3b791c6fed9ab64cb138397795fe55991280" }
 anyhow = "1.0.86"
 assert_matches = "1.5.0"
+base64 = "0.22.1"
 borsh = { version = "0.10.3" }
 bytemuck = { version = "1.16.3", features = ["min_const_generics"] }
 cfg-if = "1.0.0"

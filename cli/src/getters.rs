@@ -6,6 +6,7 @@ use crate::handler::CliHandler;
 use anyhow::Result;
 use borsh1::BorshDeserialize;
 use jito_bytemuck::{AccountDeserialize, Discriminator};
+use jito_jsm_core::slot_toggle::SlotToggleState;
 use jito_restaking_core::{
     config::Config as RestakingConfig, ncn::Ncn, ncn_operator_state::NcnOperatorState,
     ncn_vault_ticket::NcnVaultTicket, operator::Operator,
@@ -40,6 +41,7 @@ use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
 };
+use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::{account::Account, pubkey::Pubkey};
 use spl_associated_token_account::get_associated_token_address;
@@ -757,30 +759,7 @@ pub async fn get_all_sorted_operators_for_vault(
     vault: &Pubkey,
 ) -> Result<Vec<Pubkey>> {
     let client = handler.rpc_client();
-
-    let vault_operator_delegation_size = size_of::<VaultOperatorDelegation>() + 8;
-
-    let size_filter = RpcFilterType::DataSize(vault_operator_delegation_size as u64);
-
-    let vault_filter = RpcFilterType::Memcmp(Memcmp::new(
-        8,                                                  // offset
-        MemcmpEncodedBytes::Bytes(vault.to_bytes().into()), // encoded bytes
-    ));
-
-    let config = RpcProgramAccountsConfig {
-        filters: Some(vec![size_filter, vault_filter]),
-        account_config: RpcAccountInfoConfig {
-            encoding: Some(UiAccountEncoding::Base64),
-            data_slice: Some(UiDataSliceConfig {
-                offset: 0,
-                length: vault_operator_delegation_size,
-            }),
-            commitment: Some(handler.commitment),
-            min_context_slot: None,
-        },
-        with_context: Some(false),
-        sort_results: None,
-    };
+    let config = handler.get_rpc_program_accounts_with_config::<VaultOperatorDelegation>(vault)?;
 
     let results = client
         .get_program_accounts_with_config(&handler.vault_program_id, config)
@@ -817,30 +796,8 @@ pub async fn get_all_sorted_operators_for_vault(
 
 pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
     let client = handler.rpc_client();
-
-    let ncn_operator_state_size = size_of::<NcnOperatorState>() + 8;
-
-    let size_filter = RpcFilterType::DataSize(ncn_operator_state_size as u64);
-
-    let ncn_filter = RpcFilterType::Memcmp(Memcmp::new(
-        8,                                                           // offset
-        MemcmpEncodedBytes::Bytes(handler.ncn()?.to_bytes().into()), // encoded bytes
-    ));
-
-    let config = RpcProgramAccountsConfig {
-        filters: Some(vec![size_filter, ncn_filter]),
-        account_config: RpcAccountInfoConfig {
-            encoding: Some(UiAccountEncoding::Base64),
-            data_slice: Some(UiDataSliceConfig {
-                offset: 0,
-                length: ncn_operator_state_size,
-            }),
-            commitment: Some(handler.commitment),
-            min_context_slot: None,
-        },
-        with_context: Some(false),
-        sort_results: None,
-    };
+    let config =
+        handler.get_rpc_program_accounts_with_config::<NcnOperatorState>(handler.ncn()?)?;
 
     let results = client
         .get_program_accounts_with_config(&handler.restaking_program_id, config)
@@ -861,6 +818,36 @@ pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey
         .collect::<Vec<Pubkey>>();
 
     Ok(operators)
+}
+
+pub async fn get_all_active_operators_in_ncn(
+    handler: &CliHandler,
+    epoch: u64,
+) -> Result<Vec<Pubkey>> {
+    let active_slot = epoch * DEFAULT_SLOTS_PER_EPOCH + 1;
+    let operators = get_all_operators_in_ncn(handler).await?;
+
+    let mut active_operators = vec![];
+    for operator in operators {
+        let result = get_ncn_operator_state(handler, &operator).await;
+
+        if result.is_err() {
+            continue;
+        }
+
+        let ncn_operator_state = result.unwrap();
+        let ncn_operator_state_toggle_state = ncn_operator_state
+            .ncn_opt_in_state
+            .state(active_slot, DEFAULT_SLOTS_PER_EPOCH)
+            .unwrap();
+
+        match ncn_operator_state_toggle_state {
+            SlotToggleState::Active => active_operators.push(operator),
+            _ => continue,
+        };
+    }
+
+    Ok(active_operators)
 }
 
 pub async fn get_all_vaults(handler: &CliHandler) -> Result<Vec<Pubkey>> {
@@ -901,30 +888,7 @@ pub async fn get_all_vaults(handler: &CliHandler) -> Result<Vec<Pubkey>> {
 
 pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> {
     let client = handler.rpc_client();
-
-    let ncn_vault_ticket_size = size_of::<NcnVaultTicket>() + 8;
-
-    let size_filter = RpcFilterType::DataSize(ncn_vault_ticket_size as u64);
-
-    let ncn_filter = RpcFilterType::Memcmp(Memcmp::new(
-        8,                                                           // offset
-        MemcmpEncodedBytes::Bytes(handler.ncn()?.to_bytes().into()), // encoded bytes
-    ));
-
-    let config = RpcProgramAccountsConfig {
-        filters: Some(vec![size_filter, ncn_filter]),
-        account_config: RpcAccountInfoConfig {
-            encoding: Some(UiAccountEncoding::Base64),
-            data_slice: Some(UiDataSliceConfig {
-                offset: 0,
-                length: ncn_vault_ticket_size,
-            }),
-            commitment: Some(handler.commitment),
-            min_context_slot: None,
-        },
-        with_context: Some(false),
-        sort_results: None,
-    };
+    let config = handler.get_rpc_program_accounts_with_config::<NcnVaultTicket>(handler.ncn()?)?;
 
     let results = client
         .get_program_accounts_with_config(&handler.restaking_program_id, config)

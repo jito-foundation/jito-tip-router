@@ -1,0 +1,185 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "Tip Router Evaluation",
+      "folder": "Tip Router Alerts",
+      "interval": "10m",
+      "rules": [
+        {
+          "uid": "cegqd56f9ciyod",
+          "title": "Tip Router Operator Has Not Voted",
+          "condition": "F",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": { "from": 10800, "to": 0 },
+              "datasourceUid": "eeaeqrzm41logf",
+              "model": {
+                "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
+                "groupBy": [],
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "measurement": "tr-beta-em-operator",
+                "orderByTime": "ASC",
+                "policy": "default",
+                "refId": "A",
+                "resultFormat": "time_series",
+                "select": [[{ "params": ["has-voted"], "type": "field" }]],
+                "tags": [
+                  {
+                    "key": "operator::field",
+                    "operator": "=",
+                    "value": "GmWQyzNGzMGQySvNCADu9pynAQfUjQm6tJL9cuN5Y3D6"
+                  }
+                ]
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": { "from": 10800, "to": 0 },
+              "datasourceUid": "eeaeqrzm41logf",
+              "model": {
+                "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
+                "groupBy": [],
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "measurement": "tr-beta-em-operator",
+                "orderByTime": "ASC",
+                "policy": "default",
+                "refId": "B",
+                "resultFormat": "time_series",
+                "select": [[{ "params": ["current-slot"], "type": "field" }]],
+                "tags": [
+                  {
+                    "key": "operator::field",
+                    "operator": "=",
+                    "value": "GmWQyzNGzMGQySvNCADu9pynAQfUjQm6tJL9cuN5Y3D6"
+                  }
+                ]
+              }
+            },
+            {
+              "refId": "C",
+              "relativeTimeRange": { "from": 0, "to": 0 },
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": { "params": [0, 0], "type": "gt" },
+                    "operator": { "type": "and" },
+                    "query": { "params": [] },
+                    "reducer": { "params": [], "type": "avg" },
+                    "type": "query"
+                  }
+                ],
+                "datasource": {
+                  "name": "Expression",
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "C",
+                "type": "reduce"
+              }
+            },
+            {
+              "refId": "D",
+              "relativeTimeRange": { "from": 0, "to": 0 },
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": { "params": [0, 0], "type": "gt" },
+                    "operator": { "type": "and" },
+                    "query": { "params": [] },
+                    "reducer": { "params": [], "type": "avg" },
+                    "type": "query"
+                  }
+                ],
+                "datasource": {
+                  "name": "Expression",
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "D",
+                "type": "reduce"
+              }
+            },
+            {
+              "refId": "E",
+              "relativeTimeRange": { "from": 0, "to": 0 },
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": { "params": [0, 0], "type": "gt" },
+                    "operator": { "type": "and" },
+                    "query": { "params": [] },
+                    "reducer": { "params": [], "type": "avg" },
+                    "type": "query"
+                  }
+                ],
+                "datasource": {
+                  "name": "Expression",
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "($D % 432000) \u003e 216000 ",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "E",
+                "type": "math"
+              }
+            },
+            {
+              "refId": "F",
+              "relativeTimeRange": { "from": 0, "to": 0 },
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": { "params": [0, 0], "type": "gt" },
+                    "operator": { "type": "and" },
+                    "query": { "params": [] },
+                    "reducer": { "params": [], "type": "avg" },
+                    "type": "query"
+                  }
+                ],
+                "datasource": {
+                  "name": "Expression",
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "$C == 0 \u0026\u0026 $E == 1",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "F",
+                "type": "math"
+              }
+            }
+          ],
+          "noDataState": "NoData",
+          "execErrState": "Error",
+          "for": "10m",
+          "keepFiringFor": "0s",
+          "annotations": {
+            "description": "Checks for \"has-voted\" metric for this specific operator and alerts if the current epoch is more than 50% complete.",
+            "summary": "The selected operator did not submit a meta merkle root for this epoch."
+          },
+          "labels": {},
+          "isPaused": false
+        }
+      ]
+    }
+  ]
+}

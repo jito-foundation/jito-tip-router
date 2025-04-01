@@ -352,30 +352,35 @@ impl TreeNode {
             proof: None,
         }];
 
-        // REVIEW: Any concerns removing this since the epoch will have passed?
-        let (validator_claim_status_pubkey, validator_claim_status_bump) = if epoch > 756 {
-            Pubkey::find_program_address(
-                &[
-                    CLAIM_STATUS_SEED,
-                    &stake_meta.validator_vote_account.to_bytes(),
-                    &distribution_account_pubkey.to_bytes(),
-                ],
-                distribution_program_id,
-            )
-        } else {
-            Pubkey::find_program_address(
-                &[
-                    CLAIM_STATUS_SEED,
-                    &stake_meta.validator_node_pubkey.to_bytes(),
-                    &distribution_account_pubkey.to_bytes(),
-                ],
-                distribution_program_id,
-            )
-        };
+        let (validator_claimant, (validator_claim_status_pubkey, validator_claim_status_bump)) =
+            if epoch > 760 {
+                (
+                    stake_meta.validator_vote_account,
+                    Pubkey::find_program_address(
+                        &[
+                            CLAIM_STATUS_SEED,
+                            &stake_meta.validator_vote_account.to_bytes(),
+                            &distribution_account_pubkey.to_bytes(),
+                        ],
+                        distribution_program_id,
+                    ),
+                )
+            } else {
+                (
+                    stake_meta.validator_node_pubkey,
+                    Pubkey::find_program_address(
+                        &[
+                            CLAIM_STATUS_SEED,
+                            &stake_meta.validator_node_pubkey.to_bytes(),
+                            &distribution_account_pubkey.to_bytes(),
+                        ],
+                        distribution_program_id,
+                    ),
+                )
+            };
 
-        // REVIEW: Should we remove this node if validator_amount is 0 or leave it?
         tree_nodes.push(Self {
-            claimant: stake_meta.validator_node_pubkey,
+            claimant: validator_claimant,
             claim_status_pubkey: validator_claim_status_pubkey,
             claim_status_bump: validator_claim_status_bump,
             staker_pubkey: Pubkey::default(),
@@ -845,7 +850,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: validator_id_0, // Changed from validator_vote_account_0 to validator_id_0
+                claimant: validator_id_0,
                 claim_status_pubkey: claim_statuses[1].0,
                 claim_status_bump: claim_statuses[1].1,
                 staker_pubkey: Pubkey::default(),
@@ -1094,6 +1099,35 @@ mod tests {
                         );
                     });
                 assert_eq!(expected_gmt.merkle_root, actual_gmt.merkle_root);
+            });
+
+        let epoch = 761;
+        let merkle_tree_collection = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
+            stake_meta_collection.clone(),
+            &ncn_address,
+            epoch,
+            300,
+            150,
+            &tip_router_program_id,
+        )
+        .unwrap();
+        // Ensure that validator vote account exists as a claimant in the new merkle tree collection and identity account does not
+        merkle_tree_collection
+            .generated_merkle_trees
+            .iter()
+            .for_each(|gmt| {
+                assert!(gmt
+                    .tree_nodes
+                    .iter()
+                    .any(|node| node.claimant == validator_vote_account_0
+                        || node.claimant == validator_vote_account_1));
+                assert!(
+                    !(gmt
+                        .tree_nodes
+                        .iter()
+                        .any(|node| node.claimant == validator_id_0
+                            || node.claimant == validator_id_1))
+                );
             });
     }
 }

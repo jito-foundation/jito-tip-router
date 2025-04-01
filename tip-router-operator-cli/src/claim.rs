@@ -1,9 +1,3 @@
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::{Duration, Instant},
-};
-
 use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
@@ -29,7 +23,19 @@ use solana_sdk::{
     system_program,
     transaction::Transaction,
 };
+use std::path::Path;
+use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 use thiserror::Error;
+use tokio::fs::File;
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncBufReadExt;
+use tokio::io::AsyncWriteExt;
+use tokio::io::BufReader;
+use tokio::sync::Mutex;
 
 use crate::{
     merkle_tree_collection_file_name,
@@ -62,8 +68,54 @@ pub enum ClaimMevError {
     #[error("Not finished with job, transactions left {transactions_left}")]
     NotFinished { transactions_left: usize },
 
+    #[error("Failed to check or update completed epochs: {0}")]
+    CompletedEpochsError(String),
+
     #[error("UncaughtError {e:?}")]
     UncaughtError { e: String },
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn emit_claim_mev_tips_metrics(
+    cli: &Cli,
+    epoch: u64,
+    tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
+    tip_router_program_id: Pubkey,
+    ncn: Pubkey,
+) -> Result<(), anyhow::Error> {
+    let meta_merkle_tree_dir = cli.get_save_path().clone();
+    let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
+    let merkle_trees = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    let rpc_url = cli.rpc_url.clone();
+    let rpc_client = RpcClient::new_with_timeout_and_commitment(
+        rpc_url,
+        Duration::from_secs(1800),
+        CommitmentConfig::confirmed(),
+    );
+
+    let all_claim_transactions = get_claim_transactions_for_valid_unclaimed(
+        &rpc_client,
+        &merkle_trees,
+        tip_distribution_program_id,
+        priority_fee_distribution_program_id,
+        tip_router_program_id,
+        ncn,
+        0,
+        Pubkey::new_unique(),
+        &cli.operator_address,
+    )
+    .await?;
+
+    datapoint_info!(
+        "tip_router_cli.claim_mev_tips-send_summary",
+        ("claim_transactions_left", all_claim_transactions.len(), i64),
+        ("epoch", epoch, i64),
+    );
+
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -73,8 +125,9 @@ pub async fn claim_mev_tips_with_emit(
     tip_distribution_program_id: Pubkey,
     priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
-    ncn_address: Pubkey,
+    ncn: Pubkey,
     max_loop_duration: Duration,
+    file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), anyhow::Error> {
     let keypair = read_keypair_file(cli.keypair_path.clone())
         .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {:?}", e))?;
@@ -85,8 +138,7 @@ pub async fn claim_mev_tips_with_emit(
     let mut merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
         .map_err(|e| anyhow::anyhow!(e))?;
 
-    let tip_router_config_address =
-        Config::find_program_address(&tip_router_program_id, &ncn_address).0;
+    let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
 
     // Fix wrong claim status pubkeys for 1 epoch -- noop if already correct
     for tree in merkle_tree_coll.generated_merkle_trees.iter_mut() {
@@ -113,10 +165,12 @@ pub async fn claim_mev_tips_with_emit(
         tip_distribution_program_id,
         priority_fee_distribution_program_id,
         tip_router_program_id,
-        ncn_address,
+        ncn,
         &keypair,
         max_loop_duration,
         cli.micro_lamports,
+        file_mutex,
+        &cli.operator_address,
     )
     .await
     {
@@ -160,11 +214,18 @@ pub async fn claim_mev_tips(
     tip_distribution_program_id: Pubkey,
     priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
-    ncn_address: Pubkey,
+    ncn: Pubkey,
     keypair: &Arc<Keypair>,
     max_loop_duration: Duration,
     micro_lamports: u64,
+    file_mutex: &Arc<Mutex<()>>,
+    operator_address: &String,
 ) -> Result<(), ClaimMevError> {
+    let epoch = merkle_trees.epoch;
+    if is_epoch_completed(epoch, file_mutex).await? {
+        return Ok(());
+    }
+
     let rpc_client = RpcClient::new_with_timeout_and_commitment(
         rpc_url,
         Duration::from_secs(1800),
@@ -180,15 +241,18 @@ pub async fn claim_mev_tips(
             tip_distribution_program_id,
             priority_fee_distribution_program_id,
             tip_router_program_id,
-            ncn_address,
+            ncn,
             micro_lamports,
             keypair.pubkey(),
+            operator_address,
         )
         .await?;
 
         datapoint_info!(
             "tip_router_cli.claim_mev_tips-send_summary",
             ("claim_transactions_left", all_claim_transactions.len(), i64),
+            ("epoch", epoch, i64),
+            ("operator", operator_address, String),
         );
 
         if all_claim_transactions.is_empty() {
@@ -233,12 +297,14 @@ pub async fn claim_mev_tips(
         tip_distribution_program_id,
         priority_fee_distribution_program_id,
         tip_router_program_id,
-        ncn_address,
+        ncn,
         micro_lamports,
         keypair.pubkey(),
+        operator_address,
     )
     .await?;
     if transactions.is_empty() {
+        add_completed_epoch(epoch, file_mutex).await?;
         return Ok(());
     }
 
@@ -292,12 +358,13 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     tip_distribution_program_id: Pubkey,
     priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
-    ncn_address: Pubkey,
+    ncn: Pubkey,
     micro_lamports: u64,
     payer_pubkey: Pubkey,
+    operator_address: &String,
 ) -> Result<Vec<Transaction>, ClaimMevError> {
-    let tip_router_config_address =
-        Config::find_program_address(&tip_router_program_id, &ncn_address).0;
+    let epoch = merkle_trees.epoch;
+    let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
 
     let tree_nodes = merkle_trees
         .generated_merkle_trees
@@ -315,7 +382,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     info!(
         "reading {} tip distribution related accounts for epoch {}",
         tree_nodes.len(),
-        merkle_trees.epoch
+        epoch
     );
 
     let start = Instant::now();
@@ -366,6 +433,8 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         ("claimants_onchain", claimants.len(), i64),
         ("claim_statuses", claim_status_pubkeys.len(), i64),
         ("claim_statuses_onchain", claim_statuses.len(), i64),
+        ("epoch", epoch, i64),
+        ("operator", operator_address, String),
     );
 
     let transactions = build_mev_claim_transactions(
@@ -378,7 +447,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         claim_statuses,
         micro_lamports,
         payer_pubkey,
-        ncn_address,
+        ncn,
     );
 
     Ok(transactions)
@@ -406,6 +475,7 @@ fn build_mev_claim_transactions(
     payer_pubkey: Pubkey,
     ncn_address: Pubkey,
 ) -> Vec<Transaction> {
+    let epoch = merkle_trees.epoch;
     let tip_router_config_address =
         Config::find_program_address(&tip_router_program_id, &ncn_address).0;
     let tip_router_account_payer =
@@ -529,6 +599,7 @@ fn build_mev_claim_transactions(
         ("distribution_accounts", tdas.len(), i64),
         ("claim_statuses", claim_statuses.len(), i64),
         ("claim_transactions", transactions.len(), i64),
+        ("epoch", epoch, i64)
     );
 
     transactions
@@ -571,4 +642,79 @@ async fn is_sufficient_balance(
     } else {
         None
     }
+}
+
+/// Helper function to check if an epoch is in the completed_claim_epochs.txt file
+pub async fn is_epoch_completed(
+    epoch: u64,
+    file_mutex: &Arc<Mutex<()>>,
+) -> Result<bool, ClaimMevError> {
+    // Acquire the mutex lock before file operations
+    let _lock = file_mutex.lock().await;
+
+    let path = Path::new("completed_claim_epochs.txt");
+
+    // If file doesn't exist, no epochs are completed
+    if !path.exists() {
+        return Ok(false);
+    }
+
+    // Open and read file
+    let file = File::open(path).await.map_err(|e| {
+        ClaimMevError::CompletedEpochsError(format!("Failed to open completed epochs file: {}", e))
+    })?;
+
+    let mut reader = BufReader::new(file);
+    let mut line = String::new();
+
+    // Read lines asynchronously
+    while reader.read_line(&mut line).await.map_err(|e| {
+        ClaimMevError::CompletedEpochsError(format!("Failed to read line from epochs file: {}", e))
+    })? > 0
+    {
+        // Try to parse the line as a u64 and compare with our epoch
+        if let Ok(completed_epoch) = line.trim().parse::<u64>() {
+            if completed_epoch == epoch {
+                return Ok(true);
+            }
+        }
+
+        // Clear the line for the next iteration
+        line.clear();
+    }
+
+    Ok(false)
+}
+
+/// Helper function to add an epoch to the completed_claim_epochs.txt file
+pub async fn add_completed_epoch(
+    epoch: u64,
+    file_mutex: &Arc<Mutex<()>>,
+) -> Result<(), ClaimMevError> {
+    // Acquire the mutex lock before file operations
+    let _lock = file_mutex.lock().await;
+
+    let path = Path::new("completed_claim_epochs.txt");
+
+    // Create or open file in append mode
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .await
+        .map_err(|e| {
+            ClaimMevError::CompletedEpochsError(format!(
+                "Failed to open epochs file for writing: {}",
+                e
+            ))
+        })?;
+
+    // Write epoch followed by newline
+    file.write_all(format!("{}\n", epoch).as_bytes())
+        .await
+        .map_err(|e| {
+            ClaimMevError::CompletedEpochsError(format!("Failed to write epoch to file: {}", e))
+        })?;
+
+    Ok(())
 }

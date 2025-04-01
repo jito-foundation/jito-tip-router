@@ -38,6 +38,29 @@ use solana_runtime::bank::Bank;
 use solana_sdk::{account::AccountSharedData, pubkey::Pubkey};
 use stake_meta_generator::generate_stake_meta_collection;
 
+#[derive(Clone, PartialEq, Eq)]
+pub struct Version {
+    pub major: u16,
+    pub minor: u16,
+    pub patch: u16,
+}
+
+impl Default for Version {
+    fn default() -> Self {
+        Self {
+            major: env!("CARGO_PKG_VERSION_MAJOR").parse().unwrap(),
+            minor: env!("CARGO_PKG_VERSION_MINOR").parse().unwrap(),
+            patch: env!("CARGO_PKG_VERSION_PATCH").parse().unwrap(),
+        }
+    }
+}
+
+impl std::fmt::Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch,)
+    }
+}
+
 #[derive(clap::ValueEnum, Clone, Copy, Debug)]
 pub enum OperatorState {
     // Allows the operator to load from a snapshot created externally
@@ -135,7 +158,7 @@ pub fn create_stake_meta(
     }
 
     datapoint_info!(
-        "tip_router_cli.get_meta_merkle_root",
+        "tip_router_cli.process_epoch",
         ("operator_address", operator_address, String),
         ("state", "create_stake_meta", String),
         ("step", 2, i64),
@@ -173,7 +196,7 @@ pub fn create_merkle_tree_collection(
         Err(e) => {
             let error_str = format!("{:?}", e);
             datapoint_error!(
-                "tip_router_cli.create_merkle_tree_collection",
+                "tip_router_cli.process_epoch",
                 ("operator_address", operator_address, String),
                 ("epoch", epoch, i64),
                 ("status", "error", String),
@@ -192,15 +215,6 @@ pub fn create_merkle_tree_collection(
         merkle_tree_coll.bank_hash
     );
 
-    datapoint_info!(
-        "tip_router_cli.create_merkle_tree_collection",
-        ("operator_address", operator_address, String),
-        ("state", "meta_merkle_tree_creation", String),
-        ("step", 3, i64),
-        ("epoch", epoch, i64),
-        ("duration_ms", start.elapsed().as_millis() as i64, i64)
-    );
-
     if save {
         // Note: We have the epoch come before the file name so ordering is neat on a machine
         //  with multiple epochs saved.
@@ -210,7 +224,7 @@ pub fn create_merkle_tree_collection(
             Err(e) => {
                 let error_str = format!("{:?}", e);
                 datapoint_error!(
-                    "tip_router_cli.create_merkle_tree_collection",
+                    "tip_router_cli.process_epoch",
                     ("operator_address", operator_address, String),
                     ("epoch", epoch, i64),
                     ("status", "error", String),
@@ -223,7 +237,7 @@ pub fn create_merkle_tree_collection(
         }
     }
     datapoint_info!(
-        "tip_router_cli.create_merkle_tree_collection",
+        "tip_router_cli.process_epoch",
         ("operator_address", operator_address, String),
         ("state", "meta_merkle_tree_creation", String),
         ("step", 3, i64),
