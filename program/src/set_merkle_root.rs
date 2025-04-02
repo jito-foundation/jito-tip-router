@@ -28,7 +28,7 @@ pub fn process_set_merkle_root(
     epoch: u64,
     total_fees: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, ncn, ballot_box, vote_account, distribution_account, tip_distribution_config, tip_distribution_program] =
+    let [epoch_state, ncn_config, ncn, ballot_box, vote_account, distribution_account, distribution_config, distribution_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -39,35 +39,35 @@ pub fn process_set_merkle_root(
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     BallotBox::load(program_id, ballot_box, ncn.key, epoch, false)?;
 
-    let distibution_program_id = tip_distribution_program.key;
+    let distribution_program_id = distribution_program.key;
     if [
         jito_tip_distribution::ID,
         jito_priority_fee_distribution::ID,
     ]
     .iter()
-    .all(|supported_program_id| distibution_program_id.ne(supported_program_id))
+    .all(|supported_program_id| distribution_program_id.ne(supported_program_id))
     {
         msg!("Incorrect tip distribution program");
         return Err(ProgramError::InvalidAccountData);
     }
 
-    let tip_distribution_epoch = epoch
+    let distribution_epoch = epoch
         .checked_sub(1)
         .ok_or(TipRouterError::ArithmeticUnderflowError)?;
-    let (distribution_account_address, _) = if distibution_program_id.eq(&jito_tip_distribution::ID)
-    {
-        derive_tip_distribution_account_address(
-            tip_distribution_program.key,
-            vote_account.key,
-            tip_distribution_epoch,
-        )
-    } else {
-        derive_priority_fee_distribution_account_address(
-            tip_distribution_program.key,
-            vote_account.key,
-            tip_distribution_epoch,
-        )
-    };
+    let (distribution_account_address, _) =
+        if distribution_program_id.eq(&jito_tip_distribution::ID) {
+            derive_tip_distribution_account_address(
+                distribution_program.key,
+                vote_account.key,
+                distribution_epoch,
+            )
+        } else {
+            derive_priority_fee_distribution_account_address(
+                distribution_program.key,
+                vote_account.key,
+                distribution_epoch,
+            )
+        };
     if distribution_account_address.ne(distribution_account.key) {
         msg!("Incorrect tip distribution account");
         return Err(ProgramError::InvalidAccountData);
@@ -93,9 +93,9 @@ pub fn process_set_merkle_root(
     let (_, bump, mut ncn_config_seeds) = NcnConfig::find_program_address(program_id, ncn.key);
     ncn_config_seeds.push(vec![bump]);
 
-    let ix = if distibution_program_id.eq(&jito_tip_distribution::ID) {
+    let ix = if distribution_program_id.eq(&jito_tip_distribution::ID) {
         upload_merkle_root_ix(
-            *tip_distribution_config.key,
+            *distribution_config.key,
             *ncn_config.key,
             *distribution_account.key,
             merkle_root,
@@ -104,7 +104,7 @@ pub fn process_set_merkle_root(
         )
     } else {
         pf_upload_merkle_root_ix(
-            *tip_distribution_config.key,
+            *distribution_config.key,
             *ncn_config.key,
             *distribution_account.key,
             merkle_root,
@@ -116,7 +116,7 @@ pub fn process_set_merkle_root(
     invoke_signed(
         &ix,
         &[
-            tip_distribution_config.clone(),
+            distribution_config.clone(),
             distribution_account.clone(),
             ncn_config.clone(),
         ],

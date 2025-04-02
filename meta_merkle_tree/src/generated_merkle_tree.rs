@@ -68,7 +68,7 @@ pub struct GeneratedMerkleTree {
 }
 
 impl GeneratedMerkleTree {
-    fn new_from_stake_meta_for_distirbution_program(
+    fn new_from_stake_meta_for_distribution_program(
         stake_meta: &StakeMeta,
         tip_router_program_id: &Pubkey,
         distribution_program: &Pubkey,
@@ -186,7 +186,7 @@ impl GeneratedMerkleTreeCollection {
                 let mut res = Vec::new();
                 if stake_meta.maybe_tip_distribution_meta.is_some() {
                     let tip_distribution_tree =
-                        GeneratedMerkleTree::new_from_stake_meta_for_distirbution_program(
+                        GeneratedMerkleTree::new_from_stake_meta_for_distribution_program(
                             &stake_meta,
                             tip_router_program_id,
                             // REVIEW: Safe to have constant TIP_DISTRIBUTION_ID? Or keep consistent with drilling down arguments?
@@ -200,7 +200,7 @@ impl GeneratedMerkleTreeCollection {
 
                 if stake_meta.maybe_priority_fee_distribution_meta.is_some() {
                     let priority_fee_distribution_tree =
-                        GeneratedMerkleTree::new_from_stake_meta_for_distirbution_program(
+                        GeneratedMerkleTree::new_from_stake_meta_for_distribution_program(
                             &stake_meta,
                             tip_router_program_id,
                             &PRIORITY_FEE_DISTRIBUTION_ID,
@@ -282,7 +282,6 @@ impl TreeNode {
         validator_fee_bps: u16,
         epoch: u64,
     ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
-        // TODO: Update for PriorityFee distributions. This could be as easy as passing in appropritate protocol_fee_bps.
         let protocol_fee_amount = u128::checked_div(
             (total_tips as u128)
                 .checked_mul(protocol_fee_bps as u128)
@@ -294,7 +293,8 @@ impl TreeNode {
         let protocol_fee_amount = u64::try_from(protocol_fee_amount)
             .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
 
-        // TODO: For Priority Fee Distributions, there is no validator amount. Pass in 0 for validator_fee_bps
+        // For Priority Fee Distributions, there is no validator amount, 0 is passed in for
+        // validator_fee_bps
         let validator_amount = u64::try_from(
             (total_tips as u128)
                 .checked_mul(validator_fee_bps as u128)
@@ -364,32 +364,16 @@ impl TreeNode {
             proof: None,
         }];
 
-        let (validator_claimant, (validator_claim_status_pubkey, validator_claim_status_bump)) =
-            if epoch > 760 {
-                (
-                    stake_meta.validator_vote_account,
-                    Pubkey::find_program_address(
-                        &[
-                            CLAIM_STATUS_SEED,
-                            &stake_meta.validator_vote_account.to_bytes(),
-                            &distribution_account_pubkey.to_bytes(),
-                        ],
-                        distribution_program_id,
-                    ),
-                )
-            } else {
-                (
-                    stake_meta.validator_node_pubkey,
-                    Pubkey::find_program_address(
-                        &[
-                            CLAIM_STATUS_SEED,
-                            &stake_meta.validator_node_pubkey.to_bytes(),
-                            &distribution_account_pubkey.to_bytes(),
-                        ],
-                        distribution_program_id,
-                    ),
-                )
-            };
+        let validator_claimant = stake_meta.validator_vote_account;
+        let (validator_claim_status_pubkey, validator_claim_status_bump) =
+            Pubkey::find_program_address(
+                &[
+                    CLAIM_STATUS_SEED,
+                    &stake_meta.validator_vote_account.to_bytes(),
+                    &distribution_account_pubkey.to_bytes(),
+                ],
+                distribution_program_id,
+            );
 
         tree_nodes.push(Self {
             claimant: validator_claimant,
@@ -868,7 +852,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: validator_id_0,
+                claimant: validator_vote_account_0,
                 claim_status_pubkey: claim_statuses[1].0,
                 claim_status_bump: claim_statuses[1].1,
                 staker_pubkey: Pubkey::default(),
@@ -926,7 +910,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: validator_id_0,
+                claimant: validator_vote_account_0,
                 claim_status_pubkey: pf_claim_statuses[1].0,
                 claim_status_bump: pf_claim_statuses[1].1,
                 staker_pubkey: Pubkey::default(),
@@ -987,7 +971,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: validator_id_1,
+                claimant: validator_vote_account_1,
                 claim_status_pubkey: claim_statuses[5].0,
                 claim_status_bump: claim_statuses[5].1,
                 staker_pubkey: Pubkey::default(),
@@ -1044,7 +1028,7 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: validator_id_1,
+                claimant: validator_vote_account_1,
                 claim_status_pubkey: pf_claim_statuses[5].0,
                 claim_status_bump: pf_claim_statuses[5].1,
                 staker_pubkey: Pubkey::default(),
@@ -1071,7 +1055,7 @@ mod tests {
                 proof: None,
             },
         ];
-        // TODO: Handle creating expected PF GMT
+
         let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
         let gmt_3 = GeneratedMerkleTree {

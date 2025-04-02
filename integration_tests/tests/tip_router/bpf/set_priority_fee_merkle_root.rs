@@ -19,12 +19,16 @@ mod set_merkle_root {
         },
         meta_merkle_tree::MetaMerkleTree,
     };
-    use solana_sdk::{epoch_schedule::EpochSchedule, pubkey::Pubkey, signer::Signer};
+    use solana_sdk::{
+        epoch_schedule::EpochSchedule, instruction::InstructionError, pubkey::Pubkey,
+        signer::Signer,
+    };
 
     use crate::{
         fixtures::{
-            test_builder::TestBuilder, tip_router_client::assert_tip_router_error, TestError,
-            TestResult,
+            test_builder::TestBuilder,
+            tip_router_client::{assert_instruction_error, assert_tip_router_error},
+            TestError, TestResult,
         },
         helpers::serialized_accounts::{
             serialized_ballot_box_account, serialized_epoch_state_account,
@@ -597,6 +601,147 @@ mod set_merkle_root {
             .await;
 
         assert_tip_router_error(res, TipRouterError::ConsensusNotReached);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_merkle_root_mismatched_distribution_account_vs_program() -> TestResult<()> {
+        let mut fixture: TestBuilder = TestBuilder::new().await;
+        let mut tip_router_client = fixture.tip_router_client();
+        let mut priority_fee_distribution_client = fixture.priority_fee_distribution_client();
+
+        fixture.warp_epoch_incremental(10).await?;
+
+        let test_ncn = fixture.create_test_ncn().await?;
+        let ncn_address = test_ncn.ncn_root.ncn_pubkey;
+        let ncn_config_address =
+            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_address).0;
+
+        let epoch = fixture.clock().await.epoch;
+
+        priority_fee_distribution_client
+            .do_initialize(ncn_config_address)
+            .await?;
+        let vote_keypair = priority_fee_distribution_client
+            .setup_vote_account()
+            .await?;
+        let vote_account = vote_keypair.pubkey();
+
+        priority_fee_distribution_client
+            .do_initialize_priority_fee_distribution_account(
+                ncn_config_address,
+                vote_keypair,
+                epoch,
+                100,
+            )
+            .await?;
+        let (priority_fee_distribution_account, _) =
+            derive_priority_fee_distribution_account_address(
+                &jito_priority_fee_distribution::ID,
+                &vote_account,
+                epoch,
+            );
+        tip_router_client
+            .airdrop(&priority_fee_distribution_account, 10.0)
+            .await?;
+
+        let meta_merkle_tree_fixture =
+            create_meta_merkle_tree(vote_account, ncn_config_address, ncn_address, epoch)?;
+        let winning_root = meta_merkle_tree_fixture.meta_merkle_tree.merkle_root;
+
+        fixture.warp_epoch_incremental(1).await?;
+        let epoch = fixture.clock().await.epoch;
+
+        let (ballot_box_address, bump, _) =
+            BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn_address, epoch);
+
+        let ballot_box_fixture = {
+            let mut ballot_box = BallotBox::new(&ncn_address, epoch, bump, 0);
+            let winning_ballot = Ballot::new(&winning_root);
+            ballot_box.set_winning_ballot(&winning_ballot);
+            ballot_box
+        };
+
+        let (epoch_state_address, bump, _) =
+            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn_address, epoch);
+
+        let epoch_state_fixture = {
+            let mut epoch_state = EpochState::new(&ncn_address, epoch, bump, 0);
+            epoch_state._set_upload_progress();
+            epoch_state
+        };
+
+        let epoch_schedule: EpochSchedule = fixture.epoch_schedule().await;
+
+        // Must warp before .set_account
+        fixture
+            .warp_slot_incremental(epoch_schedule.get_slots_in_epoch(epoch))
+            .await?;
+
+        fixture
+            .set_account(
+                ballot_box_address,
+                serialized_ballot_box_account(&ballot_box_fixture),
+            )
+            .await;
+
+        fixture
+            .set_account(
+                epoch_state_address,
+                serialized_epoch_state_account(&epoch_state_fixture),
+            )
+            .await;
+
+        let tip_distribution_address = derive_priority_fee_distribution_account_address(
+            &jito_priority_fee_distribution::ID,
+            &vote_account,
+            epoch - 1,
+        )
+        .0;
+
+        // Get proof for vote_account
+        let node = meta_merkle_tree_fixture
+            .meta_merkle_tree
+            .get_node(&tip_distribution_address);
+        let proof = node.proof.clone().unwrap();
+
+        ballot_box_fixture
+            .verify_merkle_root(
+                &tip_distribution_address,
+                node.proof.unwrap(),
+                &node.validator_merkle_root,
+                node.max_total_claim,
+                node.max_num_nodes,
+                node.total_fees,
+            )
+            .unwrap();
+
+        // Invoke set_merkle_root
+        let (distribution_config, _) =
+            jito_priority_fee_distribution_sdk::derive_config_account_address(
+                &jito_priority_fee_distribution::ID,
+            );
+        let res = tip_router_client
+            .set_merkle_root(
+                ncn_config_address,
+                ncn_address,
+                ballot_box_address,
+                vote_account,
+                node.tip_distribution_account,
+                distribution_config,
+                // Test wrong program passed in
+                jito_tip_distribution::ID,
+                proof,
+                node.validator_merkle_root,
+                node.max_total_claim,
+                node.max_num_nodes,
+                epoch,
+                node.total_fees,
+            )
+            .await;
+
+        assert_instruction_error(res, InstructionError::InvalidAccountData);
 
         Ok(())
     }

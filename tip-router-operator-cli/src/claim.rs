@@ -497,10 +497,10 @@ fn build_mev_claim_transactions(
 
         // if unwrap panics, there's a bug in the merkle tree code because the merkle tree code relies on the state
         // of the chain to claim.
-        let distirbution_account = tdas.get(&tree.distribution_account).unwrap();
+        let distribution_account = tdas.get(&tree.distribution_account).unwrap();
         if tree.distribution_program.eq(&tip_distribution_program_id) {
             let tda =
-                TipDistributionAccount::try_deserialize(&mut distirbution_account.data.as_slice());
+                TipDistributionAccount::try_deserialize(&mut distribution_account.data.as_slice());
             match tda {
                 Ok(tda) => {
                     // can continue here, as there might be tip distribution accounts this account doesn't upload for
@@ -517,7 +517,7 @@ fn build_mev_claim_transactions(
             .eq(&priority_fee_distribution_program_id)
         {
             let pfda = PriorityFeeDistributionAccount::try_deserialize(
-                &mut distirbution_account.data.as_slice(),
+                &mut distribution_account.data.as_slice(),
             );
             match pfda {
                 Ok(pfda) => {
