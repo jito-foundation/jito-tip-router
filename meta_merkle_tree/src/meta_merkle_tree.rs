@@ -342,6 +342,7 @@ mod tests {
                 merkle_root: Hash::new_unique(),
                 tree_nodes: tree1_nodes,
                 max_total_claim: 1000,
+                total_fees: 1000,
                 max_num_nodes: 5,
             },
             GeneratedMerkleTree {
@@ -351,6 +352,7 @@ mod tests {
                 merkle_root: Hash::new_unique(),
                 tree_nodes: tree2_nodes,
                 max_total_claim: 2000,
+                total_fees: 2000,
                 max_num_nodes: 10,
             },
         ];

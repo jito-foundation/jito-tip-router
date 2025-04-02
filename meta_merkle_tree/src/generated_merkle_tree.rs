@@ -58,8 +58,13 @@ pub struct GeneratedMerkleTree {
     pub merkle_root_upload_authority: Pubkey,
     pub merkle_root: Hash,
     pub tree_nodes: Vec<TreeNode>,
+    /// The amount of tips actually sent to the distribution_account
     pub max_total_claim: u64,
     pub max_num_nodes: u64,
+    /// The total amount of REV the validator accumulated for the epoch. For Priority Fee
+    /// distributions, this is the total amount of priority fee rewards the validator earned.
+    /// For MEV Tip Distributions, this is unused and total_fees = max_total_claim
+    pub total_fees: u64,
 }
 
 impl GeneratedMerkleTree {
@@ -71,64 +76,70 @@ impl GeneratedMerkleTree {
         protocol_fee_bps: u64,
         epoch: u64,
     ) -> Result<Self, MerkleRootGeneratorError> {
-        let (mut tree_nodes, tip_distribution_pubkey, merkle_root_upload_authority, total_tips) =
-            if distribution_program.eq(&TIP_DISTRIBUTION_ID) {
-                let tip_distribution_meta =
-                    stake_meta.maybe_tip_distribution_meta.as_ref().unwrap();
+        let (
+            mut tree_nodes,
+            tip_distribution_pubkey,
+            merkle_root_upload_authority,
+            max_total_claim,
+            total_fees,
+        ) = if distribution_program.eq(&TIP_DISTRIBUTION_ID) {
+            let tip_distribution_meta = stake_meta.maybe_tip_distribution_meta.as_ref().unwrap();
 
-                let tree_nodes = match TreeNode::vec_from_stake_meta_for_distribution_meta(
-                    stake_meta,
-                    tip_router_program_id,
-                    distribution_program,
-                    &tip_distribution_meta.tip_distribution_pubkey,
-                    ncn_address,
-                    tip_distribution_meta.total_tips,
-                    protocol_fee_bps,
-                    tip_distribution_meta.validator_fee_bps,
-                    epoch,
-                ) {
-                    Err(e) => return Err(e),
-                    Ok(maybe_tree_nodes) => maybe_tree_nodes.unwrap_or_default(),
-                };
-
-                (
-                    tree_nodes,
-                    tip_distribution_meta.tip_distribution_pubkey,
-                    tip_distribution_meta.merkle_root_upload_authority,
-                    tip_distribution_meta.total_tips,
-                )
-            } else if distribution_program.eq(&PRIORITY_FEE_DISTRIBUTION_ID) {
-                let priority_fee_distribution_meta = stake_meta
-                    .maybe_priority_fee_distribution_meta
-                    .as_ref()
-                    .unwrap();
-
-                let tree_nodes = match TreeNode::vec_from_stake_meta_for_distribution_meta(
-                    stake_meta,
-                    tip_router_program_id,
-                    distribution_program,
-                    &priority_fee_distribution_meta.priority_fee_distribution_pubkey,
-                    ncn_address,
-                    priority_fee_distribution_meta.total_tips,
-                    protocol_fee_bps,
-                    // Priority fee distributions always have 0 protocol commissions because they
-                    // retain their portion and transfer the rest of the priority fees after each epoch.
-                    0,
-                    epoch,
-                ) {
-                    Err(e) => return Err(e),
-                    Ok(maybe_tree_nodes) => maybe_tree_nodes.unwrap_or_default(),
-                };
-
-                (
-                    tree_nodes,
-                    priority_fee_distribution_meta.priority_fee_distribution_pubkey,
-                    priority_fee_distribution_meta.merkle_root_upload_authority,
-                    priority_fee_distribution_meta.total_tips,
-                )
-            } else {
-                return Err(MerkleRootGeneratorError::UnknownDistributionProgram);
+            let tree_nodes = match TreeNode::vec_from_stake_meta_for_distribution_meta(
+                stake_meta,
+                tip_router_program_id,
+                distribution_program,
+                &tip_distribution_meta.tip_distribution_pubkey,
+                ncn_address,
+                tip_distribution_meta.total_tips,
+                protocol_fee_bps,
+                tip_distribution_meta.validator_fee_bps,
+                epoch,
+            ) {
+                Err(e) => return Err(e),
+                Ok(maybe_tree_nodes) => maybe_tree_nodes.unwrap_or_default(),
             };
+
+            (
+                tree_nodes,
+                tip_distribution_meta.tip_distribution_pubkey,
+                tip_distribution_meta.merkle_root_upload_authority,
+                tip_distribution_meta.total_tips,
+                tip_distribution_meta.total_tips,
+            )
+        } else if distribution_program.eq(&PRIORITY_FEE_DISTRIBUTION_ID) {
+            let priority_fee_distribution_meta = stake_meta
+                .maybe_priority_fee_distribution_meta
+                .as_ref()
+                .unwrap();
+
+            let tree_nodes = match TreeNode::vec_from_stake_meta_for_distribution_meta(
+                stake_meta,
+                tip_router_program_id,
+                distribution_program,
+                &priority_fee_distribution_meta.priority_fee_distribution_pubkey,
+                ncn_address,
+                priority_fee_distribution_meta.total_tips,
+                protocol_fee_bps,
+                // Priority fee distributions always have 0 protocol commissions because they
+                // retain their portion and transfer the rest of the priority fees after each epoch.
+                0,
+                epoch,
+            ) {
+                Err(e) => return Err(e),
+                Ok(maybe_tree_nodes) => maybe_tree_nodes.unwrap_or_default(),
+            };
+
+            (
+                tree_nodes,
+                priority_fee_distribution_meta.priority_fee_distribution_pubkey,
+                priority_fee_distribution_meta.merkle_root_upload_authority,
+                priority_fee_distribution_meta.total_tips,
+                priority_fee_distribution_meta.total_priority_fees,
+            )
+        } else {
+            return Err(MerkleRootGeneratorError::UnknownDistributionProgram);
+        };
 
         // Create merkle tree and add proofs
         let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
@@ -147,7 +158,8 @@ impl GeneratedMerkleTree {
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
             tree_nodes,
-            max_total_claim: total_tips,
+            max_total_claim,
+            total_fees,
         })
     }
 }
@@ -540,7 +552,7 @@ pub struct PriorityFeeDistributionMeta {
     pub priority_fee_distribution_pubkey: Pubkey,
 
     /// The total priority fees the Validator earned the entire epoch.
-    pub total_prioity_fees: u64,
+    pub total_priority_fees: u64,
 
     /// The validator's total tips in the [TipDistributionAccount] at the time the Merkle tree is
     /// created.
@@ -730,7 +742,7 @@ mod tests {
                     maybe_priority_fee_distribution_meta: Some(PriorityFeeDistributionMeta {
                         merkle_root_upload_authority,
                         priority_fee_distribution_pubkey: pf_tda_0,
-                        total_prioity_fees: 5_092_000_000,
+                        total_priority_fees: 5_092_000_000,
                         total_tips: 2_546_000_000,
                         validator_fee_bps: 5_000,
                     }),
@@ -763,7 +775,7 @@ mod tests {
                     maybe_priority_fee_distribution_meta: Some(PriorityFeeDistributionMeta {
                         merkle_root_upload_authority,
                         priority_fee_distribution_pubkey: pf_tda_1,
-                        total_prioity_fees: 32_100_000_000,
+                        total_priority_fees: 32_100_000_000,
                         total_tips: 3_210_000_000,
                         validator_fee_bps: 1_000,
                     }),
@@ -886,17 +898,19 @@ mod tests {
 
         let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
+        let gmt_0_max_total_claim = stake_meta_collection.stake_metas[0]
+            .clone()
+            .maybe_tip_distribution_meta
+            .unwrap()
+            .total_tips;
         let gmt_0 = GeneratedMerkleTree {
             distribution_program: TIP_DISTRIBUTION_ID,
             distribution_account: tda_0,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
             tree_nodes,
-            max_total_claim: stake_meta_collection.stake_metas[0]
-                .clone()
-                .maybe_tip_distribution_meta
-                .unwrap()
-                .total_tips,
+            max_total_claim: gmt_0_max_total_claim,
+            total_fees: gmt_0_max_total_claim,
             max_num_nodes: 4,
         };
 
@@ -954,6 +968,11 @@ mod tests {
                 .maybe_priority_fee_distribution_meta
                 .unwrap()
                 .total_tips,
+            total_fees: stake_meta_collection.stake_metas[0]
+                .clone()
+                .maybe_priority_fee_distribution_meta
+                .unwrap()
+                .total_priority_fees,
             max_num_nodes: 4,
         };
 
@@ -997,17 +1016,19 @@ mod tests {
         ];
         let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
+        let gmt_2_max_total_claim = stake_meta_collection.stake_metas[1]
+            .clone()
+            .maybe_tip_distribution_meta
+            .unwrap()
+            .total_tips;
         let gmt_2 = GeneratedMerkleTree {
             distribution_program: TIP_DISTRIBUTION_ID,
             distribution_account: tda_1,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
             tree_nodes,
-            max_total_claim: stake_meta_collection.stake_metas[1]
-                .clone()
-                .maybe_tip_distribution_meta
-                .unwrap()
-                .total_tips,
+            max_total_claim: gmt_2_max_total_claim,
+            total_fees: gmt_2_max_total_claim,
             max_num_nodes: 4,
         };
 
@@ -1064,6 +1085,11 @@ mod tests {
                 .maybe_priority_fee_distribution_meta
                 .unwrap()
                 .total_tips,
+            total_fees: stake_meta_collection.stake_metas[1]
+                .clone()
+                .maybe_priority_fee_distribution_meta
+                .unwrap()
+                .total_priority_fees,
             max_num_nodes: 4,
         };
 

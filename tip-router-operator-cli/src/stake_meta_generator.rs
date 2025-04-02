@@ -103,7 +103,7 @@ fn pf_tip_distribution_account_from_tda_wrapper(
     Ok(PriorityFeeDistributionMeta {
         priority_fee_distribution_pubkey: pf_distribution_account_wrapper
             .priority_fee_distribution_pubkey,
-        total_prioity_fees: pf_distribution_account_wrapper.total_prioity_fees,
+        total_priority_fees: pf_distribution_account_wrapper.total_prioity_fees,
         total_tips: pf_distribution_account_wrapper
             .account_data
             .lamports()
@@ -265,9 +265,9 @@ pub fn generate_stake_meta_collection(
                                         priority_fee_distribution_pubkey,
                                         total_prioity_fees: *leader_priority_fees_map
                                             .get(&vote_account.node_pubkey().to_string())
-                                            // REVIEW: should we panic or error here? Is there a 
-                                            //  case where the valdiator is in epoch_vote_accounts, 
-                                            //  the PriorityFeeDistributionAccount exists, but 
+                                            // REVIEW: should we panic or error here? Is there a
+                                            //  case where the valdiator is in epoch_vote_accounts,
+                                            //  the PriorityFeeDistributionAccount exists, but
                                             //  they had no leader slots? If yes, then cannot error.
                                             .unwrap_or(&0),
                                     })
@@ -819,7 +819,7 @@ mod tests {
                 maybe_priority_fee_distribution_meta: Some(PriorityFeeDistributionMeta {
                     merkle_root_upload_authority,
                     priority_fee_distribution_pubkey: pf_tda_0_fields.0,
-                    total_prioity_fees: validator_1_total_priority_fees,
+                    total_priority_fees: validator_1_total_priority_fees,
                     total_tips: pf_tip_distro_0_tips,
                     validator_fee_bps: pf_tda_0_fields.1,
                 }),
