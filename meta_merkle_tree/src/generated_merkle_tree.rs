@@ -539,7 +539,11 @@ pub struct PriorityFeeDistributionMeta {
     #[serde(with = "pubkey_string_conversion")]
     pub priority_fee_distribution_pubkey: Pubkey,
 
-    /// The validator's total tips in the [TipDistributionAccount].
+    /// The total priority fees the Validator earned the entire epoch.
+    pub total_prioity_fees: u64,
+
+    /// The validator's total tips in the [TipDistributionAccount] at the time the Merkle tree is
+    /// created.
     pub total_tips: u64,
 
     /// The validator's cut of tips from [TipDistributionAccount], calculated from the on-chain
@@ -726,6 +730,7 @@ mod tests {
                     maybe_priority_fee_distribution_meta: Some(PriorityFeeDistributionMeta {
                         merkle_root_upload_authority,
                         priority_fee_distribution_pubkey: pf_tda_0,
+                        total_prioity_fees: 5_092_000_000,
                         total_tips: 2_546_000_000,
                         validator_fee_bps: 5_000,
                     }),
@@ -758,6 +763,7 @@ mod tests {
                     maybe_priority_fee_distribution_meta: Some(PriorityFeeDistributionMeta {
                         merkle_root_upload_authority,
                         priority_fee_distribution_pubkey: pf_tda_1,
+                        total_prioity_fees: 32_100_000_000,
                         total_tips: 3_210_000_000,
                         validator_fee_bps: 1_000,
                     }),

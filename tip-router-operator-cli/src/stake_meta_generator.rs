@@ -103,6 +103,7 @@ fn pf_tip_distribution_account_from_tda_wrapper(
     Ok(PriorityFeeDistributionMeta {
         priority_fee_distribution_pubkey: pf_distribution_account_wrapper
             .priority_fee_distribution_pubkey,
+        total_prioity_fees: pf_distribution_account_wrapper.total_prioity_fees,
         total_tips: pf_distribution_account_wrapper
             .account_data
             .lamports()
@@ -130,6 +131,7 @@ pub fn generate_stake_meta_collection(
     tip_distribution_program_id: &Pubkey,
     priority_fee_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
+    _leader_priority_fees_map: HashMap<String, u64>,
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     assert!(bank.is_frozen());
 
@@ -261,6 +263,8 @@ pub fn generate_stake_meta_collection(
                                         priority_fee_distribution_account,
                                         account_data,
                                         priority_fee_distribution_pubkey,
+                                        // TODO: Pull from helper res
+                                        total_prioity_fees: 0,
                                     })
                                 },
                             )
@@ -742,6 +746,13 @@ mod tests {
         let pf_tip_distro_0_tips: u64 =
             validator_1_total_priority_fees * u64::from(pf_tda_0.validator_commission_bps) / 10_000;
 
+        let mut leader_priority_fees_map: HashMap<String, u64> = HashMap::new();
+        leader_priority_fees_map.insert(
+            validator_keypairs_0.node_keypair.pubkey().to_string(),
+            validator_1_total_priority_fees,
+        );
+        leader_priority_fees_map.insert(validator_keypairs_1.node_keypair.pubkey().to_string(), 0);
+
         let pf_tda_0_fields = (
             pf_tip_distribution_account_0.0,
             pf_tda_0.validator_commission_bps,
@@ -769,6 +780,7 @@ mod tests {
             &tip_distribution_program_id,
             &priorty_fee_distribution_program_id,
             &tip_payment_program_id,
+            leader_priority_fees_map,
         )
         .unwrap();
         assert_eq!(
@@ -802,6 +814,7 @@ mod tests {
                 maybe_priority_fee_distribution_meta: Some(PriorityFeeDistributionMeta {
                     merkle_root_upload_authority,
                     priority_fee_distribution_pubkey: pf_tda_0_fields.0,
+                    total_prioity_fees: validator_1_total_priority_fees,
                     total_tips: pf_tip_distro_0_tips,
                     validator_fee_bps: pf_tda_0_fields.1,
                 }),

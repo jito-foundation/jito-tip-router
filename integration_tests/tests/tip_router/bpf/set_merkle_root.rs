@@ -103,6 +103,7 @@ mod set_merkle_root {
                     target_epoch,
                 )
                 .0,
+                total_prioity_fees: 100_000,
                 total_tips: 100,
                 validator_fee_bps: 10,
             }),

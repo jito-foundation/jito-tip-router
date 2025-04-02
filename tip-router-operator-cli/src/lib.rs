@@ -13,6 +13,7 @@ pub mod process_epoch;
 pub mod rpc_utils;
 pub mod submit;
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -127,6 +128,8 @@ pub fn create_stake_meta(
         tip_distribution_program_id,
         priority_fee_distribution_program_id,
         tip_payment_program_id,
+        // TODO: Fill this out correctly!
+        HashMap::new(),
     ) {
         Ok(stake_meta) => stake_meta,
         Err(e) => {
@@ -365,6 +368,7 @@ pub struct PriorityFeeDistributionAccountWrapper {
     pub priority_fee_distribution_account: PriorityFeeDistributionAccount,
     pub account_data: AccountSharedData,
     pub priority_fee_distribution_pubkey: Pubkey,
+    pub total_prioity_fees: u64,
 }
 
 fn get_validator_cmdline() -> Result<String> {

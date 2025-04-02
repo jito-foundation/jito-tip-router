@@ -18,7 +18,7 @@ pub enum PriorityFeeUtilsError {
 pub async fn get_priority_fees_for_epoch(
     client: &EllipsisClient,
     epoch: u64,
-) -> Result<HashMap<String, i64>, PriorityFeeUtilsError> {
+) -> Result<HashMap<String, u64>, PriorityFeeUtilsError> {
     // Get the start and ending slot of the epoch
     let epoch_schedule = client.get_epoch_schedule().await?;
     let starting_slot = epoch_schedule.get_first_slot_in_epoch(epoch);
@@ -29,12 +29,12 @@ pub async fn get_priority_fees_for_epoch(
         None => return Err(PriorityFeeUtilsError::ErrorGettingLeaderSchedule),
     };
 
-    let mut res: HashMap<String, i64> = HashMap::with_capacity(leader_schedule.len());
+    let mut res: HashMap<String, u64> = HashMap::with_capacity(leader_schedule.len());
 
     for (leader, relative_leader_slots) in leader_schedule.into_iter() {
-      let mut leader_epoch_block_rewards: i64 = 0;
+        let mut leader_epoch_block_rewards: i64 = 0;
         for relative_slot in relative_leader_slots.into_iter() {
-            // adjust the relative_slot to the canonical slot  
+            // adjust the relative_slot to the canonical slot
             let slot = starting_slot.saturating_add(relative_slot as u64);
             let block = client.get_block(slot).await?;
             // get the priority fee rewards for the block.
@@ -44,9 +44,12 @@ pub async fn get_priority_fees_for_epoch(
                 .find(|r| r.reward_type == Some(RewardType::Fee))
                 .unwrap()
                 .lamports;
-              leader_epoch_block_rewards = leader_epoch_block_rewards.saturating_add(block_rewards);
+            leader_epoch_block_rewards = leader_epoch_block_rewards.saturating_add(block_rewards);
         }
-        res.insert(leader, leader_epoch_block_rewards);
+        res.insert(
+            leader,
+            u64::try_from(leader_epoch_block_rewards).unwrap_or(0),
+        );
     }
     Ok(res)
 }
