@@ -240,23 +240,13 @@ pub fn generate_stake_meta_collection(
                 .get_account(&priority_fee_distribution_pubkey)
                 .map_or_else(
                     || None,
-                    |mut account_data| {
-                        // TDAs may be funded with lamports and therefore exist in the bank, but would fail the deserialization step
+                    |account_data| {
+                        // PFDAs may be funded with lamports and therefore exist in the bank, but would fail the deserialization step
                         // if the buffer is yet to be allocated thru the init call to the program.
                         PriorityFeeDistributionAccount::try_deserialize(&mut account_data.data())
                             .map_or_else(
                                 |_| None,
                                 |priority_fee_distribution_account| {
-                                    // this snapshot might have tips that weren't claimed by the time the epoch is over
-                                    // assume that it will eventually be cranked and credit the excess to this account
-                                    if priority_fee_distribution_pubkey == tip_receiver {
-                                        account_data.set_lamports(
-                                            account_data
-                                                .lamports()
-                                                .checked_add(tip_receiver_fee)
-                                                .expect("tip overflow"),
-                                        );
-                                    }
                                     Some(PriorityFeeDistributionAccountWrapper {
                                         priority_fee_distribution_account,
                                         account_data,
@@ -297,7 +287,8 @@ pub fn generate_stake_meta_collection(
             // TODO: DRY this up
             let maybe_priority_fee_distribution_meta = if let Some(tda) = maybe_pf_tda {
                 let actual_len = tda.account_data.data().len();
-                let expected_len = 8_usize.saturating_add(size_of::<TipDistributionAccount>());
+                let expected_len =
+                    8_usize.saturating_add(size_of::<PriorityFeeDistributionAccount>());
                 if actual_len != expected_len {
                     warn!("len mismatch actual={actual_len}, expected={expected_len}");
                 }

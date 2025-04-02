@@ -164,7 +164,7 @@ impl TestContext {
                 validator_fee_bps,
             }),
             delegations: vec![Delegation {
-                stake_account_pubkey: self.stake_accounts[0].pubkey(),
+                stake_account_pubkey: self.stake_accounts[1].pubkey(),
                 staker_pubkey: self.payer.pubkey(),
                 withdrawer_pubkey: self.payer.pubkey(),
                 lamports_delegated: 1_000_000,
@@ -238,7 +238,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         &ncn_address,
         epoch,
         PROTOCOL_FEE_BPS,
-        0, // TODO: Update for Priority Fee distributions
+        0,
         &jito_tip_router_program::id(),
     )?;
 
@@ -246,7 +246,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
 
     assert_eq!(
         generated_tree.merkle_root.to_string(),
-        "Cb1Es45bg4AcYhztFrkVijKZM1aE864rAEsXH9oajrXX"
+        "DMKiigJDovqCc3oya8TiZFQ6zSxsm6Ms2HNHMgAwMcop"
     );
 
     let nodes = &generated_tree.tree_nodes;
@@ -270,9 +270,14 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
     // Verify validator fee node
     let validator_fee_node = nodes
         .iter()
-        .find(|node| node.claimant == stake_meta_collection.stake_metas[0].validator_node_pubkey)
+        .find(|node| node.claimant == stake_meta_collection.stake_metas[0].validator_vote_account)
         .expect("Validator fee node should exist");
     assert_eq!(validator_fee_node.amount, validator_fee_amount);
+
+    let has_no_validator_identity_nodes = nodes
+        .iter()
+        .all(|node| node.claimant != stake_meta_collection.stake_metas[0].validator_node_pubkey);
+    assert!(has_no_validator_identity_nodes);
 
     // Verify delegator nodes
     for delegation in &stake_meta_collection.stake_metas[0].delegations {

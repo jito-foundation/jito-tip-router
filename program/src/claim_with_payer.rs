@@ -15,7 +15,7 @@ pub fn process_claim_with_payer(
     amount: u64,
     bump: u8,
 ) -> ProgramResult {
-    let [account_payer, config, ncn, tip_distribution_config, tip_distribution_account, claim_status, claimant, tip_distribution_program, system_program] =
+    let [account_payer, config, ncn, distribution_config, distribution_account, claim_status, claimant, distribution_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -26,7 +26,7 @@ pub fn process_claim_with_payer(
     Config::load(program_id, config, ncn.key, false)?;
     AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
-    let distibution_program_id = tip_distribution_program.key;
+    let distibution_program_id = distribution_program.key;
 
     if [
         jito_tip_distribution::ID,
@@ -35,7 +35,7 @@ pub fn process_claim_with_payer(
     .iter()
     .all(|supported_program_id| distibution_program_id.ne(supported_program_id))
     {
-        msg!("Incorrect tip distribution program");
+        msg!("Incorrect distribution program");
         return Err(ProgramError::InvalidAccountData);
     }
 
@@ -47,8 +47,8 @@ pub fn process_claim_with_payer(
 
     let ix = if distibution_program_id.eq(&jito_tip_distribution::ID) {
         claim_ix(
-            *tip_distribution_config.key,
-            *tip_distribution_account.key,
+            *distribution_config.key,
+            *distribution_account.key,
             *config.key,
             *claim_status.key,
             *claimant.key,
@@ -60,8 +60,8 @@ pub fn process_claim_with_payer(
         )
     } else {
         priority_fee_distribution_claim_ix(
-            *tip_distribution_config.key,
-            *tip_distribution_account.key,
+            *distribution_config.key,
+            *distribution_account.key,
             *config.key,
             *claim_status.key,
             *claimant.key,
@@ -77,8 +77,8 @@ pub fn process_claim_with_payer(
     invoke_signed(
         &ix,
         &[
-            tip_distribution_config.clone(),
-            tip_distribution_account.clone(),
+            distribution_config.clone(),
+            distribution_account.clone(),
             config.clone(),
             claim_status.clone(),
             claimant.clone(),
