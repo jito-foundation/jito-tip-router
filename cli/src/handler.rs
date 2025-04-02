@@ -61,6 +61,7 @@ pub struct CliHandler {
     switchboard_context: Arc<SbContext>,
     pub retries: u64,
     pub priority_fee_micro_lamports: u64,
+    pub(crate) print_tx: bool,
 }
 
 impl CliHandler {
@@ -109,6 +110,7 @@ impl CliHandler {
             rpc_client,
             retries: args.transaction_retries,
             priority_fee_micro_lamports: args.priority_fee_micro_lamports,
+            print_tx: args.print_tx,
         };
 
         handler.epoch = {
