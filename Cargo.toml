@@ -5,6 +5,7 @@ members = [
     "core",
     "gcp_uploader",
     "integration_tests",
+    "priority_fee_distribution_sdk",
     "program",
     "shank_cli",
     "tip-router-operator-cli",
@@ -109,6 +110,7 @@ syn = "2.0.72"
 thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
 meta-merkle-tree = { path = "./meta_merkle_tree", version = "=0.0.1" }
+jito-priority-fee-distribution-sdk = { path = "./priority_fee_distribution_sdk", version = "=0.0.1" }
 jito-tip-distribution-sdk = { path = "./tip_distribution_sdk", version = "=0.0.1" }
 jito-tip-payment-sdk = { path = "./tip_payment_sdk", version = "=0.0.1" }
 jito-tip-router-client = { path = "./clients/rust/jito_tip_router", version = "0.0.1" }

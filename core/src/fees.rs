@@ -401,9 +401,16 @@ impl FeeConfig {
 #[repr(C)]
 pub struct Fees {
     activation_epoch: PodU64,
-
-    reserved: [u8; 128],
+    /// TipRouter fee used to determine the TipRouter claimant amount for Priority Fee
+    /// Disitributions. The
+    priority_fee_distribution_fee_bps: Fee,
+    reserved: [u8; 112],
+    /// The groups and split of the Base fee. Currently the DAO base group (index one), is the only
+    /// group and takes 100% of the base fees. 2.7% (the base fee) of total MEV tips gets directed
+    /// to the DAO.
     base_fee_groups_bps: [Fee; 8],
+    /// The groups and split of the NCN fees. Currently LST vaults and JTO vaults each get 50%.
+    /// 30bps of total MEV tips gets split evenly between the two groups.
     ncn_fee_groups_bps: [Fee; 8],
 }
 
@@ -415,7 +422,8 @@ impl Fees {
     ) -> Result<Self, TipRouterError> {
         let mut fees = Self {
             activation_epoch: PodU64::from(epoch),
-            reserved: [0; 128],
+            priority_fee_distribution_fee_bps: Fee::default(),
+            reserved: [0; 112],
             base_fee_groups_bps: [Fee::default(); BaseFeeGroup::FEE_GROUP_COUNT],
             ncn_fee_groups_bps: [Fee::default(); NcnFeeGroup::FEE_GROUP_COUNT],
         };
@@ -429,6 +437,10 @@ impl Fees {
     // ------ Getters -----------------
     pub fn activation_epoch(&self) -> u64 {
         self.activation_epoch.into()
+    }
+
+    pub fn priority_fee_distribution_fee_bps(&self) -> u64 {
+        self.priority_fee_distribution_fee_bps.fee().into()
     }
 
     pub fn base_fee_bps(&self, base_fee_group: BaseFeeGroup) -> Result<u16, TipRouterError> {
@@ -491,6 +503,19 @@ impl Fees {
     // ------ Setters -----------------
     fn set_activation_epoch(&mut self, value: u64) {
         self.activation_epoch = PodU64::from(value);
+    }
+
+    pub fn set_priority_fee_distribution_fee_bps(
+        &mut self,
+        value: u16,
+    ) -> Result<(), TipRouterError> {
+        if value as u64 > MAX_FEE_BPS {
+            return Err(TipRouterError::FeeCapExceeded);
+        }
+
+        self.priority_fee_distribution_fee_bps = Fee::new(value);
+
+        Ok(())
     }
 
     pub fn set_base_fee_bps(
@@ -993,18 +1018,28 @@ mod tests {
 
         let fees = fee_config.updatable_fees(10);
         fees.set_base_fee_bps(base_fee_group, 400).unwrap();
+        fees.set_priority_fee_distribution_fee_bps(150).unwrap();
         fees.set_activation_epoch(11);
 
         assert_eq!(fee_config.fee_1.base_fee_bps(base_fee_group).unwrap(), 400);
+        assert_eq!(
+            fee_config.fee_1.priority_fee_distribution_fee_bps.fee(),
+            150
+        );
         assert_eq!(fee_config.fee_1.activation_epoch(), 11);
 
         fee_config.fee_2.set_activation_epoch(13);
 
         let fees = fee_config.updatable_fees(12);
         fees.set_base_fee_bps(base_fee_group, 500).unwrap();
+        fees.set_priority_fee_distribution_fee_bps(200).unwrap();
         fees.set_activation_epoch(13);
 
         assert_eq!(fee_config.fee_2.base_fee_bps(base_fee_group).unwrap(), 500);
+        assert_eq!(
+            fee_config.fee_2.priority_fee_distribution_fee_bps.fee(),
+            200
+        );
         assert_eq!(fee_config.fee_2.activation_epoch(), 13);
 
         assert_eq!(fee_config.updatable_fees(u64::MAX).activation_epoch(), 11);

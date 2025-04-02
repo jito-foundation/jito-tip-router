@@ -211,7 +211,7 @@ pub enum TipRouterInstruction {
         epoch: u64,
     },
 
-    /// Set the merkle root after consensus is reached
+    /// Set the [tip distributor] merkle root after consensus is reached
     #[account(0, writable, name = "epoch_state")]
     #[account(1, writable, name = "config")]
     #[account(2, name = "ncn")]

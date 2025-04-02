@@ -18,9 +18,10 @@ use solana_client::{
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 
+use crate::tip_router::send_set_merkle_root_txs;
 use crate::{meta_merkle_tree_file_name, Version};
 use crate::{
-    tip_router::{cast_vote, get_ncn_config, set_merkle_roots_batched},
+    tip_router::{cast_vote, get_ncn_config, set_merkle_root_instructions},
     Cli,
 };
 
@@ -31,6 +32,7 @@ pub async fn submit_recent_epochs_to_ncn(
     ncn_address: &Pubkey,
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
     num_monitored_epochs: u64,
     cli_args: &Cli,
     set_merkle_roots: bool,
@@ -57,6 +59,7 @@ pub async fn submit_recent_epochs_to_ncn(
             ncn_address,
             tip_router_program_id,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             cli_args.submit_as_memo,
             set_merkle_roots,
         )
@@ -80,6 +83,7 @@ pub async fn submit_to_ncn(
     ncn_address: &Pubkey,
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
     submit_as_memo: bool,
     set_merkle_roots: bool,
 ) -> Result<(), anyhow::Error> {
@@ -210,24 +214,40 @@ pub async fn submit_to_ncn(
         )
         .await?;
 
+        // Fetch the distribution accounts from the Priority Fee Distribution program
+        let priority_fee_distribution_accounts = get_tip_distribution_accounts_to_upload(
+            client,
+            merkle_root_epoch,
+            &config_pda,
+            priority_fee_distribution_program_id,
+        )
+        .await?;
+
         info!(
             "Setting merkle roots for {} tip distribution accounts",
             tip_distribution_accounts.len()
         );
 
-        // For each TipDistributionAccount returned, if it has no root uploaded, upload root with set_merkle_root
-        match set_merkle_roots_batched(
-            client,
+        let mut instructions = set_merkle_root_instructions(
             ncn_address,
-            keypair,
             tip_distribution_program_id,
             tip_router_program_id,
             tip_router_target_epoch,
             tip_distribution_accounts,
-            meta_merkle_tree,
-        )
-        .await
-        {
+            &meta_merkle_tree,
+        );
+        let pf_instructions = set_merkle_root_instructions(
+            ncn_address,
+            priority_fee_distribution_program_id,
+            tip_router_program_id,
+            tip_router_target_epoch,
+            priority_fee_distribution_accounts,
+            &meta_merkle_tree,
+        );
+        instructions.extend(pf_instructions);
+
+        // For each TipDistributionAccount returned, if it has no root uploaded, upload root with set_merkle_root
+        match send_set_merkle_root_txs(client, keypair, instructions).await {
             Ok(res) => {
                 let num_success = res.iter().filter(|r| r.is_ok()).count();
                 let num_failed = res.iter().filter(|r| r.is_err()).count();

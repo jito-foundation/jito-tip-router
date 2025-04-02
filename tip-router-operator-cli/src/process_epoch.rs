@@ -107,6 +107,7 @@ pub async fn loop_stages(
     override_target_slot: Option<u64>,
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     ncn_address: &Pubkey,
     enable_snapshots: bool,
@@ -185,6 +186,7 @@ pub async fn loop_stages(
                     epoch_to_process,
                     bank.as_ref().expect("Bank was not set"),
                     tip_distribution_program_id,
+                    priority_fee_distribution_program_id,
                     tip_payment_program_id,
                     &cli.get_save_path(),
                     save_stages,
@@ -210,6 +212,7 @@ pub async fn loop_stages(
                 //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
                 //  use epoch + 1 here
                 let ballot_epoch = epoch_to_process.checked_add(1).unwrap();
+                let fees = config.fee_config.current_fees(ballot_epoch);
                 let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 
                 // Generate the merkle tree collection
@@ -220,6 +223,7 @@ pub async fn loop_stages(
                     epoch_to_process,
                     ncn_address,
                     protocol_fee_bps,
+                    fees.priority_fee_distribution_fee_bps(),
                     &cli.get_save_path(),
                     save_stages,
                 ));
@@ -279,6 +283,7 @@ pub async fn loop_stages(
                     ncn_address,
                     tip_router_program_id,
                     tip_distribution_program_id,
+                    priority_fee_distribution_program_id,
                     cli.submit_as_memo,
                     // We let the submit task handle setting merkle roots
                     false,

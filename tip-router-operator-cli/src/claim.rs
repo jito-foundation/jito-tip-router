@@ -1,8 +1,8 @@
 use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
+use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::{
-    derive_claim_status_account_address, jito_tip_distribution::accounts::ClaimStatus,
-    TipDistributionAccount, CLAIM_STATUS_SIZE, CONFIG_SEED,
+    derive_claim_status_account_address, TipDistributionAccount, CLAIM_STATUS_SIZE, CONFIG_SEED,
 };
 use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
@@ -80,6 +80,7 @@ pub async fn emit_claim_mev_tips_metrics(
     cli: &Cli,
     epoch: u64,
     tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn: Pubkey,
 ) -> Result<(), anyhow::Error> {
@@ -99,6 +100,7 @@ pub async fn emit_claim_mev_tips_metrics(
         &rpc_client,
         &merkle_trees,
         tip_distribution_program_id,
+        priority_fee_distribution_program_id,
         tip_router_program_id,
         ncn,
         0,
@@ -121,6 +123,7 @@ pub async fn claim_mev_tips_with_emit(
     cli: &Cli,
     epoch: u64,
     tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn: Pubkey,
     max_loop_duration: Duration,
@@ -144,9 +147,9 @@ pub async fn claim_mev_tips_with_emit(
         }
         for node in tree.tree_nodes.iter_mut() {
             let (claim_status_pubkey, claim_status_bump) = derive_claim_status_account_address(
-                &tip_distribution_program_id,
+                &tree.distribution_program,
                 &node.claimant,
-                &tree.tip_distribution_account,
+                &tree.distribution_account,
             );
             node.claim_status_pubkey = claim_status_pubkey;
             node.claim_status_bump = claim_status_bump;
@@ -160,6 +163,7 @@ pub async fn claim_mev_tips_with_emit(
         rpc_url.clone(),
         rpc_url,
         tip_distribution_program_id,
+        priority_fee_distribution_program_id,
         tip_router_program_id,
         ncn,
         &keypair,
@@ -208,6 +212,7 @@ pub async fn claim_mev_tips(
     rpc_url: String,
     rpc_sender_url: String,
     tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn: Pubkey,
     keypair: &Arc<Keypair>,
@@ -234,6 +239,7 @@ pub async fn claim_mev_tips(
             &rpc_client,
             merkle_trees,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             tip_router_program_id,
             ncn,
             micro_lamports,
@@ -289,6 +295,7 @@ pub async fn claim_mev_tips(
         &rpc_client,
         merkle_trees,
         tip_distribution_program_id,
+        priority_fee_distribution_program_id,
         tip_router_program_id,
         ncn,
         micro_lamports,
@@ -349,6 +356,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     rpc_client: &RpcClient,
     merkle_trees: &GeneratedMerkleTreeCollection,
     tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn: Pubkey,
     micro_lamports: u64,
@@ -382,7 +390,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     let tda_pubkeys = merkle_trees
         .generated_merkle_trees
         .iter()
-        .map(|tree| tree.tip_distribution_account)
+        .map(|tree| tree.distribution_account)
         .collect_vec();
 
     let tdas: HashMap<Pubkey, Account> = get_batched_accounts(rpc_client, &tda_pubkeys)
@@ -431,6 +439,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 
     let transactions = build_mev_claim_transactions(
         tip_distribution_program_id,
+        priority_fee_distribution_program_id,
         tip_router_program_id,
         merkle_trees,
         tdas,
@@ -456,11 +465,12 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 #[allow(clippy::too_many_arguments)]
 fn build_mev_claim_transactions(
     tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     merkle_trees: &GeneratedMerkleTreeCollection,
     tdas: HashMap<Pubkey, Account>,
     claimants: HashMap<Pubkey, Account>,
-    claim_status: HashMap<Pubkey, Account>,
+    claim_statuses: HashMap<Pubkey, Account>,
     micro_lamports: u64,
     payer_pubkey: Pubkey,
     ncn_address: Pubkey,
@@ -471,28 +481,11 @@ fn build_mev_claim_transactions(
     let tip_router_account_payer =
         AccountPayer::find_program_address(&tip_router_program_id, &ncn_address).0;
 
-    let tip_distribution_accounts: HashMap<Pubkey, TipDistributionAccount> = tdas
-        .iter()
-        .filter_map(|(pubkey, account)| {
-            Some((
-                *pubkey,
-                TipDistributionAccount::try_deserialize(&mut account.data.as_slice()).ok()?,
-            ))
-        })
-        .collect();
-
-    let claim_statuses: HashMap<Pubkey, ClaimStatus> = claim_status
-        .iter()
-        .filter_map(|(pubkey, account)| {
-            Some((
-                *pubkey,
-                ClaimStatus::try_deserialize(&mut account.data.as_slice()).ok()?,
-            ))
-        })
-        .collect();
-
     let tip_distribution_config =
         Pubkey::find_program_address(&[CONFIG_SEED], &tip_distribution_program_id).0;
+
+    let priority_fee_distribution_config =
+        Pubkey::find_program_address(&[CONFIG_SEED], &priority_fee_distribution_program_id).0;
 
     let mut zero_amount_claimants = 0;
 
@@ -504,15 +497,41 @@ fn build_mev_claim_transactions(
 
         // if unwrap panics, there's a bug in the merkle tree code because the merkle tree code relies on the state
         // of the chain to claim.
-        let tip_distribution_account = tip_distribution_accounts
-            .get(&tree.tip_distribution_account)
-            .unwrap();
-
-        // can continue here, as there might be tip distribution accounts this account doesn't upload for
-        if tip_distribution_account.merkle_root.is_none()
-            || tip_distribution_account.merkle_root_upload_authority != tip_router_config_address
+        let distribution_account = tdas.get(&tree.distribution_account).unwrap();
+        if tree.distribution_program.eq(&tip_distribution_program_id) {
+            let tda =
+                TipDistributionAccount::try_deserialize(&mut distribution_account.data.as_slice());
+            match tda {
+                Ok(tda) => {
+                    // can continue here, as there might be tip distribution accounts this account doesn't upload for
+                    if tda.merkle_root.is_none()
+                        || tda.merkle_root_upload_authority != tip_router_config_address
+                    {
+                        continue;
+                    }
+                }
+                Err(_) => continue,
+            }
+        } else if tree
+            .distribution_program
+            .eq(&priority_fee_distribution_program_id)
         {
-            continue;
+            let pfda = PriorityFeeDistributionAccount::try_deserialize(
+                &mut distribution_account.data.as_slice(),
+            );
+            match pfda {
+                Ok(pfda) => {
+                    // can continue here, as there might be tip distribution accounts this account doesn't upload for
+                    if pfda.merkle_root.is_none()
+                        || pfda.merkle_root_upload_authority != tip_router_config_address
+                    {
+                        continue;
+                    }
+                }
+                Err(_) => continue,
+            }
+        } else {
+            panic!("Unknown distribution program for tree");
         }
 
         for node in &tree.tree_nodes {
@@ -529,20 +548,31 @@ fn build_mev_claim_transactions(
                 continue;
             }
 
-            let claim_with_payer_ix = ClaimWithPayerBuilder::new()
+            let mut claim_with_payer_builder = ClaimWithPayerBuilder::new();
+            claim_with_payer_builder
                 .account_payer(tip_router_account_payer)
                 .ncn(ncn_address)
-                .config(tip_router_config_address)
-                .tip_distribution_program(tip_distribution_program_id)
                 .tip_distribution_config(tip_distribution_config)
-                .tip_distribution_account(tree.tip_distribution_account)
+                .tip_distribution_account(tree.distribution_account)
                 .claim_status(node.claim_status_pubkey)
                 .claimant(node.claimant)
                 .system_program(system_program::id())
                 .proof(node.proof.clone().unwrap())
                 .amount(node.amount)
                 .bump(node.claim_status_bump)
-                .instruction();
+                .tip_distribution_program(tree.distribution_program);
+
+            if tree.distribution_program.eq(&tip_distribution_program_id) {
+                claim_with_payer_builder.config(tip_router_config_address);
+            } else if tree
+                .distribution_program
+                .eq(&priority_fee_distribution_program_id)
+            {
+                claim_with_payer_builder.config(priority_fee_distribution_config);
+            } else {
+                panic!("Unknown distribution program for tree");
+            }
+            let claim_with_payer_ix = claim_with_payer_builder.instruction();
 
             instructions.push(claim_with_payer_ix);
         }
@@ -565,11 +595,7 @@ fn build_mev_claim_transactions(
     info!("zero amount claimants: {}", zero_amount_claimants);
     datapoint_info!(
         "tip_router_cli.build_mev_claim_transactions",
-        (
-            "tip_distribution_accounts",
-            tip_distribution_accounts.len(),
-            i64
-        ),
+        ("distribution_accounts", tdas.len(), i64),
         ("claim_statuses", claim_statuses.len(), i64),
         ("claim_transactions", transactions.len(), i64),
         ("epoch", epoch, i64)

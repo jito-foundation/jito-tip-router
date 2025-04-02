@@ -1,6 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use anchor_lang::prelude::AnchorSerialize;
+use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID as PRIORITY_FEE_DISTRIBUTION_ID;
 use jito_tip_distribution_sdk::jito_tip_distribution::ID as TIP_DISTRIBUTION_ID;
 use jito_tip_payment_sdk::jito_tip_payment::ID as TIP_PAYMENT_ID;
 use jito_tip_router_program::ID as TIP_ROUTER_ID;
@@ -24,6 +25,7 @@ use tip_router_operator_cli::TipAccountConfig;
 struct TestContext {
     pub context: ProgramTestContext,
     pub tip_distribution_program_id: Pubkey,
+    pub priority_fee_distribution_program_id: Pubkey,
     pub tip_payment_program_id: Pubkey,
     pub payer: Keypair,
     pub stake_accounts: Vec<Keypair>,
@@ -137,6 +139,7 @@ impl TestContext {
         Ok(Self {
             context,
             tip_distribution_program_id: TIP_DISTRIBUTION_ID,
+            priority_fee_distribution_program_id: PRIORITY_FEE_DISTRIBUTION_ID,
             tip_payment_program_id: TIP_PAYMENT_ID,
             payer,
             stake_accounts, // Store all stake accounts instead of just one
@@ -161,13 +164,14 @@ impl TestContext {
                 validator_fee_bps,
             }),
             delegations: vec![Delegation {
-                stake_account_pubkey: self.stake_accounts[0].pubkey(),
+                stake_account_pubkey: self.stake_accounts[1].pubkey(),
                 staker_pubkey: self.payer.pubkey(),
                 withdrawer_pubkey: self.payer.pubkey(),
                 lamports_delegated: 1_000_000,
             }],
             total_delegated: 1_000_000,
             commission: 10,
+            maybe_priority_fee_distribution_meta: None,
         };
 
         StakeMetaCollection {
@@ -176,6 +180,7 @@ impl TestContext {
             bank_hash: "test_bank_hash".to_string(),
             slot: 0,
             tip_distribution_program_id: self.tip_distribution_program_id,
+            priority_fee_distribution_program_id: self.priority_fee_distribution_program_id,
         }
     }
 }
@@ -233,6 +238,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         &ncn_address,
         epoch,
         PROTOCOL_FEE_BPS,
+        0,
         &jito_tip_router_program::id(),
     )?;
 
@@ -240,7 +246,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
 
     assert_eq!(
         generated_tree.merkle_root.to_string(),
-        "Cb1Es45bg4AcYhztFrkVijKZM1aE864rAEsXH9oajrXX"
+        "DMKiigJDovqCc3oya8TiZFQ6zSxsm6Ms2HNHMgAwMcop"
     );
 
     let nodes = &generated_tree.tree_nodes;
@@ -264,9 +270,14 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
     // Verify validator fee node
     let validator_fee_node = nodes
         .iter()
-        .find(|node| node.claimant == stake_meta_collection.stake_metas[0].validator_node_pubkey)
+        .find(|node| node.claimant == stake_meta_collection.stake_metas[0].validator_vote_account)
         .expect("Validator fee node should exist");
     assert_eq!(validator_fee_node.amount, validator_fee_amount);
+
+    let has_no_validator_identity_nodes = nodes
+        .iter()
+        .all(|node| node.claimant != stake_meta_collection.stake_metas[0].validator_node_pubkey);
+    assert!(has_no_validator_identity_nodes);
 
     // Verify delegator nodes
     for delegation in &stake_meta_collection.stake_metas[0].delegations {
