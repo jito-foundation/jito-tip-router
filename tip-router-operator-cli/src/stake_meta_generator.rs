@@ -284,7 +284,6 @@ pub fn generate_stake_meta_collection(
                 None
             };
 
-            // TODO: DRY this up
             let maybe_priority_fee_distribution_meta = if let Some(tda) = maybe_pf_tda {
                 let actual_len = tda.account_data.data().len();
                 let expected_len =
