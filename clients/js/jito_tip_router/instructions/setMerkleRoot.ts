@@ -90,6 +90,7 @@ export type SetMerkleRootInstructionData = {
   maxTotalClaim: bigint;
   maxNumNodes: bigint;
   epoch: bigint;
+  totalFees: bigint;
 };
 
 export type SetMerkleRootInstructionDataArgs = {
@@ -98,6 +99,7 @@ export type SetMerkleRootInstructionDataArgs = {
   maxTotalClaim: number | bigint;
   maxNumNodes: number | bigint;
   epoch: number | bigint;
+  totalFees: number | bigint;
 };
 
 export function getSetMerkleRootInstructionDataEncoder(): Encoder<SetMerkleRootInstructionDataArgs> {
@@ -109,6 +111,7 @@ export function getSetMerkleRootInstructionDataEncoder(): Encoder<SetMerkleRootI
       ['maxTotalClaim', getU64Encoder()],
       ['maxNumNodes', getU64Encoder()],
       ['epoch', getU64Encoder()],
+      ['totalFees', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: SET_MERKLE_ROOT_DISCRIMINATOR })
   );
@@ -122,6 +125,7 @@ export function getSetMerkleRootInstructionDataDecoder(): Decoder<SetMerkleRootI
     ['maxTotalClaim', getU64Decoder()],
     ['maxNumNodes', getU64Decoder()],
     ['epoch', getU64Decoder()],
+    ['totalFees', getU64Decoder()],
   ]);
 }
 
@@ -158,6 +162,7 @@ export type SetMerkleRootInput<
   maxTotalClaim: SetMerkleRootInstructionDataArgs['maxTotalClaim'];
   maxNumNodes: SetMerkleRootInstructionDataArgs['maxNumNodes'];
   epoch: SetMerkleRootInstructionDataArgs['epoch'];
+  totalFees: SetMerkleRootInstructionDataArgs['totalFees'];
 };
 
 export function getSetMerkleRootInstruction<

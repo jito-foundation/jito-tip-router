@@ -26,6 +26,7 @@ pub fn process_set_merkle_root(
     max_total_claim: u64,
     max_num_nodes: u64,
     epoch: u64,
+    total_fees: u64,
 ) -> ProgramResult {
     let [epoch_state, ncn_config, ncn, ballot_box, vote_account, distribution_account, tip_distribution_config, tip_distribution_program] =
         accounts
@@ -86,6 +87,7 @@ pub fn process_set_merkle_root(
         &merkle_root,
         max_total_claim,
         max_num_nodes,
+        total_fees,
     )?;
 
     let (_, bump, mut ncn_config_seeds) = NcnConfig::find_program_address(program_id, ncn.key);

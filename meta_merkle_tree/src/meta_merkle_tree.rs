@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_verify_new_merkle_tree() {
-        let tree_nodes = vec![TreeNode::new(&Pubkey::default(), &[0; 32], 100, 10)];
+        let tree_nodes = vec![TreeNode::new(&Pubkey::default(), &[0; 32], 100, 10, 100)];
         let merkle_tree = MetaMerkleTree::new(tree_nodes).unwrap();
         assert!(merkle_tree.verify_proof().is_ok(), "verify failed");
     }
@@ -222,16 +222,19 @@ mod tests {
                 &[0; 32],
                 100 * u64::pow(10, 9),
                 100 * u64::pow(10, 9),
+                100 * u64::pow(10, 9),
             ),
             TreeNode::new(
                 &new_test_key(),
                 &[0; 32],
                 100 * u64::pow(10, 9),
                 100 * u64::pow(10, 9),
+                100 * u64::pow(10, 9),
             ),
             TreeNode::new(
                 &new_test_key(),
                 &[0; 32],
+                100 * u64::pow(10, 9),
                 100 * u64::pow(10, 9),
                 100 * u64::pow(10, 9),
             ),
@@ -256,9 +259,9 @@ mod tests {
         let pubkey3 = Pubkey::new_unique();
 
         let mut tree_nodes = vec![
-            TreeNode::new(&pubkey1, &[0; 32], 10, 20),
-            TreeNode::new(&pubkey2, &[0; 32], 1, 2),
-            TreeNode::new(&pubkey3, &[0; 32], 3, 4),
+            TreeNode::new(&pubkey1, &[0; 32], 10, 20, 10),
+            TreeNode::new(&pubkey2, &[0; 32], 1, 2, 1),
+            TreeNode::new(&pubkey3, &[0; 32], 3, 4, 3),
         ];
 
         // Sort by hash

@@ -298,6 +298,7 @@ mod set_merkle_root {
                 &node.validator_merkle_root,
                 node.max_total_claim,
                 node.max_num_nodes,
+                node.total_fees,
             )
             .unwrap();
 
@@ -312,6 +313,7 @@ mod set_merkle_root {
                 node.max_total_claim,
                 node.max_num_nodes,
                 epoch,
+                node.total_fees,
             )
             .await;
         assert_tip_router_error(res, TipRouterError::InvalidMerkleProof);
@@ -327,6 +329,7 @@ mod set_merkle_root {
                 node.max_total_claim,
                 node.max_num_nodes,
                 epoch,
+                node.total_fees,
             )
             .await?;
 
@@ -456,6 +459,7 @@ mod set_merkle_root {
                 &node.validator_merkle_root,
                 node.max_total_claim,
                 node.max_num_nodes,
+                node.total_fees,
             )
             .unwrap();
 
@@ -476,6 +480,7 @@ mod set_merkle_root {
                 node.max_total_claim,
                 node.max_num_nodes,
                 epoch,
+                node.total_fees,
             )
             .await?;
 
@@ -557,6 +562,7 @@ mod set_merkle_root {
                 node.max_total_claim,
                 node.max_num_nodes,
                 epoch,
+                node.total_fees,
             )
             .await;
 

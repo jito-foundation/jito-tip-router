@@ -1386,6 +1386,7 @@ impl TipRouterClient {
         max_total_claim: u64,
         max_num_nodes: u64,
         epoch: u64,
+        total_fees: u64,
     ) -> Result<(), TestError> {
         let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
         let ballot_box =
@@ -1432,6 +1433,7 @@ impl TipRouterClient {
             max_total_claim,
             max_num_nodes,
             epoch,
+            total_fees,
         )
         .await
     }
@@ -1450,6 +1452,7 @@ impl TipRouterClient {
         max_total_claim: u64,
         max_num_nodes: u64,
         epoch: u64,
+        total_fees: u64,
     ) -> Result<(), TestError> {
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
@@ -1468,6 +1471,7 @@ impl TipRouterClient {
             .max_total_claim(max_total_claim)
             .max_num_nodes(max_num_nodes)
             .epoch(epoch)
+            .total_fees(total_fees)
             .instruction();
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;

@@ -226,6 +226,7 @@ pub enum TipRouterInstruction {
         max_total_claim: u64,
         max_num_nodes: u64,
         epoch: u64,
+        total_fees: u64,
     },
 
     // ---------------------------------------------------- //

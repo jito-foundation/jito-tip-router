@@ -110,6 +110,7 @@ pub struct SetMerkleRootInstructionArgs {
     pub max_total_claim: u64,
     pub max_num_nodes: u64,
     pub epoch: u64,
+    pub total_fees: u64,
 }
 
 /// Instruction builder for `SetMerkleRoot`.
@@ -139,6 +140,7 @@ pub struct SetMerkleRootBuilder {
     max_total_claim: Option<u64>,
     max_num_nodes: Option<u64>,
     epoch: Option<u64>,
+    total_fees: Option<u64>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
@@ -220,6 +222,11 @@ impl SetMerkleRootBuilder {
         self.epoch = Some(epoch);
         self
     }
+    #[inline(always)]
+    pub fn total_fees(&mut self, total_fees: u64) -> &mut Self {
+        self.total_fees = Some(total_fees);
+        self
+    }
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -268,6 +275,7 @@ impl SetMerkleRootBuilder {
                 .clone()
                 .expect("max_num_nodes is not set"),
             epoch: self.epoch.clone().expect("epoch is not set"),
+            total_fees: self.total_fees.clone().expect("total_fees is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -474,6 +482,7 @@ impl<'a, 'b> SetMerkleRootCpiBuilder<'a, 'b> {
             max_total_claim: None,
             max_num_nodes: None,
             epoch: None,
+            total_fees: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -564,6 +573,11 @@ impl<'a, 'b> SetMerkleRootCpiBuilder<'a, 'b> {
         self.instruction.epoch = Some(epoch);
         self
     }
+    #[inline(always)]
+    pub fn total_fees(&mut self, total_fees: u64) -> &mut Self {
+        self.instruction.total_fees = Some(total_fees);
+        self
+    }
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -623,6 +637,11 @@ impl<'a, 'b> SetMerkleRootCpiBuilder<'a, 'b> {
                 .clone()
                 .expect("max_num_nodes is not set"),
             epoch: self.instruction.epoch.clone().expect("epoch is not set"),
+            total_fees: self
+                .instruction
+                .total_fees
+                .clone()
+                .expect("total_fees is not set"),
         };
         let instruction = SetMerkleRootCpi {
             __program: self.instruction.__program,
@@ -682,6 +701,7 @@ struct SetMerkleRootCpiBuilderInstruction<'a, 'b> {
     max_total_claim: Option<u64>,
     max_num_nodes: Option<u64>,
     epoch: Option<u64>,
+    total_fees: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,

@@ -896,6 +896,10 @@
         {
           "name": "epoch",
           "type": "u64"
+        },
+        {
+          "name": "totalFees",
+          "type": "u64"
         }
       ],
       "discriminant": {
