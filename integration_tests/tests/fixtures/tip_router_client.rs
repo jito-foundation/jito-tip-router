@@ -2597,3 +2597,16 @@ pub fn assert_tip_router_error<T>(
         TransactionError::InstructionError(0, InstructionError::Custom(tip_router_error as u32))
     );
 }
+
+#[inline(always)]
+#[track_caller]
+pub fn assert_instruction_error<T>(
+    test_error: Result<T, TestError>,
+    instruction_error: InstructionError,
+) {
+    assert!(test_error.is_err());
+    assert_eq!(
+        test_error.err().unwrap().to_transaction_error().unwrap(),
+        TransactionError::InstructionError(0, instruction_error)
+    );
+}
