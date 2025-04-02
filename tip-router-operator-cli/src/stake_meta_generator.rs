@@ -131,7 +131,7 @@ pub fn generate_stake_meta_collection(
     tip_distribution_program_id: &Pubkey,
     priority_fee_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
-    _leader_priority_fees_map: HashMap<String, u64>,
+    leader_priority_fees_map: HashMap<String, u64>,
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     assert!(bank.is_frozen());
 
@@ -263,8 +263,13 @@ pub fn generate_stake_meta_collection(
                                         priority_fee_distribution_account,
                                         account_data,
                                         priority_fee_distribution_pubkey,
-                                        // TODO: Pull from helper res
-                                        total_prioity_fees: 0,
+                                        total_prioity_fees: *leader_priority_fees_map
+                                            .get(&vote_account.node_pubkey().to_string())
+                                            // REVIEW: should we panic or error here? Is there a 
+                                            //  case where the valdiator is in epoch_vote_accounts, 
+                                            //  the PriorityFeeDistributionAccount exists, but 
+                                            //  they had no leader slots? If yes, then cannot error.
+                                            .unwrap_or(&0),
                                     })
                                 },
                             )
