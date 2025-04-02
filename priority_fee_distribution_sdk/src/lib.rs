@@ -12,7 +12,7 @@ pub const PF_DISTRIBUTION_SEED: &[u8] = b"PF_DISTRIBUTION_ACCOUNT";
 pub const MERKLE_ROOT_UPLOAD_CONFIG_SEED: &[u8] = b"ROOT_UPLOAD_CONFIG";
 
 pub const HEADER_SIZE: usize = 8;
-pub const TIP_DISTRIBUTION_SIZE: usize =
+pub const PRIORITY_FEE_DISTRIBUTION_SIZE: usize =
     HEADER_SIZE + std::mem::size_of::<PriorityFeeDistributionAccount>();
 pub const CLAIM_STATUS_SIZE: usize =
     HEADER_SIZE + std::mem::size_of::<jito_priority_fee_distribution::accounts::ClaimStatus>();

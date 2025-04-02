@@ -389,6 +389,7 @@ fn group_delegations_by_voter_pubkey(
 #[cfg(test)]
 mod tests {
     use anchor_lang::AccountSerialize;
+    use jito_priority_fee_distribution_sdk::PRIORITY_FEE_DISTRIBUTION_SIZE;
     use jito_tip_distribution_sdk::TIP_DISTRIBUTION_SIZE;
     use jito_tip_payment_sdk::{
         jito_tip_payment::{accounts::TipPaymentAccount, types::InitBumps},
@@ -719,15 +720,15 @@ mod tests {
         bank.store_account(&tip_distribution_account_1.0, &data_1);
         bank.store_account(&tip_distribution_account_2.0, &data_2);
 
-        // TODO: Add in information for the PriorityFeeDistributions
-        let pf_tip_distribution_account_0 = derive_tip_distribution_account_address(
+        // Add in information for the PriorityFeeDistributions
+        let pf_tip_distribution_account_0 = derive_priority_fee_distribution_account_address(
             &priorty_fee_distribution_program_id,
             &validator_keypairs_0.vote_keypair.pubkey(),
             bank.epoch(),
         );
         let expires_at = bank.epoch() + 3;
 
-        let pf_tda_0 = TipDistributionAccount {
+        let pf_tda_0 = PriorityFeeDistributionAccount {
             validator_vote_account: validator_keypairs_0.vote_keypair.pubkey(),
             merkle_root_upload_authority,
             merkle_root: None,
@@ -737,15 +738,21 @@ mod tests {
             bump: pf_tip_distribution_account_0.1,
         };
 
-        let pf_tip_distro_0_tips = 1_000_000 * 10;
+        let validator_1_total_priority_fees: u64 = 11_000_000;
+        let pf_tip_distro_0_tips: u64 =
+            validator_1_total_priority_fees * u64::from(pf_tda_0.validator_commission_bps) / 10_000;
 
         let pf_tda_0_fields = (
             pf_tip_distribution_account_0.0,
             pf_tda_0.validator_commission_bps,
         );
-        let pf_data_0 = tda_to_account_shared_data(
+        let pf_data_0 = pfda_to_account_shared_data(
             &priorty_fee_distribution_program_id,
-            pf_tip_distro_0_tips,
+            pf_tip_distro_0_tips
+                .checked_add(
+                    bank.get_minimum_balance_for_rent_exemption(PRIORITY_FEE_DISTRIBUTION_SIZE),
+                )
+                .unwrap(),
             pf_tda_0,
         );
 
@@ -795,11 +802,7 @@ mod tests {
                 maybe_priority_fee_distribution_meta: Some(PriorityFeeDistributionMeta {
                     merkle_root_upload_authority,
                     priority_fee_distribution_pubkey: pf_tda_0_fields.0,
-                    total_tips: pf_tip_distro_0_tips
-                        .checked_sub(
-                            bank.get_minimum_balance_for_rent_exemption(TIP_DISTRIBUTION_SIZE),
-                        )
-                        .unwrap(),
+                    total_tips: pf_tip_distro_0_tips,
                     validator_fee_bps: pf_tda_0_fields.1,
                 }),
                 commission: 0,
@@ -885,6 +888,10 @@ mod tests {
             assert_eq!(
                 expected_stake_meta.maybe_tip_distribution_meta,
                 actual_stake_meta.maybe_tip_distribution_meta
+            );
+            assert_eq!(
+                expected_stake_meta.maybe_priority_fee_distribution_meta,
+                actual_stake_meta.maybe_priority_fee_distribution_meta
             );
             assert_eq!(
                 expected_stake_meta.total_delegated,
@@ -975,6 +982,25 @@ mod tests {
         let mut data: [u8; TIP_DISTRIBUTION_SIZE] = [0u8; TIP_DISTRIBUTION_SIZE];
         let mut cursor = std::io::Cursor::new(&mut data[..]);
         tda.try_serialize(&mut cursor).unwrap();
+
+        account_data.set_data(data.to_vec());
+        account_data
+    }
+
+    fn pfda_to_account_shared_data(
+        priority_fee_distribution_program_id: &Pubkey,
+        lamports: u64,
+        pfda: PriorityFeeDistributionAccount,
+    ) -> AccountSharedData {
+        let mut account_data = AccountSharedData::new(
+            lamports,
+            PRIORITY_FEE_DISTRIBUTION_SIZE,
+            priority_fee_distribution_program_id,
+        );
+
+        let mut data: [u8; PRIORITY_FEE_DISTRIBUTION_SIZE] = [0u8; PRIORITY_FEE_DISTRIBUTION_SIZE];
+        let mut cursor = std::io::Cursor::new(&mut data[..]);
+        pfda.try_serialize(&mut cursor).unwrap();
 
         account_data.set_data(data.to_vec());
         account_data
