@@ -19,8 +19,8 @@ use crate::{
     backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
     create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
     load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
-    stake_meta_file_name, submit::submit_to_ncn, tip_router::get_ncn_config, Cli, OperatorState,
-    Version,
+    priority_fee_utils::get_priority_fees_for_epoch, stake_meta_file_name, submit::submit_to_ncn,
+    tip_router::get_ncn_config, Cli, OperatorState, Version,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -181,6 +181,9 @@ pub async fn loop_stages(
                         }
                     }
                 }
+                let leader_priority_fees_map =
+                    get_priority_fees_for_epoch(&rpc_client, epoch_to_process).await?;
+
                 stake_meta_collection = Some(create_stake_meta(
                     operator_address.clone(),
                     epoch_to_process,
@@ -190,6 +193,7 @@ pub async fn loop_stages(
                     tip_payment_program_id,
                     &cli.get_save_path(),
                     save_stages,
+                    leader_priority_fees_map,
                 ));
                 // we should be able to safely drop the bank in this loop
                 bank = None;

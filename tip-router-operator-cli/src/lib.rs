@@ -119,6 +119,7 @@ pub fn create_stake_meta(
     tip_payment_program_id: &Pubkey,
     save_path: &Path,
     save: bool,
+    leader_priority_fees_map: HashMap<String, u64>,
 ) -> StakeMetaCollection {
     let start = Instant::now();
 
@@ -128,8 +129,7 @@ pub fn create_stake_meta(
         tip_distribution_program_id,
         priority_fee_distribution_program_id,
         tip_payment_program_id,
-        // TODO: Fill this out correctly!
-        HashMap::new(),
+        leader_priority_fees_map,
     ) {
         Ok(stake_meta) => stake_meta,
         Err(e) => {

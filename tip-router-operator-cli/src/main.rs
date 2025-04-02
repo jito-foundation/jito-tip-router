@@ -16,6 +16,7 @@ use ::{
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_snapshot_at_slot,
         load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
+        priority_fee_utils::get_priority_fees_for_epoch,
         process_epoch, stake_meta_file_name,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         tip_router::get_ncn_config,
@@ -394,6 +395,8 @@ async fn main() -> Result<()> {
                 ledger_path.as_path(),
             )?;
 
+            let leader_priority_fees_map = get_priority_fees_for_epoch(&rpc_client, epoch).await?;
+
             create_stake_meta(
                 cli.operator_address,
                 epoch,
@@ -403,6 +406,7 @@ async fn main() -> Result<()> {
                 &tip_payment_program_id,
                 &save_path,
                 save,
+                leader_priority_fees_map,
             );
         }
         Commands::CreateMerkleTreeCollection {
