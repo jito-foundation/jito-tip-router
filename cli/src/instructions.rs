@@ -11,7 +11,7 @@ use crate::{
         get_vault_update_state_tracker, get_weight_table,
     },
     handler::CliHandler,
-    log::boring_progress_bar,
+    log::{boring_progress_bar, print_base58_tx},
 };
 use anyhow::{anyhow, Ok, Result};
 use jito_restaking_client::instructions::{
@@ -147,26 +147,31 @@ pub async fn admin_create_config(
         &handler.tip_router_program_id, program, &initialize_config_ix
     );
 
-    send_and_log_transaction(
-        handler,
-        &[initialize_config_ix],
-        &[],
-        "Created Tip Router Config",
-        &[
-            format!("NCN: {:?}", ncn),
-            format!("Ncn Admin: {:?}", keypair.pubkey()),
-            format!("Fee Wallet: {:?}", fee_wallet),
-            format!("Tie Breaker Admin: {:?}", tie_breaker_admin),
-            format!(
-                "Valid Slots After Consensus: {:?}",
-                valid_slots_after_consensus
-            ),
-            format!("DAO Fee BPS: {:?}", dao_fee_bps),
-            format!("Block Engine Fee BPS: {:?}", block_engine_fee),
-            format!("Default NCN Fee BPS: {:?}", default_ncn_fee_bps),
-        ],
-    )
-    .await?;
+    let ixs = &[initialize_config_ix];
+    if handler.print_tx {
+        print_base58_tx(ixs);
+    } else {
+        send_and_log_transaction(
+            handler,
+            ixs,
+            &[],
+            "Created Tip Router Config",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("Ncn Admin: {:?}", keypair.pubkey()),
+                format!("Fee Wallet: {:?}", fee_wallet),
+                format!("Tie Breaker Admin: {:?}", tie_breaker_admin),
+                format!(
+                    "Valid Slots After Consensus: {:?}",
+                    valid_slots_after_consensus
+                ),
+                format!("DAO Fee BPS: {:?}", dao_fee_bps),
+                format!("Block Engine Fee BPS: {:?}", block_engine_fee),
+                format!("Default NCN Fee BPS: {:?}", default_ncn_fee_bps),
+            ],
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -212,24 +217,29 @@ pub async fn admin_register_st_mint(
 
     let register_st_mint_ix = register_st_mint_builder.instruction();
 
-    send_and_log_transaction(
-        handler,
-        &[register_st_mint_ix],
-        &[],
-        "Registered ST Mint",
-        &[
-            format!("NCN: {:?}", ncn),
-            format!("ST Mint: {:?}", vault_account.supported_mint),
-            format!("NCN Fee Group: {:?}", ncn_fee_group.group),
-            format!("Reward Multiplier BPS: {:?}", reward_multiplier_bps),
-            format!(
-                "Switchboard Feed: {:?}",
-                switchboard_feed.unwrap_or_default()
-            ),
-            format!("No Feed Weight: {:?}", no_feed_weight.unwrap_or_default()),
-        ],
-    )
-    .await?;
+    let ixs = &[register_st_mint_ix];
+    if handler.print_tx {
+        print_base58_tx(ixs);
+    } else {
+        send_and_log_transaction(
+            handler,
+            ixs,
+            &[],
+            "Registered ST Mint",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("ST Mint: {:?}", vault_account.supported_mint),
+                format!("NCN Fee Group: {:?}", ncn_fee_group.group),
+                format!("Reward Multiplier BPS: {:?}", reward_multiplier_bps),
+                format!(
+                    "Switchboard Feed: {:?}",
+                    switchboard_feed.unwrap_or_default()
+                ),
+                format!("No Feed Weight: {:?}", no_feed_weight.unwrap_or_default()),
+            ],
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -271,19 +281,24 @@ pub async fn admin_set_weight_with_st_mint(
         .epoch(epoch)
         .instruction();
 
-    send_and_log_transaction(
-        handler,
-        &[admin_set_weight_ix],
-        &[],
-        "Set Weight",
-        &[
-            format!("NCN: {:?}", ncn),
-            format!("Epoch: {:?}", epoch),
-            format!("ST Mint: {:?}", st_mint),
-            format!("Weight: {:?}", weight),
-        ],
-    )
-    .await?;
+    let ixs = &[admin_set_weight_ix];
+    if handler.print_tx {
+        print_base58_tx(ixs);
+    } else {
+        send_and_log_transaction(
+            handler,
+            ixs,
+            &[],
+            "Set Weight",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("Epoch: {:?}", epoch),
+                format!("ST Mint: {:?}", st_mint),
+                format!("Weight: {:?}", weight),
+            ],
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -316,18 +331,23 @@ pub async fn admin_set_tie_breaker(
         .epoch(epoch)
         .instruction();
 
-    send_and_log_transaction(
-        handler,
-        &[set_tie_breaker_ix],
-        &[],
-        "Set Tie Breaker",
-        &[
-            format!("NCN: {:?}", ncn),
-            format!("Meta Merkle Root: {:?}", meta_merkle_root),
-            format!("Epoch: {:?}", epoch),
-        ],
-    )
-    .await?;
+    let ixs = &[set_tie_breaker_ix];
+    if handler.print_tx {
+        print_base58_tx(ixs);
+    } else {
+        send_and_log_transaction(
+            handler,
+            ixs,
+            &[],
+            "Set Tie Breaker",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("Meta Merkle Root: {:?}", meta_merkle_root),
+                format!("Epoch: {:?}", epoch),
+            ],
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -360,18 +380,23 @@ pub async fn admin_set_new_admin(
             .new_admin(*new_admin)
             .role(*role);
 
-        send_and_log_transaction(
-            handler,
-            &[ix.instruction()],
-            &[],
-            "Admin Set New Admin",
-            &[
-                format!("NCN: {:?}", ncn),
-                format!("New Admin: {:?}", new_admin),
-                format!("Role: {:?}", role),
-            ],
-        )
-        .await?;
+        let ixs = &[ix.instruction()];
+        if handler.print_tx {
+            print_base58_tx(ixs);
+        } else {
+            send_and_log_transaction(
+                handler,
+                ixs,
+                &[],
+                "Admin Set New Admin",
+                &[
+                    format!("NCN: {:?}", ncn),
+                    format!("New Admin: {:?}", new_admin),
+                    format!("Role: {:?}", role),
+                ],
+            )
+            .await?;
+        }
     }
 
     Ok(())
@@ -408,25 +433,30 @@ pub async fn admin_set_parameters(
         ix.starting_valid_epoch(epoch);
     }
 
-    send_and_log_transaction(
-        handler,
-        &[ix.instruction()],
-        &[],
-        "Set Parameters",
-        &[
-            format!("NCN: {:?}", ncn),
-            format!("Epochs Before Stall: {:?}", epochs_before_stall),
-            format!(
-                "Epochs After Consensus Before Close: {:?}",
-                epochs_after_consensus_before_close
-            ),
-            format!(
-                "Valid Slots After Consensus: {:?}",
-                valid_slots_after_consensus
-            ),
-        ],
-    )
-    .await?;
+    let ixs = &[ix.instruction()];
+    if handler.print_tx {
+        print_base58_tx(ixs);
+    } else {
+        send_and_log_transaction(
+            handler,
+            ixs,
+            &[],
+            "Set Parameters",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("Epochs Before Stall: {:?}", epochs_before_stall),
+                format!(
+                    "Epochs After Consensus Before Close: {:?}",
+                    epochs_after_consensus_before_close
+                ),
+                format!(
+                    "Valid Slots After Consensus: {:?}",
+                    valid_slots_after_consensus
+                ),
+            ],
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -440,17 +470,22 @@ pub async fn admin_fund_account_payer(handler: &CliHandler, amount: f64) -> Resu
 
     let transfer_ix = transfer(&keypair.pubkey(), &account_payer, sol_to_lamports(amount));
 
-    send_and_log_transaction(
-        handler,
-        &[transfer_ix],
-        &[],
-        "Fund Account Payer",
-        &[
-            format!("NCN: {:?}", ncn),
-            format!("Amount: {:?} SOL", amount),
-        ],
-    )
-    .await?;
+    let ixs = &[transfer_ix];
+    if handler.print_tx {
+        print_base58_tx(ixs);
+    } else {
+        send_and_log_transaction(
+            handler,
+            ixs,
+            &[],
+            "Fund Account Payer",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("Amount: {:?} SOL", amount),
+            ],
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -497,22 +532,27 @@ pub async fn admin_set_config_fees(
         ix.new_ncn_fee_bps(fee);
     }
 
-    send_and_log_transaction(
-        handler,
-        &[ix.instruction()],
-        &[],
-        "Set Config Fees",
-        &[
-            format!("NCN: {:?}", ncn),
-            format!("New Block Engine Fee BPS: {:?}", new_block_engine_fee_bps),
-            format!("Base Fee Group: {:?}", base_fee_group),
-            format!("New Base Fee Wallet: {:?}", new_base_fee_wallet),
-            format!("New Base Fee BPS: {:?}", new_base_fee_bps),
-            format!("NCN Fee Group: {:?}", ncn_fee_group),
-            format!("New NCN Fee BPS: {:?}", new_ncn_fee_bps),
-        ],
-    )
-    .await?;
+    let ixs = &[ix.instruction()];
+    if handler.print_tx {
+        print_base58_tx(ixs);
+    } else {
+        send_and_log_transaction(
+            handler,
+            ixs,
+            &[],
+            "Set Config Fees",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("New Block Engine Fee BPS: {:?}", new_block_engine_fee_bps),
+                format!("Base Fee Group: {:?}", base_fee_group),
+                format!("New Base Fee Wallet: {:?}", new_base_fee_wallet),
+                format!("New Base Fee BPS: {:?}", new_base_fee_bps),
+                format!("NCN Fee Group: {:?}", ncn_fee_group),
+                format!("New NCN Fee BPS: {:?}", new_ncn_fee_bps),
+            ],
+        )
+        .await?;
+    }
 
     Ok(())
 }
