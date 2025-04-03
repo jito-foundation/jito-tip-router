@@ -16,10 +16,11 @@ use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::read_keypair_
 use tokio::time;
 
 use crate::{
-    backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
-    create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
+    backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_leader_priority_fee_map,
+    create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
+    leader_priority_fees_file_name, ledger_utils::get_bank_from_snapshot_at_slot,
     load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
-    priority_fee_utils::get_priority_fees_for_epoch, stake_meta_file_name, submit::submit_to_ncn,
+    priority_fee_utils::LeaderEpochPriorityFees, stake_meta_file_name, submit::submit_to_ncn,
     tip_router::get_ncn_config, Cli, OperatorState, Version,
 };
 
@@ -122,6 +123,7 @@ pub async fn loop_stages(
     let mut bank: Option<Arc<Bank>> = None;
     let mut stake_meta_collection: Option<StakeMetaCollection> = None;
     let mut merkle_tree_collection: Option<GeneratedMerkleTreeCollection> = None;
+    let mut leader_epoch_priority_fees: Option<LeaderEpochPriorityFees> = None;
     let mut epoch_to_process = current_epoch_info.epoch.saturating_sub(1);
     let mut slot_to_process = if let Some(slot) = override_target_slot {
         slot
@@ -141,6 +143,21 @@ pub async fn loop_stages(
                     slot_to_process,
                     enable_snapshots,
                 ));
+                // Transition to the next stage
+                stage = OperatorState::CreateLeaderPriorityFeeMap;
+            }
+            OperatorState::CreateLeaderPriorityFeeMap => {
+                leader_epoch_priority_fees = Some(
+                    create_leader_priority_fee_map(
+                        &rpc_client,
+                        operator_address.clone(),
+                        epoch_to_process,
+                        &cli.get_save_path(),
+                        save_stages,
+                    )
+                    .await,
+                );
+
                 // Transition to the next stage
                 stage = OperatorState::CreateStakeMeta;
             }
@@ -181,8 +198,15 @@ pub async fn loop_stages(
                         }
                     }
                 }
-                let leader_priority_fees_map =
-                    get_priority_fees_for_epoch(&rpc_client, epoch_to_process).await?;
+                let some_leader_epoch_priority_fees = match leader_epoch_priority_fees.as_ref() {
+                    Some(leader_epoch_priority_fees) => leader_epoch_priority_fees,
+                    None => {
+                        let file = cli
+                            .get_save_path()
+                            .join(leader_priority_fees_file_name(epoch_to_process));
+                        &LeaderEpochPriorityFees::new_from_file(&file)?
+                    }
+                };
 
                 stake_meta_collection = Some(create_stake_meta(
                     operator_address.clone(),
@@ -193,7 +217,7 @@ pub async fn loop_stages(
                     tip_payment_program_id,
                     &cli.get_save_path(),
                     save_stages,
-                    leader_priority_fees_map,
+                    &some_leader_epoch_priority_fees.leader_priority_fee_map,
                 ));
                 // we should be able to safely drop the bank in this loop
                 bank = None;

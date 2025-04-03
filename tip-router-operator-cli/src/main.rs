@@ -13,10 +13,11 @@ use ::{
         backup_snapshots::BackupSnapshotMonitor,
         claim::{claim_mev_tips_with_emit, emit_claim_mev_tips_metrics},
         cli::{Cli, Commands, SnapshotPaths},
-        create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
+        create_leader_priority_fee_map, create_merkle_tree_collection, create_meta_merkle_tree,
+        create_stake_meta, leader_priority_fees_file_name,
         ledger_utils::get_bank_from_snapshot_at_slot,
         load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
-        priority_fee_utils::get_priority_fees_for_epoch,
+        priority_fee_utils::LeaderEpochPriorityFees,
         process_epoch, stake_meta_file_name,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         tip_router::get_ncn_config,
@@ -395,7 +396,11 @@ async fn main() -> Result<()> {
                 ledger_path.as_path(),
             )?;
 
-            let leader_priority_fees_map = get_priority_fees_for_epoch(&rpc_client, epoch).await?;
+            // We also expect the LeaderEpochPriorityFees map to have been previously created
+            let file = cli
+                .get_save_path()
+                .join(leader_priority_fees_file_name(epoch));
+            let leader_epoch_priority_fees = LeaderEpochPriorityFees::new_from_file(&file)?;
 
             create_stake_meta(
                 cli.operator_address,
@@ -406,7 +411,7 @@ async fn main() -> Result<()> {
                 &tip_payment_program_id,
                 &save_path,
                 save,
-                leader_priority_fees_map,
+                &leader_epoch_priority_fees.leader_priority_fee_map,
             );
         }
         Commands::CreateMerkleTreeCollection {
@@ -459,6 +464,16 @@ async fn main() -> Result<()> {
                 &save_path,
                 save,
             );
+        }
+        Commands::CreateLeaderPriorityFeeMap { epoch, save } => {
+            create_leader_priority_fee_map(
+                &rpc_client,
+                cli.operator_address,
+                epoch,
+                &save_path,
+                save,
+            )
+            .await;
         }
     }
     Ok(())

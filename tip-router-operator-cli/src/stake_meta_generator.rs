@@ -131,7 +131,7 @@ pub fn generate_stake_meta_collection(
     tip_distribution_program_id: &Pubkey,
     priority_fee_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
-    leader_priority_fees_map: HashMap<String, u64>,
+    leader_priority_fees_map: &HashMap<String, u64>,
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     assert!(bank.is_frozen());
 
@@ -775,7 +775,7 @@ mod tests {
             &tip_distribution_program_id,
             &priorty_fee_distribution_program_id,
             &tip_payment_program_id,
-            leader_priority_fees_map,
+            &leader_priority_fees_map,
         )
         .unwrap();
         assert_eq!(

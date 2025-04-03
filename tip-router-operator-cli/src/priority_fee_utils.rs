@@ -1,6 +1,12 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{BufReader, Write},
+    path::PathBuf,
+};
 
 use ellipsis_client::{EllipsisClient, EllipsisClientError};
+use serde::{Deserialize, Serialize};
 use solana_client::client_error::ClientError;
 use solana_sdk::reward_type::RewardType;
 use thiserror::Error;
@@ -11,14 +17,42 @@ pub enum PriorityFeeUtilsError {
     EllipsisClientError(#[from] EllipsisClientError),
     #[error("SoloanaClientError error: {0}")]
     SoloanaClientError(#[from] ClientError),
+    #[error(transparent)]
+    SerdeJsonError(#[from] serde_json::Error),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
     #[error("No leader schedule for epoch found")]
     ErrorGettingLeaderSchedule,
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub struct LeaderEpochPriorityFees {
+    epoch: u64,
+    pub leader_priority_fee_map: HashMap<String, u64>,
+}
+
+impl LeaderEpochPriorityFees {
+    /// Load a serialized LeaderEpochPriorityFees from file path
+    pub fn new_from_file(path: &PathBuf) -> Result<Self, PriorityFeeUtilsError> {
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        let tree: Self = serde_json::from_reader(reader)?;
+
+        Ok(tree)
+    }
+    /// Write a LeaderEpochPriorityFees to a filepath
+    pub fn write_to_file(&self, path: &PathBuf) -> Result<(), PriorityFeeUtilsError> {
+        let serialized = serde_json::to_string_pretty(&self)?;
+        let mut file = File::create(path)?;
+        file.write_all(serialized.as_bytes())?;
+        Ok(())
+    }
 }
 
 pub async fn get_priority_fees_for_epoch(
     client: &EllipsisClient,
     epoch: u64,
-) -> Result<HashMap<String, u64>, PriorityFeeUtilsError> {
+) -> Result<LeaderEpochPriorityFees, PriorityFeeUtilsError> {
     // Get the start and ending slot of the epoch
     let epoch_schedule = client.get_epoch_schedule().await?;
     let starting_slot = epoch_schedule.get_first_slot_in_epoch(epoch);
@@ -51,5 +85,8 @@ pub async fn get_priority_fees_for_epoch(
             u64::try_from(leader_epoch_block_rewards).unwrap_or(0),
         );
     }
-    Ok(res)
+    Ok(LeaderEpochPriorityFees {
+        epoch,
+        leader_priority_fee_map: res,
+    })
 }

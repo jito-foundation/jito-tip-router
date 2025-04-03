@@ -22,6 +22,7 @@ use std::time::Instant;
 
 use anchor_lang::prelude::*;
 use cli::SnapshotPaths;
+use ellipsis_client::EllipsisClient;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{
@@ -35,6 +36,7 @@ use meta_merkle_tree::generated_merkle_tree::StakeMetaCollection;
 use meta_merkle_tree::{
     generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
 };
+use priority_fee_utils::{get_priority_fees_for_epoch, LeaderEpochPriorityFees};
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::bank::Bank;
 use solana_sdk::{account::AccountSharedData, pubkey::Pubkey};
@@ -67,11 +69,16 @@ impl std::fmt::Display for Version {
 pub enum OperatorState {
     // Allows the operator to load from a snapshot created externally
     LoadBankFromSnapshot,
+    CreateLeaderPriorityFeeMap,
     CreateStakeMeta,
     CreateMerkleTreeCollection,
     CreateMetaMerkleTree,
     CastVote,
     WaitForNextEpoch,
+}
+
+pub fn leader_priority_fees_file_name(epoch: u64) -> String {
+    format!("{}_leader_priority_fees.json", epoch)
 }
 
 pub fn stake_meta_file_name(epoch: u64) -> String {
@@ -108,7 +115,53 @@ pub fn load_bank_from_snapshot(cli: Cli, slot: u64, save_snapshot: bool) -> Arc<
     )
 }
 
-// STAGE 2 CreateStakeMeta
+// STAGE 2 generate the priority fees per leader for a given epoch
+pub async fn create_leader_priority_fee_map(
+    rpc_client: &EllipsisClient,
+    operator_address: String,
+    epoch: u64,
+    save_path: &Path,
+    save: bool,
+) -> LeaderEpochPriorityFees {
+    let start = Instant::now();
+    let leader_priority_fees = match get_priority_fees_for_epoch(rpc_client, epoch).await {
+        Ok(leader_priority_fees) => leader_priority_fees,
+        Err(e) => {
+            let error_str = format!("{:?}", e);
+            datapoint_error!(
+                "tip_router_cli.create_leader_priority_fee_map",
+                ("operator_address", operator_address, String),
+                ("epoch", epoch, i64),
+                ("status", "error", String),
+                ("error", error_str, String),
+                ("state", "create_leader_priority_fee_map", String),
+                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+            );
+            panic!("{}", error_str);
+        }
+    };
+    if save {
+        let file = save_path.join(leader_priority_fees_file_name(epoch));
+        match leader_priority_fees.write_to_file(&file) {
+            Ok(_) => {}
+            Err(e) => {
+                let error_str = format!("{:?}", e);
+                datapoint_error!(
+                    "tip_router_cli.create_leader_priority_fee_map",
+                    ("operator_address", operator_address, String),
+                    ("epoch", epoch, i64),
+                    ("status", "error", String),
+                    ("error", error_str, String),
+                    ("state", "write_to_file", String),
+                    ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                );
+            }
+        };
+    }
+    leader_priority_fees
+}
+
+// STAGE 3 CreateStakeMeta
 #[allow(clippy::too_many_arguments)]
 pub fn create_stake_meta(
     operator_address: String,
@@ -119,7 +172,7 @@ pub fn create_stake_meta(
     tip_payment_program_id: &Pubkey,
     save_path: &Path,
     save: bool,
-    leader_priority_fees_map: HashMap<String, u64>,
+    leader_priority_fees_map: &HashMap<String, u64>,
 ) -> StakeMetaCollection {
     let start = Instant::now();
 
@@ -172,7 +225,7 @@ pub fn create_stake_meta(
     stake_meta_coll
 }
 
-// STAGE 3 CreateMerkleTreeCollection
+// STAGE 4 CreateMerkleTreeCollection
 #[allow(clippy::too_many_arguments)]
 pub fn create_merkle_tree_collection(
     operator_address: String,
@@ -251,7 +304,7 @@ pub fn create_merkle_tree_collection(
     merkle_tree_coll
 }
 
-// STAGE 4 CreateMetaMerkleTree
+// STAGE 5 CreateMetaMerkleTree
 pub fn create_meta_merkle_tree(
     operator_address: String,
     merkle_tree_collection: GeneratedMerkleTreeCollection,
