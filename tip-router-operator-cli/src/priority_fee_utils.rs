@@ -4,6 +4,7 @@ use std::{
     io::{BufReader, Write},
     path::PathBuf,
 };
+use regex::Regex;
 
 use ellipsis_client::{EllipsisClient, EllipsisClientError};
 use log::info;
@@ -137,9 +138,8 @@ async fn get_block(
                     message,
                     data,
                 } => {
-                    let expected_err_str =
-                        format!("Slot {} was skipped, or missing in long-term storage", slot);
-                    if *message == expected_err_str {
+                    let slot_skipped_regex = Regex::new(r"^Slot [\d]+ was skipped").unwrap();
+                    if slot_skipped_regex.is_match(&message) {
                         return Err(PriorityFeeUtilsError::SkippedBlock);
                     }
                     return Err(PriorityFeeUtilsError::RpcError(
