@@ -93,14 +93,17 @@ pub async fn get_priority_fees_for_epoch(
                 },
             };
             // get the priority fee rewards for the block.
-            let block_rewards = block
+            let maybe_block_rewards = block
                 .rewards
                 .unwrap()
-                .iter()
-                .find(|r| r.reward_type == Some(RewardType::Fee))
-                .unwrap()
-                .lamports;
-            leader_epoch_block_rewards = leader_epoch_block_rewards.saturating_add(block_rewards);
+                .into_iter()
+                .find(|r| r.reward_type == Some(RewardType::Fee));
+            match maybe_block_rewards {
+                Some(block_reward) => {
+                    leader_epoch_block_rewards = leader_epoch_block_rewards.saturating_add(block_reward.lamports);
+                },
+                None => {}
+            }
         }
         res.insert(
             leader,
