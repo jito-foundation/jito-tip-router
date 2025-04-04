@@ -238,4 +238,11 @@ pub enum Commands {
         #[arg(long, env, default_value = "true")]
         save: bool,
     },
+    CreateLeaderPriorityFeeMap {
+        #[arg(long, env)]
+        epoch: u64,
+
+        #[arg(long, env, default_value = "true")]
+        save: bool,
+    },
 }

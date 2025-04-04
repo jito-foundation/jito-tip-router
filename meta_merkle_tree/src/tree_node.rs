@@ -19,6 +19,10 @@ pub struct TreeNode {
     pub max_total_claim: u64,
     /// Number of nodes to claim
     pub max_num_nodes: u64,
+    /// The total amount of REV the validator accumulated for the epoch. For Priority Fee
+    /// distributions, this is the total amount of priority fee rewards the validator earned.
+    /// For MEV Tip Distributions, this is unused and total_fees = max_total_claim
+    pub total_fees: u64,
 }
 
 impl TreeNode {
@@ -27,6 +31,7 @@ impl TreeNode {
         validator_merkle_root: &[u8; 32],
         max_total_claim: u64,
         max_num_nodes: u64,
+        total_fees: u64,
     ) -> Self {
         Self {
             tip_distribution_account: *tip_distribution_account,
@@ -34,6 +39,7 @@ impl TreeNode {
             validator_merkle_root: *validator_merkle_root,
             max_total_claim,
             max_num_nodes,
+            total_fees,
         }
     }
 
@@ -43,6 +49,7 @@ impl TreeNode {
             &self.validator_merkle_root,
             &self.max_total_claim.to_le_bytes(),
             &self.max_num_nodes.to_le_bytes(),
+            &self.total_fees.to_le_bytes(),
         ])
     }
 }
@@ -54,6 +61,7 @@ impl From<GeneratedMerkleTree> for TreeNode {
             validator_merkle_root: generated_merkle_tree.merkle_root.to_bytes(),
             max_total_claim: generated_merkle_tree.max_total_claim,
             max_num_nodes: generated_merkle_tree.max_num_nodes,
+            total_fees: generated_merkle_tree.total_fees,
             proof: None,
         }
     }
@@ -71,6 +79,7 @@ mod tests {
             validator_merkle_root: [0; 32],
             max_total_claim: 0,
             max_num_nodes: 0,
+            total_fees: 0,
         };
         let serialized = serde_json::to_string(&tree_node).unwrap();
         let deserialized: TreeNode = serde_json::from_str(&serialized).unwrap();

@@ -206,6 +206,7 @@ pub fn process_instruction(
             max_total_claim,
             max_num_nodes,
             epoch,
+            total_fees,
         } => {
             msg!("Instruction: SetMerkleRoot");
             process_set_merkle_root(
@@ -216,6 +217,7 @@ pub fn process_instruction(
                 max_total_claim,
                 max_num_nodes,
                 epoch,
+                total_fees,
             )
         }
 

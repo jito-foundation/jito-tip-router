@@ -539,6 +539,7 @@ fn build_mev_claim_transactions(
             // can't claim for something already claimed
             // don't need to claim for claimants that get 0 MEV
             if !claimants.contains_key(&node.claimant)
+                // REVIEW: Is it ok that claim_statuses does not go through a deserialization check? 
                 || claim_statuses.contains_key(&node.claim_status_pubkey)
                 || node.amount == 0
             {

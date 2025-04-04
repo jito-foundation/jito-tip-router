@@ -619,12 +619,14 @@ impl BallotBox {
         merkle_root: &[u8; 32],
         max_total_claim: u64,
         max_num_nodes: u64,
+        total_fees: u64,
     ) -> Result<(), TipRouterError> {
         let tree_node = TreeNode::new(
             tip_distribution_account,
             merkle_root,
             max_total_claim,
             max_num_nodes,
+            total_fees,
         );
 
         let node_hash = hashv(&[LEAF_PREFIX, &tree_node.hash().to_bytes()]);
@@ -742,9 +744,27 @@ mod tests {
 
         // Create tree nodes with unique tip_distribution_accounts
         let mut tree_nodes = vec![
-            TreeNode::new(&tip_distribution1, &[1; 32], max_total_claim, max_num_nodes),
-            TreeNode::new(&tip_distribution2, &[2; 32], max_total_claim, max_num_nodes),
-            TreeNode::new(&tip_distribution3, &[3; 32], max_total_claim, max_num_nodes),
+            TreeNode::new(
+                &tip_distribution1,
+                &[1; 32],
+                max_total_claim,
+                max_num_nodes,
+                max_total_claim,
+            ),
+            TreeNode::new(
+                &tip_distribution2,
+                &[2; 32],
+                max_total_claim,
+                max_num_nodes,
+                max_total_claim + 1,
+            ),
+            TreeNode::new(
+                &tip_distribution3,
+                &[3; 32],
+                max_total_claim,
+                max_num_nodes,
+                max_total_claim + 20,
+            ),
         ];
 
         // Sort nodes by hash (required for consistent tree creation)
@@ -767,8 +787,9 @@ mod tests {
             &test_node.tip_distribution_account,
             valid_proof.clone(),
             &test_node.validator_merkle_root,
-            max_total_claim,
-            max_num_nodes,
+            test_node.max_total_claim,
+            test_node.max_num_nodes,
+            test_node.total_fees,
         );
         assert!(result.is_ok(), "Valid proof should succeed");
 
@@ -782,8 +803,9 @@ mod tests {
             &test_node.tip_distribution_account,
             invalid_proof,
             &test_node.validator_merkle_root,
-            max_total_claim,
-            max_num_nodes,
+            test_node.max_total_claim,
+            test_node.max_num_nodes,
+            test_node.total_fees,
         );
         assert_eq!(
             result,
