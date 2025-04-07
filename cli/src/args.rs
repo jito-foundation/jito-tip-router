@@ -25,7 +25,7 @@ pub struct Args {
         default_value_t = Cluster::Mainnet,
         help = "Cluster label for metrics purposes"
     )]
-    pub cluster_label: Cluster,
+    pub cluster: Cluster,
 
     #[arg(
         long,
