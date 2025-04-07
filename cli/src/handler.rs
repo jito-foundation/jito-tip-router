@@ -69,7 +69,7 @@ impl CliHandler {
         let rpc_url = args.rpc_url.clone();
         CommitmentConfig::confirmed();
 
-        let cluster_label = args.cluster_label.clone().to_string();
+        let cluster_label = args.cluster.clone().to_string();
 
         let commitment = CommitmentConfig::from_str(&args.commitment)?;
 
