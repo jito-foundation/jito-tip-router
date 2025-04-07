@@ -4,8 +4,6 @@ category: Jekyll
 layout: post
 ---
 
-# Reward Payment
-
 ## Introduction
 
 The Reward Payment module in the Jito Tip Router is responsible for distributing rewards generated from tips.

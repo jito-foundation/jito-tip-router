@@ -1,9 +1,9 @@
 ---
-title: About
+title: Permissionless Cranker
 category: Jekyll
 layout: post
 ---
 
-# Permissionless Cranker
+## About the Permissionless Cranker
 
 TODO

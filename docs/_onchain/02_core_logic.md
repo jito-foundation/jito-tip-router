@@ -4,8 +4,6 @@ category: Jekyll
 layout: post
 ---
 
-# Core Logic (Cast Votes + Consensus)
-
 ## Introduction
 
 The Core Logic section of the Jito Tip Router outlines the mechanisms behind the voting and consensus process, which ensures fair and decentralized decision-making.
