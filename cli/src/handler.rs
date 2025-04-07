@@ -48,7 +48,6 @@ use switchboard_on_demand_client::SbContext;
 
 pub struct CliHandler {
     pub rpc_url: String,
-    pub cluster_label: String,
     pub commitment: CommitmentConfig,
     keypair: Option<Keypair>,
     pub restaking_program_id: Pubkey,
@@ -68,8 +67,6 @@ impl CliHandler {
     pub async fn from_args(args: &Args) -> Result<Self> {
         let rpc_url = args.rpc_url.clone();
         CommitmentConfig::confirmed();
-
-        let cluster_label = args.cluster.clone().to_string();
 
         let commitment = CommitmentConfig::from_str(&args.commitment)?;
 
@@ -113,7 +110,6 @@ impl CliHandler {
             rpc_client,
             retries: args.transaction_retries,
             priority_fee_micro_lamports: args.priority_fee_micro_lamports,
-            cluster_label,
         };
 
         handler.epoch = {
