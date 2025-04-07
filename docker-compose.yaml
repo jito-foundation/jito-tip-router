@@ -26,8 +26,6 @@ services:
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5
-    deploy:
-      replicas: 2
   jito-tip-router-ncn-keeper-metrics-only:
     build:
       context: .
@@ -79,5 +77,3 @@ services:
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5
-    deploy:
-      replicas: 2
