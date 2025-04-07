@@ -166,7 +166,7 @@ pub enum ProgramCommand {
         #[arg(long, env, help = "Run migration")]
         run_migration: bool,
         #[arg(long, env, help = "Cluster label for metrics purposes")]
-        cluster_label: Cluster,
+        cluster: Cluster,
         #[arg(
             long,
             env,
