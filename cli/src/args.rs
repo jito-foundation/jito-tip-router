@@ -21,24 +21,6 @@ pub struct Args {
     #[arg(
         long,
         global = true,
-        env = "CLUSTER",
-        default_value_t = Cluster::Mainnet,
-        help = "Cluster label for metrics purposes"
-    )]
-    pub cluster: Cluster,
-
-    #[arg(
-        long,
-        global = true,
-        env = "REGION",
-        default_value = "local",
-        help = "Region label for metrics purposes"
-    )]
-    pub region: String,
-
-    #[arg(
-        long,
-        global = true,
         env = "COMMITMENT",
         default_value = "confirmed",
         help = "Commitment level"

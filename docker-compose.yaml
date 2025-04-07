@@ -78,6 +78,7 @@ services:
       - RUN_MIGRATION=true
       - TRANSACTION_RETRIES=5
       - REGION=${REGION}
+      - CLUSTER=${CLUSTER}
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5
