@@ -30,6 +30,15 @@ pub struct Args {
     #[arg(
         long,
         global = true,
+        env = "REGION",
+        default_value = "local",
+        help = "Region label for metrics purposes"
+    )]
+    pub region: String,
+
+    #[arg(
+        long,
+        global = true,
         env = "COMMITMENT",
         default_value = "confirmed",
         help = "Commitment level"
@@ -158,6 +167,13 @@ pub enum ProgramCommand {
         run_migration: bool,
         #[arg(long, env, help = "Cluster label for metrics purposes")]
         cluster_label: Cluster,
+        #[arg(
+            long,
+            env,
+            default_value = "local",
+            help = "Region for metrics purposes"
+        )]
+        region: String,
     },
     /// Crank Functions
     CrankUpdateAllVaults {},

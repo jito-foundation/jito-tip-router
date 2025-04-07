@@ -84,6 +84,7 @@ pub async fn startup_keeper(
     metrics_only: bool,
     run_migration: bool,
     cluster_label: String,
+    region: String,
 ) -> Result<()> {
     let mut state: KeeperState = KeeperState::default();
     let mut epoch_stall = false;
@@ -106,7 +107,10 @@ pub async fn startup_keeper(
         .trim()
         .to_string();
 
-    set_host_id(format!("{}_{}", cluster_label, hostname));
+    set_host_id(format!(
+        "tip-router-keeper_{}_{}_{}",
+        region, cluster_label, hostname
+    ));
 
     loop {
         // If there is a new epoch, this will do a full vault update on *all* vaults
