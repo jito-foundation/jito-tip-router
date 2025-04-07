@@ -22,6 +22,7 @@ services:
       - METRICS_ONLY=false
       - RUN_MIGRATION=false
       - TRANSACTION_RETRIES=2
+      - REGION=${REGION}
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5
