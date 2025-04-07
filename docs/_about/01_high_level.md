@@ -1,10 +1,8 @@
 ---
-title: About
+title: Overview
 category: Jekyll
 layout: post
 ---
-
-### Overview
 
 Jito Tip Router NCN is handling operation of distribution of MEV tips generated from the Jito Tip Distribution protocol. The system is made of 3 components: 
 
