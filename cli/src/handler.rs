@@ -187,7 +187,7 @@ impl CliHandler {
                 emit_metrics,
                 metrics_only,
                 run_migration,
-                cluster_label,
+                cluster,
                 region,
             } => {
                 startup_keeper(
@@ -199,7 +199,7 @@ impl CliHandler {
                     emit_metrics,
                     metrics_only,
                     run_migration,
-                    cluster_label.to_string(),
+                    cluster.to_string(),
                     region.to_string(),
                 )
                 .await
