@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
         "Starting file monitor in {} with {} second polling interval",
         args.directory, args.interval
     );
-    println!("Looking for files matching patterns: '*_merkle_tree_collection.json', '*_stake_meta_collection.json', and '*_meta_merkle_tree.json'");
+    println!("Looking for files matching patterns: '*_merkle_tree_collection.json', '*_stake_meta_collection.json', and 'snapshot-*-*.tar.zst'");
 
     // Main monitoring loop
     loop {
