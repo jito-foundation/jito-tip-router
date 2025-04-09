@@ -4,7 +4,6 @@ use ::{
     clap::Parser,
     ellipsis_client::EllipsisClient,
     log::{error, info},
-    meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection},
     solana_metrics::{datapoint_info, set_host_id},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
@@ -16,7 +15,8 @@ use ::{
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_snapshot_at_slot,
         load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
-        process_epoch, stake_meta_file_name,
+        process_epoch, read_merkle_tree_collection, read_stake_meta_collection,
+        stake_meta_file_name,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         tip_router::get_ncn_config,
         Version,
@@ -401,12 +401,10 @@ async fn main() -> Result<()> {
             save,
         } => {
             // Load the stake_meta_collection from disk
-            let stake_meta_collection = match StakeMetaCollection::new_from_file(
+            let stake_meta_collection = read_stake_meta_collection(
+                epoch,
                 &cli.get_save_path().join(stake_meta_file_name(epoch)),
-            ) {
-                Ok(stake_meta_collection) => stake_meta_collection,
-                Err(e) => panic!("{}", e),
-            };
+            );
             let config = get_ncn_config(&rpc_client, &tip_router_program_id, &ncn_address).await?;
             // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
             //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
@@ -428,12 +426,11 @@ async fn main() -> Result<()> {
         }
         Commands::CreateMetaMerkleTree { epoch, save } => {
             // Load the stake_meta_collection from disk
-            let merkle_tree_collection = match GeneratedMerkleTreeCollection::new_from_file(
-                &save_path.join(merkle_tree_collection_file_name(epoch)),
-            ) {
-                Ok(merkle_tree_collection) => merkle_tree_collection,
-                Err(e) => panic!("{}", e),
-            };
+            let merkle_tree_collection = read_merkle_tree_collection(
+                epoch,
+                &cli.get_save_path()
+                    .join(merkle_tree_collection_file_name(epoch)),
+            );
 
             create_meta_merkle_tree(
                 cli.operator_address,

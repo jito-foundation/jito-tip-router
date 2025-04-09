@@ -75,22 +75,78 @@ pub fn stake_meta_file_name(epoch: u64) -> String {
     format!("{}_stake_meta_collection.json", epoch)
 }
 
-pub fn stake_meta_file_candidates(epoch: u64) -> [String; 2] {
+fn stake_meta_file_candidates(epoch: u64) -> [String; 2] {
     [
         format!("{}_stake_meta_collection.json", epoch),
         format!("{}-stake-meta-collection.json", epoch),
     ]
 }
 
+pub fn read_stake_meta_collection(epoch: u64, save_path: &Path) -> StakeMetaCollection {
+    let stake_meta_file_candidates: &[String] = &stake_meta_file_candidates(epoch);
+
+    let candidate_paths = stake_meta_file_candidates
+        .iter()
+        .map(|filename| {
+            let path = save_path.join(filename);
+            PathBuf::from(&path)
+        })
+        .collect::<Vec<_>>();
+
+    let valid_stake_meta_file_names = candidate_paths
+        .iter()
+        .filter(|path| path.exists())
+        .map(|path| path.file_name().unwrap().to_string_lossy().to_string())
+        .collect::<Vec<_>>();
+
+    let stake_meta_file_name = valid_stake_meta_file_names
+        .first()
+        .expect("Failed to find a valid stake meta file");
+
+    StakeMetaCollection::new_from_file(&PathBuf::from(stake_meta_file_name)).expect(&format!(
+        "Failed to load stake meta collection from file: {}",
+        stake_meta_file_name
+    ))
+}
+
 pub fn merkle_tree_collection_file_name(epoch: u64) -> String {
     format!("{}_merkle_tree_collection.json", epoch)
 }
 
-pub fn merkle_tree_collection_file_candidates(epoch: u64) -> [String; 2] {
+fn merkle_tree_collection_file_candidates(epoch: u64) -> [String; 2] {
     [
         format!("{}_merkle_tree_collection.json", epoch),
         format!("{}-merkle-tree-collection.json", epoch),
     ]
+}
+
+pub fn read_merkle_tree_collection(epoch: u64, save_path: &Path) -> GeneratedMerkleTreeCollection {
+    let merkle_tree_file_candidates: &[String] = &merkle_tree_collection_file_candidates(epoch);
+
+    let candidate_paths = merkle_tree_file_candidates
+        .iter()
+        .map(|filename| {
+            let path = save_path.join(filename);
+            PathBuf::from(&path)
+        })
+        .collect::<Vec<_>>();
+
+    let valid_merkle_tree_file_names = candidate_paths
+        .iter()
+        .filter(|path| path.exists())
+        .map(|path| path.file_name().unwrap().to_string_lossy().to_string())
+        .collect::<Vec<_>>();
+
+    let merkle_tree_file_name = valid_merkle_tree_file_names
+        .first()
+        .expect("Failed to find a valid merkle tree file");
+
+    GeneratedMerkleTreeCollection::new_from_file(&PathBuf::from(merkle_tree_file_name)).expect(
+        &format!(
+            "Failed to load merkle tree collection from file: {}",
+            merkle_tree_file_name
+        ),
+    )
 }
 
 pub fn meta_merkle_tree_file_name(epoch: u64) -> String {
