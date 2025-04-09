@@ -195,10 +195,10 @@ pub async fn loop_stages(
                 stage = OperatorState::CreateMerkleTreeCollection;
             }
             OperatorState::CreateMerkleTreeCollection => {
-                let some_stake_meta_collection = match stake_meta_collection.to_owned() {
-                    Some(collection) => collection,
-                    None => read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
-                };
+                let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
+                    || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
+                    |collection| collection,
+                );
                 let config =
                     get_ncn_config(&rpc_client, tip_router_program_id, ncn_address).await?;
                 // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
@@ -224,10 +224,10 @@ pub async fn loop_stages(
                 stage = OperatorState::CreateMetaMerkleTree;
             }
             OperatorState::CreateMetaMerkleTree => {
-                let some_merkle_tree_collection = match merkle_tree_collection.to_owned() {
-                    Some(collection) => collection,
-                    None => read_merkle_tree_collection(epoch_to_process, &cli.get_save_path()),
-                };
+                let some_merkle_tree_collection = merkle_tree_collection.to_owned().map_or_else(
+                    || read_merkle_tree_collection(epoch_to_process, &cli.get_save_path()),
+                    |collection| collection,
+                );
 
                 let merkle_tree = create_meta_merkle_tree(
                     cli.operator_address.clone(),
