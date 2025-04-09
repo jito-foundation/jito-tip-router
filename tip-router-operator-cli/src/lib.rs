@@ -103,10 +103,12 @@ pub fn read_stake_meta_collection(epoch: u64, save_path: &Path) -> StakeMetaColl
         .first()
         .expect("Failed to find a valid stake meta file");
 
-    StakeMetaCollection::new_from_file(&PathBuf::from(stake_meta_file_name)).expect(&format!(
-        "Failed to load stake meta collection from file: {}",
-        stake_meta_file_name
-    ))
+    StakeMetaCollection::new_from_file(&PathBuf::from(stake_meta_file_name)).unwrap_or_else(|_| {
+        panic!(
+            "Failed to load stake meta collection from file: {}",
+            stake_meta_file_name
+        )
+    })
 }
 
 pub fn merkle_tree_collection_file_name(epoch: u64) -> String {
@@ -141,12 +143,13 @@ pub fn read_merkle_tree_collection(epoch: u64, save_path: &Path) -> GeneratedMer
         .first()
         .expect("Failed to find a valid merkle tree file");
 
-    GeneratedMerkleTreeCollection::new_from_file(&PathBuf::from(merkle_tree_file_name)).expect(
-        &format!(
-            "Failed to load merkle tree collection from file: {}",
-            merkle_tree_file_name
-        ),
-    )
+    GeneratedMerkleTreeCollection::new_from_file(&PathBuf::from(merkle_tree_file_name))
+        .unwrap_or_else(|_| {
+            panic!(
+                "Failed to load merkle tree collection from file: {}",
+                merkle_tree_file_name
+            )
+        })
 }
 
 pub fn meta_merkle_tree_file_name(epoch: u64) -> String {
