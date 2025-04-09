@@ -160,6 +160,34 @@ pub fn meta_merkle_tree_file_candidates(epoch: u64) -> [String; 2] {
     ]
 }
 
+pub fn meta_merkle_tree_path(epoch: u64, save_path: &Path) -> PathBuf {
+    let meta_merkle_file_candidates: &[String] = &meta_merkle_tree_file_candidates(epoch);
+
+    let candidate_paths = meta_merkle_file_candidates
+        .iter()
+        .map(|filename| {
+            let path = save_path.join(filename);
+            PathBuf::from(&path)
+        })
+        .collect::<Vec<_>>();
+
+    let meta_merkle_tree_filenames = candidate_paths
+        .iter()
+        .filter(|path| path.exists())
+        .map(|path| path.file_name().unwrap().to_string_lossy().to_string())
+        .collect::<Vec<_>>();
+
+    let meta_merkle_tree_filename = meta_merkle_tree_filenames
+        .first()
+        .expect("Failed to find a valid meta merkle tree file");
+
+    PathBuf::from(format!(
+        "{}/{}",
+        save_path.display(),
+        meta_merkle_tree_filename
+    ))
+}
+
 // STAGE 1 LoadBankFromSnapshot
 pub fn load_bank_from_snapshot(cli: Cli, slot: u64, save_snapshot: bool) -> Arc<Bank> {
     let SnapshotPaths {

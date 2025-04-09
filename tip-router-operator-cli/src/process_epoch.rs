@@ -18,7 +18,7 @@ use tokio::time;
 use crate::{
     backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
     create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
-    load_bank_from_snapshot, meta_merkle_tree_file_candidates, read_merkle_tree_collection,
+    load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
     read_stake_meta_collection, submit::submit_to_ncn, tip_router::get_ncn_config, Cli,
     OperatorState, Version,
 };
@@ -254,32 +254,8 @@ pub async fn loop_stages(
                 stage = OperatorState::CastVote;
             }
             OperatorState::CastVote => {
-                let meta_merkle_file_candidates: &[String] =
-                    &meta_merkle_tree_file_candidates(epoch_to_process);
-
-                let candidate_paths = meta_merkle_file_candidates
-                    .iter()
-                    .map(|filename| {
-                        let path = cli.get_save_path().join(filename);
-                        PathBuf::from(&path)
-                    })
-                    .collect::<Vec<_>>();
-
-                let meta_merkle_tree_filenames = candidate_paths
-                    .iter()
-                    .filter(|path| path.exists())
-                    .map(|path| path.file_name().unwrap().to_string_lossy().to_string())
-                    .collect::<Vec<_>>();
-
-                let meta_merkle_tree_filename = meta_merkle_tree_filenames
-                    .first()
-                    .expect("Failed to find a valid meta merkle tree file");
-
-                let meta_merkle_tree_path = PathBuf::from(format!(
-                    "{}/{}",
-                    cli.get_save_path().display(),
-                    meta_merkle_tree_filename
-                ));
+                let meta_merkle_tree_path =
+                    meta_merkle_tree_path(epoch_to_process, &cli.get_save_path());
 
                 let operator_address = Pubkey::from_str(&cli.operator_address)?;
                 submit_to_ncn(
