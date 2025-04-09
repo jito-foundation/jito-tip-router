@@ -60,11 +60,7 @@ async fn main() -> Result<()> {
     let stake_pattern = Regex::new(r"^(\d+)_stake_meta_collection\.json$").unwrap();
     let snapshot_tar_zst_pattern = Regex::new(r"^snapshot-(\d+).*\.tar\.zst$").unwrap();
 
-    let matching_patterns = vec![
-        &merkle_pattern,
-        &stake_pattern,
-        &snapshot_tar_zst_pattern,
-    ];
+    let matching_patterns = vec![&merkle_pattern, &stake_pattern, &snapshot_tar_zst_pattern];
 
     println!(
         "Starting file monitor in {} with {} second polling interval",
@@ -130,8 +126,14 @@ async fn scan_and_upload_files(
         }
 
         // Check if file matches our patterns
-        let try_find_match: Option<&Regex> = matching_patterns.iter().find(|re| re.captures(&filename).is_some()).copied();
-        let try_epoch: Option<String> = try_find_match.and_then(|re| re.captures(&filename).and_then(|captures| captures.get(1).map(|m| m.as_str().to_string()))); 
+        let try_find_match: Option<&Regex> = matching_patterns
+            .iter()
+            .find(|re| re.captures(&filename).is_some())
+            .copied();
+        let try_epoch: Option<String> = try_find_match.and_then(|re| {
+            re.captures(&filename)
+                .and_then(|captures| captures.get(1).map(|m| m.as_str().to_string()))
+        });
 
         if let Some(epoch) = try_epoch {
             // We found a matching file, upload it
