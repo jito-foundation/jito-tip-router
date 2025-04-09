@@ -75,12 +75,33 @@ pub fn stake_meta_file_name(epoch: u64) -> String {
     format!("{}_stake_meta_collection.json", epoch)
 }
 
+pub fn stake_meta_file_candidates(epoch: u64) -> [String; 2] {
+    [
+        format!("{}_stake_meta_collection.json", epoch),
+        format!("{}-stake-meta-collection.json", epoch),
+    ]
+}
+
 pub fn merkle_tree_collection_file_name(epoch: u64) -> String {
     format!("{}_merkle_tree_collection.json", epoch)
 }
 
+pub fn merkle_tree_collection_file_candidates(epoch: u64) -> [String; 2] {
+    [
+        format!("{}_merkle_tree_collection.json", epoch),
+        format!("{}-merkle-tree-collection.json", epoch),
+    ]
+}
+
 pub fn meta_merkle_tree_file_name(epoch: u64) -> String {
     format!("{}_meta_merkle_tree.json", epoch)
+}
+
+pub fn meta_merkle_tree_file_candidates(epoch: u64) -> [String; 2] {
+    [
+        format!("{}_meta_merkle_tree.json", epoch),
+        format!("{}-meta-merkle-tree.json", epoch),
+    ]
 }
 
 // STAGE 1 LoadBankFromSnapshot

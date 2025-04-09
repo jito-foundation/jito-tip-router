@@ -18,9 +18,9 @@ use tokio::time;
 use crate::{
     backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
     create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
-    load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
-    stake_meta_file_name, submit::submit_to_ncn, tip_router::get_ncn_config, Cli, OperatorState,
-    Version,
+    load_bank_from_snapshot, merkle_tree_collection_file_candidates,
+    meta_merkle_tree_file_candidates, stake_meta_file_candidates, submit::submit_to_ncn,
+    tip_router::get_ncn_config, Cli, OperatorState, Version,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -198,10 +198,28 @@ pub async fn loop_stages(
                 let some_stake_meta_collection = match stake_meta_collection.to_owned() {
                     Some(collection) => collection,
                     None => {
-                        let file = cli
-                            .get_save_path()
-                            .join(stake_meta_file_name(epoch_to_process));
-                        StakeMetaCollection::new_from_file(&file)?
+                        let stake_meta_file_candidates: &[String] =
+                            &stake_meta_file_candidates(epoch_to_process);
+
+                        let candidate_paths = stake_meta_file_candidates
+                            .iter()
+                            .map(|filename| {
+                                let path = cli.get_save_path().join(filename);
+                                PathBuf::from(&path)
+                            })
+                            .collect::<Vec<_>>();
+
+                        let valid_stake_meta_file_names = candidate_paths
+                            .iter()
+                            .filter(|path| path.exists())
+                            .map(|path| path.file_name().unwrap().to_string_lossy().to_string())
+                            .collect::<Vec<_>>();
+
+                        let stake_meta_file_name = valid_stake_meta_file_names
+                            .first()
+                            .expect("Failed to find a valid stake meta file");
+
+                        StakeMetaCollection::new_from_file(&PathBuf::from(stake_meta_file_name))?
                     }
                 };
                 let config =
@@ -232,10 +250,30 @@ pub async fn loop_stages(
                 let some_merkle_tree_collection = match merkle_tree_collection.to_owned() {
                     Some(collection) => collection,
                     None => {
-                        let file = cli
-                            .get_save_path()
-                            .join(merkle_tree_collection_file_name(epoch_to_process));
-                        GeneratedMerkleTreeCollection::new_from_file(&file)?
+                        let merkle_tree_file_candidates: &[String] =
+                            &merkle_tree_collection_file_candidates(epoch_to_process);
+
+                        let candidate_paths = merkle_tree_file_candidates
+                            .iter()
+                            .map(|filename| {
+                                let path = cli.get_save_path().join(filename);
+                                PathBuf::from(&path)
+                            })
+                            .collect::<Vec<_>>();
+
+                        let valid_merkle_tree_file_names = candidate_paths
+                            .iter()
+                            .filter(|path| path.exists())
+                            .map(|path| path.file_name().unwrap().to_string_lossy().to_string())
+                            .collect::<Vec<_>>();
+
+                        let merkle_tree_file_name = valid_merkle_tree_file_names
+                            .first()
+                            .expect("Failed to find a valid merkle tree file");
+
+                        GeneratedMerkleTreeCollection::new_from_file(&PathBuf::from(
+                            merkle_tree_file_name,
+                        ))?
                     }
                 };
 
@@ -264,11 +302,33 @@ pub async fn loop_stages(
                 stage = OperatorState::CastVote;
             }
             OperatorState::CastVote => {
+                let meta_merkle_file_candidates: &[String] =
+                    &meta_merkle_tree_file_candidates(epoch_to_process);
+
+                let candidate_paths = meta_merkle_file_candidates
+                    .iter()
+                    .map(|filename| {
+                        let path = cli.get_save_path().join(filename);
+                        PathBuf::from(&path)
+                    })
+                    .collect::<Vec<_>>();
+
+                let meta_merkle_tree_filenames = candidate_paths
+                    .iter()
+                    .filter(|path| path.exists())
+                    .map(|path| path.file_name().unwrap().to_string_lossy().to_string())
+                    .collect::<Vec<_>>();
+
+                let meta_merkle_tree_filename = meta_merkle_tree_filenames
+                    .first()
+                    .expect("Failed to find a valid meta merkle tree file");
+
                 let meta_merkle_tree_path = PathBuf::from(format!(
                     "{}/{}",
                     cli.get_save_path().display(),
-                    meta_merkle_tree_file_name(epoch_to_process)
+                    meta_merkle_tree_filename
                 ));
+
                 let operator_address = Pubkey::from_str(&cli.operator_address)?;
                 submit_to_ncn(
                     &rpc_client,
