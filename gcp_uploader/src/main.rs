@@ -58,7 +58,7 @@ async fn main() -> Result<()> {
     // Compile regex patterns for epoch files
     let merkle_pattern = Regex::new(r"^(\d+)_merkle_tree_collection\.json$").unwrap();
     let stake_pattern = Regex::new(r"^(\d+)_stake_meta_collection\.json$").unwrap();
-    let snapshot_tar_zst_pattern = Regex::new(r"^snapshot-\d+-[a-zA-Z0-9]+-.*\.tar\.zst$").unwrap();
+    let snapshot_tar_zst_pattern = Regex::new(r"^snapshot-(\d+).*\.tar\.zst$").unwrap();
 
     let matching_patterns = vec![
         &merkle_pattern,
@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
         "Starting file monitor in {} with {} second polling interval",
         args.directory, args.interval
     );
-    println!("Looking for files matching patterns: '*_merkle_tree_collection.json', '*_stake_meta_collection.json', and 'snapshot-*-*.tar.zst'");
+    println!("Looking for files matching patterns: '*_merkle_tree_collection.json', '*_stake_meta_collection.json', and 'snapshot-*.tar.zst'");
 
     // Main monitoring loop
     loop {
