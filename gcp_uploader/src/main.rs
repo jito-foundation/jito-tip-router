@@ -58,12 +58,19 @@ async fn main() -> Result<()> {
     // Compile regex patterns for epoch files
     let merkle_pattern = Regex::new(r"^(\d+)_merkle_tree_collection\.json$").unwrap();
     let stake_pattern = Regex::new(r"^(\d+)_stake_meta_collection\.json$").unwrap();
+    let snapshot_tar_zst_pattern = Regex::new(r"^snapshot-\d+-[a-zA-Z0-9]+-.*\.tar\.zst$").unwrap();
+
+    let matching_patterns = vec![
+        &merkle_pattern,
+        &stake_pattern,
+        &snapshot_tar_zst_pattern,
+    ];
 
     println!(
         "Starting file monitor in {} with {} second polling interval",
         args.directory, args.interval
     );
-    println!("Looking for files matching patterns: '*_merkle_tree_collection.json' and '*_stake_meta_collection.json'");
+    println!("Looking for files matching patterns: '*_merkle_tree_collection.json', '*_stake_meta_collection.json', and '*_meta_merkle_tree.json'");
 
     // Main monitoring loop
     loop {
@@ -72,8 +79,7 @@ async fn main() -> Result<()> {
             &bucket_name,
             &hostname,
             &mut uploaded_files,
-            &merkle_pattern,
-            &stake_pattern,
+            &matching_patterns,
         )
         .await
         {
@@ -99,8 +105,7 @@ async fn scan_and_upload_files(
     bucket_name: &str,
     hostname: &str,
     uploaded_files: &mut HashSet<String>,
-    merkle_pattern: &Regex,
-    stake_pattern: &Regex,
+    matching_patterns: &[&Regex],
 ) -> Result<usize> {
     let mut uploaded_count = 0;
 
@@ -125,16 +130,10 @@ async fn scan_and_upload_files(
         }
 
         // Check if file matches our patterns
-        let epoch = merkle_pattern.captures(&filename).map_or_else(
-            || {
-                stake_pattern
-                    .captures(&filename)
-                    .and_then(|captures| captures.get(1).map(|m| m.as_str().to_string()))
-            },
-            |captures| captures.get(1).map(|m| m.as_str().to_string()),
-        );
+        let try_find_match: Option<&Regex> = matching_patterns.iter().find(|re| re.captures(&filename).is_some()).copied();
+        let try_epoch: Option<String> = try_find_match.and_then(|re| re.captures(&filename).and_then(|captures| captures.get(1).map(|m| m.as_str().to_string()))); 
 
-        if let Some(epoch) = epoch {
+        if let Some(epoch) = try_epoch {
             // We found a matching file, upload it
             if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname).await {
                 eprintln!("Failed to upload {}: {}", filename, e);
