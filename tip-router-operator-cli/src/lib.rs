@@ -184,11 +184,7 @@ pub fn meta_merkle_tree_path(epoch: u64, save_path: &Path) -> PathBuf {
         .first()
         .expect("Failed to find a valid meta merkle tree file");
 
-    PathBuf::from(format!(
-        "{}/{}",
-        save_path.display(),
-        meta_merkle_tree_filename
-    ))
+    PathBuf::from(meta_merkle_tree_filename)
 }
 
 // STAGE 1 LoadBankFromSnapshot
