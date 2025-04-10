@@ -5,8 +5,9 @@ After=network.target
 [Service]
 Type=simple
 User=core
-ExecStart=/home/core/gcp_uploader \
+ExecStart=/home/core/jito-tip-router/target/release/gcp_uploader \
     --directory /solana/snapshots/operator-saves \
+    --snapshot-directory /solana/snapshots/autosnapshot \
     --cluster mainnet \
     --interval 600
 Restart=always
