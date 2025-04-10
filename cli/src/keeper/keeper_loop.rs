@@ -16,9 +16,9 @@ use crate::{
 use anyhow::Result;
 use jito_tip_router_core::epoch_state::State;
 use log::info;
-use tokio::time::sleep;
 use solana_metrics::set_host_id;
 use std::process::Command;
+use tokio::time::sleep;
 
 pub async fn progress_epoch(
     is_epoch_completed: bool,
