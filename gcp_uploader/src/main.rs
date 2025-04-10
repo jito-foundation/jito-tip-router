@@ -232,7 +232,9 @@ async fn scan_and_upload_snapshot_files(
                     anyhow::anyhow!("Failed to parse slot number from filename: {}", filename)
                 })?
                 .checked_div(432_000)
-                .ok_or_else(|| anyhow::anyhow!("Failed to divide slot number by 432_000: {}", slot_num))?
+                .ok_or_else(|| {
+                    anyhow::anyhow!("Failed to divide slot number by 432_000: {}", slot_num)
+                })?
                 .to_string();
             // We found a matching file, upload it
             if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname).await {
