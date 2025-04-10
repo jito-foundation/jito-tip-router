@@ -1,0 +1,18 @@
+[Unit]
+Description=Monitor and Upload Epoch Merkle Tree and Stake Meta Files
+After=network.target
+
+[Service]
+Type=simple
+User=core
+ExecStart=/home/core/jito-tip-router/target/release/gcp_uploader \
+    --directory /solana/snapshots/operator-saves \
+    --snapshot-directory /solana/snapshots/autosnapshot \
+    --cluster mainnet \
+    --interval 600
+Restart=always
+RestartSec=10
+Environment="RUST_LOG=info"
+
+[Install]
+WantedBy=multi-user.target
