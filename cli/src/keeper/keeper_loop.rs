@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{
     getters::get_guaranteed_epoch_and_slot,
     handler::CliHandler,
@@ -10,11 +12,11 @@ use crate::{
         keeper_metrics::{emit_epoch_metrics, emit_error, emit_heartbeat, emit_ncn_metrics},
         keeper_state::KeeperState,
     },
-    log::{boring_progress_bar, progress_bar},
 };
 use anyhow::Result;
 use jito_tip_router_core::epoch_state::State;
 use log::info;
+use tokio::time::sleep;
 
 pub async fn progress_epoch(
     is_epoch_completed: bool,
@@ -63,11 +65,15 @@ pub async fn check_and_timeout_error<T>(
 }
 
 pub async fn timeout_error(duration_ms: u64) {
-    progress_bar(duration_ms).await;
+    info!("Error Timeout for {}s", duration_ms as f64 / 1000.0);
+    sleep(Duration::from_millis(duration_ms)).await;
+    // progress_bar(duration_ms).await;
 }
 
 pub async fn timeout_keeper(duration_ms: u64) {
-    boring_progress_bar(duration_ms).await;
+    info!("Keeper Timeout for {}s", duration_ms as f64 / 1000.0);
+    sleep(Duration::from_millis(duration_ms)).await;
+    // boring_progress_bar(duration_ms).await;
 }
 
 #[allow(clippy::large_stack_frames)]
