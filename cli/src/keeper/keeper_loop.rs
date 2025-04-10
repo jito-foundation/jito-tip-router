@@ -17,6 +17,8 @@ use anyhow::Result;
 use jito_tip_router_core::epoch_state::State;
 use log::info;
 use tokio::time::sleep;
+use solana_metrics::set_host_id;
+use std::process::Command;
 
 pub async fn progress_epoch(
     is_epoch_completed: bool,
@@ -87,6 +89,8 @@ pub async fn startup_keeper(
     emit_metrics: bool,
     metrics_only: bool,
     run_migration: bool,
+    cluster_label: String,
+    region: String,
 ) -> Result<()> {
     let mut state: KeeperState = KeeperState::default();
     let mut epoch_stall = false;
@@ -100,6 +104,19 @@ pub async fn startup_keeper(
 
     let run_operations = !metrics_only && !run_migration;
     let emit_metrics = emit_metrics || metrics_only;
+
+    let hostname_cmd = Command::new("hostname")
+        .output()
+        .expect("Failed to execute hostname command");
+
+    let hostname = String::from_utf8_lossy(&hostname_cmd.stdout)
+        .trim()
+        .to_string();
+
+    set_host_id(format!(
+        "tip-router-keeper_{}_{}_{}",
+        region, cluster_label, hostname
+    ));
 
     loop {
         // If there is a new epoch, this will do a full vault update on *all* vaults

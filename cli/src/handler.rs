@@ -67,6 +67,7 @@ impl CliHandler {
     pub async fn from_args(args: &Args) -> Result<Self> {
         let rpc_url = args.rpc_url.clone();
         CommitmentConfig::confirmed();
+
         let commitment = CommitmentConfig::from_str(&args.commitment)?;
 
         let keypair = args
@@ -182,6 +183,8 @@ impl CliHandler {
                 emit_metrics,
                 metrics_only,
                 run_migration,
+                cluster,
+                region,
             } => {
                 startup_keeper(
                     self,
@@ -192,6 +195,8 @@ impl CliHandler {
                     emit_metrics,
                     metrics_only,
                     run_migration,
+                    cluster.to_string(),
+                    region.to_string(),
                 )
                 .await
             }
