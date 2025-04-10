@@ -96,17 +96,16 @@ pub fn read_stake_meta_collection(epoch: u64, save_path: &Path) -> StakeMetaColl
     let valid_stake_meta_file_names = candidate_paths
         .iter()
         .filter(|path| path.exists())
-        .map(|path| path.file_name().unwrap().to_string_lossy().to_string())
         .collect::<Vec<_>>();
 
     let stake_meta_file_name = valid_stake_meta_file_names
         .first()
         .expect("Failed to find a valid stake meta file");
 
-    StakeMetaCollection::new_from_file(&PathBuf::from(stake_meta_file_name)).unwrap_or_else(|_| {
+    StakeMetaCollection::new_from_file(&stake_meta_file_name).unwrap_or_else(|_| {
         panic!(
             "Failed to load stake meta collection from file: {}",
-            stake_meta_file_name
+            stake_meta_file_name.display()
         )
     })
 }
@@ -136,18 +135,17 @@ pub fn read_merkle_tree_collection(epoch: u64, save_path: &Path) -> GeneratedMer
     let valid_merkle_tree_file_names = candidate_paths
         .iter()
         .filter(|path| path.exists())
-        .map(|path| path.file_name().unwrap().to_string_lossy().to_string())
         .collect::<Vec<_>>();
 
     let merkle_tree_file_name = valid_merkle_tree_file_names
         .first()
         .expect("Failed to find a valid merkle tree file");
 
-    GeneratedMerkleTreeCollection::new_from_file(&PathBuf::from(merkle_tree_file_name))
+    GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_file_name)
         .unwrap_or_else(|_| {
             panic!(
                 "Failed to load merkle tree collection from file: {}",
-                merkle_tree_file_name
+                merkle_tree_file_name.display()
             )
         })
 }
@@ -177,7 +175,6 @@ pub fn meta_merkle_tree_path(epoch: u64, save_path: &Path) -> PathBuf {
     let meta_merkle_tree_filenames = candidate_paths
         .iter()
         .filter(|path| path.exists())
-        .map(|path| path.file_name().unwrap().to_string_lossy().to_string())
         .collect::<Vec<_>>();
 
     let meta_merkle_tree_filename = meta_merkle_tree_filenames
