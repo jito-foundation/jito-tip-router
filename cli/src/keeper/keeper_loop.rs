@@ -238,6 +238,7 @@ pub async fn startup_keeper(
 
             // If complete, reset loop
             if state.is_epoch_completed {
+                info!("Epoch {} is complete", state.epoch);
                 continue;
             }
 
