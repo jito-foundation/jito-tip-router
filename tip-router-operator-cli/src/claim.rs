@@ -122,7 +122,7 @@ pub async fn emit_claim_mev_tips_metrics(
     );
 
     if all_claim_transactions.is_empty() {
-        add_completed_epoch(epoch, current_epoch, file_path, &file_mutex).await?;
+        add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
     }
 
     Ok(())
@@ -666,7 +666,7 @@ pub async fn is_epoch_completed(
     if !file_path.exists() {
         info!("No completed epochs file found - creating empty");
         drop(_lock);
-        add_completed_epoch(0, current_epoch, file_path, &file_mutex).await?;
+        add_completed_epoch(0, current_epoch, file_path, file_mutex).await?;
 
         return Ok(false);
     }
