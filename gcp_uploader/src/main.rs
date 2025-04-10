@@ -103,11 +103,11 @@ async fn main() -> Result<()> {
         }
 
         match scan_and_upload_snapshot_files(
-            &snapshot_dir_path,
+            snapshot_dir_path,
             &bucket_name,
             &hostname,
             &mut uploaded_files,
-            &vec![&snapshot_tar_zst_pattern],
+            &[&snapshot_tar_zst_pattern],
         )
         .await
         {
