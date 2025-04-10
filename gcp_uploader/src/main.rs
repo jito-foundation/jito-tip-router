@@ -28,6 +28,10 @@ struct Args {
     /// Polling interval in seconds (defaults to 600 seconds / 10 minutes)
     #[arg(short, long, default_value = "600")]
     interval: u64,
+
+    /// Directory to scan for snapshot files
+    #[arg(short, long)]
+    snapshot_directory: String,
 }
 
 #[tokio::main]
@@ -41,6 +45,15 @@ async fn main() -> Result<()> {
         return Err(anyhow!(
             "Directory not found or not a directory: {}",
             args.directory
+        ));
+    }
+
+    // Verify snapshot directory exists
+    let snapshot_dir_path = Path::new(&args.snapshot_directory);
+    if !snapshot_dir_path.exists() || !snapshot_dir_path.is_dir() {
+        return Err(anyhow!(
+            "Snapshot directory not found or not a directory: {}",
+            args.snapshot_directory
         ));
     }
 
@@ -60,13 +73,13 @@ async fn main() -> Result<()> {
     let stake_pattern = Regex::new(r"^(\d+)_stake_meta_collection\.json$").unwrap();
     let snapshot_tar_zst_pattern = Regex::new(r"^snapshot-(\d+).*\.tar\.zst$").unwrap();
 
-    let matching_patterns = vec![&merkle_pattern, &stake_pattern, &snapshot_tar_zst_pattern];
+    let incremental_file_patterns = vec![&merkle_pattern, &stake_pattern];
 
     println!(
         "Starting file monitor in {} with {} second polling interval",
         args.directory, args.interval
     );
-    println!("Looking for files matching patterns: '*_merkle_tree_collection.json', '*_stake_meta_collection.json', and 'snapshot-*.tar.zst'");
+    println!("Looking for files matching patterns: '*_merkle_tree_collection.json' and '*_stake_meta_collection.json', and 'snapshot-*.tar.zst'");
 
     // Main monitoring loop
     loop {
@@ -75,13 +88,32 @@ async fn main() -> Result<()> {
             &bucket_name,
             &hostname,
             &mut uploaded_files,
-            &matching_patterns,
+            &incremental_file_patterns,
         )
         .await
         {
             Ok(uploaded) => {
                 if uploaded > 0 {
                     println!("Uploaded {} new files", uploaded);
+                }
+            }
+            Err(e) => {
+                eprintln!("Error during scan/upload: {}", e);
+            }
+        }
+
+        match scan_and_upload_snapshot_files(
+            &snapshot_dir_path,
+            &bucket_name,
+            &hostname,
+            &mut uploaded_files,
+            &vec![&snapshot_tar_zst_pattern],
+        )
+        .await
+        {
+            Ok(uploaded) => {
+                if uploaded > 0 {
+                    println!("Uploaded {} new snapshot files", uploaded);
                 }
             }
             Err(e) => {
@@ -142,6 +174,71 @@ async fn scan_and_upload_files(
                 continue;
             }
 
+            // Mark as uploaded
+            uploaded_files.insert(filename.clone());
+            uploaded_count += 1;
+        }
+    }
+
+    Ok(uploaded_count)
+}
+
+/// Scans directory for snapshots & uploads after deriving the associated epoch
+#[allow(clippy::arithmetic_side_effects)]
+async fn scan_and_upload_snapshot_files(
+    dir_path: &Path,
+    bucket_name: &str,
+    hostname: &str,
+    uploaded_files: &mut HashSet<String>,
+    matching_patterns: &[&Regex],
+) -> Result<usize> {
+    let mut uploaded_count = 0;
+
+    let mut entries = read_dir(dir_path).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        let path = entry.path();
+
+        // Skip directories
+        if path.is_dir() {
+            continue;
+        }
+
+        // Get filename as string
+        let filename = match path.file_name().and_then(|n| n.to_str()) {
+            Some(name) => name.to_string(),
+            None => continue,
+        };
+
+        // Skip if already uploaded
+        if uploaded_files.contains(&filename) {
+            continue;
+        }
+
+        // Check if file matches our patterns
+        let try_find_match: Option<&Regex> = matching_patterns
+            .iter()
+            .find(|re| re.captures(&filename).is_some())
+            .copied();
+
+        let try_slot_num: Option<String> = try_find_match.and_then(|re| {
+            re.captures(&filename)
+                .and_then(|captures| captures.get(1).map(|m| m.as_str().to_string()))
+        });
+
+        if let Some(slot_num) = try_slot_num {
+            let epoch = slot_num
+                .parse::<u64>()
+                .map_err(|_| {
+                    anyhow::anyhow!("Failed to parse slot number from filename: {}", filename)
+                })?
+                .checked_div(432_000)
+                .unwrap()
+                .to_string();
+            // We found a matching file, upload it
+            if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname).await {
+                eprintln!("Failed to upload {}: {}", filename, e);
+                continue;
+            }
             // Mark as uploaded
             uploaded_files.insert(filename.clone());
             uploaded_count += 1;
