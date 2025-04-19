@@ -29,13 +29,20 @@ pub fn format_token_amount(value: u64) -> f64 {
     lamports_to_sol(value)
 }
 
-pub async fn emit_error(title: String, error: String, message: String, keeper_epoch: u64) {
+pub async fn emit_error(
+    title: String,
+    error: String,
+    message: String,
+    keeper_epoch: u64,
+    cluster_name: &str,
+) {
     datapoint_info!(
         "tr-beta-error",
         ("command-title", title, String),
         ("error", error, String),
         ("message", message, String),
         ("keeper-epoch", keeper_epoch, i64),
+        "cluster" => cluster_name,
     );
 }
 
@@ -44,38 +51,46 @@ pub async fn emit_heartbeat(
     run_operations: bool,
     emit_metrics: bool,
     run_migration: bool,
+    cluster_name: &str,
 ) {
     if run_operations {
-        datapoint_info!("tr-beta-keeper-heartbeat-operations", ("tick", tick, i64),);
+        datapoint_info!("tr-beta-keeper-heartbeat-operations", ("tick", tick, i64), "cluster" => cluster_name);
     }
 
     if emit_metrics {
-        datapoint_info!("tr-beta-keeper-heartbeat-metrics", ("tick", tick, i64),);
+        datapoint_info!("tr-beta-keeper-heartbeat-metrics", ("tick", tick, i64), "cluster" => cluster_name);
     }
 
     if run_migration {
-        datapoint_info!("tr-beta-keeper-heartbeat-migrate", ("tick", tick, i64),);
+        datapoint_info!("tr-beta-keeper-heartbeat-migrate", ("tick", tick, i64), "cluster" => cluster_name);
     }
 }
 
 #[allow(clippy::large_stack_frames)]
-pub async fn emit_ncn_metrics(handler: &CliHandler, start_of_loop: bool) -> Result<()> {
-    emit_ncn_metrics_epoch_slot(handler).await?;
+pub async fn emit_ncn_metrics(
+    handler: &CliHandler,
+    start_of_loop: bool,
+    cluster_name: &str,
+) -> Result<()> {
+    emit_ncn_metrics_epoch_slot(handler, cluster_name).await?;
 
     if start_of_loop {
-        emit_ncn_metrics_tickets(handler).await?;
-        emit_ncn_metrics_vault_operator_delegation(handler).await?;
-        emit_ncn_metrics_operators(handler).await?;
-        emit_ncn_metrics_vault_registry(handler).await?;
-        emit_ncn_metrics_config(handler).await?;
-        emit_ncn_metrics_account_payer(handler).await?;
-        emit_ncn_metrics_opted_in_validators(handler).await?;
+        emit_ncn_metrics_tickets(handler, cluster_name).await?;
+        emit_ncn_metrics_vault_operator_delegation(handler, cluster_name).await?;
+        emit_ncn_metrics_operators(handler, cluster_name).await?;
+        emit_ncn_metrics_vault_registry(handler, cluster_name).await?;
+        emit_ncn_metrics_config(handler, cluster_name).await?;
+        emit_ncn_metrics_account_payer(handler, cluster_name).await?;
+        emit_ncn_metrics_opted_in_validators(handler, cluster_name).await?;
     }
 
     Ok(())
 }
 
-pub async fn emit_ncn_metrics_opted_in_validators(handler: &CliHandler) -> Result<()> {
+pub async fn emit_ncn_metrics_opted_in_validators(
+    handler: &CliHandler,
+    cluster_name: &str,
+) -> Result<()> {
     let result = get_all_opted_in_validators(handler).await;
 
     if let Ok(all_opted_in_validators) = result {
@@ -86,6 +101,7 @@ pub async fn emit_ncn_metrics_opted_in_validators(handler: &CliHandler) -> Resul
                 ("identity", info.identity.to_string(), String),
                 ("stake", info.stake, i64),
                 ("active", info.active, bool),
+                "cluster" => cluster_name,
             );
         }
     }
@@ -93,7 +109,7 @@ pub async fn emit_ncn_metrics_opted_in_validators(handler: &CliHandler) -> Resul
     Ok(())
 }
 
-pub async fn emit_ncn_metrics_epoch_slot(handler: &CliHandler) -> Result<()> {
+pub async fn emit_ncn_metrics_epoch_slot(handler: &CliHandler, cluster_name: &str) -> Result<()> {
     let ncn = handler.ncn()?;
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let epoch_percentage =
@@ -105,12 +121,16 @@ pub async fn emit_ncn_metrics_epoch_slot(handler: &CliHandler) -> Result<()> {
         ("current-slot", current_slot, i64),
         ("epoch-percentage", epoch_percentage, f64),
         ("ncn", ncn.to_string(), String),
+        "cluster" => cluster_name,
     );
 
     Ok(())
 }
 
-pub async fn emit_ncn_metrics_account_payer(handler: &CliHandler) -> Result<()> {
+pub async fn emit_ncn_metrics_account_payer(
+    handler: &CliHandler,
+    cluster_name: &str,
+) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
 
     let (account_payer_address, _, _) =
@@ -124,12 +144,13 @@ pub async fn emit_ncn_metrics_account_payer(handler: &CliHandler) -> Result<()> 
         ("account-payer", account_payer_address.to_string(), String),
         ("balance", account_payer.lamports, i64),
         ("balance-sol", lamports_to_sol(account_payer.lamports), f64),
+        "cluster" => cluster_name,
     );
 
     Ok(())
 }
 
-pub async fn emit_ncn_metrics_tickets(handler: &CliHandler) -> Result<()> {
+pub async fn emit_ncn_metrics_tickets(handler: &CliHandler, cluster_name: &str) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let vault_epoch_length = {
         let vault_config = get_vault_config(handler).await?;
@@ -232,13 +253,17 @@ pub async fn emit_ncn_metrics_tickets(handler: &CliHandler) -> Result<()> {
                 format_token_amount(vault_delegation_state.total_security()?),
                 f64
             ),
+            "cluster" => cluster_name,
         );
     }
 
     Ok(())
 }
 
-pub async fn emit_ncn_metrics_vault_operator_delegation(handler: &CliHandler) -> Result<()> {
+pub async fn emit_ncn_metrics_vault_operator_delegation(
+    handler: &CliHandler,
+    cluster_name: &str,
+) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let all_operators = get_all_operators_in_ncn(handler).await?;
     let all_vaults = get_all_vaults_in_ncn(handler).await?;
@@ -267,6 +292,7 @@ pub async fn emit_ncn_metrics_vault_operator_delegation(handler: &CliHandler) ->
                     ),
                     f64
                 ),
+                "cluster" => cluster_name
             );
         }
     }
@@ -274,7 +300,7 @@ pub async fn emit_ncn_metrics_vault_operator_delegation(handler: &CliHandler) ->
     Ok(())
 }
 
-pub async fn emit_ncn_metrics_operators(handler: &CliHandler) -> Result<()> {
+pub async fn emit_ncn_metrics_operators(handler: &CliHandler, cluster_name: &str) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let all_operators = get_all_operators_in_ncn(handler).await?;
     let ballot_box_result = get_ballot_box(handler, current_epoch).await;
@@ -301,14 +327,18 @@ pub async fn emit_ncn_metrics_operators(handler: &CliHandler) -> Result<()> {
             ),
             ("vault-count", operator_account.vault_count(), i64),
             ("ncn-count", operator_account.ncn_count(), i64),
-            ("has-voted", operator_has_voted as i64, i64)
+            ("has-voted", operator_has_voted as i64, i64),
+            "cluster" => cluster_name,
         );
     }
 
     Ok(())
 }
 
-pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()> {
+pub async fn emit_ncn_metrics_vault_registry(
+    handler: &CliHandler,
+    cluster_name: &str,
+) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let vault_registry = get_vault_registry(handler).await?;
 
@@ -317,7 +347,8 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
         ("current-epoch", current_epoch, i64),
         ("current-slot", current_slot, i64),
         ("st-mints", vault_registry.st_mint_count(), i64),
-        ("vaults", vault_registry.vault_count(), i64)
+        ("vaults", vault_registry.vault_count(), i64),
+        "cluster" => cluster_name,
     );
 
     for vault in vault_registry.vault_list {
@@ -346,6 +377,7 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
             ),
             ("operator-count", vault_account.operator_count(), i64),
             ("ncn-count", vault_account.ncn_count(), i64),
+            "cluster" => cluster_name,
         );
     }
 
@@ -371,13 +403,14 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
                 st_mint.reward_multiplier_bps(),
                 i64
             ),
+            "cluster" => cluster_name,
         );
     }
 
     Ok(())
 }
 
-pub async fn emit_ncn_metrics_config(handler: &CliHandler) -> Result<()> {
+pub async fn emit_ncn_metrics_config(handler: &CliHandler, cluster_name: &str) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
 
     let config = get_tip_router_config(handler).await?;
@@ -434,41 +467,44 @@ pub async fn emit_ncn_metrics_config(handler: &CliHandler) -> Result<()> {
             current_fees.ncn_fee_bps(NcnFeeGroup::jto())?,
             i64
         ),
-        ("total-fees", current_fees.total_fees_bps()?, i64)
+        ("total-fees", current_fees.total_fees_bps()?, i64),
+        "cluster" => cluster_name,
     );
 
     Ok(())
 }
 
 macro_rules! emit_epoch_datapoint {
-    ($name:expr, $is_current_epoch:expr, $($fields:tt),*) => {
-        // Always emit the standard metric
-        datapoint_info!($name, $($fields),*);
-
-        // If it's the current epoch, also emit with "-current" suffix
+    ($name:expr, $is_current_epoch:expr, $($field:tt)*) => {
+        datapoint_info!($name, $($field)*);
         if $is_current_epoch {
-            datapoint_info!(
-                concat!($name, "-current"),
-                $($fields),*
-            );
+            datapoint_info!(concat!($name, "-current"), $($field)*);
         }
     };
 }
 
 #[allow(clippy::large_stack_frames)]
-pub async fn emit_epoch_metrics(handler: &CliHandler, epoch: u64) -> Result<()> {
-    emit_epoch_metrics_state(handler, epoch).await?;
-    emit_epoch_metrics_weight_table(handler, epoch).await?;
-    emit_epoch_metrics_epoch_snapshot(handler, epoch).await?;
-    emit_epoch_metrics_operator_snapshot(handler, epoch).await?;
-    emit_epoch_metrics_ballot_box(handler, epoch).await?;
-    emit_epoch_metrics_base_rewards(handler, epoch).await?;
-    emit_epoch_metrics_ncn_rewards(handler, epoch).await?;
+pub async fn emit_epoch_metrics(
+    handler: &CliHandler,
+    epoch: u64,
+    cluster_name: &str,
+) -> Result<()> {
+    emit_epoch_metrics_state(handler, epoch, cluster_name).await?;
+    emit_epoch_metrics_weight_table(handler, epoch, cluster_name).await?;
+    emit_epoch_metrics_epoch_snapshot(handler, epoch, cluster_name).await?;
+    emit_epoch_metrics_operator_snapshot(handler, epoch, cluster_name).await?;
+    emit_epoch_metrics_ballot_box(handler, epoch, cluster_name).await?;
+    emit_epoch_metrics_base_rewards(handler, epoch, cluster_name).await?;
+    emit_epoch_metrics_ncn_rewards(handler, epoch, cluster_name).await?;
 
     Ok(())
 }
 
-pub async fn emit_epoch_metrics_ncn_rewards(handler: &CliHandler, epoch: u64) -> Result<()> {
+pub async fn emit_epoch_metrics_ncn_rewards(
+    handler: &CliHandler,
+    epoch: u64,
+    cluster_name: &str,
+) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let is_current_epoch = current_epoch == epoch;
 
@@ -501,7 +537,8 @@ pub async fn emit_epoch_metrics_ncn_rewards(handler: &CliHandler, epoch: u64) ->
                         ("group", group.group, i64),
                         ("operator", operator.to_string(), String),
                         ("vault", route.vault().to_string(), String),
-                        ("rewards", format_token_amount(route.rewards()), f64)
+                        ("rewards", format_token_amount(route.rewards()), f64),
+                        "cluster" => cluster_name,
                     );
                 }
 
@@ -548,7 +585,8 @@ pub async fn emit_epoch_metrics_ncn_rewards(handler: &CliHandler, epoch: u64) ->
                         "total-vault-rewards",
                         format_token_amount(total_vault_rewards),
                         f64
-                    )
+                    ),
+                    "cluster" => cluster_name,
                 );
             }
         }
@@ -557,7 +595,11 @@ pub async fn emit_epoch_metrics_ncn_rewards(handler: &CliHandler, epoch: u64) ->
     Ok(())
 }
 
-pub async fn emit_epoch_metrics_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> {
+pub async fn emit_epoch_metrics_base_rewards(
+    handler: &CliHandler,
+    epoch: u64,
+    cluster_name: &str,
+) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let is_current_epoch = current_epoch == epoch;
 
@@ -741,7 +783,8 @@ pub async fn emit_epoch_metrics_base_rewards(handler: &CliHandler, epoch: u64) -
                         .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved7))?
                 ),
                 f64
-            )
+            ),
+            "cluster" => cluster_name,
         );
     }
 
@@ -749,7 +792,11 @@ pub async fn emit_epoch_metrics_base_rewards(handler: &CliHandler, epoch: u64) -
 }
 
 #[allow(clippy::large_stack_frames)]
-pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
+pub async fn emit_epoch_metrics_ballot_box(
+    handler: &CliHandler,
+    epoch: u64,
+    cluster_name: &str,
+) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let is_current_epoch = current_epoch == epoch;
 
@@ -800,7 +847,8 @@ pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> 
                         format_stake_weight(total_stake_weight),
                         f64
                     ),
-                    ("vote", vote, String)
+                    ("vote", vote, String),
+                    "cluster" => cluster_name,
                 );
             }
 
@@ -829,7 +877,8 @@ pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> 
                         format_stake_weight(total_stake_weight),
                         f64
                     ),
-                    ("vote", vote, String)
+                    ("vote", vote, String),
+                    "cluster" => cluster_name,
                 );
             }
 
@@ -871,7 +920,8 @@ pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> 
                     "is-voting-valid",
                     ballot_box.is_voting_valid(current_slot, valid_slots_after_consensus)?,
                     bool
-                )
+                ),
+                "cluster" => cluster_name,
             );
         }
     }
@@ -879,7 +929,11 @@ pub async fn emit_epoch_metrics_ballot_box(handler: &CliHandler, epoch: u64) -> 
     Ok(())
 }
 
-pub async fn emit_epoch_metrics_operator_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
+pub async fn emit_epoch_metrics_operator_snapshot(
+    handler: &CliHandler,
+    epoch: u64,
+    cluster_name: &str,
+) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let is_current_epoch = current_epoch == epoch;
 
@@ -928,7 +982,8 @@ pub async fn emit_epoch_metrics_operator_snapshot(handler: &CliHandler, epoch: u
                     format_stake_weight(operator_snapshot.stake_weights().stake_weight()),
                     f64
                 ),
-                ("slot-finalized", operator_snapshot.slot_finalized(), i64)
+                ("slot-finalized", operator_snapshot.slot_finalized(), i64),
+                "cluster" => cluster_name,
             );
         }
     }
@@ -936,7 +991,11 @@ pub async fn emit_epoch_metrics_operator_snapshot(handler: &CliHandler, epoch: u
     Ok(())
 }
 
-pub async fn emit_epoch_metrics_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
+pub async fn emit_epoch_metrics_epoch_snapshot(
+    handler: &CliHandler,
+    epoch: u64,
+    cluster_name: &str,
+) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let is_current_epoch = current_epoch == epoch;
 
@@ -976,14 +1035,19 @@ pub async fn emit_epoch_metrics_epoch_snapshot(handler: &CliHandler, epoch: u64)
             ("base-fee-dao", fees.base_fee_bps(BaseFeeGroup::dao())?, i64),
             ("ncn-fee-lst", fees.ncn_fee_bps(NcnFeeGroup::lst())?, i64),
             ("ncn-fee-jto", fees.ncn_fee_bps(NcnFeeGroup::jto())?, i64),
-            ("total-fees", fees.total_fees_bps()?, i64)
+            ("total-fees", fees.total_fees_bps()?, i64),
+            "cluster" => cluster_name,
         );
     }
 
     Ok(())
 }
 
-pub async fn emit_epoch_metrics_weight_table(handler: &CliHandler, epoch: u64) -> Result<()> {
+pub async fn emit_epoch_metrics_weight_table(
+    handler: &CliHandler,
+    epoch: u64,
+    cluster_name: &str,
+) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let is_current_epoch = current_epoch == epoch;
 
@@ -1002,7 +1066,8 @@ pub async fn emit_epoch_metrics_weight_table(handler: &CliHandler, epoch: u64) -
                 ("current-slot", current_slot, i64),
                 ("keeper-epoch", epoch, i64),
                 ("st-mint", entry.st_mint().to_string(), String),
-                ("weight", format_stake_weight(entry.weight()), f64)
+                ("weight", format_stake_weight(entry.weight()), f64),
+                "cluster" => cluster_name,
             );
         }
 
@@ -1014,7 +1079,8 @@ pub async fn emit_epoch_metrics_weight_table(handler: &CliHandler, epoch: u64) -
             ("keeper-epoch", epoch, i64),
             ("weight-count", weight_table.mint_count(), i64),
             ("vault-count", weight_table.vault_count(), i64),
-            ("weight-count", weight_table.weight_count(), i64)
+            ("weight-count", weight_table.weight_count(), i64),
+            "cluster" => cluster_name,
         );
     }
 
@@ -1022,7 +1088,11 @@ pub async fn emit_epoch_metrics_weight_table(handler: &CliHandler, epoch: u64) -
 }
 
 #[allow(clippy::large_stack_frames)]
-pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Result<()> {
+pub async fn emit_epoch_metrics_state(
+    handler: &CliHandler,
+    epoch: u64,
+    cluster_name: &str,
+) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
     let is_current_epoch = current_epoch == epoch;
 
@@ -1037,7 +1107,8 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
             ("keeper-epoch", epoch, i64),
             ("current-state-string", "Complete", String),
             ("current-state", -1, i64),
-            ("is-complete", true, bool)
+            ("is-complete", true, bool),
+            "cluster" => cluster_name,
         );
 
         return Ok(());
@@ -1228,7 +1299,8 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
         ),
         ("ncn-reward-router-account-dne", ncn_router_dne, i64),
         ("ncn-reward-router-account-open", ncn_router_open, i64),
-        ("ncn-reward-router-account-closed", ncn_router_closed, i64)
+        ("ncn-reward-router-account-closed", ncn_router_closed, i64),
+        "cluster" => cluster_name,
     );
 
     Ok(())
