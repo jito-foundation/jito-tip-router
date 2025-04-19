@@ -5,7 +5,6 @@
 //! <https://github.com/kinobi-so/kinobi>
 //!
 
-use crate::generated::types::NcnFeeGroup;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 use solana_program::pubkey::Pubkey;
@@ -18,8 +17,8 @@ pub struct StMintEntry {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub st_mint: Pubkey,
-    pub ncn_fee_group: NcnFeeGroup,
     pub reward_multiplier_bps: u64,
+    pub reserved_reward_multiplier_bps: u64,
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")

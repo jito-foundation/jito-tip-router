@@ -11,7 +11,6 @@ pub fn process_admin_set_st_mint(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     st_mint: &Pubkey,
-    ncn_fee_group: Option<u8>,
     reward_multiplier_bps: Option<u64>,
     switchboard_feed: Option<Pubkey>,
     no_feed_weight: Option<u128>,
@@ -42,7 +41,6 @@ pub fn process_admin_set_st_mint(
 
     vault_registry_account.set_st_mint(
         st_mint,
-        ncn_fee_group,
         reward_multiplier_bps,
         switchboard_feed,
         no_feed_weight,

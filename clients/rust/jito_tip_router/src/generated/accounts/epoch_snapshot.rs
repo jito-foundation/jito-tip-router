@@ -5,7 +5,6 @@
 //! <https://github.com/kinobi-so/kinobi>
 //!
 
-use crate::generated::types::Fees;
 use crate::generated::types::StakeWeights;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
@@ -24,7 +23,8 @@ pub struct EpochSnapshot {
     pub bump: u8,
     pub slot_created: u64,
     pub slot_finalized: u64,
-    pub fees: Fees,
+    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
+    pub reserved_for_fees: [u8; 168],
     pub operator_count: u64,
     pub vault_count: u64,
     pub operators_registered: u64,

@@ -1,7 +1,7 @@
 use crate::{
     getters::{
         get_account, get_all_operators_in_ncn, get_all_vaults_in_ncn, get_is_epoch_completed,
-        get_tip_router_config, get_total_rewards_to_be_distributed,
+        get_tip_router_config,
     },
     handler::CliHandler,
 };
@@ -10,16 +10,13 @@ use jito_bytemuck::AccountDeserialize;
 
 use jito_tip_router_core::{
     ballot_box::BallotBox,
-    base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::{EpochState, State},
-    ncn_fee_group::NcnFeeGroup,
-    ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
     vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
-use solana_sdk::{account::Account, pubkey::Pubkey};
+use solana_sdk::pubkey::Pubkey;
 
 #[derive(Default)]
 pub struct KeeperState {
@@ -34,10 +31,6 @@ pub struct KeeperState {
     pub epoch_snapshot_address: Pubkey,
     pub operator_snapshots_address: Vec<Pubkey>,
     pub ballot_box_address: Pubkey,
-    pub base_reward_router_address: Pubkey,
-    pub base_reward_receiver_address: Pubkey,
-    pub ncn_reward_routers_address: Vec<Vec<Pubkey>>,
-    pub ncn_reward_receivers_address: Vec<Vec<Pubkey>>,
     pub epoch_state: Option<Box<EpochState>>,
     pub current_state: Option<State>,
     pub is_epoch_completed: bool,
@@ -89,44 +82,6 @@ impl KeeperState {
         let (ballot_box_address, _, _) =
             BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
         self.ballot_box_address = ballot_box_address;
-
-        let (base_reward_router_address, _, _) =
-            BaseRewardRouter::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-        self.base_reward_router_address = base_reward_router_address;
-
-        let (base_reward_receiver_address, _, _) =
-            BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
-        self.base_reward_receiver_address = base_reward_receiver_address;
-
-        for operator in self.operators.iter() {
-            let mut ncn_reward_routers_address = Vec::default();
-            let mut ncn_reward_receivers_address = Vec::default();
-
-            for ncn_fee_group in NcnFeeGroup::all_groups() {
-                let (ncn_reward_router_address, _, _) = NcnRewardRouter::find_program_address(
-                    &handler.tip_router_program_id,
-                    ncn_fee_group,
-                    operator,
-                    &ncn,
-                    epoch,
-                );
-                ncn_reward_routers_address.push(ncn_reward_router_address);
-
-                let (ncn_reward_receiver_address, _, _) = NcnRewardReceiver::find_program_address(
-                    &handler.tip_router_program_id,
-                    ncn_fee_group,
-                    operator,
-                    &ncn,
-                    epoch,
-                );
-                ncn_reward_receivers_address.push(ncn_reward_receiver_address);
-            }
-
-            self.ncn_reward_routers_address
-                .push(ncn_reward_routers_address);
-            self.ncn_reward_receivers_address
-                .push(ncn_reward_receivers_address);
-        }
 
         self.update_epoch_state(handler).await?;
 
@@ -249,63 +204,6 @@ impl KeeperState {
         }
     }
 
-    pub async fn base_reward_router(
-        &self,
-        handler: &CliHandler,
-    ) -> Result<Option<BaseRewardRouter>> {
-        let raw_account = get_account(handler, &self.base_reward_router_address).await?;
-
-        if raw_account.is_none() {
-            Ok(None)
-        } else {
-            let raw_account = raw_account.unwrap();
-            let account = BaseRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice())?;
-            Ok(Some(*account))
-        }
-    }
-
-    pub async fn base_reward_receiver(&self, handler: &CliHandler) -> Result<Option<Account>> {
-        let raw_account = get_account(handler, &self.base_reward_receiver_address).await?;
-
-        Ok(raw_account)
-    }
-
-    pub async fn ncn_reward_router(
-        &self,
-        handler: &CliHandler,
-        operator_index: usize,
-        ncn_fee_group: NcnFeeGroup,
-    ) -> Result<Option<NcnRewardRouter>> {
-        let raw_account = get_account(
-            handler,
-            &self.ncn_reward_routers_address[operator_index][ncn_fee_group.group_index()?],
-        )
-        .await?;
-
-        if raw_account.is_none() {
-            Ok(None)
-        } else {
-            let raw_account = raw_account.unwrap();
-            let account = NcnRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice())?;
-            Ok(Some(*account))
-        }
-    }
-
-    pub async fn ncn_reward_receiver(
-        &self,
-        handler: &CliHandler,
-        operator_index: usize,
-        ncn_fee_group: NcnFeeGroup,
-    ) -> Result<Option<Account>> {
-        let raw_account = get_account(
-            handler,
-            &self.ncn_reward_receivers_address[operator_index][ncn_fee_group.group_index()?],
-        )
-        .await?;
-
-        Ok(raw_account)
-    }
-
     pub fn epoch_state(&self) -> Result<&EpochState> {
         self.epoch_state
             .as_ref()
@@ -385,7 +283,7 @@ impl KeeperState {
         Ok(*state)
     }
 
-    pub async fn detect_stall(&mut self, handler: &CliHandler) -> Result<bool> {
+    pub async fn detect_stall(&mut self) -> Result<bool> {
         if self.is_epoch_completed {
             return Ok(true);
         }
@@ -394,16 +292,6 @@ impl KeeperState {
 
         if current_state == State::Vote || current_state == State::PostVoteCooldown {
             return Ok(true);
-        }
-
-        if current_state == State::Distribute {
-            let total_rewards_to_be_distributed =
-                get_total_rewards_to_be_distributed(handler, self.epoch).await?;
-
-            // If dust rewards, then stall
-            if total_rewards_to_be_distributed < 10_000 {
-                return Ok(true);
-            }
         }
 
         Ok(false)

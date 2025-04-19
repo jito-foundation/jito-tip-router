@@ -162,7 +162,6 @@ pub enum ProgramCommand {
     CrankRegisterVaults {},
     CrankSetWeight {},
     CrankSnapshot {},
-    CrankDistribute {},
     CrankCloseEpochAccounts {},
 
     /// Admin
@@ -177,22 +176,12 @@ pub enum ProgramCommand {
             help = "Epochs after consensus before accounts can be closed"
         )]
         epochs_after_consensus_before_close: u64,
-        #[arg(long, default_value_t = 300, help = "DAO fee in basis points")]
-        dao_fee_bps: u16,
-        #[arg(long, default_value_t = 100, help = "Block engine fee in basis points")]
-        block_engine_fee_bps: u16,
-        #[arg(long, default_value_t = 100, help = "Default NCN fee in basis points")]
-        default_ncn_fee_bps: u16,
-        #[arg(long, help = "Fee wallet address")]
-        fee_wallet: Option<String>,
         #[arg(long, help = "Tie breaker admin address")]
         tie_breaker_admin: Option<String>,
     },
     AdminRegisterStMint {
         #[arg(long, help = "Vault address")]
         vault: String,
-        #[arg(long, default_value_t = 0, help = "NCN fee group")]
-        ncn_fee_group: u8,
         #[arg(
             long,
             default_value_t = 100,
@@ -224,25 +213,9 @@ pub enum ProgramCommand {
         #[arg(long, help = "Starting valid epoch")]
         starting_valid_epoch: Option<u64>,
     },
-    AdminSetConfigFees {
-        #[arg(long, help = "New block engine fee in basis points")]
-        new_block_engine_fee_bps: Option<u16>,
-        #[arg(long, help = "Base fee group")]
-        base_fee_group: Option<u8>,
-        #[arg(long, help = "New base fee wallet")]
-        new_base_fee_wallet: Option<String>,
-        #[arg(long, help = "New base fee in basis points")]
-        new_base_fee_bps: Option<u16>,
-        #[arg(long, help = "NCN fee group")]
-        ncn_fee_group: Option<u8>,
-        #[arg(long, help = "New NCN fee in basis points")]
-        new_ncn_fee_bps: Option<u16>,
-    },
     AdminSetNewAdmin {
         #[arg(long, help = "New admin address")]
         new_admin: String,
-        #[arg(long, help = "Set fee admin")]
-        set_fee_admin: bool,
         #[arg(long, help = "Set tie breaker admin")]
         set_tie_breaker_admin: bool,
     },
@@ -296,31 +269,6 @@ pub enum ProgramCommand {
         meta_merkle_root: String,
     },
 
-    CreateBaseRewardRouter,
-
-    CreateNcnRewardRouter {
-        #[arg(long, help = "Operator address")]
-        operator: String,
-        #[arg(long, default_value_t = 0, help = "NCN fee group")]
-        ncn_fee_group: u8,
-    },
-
-    RouteBaseRewards,
-
-    RouteNcnRewards {
-        #[arg(long, help = "Operator address")]
-        operator: String,
-        #[arg(long, default_value_t = 0, help = "NCN fee group")]
-        ncn_fee_group: u8,
-    },
-
-    DistributeBaseNcnRewards {
-        #[arg(long, help = "Operator address")]
-        operator: String,
-        #[arg(long, default_value_t = 0, help = "NCN fee group")]
-        ncn_fee_group: u8,
-    },
-
     /// Getters
     GetNcn,
     GetNcnOperatorState {
@@ -354,15 +302,6 @@ pub enum ProgramCommand {
         operator: String,
     },
     GetBallotBox,
-    GetBaseRewardRouter,
-    GetBaseRewardReceiverAddress,
-    GetNcnRewardRouter {
-        #[arg(long, env = "OPERATOR", help = "Operator Account Address")]
-        operator: String,
-        #[arg(long, default_value_t = 0, help = "NCN fee group")]
-        ncn_fee_group: u8,
-    },
-    GetAllNcnRewardRouters,
     GetAccountPayer,
     GetTotalEpochRentCost,
     GetStakePool,
@@ -404,13 +343,6 @@ pub enum ProgramCommand {
             help = "Withdrawal fee BPS"
         )]
         withdrawal_fee_bps: u16,
-        #[arg(
-            long,
-            env = "VAULT_REWARD_FEE",
-            default_value_t = 100,
-            help = "Reward fee BPS"
-        )]
-        reward_fee_bps: u16,
     },
 }
 
@@ -431,7 +363,6 @@ impl fmt::Display for Args {
         writeln!(f, "  • Restaking:         {}", self.restaking_program_id)?;
         writeln!(f, "  • Vault:             {}", self.vault_program_id)?;
         writeln!(f, "  • Token:             {}", self.token_program_id)?;
-        writeln!(f, "  • Tip Distribution:  {}", self.tip_distribution_program_id)?;
 
         // Solana Settings
         writeln!(f, "\n◎  Solana Settings:")?;

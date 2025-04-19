@@ -64,9 +64,7 @@ export type EpochState = {
   votingProgress: Progress;
   validationProgress: Progress;
   uploadProgress: Progress;
-  totalDistributionProgress: Progress;
-  baseDistributionProgress: Progress;
-  ncnDistributionProgress: Array<Progress>;
+  reservedDistributionSpace: Array<number>;
   isClosing: number;
   reserved: Array<number>;
 };
@@ -88,9 +86,7 @@ export type EpochStateArgs = {
   votingProgress: ProgressArgs;
   validationProgress: ProgressArgs;
   uploadProgress: ProgressArgs;
-  totalDistributionProgress: ProgressArgs;
-  baseDistributionProgress: ProgressArgs;
-  ncnDistributionProgress: Array<ProgressArgs>;
+  reservedDistributionSpace: Array<number>;
   isClosing: number;
   reserved: Array<number>;
 };
@@ -116,11 +112,9 @@ export function getEpochStateEncoder(): Encoder<EpochStateArgs> {
     ['votingProgress', getProgressEncoder()],
     ['validationProgress', getProgressEncoder()],
     ['uploadProgress', getProgressEncoder()],
-    ['totalDistributionProgress', getProgressEncoder()],
-    ['baseDistributionProgress', getProgressEncoder()],
     [
-      'ncnDistributionProgress',
-      getArrayEncoder(getProgressEncoder(), { size: 2048 }),
+      'reservedDistributionSpace',
+      getArrayEncoder(getU8Encoder(), { size: 2064 }),
     ],
     ['isClosing', getBoolEncoder()],
     ['reserved', getArrayEncoder(getU8Encoder(), { size: 1023 })],
@@ -148,11 +142,9 @@ export function getEpochStateDecoder(): Decoder<EpochState> {
     ['votingProgress', getProgressDecoder()],
     ['validationProgress', getProgressDecoder()],
     ['uploadProgress', getProgressDecoder()],
-    ['totalDistributionProgress', getProgressDecoder()],
-    ['baseDistributionProgress', getProgressDecoder()],
     [
-      'ncnDistributionProgress',
-      getArrayDecoder(getProgressDecoder(), { size: 2048 }),
+      'reservedDistributionSpace',
+      getArrayDecoder(getU8Decoder(), { size: 2064 }),
     ],
     ['isClosing', getBoolDecoder()],
     ['reserved', getArrayDecoder(getU8Decoder(), { size: 1023 })],

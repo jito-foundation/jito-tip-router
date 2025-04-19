@@ -16,15 +16,11 @@ use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_router_core::{
     account_payer::AccountPayer,
     ballot_box::BallotBox,
-    base_fee_group::BaseFeeGroup,
-    base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
     constants::JITOSOL_POOL_ADDRESS,
     epoch_marker::EpochMarker,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
-    ncn_fee_group::NcnFeeGroup,
-    ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
     vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
@@ -44,7 +40,6 @@ use solana_client::{
 use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::{account::Account, pubkey::Pubkey};
-use spl_associated_token_account::get_associated_token_address;
 use spl_stake_pool::{find_withdraw_authority_program_address, state::StakePool};
 use tokio::time::sleep;
 
@@ -202,184 +197,6 @@ pub async fn get_ballot_box(handler: &CliHandler, epoch: u64) -> Result<BallotBo
 
     let account = BallotBox::try_from_slice_unchecked(account.data.as_slice())?;
     Ok(*account)
-}
-
-pub async fn get_base_reward_router(handler: &CliHandler, epoch: u64) -> Result<BaseRewardRouter> {
-    let (address, _, _) = BaseRewardRouter::find_program_address(
-        &handler.tip_router_program_id,
-        handler.ncn()?,
-        epoch,
-    );
-
-    let account = get_account(handler, &address).await?;
-
-    if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
-    }
-    let account = account.unwrap();
-
-    let account = BaseRewardRouter::try_from_slice_unchecked(account.data.as_slice())?;
-    Ok(*account)
-}
-
-pub async fn get_base_reward_receiver(
-    handler: &CliHandler,
-    epoch: u64,
-) -> Result<(Pubkey, Account)> {
-    let (address, _, _) = BaseRewardReceiver::find_program_address(
-        &handler.tip_router_program_id,
-        handler.ncn()?,
-        epoch,
-    );
-
-    let account = get_account(handler, &address).await?;
-
-    if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
-    }
-    let account = account.unwrap();
-
-    Ok((address, account))
-}
-
-pub async fn get_ncn_reward_router(
-    handler: &CliHandler,
-    ncn_fee_group: NcnFeeGroup,
-    operator: &Pubkey,
-    epoch: u64,
-) -> Result<NcnRewardRouter> {
-    let (address, _, _) = NcnRewardRouter::find_program_address(
-        &handler.tip_router_program_id,
-        ncn_fee_group,
-        operator,
-        handler.ncn()?,
-        epoch,
-    );
-
-    let account = get_account(handler, &address).await?;
-
-    if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
-    }
-    let account = account.unwrap();
-
-    let account = NcnRewardRouter::try_from_slice_unchecked(account.data.as_slice())?;
-    Ok(*account)
-}
-
-pub async fn get_ncn_reward_receiver(
-    handler: &CliHandler,
-    ncn_fee_group: NcnFeeGroup,
-    operator: &Pubkey,
-    epoch: u64,
-) -> Result<(Pubkey, Account)> {
-    let (address, _, _) = NcnRewardReceiver::find_program_address(
-        &handler.tip_router_program_id,
-        ncn_fee_group,
-        operator,
-        handler.ncn()?,
-        epoch,
-    );
-
-    let account = get_account(handler, &address).await?;
-
-    if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
-    }
-    let account = account.unwrap();
-
-    Ok((address, account))
-}
-
-pub async fn get_receiver_rewards(handler: &CliHandler, address: &Pubkey) -> Result<u64> {
-    let account = get_account(handler, address).await?;
-
-    let rent = handler
-        .rpc_client()
-        .get_minimum_balance_for_rent_exemption(0)
-        .await?;
-
-    if account.is_none() {
-        return Err(anyhow::anyhow!("Account not found"));
-    }
-    let account = account.unwrap();
-
-    Ok(account.lamports - rent)
-}
-
-pub async fn get_base_reward_receiver_rewards(handler: &CliHandler, epoch: u64) -> Result<u64> {
-    let (address, _) = get_base_reward_receiver(handler, epoch).await?;
-    get_receiver_rewards(handler, &address).await
-}
-
-pub async fn get_ncn_reward_receiver_rewards(
-    handler: &CliHandler,
-    ncn_fee_group: NcnFeeGroup,
-    operator: &Pubkey,
-    epoch: u64,
-) -> Result<u64> {
-    let (address, _) = get_ncn_reward_receiver(handler, ncn_fee_group, operator, epoch).await?;
-    get_receiver_rewards(handler, &address).await
-}
-
-#[allow(clippy::large_stack_frames)]
-pub async fn get_total_rewards_to_be_distributed(handler: &CliHandler, epoch: u64) -> Result<u64> {
-    let all_operators = {
-        let ballot_box = get_ballot_box(handler, epoch).await?;
-        let winning_ballot = ballot_box.get_winning_ballot_tally()?;
-        let winning_ballot_index = winning_ballot.index();
-
-        ballot_box
-            .operator_votes()
-            .iter()
-            .filter_map(|vote| {
-                if vote.ballot_index() == winning_ballot_index {
-                    Some(*vote.operator())
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<Pubkey>>()
-    };
-
-    let all_ncn_groups = {
-        let epoch_snapshot = get_epoch_snapshot(handler, epoch).await?;
-        let fees = *epoch_snapshot.fees();
-        NcnFeeGroup::all_groups()
-            .iter()
-            .filter_map(|group| {
-                if fees.ncn_fee_bps(*group).unwrap() > 0 {
-                    Some(*group)
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<NcnFeeGroup>>()
-    };
-
-    let mut total_amount_to_distribute = 0;
-    {
-        let result = get_base_reward_receiver_rewards(handler, epoch).await;
-        if result.is_err() {
-            return Ok(0);
-        }
-
-        total_amount_to_distribute += result.unwrap();
-    }
-
-    for operator in all_operators.iter() {
-        for group in all_ncn_groups.iter() {
-            let result = get_ncn_reward_receiver_rewards(handler, *group, operator, epoch).await;
-
-            if result.is_err() {
-                continue;
-            }
-
-            total_amount_to_distribute += result.unwrap();
-        }
-    }
-
-    Ok(total_amount_to_distribute)
 }
 
 pub async fn get_account_payer(handler: &CliHandler) -> Result<Account> {
@@ -724,7 +541,6 @@ pub struct StakePoolAccounts {
     pub stake_pool_address: Pubkey,
     pub stake_pool: StakePool,
     pub stake_pool_withdraw_authority: Pubkey,
-    pub referrer_pool_tokens_account: Pubkey,
 }
 
 pub async fn get_stake_pool_accounts(handler: &CliHandler) -> Result<StakePoolAccounts> {
@@ -735,20 +551,11 @@ pub async fn get_stake_pool_accounts(handler: &CliHandler) -> Result<StakePoolAc
     let (stake_pool_withdraw_authority, _) =
         find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool_address);
 
-    let referrer_pool_tokens_account = {
-        let tip_router_config = get_tip_router_config(handler).await?;
-        let base_fee_wallet = tip_router_config
-            .fee_config
-            .base_fee_wallet(BaseFeeGroup::default())?;
-        get_associated_token_address(base_fee_wallet, &stake_pool.pool_mint)
-    };
-
     let accounts = StakePoolAccounts {
         stake_pool_program_id,
         stake_pool_address,
         stake_pool,
         stake_pool_withdraw_authority,
-        referrer_pool_tokens_account,
     };
 
     Ok(accounts)
@@ -912,25 +719,11 @@ pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> 
 }
 
 pub async fn get_total_epoch_rent_cost(handler: &CliHandler) -> Result<u64> {
-    let current_epoch = handler.epoch;
     let client = handler.rpc_client();
 
     let operator_count = {
         let all_operators = get_all_operators_in_ncn(handler).await?;
         all_operators.len() as u64
-    };
-
-    let fee_group_count = {
-        let config = get_tip_router_config(handler).await?;
-        let current_fees = config.fee_config.current_fees(current_epoch);
-        let mut fee_group_count = 0;
-        for group in NcnFeeGroup::all_groups() {
-            let fee = current_fees.ncn_fee_bps(group)?;
-            if fee > 0 {
-                fee_group_count += 1;
-            }
-        }
-        fee_group_count as u64
     };
 
     let mut rent_cost = 0;
@@ -951,18 +744,9 @@ pub async fn get_total_epoch_rent_cost(handler: &CliHandler) -> Result<u64> {
     rent_cost += client
         .get_minimum_balance_for_rent_exemption(BallotBox::SIZE)
         .await?;
-    rent_cost += client
-        .get_minimum_balance_for_rent_exemption(BaseRewardRouter::SIZE)
-        .await?;
     // Base Reward Receiver
     rent_cost += client.get_minimum_balance_for_rent_exemption(0).await?;
-    rent_cost += client
-        .get_minimum_balance_for_rent_exemption(NcnRewardRouter::SIZE)
-        .await?
-        * operator_count
-        * fee_group_count;
-    rent_cost +=
-        client.get_minimum_balance_for_rent_exemption(0).await? * operator_count * fee_group_count;
+    rent_cost += client.get_minimum_balance_for_rent_exemption(0).await? * operator_count;
 
     Ok(rent_cost)
 }

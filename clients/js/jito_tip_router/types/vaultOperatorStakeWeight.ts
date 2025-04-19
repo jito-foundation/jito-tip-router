@@ -12,12 +12,16 @@ import {
   fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
+  getArrayDecoder,
+  getArrayEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
   getU64Encoder,
+  getU8Decoder,
+  getU8Encoder,
   type Address,
   type Codec,
   type Decoder,
@@ -25,12 +29,8 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/web3.js';
 import {
-  getNcnFeeGroupDecoder,
-  getNcnFeeGroupEncoder,
   getStakeWeightsDecoder,
   getStakeWeightsEncoder,
-  type NcnFeeGroup,
-  type NcnFeeGroupArgs,
   type StakeWeights,
   type StakeWeightsArgs,
 } from '.';
@@ -38,7 +38,7 @@ import {
 export type VaultOperatorStakeWeight = {
   vault: Address;
   vaultIndex: bigint;
-  ncnFeeGroup: NcnFeeGroup;
+  reservedFeeGroup: Array<number>;
   stakeWeight: StakeWeights;
   reserved: ReadonlyUint8Array;
 };
@@ -46,7 +46,7 @@ export type VaultOperatorStakeWeight = {
 export type VaultOperatorStakeWeightArgs = {
   vault: Address;
   vaultIndex: number | bigint;
-  ncnFeeGroup: NcnFeeGroupArgs;
+  reservedFeeGroup: Array<number>;
   stakeWeight: StakeWeightsArgs;
   reserved: ReadonlyUint8Array;
 };
@@ -55,7 +55,7 @@ export function getVaultOperatorStakeWeightEncoder(): Encoder<VaultOperatorStake
   return getStructEncoder([
     ['vault', getAddressEncoder()],
     ['vaultIndex', getU64Encoder()],
-    ['ncnFeeGroup', getNcnFeeGroupEncoder()],
+    ['reservedFeeGroup', getArrayEncoder(getU8Encoder(), { size: 1 })],
     ['stakeWeight', getStakeWeightsEncoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 32)],
   ]);
@@ -65,7 +65,7 @@ export function getVaultOperatorStakeWeightDecoder(): Decoder<VaultOperatorStake
   return getStructDecoder([
     ['vault', getAddressDecoder()],
     ['vaultIndex', getU64Decoder()],
-    ['ncnFeeGroup', getNcnFeeGroupDecoder()],
+    ['reservedFeeGroup', getArrayDecoder(getU8Decoder(), { size: 1 })],
     ['stakeWeight', getStakeWeightsDecoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 32)],
   ]);

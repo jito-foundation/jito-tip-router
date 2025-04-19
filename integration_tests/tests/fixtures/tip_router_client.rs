@@ -5,35 +5,27 @@ use jito_restaking_core::{
 use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, jito_tip_distribution};
 use jito_tip_router_client::{
     instructions::{
-        AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
-        AdminSetParametersBuilder, AdminSetStMintBuilder, AdminSetTieBreakerBuilder,
-        AdminSetWeightBuilder, CastVoteBuilder, ClaimWithPayerBuilder, CloseEpochAccountBuilder,
-        DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
-        DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
-        InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder, InitializeConfigBuilder,
+        AdminRegisterStMintBuilder, AdminSetNewAdminBuilder, AdminSetParametersBuilder,
+        AdminSetStMintBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder, CastVoteBuilder,
+        CloseEpochAccountBuilder, InitializeBallotBoxBuilder, InitializeConfigBuilder,
         InitializeEpochSnapshotBuilder, InitializeEpochStateBuilder,
-        InitializeNcnRewardRouterBuilder, InitializeOperatorSnapshotBuilder,
-        InitializeVaultRegistryBuilder, InitializeWeightTableBuilder, ReallocBallotBoxBuilder,
-        ReallocBaseRewardRouterBuilder, ReallocEpochStateBuilder, ReallocOperatorSnapshotBuilder,
-        ReallocVaultRegistryBuilder, ReallocWeightTableBuilder, RegisterVaultBuilder,
-        RouteBaseRewardsBuilder, RouteNcnRewardsBuilder, SetMerkleRootBuilder,
-        SnapshotVaultOperatorDelegationBuilder, SwitchboardSetWeightBuilder,
+        InitializeOperatorSnapshotBuilder, InitializeVaultRegistryBuilder,
+        InitializeWeightTableBuilder, ReallocBallotBoxBuilder, ReallocEpochStateBuilder,
+        ReallocOperatorSnapshotBuilder, ReallocVaultRegistryBuilder, ReallocWeightTableBuilder,
+        RegisterVaultBuilder, SetMerkleRootBuilder, SnapshotVaultOperatorDelegationBuilder,
+        SwitchboardSetWeightBuilder,
     },
     types::ConfigAdminRole,
 };
 use jito_tip_router_core::{
     account_payer::AccountPayer,
     ballot_box::BallotBox,
-    base_fee_group::BaseFeeGroup,
-    base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as NcnConfig,
-    constants::{JITOSOL_MINT, MAX_REALLOC_BYTES},
+    constants::MAX_REALLOC_BYTES,
     epoch_marker::EpochMarker,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
     error::TipRouterError,
-    ncn_fee_group::NcnFeeGroup,
-    ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
     vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
@@ -41,23 +33,18 @@ use jito_vault_core::{
     vault_ncn_ticket::VaultNcnTicket, vault_operator_delegation::VaultOperatorDelegation,
 };
 use solana_program::{
-    hash::Hash, instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
+    instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
     system_instruction::transfer,
 };
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 use solana_sdk::{
     commitment_config::CommitmentLevel,
-    compute_budget::ComputeBudgetInstruction,
     signature::{Keypair, Signer},
     system_program,
     transaction::{Transaction, TransactionError},
 };
-use spl_associated_token_account::{
-    get_associated_token_address, instruction::create_associated_token_account_idempotent,
-};
-use spl_stake_pool::find_withdraw_authority_program_address;
 
-use super::{restaking_client::NcnRoot, stake_pool_client::PoolRoot};
+use super::restaking_client::NcnRoot;
 use crate::fixtures::{TestError, TestResult};
 
 pub struct TipRouterClient {
@@ -83,16 +70,6 @@ impl TipRouterClient {
         Ok(())
     }
 
-    pub async fn get_best_latest_blockhash(&mut self) -> TestResult<Hash> {
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        let new_blockhash = self
-            .banks_client
-            .get_new_latest_blockhash(&blockhash)
-            .await?;
-
-        Ok(new_blockhash)
-    }
-
     pub async fn airdrop(&mut self, to: &Pubkey, sol: f64) -> TestResult<()> {
         let blockhash = self.banks_client.get_latest_blockhash().await?;
         let new_blockhash = self
@@ -107,22 +84,6 @@ impl TipRouterClient {
                     Some(&self.payer.pubkey()),
                     &[&self.payer],
                     new_blockhash,
-                ),
-                CommitmentLevel::Processed,
-            )
-            .await?;
-        Ok(())
-    }
-
-    pub async fn airdrop_lamports(&mut self, to: &Pubkey, lamports: u64) -> TestResult<()> {
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.banks_client
-            .process_transaction_with_preflight_and_commitment(
-                Transaction::new_signed_with_payer(
-                    &[transfer(&self.payer.pubkey(), to, lamports)],
-                    Some(&self.payer.pubkey()),
-                    &[&self.payer],
-                    blockhash,
                 ),
                 CommitmentLevel::Processed,
             )
@@ -233,46 +194,6 @@ impl TipRouterClient {
         Ok(*BallotBox::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap())
     }
 
-    pub async fn get_base_reward_router(
-        &mut self,
-        ncn: Pubkey,
-        ncn_epoch: u64,
-    ) -> TestResult<BaseRewardRouter> {
-        let address =
-            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, ncn_epoch)
-                .0;
-
-        let raw_account = self.banks_client.get_account(address).await?.unwrap();
-
-        let account =
-            BaseRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap();
-        Ok(*account)
-    }
-
-    pub async fn get_ncn_reward_router(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        operator: Pubkey,
-        ncn: Pubkey,
-        epoch: u64,
-    ) -> TestResult<NcnRewardRouter> {
-        let address = NcnRewardRouter::find_program_address(
-            &jito_tip_router_program::id(),
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        )
-        .0;
-
-        let raw_account = self.banks_client.get_account(address).await?.unwrap();
-
-        let account =
-            NcnRewardRouter::try_from_slice_unchecked(raw_account.data.as_slice()).unwrap();
-
-        Ok(*account)
-    }
-
     pub async fn do_initialize_config(
         &mut self,
         ncn: Pubkey,
@@ -287,19 +208,8 @@ impl TipRouterClient {
         self.airdrop(&account_payer, 100.0).await?;
 
         let ncn_admin_pubkey = ncn_admin.pubkey();
-        self.initialize_config(
-            ncn,
-            ncn_admin,
-            &ncn_admin_pubkey,
-            &ncn_admin_pubkey,
-            100,
-            100,
-            100,
-            3,
-            10,
-            10000,
-        )
-        .await
+        self.initialize_config(ncn, ncn_admin, &ncn_admin_pubkey, 3, 10, 10000)
+            .await
     }
 
     pub async fn initialize_config(
@@ -307,10 +217,6 @@ impl TipRouterClient {
         ncn: Pubkey,
         ncn_admin: &Keypair,
         tie_breaker_admin: &Pubkey,
-        fee_wallet: &Pubkey,
-        block_engine_fee_bps: u16,
-        dao_fee_bps: u16,
-        default_ncn_fee_bps: u16,
         epochs_before_stall: u64,
         epochs_after_consensus_before_close: u64,
         valid_slots_after_consensus: u64,
@@ -325,11 +231,7 @@ impl TipRouterClient {
             .ncn(ncn)
             .ncn_admin(ncn_admin.pubkey())
             .account_payer(account_payer)
-            .fee_wallet(*fee_wallet)
             .tie_breaker_admin(*tie_breaker_admin)
-            .dao_fee_bps(dao_fee_bps)
-            .default_ncn_fee_bps(default_ncn_fee_bps)
-            .block_engine_fee_bps(block_engine_fee_bps)
             .epochs_before_stall(epochs_before_stall)
             .epochs_after_consensus_before_close(epochs_after_consensus_before_close)
             .valid_slots_after_consensus(valid_slots_after_consensus)
@@ -340,87 +242,6 @@ impl TipRouterClient {
             &[ix],
             Some(&ncn_admin.pubkey()),
             &[&ncn_admin],
-            blockhash,
-        ))
-        .await
-    }
-
-    pub async fn do_set_config_fees(
-        &mut self,
-        new_block_engine_fee_bps: Option<u16>,
-        base_fee_group: Option<BaseFeeGroup>,
-        new_base_fee_wallet: Option<Pubkey>,
-        new_base_fee_bps: Option<u16>,
-        ncn_fee_group: Option<NcnFeeGroup>,
-        new_ncn_fee_bps: Option<u16>,
-        ncn_root: &NcnRoot,
-    ) -> TestResult<()> {
-        let config_pda =
-            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_root.ncn_pubkey).0;
-        self.airdrop(&ncn_root.ncn_admin.pubkey(), 1.0).await?;
-        self.set_config_fees(
-            config_pda,
-            new_block_engine_fee_bps,
-            base_fee_group,
-            new_base_fee_wallet,
-            new_base_fee_bps,
-            ncn_fee_group,
-            new_ncn_fee_bps,
-            ncn_root,
-        )
-        .await
-    }
-
-    pub async fn set_config_fees(
-        &mut self,
-        config_pda: Pubkey,
-        new_block_engine_fee_bps: Option<u16>,
-        base_fee_group: Option<BaseFeeGroup>,
-        new_base_fee_wallet: Option<Pubkey>,
-        new_base_fee_bps: Option<u16>,
-        ncn_fee_group: Option<NcnFeeGroup>,
-        new_ncn_fee_bps: Option<u16>,
-        ncn_root: &NcnRoot,
-    ) -> TestResult<()> {
-        let ix = {
-            let mut builder = AdminSetConfigFeesBuilder::new();
-            builder
-                .config(config_pda)
-                .ncn(ncn_root.ncn_pubkey)
-                .ncn_admin(ncn_root.ncn_admin.pubkey());
-
-            if let Some(new_block_engine_fee_bps) = new_block_engine_fee_bps {
-                builder.new_block_engine_fee_bps(new_block_engine_fee_bps);
-            }
-
-            if let Some(base_fee_group) = base_fee_group {
-                builder.base_fee_group(base_fee_group.group);
-            }
-
-            if let Some(new_base_fee_wallet) = new_base_fee_wallet {
-                builder.new_base_fee_wallet(new_base_fee_wallet);
-            }
-
-            if let Some(new_base_fee_bps) = new_base_fee_bps {
-                builder.new_base_fee_bps(new_base_fee_bps);
-            }
-
-            if let Some(ncn_fee_group) = ncn_fee_group {
-                builder.ncn_fee_group(ncn_fee_group.group);
-            }
-
-            if let Some(new_ncn_fee_bps) = new_ncn_fee_bps {
-                builder.new_ncn_fee_bps(new_ncn_fee_bps);
-            }
-
-            builder.instruction()
-        };
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
-            &[ix],
-            Some(&ncn_root.ncn_admin.pubkey()),
-            &[&ncn_root.ncn_admin],
             blockhash,
         ))
         .await
@@ -716,7 +537,7 @@ impl TipRouterClient {
         ncn: &Pubkey,
     ) -> TestResult<()> {
         let (account_payer, _, _) =
-            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), ncn);
 
         let ix = InitializeVaultRegistryBuilder::new()
             .config(*ncn_config)
@@ -756,7 +577,7 @@ impl TipRouterClient {
         num_reallocations: u64,
     ) -> TestResult<()> {
         let (account_payer, _, _) =
-            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), ncn);
 
         let ix = ReallocVaultRegistryBuilder::new()
             .ncn(*ncn)
@@ -823,7 +644,6 @@ impl TipRouterClient {
         &mut self,
         ncn: Pubkey,
         st_mint: Pubkey,
-        ncn_fee_group: NcnFeeGroup,
         reward_multiplier_bps: u64,
         switchboard_feed: Option<Pubkey>,
         no_feed_weight: Option<u128>,
@@ -842,7 +662,6 @@ impl TipRouterClient {
             vault_registry,
             admin,
             st_mint,
-            ncn_fee_group,
             reward_multiplier_bps,
             switchboard_feed,
             no_feed_weight,
@@ -850,6 +669,7 @@ impl TipRouterClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn admin_register_st_mint(
         &mut self,
         ncn: Pubkey,
@@ -857,7 +677,6 @@ impl TipRouterClient {
         vault_registry: Pubkey,
         admin: Pubkey,
         st_mint: Pubkey,
-        ncn_fee_group: NcnFeeGroup,
         reward_multiplier_bps: u64,
         switchboard_feed: Option<Pubkey>,
         no_feed_weight: Option<u128>,
@@ -870,7 +689,6 @@ impl TipRouterClient {
                 .vault_registry(vault_registry)
                 .admin(admin)
                 .st_mint(st_mint)
-                .ncn_fee_group(ncn_fee_group.group)
                 .reward_multiplier_bps(reward_multiplier_bps);
 
             if let Some(switchboard_feed) = switchboard_feed {
@@ -898,7 +716,6 @@ impl TipRouterClient {
         &mut self,
         ncn: Pubkey,
         st_mint: Pubkey,
-        ncn_fee_group: Option<NcnFeeGroup>,
         reward_multiplier_bps: Option<u64>,
         switchboard_feed: Option<Pubkey>,
         no_feed_weight: Option<u128>,
@@ -917,7 +734,6 @@ impl TipRouterClient {
             vault_registry,
             admin,
             st_mint,
-            ncn_fee_group,
             reward_multiplier_bps,
             switchboard_feed,
             no_feed_weight,
@@ -925,6 +741,7 @@ impl TipRouterClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn admin_set_st_mint(
         &mut self,
         ncn: Pubkey,
@@ -932,7 +749,6 @@ impl TipRouterClient {
         vault_registry: Pubkey,
         admin: Pubkey,
         st_mint: Pubkey,
-        ncn_fee_group: Option<NcnFeeGroup>,
         reward_multiplier_bps: Option<u64>,
         switchboard_feed: Option<Pubkey>,
         no_feed_weight: Option<u128>,
@@ -945,10 +761,6 @@ impl TipRouterClient {
                 .vault_registry(vault_registry)
                 .admin(admin)
                 .st_mint(st_mint);
-
-            if let Some(ncn_fee_group) = ncn_fee_group {
-                builder.ncn_fee_group(ncn_fee_group.group);
-            }
 
             if let Some(reward_multiplier_bps) = reward_multiplier_bps {
                 builder.reward_multiplier_bps(reward_multiplier_bps);
@@ -1337,6 +1149,7 @@ impl TipRouterClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn cast_vote(
         &mut self,
         ncn_config: Pubkey,
@@ -1375,6 +1188,7 @@ impl TipRouterClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn do_set_merkle_root(
         &mut self,
         ncn: Pubkey,
@@ -1417,6 +1231,7 @@ impl TipRouterClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn set_merkle_root(
         &mut self,
         config: Pubkey,
@@ -1516,655 +1331,6 @@ impl TipRouterClient {
         .await
     }
 
-    pub async fn do_full_initialize_base_reward_router(
-        &mut self,
-        ncn: Pubkey,
-        epoch: u64,
-    ) -> TestResult<()> {
-        self.do_initialize_base_reward_router(ncn, epoch).await?;
-        let num_reallocs =
-            (BaseRewardRouter::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
-        self.do_realloc_base_reward_router(ncn, epoch, num_reallocs)
-            .await?;
-        Ok(())
-    }
-
-    pub async fn do_initialize_base_reward_router(
-        &mut self,
-        ncn: Pubkey,
-        epoch: u64,
-    ) -> TestResult<()> {
-        let (base_reward_router, _, _) =
-            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-        let (base_reward_receiver, _, _) =
-            BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-        self.initialize_base_reward_router(ncn, base_reward_router, base_reward_receiver, epoch)
-            .await
-    }
-
-    pub async fn initialize_base_reward_router(
-        &mut self,
-        ncn: Pubkey,
-        base_reward_router: Pubkey,
-        base_reward_receiver: Pubkey,
-        epoch: u64,
-    ) -> TestResult<()> {
-        let (epoch_marker, _, _) =
-            EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-        let epoch_state =
-            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        let (account_payer, _, _) =
-            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
-
-        let ix = InitializeBaseRewardRouterBuilder::new()
-            .epoch_marker(epoch_marker)
-            .epoch_state(epoch_state)
-            .ncn(ncn)
-            .base_reward_router(base_reward_router)
-            .base_reward_receiver(base_reward_receiver)
-            .account_payer(account_payer)
-            .system_program(system_program::id())
-            .epoch(epoch)
-            .instruction();
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
-            &[ix],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        ))
-        .await
-    }
-
-    pub async fn do_initialize_ncn_reward_router(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        ncn: Pubkey,
-        operator: Pubkey,
-        epoch: u64,
-    ) -> TestResult<()> {
-        let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
-            &jito_tip_router_program::id(),
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        );
-
-        let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
-            &jito_tip_router_program::id(),
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        );
-
-        let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
-            &jito_tip_router_program::id(),
-            &operator,
-            &ncn,
-            epoch,
-        );
-
-        self.initialize_ncn_reward_router(
-            ncn_fee_group,
-            ncn,
-            operator,
-            operator_snapshot,
-            ncn_reward_router,
-            ncn_reward_receiver,
-            epoch,
-        )
-        .await
-    }
-
-    pub async fn initialize_ncn_reward_router(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        ncn: Pubkey,
-        operator: Pubkey,
-        operator_snapshot: Pubkey,
-        ncn_reward_router: Pubkey,
-        ncn_reward_receiver: Pubkey,
-        epoch: u64,
-    ) -> TestResult<()> {
-        let (epoch_marker, _, _) =
-            EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-        let epoch_state =
-            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        let (account_payer, _, _) =
-            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
-
-        let ix = InitializeNcnRewardRouterBuilder::new()
-            .epoch_marker(epoch_marker)
-            .epoch_state(epoch_state)
-            .ncn(ncn)
-            .operator(operator)
-            .operator_snapshot(operator_snapshot)
-            .ncn_reward_router(ncn_reward_router)
-            .ncn_reward_receiver(ncn_reward_receiver)
-            .account_payer(account_payer)
-            .system_program(system_program::id())
-            .ncn_fee_group(ncn_fee_group.group)
-            .epoch(epoch)
-            .instruction();
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
-            &[ix],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        ))
-        .await
-    }
-
-    pub async fn do_route_base_rewards(&mut self, ncn: Pubkey, epoch: u64) -> TestResult<()> {
-        let (epoch_snapshot, _, _) =
-            EpochSnapshot::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-        let (ballot_box, _, _) =
-            BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-        let (base_reward_router, _, _) =
-            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-        let (base_reward_receiver, _, _) =
-            BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-        //Pretty close to max
-        let max_iterations: u16 = BaseRewardRouter::MAX_ROUTE_BASE_ITERATIONS;
-
-        let mut still_routing = true;
-        while still_routing {
-            self.route_base_rewards(
-                ncn,
-                epoch_snapshot,
-                ballot_box,
-                base_reward_router,
-                base_reward_receiver,
-                max_iterations,
-                epoch,
-            )
-            .await?;
-
-            let base_reward_router_account = self.get_base_reward_router(ncn, epoch).await?;
-
-            still_routing = base_reward_router_account.still_routing();
-        }
-
-        Ok(())
-    }
-
-    pub async fn route_base_rewards(
-        &mut self,
-        ncn: Pubkey,
-        epoch_snapshot: Pubkey,
-        ballot_box: Pubkey,
-        base_reward_router: Pubkey,
-        base_reward_receiver: Pubkey,
-        max_iterations: u16,
-        epoch: u64,
-    ) -> TestResult<()> {
-        let epoch_state =
-            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        let config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
-
-        let ix = RouteBaseRewardsBuilder::new()
-            .epoch_state(epoch_state)
-            .config(config)
-            .ncn(ncn)
-            .epoch_snapshot(epoch_snapshot)
-            .ballot_box(ballot_box)
-            .base_reward_router(base_reward_router)
-            .base_reward_receiver(base_reward_receiver)
-            .max_iterations(max_iterations)
-            .epoch(epoch)
-            .instruction();
-
-        let blockhash = self.get_best_latest_blockhash().await?;
-        let tx = &Transaction::new_signed_with_payer(
-            &[
-                ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
-                ix,
-            ],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        );
-
-        self.process_transaction(tx).await
-    }
-
-    pub async fn do_route_ncn_rewards(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        ncn: Pubkey,
-        operator: Pubkey,
-        epoch: u64,
-    ) -> TestResult<()> {
-        let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
-            &jito_tip_router_program::id(),
-            &operator,
-            &ncn,
-            epoch,
-        );
-
-        let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
-            &jito_tip_router_program::id(),
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        );
-
-        let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
-            &jito_tip_router_program::id(),
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        );
-
-        let max_iterations: u16 = NcnRewardRouter::MAX_ROUTE_NCN_ITERATIONS;
-        let mut still_routing = true;
-
-        while still_routing {
-            self.route_ncn_rewards(
-                ncn_fee_group,
-                ncn,
-                operator,
-                operator_snapshot,
-                ncn_reward_router,
-                ncn_reward_receiver,
-                max_iterations,
-                epoch,
-            )
-            .await?;
-
-            let ncn_reward_router_account = self
-                .get_ncn_reward_router(ncn_fee_group, operator, ncn, epoch)
-                .await?;
-
-            still_routing = ncn_reward_router_account.still_routing();
-        }
-
-        Ok(())
-    }
-
-    pub async fn route_ncn_rewards(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        ncn: Pubkey,
-        operator: Pubkey,
-        operator_snapshot: Pubkey,
-        ncn_reward_router: Pubkey,
-        ncn_reward_receiver: Pubkey,
-        max_iterations: u16,
-        epoch: u64,
-    ) -> TestResult<()> {
-        let epoch_state =
-            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        let ix = RouteNcnRewardsBuilder::new()
-            .epoch_state(epoch_state)
-            .ncn(ncn)
-            .operator(operator)
-            .operator_snapshot(operator_snapshot)
-            .ncn_reward_router(ncn_reward_router)
-            .ncn_reward_receiver(ncn_reward_receiver)
-            .ncn_fee_group(ncn_fee_group.group)
-            .max_iterations(max_iterations)
-            .epoch(epoch)
-            .instruction();
-
-        let blockhash = self.get_best_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
-            &[
-                // TODO: should make this instruction much more efficient
-                ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
-                ix,
-            ],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        ))
-        .await
-    }
-
-    pub async fn do_distribute_base_rewards(
-        &mut self,
-        base_fee_group: BaseFeeGroup,
-        ncn: Pubkey,
-        epoch: u64,
-        pool_root: &PoolRoot,
-    ) -> TestResult<()> {
-        let epoch_state =
-            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        let (ncn_config, _, _) =
-            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
-
-        let (base_reward_router, _, _) =
-            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-        let ncn_config_account = self.get_ncn_config(ncn).await?;
-        let base_fee_wallet = ncn_config_account
-            .fee_config
-            .base_fee_wallet(base_fee_group)
-            .unwrap();
-        let base_fee_wallet_ata = get_associated_token_address(&base_fee_wallet, &JITOSOL_MINT);
-        let create_base_fee_wallet_ata_ix = create_associated_token_account_idempotent(
-            &self.payer.pubkey(),
-            &base_fee_wallet,
-            &JITOSOL_MINT,
-            &spl_token::id(),
-        );
-        let (base_reward_receiver, _, _) =
-            BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-        // stake pool accounts
-        let stake_pool = pool_root.pool_address;
-        let (stake_pool_withdraw_authority, _) =
-            find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool);
-        let reserve_stake = pool_root.reserve_stake;
-        let manager_fee_account = pool_root.manager_fee_account;
-        let referrer_pool_tokens_account = pool_root.referrer_pool_tokens_account;
-
-        let ix = DistributeBaseRewardsBuilder::new()
-            .epoch_state(epoch_state)
-            .config(ncn_config)
-            .ncn(ncn)
-            .base_reward_router(base_reward_router)
-            .base_reward_receiver(base_reward_receiver)
-            .base_fee_wallet(*base_fee_wallet)
-            .base_fee_wallet_ata(base_fee_wallet_ata)
-            .stake_pool_program(spl_stake_pool::id())
-            .stake_pool(stake_pool)
-            .stake_pool_withdraw_authority(stake_pool_withdraw_authority)
-            .reserve_stake(reserve_stake)
-            .manager_fee_account(manager_fee_account)
-            .referrer_pool_tokens_account(referrer_pool_tokens_account)
-            .pool_mint(JITOSOL_MINT)
-            .token_program(spl_token::id())
-            .system_program(system_program::id())
-            .base_fee_group(base_fee_group.group)
-            .epoch(epoch)
-            .instruction();
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-
-        let transaction = Transaction::new_signed_with_payer(
-            &[create_base_fee_wallet_ata_ix, ix],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        );
-
-        self.process_transaction(&transaction).await
-    }
-
-    pub async fn do_distribute_base_ncn_reward_route(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        operator: Pubkey,
-        ncn: Pubkey,
-        epoch: u64,
-    ) -> TestResult<()> {
-        let (ncn_config, _, _) =
-            NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
-
-        let (base_reward_router, _, _) =
-            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-        let (base_reward_receiver, _, _) =
-            BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
-
-        let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
-            &jito_tip_router_program::id(),
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        );
-        let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
-            &jito_tip_router_program::id(),
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        );
-
-        self.distribute_base_ncn_reward_route(
-            ncn_fee_group,
-            operator,
-            ncn,
-            ncn_config,
-            base_reward_router,
-            base_reward_receiver,
-            ncn_reward_router,
-            ncn_reward_receiver,
-            epoch,
-        )
-        .await
-    }
-
-    pub async fn distribute_base_ncn_reward_route(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        operator: Pubkey,
-        ncn: Pubkey,
-        ncn_config: Pubkey,
-        base_reward_router: Pubkey,
-        base_reward_receiver: Pubkey,
-        ncn_reward_router: Pubkey,
-        ncn_reward_receiver: Pubkey,
-        epoch: u64,
-    ) -> TestResult<()> {
-        let epoch_state =
-            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        let ix = DistributeBaseNcnRewardRouteBuilder::new()
-            .epoch_state(epoch_state)
-            .config(ncn_config)
-            .ncn(ncn)
-            .operator(operator)
-            .base_reward_router(base_reward_router)
-            .base_reward_receiver(base_reward_receiver)
-            .ncn_reward_router(ncn_reward_router)
-            .ncn_reward_receiver(ncn_reward_receiver)
-            .system_program(system_program::id())
-            .ncn_fee_group(ncn_fee_group.group)
-            .epoch(epoch)
-            .instruction();
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
-            &[ix],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        ))
-        .await
-    }
-
-    pub async fn do_distribute_ncn_operator_rewards(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        operator: Pubkey,
-        ncn: Pubkey,
-        epoch: u64,
-        pool_root: &PoolRoot,
-    ) -> TestResult<()> {
-        let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
-
-        let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
-            &jito_tip_router_program::id(),
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        );
-
-        let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
-            &jito_tip_router_program::id(),
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        );
-
-        // Add stake pool accounts
-        let stake_pool = pool_root.pool_address;
-        let (stake_pool_withdraw_authority, _) =
-            find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool);
-        let reserve_stake = pool_root.reserve_stake;
-        let manager_fee_account = pool_root.manager_fee_account;
-        let referrer_pool_tokens_account = pool_root.referrer_pool_tokens_account;
-
-        let operator_ata = get_associated_token_address(&operator, &JITOSOL_MINT);
-        let operator_ata_ix = create_associated_token_account_idempotent(
-            &self.payer.pubkey(),
-            &operator,
-            &JITOSOL_MINT,
-            &spl_token::id(),
-        );
-
-        let operator_snapshot = OperatorSnapshot::find_program_address(
-            &jito_tip_router_program::id(),
-            &operator,
-            &ncn,
-            epoch,
-        )
-        .0;
-
-        let epoch_state =
-            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        let ix = DistributeNcnOperatorRewardsBuilder::new()
-            .epoch_state(epoch_state)
-            .config(ncn_config)
-            .ncn(ncn)
-            .operator(operator)
-            .operator_ata(operator_ata)
-            .operator_snapshot(operator_snapshot)
-            .ncn_reward_router(ncn_reward_router)
-            .ncn_reward_receiver(ncn_reward_receiver)
-            .stake_pool_program(spl_stake_pool::id())
-            .stake_pool(stake_pool)
-            .stake_pool_withdraw_authority(stake_pool_withdraw_authority)
-            .reserve_stake(reserve_stake)
-            .manager_fee_account(manager_fee_account)
-            .referrer_pool_tokens_account(referrer_pool_tokens_account)
-            .pool_mint(JITOSOL_MINT)
-            .token_program(spl_token::id())
-            .system_program(system_program::id())
-            .ncn_fee_group(ncn_fee_group.group)
-            .epoch(epoch)
-            .instruction();
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
-            &[operator_ata_ix, ix],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        ))
-        .await
-    }
-
-    pub async fn do_distribute_ncn_vault_rewards(
-        &mut self,
-        ncn_fee_group: NcnFeeGroup,
-        vault: Pubkey,
-        operator: Pubkey,
-        ncn: Pubkey,
-        epoch: u64,
-        pool_root: &PoolRoot,
-    ) -> TestResult<()> {
-        let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
-
-        let (ncn_reward_router, _, _) = NcnRewardRouter::find_program_address(
-            &jito_tip_router_program::id(),
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        );
-        let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
-            &jito_tip_router_program::id(),
-            ncn_fee_group,
-            &operator,
-            &ncn,
-            epoch,
-        );
-
-        let operator_snapshot = OperatorSnapshot::find_program_address(
-            &jito_tip_router_program::id(),
-            &operator,
-            &ncn,
-            epoch,
-        )
-        .0;
-
-        // Add stake pool accounts
-        let stake_pool = pool_root.pool_address;
-        let (stake_pool_withdraw_authority, _) =
-            find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool);
-        let reserve_stake = pool_root.reserve_stake;
-        let manager_fee_account = pool_root.manager_fee_account;
-        let referrer_pool_tokens_account = pool_root.referrer_pool_tokens_account;
-
-        let vault_ata = get_associated_token_address(&vault, &JITOSOL_MINT);
-
-        let vault_ata_ix = create_associated_token_account_idempotent(
-            &self.payer.pubkey(),
-            &vault,
-            &JITOSOL_MINT,
-            &spl_token::id(),
-        );
-        let epoch_state =
-            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        let ix = DistributeNcnVaultRewardsBuilder::new()
-            .epoch_state(epoch_state)
-            .config(ncn_config)
-            .ncn(ncn)
-            .operator(operator)
-            .vault(vault)
-            .vault_ata(vault_ata)
-            .operator_snapshot(operator_snapshot)
-            .ncn_reward_router(ncn_reward_router)
-            .ncn_reward_receiver(ncn_reward_receiver)
-            .stake_pool_program(spl_stake_pool::id())
-            .stake_pool(stake_pool)
-            .stake_pool_withdraw_authority(stake_pool_withdraw_authority)
-            .reserve_stake(reserve_stake)
-            .manager_fee_account(manager_fee_account)
-            .referrer_pool_tokens_account(referrer_pool_tokens_account)
-            .pool_mint(JITOSOL_MINT)
-            .token_program(spl_token::id())
-            .system_program(system_program::id())
-            .ncn_fee_group(ncn_fee_group.group)
-            .epoch(epoch)
-            .instruction();
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
-            &[vault_ata_ix, ix],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        ))
-        .await
-    }
-
     pub async fn do_realloc_operator_snapshot(
         &mut self,
         operator: Pubkey,
@@ -2201,6 +1367,7 @@ impl TipRouterClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn realloc_operator_snapshot(
         &mut self,
         config: Pubkey,
@@ -2231,62 +1398,6 @@ impl TipRouterClient {
             .account_payer(account_payer)
             .system_program(system_program::id())
             .epoch(epoch)
-            .instruction();
-
-        let ixs = vec![ix; num_reallocations as usize];
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        self.process_transaction(&Transaction::new_signed_with_payer(
-            &ixs,
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        ))
-        .await
-    }
-
-    pub async fn do_realloc_base_reward_router(
-        &mut self,
-        ncn: Pubkey,
-        epoch: u64,
-        num_reallocations: u64,
-    ) -> Result<(), TestError> {
-        let ncn_config = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn).0;
-        let base_reward_router =
-            BaseRewardRouter::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        self.realloc_base_reward_router(
-            ncn_config,
-            base_reward_router,
-            ncn,
-            epoch,
-            num_reallocations,
-        )
-        .await
-    }
-
-    pub async fn realloc_base_reward_router(
-        &mut self,
-        ncn_config: Pubkey,
-        base_reward_router: Pubkey,
-        ncn: Pubkey,
-        epoch: u64,
-        num_reallocations: u64,
-    ) -> Result<(), TestError> {
-        let epoch_state =
-            EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
-
-        let (account_payer, _, _) =
-            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
-
-        let ix = ReallocBaseRewardRouterBuilder::new()
-            .epoch_state(epoch_state)
-            .config(ncn_config)
-            .base_reward_router(base_reward_router)
-            .ncn(ncn)
-            .epoch(epoch)
-            .account_payer(account_payer)
-            .system_program(system_program::id())
             .instruction();
 
         let ixs = vec![ix; num_reallocations as usize];
@@ -2362,92 +1473,11 @@ impl TipRouterClient {
         .await
     }
 
-    pub async fn do_claim_with_payer(
-        &mut self,
-        ncn: Pubkey,
-        claimant: Pubkey,
-        tip_distribution_account: Pubkey,
-        proof: Vec<[u8; 32]>,
-        amount: u64,
-    ) -> TestResult<()> {
-        let (account_payer, _, _) =
-            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
-
-        let (config, _, _) = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
-
-        let tip_distribution_program = jito_tip_distribution::ID;
-        let tip_distribution_config =
-            jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program).0;
-
-        let (claim_status, claim_status_bump) =
-            jito_tip_distribution_sdk::derive_claim_status_account_address(
-                &tip_distribution_program,
-                &claimant,
-                &tip_distribution_account,
-            );
-
-        self.claim_with_payer(
-            ncn,
-            config,
-            account_payer,
-            tip_distribution_config,
-            tip_distribution_account,
-            tip_distribution_program,
-            claim_status,
-            claimant,
-            proof,
-            amount,
-            claim_status_bump,
-        )
-        .await
-    }
-
-    pub async fn claim_with_payer(
-        &mut self,
-        ncn: Pubkey,
-        config: Pubkey,
-        account_payer: Pubkey,
-        tip_distribution_config: Pubkey,
-        tip_distribution_account: Pubkey,
-        tip_distribution_program: Pubkey,
-        claim_status: Pubkey,
-        claimant: Pubkey,
-        proof: Vec<[u8; 32]>,
-        amount: u64,
-        bump: u8,
-    ) -> TestResult<()> {
-        let ix = ClaimWithPayerBuilder::new()
-            .account_payer(account_payer)
-            .ncn(ncn)
-            .config(config)
-            .tip_distribution_config(tip_distribution_config)
-            .tip_distribution_account(tip_distribution_account)
-            .tip_distribution_program(tip_distribution_program)
-            .claim_status(claim_status)
-            .claimant(claimant)
-            .system_program(system_program::id())
-            .proof(proof)
-            .amount(amount)
-            .bump(bump)
-            .instruction();
-
-        let blockhash = self.banks_client.get_latest_blockhash().await?;
-        let tx = Transaction::new_signed_with_payer(
-            &[ix],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            blockhash,
-        );
-
-        self.process_transaction(&tx).await
-    }
-
     pub async fn do_close_epoch_account(
         &mut self,
         ncn: Pubkey,
         epoch: u64,
         account_to_close: Pubkey,
-        receiver_to_close: Option<Pubkey>,
     ) -> TestResult<()> {
         let (epoch_marker, _, _) =
             EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
@@ -2460,26 +1490,19 @@ impl TipRouterClient {
 
         let (config, _, _) = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
 
-        let config_account = self.get_ncn_config(ncn).await?;
-        let dao_wallet = *config_account
-            .fee_config
-            .base_fee_wallet(BaseFeeGroup::dao())
-            .expect("No DAO wallet ( do_close_epoch_account )");
-
         self.close_epoch_account(
             epoch_marker,
             epoch_state,
             ncn,
             config,
             account_to_close,
-            receiver_to_close,
             account_payer,
-            dao_wallet,
             epoch,
         )
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn close_epoch_account(
         &mut self,
         epoch_marker: Pubkey,
@@ -2487,9 +1510,7 @@ impl TipRouterClient {
         ncn: Pubkey,
         config: Pubkey,
         account_to_close: Pubkey,
-        receiver_to_close: Option<Pubkey>,
         account_payer: Pubkey,
-        dao_wallet: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
         let mut ix = CloseEpochAccountBuilder::new();
@@ -2500,13 +1521,8 @@ impl TipRouterClient {
             .account_to_close(account_to_close)
             .epoch_state(epoch_state)
             .ncn(ncn)
-            .dao_wallet(dao_wallet)
             .system_program(system_program::id())
             .epoch(epoch);
-
-        if let Some(receiver_to_close) = receiver_to_close {
-            ix.receiver_to_close(Some(receiver_to_close));
-        }
 
         let ix = ix.instruction();
 

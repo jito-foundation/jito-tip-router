@@ -132,10 +132,9 @@ pub fn process_snapshot_vault_operator_delegation(
         vault_ncn_okay && ncn_vault_okay && !delegation_dne
     };
 
-    let (ncn_fee_group, reward_multiplier_bps, total_stake_weight) = {
+    let total_stake_weight = {
         let weight_table_data = weight_table.data.borrow();
         let weight_table_account = WeightTable::try_from_slice_unchecked(&weight_table_data)?;
-        let weight_entry = weight_table_account.get_weight_entry(&st_mint)?;
 
         weight_table_account.check_registry_for_vault(vault_index)?;
 
@@ -153,11 +152,7 @@ pub fn process_snapshot_vault_operator_delegation(
             0u128
         };
 
-        (
-            weight_entry.st_mint_entry().ncn_fee_group(),
-            weight_entry.st_mint_entry().reward_multiplier_bps(),
-            total_stake_weight,
-        )
+        total_stake_weight
     };
 
     // Increment vault operator delegation
@@ -165,14 +160,12 @@ pub fn process_snapshot_vault_operator_delegation(
     let operator_snapshot_account =
         OperatorSnapshot::try_from_slice_unchecked_mut(&mut operator_snapshot_data)?;
 
-    let stake_weights =
-        StakeWeights::snapshot(ncn_fee_group, total_stake_weight, reward_multiplier_bps)?;
+    let stake_weights = StakeWeights::snapshot(total_stake_weight)?;
 
     operator_snapshot_account.increment_vault_operator_delegation_registration(
         current_slot,
         vault.key,
         vault_index,
-        ncn_fee_group,
         &stake_weights,
     )?;
 

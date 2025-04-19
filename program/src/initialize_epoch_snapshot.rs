@@ -3,7 +3,7 @@ use jito_jsm_core::loader::{load_system_account, load_system_program};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_router_core::{
     account_payer::AccountPayer, config::Config, epoch_marker::EpochMarker,
-    epoch_snapshot::EpochSnapshot, epoch_state::EpochState, error::TipRouterError, fees,
+    epoch_snapshot::EpochSnapshot, epoch_state::EpochState, error::TipRouterError,
     weight_table::WeightTable,
 };
 use solana_program::{
@@ -76,12 +76,6 @@ pub fn process_initialize_epoch_snapshot(
         &epoch_snapshot_seeds,
     )?;
 
-    let ncn_fees: fees::Fees = {
-        let ncn_config_data = config.data.borrow();
-        let ncn_config_account = Config::try_from_slice_unchecked(&ncn_config_data)?;
-        *ncn_config_account.fee_config.current_fees(ncn_epoch)
-    };
-
     let operator_count: u64 = {
         let ncn_data = ncn.data.borrow();
         let ncn_account = Ncn::try_from_slice_unchecked(&ncn_data)?;
@@ -104,7 +98,6 @@ pub fn process_initialize_epoch_snapshot(
         ncn_epoch,
         epoch_snapshot_bump,
         current_slot,
-        &ncn_fees,
         operator_count,
         vault_count,
     );

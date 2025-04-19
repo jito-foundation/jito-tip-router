@@ -17,7 +17,6 @@ use crate::{
     discriminators::Discriminators,
     error::TipRouterError,
     loaders::check_load,
-    ncn_fee_group::NcnFeeGroup,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,8 +36,7 @@ pub struct EpochAccountStatus {
     epoch_snapshot: u8,
     operator_snapshot: [u8; 256],
     ballot_box: u8,
-    base_reward_router: u8,
-    ncn_reward_router: [u8; 2048],
+    reserved: [u8; 2049], // Initialize padding with zeros
 }
 
 impl Default for EpochAccountStatus {
@@ -49,8 +47,7 @@ impl Default for EpochAccountStatus {
             epoch_snapshot: 0,
             operator_snapshot: [0; MAX_OPERATORS],
             ballot_box: 0,
-            base_reward_router: 0,
-            ncn_reward_router: [0; MAX_OPERATORS * NcnFeeGroup::FEE_GROUP_COUNT],
+            reserved: [0; 2049], // Initialize padding with zeros
         }
     }
 }
@@ -88,20 +85,6 @@ impl EpochAccountStatus {
         Self::get_account_status(self.ballot_box)
     }
 
-    pub const fn base_reward_router(&self) -> Result<AccountStatus, TipRouterError> {
-        Self::get_account_status(self.base_reward_router)
-    }
-
-    pub fn ncn_reward_router(
-        &self,
-        index: usize,
-        group: NcnFeeGroup,
-    ) -> Result<AccountStatus, TipRouterError> {
-        Self::get_account_status(
-            self.ncn_reward_router[EpochState::get_ncn_reward_router_index(index, group)?],
-        )
-    }
-
     pub fn set_epoch_state(&mut self, status: AccountStatus) {
         self.epoch_state = status as u8;
     }
@@ -120,21 +103,6 @@ impl EpochAccountStatus {
 
     pub fn set_ballot_box(&mut self, status: AccountStatus) {
         self.ballot_box = status as u8;
-    }
-
-    pub fn set_base_reward_router(&mut self, status: AccountStatus) {
-        self.base_reward_router = status as u8;
-    }
-
-    pub fn set_ncn_reward_router(
-        &mut self,
-        index: usize,
-        group: NcnFeeGroup,
-        status: AccountStatus,
-    ) -> Result<(), TipRouterError> {
-        self.ncn_reward_router[EpochState::get_ncn_reward_router_index(index, group)?] =
-            status as u8;
-        Ok(())
     }
 
     pub fn are_all_closed(&self) -> bool {
@@ -160,20 +128,6 @@ impl EpochAccountStatus {
 
         if self.ballot_box != AccountStatus::Closed as u8 {
             return false;
-        }
-
-        if self.base_reward_router != AccountStatus::Closed as u8 {
-            return false;
-        }
-
-        for ncn_reward_router_ref in self.ncn_reward_router.iter() {
-            let ncn_reward_router = *ncn_reward_router_ref;
-            let is_dne = ncn_reward_router == AccountStatus::DNE as u8;
-            let is_closed = ncn_reward_router == AccountStatus::Closed as u8;
-
-            if !is_dne && !is_closed {
-                return false;
-            }
         }
 
         true
@@ -302,14 +256,8 @@ pub struct EpochState {
     /// Upload progress
     upload_progress: Progress,
 
-    /// Distribution progress
-    total_distribution_progress: Progress,
-
-    /// base distribution progress
-    base_distribution_progress: Progress,
-
-    /// ncn distribution progress
-    ncn_distribution_progress: [Progress; 2048],
+    /// Reserved space to replace total_distribution_progress, base_distribution_progress, and ncn_distribution_progress
+    reserved_distribution_space: [u8; 2064], // 24 (Progress * 3) + (2048 * 24)
 
     /// Is closing
     is_closing: PodBool,
@@ -342,10 +290,7 @@ impl EpochState {
             voting_progress: Progress::default(),
             validation_progress: Progress::default(),
             upload_progress: Progress::default(),
-            total_distribution_progress: Progress::default(),
-            base_distribution_progress: Progress::default(),
-            ncn_distribution_progress: [Progress::default();
-                MAX_OPERATORS * NcnFeeGroup::FEE_GROUP_COUNT],
+            reserved_distribution_space: [0; 2064],
             is_closing: PodBool::from(false),
             reserved: [0; 1023],
         }
@@ -444,18 +389,6 @@ impl EpochState {
     }
 
     // ------------ HELPER FUNCTIONS ------------
-    pub fn get_ncn_reward_router_index(
-        ncn_operator_index: usize,
-        group: NcnFeeGroup,
-    ) -> Result<usize, TipRouterError> {
-        let mut index = ncn_operator_index
-            .checked_mul(NcnFeeGroup::FEE_GROUP_COUNT)
-            .ok_or(TipRouterError::ArithmeticOverflow)?;
-        index = index
-            .checked_add(group.group.into())
-            .ok_or(TipRouterError::ArithmeticOverflow)?;
-        Ok(index)
-    }
 
     pub fn _set_upload_progress(&mut self) {
         self.upload_progress = Progress::new(1);
@@ -543,23 +476,6 @@ impl EpochState {
 
     pub const fn upload_progress(&self) -> Progress {
         self.upload_progress
-    }
-
-    pub const fn total_distribution_progress(&self) -> Progress {
-        self.total_distribution_progress
-    }
-
-    pub const fn base_distribution_progress(&self) -> Progress {
-        self.base_distribution_progress
-    }
-
-    pub fn ncn_distribution_progress(
-        &self,
-        ncn_ncn_operator_index: usize,
-        group: NcnFeeGroup,
-    ) -> Result<Progress, TipRouterError> {
-        let index = Self::get_ncn_reward_router_index(ncn_ncn_operator_index, group)?;
-        Ok(self.ncn_distribution_progress[index])
     }
 
     // ------------ UPDATERS ------------
@@ -662,73 +578,6 @@ impl EpochState {
         Ok(())
     }
 
-    pub fn update_realloc_base_reward_router(&mut self) {
-        self.account_status
-            .set_base_reward_router(AccountStatus::CreatedWithReceiver);
-        self.base_distribution_progress = Progress::new(0);
-    }
-
-    pub fn update_realloc_ncn_reward_router(
-        &mut self,
-        ncn_operator_index: usize,
-        group: NcnFeeGroup,
-    ) -> Result<(), TipRouterError> {
-        self.account_status.set_ncn_reward_router(
-            ncn_operator_index,
-            group,
-            AccountStatus::CreatedWithReceiver,
-        )?;
-        self.ncn_distribution_progress
-            [Self::get_ncn_reward_router_index(ncn_operator_index, group)?] = Progress::new(0);
-
-        Ok(())
-    }
-
-    pub fn update_route_base_rewards(&mut self, total_rewards: u64) {
-        self.total_distribution_progress.set_total(total_rewards);
-        self.base_distribution_progress.set_total(total_rewards);
-    }
-
-    pub fn update_route_ncn_rewards(
-        &mut self,
-        ncn_operator_index: usize,
-        group: NcnFeeGroup,
-        total_rewards: u64,
-    ) -> Result<(), TipRouterError> {
-        self.ncn_distribution_progress
-            [Self::get_ncn_reward_router_index(ncn_operator_index, group)?]
-        .set_total(total_rewards);
-        Ok(())
-    }
-
-    pub fn update_distribute_base_rewards(&mut self, rewards: u64) -> Result<(), TipRouterError> {
-        self.total_distribution_progress.increment(rewards)?;
-        self.base_distribution_progress.increment(rewards)?;
-        Ok(())
-    }
-
-    pub fn update_distribute_base_ncn_rewards(
-        &mut self,
-        rewards: u64,
-    ) -> Result<(), TipRouterError> {
-        self.base_distribution_progress.increment(rewards)?;
-        Ok(())
-    }
-
-    pub fn update_distribute_ncn_rewards(
-        &mut self,
-        ncn_operator_index: usize,
-        group: NcnFeeGroup,
-        rewards: u64,
-    ) -> Result<(), TipRouterError> {
-        self.total_distribution_progress.increment(rewards)?;
-
-        self.ncn_distribution_progress
-            [Self::get_ncn_reward_router_index(ncn_operator_index, group)?]
-        .increment(rewards)?;
-        Ok(())
-    }
-
     // ---------- CLOSERS ----------
     pub fn set_is_closing(&mut self) {
         self.is_closing = PodBool::from(true);
@@ -754,20 +603,6 @@ impl EpochState {
 
     pub fn close_ballot_box(&mut self) {
         self.account_status.set_ballot_box(AccountStatus::Closed);
-    }
-
-    pub fn close_base_reward_router(&mut self) {
-        self.account_status
-            .set_base_reward_router(AccountStatus::Closed);
-    }
-
-    pub fn close_ncn_reward_router(
-        &mut self,
-        ncn_operator_index: usize,
-        group: NcnFeeGroup,
-    ) -> Result<(), TipRouterError> {
-        self.account_status
-            .set_ncn_reward_router(ncn_operator_index, group, AccountStatus::Closed)
     }
 
     // ------------ STATE ------------
@@ -837,7 +672,7 @@ impl EpochState {
             return Ok(State::PostVoteCooldown);
         }
 
-        Ok(State::Distribute)
+        Ok(State::PostVoteCooldown)
     }
 
     pub fn current_state_patched(
@@ -877,7 +712,7 @@ impl EpochState {
             return Ok(State::PostVoteCooldown);
         }
 
-        Ok(State::Distribute)
+        Ok(State::PostVoteCooldown)
     }
 }
 
@@ -888,7 +723,6 @@ pub enum State {
     Snapshot,
     Vote,
     PostVoteCooldown,
-    Distribute,
     Close,
 }
 
@@ -910,7 +744,6 @@ impl fmt::Display for EpochState {
        writeln!(f, "  Weight Table:                 {:?}", self.account_status.weight_table().unwrap())?;
        writeln!(f, "  Epoch Snapshot:               {:?}", self.account_status.epoch_snapshot().unwrap())?;
        writeln!(f, "  Ballot Box:                   {:?}", self.account_status.ballot_box().unwrap())?;
-       writeln!(f, "  Base Reward Router:           {:?}", self.account_status.base_reward_router().unwrap())?;
        
        writeln!(f, "\nOperator Snapshots:")?;
        for i in 0..MAX_OPERATORS {
@@ -921,16 +754,6 @@ impl fmt::Display for EpochState {
            }
        }
 
-       writeln!(f, "\nNCN Reward Routers:")?;
-       for i in 0..MAX_OPERATORS {
-           for group in NcnFeeGroup::all_groups() {
-               if let Ok(status) = self.account_status.ncn_reward_router(i, group) {
-                    if status != AccountStatus::DNE {
-                        writeln!(f, "  Operator {} Group {}:           {:?}", i, group.group, status)?;
-                    }
-               }
-           }
-       }
 
        writeln!(f, "\nProgress:")?;
        writeln!(f, "  Set Weight Progress:          {}/{}", self.set_weight_progress.tally(), self.set_weight_progress.total())?;
@@ -946,19 +769,7 @@ impl fmt::Display for EpochState {
        writeln!(f, "\nVoting Progress:                {}/{}", self.voting_progress.tally(), self.voting_progress.total())?;
        writeln!(f, "  Validation Progress:          {}/{}", self.validation_progress.tally(), self.validation_progress.total())?;
        writeln!(f, "  Upload Progress:              {}/{}", self.upload_progress.tally(), self.upload_progress.total())?;
-       writeln!(f, "  Total Distribution Progress:  {}/{}", self.total_distribution_progress.tally(), self.total_distribution_progress.total())?;
-       writeln!(f, "  Base Distribution Progress:   {}/{}", self.base_distribution_progress.tally(), self.base_distribution_progress.total())?;
 
-       writeln!(f, "\nNCN Distribution Progress:")?;
-       for i in 0..MAX_OPERATORS {
-           for group in NcnFeeGroup::all_groups() {
-               if let Ok(progress) = self.ncn_distribution_progress(i, group) {
-                    if progress.total() > 0 {
-                        writeln!(f, "  Operator {} Group {}:           {}/{}", i, group.group, progress.tally(), progress.total())?;
-                    } 
-               }
-           }
-       }
 
        writeln!(f, "\n")?;
        Ok(())

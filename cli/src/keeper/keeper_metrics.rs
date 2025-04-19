@@ -1,10 +1,6 @@
 use anyhow::Result;
 use jito_tip_router_core::{
-    account_payer::AccountPayer,
-    base_fee_group::{BaseFeeGroup, BaseFeeGroupType},
-    constants::MAX_OPERATORS,
-    epoch_state::AccountStatus,
-    ncn_fee_group::{NcnFeeGroup, NcnFeeGroupType},
+    account_payer::AccountPayer, constants::MAX_OPERATORS, epoch_state::AccountStatus,
 };
 use solana_metrics::datapoint_info;
 use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, native_token::lamports_to_sol};
@@ -12,9 +8,8 @@ use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, native_token::lamports_to_sol};
 use crate::{
     getters::{
         get_account_payer, get_all_operators_in_ncn, get_all_opted_in_validators, get_all_tickets,
-        get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver, get_base_reward_router,
-        get_current_epoch_and_slot, get_epoch_snapshot, get_epoch_state, get_is_epoch_completed,
-        get_ncn_reward_receiver, get_ncn_reward_router, get_operator, get_operator_snapshot,
+        get_all_vaults_in_ncn, get_ballot_box, get_current_epoch_and_slot, get_epoch_snapshot,
+        get_epoch_state, get_is_epoch_completed, get_operator, get_operator_snapshot,
         get_tip_router_config, get_vault, get_vault_config, get_vault_operator_delegation,
         get_vault_registry, get_weight_table,
     },
@@ -355,7 +350,6 @@ pub async fn emit_ncn_metrics_vault_registry(handler: &CliHandler) -> Result<()>
             ("current-epoch", current_epoch, i64),
             ("current-slot", current_slot, i64),
             ("st-mint", st_mint.st_mint().to_string(), String),
-            ("ncn-fee-group", st_mint.ncn_fee_group().group, i64),
             (
                 "switchboard-feed",
                 st_mint.switchboard_feed().to_string(),
@@ -381,8 +375,6 @@ pub async fn emit_ncn_metrics_config(handler: &CliHandler) -> Result<()> {
     let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
 
     let config = get_tip_router_config(handler).await?;
-    let fee_config = config.fee_config;
-    let current_fees = fee_config.current_fees(current_epoch);
 
     datapoint_info!(
         "tr-beta-em-config",
@@ -400,41 +392,11 @@ pub async fn emit_ncn_metrics_config(handler: &CliHandler) -> Result<()> {
             config.valid_slots_after_consensus(),
             i64
         ),
-        ("fee-admin", config.fee_admin.to_string(), String),
         (
             "tie-breaker-admin",
             config.tie_breaker_admin.to_string(),
             String
         ),
-        // Fees
-        (
-            "block-engine-fee-bps",
-            fee_config.block_engine_fee_bps(),
-            i64
-        ),
-        (
-            "base-fee-wallet",
-            fee_config
-                .base_fee_wallet(BaseFeeGroup::default())?
-                .to_string(),
-            String
-        ),
-        (
-            "base-fee-dao",
-            current_fees.base_fee_bps(BaseFeeGroup::dao())?,
-            i64
-        ),
-        (
-            "ncn-fee-lst",
-            current_fees.ncn_fee_bps(NcnFeeGroup::lst())?,
-            i64
-        ),
-        (
-            "ncn-fee-jto",
-            current_fees.ncn_fee_bps(NcnFeeGroup::jto())?,
-            i64
-        ),
-        ("total-fees", current_fees.total_fees_bps()?, i64)
     );
 
     Ok(())
@@ -462,288 +424,6 @@ pub async fn emit_epoch_metrics(handler: &CliHandler, epoch: u64) -> Result<()> 
     emit_epoch_metrics_epoch_snapshot(handler, epoch).await?;
     emit_epoch_metrics_operator_snapshot(handler, epoch).await?;
     emit_epoch_metrics_ballot_box(handler, epoch).await?;
-    emit_epoch_metrics_base_rewards(handler, epoch).await?;
-    emit_epoch_metrics_ncn_rewards(handler, epoch).await?;
-
-    Ok(())
-}
-
-pub async fn emit_epoch_metrics_ncn_rewards(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
-    let is_current_epoch = current_epoch == epoch;
-
-    let all_operators = get_all_operators_in_ncn(handler).await?;
-    for operator in all_operators {
-        for group in NcnFeeGroup::all_groups().iter().take(2) {
-            let result = get_ncn_reward_router(handler, *group, &operator, epoch).await;
-
-            if let Ok(ncn_reward_router) = result {
-                let (ncn_reward_receiver_address, ncn_reward_receiver_account) =
-                    get_ncn_reward_receiver(handler, *group, &operator, epoch).await?;
-
-                let total_vault_rewards = ncn_reward_router
-                    .vault_reward_routes()
-                    .iter()
-                    .map(|route| route.rewards())
-                    .sum::<u64>();
-
-                for route in ncn_reward_router.vault_reward_routes() {
-                    if route.is_empty() {
-                        continue;
-                    }
-
-                    emit_epoch_datapoint!(
-                        "tr-beta-ee-epoch-ncn-vault-rewards",
-                        is_current_epoch,
-                        ("current-epoch", current_epoch, i64),
-                        ("current-slot", current_slot, i64),
-                        ("keeper-epoch", epoch, i64),
-                        ("group", group.group, i64),
-                        ("operator", operator.to_string(), String),
-                        ("vault", route.vault().to_string(), String),
-                        ("rewards", format_token_amount(route.rewards()), f64)
-                    );
-                }
-
-                emit_epoch_datapoint!(
-                    "tr-beta-ee-epoch-ncn-rewards",
-                    is_current_epoch,
-                    ("current-epoch", current_epoch, i64),
-                    ("current-slot", current_slot, i64),
-                    ("keeper-epoch", epoch, i64),
-                    ("group", group.group, i64),
-                    ("operator", operator.to_string(), String),
-                    (
-                        "receiver-address",
-                        ncn_reward_receiver_address.to_string(),
-                        String
-                    ),
-                    (
-                        "receiver-balance",
-                        ncn_reward_receiver_account.lamports,
-                        i64
-                    ),
-                    (
-                        "receiver-balance-sol",
-                        format_token_amount(ncn_reward_receiver_account.lamports),
-                        f64
-                    ),
-                    ("still-routing", ncn_reward_router.still_routing(), bool),
-                    (
-                        "total-rewards",
-                        format_token_amount(ncn_reward_router.total_rewards()),
-                        f64
-                    ),
-                    (
-                        "rewards-processed",
-                        format_token_amount(ncn_reward_router.rewards_processed()),
-                        f64
-                    ),
-                    (
-                        "operator-rewards",
-                        format_token_amount(ncn_reward_router.operator_rewards()),
-                        f64
-                    ),
-                    (
-                        "total-vault-rewards",
-                        format_token_amount(total_vault_rewards),
-                        f64
-                    )
-                );
-            }
-        }
-    }
-
-    Ok(())
-}
-
-pub async fn emit_epoch_metrics_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
-    let is_current_epoch = current_epoch == epoch;
-
-    let result = get_base_reward_router(handler, epoch).await;
-
-    if let Ok(base_reward_router) = result {
-        let (base_reward_receiver_address, base_reward_receiver_account) =
-            get_base_reward_receiver(handler, epoch).await?;
-
-        emit_epoch_datapoint!(
-            "tr-beta-ee-epoch-base-rewards",
-            is_current_epoch,
-            ("current-epoch", current_epoch, i64),
-            ("current-slot", current_slot, i64),
-            ("keeper-epoch", epoch, i64),
-            (
-                "receiver-address",
-                base_reward_receiver_address.to_string(),
-                String
-            ),
-            (
-                "receiver-balance",
-                base_reward_receiver_account.lamports,
-                i64
-            ),
-            (
-                "receiver-balance-sol",
-                format_token_amount(base_reward_receiver_account.lamports),
-                f64
-            ),
-            ("still-routing", base_reward_router.still_routing(), bool),
-            (
-                "total-rewards",
-                format_token_amount(base_reward_router.total_rewards()),
-                f64
-            ),
-            (
-                "rewards-processed",
-                format_token_amount(base_reward_router.rewards_processed()),
-                f64
-            ),
-            (
-                "dao-rewards",
-                format_token_amount(base_reward_router.base_fee_group_reward(BaseFeeGroup::dao())?),
-                f64
-            ),
-            (
-                "lst-rewards",
-                format_token_amount(base_reward_router.ncn_fee_group_rewards(NcnFeeGroup::lst())?),
-                f64
-            ),
-            (
-                "jto-rewards",
-                format_token_amount(base_reward_router.ncn_fee_group_rewards(NcnFeeGroup::jto())?),
-                f64
-            ),
-            (
-                "base-rewards-0",
-                format_token_amount(
-                    base_reward_router
-                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::DAO))?
-                ),
-                f64
-            ),
-            (
-                "base-rewards-1",
-                format_token_amount(
-                    base_reward_router
-                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved1))?
-                ),
-                f64
-            ),
-            (
-                "base-rewards-2",
-                format_token_amount(
-                    base_reward_router
-                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved2))?
-                ),
-                f64
-            ),
-            (
-                "base-rewards-3",
-                format_token_amount(
-                    base_reward_router
-                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved3))?
-                ),
-                f64
-            ),
-            (
-                "base-rewards-4",
-                format_token_amount(
-                    base_reward_router
-                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved4))?
-                ),
-                f64
-            ),
-            (
-                "base-rewards-5",
-                format_token_amount(
-                    base_reward_router
-                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved5))?
-                ),
-                f64
-            ),
-            (
-                "base-rewards-6",
-                format_token_amount(
-                    base_reward_router
-                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved6))?
-                ),
-                f64
-            ),
-            (
-                "base-rewards-7",
-                format_token_amount(
-                    base_reward_router
-                        .base_fee_group_reward(BaseFeeGroup::new(BaseFeeGroupType::Reserved7))?
-                ),
-                f64
-            ),
-            (
-                "ncn-rewards-0",
-                format_token_amount(
-                    base_reward_router
-                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Default))?
-                ),
-                f64
-            ),
-            (
-                "ncn-rewards-1",
-                format_token_amount(
-                    base_reward_router
-                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::JTO))?
-                ),
-                f64
-            ),
-            (
-                "ncn-rewards-2",
-                format_token_amount(
-                    base_reward_router
-                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved2))?
-                ),
-                f64
-            ),
-            (
-                "ncn-rewards-3",
-                format_token_amount(
-                    base_reward_router
-                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved3))?
-                ),
-                f64
-            ),
-            (
-                "ncn-rewards-4",
-                format_token_amount(
-                    base_reward_router
-                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved4))?
-                ),
-                f64
-            ),
-            (
-                "ncn-rewards-5",
-                format_token_amount(
-                    base_reward_router
-                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved5))?
-                ),
-                f64
-            ),
-            (
-                "ncn-rewards-6",
-                format_token_amount(
-                    base_reward_router
-                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved6))?
-                ),
-                f64
-            ),
-            (
-                "ncn-rewards-7",
-                format_token_amount(
-                    base_reward_router
-                        .ncn_fee_group_rewards(NcnFeeGroup::new(NcnFeeGroupType::Reserved7))?
-                ),
-                f64
-            )
-        );
-    }
 
     Ok(())
 }
@@ -943,8 +623,6 @@ pub async fn emit_epoch_metrics_epoch_snapshot(handler: &CliHandler, epoch: u64)
     let result = get_epoch_snapshot(handler, epoch).await;
 
     if let Ok(epoch_snapshot) = result {
-        let fees = epoch_snapshot.fees();
-
         emit_epoch_datapoint!(
             "tr-beta-ee-epoch-snapshot",
             is_current_epoch,
@@ -967,16 +645,7 @@ pub async fn emit_epoch_metrics_epoch_snapshot(handler: &CliHandler, epoch: u64)
                 i64
             ),
             ("operator-count", epoch_snapshot.operator_count(), i64),
-            ("vault-count", epoch_snapshot.vault_count(), i64),
-            (
-                "base-fee-bps",
-                fees.base_fee_bps(BaseFeeGroup::default())?,
-                i64
-            ),
-            ("base-fee-dao", fees.base_fee_bps(BaseFeeGroup::dao())?, i64),
-            ("ncn-fee-lst", fees.ncn_fee_bps(NcnFeeGroup::lst())?, i64),
-            ("ncn-fee-jto", fees.ncn_fee_bps(NcnFeeGroup::jto())?, i64),
-            ("total-fees", fees.total_fees_bps()?, i64)
+            ("vault-count", epoch_snapshot.vault_count(), i64)
         );
     }
 
@@ -1076,9 +745,6 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
     let mut operator_snapshot_dne = 0;
     let mut operator_snapshot_open = 0;
     let mut operator_snapshot_closed = 0;
-    let mut ncn_router_dne = 0;
-    let mut ncn_router_open = 0;
-    let mut ncn_router_closed = 0;
     for i in 0..MAX_OPERATORS {
         let operator_snapshot_status = state.account_status().operator_snapshot(i)?;
 
@@ -1086,16 +752,6 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
             AccountStatus::DNE => operator_snapshot_dne += 1,
             AccountStatus::Closed => operator_snapshot_closed += 1,
             _ => operator_snapshot_open += 1,
-        }
-
-        for group in NcnFeeGroup::all_groups() {
-            let ncn_fee_group_status = state.account_status().ncn_reward_router(i, group)?;
-
-            match ncn_fee_group_status {
-                AccountStatus::DNE => ncn_router_dne += 1,
-                AccountStatus::Closed => ncn_router_closed += 1,
-                _ => ncn_router_open += 1,
-            }
         }
     }
 
@@ -1169,26 +825,6 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
             state.upload_progress().total(),
             i64
         ),
-        (
-            "total-distribution-progress-tally",
-            state.total_distribution_progress().tally(),
-            i64
-        ),
-        (
-            "total-distribution-progress-total",
-            state.total_distribution_progress().total(),
-            i64
-        ),
-        (
-            "base-distribution-progress-tally",
-            state.base_distribution_progress().tally(),
-            i64
-        ),
-        (
-            "base-distribution-progress-total",
-            state.base_distribution_progress().total(),
-            i64
-        ),
         // Account status
         (
             "epoch-state-account-status",
@@ -1210,11 +846,6 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
             state.account_status().ballot_box()?,
             i64
         ),
-        (
-            "base-reward-router-account-status",
-            state.account_status().base_reward_router()?,
-            i64
-        ),
         ("operator-snapshot-account-dne", operator_snapshot_dne, i64),
         (
             "operator-snapshot-account-open",
@@ -1225,10 +856,7 @@ pub async fn emit_epoch_metrics_state(handler: &CliHandler, epoch: u64) -> Resul
             "operator-snapshot-account-closed",
             operator_snapshot_closed,
             i64
-        ),
-        ("ncn-reward-router-account-dne", ncn_router_dne, i64),
-        ("ncn-reward-router-account-open", ncn_router_open, i64),
-        ("ncn-reward-router-account-closed", ncn_router_closed, i64)
+        )
     );
 
     Ok(())

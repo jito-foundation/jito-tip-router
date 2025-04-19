@@ -29,7 +29,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const CLOSE_EPOCH_ACCOUNT_DISCRIMINATOR = 27;
+export const CLOSE_EPOCH_ACCOUNT_DISCRIMINATOR = 17;
 
 export function getCloseEpochAccountDiscriminatorBytes() {
   return getU8Encoder().encode(CLOSE_EPOCH_ACCOUNT_DISCRIMINATOR);
@@ -43,11 +43,9 @@ export type CloseEpochAccountInstruction<
   TAccountNcn extends string | IAccountMeta<string> = string,
   TAccountAccountToClose extends string | IAccountMeta<string> = string,
   TAccountAccountPayer extends string | IAccountMeta<string> = string,
-  TAccountDaoWallet extends string | IAccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | IAccountMeta<string> = '11111111111111111111111111111111',
-  TAccountReceiverToClose extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
 > = IInstruction<TProgram> &
   IInstructionWithData<Uint8Array> &
@@ -69,15 +67,9 @@ export type CloseEpochAccountInstruction<
       TAccountAccountPayer extends string
         ? WritableAccount<TAccountAccountPayer>
         : TAccountAccountPayer,
-      TAccountDaoWallet extends string
-        ? WritableAccount<TAccountDaoWallet>
-        : TAccountDaoWallet,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
-      TAccountReceiverToClose extends string
-        ? WritableAccount<TAccountReceiverToClose>
-        : TAccountReceiverToClose,
       ...TRemainingAccounts,
     ]
   >;
@@ -123,9 +115,7 @@ export type CloseEpochAccountInput<
   TAccountNcn extends string = string,
   TAccountAccountToClose extends string = string,
   TAccountAccountPayer extends string = string,
-  TAccountDaoWallet extends string = string,
   TAccountSystemProgram extends string = string,
-  TAccountReceiverToClose extends string = string,
 > = {
   epochMarker: Address<TAccountEpochMarker>;
   epochState: Address<TAccountEpochState>;
@@ -133,9 +123,7 @@ export type CloseEpochAccountInput<
   ncn: Address<TAccountNcn>;
   accountToClose: Address<TAccountAccountToClose>;
   accountPayer: Address<TAccountAccountPayer>;
-  daoWallet: Address<TAccountDaoWallet>;
   systemProgram?: Address<TAccountSystemProgram>;
-  receiverToClose?: Address<TAccountReceiverToClose>;
   epoch: CloseEpochAccountInstructionDataArgs['epoch'];
 };
 
@@ -146,9 +134,7 @@ export function getCloseEpochAccountInstruction<
   TAccountNcn extends string,
   TAccountAccountToClose extends string,
   TAccountAccountPayer extends string,
-  TAccountDaoWallet extends string,
   TAccountSystemProgram extends string,
-  TAccountReceiverToClose extends string,
   TProgramAddress extends Address = typeof JITO_TIP_ROUTER_PROGRAM_ADDRESS,
 >(
   input: CloseEpochAccountInput<
@@ -158,9 +144,7 @@ export function getCloseEpochAccountInstruction<
     TAccountNcn,
     TAccountAccountToClose,
     TAccountAccountPayer,
-    TAccountDaoWallet,
-    TAccountSystemProgram,
-    TAccountReceiverToClose
+    TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): CloseEpochAccountInstruction<
@@ -171,9 +155,7 @@ export function getCloseEpochAccountInstruction<
   TAccountNcn,
   TAccountAccountToClose,
   TAccountAccountPayer,
-  TAccountDaoWallet,
-  TAccountSystemProgram,
-  TAccountReceiverToClose
+  TAccountSystemProgram
 > {
   // Program address.
   const programAddress =
@@ -187,9 +169,7 @@ export function getCloseEpochAccountInstruction<
     ncn: { value: input.ncn ?? null, isWritable: false },
     accountToClose: { value: input.accountToClose ?? null, isWritable: true },
     accountPayer: { value: input.accountPayer ?? null, isWritable: true },
-    daoWallet: { value: input.daoWallet ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
-    receiverToClose: { value: input.receiverToClose ?? null, isWritable: true },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -214,9 +194,7 @@ export function getCloseEpochAccountInstruction<
       getAccountMeta(accounts.ncn),
       getAccountMeta(accounts.accountToClose),
       getAccountMeta(accounts.accountPayer),
-      getAccountMeta(accounts.daoWallet),
       getAccountMeta(accounts.systemProgram),
-      getAccountMeta(accounts.receiverToClose),
     ],
     programAddress,
     data: getCloseEpochAccountInstructionDataEncoder().encode(
@@ -230,9 +208,7 @@ export function getCloseEpochAccountInstruction<
     TAccountNcn,
     TAccountAccountToClose,
     TAccountAccountPayer,
-    TAccountDaoWallet,
-    TAccountSystemProgram,
-    TAccountReceiverToClose
+    TAccountSystemProgram
   >;
 
   return instruction;
@@ -250,9 +226,7 @@ export type ParsedCloseEpochAccountInstruction<
     ncn: TAccountMetas[3];
     accountToClose: TAccountMetas[4];
     accountPayer: TAccountMetas[5];
-    daoWallet: TAccountMetas[6];
-    systemProgram: TAccountMetas[7];
-    receiverToClose?: TAccountMetas[8] | undefined;
+    systemProgram: TAccountMetas[6];
   };
   data: CloseEpochAccountInstructionData;
 };
@@ -265,7 +239,7 @@ export function parseCloseEpochAccountInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedCloseEpochAccountInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 9) {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -274,12 +248,6 @@ export function parseCloseEpochAccountInstruction<
     const accountMeta = instruction.accounts![accountIndex]!;
     accountIndex += 1;
     return accountMeta;
-  };
-  const getNextOptionalAccount = () => {
-    const accountMeta = getNextAccount();
-    return accountMeta.address === JITO_TIP_ROUTER_PROGRAM_ADDRESS
-      ? undefined
-      : accountMeta;
   };
   return {
     programAddress: instruction.programAddress,
@@ -290,9 +258,7 @@ export function parseCloseEpochAccountInstruction<
       ncn: getNextAccount(),
       accountToClose: getNextAccount(),
       accountPayer: getNextAccount(),
-      daoWallet: getNextAccount(),
       systemProgram: getNextAccount(),
-      receiverToClose: getNextOptionalAccount(),
     },
     data: getCloseEpochAccountInstructionDataDecoder().decode(instruction.data),
   };

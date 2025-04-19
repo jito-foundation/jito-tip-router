@@ -40,7 +40,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ADMIN_SET_ST_MINT_DISCRIMINATOR = 34;
+export const ADMIN_SET_ST_MINT_DISCRIMINATOR = 23;
 
 export function getAdminSetStMintDiscriminatorBytes() {
   return getU8Encoder().encode(ADMIN_SET_ST_MINT_DISCRIMINATOR);
@@ -75,7 +75,6 @@ export type AdminSetStMintInstruction<
 export type AdminSetStMintInstructionData = {
   discriminator: number;
   stMint: Address;
-  ncnFeeGroup: Option<number>;
   rewardMultiplierBps: Option<bigint>;
   switchboardFeed: Option<Address>;
   noFeedWeight: Option<bigint>;
@@ -83,7 +82,6 @@ export type AdminSetStMintInstructionData = {
 
 export type AdminSetStMintInstructionDataArgs = {
   stMint: Address;
-  ncnFeeGroup: OptionOrNullable<number>;
   rewardMultiplierBps: OptionOrNullable<number | bigint>;
   switchboardFeed: OptionOrNullable<Address>;
   noFeedWeight: OptionOrNullable<number | bigint>;
@@ -94,7 +92,6 @@ export function getAdminSetStMintInstructionDataEncoder(): Encoder<AdminSetStMin
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['stMint', getAddressEncoder()],
-      ['ncnFeeGroup', getOptionEncoder(getU8Encoder())],
       ['rewardMultiplierBps', getOptionEncoder(getU64Encoder())],
       ['switchboardFeed', getOptionEncoder(getAddressEncoder())],
       ['noFeedWeight', getOptionEncoder(getU128Encoder())],
@@ -107,7 +104,6 @@ export function getAdminSetStMintInstructionDataDecoder(): Decoder<AdminSetStMin
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['stMint', getAddressDecoder()],
-    ['ncnFeeGroup', getOptionDecoder(getU8Decoder())],
     ['rewardMultiplierBps', getOptionDecoder(getU64Decoder())],
     ['switchboardFeed', getOptionDecoder(getAddressDecoder())],
     ['noFeedWeight', getOptionDecoder(getU128Decoder())],
@@ -135,7 +131,6 @@ export type AdminSetStMintInput<
   vaultRegistry: Address<TAccountVaultRegistry>;
   admin: TransactionSigner<TAccountAdmin>;
   stMint: AdminSetStMintInstructionDataArgs['stMint'];
-  ncnFeeGroup: AdminSetStMintInstructionDataArgs['ncnFeeGroup'];
   rewardMultiplierBps: AdminSetStMintInstructionDataArgs['rewardMultiplierBps'];
   switchboardFeed: AdminSetStMintInstructionDataArgs['switchboardFeed'];
   noFeedWeight: AdminSetStMintInstructionDataArgs['noFeedWeight'];

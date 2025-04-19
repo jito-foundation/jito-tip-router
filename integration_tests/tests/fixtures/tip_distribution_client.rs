@@ -161,6 +161,7 @@ impl TipDistributionClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn initialize(
         &mut self,
         authority: Pubkey,
@@ -224,6 +225,7 @@ impl TipDistributionClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn initialize_tip_distribution_account(
         &mut self,
         merkle_root_upload_authority: Pubkey,
@@ -296,7 +298,7 @@ impl TipDistributionClient {
         .await
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::too_many_arguments)]
     pub async fn claim(
         &mut self,
         proof: Vec<[u8; 32]>,

@@ -315,7 +315,7 @@ impl VaultProgramClient {
 
         let vrt_mint = Keypair::new();
         let vault_admin = Keypair::new();
-        let token_mint = token_mint.unwrap_or_else(|| Keypair::new());
+        let token_mint = token_mint.unwrap_or_else(Keypair::new);
 
         self.airdrop(&vault_admin.pubkey(), 100.0).await?;
 
@@ -661,6 +661,7 @@ impl VaultProgramClient {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn initialize_vault(
         &mut self,
         config: &Pubkey,
@@ -725,6 +726,7 @@ impl VaultProgramClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn initialize_vault_ncn_ticket(
         &mut self,
         config: &Pubkey,
@@ -755,6 +757,7 @@ impl VaultProgramClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn initialize_vault_operator_delegation(
         &mut self,
         config: &Pubkey,
@@ -784,7 +787,7 @@ impl VaultProgramClient {
         .await
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::too_many_arguments)]
     pub async fn delegate_token_account(
         &mut self,
         config: &Pubkey,
@@ -1187,6 +1190,7 @@ impl VaultProgramClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn enqueue_withdrawal(
         &mut self,
         config: &Pubkey,
@@ -1251,6 +1255,7 @@ impl VaultProgramClient {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn burn_withdrawal_ticket(
         &mut self,
         config: &Pubkey,
@@ -1336,6 +1341,7 @@ impl VaultProgramClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn mint_to(
         &mut self,
         vault: &Pubkey,
@@ -1376,6 +1382,7 @@ impl VaultProgramClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn initialize_vault_ncn_slasher_ticket(
         &mut self,
         config: &Pubkey,
@@ -1407,7 +1414,7 @@ impl VaultProgramClient {
         .await
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::too_many_arguments)]
     pub async fn initialize_vault_ncn_slasher_operator_ticket(
         &mut self,
         config: &Pubkey,
@@ -1441,7 +1448,7 @@ impl VaultProgramClient {
         .await
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::too_many_arguments)]
     pub async fn create_token_metadata(
         &mut self,
         vault: &Pubkey,
@@ -1474,7 +1481,7 @@ impl VaultProgramClient {
         .await
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::too_many_arguments)]
     pub async fn update_token_metadata(
         &mut self,
         vault: &Pubkey,

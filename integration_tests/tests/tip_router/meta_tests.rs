@@ -34,15 +34,8 @@ mod tests {
             .await?;
         fixture.add_ballot_box_to_test_ncn(&test_ncn).await?;
         fixture.cast_votes_for_test_ncn(&test_ncn).await?;
-        fixture.add_routers_for_test_ncn(&test_ncn).await?;
         stake_pool_client
             .update_stake_pool_balance(&pool_root)
-            .await?;
-        fixture
-            .route_in_base_rewards_for_test_ncn(&test_ncn, 10_000, &pool_root)
-            .await?;
-        fixture
-            .route_in_ncn_rewards_for_test_ncn(&test_ncn, &pool_root)
             .await?;
         fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
 
@@ -53,8 +46,6 @@ mod tests {
     async fn test_intermission_test_ncn_functions() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut stake_pool_client = fixture.stake_pool_client();
-        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
 
         const OPERATOR_COUNT: usize = 1;
         const VAULT_COUNT: usize = 1;
@@ -81,10 +72,6 @@ mod tests {
 
         assert!(ballot_box.has_winning_ballot());
 
-        fixture
-            .reward_test_ncn(&test_ncn, 10_000, &pool_root)
-            .await?;
-
         Ok(())
     }
 
@@ -92,8 +79,6 @@ mod tests {
     async fn test_multiple_operators() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut stake_pool_client = fixture.stake_pool_client();
-        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
         const OPERATOR_COUNT: usize = 10;
         const VAULT_COUNT: usize = 1;
 
@@ -119,10 +104,6 @@ mod tests {
 
         assert!(ballot_box.has_winning_ballot());
 
-        fixture
-            .reward_test_ncn(&test_ncn, 10_000, &pool_root)
-            .await?;
-
         fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
 
         Ok(())
@@ -132,8 +113,6 @@ mod tests {
     async fn test_multiple_vaults() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut stake_pool_client = fixture.stake_pool_client();
-        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
 
         const OPERATOR_COUNT: usize = 1;
         const VAULT_COUNT: usize = 10;
@@ -159,10 +138,6 @@ mod tests {
             .await?;
 
         assert!(ballot_box.has_winning_ballot());
-
-        fixture
-            .reward_test_ncn(&test_ncn, 10_000, &pool_root)
-            .await?;
 
         fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
 
@@ -203,10 +178,6 @@ mod tests {
 
         stake_pool_client
             .update_stake_pool_balance(&pool_root)
-            .await?;
-
-        fixture
-            .reward_test_ncn(&test_ncn, 10_000, &pool_root)
             .await?;
 
         fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;

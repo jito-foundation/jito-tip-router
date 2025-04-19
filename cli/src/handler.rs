@@ -5,32 +5,26 @@ use crate::{
     args::{Args, ProgramCommand},
     getters::{
         get_account_payer, get_all_operators_in_ncn, get_all_opted_in_validators, get_all_tickets,
-        get_all_vaults, get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver,
-        get_base_reward_router, get_current_slot, get_epoch_snapshot, get_epoch_state,
-        get_is_epoch_completed, get_ncn, get_ncn_operator_state, get_ncn_reward_receiver,
-        get_ncn_reward_router, get_ncn_vault_ticket, get_operator_snapshot, get_stake_pool,
-        get_tip_router_config, get_total_epoch_rent_cost, get_total_rewards_to_be_distributed,
-        get_vault_ncn_ticket, get_vault_operator_delegation, get_vault_registry, get_weight_table,
-        OptedInValidatorInfo,
+        get_all_vaults, get_all_vaults_in_ncn, get_ballot_box, get_current_slot,
+        get_epoch_snapshot, get_epoch_state, get_is_epoch_completed, get_ncn,
+        get_ncn_operator_state, get_ncn_vault_ticket, get_operator_snapshot, get_stake_pool,
+        get_tip_router_config, get_total_epoch_rent_cost, get_vault_ncn_ticket,
+        get_vault_operator_delegation, get_vault_registry, get_weight_table, OptedInValidatorInfo,
     },
     instructions::{
-        admin_create_config, admin_fund_account_payer, admin_register_st_mint,
-        admin_set_config_fees, admin_set_new_admin, admin_set_parameters, admin_set_weight,
-        crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
-        crank_snapshot, crank_switchboard, create_and_add_test_operator, create_and_add_test_vault,
-        create_ballot_box, create_base_reward_router, create_epoch_snapshot, create_epoch_state,
-        create_ncn_reward_router, create_operator_snapshot, create_test_ncn, create_vault_registry,
-        create_weight_table, distribute_base_ncn_rewards, full_vault_update, register_vault,
-        route_base_rewards, route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
+        admin_create_config, admin_fund_account_payer, admin_register_st_mint, admin_set_new_admin,
+        admin_set_parameters, admin_set_weight, crank_close_epoch_accounts, crank_register_vaults,
+        crank_set_weight, crank_snapshot, crank_switchboard, create_and_add_test_operator,
+        create_and_add_test_vault, create_ballot_box, create_epoch_snapshot, create_epoch_state,
+        create_operator_snapshot, create_test_ncn, create_vault_registry, create_weight_table,
+        full_vault_update, register_vault, set_weight, snapshot_vault_operator_delegation,
         update_all_vaults_in_network,
     },
     keeper::keeper_loop::startup_keeper,
 };
 use anyhow::{anyhow, Result};
 use base64::{engine::general_purpose, Engine};
-use jito_tip_router_core::{
-    account_payer::AccountPayer, base_reward_router::BaseRewardReceiver, ncn_fee_group::NcnFeeGroup,
-};
+use jito_tip_router_core::account_payer::AccountPayer;
 use log::info;
 use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
 use solana_client::{
@@ -206,7 +200,6 @@ impl CliHandler {
 
             ProgramCommand::CrankSetWeight {} => crank_set_weight(self, self.epoch).await,
             ProgramCommand::CrankSnapshot {} => crank_snapshot(self, self.epoch).await,
-            ProgramCommand::CrankDistribute {} => crank_distribute(self, self.epoch).await,
             ProgramCommand::CrankCloseEpochAccounts {} => {
                 crank_close_epoch_accounts(self, self.epoch).await
             }
@@ -216,14 +209,8 @@ impl CliHandler {
                 epochs_before_stall,
                 valid_slots_after_consensus,
                 epochs_after_consensus_before_close,
-                dao_fee_bps,
-                block_engine_fee_bps,
-                default_ncn_fee_bps,
-                fee_wallet,
                 tie_breaker_admin,
             } => {
-                let fee_wallet =
-                    fee_wallet.map(|s| Pubkey::from_str(&s).expect("error parsing fee wallet"));
                 let tie_breaker = tie_breaker_admin
                     .map(|s| Pubkey::from_str(&s).expect("error parsing tie breaker admin"));
                 admin_create_config(
@@ -231,17 +218,12 @@ impl CliHandler {
                     epochs_before_stall,
                     valid_slots_after_consensus,
                     epochs_after_consensus_before_close,
-                    dao_fee_bps,
-                    block_engine_fee_bps,
-                    default_ncn_fee_bps,
-                    fee_wallet,
                     tie_breaker,
                 )
                 .await
             }
             ProgramCommand::AdminRegisterStMint {
                 vault,
-                ncn_fee_group,
                 reward_multiplier_bps,
                 switchboard_feed,
                 no_feed_weight,
@@ -249,12 +231,9 @@ impl CliHandler {
                 let vault = Pubkey::from_str(&vault).expect("error parsing vault");
                 let switchboard = switchboard_feed
                     .map(|s| Pubkey::from_str(&s).expect("error parsing switchboard feed"));
-                let ncn_fee_group =
-                    NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
                 admin_register_st_mint(
                     self,
                     &vault,
-                    ncn_fee_group,
                     reward_multiplier_bps,
                     switchboard,
                     no_feed_weight,
@@ -299,32 +278,12 @@ impl CliHandler {
 
                 Ok(())
             }
-            ProgramCommand::AdminSetConfigFees {
-                new_block_engine_fee_bps,
-                base_fee_group,
-                new_base_fee_wallet,
-                new_base_fee_bps,
-                ncn_fee_group,
-                new_ncn_fee_bps,
-            } => {
-                admin_set_config_fees(
-                    self,
-                    new_block_engine_fee_bps,
-                    base_fee_group,
-                    new_base_fee_wallet,
-                    new_base_fee_bps,
-                    ncn_fee_group,
-                    new_ncn_fee_bps,
-                )
-                .await
-            }
             ProgramCommand::AdminSetNewAdmin {
                 new_admin,
-                set_fee_admin,
                 set_tie_breaker_admin,
             } => {
                 let new_admin = Pubkey::from_str(&new_admin).expect("error parsing new admin");
-                admin_set_new_admin(self, &new_admin, set_fee_admin, set_tie_breaker_admin).await
+                admin_set_new_admin(self, &new_admin, set_tie_breaker_admin).await
             }
             ProgramCommand::AdminFundAccountPayer { amount_in_sol } => {
                 admin_fund_account_payer(self, amount_in_sol).await
@@ -377,42 +336,6 @@ impl CliHandler {
                 // let mut root = [0u8; 32];
                 // root.copy_from_slice(&merkle_root);
                 // admin_cast_vote(self, &operator, root).await
-            }
-
-            ProgramCommand::CreateBaseRewardRouter {} => {
-                create_base_reward_router(self, self.epoch).await
-            }
-
-            ProgramCommand::CreateNcnRewardRouter {
-                operator,
-                ncn_fee_group,
-            } => {
-                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
-                let ncn_fee_group =
-                    NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
-                create_ncn_reward_router(self, ncn_fee_group, &operator, self.epoch).await
-            }
-
-            ProgramCommand::RouteBaseRewards {} => route_base_rewards(self, self.epoch).await,
-
-            ProgramCommand::RouteNcnRewards {
-                operator,
-                ncn_fee_group,
-            } => {
-                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
-                let ncn_fee_group =
-                    NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
-                route_ncn_rewards(self, &operator, ncn_fee_group, self.epoch).await
-            }
-
-            ProgramCommand::DistributeBaseNcnRewards {
-                operator,
-                ncn_fee_group,
-            } => {
-                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
-                let ncn_fee_group =
-                    NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
-                distribute_base_ncn_rewards(self, &operator, ncn_fee_group, self.epoch).await
             }
 
             // Getters
@@ -541,91 +464,6 @@ impl CliHandler {
             ProgramCommand::GetBallotBox {} => {
                 let ballot_box = get_ballot_box(self, self.epoch).await?;
                 info!("{}", ballot_box);
-                Ok(())
-            }
-            ProgramCommand::GetBaseRewardReceiverAddress {} => {
-                let (base_reward_receiver_address, _, _) = BaseRewardReceiver::find_program_address(
-                    &self.tip_router_program_id,
-                    self.ncn()?,
-                    self.epoch,
-                );
-                info!("Base Reward Receiver: {}", base_reward_receiver_address);
-                Ok(())
-            }
-            ProgramCommand::GetBaseRewardRouter {} => {
-                let total_rewards_to_be_distributed =
-                    get_total_rewards_to_be_distributed(self, self.epoch).await?;
-                let base_reward_router = get_base_reward_router(self, self.epoch).await?;
-                let (base_reward_receiver_address, base_reward_receiver_account) =
-                    get_base_reward_receiver(self, self.epoch).await?;
-                let rent = self
-                    .rpc_client
-                    .get_minimum_balance_for_rent_exemption(0)
-                    .await?;
-                info!(
-                    "{}\nTotal Rewards To Distribute: {}\nReceiver {}: {}\n",
-                    base_reward_router,
-                    total_rewards_to_be_distributed,
-                    base_reward_receiver_address,
-                    base_reward_receiver_account.lamports - rent
-                );
-                Ok(())
-            }
-            ProgramCommand::GetNcnRewardRouter {
-                operator,
-                ncn_fee_group,
-            } => {
-                let operator = Pubkey::from_str(&operator).expect("error parsing operator");
-                let ncn_fee_group =
-                    NcnFeeGroup::try_from(ncn_fee_group).expect("error parsing fee group");
-                let ncn_reward_router =
-                    get_ncn_reward_router(self, ncn_fee_group, &operator, self.epoch).await?;
-                let (ncn_reward_receiver_address, ncn_reward_receiver_account) =
-                    get_ncn_reward_receiver(self, ncn_fee_group, &operator, self.epoch).await?;
-                let rent = self
-                    .rpc_client
-                    .get_minimum_balance_for_rent_exemption(0)
-                    .await?;
-                info!(
-                    "{}\nReceiver {}: {}\n",
-                    ncn_reward_router,
-                    ncn_reward_receiver_address,
-                    ncn_reward_receiver_account.lamports - rent
-                );
-                Ok(())
-            }
-            ProgramCommand::GetAllNcnRewardRouters {} => {
-                let all_operators = get_all_operators_in_ncn(self).await?;
-                let rent = self
-                    .rpc_client
-                    .get_minimum_balance_for_rent_exemption(0)
-                    .await?;
-                let epoch_snapshot = get_epoch_snapshot(self, self.epoch).await?;
-                let fees = epoch_snapshot.fees();
-
-                let mut valid_ncn_groups: Vec<NcnFeeGroup> = Vec::new();
-                for group in NcnFeeGroup::all_groups() {
-                    if fees.ncn_fee_bps(group)? > 0 {
-                        valid_ncn_groups.push(group);
-                    }
-                }
-
-                for operator in all_operators.iter() {
-                    for group in valid_ncn_groups.iter() {
-                        let ncn_reward_router =
-                            get_ncn_reward_router(self, *group, operator, self.epoch).await?;
-                        let (ncn_reward_receiver_address, ncn_reward_receiver_account) =
-                            get_ncn_reward_receiver(self, *group, operator, self.epoch).await?;
-
-                        info!(
-                            "{}\nReceiver {}: {}\n",
-                            ncn_reward_router,
-                            ncn_reward_receiver_address,
-                            ncn_reward_receiver_account.lamports - rent,
-                        );
-                    }
-                }
-
                 Ok(())
             }
             ProgramCommand::GetAccountPayer {} => {
@@ -849,11 +687,7 @@ impl CliHandler {
             ProgramCommand::CreateAndAddTestVault {
                 deposit_fee_bps,
                 withdrawal_fee_bps,
-                reward_fee_bps,
-            } => {
-                create_and_add_test_vault(self, deposit_fee_bps, withdrawal_fee_bps, reward_fee_bps)
-                    .await
-            }
+            } => create_and_add_test_vault(self, deposit_fee_bps, withdrawal_fee_bps).await,
         }
     }
 }

@@ -709,6 +709,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn warmup_ncn_vault_slasher_ticket(
         &mut self,
         config: &Pubkey,
@@ -819,6 +820,7 @@ impl RestakingProgramClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn initialize_ncn_vault_slasher_ticket(
         &mut self,
         config: &Pubkey,

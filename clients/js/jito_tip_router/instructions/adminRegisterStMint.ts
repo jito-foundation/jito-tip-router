@@ -40,7 +40,7 @@ import {
 import { JITO_TIP_ROUTER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ADMIN_REGISTER_ST_MINT_DISCRIMINATOR = 33;
+export const ADMIN_REGISTER_ST_MINT_DISCRIMINATOR = 22;
 
 export function getAdminRegisterStMintDiscriminatorBytes() {
   return getU8Encoder().encode(ADMIN_REGISTER_ST_MINT_DISCRIMINATOR);
@@ -78,14 +78,12 @@ export type AdminRegisterStMintInstruction<
 
 export type AdminRegisterStMintInstructionData = {
   discriminator: number;
-  ncnFeeGroup: number;
   rewardMultiplierBps: bigint;
   switchboardFeed: Option<Address>;
   noFeedWeight: Option<bigint>;
 };
 
 export type AdminRegisterStMintInstructionDataArgs = {
-  ncnFeeGroup: number;
   rewardMultiplierBps: number | bigint;
   switchboardFeed: OptionOrNullable<Address>;
   noFeedWeight: OptionOrNullable<number | bigint>;
@@ -95,7 +93,6 @@ export function getAdminRegisterStMintInstructionDataEncoder(): Encoder<AdminReg
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['ncnFeeGroup', getU8Encoder()],
       ['rewardMultiplierBps', getU64Encoder()],
       ['switchboardFeed', getOptionEncoder(getAddressEncoder())],
       ['noFeedWeight', getOptionEncoder(getU128Encoder())],
@@ -110,7 +107,6 @@ export function getAdminRegisterStMintInstructionDataEncoder(): Encoder<AdminReg
 export function getAdminRegisterStMintInstructionDataDecoder(): Decoder<AdminRegisterStMintInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['ncnFeeGroup', getU8Decoder()],
     ['rewardMultiplierBps', getU64Decoder()],
     ['switchboardFeed', getOptionDecoder(getAddressDecoder())],
     ['noFeedWeight', getOptionDecoder(getU128Decoder())],
@@ -139,7 +135,6 @@ export type AdminRegisterStMintInput<
   stMint: Address<TAccountStMint>;
   vaultRegistry: Address<TAccountVaultRegistry>;
   admin: TransactionSigner<TAccountAdmin>;
-  ncnFeeGroup: AdminRegisterStMintInstructionDataArgs['ncnFeeGroup'];
   rewardMultiplierBps: AdminRegisterStMintInstructionDataArgs['rewardMultiplierBps'];
   switchboardFeed: AdminRegisterStMintInstructionDataArgs['switchboardFeed'];
   noFeedWeight: AdminRegisterStMintInstructionDataArgs['noFeedWeight'];

@@ -12,9 +12,8 @@ use solana_program::{account_info::AccountInfo, program_error::ProgramError, pub
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
-    base_fee_group::BaseFeeGroup, constants::MAX_VAULTS, discriminators::Discriminators,
-    error::TipRouterError, fees::Fees, loaders::check_load, ncn_fee_group::NcnFeeGroup,
-    stake_weight::StakeWeights, weight_table::WeightTable,
+    constants::MAX_VAULTS, discriminators::Discriminators, error::TipRouterError,
+    loaders::check_load, stake_weight::StakeWeights, weight_table::WeightTable,
 };
 
 // PDA'd ["epoch_snapshot", NCN, NCN_EPOCH_SLOT]
@@ -31,8 +30,8 @@ pub struct EpochSnapshot {
     slot_created: PodU64,
     /// Slot Epoch snapshot was finalized
     slot_finalized: PodU64,
-    /// Snapshot of the Fees for the epoch
-    fees: Fees,
+    /// Reserved space for Fees
+    reserved_for_fees: [u8; 168],
     /// Number of operators in the epoch
     operator_count: PodU64,
     /// Number of vaults in the epoch
@@ -59,7 +58,6 @@ impl EpochSnapshot {
         ncn_epoch: u64,
         bump: u8,
         current_slot: u64,
-        fees: &Fees,
         operator_count: u64,
         vault_count: u64,
     ) -> Self {
@@ -68,8 +66,8 @@ impl EpochSnapshot {
             epoch: PodU64::from(ncn_epoch),
             slot_created: PodU64::from(current_slot),
             slot_finalized: PodU64::from(0),
+            reserved_for_fees: [0; 168],
             bump,
-            fees: *fees,
             operator_count: PodU64::from(operator_count),
             vault_count: PodU64::from(vault_count),
             operators_registered: PodU64::from(0),
@@ -150,10 +148,6 @@ impl EpochSnapshot {
 
     pub const fn stake_weights(&self) -> &StakeWeights {
         &self.stake_weights
-    }
-
-    pub const fn fees(&self) -> &Fees {
-        &self.fees
     }
 
     pub fn slot_finalized(&self) -> u64 {
@@ -438,7 +432,6 @@ impl OperatorSnapshot {
         &mut self,
         vault: &Pubkey,
         vault_index: u64,
-        ncn_fee_group: NcnFeeGroup,
         stake_weights: &StakeWeights,
     ) -> Result<(), TipRouterError> {
         if self
@@ -455,7 +448,7 @@ impl OperatorSnapshot {
         }
 
         self.vault_operator_stake_weight[self.vault_operator_delegations_registered() as usize] =
-            VaultOperatorStakeWeight::new(vault, vault_index, ncn_fee_group, stake_weights);
+            VaultOperatorStakeWeight::new(vault, vault_index, stake_weights);
 
         Ok(())
     }
@@ -465,14 +458,13 @@ impl OperatorSnapshot {
         current_slot: u64,
         vault: &Pubkey,
         vault_index: u64,
-        ncn_fee_group: NcnFeeGroup,
         stake_weights: &StakeWeights,
     ) -> Result<(), TipRouterError> {
         if self.finalized() {
             return Err(TipRouterError::VaultOperatorDelegationFinalized);
         }
 
-        self.insert_vault_operator_stake_weight(vault, vault_index, ncn_fee_group, stake_weights)?;
+        self.insert_vault_operator_stake_weight(vault, vault_index, stake_weights)?;
 
         self.vault_operator_delegations_registered = PodU64::from(
             self.vault_operator_delegations_registered()
@@ -528,7 +520,7 @@ impl OperatorSnapshot {
 pub struct VaultOperatorStakeWeight {
     vault: Pubkey,
     vault_index: PodU64,
-    ncn_fee_group: NcnFeeGroup,
+    reserved_fee_group: [u8; 1],
     stake_weight: StakeWeights,
     reserved: [u8; 32],
 }
@@ -537,8 +529,8 @@ impl Default for VaultOperatorStakeWeight {
     fn default() -> Self {
         Self {
             vault: Pubkey::default(),
-            ncn_fee_group: NcnFeeGroup::default(),
             vault_index: PodU64::from(u64::MAX),
+            reserved_fee_group: [0; 1],
             stake_weight: StakeWeights::default(),
             reserved: [0; 32],
         }
@@ -546,16 +538,11 @@ impl Default for VaultOperatorStakeWeight {
 }
 
 impl VaultOperatorStakeWeight {
-    pub fn new(
-        vault: &Pubkey,
-        vault_index: u64,
-        ncn_fee_group: NcnFeeGroup,
-        stake_weight: &StakeWeights,
-    ) -> Self {
+    pub fn new(vault: &Pubkey, vault_index: u64, stake_weight: &StakeWeights) -> Self {
         Self {
             vault: *vault,
             vault_index: PodU64::from(vault_index),
-            ncn_fee_group,
+            reserved_fee_group: [0; 1],
             stake_weight: *stake_weight,
             reserved: [0; 32],
         }
@@ -576,10 +563,6 @@ impl VaultOperatorStakeWeight {
     pub const fn vault(&self) -> &Pubkey {
         &self.vault
     }
-
-    pub const fn ncn_fee_group(&self) -> NcnFeeGroup {
-        self.ncn_fee_group
-    }
 }
 
 #[rustfmt::skip]
@@ -595,30 +578,7 @@ impl fmt::Display for EpochSnapshot {
        writeln!(f, "  Valid Delegations:            {}", self.valid_operator_vault_delegations())?;
        writeln!(f, "  Slot Finalized:               {}", self.slot_finalized())?;
        writeln!(f, "  Finalized:                    {}", self.finalized())?;
-
-       writeln!(f, "\nFees:")?;
-       writeln!(f, "\n  Base Fee Group Fees:")?;
-       for group in BaseFeeGroup::all_groups() {
-           if let Ok(fee) = self.fees().base_fee_bps(group) {
-               writeln!(f, "    Group {}:                    {}", group.group, fee)?;
-           }
-       }
-       writeln!(f, "\n  NCN Fee Group Fees:")?;
-       for group in NcnFeeGroup::all_groups() {
-           if let Ok(fee) = self.fees().ncn_fee_bps(group) {
-               writeln!(f, "    Group {}:                    {}", group.group, fee)?;
-           }
-       }
-
-       writeln!(f, "\nStake Weights:")?;
-       let stake_weights = self.stake_weights();
-       for group in NcnFeeGroup::all_groups() {
-           if let Ok(weight) = stake_weights.ncn_fee_group_stake_weight(group) {
-               if weight > 0 {
-                   writeln!(f, "  Group {}:                      {}", group.group, weight)?;
-               }
-           }
-       }
+       writeln!(f, "  total Weight:                 {}", self.stake_weights().stake_weight())?;
 
        writeln!(f, "\n")?;
        Ok(())
@@ -644,29 +604,13 @@ impl fmt::Display for OperatorSnapshot {
 
        let stake_weights = self.stake_weights();
        writeln!(f, "\nTotal Stake Weight: {}", stake_weights.stake_weight())?;
-       writeln!(f, "\nStake Weights by Group:")?;
-       for group in NcnFeeGroup::all_groups() {
-           if let Ok(weight) = stake_weights.ncn_fee_group_stake_weight(group) {
-               if weight > 0 {
-                   writeln!(f, "  Group {}:                      {}", group.group, weight)?;
-               }
-           }
-       }
 
        writeln!(f, "\nVault Operator Stake Weights:")?;
        for weight in self.vault_operator_stake_weight().iter() {
            if !weight.is_empty() {
                writeln!(f, "  Vault:                        {}", weight.vault())?;
                writeln!(f, "    Vault Index:                {}", weight.vault_index())?;
-               writeln!(f, "    NCN Fee Group:              {}", weight.ncn_fee_group().group)?;
-               let stake_weights = weight.stake_weights();
-               for group in NcnFeeGroup::all_groups() {
-                   if let Ok(weight) = stake_weights.ncn_fee_group_stake_weight(group) {
-                       if weight > 0 {
-                           writeln!(f, "    Group {} Weight:             {}", group.group, weight)?; 
-                       }
-                   }
-               }
+               writeln!(f, "    Stake Weight: {}", weight.stake_weights().stake_weight())?;
            }
        }
 
@@ -704,34 +648,14 @@ mod tests {
     }
 
     #[test]
-    fn test_vault_operator_stake_weight_ncn_fee_group() {
-        // Test with default
-        let default_weight = VaultOperatorStakeWeight::default();
-        assert_eq!(default_weight.ncn_fee_group(), NcnFeeGroup::default());
-
-        // Test with custom value
-        let custom_weight = VaultOperatorStakeWeight::new(
-            &Pubkey::new_unique(),
-            1,
-            NcnFeeGroup::default(),
-            &StakeWeights::default(),
-        );
-        assert_eq!(custom_weight.ncn_fee_group(), NcnFeeGroup::default());
-    }
-
-    #[test]
     fn test_vault_operator_stake_weight_is_empty() {
         // Test default (should be empty)
         let default_weight = VaultOperatorStakeWeight::default();
         assert!(default_weight.is_empty());
 
         // Test non-empty case
-        let non_empty_weight = VaultOperatorStakeWeight::new(
-            &Pubkey::new_unique(),
-            1,
-            NcnFeeGroup::default(),
-            &StakeWeights::default(),
-        );
+        let non_empty_weight =
+            VaultOperatorStakeWeight::new(&Pubkey::new_unique(), 1, &StakeWeights::default());
         assert!(!non_empty_weight.is_empty());
     }
 
@@ -759,7 +683,6 @@ mod tests {
             200, // current_slot
             &Pubkey::new_unique(),
             1,
-            NcnFeeGroup::default(),
             &StakeWeights::default(),
         );
 
@@ -832,7 +755,6 @@ mod tests {
         let result = snapshot.insert_vault_operator_stake_weight(
             &Pubkey::new_unique(),
             1,
-            NcnFeeGroup::default(),
             &StakeWeights::default(),
         );
 
@@ -867,7 +789,6 @@ mod tests {
             .insert_vault_operator_stake_weight(
                 &Pubkey::new_unique(),
                 vault_index, // Use specific index
-                NcnFeeGroup::default(),
                 &StakeWeights::default(),
             )
             .unwrap();
@@ -879,7 +800,6 @@ mod tests {
         let result = snapshot.insert_vault_operator_stake_weight(
             &Pubkey::new_unique(),
             vault_index, // Use same index as before
-            NcnFeeGroup::default(),
             &StakeWeights::default(),
         );
 
@@ -915,16 +835,14 @@ mod tests {
 
     #[test]
     fn test_increment_operator_registration_finalized() {
-        let fees = Fees::new(1000, 1000, 1).unwrap();
         // Create an epoch snapshot
         let mut snapshot = EpochSnapshot::new(
             &Pubkey::new_unique(),
             1,   // ncn_epoch
             1,   // bump
             100, // current_slot
-            &fees,
-            1, // operator_count - set to 1
-            1, // vault_count
+            1,   // operator_count - set to 1
+            1,   // vault_count
         );
 
         // Set operators_registered equal to operator_count to make it finalized

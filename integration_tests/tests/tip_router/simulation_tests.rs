@@ -4,10 +4,8 @@ mod tests {
     use std::str::FromStr;
 
     use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
-    use jito_tip_router_core::{
-        base_fee_group::BaseFeeGroup,
-        constants::{JITOSOL_SOL_FEED, JTO_SOL_FEED, MAX_OPERATORS, WEIGHT_PRECISION},
-        ncn_fee_group::NcnFeeGroup,
+    use jito_tip_router_core::constants::{
+        JITOSOL_SOL_FEED, JTO_SOL_FEED, MAX_OPERATORS, WEIGHT_PRECISION,
     };
     use solana_sdk::{
         native_token::sol_to_lamports, pubkey::Pubkey, signature::Keypair, signer::Signer,
@@ -31,37 +29,13 @@ mod tests {
         tip_router_client.airdrop(&base_fee_wallet, 1.0).await?;
 
         let mints = vec![
-            (
-                Keypair::new(),
-                20_000,
-                Some(JITOSOL_SOL_FEED),
-                None,
-                NcnFeeGroup::lst(),
-            ), // JitoSOL
-            (
-                Keypair::new(),
-                10_000,
-                Some(JTO_SOL_FEED),
-                None,
-                NcnFeeGroup::jto(),
-            ), // JTO
-            (
-                Keypair::new(),
-                10_000,
-                Some(JITOSOL_SOL_FEED),
-                None,
-                NcnFeeGroup::lst(),
-            ), // BnSOL
-            (
-                Keypair::new(),
-                7_000,
-                None,
-                Some(1 * WEIGHT_PRECISION),
-                NcnFeeGroup::lst(),
-            ), // nSol
+            (Keypair::new(), 20_000, Some(JITOSOL_SOL_FEED), None), // JitoSOL
+            (Keypair::new(), 10_000, Some(JTO_SOL_FEED), None),     // JTO
+            (Keypair::new(), 10_000, Some(JITOSOL_SOL_FEED), None), // BnSOL
+            (Keypair::new(), 7_000, None, Some(WEIGHT_PRECISION)),  // nSol
         ];
 
-        let delegations = vec![
+        let delegations = [
             1,
             sol_to_lamports(1000.0),
             sol_to_lamports(10000.0),
@@ -74,35 +48,6 @@ mod tests {
         let mut test_ncn = fixture.create_test_ncn().await?;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
         let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
-
-        // Set Fees
-        {
-            tip_router_client
-                .do_set_config_fees(
-                    Some(500),
-                    Some(BaseFeeGroup::dao()),
-                    Some(base_fee_wallet),
-                    Some(270),
-                    Some(NcnFeeGroup::lst()),
-                    Some(15),
-                    &test_ncn.ncn_root,
-                )
-                .await?;
-
-            tip_router_client
-                .do_set_config_fees(
-                    None,
-                    None,
-                    None,
-                    None,
-                    Some(NcnFeeGroup::jto()),
-                    Some(15),
-                    &test_ncn.ncn_root,
-                )
-                .await?;
-
-            fixture.warp_epoch_incremental(2).await?;
-        }
 
         // Add operators and vaults
         {
@@ -129,9 +74,12 @@ mod tests {
 
         // Add delegation
         {
-            let mut index = 0;
-            for operator_root in test_ncn.operators.iter().take(OPERATOR_COUNT - 1) {
-                // for operator_root in test_ncn.operators.iter() {
+            for (index, operator_root) in test_ncn
+                .operators
+                .iter()
+                .take(OPERATOR_COUNT - 1)
+                .enumerate()
+            {
                 for vault_root in test_ncn.vaults.iter() {
                     let delegation_amount = delegations[index % delegations.len()];
 
@@ -140,13 +88,12 @@ mod tests {
                             .do_add_delegation(
                                 vault_root,
                                 &operator_root.operator_pubkey,
-                                delegation_amount as u64,
+                                delegation_amount,
                             )
                             .await
                             .unwrap();
                     }
                 }
-                index += 1;
             }
         }
 
@@ -165,14 +112,11 @@ mod tests {
                 .await
                 .unwrap();
 
-            for (mint, reward_multiplier_bps, switchboard_feed, no_feed_weight, group) in
-                mints.iter()
-            {
+            for (mint, reward_multiplier_bps, switchboard_feed, no_feed_weight) in mints.iter() {
                 tip_router_client
                     .do_admin_register_st_mint(
                         ncn,
                         mint.pubkey(),
-                        *group,
                         *reward_multiplier_bps as u64,
                         *switchboard_feed,
                         *no_feed_weight,
@@ -339,15 +283,8 @@ mod tests {
             );
         }
 
-        fixture.add_routers_for_test_ncn(&test_ncn).await?;
         stake_pool_client
             .update_stake_pool_balance(&pool_root)
-            .await?;
-        fixture
-            .route_in_base_rewards_for_test_ncn(&test_ncn, 10_000, &pool_root)
-            .await?;
-        fixture
-            .route_in_ncn_rewards_for_test_ncn(&test_ncn, &pool_root)
             .await?;
         fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
 
@@ -359,10 +296,8 @@ mod tests {
 mod fuzz_tests {
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
     use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
-    use jito_tip_router_core::{
-        base_fee_group::BaseFeeGroup,
-        constants::{JITOSOL_SOL_FEED, JTO_SOL_FEED, MAX_OPERATORS, WEIGHT_PRECISION},
-        ncn_fee_group::NcnFeeGroup,
+    use jito_tip_router_core::constants::{
+        JITOSOL_SOL_FEED, JTO_SOL_FEED, MAX_OPERATORS, WEIGHT_PRECISION,
     };
     use solana_sdk::{
         native_token::sol_to_lamports, pubkey::Pubkey, signature::Keypair, signer::Signer,
@@ -374,7 +309,6 @@ mod fuzz_tests {
         reward_multiplier: u64,
         switchboard_feed: Option<Pubkey>,
         no_feed_weight: Option<u128>,
-        fee_group: NcnFeeGroup,
         vault_count: usize,
     }
 
@@ -383,12 +317,7 @@ mod fuzz_tests {
         base_fee_wallet: Pubkey,
         mints: Vec<MintConfig>,
         delegations: Vec<u64>,
-        base_engine_fee_bps: u16,
-        dao_fee_bps: u16,
         operator_fee_bps: u16,
-        lst_fee_bps: u16,
-        jto_fee_bps: u16,
-        rewards_amount: u64,
     }
 
     async fn run_simulation(config: SimConfig) -> TestResult<()> {
@@ -409,35 +338,6 @@ mod fuzz_tests {
         let mut test_ncn = fixture.create_test_ncn().await?;
         let ncn = test_ncn.ncn_root.ncn_pubkey;
         let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
-
-        // Set Fees
-        {
-            tip_router_client
-                .do_set_config_fees(
-                    Some(config.base_engine_fee_bps),
-                    Some(BaseFeeGroup::dao()),
-                    Some(config.base_fee_wallet),
-                    Some(config.dao_fee_bps),
-                    Some(NcnFeeGroup::lst()),
-                    Some(config.lst_fee_bps),
-                    &test_ncn.ncn_root,
-                )
-                .await?;
-
-            tip_router_client
-                .do_set_config_fees(
-                    None,
-                    None,
-                    None,
-                    None,
-                    Some(NcnFeeGroup::jto()),
-                    Some(config.jto_fee_bps),
-                    &test_ncn.ncn_root,
-                )
-                .await?;
-
-            fixture.warp_epoch_incremental(2).await?;
-        }
 
         // Add operators and vaults
         {
@@ -521,7 +421,6 @@ mod fuzz_tests {
                     .do_admin_register_st_mint(
                         ncn,
                         mint_config.keypair.pubkey(),
-                        mint_config.fee_group,
                         mint_config.reward_multiplier,
                         mint_config.switchboard_feed,
                         mint_config.no_feed_weight,
@@ -646,15 +545,8 @@ mod fuzz_tests {
             );
         }
 
-        fixture.add_routers_for_test_ncn(&test_ncn).await?;
         stake_pool_client
             .update_stake_pool_balance(&pool_root)
-            .await?;
-        fixture
-            .route_in_base_rewards_for_test_ncn(&test_ncn, config.rewards_amount, &pool_root)
-            .await?;
-        fixture
-            .route_in_ncn_rewards_for_test_ncn(&test_ncn, &pool_root)
             .await?;
         fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
 
@@ -676,7 +568,6 @@ mod fuzz_tests {
                     reward_multiplier: 20_000,
                     switchboard_feed: Some(JITOSOL_SOL_FEED),
                     no_feed_weight: None,
-                    fee_group: NcnFeeGroup::lst(),
                     vault_count: 3,
                 },
                 MintConfig {
@@ -684,7 +575,6 @@ mod fuzz_tests {
                     reward_multiplier: 10_000,
                     switchboard_feed: Some(JTO_SOL_FEED),
                     no_feed_weight: None,
-                    fee_group: NcnFeeGroup::jto(),
                     vault_count: 2,
                 },
                 MintConfig {
@@ -692,15 +582,13 @@ mod fuzz_tests {
                     reward_multiplier: 10_000,
                     switchboard_feed: Some(JITOSOL_SOL_FEED),
                     no_feed_weight: None,
-                    fee_group: NcnFeeGroup::lst(),
                     vault_count: 1,
                 },
                 MintConfig {
                     keypair: Keypair::new(),
                     reward_multiplier: 7_000,
                     switchboard_feed: None,
-                    no_feed_weight: Some(1 * WEIGHT_PRECISION),
-                    fee_group: NcnFeeGroup::lst(),
+                    no_feed_weight: Some(WEIGHT_PRECISION),
                     vault_count: 1,
                 },
             ],
@@ -714,12 +602,7 @@ mod fuzz_tests {
                 sol_to_lamports(10000000.0),
                 255,
             ],
-            base_engine_fee_bps: 500,
-            dao_fee_bps: 270,
             operator_fee_bps: 100,
-            lst_fee_bps: 15,
-            jto_fee_bps: 15,
-            rewards_amount: sol_to_lamports(137000.0) + 1,
         };
 
         run_simulation(config).await
@@ -739,16 +622,10 @@ mod fuzz_tests {
                 reward_multiplier: 20_000,
                 switchboard_feed: Some(JITOSOL_SOL_FEED),
                 no_feed_weight: None,
-                fee_group: NcnFeeGroup::lst(),
                 vault_count: 2,
             }],
             delegations: vec![sol_to_lamports(1000.0), sol_to_lamports(1000.0)],
-            base_engine_fee_bps: 500,
-            dao_fee_bps: 270,
             operator_fee_bps: 100,
-            lst_fee_bps: 15,
-            jto_fee_bps: 15,
-            rewards_amount: 100_000,
         };
 
         run_simulation(config).await
@@ -772,7 +649,6 @@ mod fuzz_tests {
                         reward_multiplier: 15_000,
                         switchboard_feed: Some(JITOSOL_SOL_FEED),
                         no_feed_weight: None,
-                        fee_group: NcnFeeGroup::lst(),
                         vault_count: 2,
                     },
                     MintConfig {
@@ -780,7 +656,6 @@ mod fuzz_tests {
                         reward_multiplier: 12_000,
                         switchboard_feed: Some(JTO_SOL_FEED),
                         no_feed_weight: None,
-                        fee_group: NcnFeeGroup::jto(),
                         vault_count: 1,
                     },
                 ],
@@ -789,12 +664,7 @@ mod fuzz_tests {
                     sol_to_lamports(5000.0),
                     sol_to_lamports(50000.0),
                 ],
-                base_engine_fee_bps: 400,
-                dao_fee_bps: 250,
                 operator_fee_bps: 90,
-                lst_fee_bps: 12,
-                jto_fee_bps: 12,
-                rewards_amount: sol_to_lamports(50000.0),
             },
             // Test extreme delegation amounts
             SimConfig {
@@ -805,7 +675,6 @@ mod fuzz_tests {
                     reward_multiplier: 25_000,
                     switchboard_feed: None,
                     no_feed_weight: Some(2 * WEIGHT_PRECISION),
-                    fee_group: NcnFeeGroup::lst(),
                     vault_count: 3,
                 }],
                 delegations: vec![
@@ -813,12 +682,7 @@ mod fuzz_tests {
                     sol_to_lamports(1.0),
                     sol_to_lamports(1_000_000.0), // Very large delegation
                 ],
-                base_engine_fee_bps: 600,
-                dao_fee_bps: 300,
                 operator_fee_bps: 150,
-                lst_fee_bps: 20,
-                jto_fee_bps: 20,
-                rewards_amount: sol_to_lamports(900_000.0) - 1,
             },
             // Test mixed fee groups and feeds
             SimConfig {
@@ -830,7 +694,6 @@ mod fuzz_tests {
                         reward_multiplier: 18_000,
                         switchboard_feed: Some(JITOSOL_SOL_FEED),
                         no_feed_weight: None,
-                        fee_group: NcnFeeGroup::lst(),
                         vault_count: 1,
                     },
                     MintConfig {
@@ -838,7 +701,6 @@ mod fuzz_tests {
                         reward_multiplier: 8_000,
                         switchboard_feed: Some(JTO_SOL_FEED),
                         no_feed_weight: None,
-                        fee_group: NcnFeeGroup::jto(),
                         vault_count: 1,
                     },
                     MintConfig {
@@ -846,7 +708,6 @@ mod fuzz_tests {
                         reward_multiplier: 5_000,
                         switchboard_feed: None,
                         no_feed_weight: Some(WEIGHT_PRECISION / 2),
-                        fee_group: NcnFeeGroup::lst(),
                         vault_count: 1,
                     },
                 ],
@@ -855,12 +716,7 @@ mod fuzz_tests {
                     sol_to_lamports(1000.0),
                     sol_to_lamports(10000.0),
                 ],
-                base_engine_fee_bps: 450,
-                dao_fee_bps: 200,
                 operator_fee_bps: 80,
-                lst_fee_bps: 10,
-                jto_fee_bps: 10,
-                rewards_amount: sol_to_lamports(75000.0),
             },
         ];
 

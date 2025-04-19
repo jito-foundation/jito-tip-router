@@ -4,8 +4,8 @@ use crate::{
     getters::get_guaranteed_epoch_and_slot,
     handler::CliHandler,
     instructions::{
-        crank_close_epoch_accounts, crank_distribute, crank_post_vote_cooldown,
-        crank_register_vaults, crank_set_weight, crank_snapshot, crank_vote, create_epoch_state,
+        crank_close_epoch_accounts, crank_post_vote_cooldown, crank_register_vaults,
+        crank_set_weight, crank_snapshot, crank_vote, create_epoch_state,
         migrate_tda_merkle_root_upload_authorities, update_all_vaults_in_network,
     },
     keeper::{
@@ -314,7 +314,6 @@ pub async fn startup_keeper(
                 State::Snapshot => crank_snapshot(handler, state.epoch).await,
                 State::Vote => crank_vote(handler, state.epoch, test_vote).await,
                 State::PostVoteCooldown => crank_post_vote_cooldown(handler, state.epoch).await,
-                State::Distribute => crank_distribute(handler, state.epoch).await,
                 State::Close => crank_close_epoch_accounts(handler, state.epoch).await,
             };
 
@@ -351,7 +350,7 @@ pub async fn startup_keeper(
         {
             info!("\n\nE. Detect Stall - {}\n", current_keeper_epoch);
 
-            let result = state.detect_stall(handler).await;
+            let result = state.detect_stall().await;
 
             if check_and_timeout_error(
                 "Detect Stall".to_string(),

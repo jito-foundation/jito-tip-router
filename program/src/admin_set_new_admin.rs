@@ -40,10 +40,6 @@ pub fn process_admin_set_new_admin(
     }
 
     match role {
-        ConfigAdminRole::FeeAdmin => {
-            config.fee_admin = *new_admin.key;
-            msg!("Fee admin set to {:?}", new_admin.key);
-        }
         ConfigAdminRole::TieBreakerAdmin => {
             config.tie_breaker_admin = *new_admin.key;
             msg!("Tie breaker admin set to {:?}", new_admin.key);

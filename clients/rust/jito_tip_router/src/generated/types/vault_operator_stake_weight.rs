@@ -5,7 +5,6 @@
 //! <https://github.com/kinobi-so/kinobi>
 //!
 
-use crate::generated::types::NcnFeeGroup;
 use crate::generated::types::StakeWeights;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
@@ -20,7 +19,7 @@ pub struct VaultOperatorStakeWeight {
     )]
     pub vault: Pubkey,
     pub vault_index: u64,
-    pub ncn_fee_group: NcnFeeGroup,
+    pub reserved_fee_group: [u8; 1],
     pub stake_weight: StakeWeights,
     pub reserved: [u8; 32],
 }

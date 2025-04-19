@@ -19,8 +19,7 @@ use crate::{
     backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
     create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
     load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
-    read_stake_meta_collection, submit::submit_to_ncn, tip_router::get_ncn_config, Cli,
-    OperatorState, Version,
+    read_stake_meta_collection, submit::submit_to_ncn, Cli, OperatorState, Version,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -199,13 +198,6 @@ pub async fn loop_stages(
                     || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
                     |collection| collection,
                 );
-                let config =
-                    get_ncn_config(&rpc_client, tip_router_program_id, ncn_address).await?;
-                // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
-                //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
-                //  use epoch + 1 here
-                let ballot_epoch = epoch_to_process.checked_add(1).unwrap();
-                let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 
                 // Generate the merkle tree collection
                 merkle_tree_collection = Some(create_merkle_tree_collection(
@@ -214,7 +206,7 @@ pub async fn loop_stages(
                     some_stake_meta_collection,
                     epoch_to_process,
                     ncn_address,
-                    protocol_fee_bps,
+                    0, // TODO: remove hardcoded protocol_fee_bps, or remove the whole merkle tree
                     &cli.get_save_path(),
                     save_stages,
                 ));

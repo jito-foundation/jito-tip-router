@@ -18,7 +18,6 @@ use crate::{
     discriminators::Discriminators,
     error::TipRouterError,
     loaders::check_load,
-    ncn_fee_group::NcnFeeGroup,
     stake_weight::StakeWeights,
 };
 
@@ -666,14 +665,6 @@ impl fmt::Display for BallotBox {
                writeln!(f, "    Slot Voted:                 {}", vote.slot_voted())?;
                writeln!(f, "    Ballot Index:               {}", vote.ballot_index())?;
                writeln!(f, "    Stake Weights:")?;
-               let weights = vote.stake_weights();
-               for group in NcnFeeGroup::all_groups() {
-                   if let Ok(weight) = weights.ncn_fee_group_stake_weight(group) {
-                       if weight > 0 {
-                           writeln!(f, "      Group {}:                  {}", group.group, weight)?;
-                       }
-                   }
-               }
            }
        }
 
@@ -684,14 +675,6 @@ impl fmt::Display for BallotBox {
                writeln!(f, "    Ballot:                     {}", tally.ballot())?;
                writeln!(f, "    Tally:                      {}", tally.tally())?;
                writeln!(f, "    Stake Weights:")?;
-               let weights = tally.stake_weights();
-               for group in NcnFeeGroup::all_groups() {
-                   if let Ok(weight) = weights.ncn_fee_group_stake_weight(group) {
-                       if weight > 0 {
-                           writeln!(f, "      Group {}:                  {}", group.group, weight)?;
-                       }
-                   }
-               }
            }
        }
 
@@ -1208,13 +1191,13 @@ mod tests {
 
         assert_eq!(
             winning_tally.stake_weights().stake_weight(),
-            total_stake_weight as u128
+            total_stake_weight
         );
         assert_eq!(winning_tally.tally(), 3);
 
         // Verify ballot2 wins consensus with all votes
         ballot_box
-            .tally_votes(total_stake_weight as u128, current_slot + 4)
+            .tally_votes(total_stake_weight, current_slot + 4)
             .unwrap();
         assert!(ballot_box.has_winning_ballot());
         assert_eq!(*ballot_box.get_winning_ballot().unwrap(), ballot2);
@@ -1814,12 +1797,11 @@ mod revote_same_tests {
         // Record state after first vote
         let initial_operators_voted = ballot_box.operators_voted();
         let initial_unique_ballots = ballot_box.unique_ballots();
-        let initial_ballot_tally = ballot_box
+        let initial_ballot_tally = *ballot_box
             .ballot_tallies()
             .iter()
             .find(|t| t.ballot().eq(&ballot))
-            .expect("Ballot tally should exist")
-            .clone();
+            .expect("Ballot tally should exist");
 
         // Vote again for the same ballot
         ballot_box

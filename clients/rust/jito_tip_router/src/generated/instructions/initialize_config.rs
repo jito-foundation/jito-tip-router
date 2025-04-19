@@ -14,8 +14,6 @@ pub struct InitializeConfig {
 
     pub ncn: solana_program::pubkey::Pubkey,
 
-    pub fee_wallet: solana_program::pubkey::Pubkey,
-
     pub ncn_admin: solana_program::pubkey::Pubkey,
 
     pub tie_breaker_admin: solana_program::pubkey::Pubkey,
@@ -38,17 +36,13 @@ impl InitializeConfig {
         args: InitializeConfigInstructionArgs,
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             self.config,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn, false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.fee_wallet,
-            false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.ncn_admin,
@@ -99,9 +93,6 @@ impl Default for InitializeConfigInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InitializeConfigInstructionArgs {
-    pub block_engine_fee_bps: u16,
-    pub dao_fee_bps: u16,
-    pub default_ncn_fee_bps: u16,
     pub epochs_before_stall: u64,
     pub epochs_after_consensus_before_close: u64,
     pub valid_slots_after_consensus: u64,
@@ -113,23 +104,18 @@ pub struct InitializeConfigInstructionArgs {
 ///
 ///   0. `[writable]` config
 ///   1. `[]` ncn
-///   2. `[]` fee_wallet
-///   3. `[signer]` ncn_admin
-///   4. `[]` tie_breaker_admin
-///   5. `[writable]` account_payer
-///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   2. `[signer]` ncn_admin
+///   3. `[]` tie_breaker_admin
+///   4. `[writable]` account_payer
+///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeConfigBuilder {
     config: Option<solana_program::pubkey::Pubkey>,
     ncn: Option<solana_program::pubkey::Pubkey>,
-    fee_wallet: Option<solana_program::pubkey::Pubkey>,
     ncn_admin: Option<solana_program::pubkey::Pubkey>,
     tie_breaker_admin: Option<solana_program::pubkey::Pubkey>,
     account_payer: Option<solana_program::pubkey::Pubkey>,
     system_program: Option<solana_program::pubkey::Pubkey>,
-    block_engine_fee_bps: Option<u16>,
-    dao_fee_bps: Option<u16>,
-    default_ncn_fee_bps: Option<u16>,
     epochs_before_stall: Option<u64>,
     epochs_after_consensus_before_close: Option<u64>,
     valid_slots_after_consensus: Option<u64>,
@@ -148,11 +134,6 @@ impl InitializeConfigBuilder {
     #[inline(always)]
     pub fn ncn(&mut self, ncn: solana_program::pubkey::Pubkey) -> &mut Self {
         self.ncn = Some(ncn);
-        self
-    }
-    #[inline(always)]
-    pub fn fee_wallet(&mut self, fee_wallet: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.fee_wallet = Some(fee_wallet);
         self
     }
     #[inline(always)]
@@ -177,21 +158,6 @@ impl InitializeConfigBuilder {
     #[inline(always)]
     pub fn system_program(&mut self, system_program: solana_program::pubkey::Pubkey) -> &mut Self {
         self.system_program = Some(system_program);
-        self
-    }
-    #[inline(always)]
-    pub fn block_engine_fee_bps(&mut self, block_engine_fee_bps: u16) -> &mut Self {
-        self.block_engine_fee_bps = Some(block_engine_fee_bps);
-        self
-    }
-    #[inline(always)]
-    pub fn dao_fee_bps(&mut self, dao_fee_bps: u16) -> &mut Self {
-        self.dao_fee_bps = Some(dao_fee_bps);
-        self
-    }
-    #[inline(always)]
-    pub fn default_ncn_fee_bps(&mut self, default_ncn_fee_bps: u16) -> &mut Self {
-        self.default_ncn_fee_bps = Some(default_ncn_fee_bps);
         self
     }
     #[inline(always)]
@@ -235,7 +201,6 @@ impl InitializeConfigBuilder {
         let accounts = InitializeConfig {
             config: self.config.expect("config is not set"),
             ncn: self.ncn.expect("ncn is not set"),
-            fee_wallet: self.fee_wallet.expect("fee_wallet is not set"),
             ncn_admin: self.ncn_admin.expect("ncn_admin is not set"),
             tie_breaker_admin: self
                 .tie_breaker_admin
@@ -246,15 +211,6 @@ impl InitializeConfigBuilder {
                 .unwrap_or(solana_program::pubkey!("11111111111111111111111111111111")),
         };
         let args = InitializeConfigInstructionArgs {
-            block_engine_fee_bps: self
-                .block_engine_fee_bps
-                .clone()
-                .expect("block_engine_fee_bps is not set"),
-            dao_fee_bps: self.dao_fee_bps.clone().expect("dao_fee_bps is not set"),
-            default_ncn_fee_bps: self
-                .default_ncn_fee_bps
-                .clone()
-                .expect("default_ncn_fee_bps is not set"),
             epochs_before_stall: self
                 .epochs_before_stall
                 .clone()
@@ -279,8 +235,6 @@ pub struct InitializeConfigCpiAccounts<'a, 'b> {
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub fee_wallet: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub tie_breaker_admin: &'b solana_program::account_info::AccountInfo<'a>,
@@ -298,8 +252,6 @@ pub struct InitializeConfigCpi<'a, 'b> {
     pub config: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn: &'b solana_program::account_info::AccountInfo<'a>,
-
-    pub fee_wallet: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub ncn_admin: &'b solana_program::account_info::AccountInfo<'a>,
 
@@ -322,7 +274,6 @@ impl<'a, 'b> InitializeConfigCpi<'a, 'b> {
             __program: program,
             config: accounts.config,
             ncn: accounts.ncn,
-            fee_wallet: accounts.fee_wallet,
             ncn_admin: accounts.ncn_admin,
             tie_breaker_admin: accounts.tie_breaker_admin,
             account_payer: accounts.account_payer,
@@ -363,17 +314,13 @@ impl<'a, 'b> InitializeConfigCpi<'a, 'b> {
             bool,
         )],
     ) -> solana_program::entrypoint::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_program::instruction::AccountMeta::new(
             *self.config.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.ncn.key,
-            false,
-        ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.fee_wallet.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
@@ -408,11 +355,10 @@ impl<'a, 'b> InitializeConfigCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(7 + 1 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(6 + 1 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.config.clone());
         account_infos.push(self.ncn.clone());
-        account_infos.push(self.fee_wallet.clone());
         account_infos.push(self.ncn_admin.clone());
         account_infos.push(self.tie_breaker_admin.clone());
         account_infos.push(self.account_payer.clone());
@@ -435,11 +381,10 @@ impl<'a, 'b> InitializeConfigCpi<'a, 'b> {
 ///
 ///   0. `[writable]` config
 ///   1. `[]` ncn
-///   2. `[]` fee_wallet
-///   3. `[signer]` ncn_admin
-///   4. `[]` tie_breaker_admin
-///   5. `[writable]` account_payer
-///   6. `[]` system_program
+///   2. `[signer]` ncn_admin
+///   3. `[]` tie_breaker_admin
+///   4. `[writable]` account_payer
+///   5. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeConfigCpiBuilder<'a, 'b> {
     instruction: Box<InitializeConfigCpiBuilderInstruction<'a, 'b>>,
@@ -451,14 +396,10 @@ impl<'a, 'b> InitializeConfigCpiBuilder<'a, 'b> {
             __program: program,
             config: None,
             ncn: None,
-            fee_wallet: None,
             ncn_admin: None,
             tie_breaker_admin: None,
             account_payer: None,
             system_program: None,
-            block_engine_fee_bps: None,
-            dao_fee_bps: None,
-            default_ncn_fee_bps: None,
             epochs_before_stall: None,
             epochs_after_consensus_before_close: None,
             valid_slots_after_consensus: None,
@@ -477,14 +418,6 @@ impl<'a, 'b> InitializeConfigCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn ncn(&mut self, ncn: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.ncn = Some(ncn);
-        self
-    }
-    #[inline(always)]
-    pub fn fee_wallet(
-        &mut self,
-        fee_wallet: &'b solana_program::account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.fee_wallet = Some(fee_wallet);
         self
     }
     #[inline(always)]
@@ -517,21 +450,6 @@ impl<'a, 'b> InitializeConfigCpiBuilder<'a, 'b> {
         system_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.system_program = Some(system_program);
-        self
-    }
-    #[inline(always)]
-    pub fn block_engine_fee_bps(&mut self, block_engine_fee_bps: u16) -> &mut Self {
-        self.instruction.block_engine_fee_bps = Some(block_engine_fee_bps);
-        self
-    }
-    #[inline(always)]
-    pub fn dao_fee_bps(&mut self, dao_fee_bps: u16) -> &mut Self {
-        self.instruction.dao_fee_bps = Some(dao_fee_bps);
-        self
-    }
-    #[inline(always)]
-    pub fn default_ncn_fee_bps(&mut self, default_ncn_fee_bps: u16) -> &mut Self {
-        self.instruction.default_ncn_fee_bps = Some(default_ncn_fee_bps);
         self
     }
     #[inline(always)]
@@ -595,21 +513,6 @@ impl<'a, 'b> InitializeConfigCpiBuilder<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
         let args = InitializeConfigInstructionArgs {
-            block_engine_fee_bps: self
-                .instruction
-                .block_engine_fee_bps
-                .clone()
-                .expect("block_engine_fee_bps is not set"),
-            dao_fee_bps: self
-                .instruction
-                .dao_fee_bps
-                .clone()
-                .expect("dao_fee_bps is not set"),
-            default_ncn_fee_bps: self
-                .instruction
-                .default_ncn_fee_bps
-                .clone()
-                .expect("default_ncn_fee_bps is not set"),
             epochs_before_stall: self
                 .instruction
                 .epochs_before_stall
@@ -632,8 +535,6 @@ impl<'a, 'b> InitializeConfigCpiBuilder<'a, 'b> {
             config: self.instruction.config.expect("config is not set"),
 
             ncn: self.instruction.ncn.expect("ncn is not set"),
-
-            fee_wallet: self.instruction.fee_wallet.expect("fee_wallet is not set"),
 
             ncn_admin: self.instruction.ncn_admin.expect("ncn_admin is not set"),
 
@@ -665,14 +566,10 @@ struct InitializeConfigCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
     config: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    fee_wallet: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     ncn_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     tie_breaker_admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     account_payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    block_engine_fee_bps: Option<u16>,
-    dao_fee_bps: Option<u16>,
-    default_ncn_fee_bps: Option<u16>,
     epochs_before_stall: Option<u64>,
     epochs_after_consensus_before_close: Option<u64>,
     valid_slots_after_consensus: Option<u64>,

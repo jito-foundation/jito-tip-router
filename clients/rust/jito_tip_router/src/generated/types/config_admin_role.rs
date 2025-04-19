@@ -23,6 +23,5 @@ use num_derive::FromPrimitive;
 )]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ConfigAdminRole {
-    FeeAdmin,
     TieBreakerAdmin,
 }

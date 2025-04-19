@@ -345,19 +345,12 @@ mod tests {
     use solana_program::pubkey::Pubkey;
 
     use super::*;
-    use crate::ncn_fee_group::NcnFeeGroup;
 
     fn get_test_mint_entries(count: usize) -> [StMintEntry; 64] {
         let mut mints = [StMintEntry::default(); MAX_ST_MINTS];
 
         for i in 0..count {
-            mints[i] = StMintEntry::new(
-                &Pubkey::new_unique(),
-                NcnFeeGroup::default(),
-                0,
-                &Pubkey::new_unique(),
-                0,
-            );
+            mints[i] = StMintEntry::new(&Pubkey::new_unique(), 0, &Pubkey::new_unique(), 0);
         }
 
         mints

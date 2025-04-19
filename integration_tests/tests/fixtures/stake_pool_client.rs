@@ -36,7 +36,6 @@ pub struct PoolRoot {
     pub pool_mint: Pubkey,
     pub reserve_stake: Pubkey,
     pub manager_fee_account: Pubkey,
-    pub referrer_pool_tokens_account: Pubkey,
     pub withdraw_authority: Pubkey,
     pub validator_list: Pubkey,
 }
@@ -97,6 +96,7 @@ impl StakePoolClient {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn initialize_stake_pool(
         &mut self,
         manager: &Keypair,
@@ -112,7 +112,6 @@ impl StakePoolClient {
         let pool_mint = JITOSOL_MINT;
         let reserve_stake = Keypair::new();
         let manager_fee_account = get_associated_token_address(&manager.pubkey(), &pool_mint);
-        let referrer_pool_tokens_account = Keypair::new();
 
         let withdraw_authority =
             find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool.pubkey()).0;
@@ -208,7 +207,6 @@ impl StakePoolClient {
             pool_mint,
             reserve_stake: reserve_stake.pubkey(),
             manager_fee_account,
-            referrer_pool_tokens_account: referrer_pool_tokens_account.pubkey(),
             withdraw_authority,
             validator_list: validator_list.pubkey(),
         })

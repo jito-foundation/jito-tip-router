@@ -17,7 +17,6 @@ pub struct EpochAccountStatus {
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub operator_snapshot: [u8; 256],
     pub ballot_box: u8,
-    pub base_reward_router: u8,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-    pub ncn_reward_router: [u8; 2048],
+    pub reserved: [u8; 2049],
 }

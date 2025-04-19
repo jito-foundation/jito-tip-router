@@ -1,9 +1,6 @@
 #[cfg(test)]
 mod tests {
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
-    use jito_tip_router_core::{
-        constants::MAX_OPERATORS, epoch_state::AccountStatus, ncn_fee_group::NcnFeeGroup,
-    };
 
     #[tokio::test]
     async fn cannot_create_epoch_before_starting_valid_epoch() -> TestResult<()> {
@@ -38,8 +35,6 @@ mod tests {
     async fn cannot_create_after_epoch_marker() -> TestResult<()> {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
-        let mut stake_pool_client = fixture.stake_pool_client();
-        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
         const OPERATOR_COUNT: usize = 1;
         const VAULT_COUNT: usize = 1;
 
@@ -52,9 +47,6 @@ mod tests {
 
         fixture.snapshot_test_ncn(&test_ncn).await?;
         fixture.vote_test_ncn(&test_ncn).await?;
-        fixture
-            .reward_test_ncn(&test_ncn, 10_000, &pool_root)
-            .await?;
         fixture.close_epoch_accounts_for_test_ncn(&test_ncn).await?;
 
         let epoch_marker = tip_router_client.get_epoch_marker(ncn, epoch).await?;
@@ -252,95 +244,69 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_all_test_ncn_functions_pt5() -> TestResult<()> {
-        let mut fixture = TestBuilder::new().await;
-        let mut stake_pool_client = fixture.stake_pool_client();
-        let mut tip_router_client = fixture.tip_router_client();
-
-        const OPERATOR_COUNT: usize = 2;
-        const VAULT_COUNT: usize = 3;
-        const OPERATOR_FEE_BPS: u16 = 1000;
-        const BASE_FEE_BPS: u16 = 1000;
-        const NCN_FEE_BPS: u16 = 1000;
-        const TOTAL_REWARDS: u64 = 10_000;
-
-        let expected_ncn_rewards = 5000;
-        let expected_operator_router_rewards = expected_ncn_rewards / OPERATOR_COUNT as u64;
-
-        let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
-        let test_ncn = fixture
-            .create_custom_initial_test_ncn(
-                OPERATOR_COUNT,
-                VAULT_COUNT,
-                OPERATOR_FEE_BPS,
-                BASE_FEE_BPS,
-                NCN_FEE_BPS,
-            )
-            .await?;
-
-        let ncn = test_ncn.ncn_root.ncn_pubkey;
-        let epoch = fixture.clock().await.epoch;
-
-        fixture.add_epoch_state_for_test_ncn(&test_ncn).await?;
-        fixture.add_admin_weights_for_test_ncn(&test_ncn).await?;
-        fixture.add_epoch_snapshot_to_test_ncn(&test_ncn).await?;
-        fixture
-            .add_operator_snapshots_to_test_ncn(&test_ncn)
-            .await?;
-        fixture
-            .add_vault_operator_delegation_snapshots_to_test_ncn(&test_ncn)
-            .await?;
-        fixture.add_ballot_box_to_test_ncn(&test_ncn).await?;
-        fixture.cast_votes_for_test_ncn(&test_ncn).await?;
-
-        fixture.add_routers_for_test_ncn(&test_ncn).await?;
-        stake_pool_client
-            .update_stake_pool_balance(&pool_root)
-            .await?;
-
-        fixture
-            .route_in_base_rewards_for_test_ncn(&test_ncn, TOTAL_REWARDS, &pool_root)
-            .await?;
-        fixture
-            .route_in_ncn_rewards_for_test_ncn(&test_ncn, &pool_root)
-            .await?;
-
-        let epoch_state = tip_router_client.get_epoch_state(ncn, epoch).await?;
-
-        for i in 0..MAX_OPERATORS {
-            for group in NcnFeeGroup::all_groups() {
-                if i < OPERATOR_COUNT && group == NcnFeeGroup::default() {
-                    assert_eq!(
-                        epoch_state
-                            .ncn_distribution_progress(i, group)
-                            .unwrap()
-                            .total(),
-                        expected_operator_router_rewards
-                    );
-                    assert_eq!(
-                        epoch_state
-                            .ncn_distribution_progress(i, group)
-                            .unwrap()
-                            .tally(),
-                        expected_operator_router_rewards
-                    );
-                    assert!(epoch_state
-                        .ncn_distribution_progress(i, group)
-                        .unwrap()
-                        .is_complete());
-                } else if i >= OPERATOR_COUNT {
-                    assert_eq!(
-                        epoch_state
-                            .account_status()
-                            .ncn_reward_router(i, group)
-                            .unwrap(),
-                        AccountStatus::DNE
-                    );
-                }
-            }
-        }
-
-        Ok(())
-    }
+    // #[tokio::test]
+    // async fn test_all_test_ncn_functions_pt5() -> TestResult<()> {
+    //     let mut fixture = TestBuilder::new().await;
+    //     let mut stake_pool_client = fixture.stake_pool_client();
+    //     let mut tip_router_client = fixture.tip_router_client();
+    //
+    //     const OPERATOR_COUNT: usize = 2;
+    //     const VAULT_COUNT: usize = 3;
+    //     const OPERATOR_FEE_BPS: u16 = 1000;
+    //
+    //     let pool_root = stake_pool_client.do_initialize_stake_pool().await?;
+    //     let test_ncn = fixture
+    //         .create_custom_initial_test_ncn(OPERATOR_COUNT, VAULT_COUNT, OPERATOR_FEE_BPS)
+    //         .await?;
+    //
+    //     let ncn = test_ncn.ncn_root.ncn_pubkey;
+    //     let epoch = fixture.clock().await.epoch;
+    //
+    //     fixture.add_epoch_state_for_test_ncn(&test_ncn).await?;
+    //     fixture.add_admin_weights_for_test_ncn(&test_ncn).await?;
+    //     fixture.add_epoch_snapshot_to_test_ncn(&test_ncn).await?;
+    //     fixture
+    //         .add_operator_snapshots_to_test_ncn(&test_ncn)
+    //         .await?;
+    //     fixture
+    //         .add_vault_operator_delegation_snapshots_to_test_ncn(&test_ncn)
+    //         .await?;
+    //     fixture.add_ballot_box_to_test_ncn(&test_ncn).await?;
+    //     fixture.cast_votes_for_test_ncn(&test_ncn).await?;
+    //
+    //     fixture.add_routers_for_test_ncn(&test_ncn).await?;
+    //     stake_pool_client
+    //         .update_stake_pool_balance(&pool_root)
+    //         .await?;
+    //
+    //     fixture
+    //         .route_in_base_rewards_for_test_ncn(&test_ncn, TOTAL_REWARDS, &pool_root)
+    //         .await?;
+    //     fixture
+    //         .route_in_ncn_rewards_for_test_ncn(&test_ncn, &pool_root)
+    //         .await?;
+    //
+    //     let epoch_state = tip_router_client.get_epoch_state(ncn, epoch).await?;
+    //
+    //     for i in 0..MAX_OPERATORS {
+    //         for group in NcnFeeGroup::all_groups() {
+    //             if i < OPERATOR_COUNT && group == NcnFeeGroup::default() {
+    //                 assert!(epoch_state
+    //                     .ncn_distribution_progress(i, group)
+    //                     .unwrap()
+    //                     .is_complete());
+    //             } else if i >= OPERATOR_COUNT {
+    //                 assert_eq!(
+    //                     epoch_state
+    //                         .account_status()
+    //                         .ncn_reward_router(i, group)
+    //                         .unwrap(),
+    //                     AccountStatus::DNE
+    //                 );
+    //             }
+    //         }
+    //     }
+    //
+    //     Ok(())
+    // }
 }

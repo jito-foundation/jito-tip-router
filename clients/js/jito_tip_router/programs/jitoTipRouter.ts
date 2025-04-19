@@ -14,37 +14,26 @@ import {
 } from '@solana/web3.js';
 import {
   type ParsedAdminRegisterStMintInstruction,
-  type ParsedAdminSetConfigFeesInstruction,
   type ParsedAdminSetNewAdminInstruction,
   type ParsedAdminSetParametersInstruction,
   type ParsedAdminSetStMintInstruction,
   type ParsedAdminSetTieBreakerInstruction,
   type ParsedAdminSetWeightInstruction,
   type ParsedCastVoteInstruction,
-  type ParsedClaimWithPayerInstruction,
   type ParsedCloseEpochAccountInstruction,
-  type ParsedDistributeBaseNcnRewardRouteInstruction,
-  type ParsedDistributeBaseRewardsInstruction,
-  type ParsedDistributeNcnOperatorRewardsInstruction,
-  type ParsedDistributeNcnVaultRewardsInstruction,
   type ParsedInitializeBallotBoxInstruction,
-  type ParsedInitializeBaseRewardRouterInstruction,
   type ParsedInitializeConfigInstruction,
   type ParsedInitializeEpochSnapshotInstruction,
   type ParsedInitializeEpochStateInstruction,
-  type ParsedInitializeNcnRewardRouterInstruction,
   type ParsedInitializeOperatorSnapshotInstruction,
   type ParsedInitializeVaultRegistryInstruction,
   type ParsedInitializeWeightTableInstruction,
   type ParsedReallocBallotBoxInstruction,
-  type ParsedReallocBaseRewardRouterInstruction,
   type ParsedReallocEpochStateInstruction,
   type ParsedReallocOperatorSnapshotInstruction,
   type ParsedReallocVaultRegistryInstruction,
   type ParsedReallocWeightTableInstruction,
   type ParsedRegisterVaultInstruction,
-  type ParsedRouteBaseRewardsInstruction,
-  type ParsedRouteNcnRewardsInstruction,
   type ParsedSetMerkleRootInstruction,
   type ParsedSnapshotVaultOperatorDelegationInstruction,
   type ParsedSwitchboardSetWeightInstruction,
@@ -55,13 +44,11 @@ export const JITO_TIP_ROUTER_PROGRAM_ADDRESS =
 
 export enum JitoTipRouterAccount {
   BallotBox,
-  BaseRewardRouter,
   Config,
   EpochMarker,
   EpochSnapshot,
   OperatorSnapshot,
   EpochState,
-  NcnRewardRouter,
   VaultRegistry,
   WeightTable,
 }
@@ -84,19 +71,8 @@ export enum JitoTipRouterInstruction {
   ReallocBallotBox,
   CastVote,
   SetMerkleRoot,
-  InitializeBaseRewardRouter,
-  ReallocBaseRewardRouter,
-  InitializeNcnRewardRouter,
-  RouteBaseRewards,
-  RouteNcnRewards,
-  DistributeBaseRewards,
-  DistributeBaseNcnRewardRoute,
-  DistributeNcnOperatorRewards,
-  DistributeNcnVaultRewards,
-  ClaimWithPayer,
   CloseEpochAccount,
   AdminSetParameters,
-  AdminSetConfigFees,
   AdminSetNewAdmin,
   AdminSetTieBreaker,
   AdminSetWeight,
@@ -160,57 +136,24 @@ export function identifyJitoTipRouterInstruction(
     return JitoTipRouterInstruction.SetMerkleRoot;
   }
   if (containsBytes(data, getU8Encoder().encode(17), 0)) {
-    return JitoTipRouterInstruction.InitializeBaseRewardRouter;
-  }
-  if (containsBytes(data, getU8Encoder().encode(18), 0)) {
-    return JitoTipRouterInstruction.ReallocBaseRewardRouter;
-  }
-  if (containsBytes(data, getU8Encoder().encode(19), 0)) {
-    return JitoTipRouterInstruction.InitializeNcnRewardRouter;
-  }
-  if (containsBytes(data, getU8Encoder().encode(20), 0)) {
-    return JitoTipRouterInstruction.RouteBaseRewards;
-  }
-  if (containsBytes(data, getU8Encoder().encode(21), 0)) {
-    return JitoTipRouterInstruction.RouteNcnRewards;
-  }
-  if (containsBytes(data, getU8Encoder().encode(22), 0)) {
-    return JitoTipRouterInstruction.DistributeBaseRewards;
-  }
-  if (containsBytes(data, getU8Encoder().encode(23), 0)) {
-    return JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
-  }
-  if (containsBytes(data, getU8Encoder().encode(24), 0)) {
-    return JitoTipRouterInstruction.DistributeNcnOperatorRewards;
-  }
-  if (containsBytes(data, getU8Encoder().encode(25), 0)) {
-    return JitoTipRouterInstruction.DistributeNcnVaultRewards;
-  }
-  if (containsBytes(data, getU8Encoder().encode(26), 0)) {
-    return JitoTipRouterInstruction.ClaimWithPayer;
-  }
-  if (containsBytes(data, getU8Encoder().encode(27), 0)) {
     return JitoTipRouterInstruction.CloseEpochAccount;
   }
-  if (containsBytes(data, getU8Encoder().encode(28), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(18), 0)) {
     return JitoTipRouterInstruction.AdminSetParameters;
   }
-  if (containsBytes(data, getU8Encoder().encode(29), 0)) {
-    return JitoTipRouterInstruction.AdminSetConfigFees;
-  }
-  if (containsBytes(data, getU8Encoder().encode(30), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(19), 0)) {
     return JitoTipRouterInstruction.AdminSetNewAdmin;
   }
-  if (containsBytes(data, getU8Encoder().encode(31), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(20), 0)) {
     return JitoTipRouterInstruction.AdminSetTieBreaker;
   }
-  if (containsBytes(data, getU8Encoder().encode(32), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(21), 0)) {
     return JitoTipRouterInstruction.AdminSetWeight;
   }
-  if (containsBytes(data, getU8Encoder().encode(33), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(22), 0)) {
     return JitoTipRouterInstruction.AdminRegisterStMint;
   }
-  if (containsBytes(data, getU8Encoder().encode(34), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(23), 0)) {
     return JitoTipRouterInstruction.AdminSetStMint;
   }
   throw new Error(
@@ -273,44 +216,11 @@ export type ParsedJitoTipRouterInstruction<
       instructionType: JitoTipRouterInstruction.SetMerkleRoot;
     } & ParsedSetMerkleRootInstruction<TProgram>)
   | ({
-      instructionType: JitoTipRouterInstruction.InitializeBaseRewardRouter;
-    } & ParsedInitializeBaseRewardRouterInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.ReallocBaseRewardRouter;
-    } & ParsedReallocBaseRewardRouterInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.InitializeNcnRewardRouter;
-    } & ParsedInitializeNcnRewardRouterInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.RouteBaseRewards;
-    } & ParsedRouteBaseRewardsInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.RouteNcnRewards;
-    } & ParsedRouteNcnRewardsInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.DistributeBaseRewards;
-    } & ParsedDistributeBaseRewardsInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.DistributeBaseNcnRewardRoute;
-    } & ParsedDistributeBaseNcnRewardRouteInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.DistributeNcnOperatorRewards;
-    } & ParsedDistributeNcnOperatorRewardsInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.DistributeNcnVaultRewards;
-    } & ParsedDistributeNcnVaultRewardsInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.ClaimWithPayer;
-    } & ParsedClaimWithPayerInstruction<TProgram>)
-  | ({
       instructionType: JitoTipRouterInstruction.CloseEpochAccount;
     } & ParsedCloseEpochAccountInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.AdminSetParameters;
     } & ParsedAdminSetParametersInstruction<TProgram>)
-  | ({
-      instructionType: JitoTipRouterInstruction.AdminSetConfigFees;
-    } & ParsedAdminSetConfigFeesInstruction<TProgram>)
   | ({
       instructionType: JitoTipRouterInstruction.AdminSetNewAdmin;
     } & ParsedAdminSetNewAdminInstruction<TProgram>)

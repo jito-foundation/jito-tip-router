@@ -76,7 +76,7 @@ pub struct AdminRegisterStMintInstructionData {
 
 impl AdminRegisterStMintInstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 33 }
+        Self { discriminator: 22 }
     }
 }
 
@@ -89,7 +89,6 @@ impl Default for AdminRegisterStMintInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AdminRegisterStMintInstructionArgs {
-    pub ncn_fee_group: u8,
     pub reward_multiplier_bps: u64,
     pub switchboard_feed: Option<Pubkey>,
     pub no_feed_weight: Option<u128>,
@@ -111,7 +110,6 @@ pub struct AdminRegisterStMintBuilder {
     st_mint: Option<solana_program::pubkey::Pubkey>,
     vault_registry: Option<solana_program::pubkey::Pubkey>,
     admin: Option<solana_program::pubkey::Pubkey>,
-    ncn_fee_group: Option<u8>,
     reward_multiplier_bps: Option<u64>,
     switchboard_feed: Option<Pubkey>,
     no_feed_weight: Option<u128>,
@@ -145,11 +143,6 @@ impl AdminRegisterStMintBuilder {
     #[inline(always)]
     pub fn admin(&mut self, admin: solana_program::pubkey::Pubkey) -> &mut Self {
         self.admin = Some(admin);
-        self
-    }
-    #[inline(always)]
-    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
-        self.ncn_fee_group = Some(ncn_fee_group);
         self
     }
     #[inline(always)]
@@ -197,10 +190,6 @@ impl AdminRegisterStMintBuilder {
             admin: self.admin.expect("admin is not set"),
         };
         let args = AdminRegisterStMintInstructionArgs {
-            ncn_fee_group: self
-                .ncn_fee_group
-                .clone()
-                .expect("ncn_fee_group is not set"),
             reward_multiplier_bps: self
                 .reward_multiplier_bps
                 .clone()
@@ -374,7 +363,6 @@ impl<'a, 'b> AdminRegisterStMintCpiBuilder<'a, 'b> {
             st_mint: None,
             vault_registry: None,
             admin: None,
-            ncn_fee_group: None,
             reward_multiplier_bps: None,
             switchboard_feed: None,
             no_feed_weight: None,
@@ -414,11 +402,6 @@ impl<'a, 'b> AdminRegisterStMintCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn admin(&mut self, admin: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.admin = Some(admin);
-        self
-    }
-    #[inline(always)]
-    pub fn ncn_fee_group(&mut self, ncn_fee_group: u8) -> &mut Self {
-        self.instruction.ncn_fee_group = Some(ncn_fee_group);
         self
     }
     #[inline(always)]
@@ -480,11 +463,6 @@ impl<'a, 'b> AdminRegisterStMintCpiBuilder<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
         let args = AdminRegisterStMintInstructionArgs {
-            ncn_fee_group: self
-                .instruction
-                .ncn_fee_group
-                .clone()
-                .expect("ncn_fee_group is not set"),
             reward_multiplier_bps: self
                 .instruction
                 .reward_multiplier_bps
@@ -525,7 +503,6 @@ struct AdminRegisterStMintCpiBuilderInstruction<'a, 'b> {
     st_mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     vault_registry: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     admin: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    ncn_fee_group: Option<u8>,
     reward_multiplier_bps: Option<u64>,
     switchboard_feed: Option<Pubkey>,
     no_feed_weight: Option<u128>,

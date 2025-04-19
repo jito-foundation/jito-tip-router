@@ -16,7 +16,6 @@ import {
 } from '@solana/web3.js';
 
 export enum ConfigAdminRole {
-  FeeAdmin,
   TieBreakerAdmin,
 }
 

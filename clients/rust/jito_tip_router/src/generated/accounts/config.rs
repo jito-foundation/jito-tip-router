@@ -5,7 +5,6 @@
 //! <https://github.com/kinobi-so/kinobi>
 //!
 
-use crate::generated::types::FeeConfig;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 use solana_program::pubkey::Pubkey;
@@ -24,14 +23,9 @@ pub struct Config {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub tie_breaker_admin: Pubkey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub fee_admin: Pubkey,
+    pub reserved_fee_admin: [u8; 32],
     pub valid_slots_after_consensus: u64,
     pub epochs_before_stall: u64,
-    pub fee_config: FeeConfig,
     pub bump: u8,
     pub epochs_after_consensus_before_close: u64,
     pub starting_valid_epoch: u64,
