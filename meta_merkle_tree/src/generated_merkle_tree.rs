@@ -18,6 +18,14 @@ use thiserror::Error;
 
 use crate::{merkle_tree::MerkleTree, utils::get_proof};
 
+pub fn mul_div(a: u64, b: u64, q: u64) -> Result<u64, MerkleRootGeneratorError> {
+    (a as u128)
+        .checked_mul(b as u128)
+        .and_then(|x| x.checked_div(q as u128))
+        .and_then(|x| u64::try_from(x).ok())
+        .ok_or(MerkleRootGeneratorError::CheckedMathError)
+}
+
 #[derive(Error, Debug)]
 pub enum MerkleRootGeneratorError {
     #[error("Account not found")]
@@ -269,27 +277,11 @@ impl TreeNode {
         validator_fee_bps: u16,
         epoch: u64,
     ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
-        let protocol_fee_amount = u128::checked_div(
-            (total_tips as u128)
-                .checked_mul(protocol_fee_bps as u128)
-                .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
-            MAX_BPS as u128,
-        )
-        .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
-
-        let protocol_fee_amount = u64::try_from(protocol_fee_amount)
-            .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
+        let protocol_fee_amount: u64 = mul_div(total_tips, protocol_fee_bps, MAX_BPS as u64)?;
 
         // For Priority Fee Distributions, there is no validator amount, 0 is passed in for
         // validator_fee_bps
-        let validator_amount = u64::try_from(
-            (total_tips as u128)
-                .checked_mul(validator_fee_bps as u128)
-                .ok_or(MerkleRootGeneratorError::CheckedMathError)?
-                .checked_div(MAX_BPS as u128)
-                .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
-        )
-        .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
+        let validator_amount = mul_div(total_tips, validator_fee_bps as u64, MAX_BPS as u64)?;
 
         let (validator_amount, remaining_total_rewards) = validator_amount
             .checked_add(protocol_fee_amount)
@@ -317,6 +309,8 @@ impl TreeNode {
         let tip_router_target_epoch = epoch
             .checked_add(1)
             .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
+
+        // REVIEW: [cleanup] Could wrap these PDA derivations
 
         // Must match the seeds from `core::BaseRewardReceiver`. Cannot
         // use `BaseRewardReceiver::find_program_address` as it would cause
@@ -372,20 +366,16 @@ impl TreeNode {
             proof: None,
         });
 
-        let total_delegated = stake_meta.total_delegated as u128;
         tree_nodes.extend(
             stake_meta
                 .delegations
                 .iter()
                 .map(|delegation| {
-                    let amount_delegated = delegation.lamports_delegated as u128;
-                    let reward_amount = u64::try_from(
-                        (amount_delegated.checked_mul(remaining_total_rewards as u128))
-                            .ok_or(MerkleRootGeneratorError::CheckedMathError)?
-                            .checked_div(total_delegated)
-                            .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
-                    )
-                    .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
+                    let reward_amount = mul_div(
+                        delegation.lamports_delegated,
+                        remaining_total_rewards,
+                        stake_meta.total_delegated,
+                    )?;
 
                     let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
                         &[
