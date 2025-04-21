@@ -352,11 +352,36 @@ fn derive_tip_payment_pubkeys(program_id: &Pubkey) -> TipPaymentPubkeys {
     }
 }
 
+pub trait DistributionWrapper {
+    type DistributionAccountType;
+
+    fn new_from_account(
+        distribution_account: Self::DistributionAccountType,
+        acount_data: AccountSharedData,
+        pubkey: Pubkey,
+    ) -> Self;
+}
+
 /// Convenience wrapper around [TipDistributionAccount]
 pub struct TipDistributionAccountWrapper {
     pub tip_distribution_account: TipDistributionAccount,
     pub account_data: AccountSharedData,
     pub tip_distribution_pubkey: Pubkey,
+}
+impl DistributionWrapper for TipDistributionAccountWrapper {
+    type DistributionAccountType = TipDistributionAccount;
+
+    fn new_from_account(
+        distribution_account: TipDistributionAccount,
+        acount_data: AccountSharedData,
+        pubkey: Pubkey,
+    ) -> Self {
+        Self {
+            tip_distribution_account: distribution_account,
+            account_data: acount_data,
+            tip_distribution_pubkey: pubkey,
+        }
+    }
 }
 
 /// Convenience wrapper around [PriorityFeeDistributionAccount]
@@ -364,6 +389,21 @@ pub struct PriorityFeeDistributionAccountWrapper {
     pub priority_fee_distribution_account: PriorityFeeDistributionAccount,
     pub account_data: AccountSharedData,
     pub priority_fee_distribution_pubkey: Pubkey,
+}
+impl DistributionWrapper for PriorityFeeDistributionAccountWrapper {
+    type DistributionAccountType = PriorityFeeDistributionAccount;
+
+    fn new_from_account(
+        distribution_account: PriorityFeeDistributionAccount,
+        acount_data: AccountSharedData,
+        pubkey: Pubkey,
+    ) -> Self {
+        Self {
+            priority_fee_distribution_account: distribution_account,
+            account_data: acount_data,
+            priority_fee_distribution_pubkey: pubkey,
+        }
+    }
 }
 
 fn get_validator_cmdline() -> Result<String> {

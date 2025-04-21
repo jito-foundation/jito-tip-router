@@ -5,7 +5,7 @@ use std::{
     sync::Arc,
 };
 
-use anchor_lang::AccountDeserialize;
+use anchor_lang::{AccountDeserialize, AnchorDeserialize};
 use itertools::Itertools;
 use jito_priority_fee_distribution_sdk::{
     derive_priority_fee_distribution_account_address, PriorityFeeDistributionAccount,
@@ -25,14 +25,14 @@ use solana_ledger::{
 use solana_program::{stake_history::StakeHistory, sysvar};
 use solana_runtime::{bank::Bank, stakes::StakeAccount};
 use solana_sdk::{
-    account::{from_account, ReadableAccount, WritableAccount},
+    account::{from_account, AccountSharedData, ReadableAccount, WritableAccount},
     pubkey::Pubkey,
 };
 use solana_vote::vote_account::VoteAccount;
 use thiserror::Error;
 
 use crate::{
-    derive_tip_payment_pubkeys, PriorityFeeDistributionAccountWrapper,
+    derive_tip_payment_pubkeys, DistributionWrapper, PriorityFeeDistributionAccountWrapper,
     TipDistributionAccountWrapper,
 };
 
@@ -201,53 +201,25 @@ pub fn generate_stake_meta_collection(
                     bank.epoch(),
                 )
                 .0;
-            let tda = bank.get_account(&tip_distribution_pubkey).map_or_else(
-                || None,
-                |mut account_data| {
-                    // TDAs may be funded with lamports and therefore exist in the bank, but would fail the deserialization step
-                    // if the buffer is yet to be allocated thru the init call to the program.
-                    TipDistributionAccount::try_deserialize(&mut account_data.data()).map_or_else(
-                        |_| None,
-                        |tip_distribution_account| {
-                            // this snapshot might have tips that weren't claimed by the time the epoch is over
-                            // assume that it will eventually be cranked and credit the excess to this account
-                            if tip_distribution_pubkey == tip_receiver {
-                                account_data.set_lamports(
-                                    account_data
-                                        .lamports()
-                                        .checked_add(tip_receiver_fee)
-                                        .expect("tip overflow"),
-                                );
-                            }
-                            Some(TipDistributionAccountWrapper {
-                                tip_distribution_account,
-                                account_data,
-                                tip_distribution_pubkey,
-                            })
-                        },
-                    )
-                },
-            );
-            let pf_tda = bank
-                .get_account(&priority_fee_distribution_pubkey)
-                .map_or_else(
-                    || None,
-                    |account_data| {
-                        // PFDAs may be funded with lamports and therefore exist in the bank, but would fail the deserialization step
-                        // if the buffer is yet to be allocated thru the init call to the program.
-                        PriorityFeeDistributionAccount::try_deserialize(&mut account_data.data())
-                            .map_or_else(
-                                |_| None,
-                                |priority_fee_distribution_account| {
-                                    Some(PriorityFeeDistributionAccountWrapper {
-                                        priority_fee_distribution_account,
-                                        account_data,
-                                        priority_fee_distribution_pubkey,
-                                    })
-                                },
-                            )
-                    },
+            let tda =
+                get_distribution_account::<TipDistributionAccount, TipDistributionAccountWrapper>(
+                    bank,
+                    tip_distribution_pubkey,
+                    true,
+                    tip_receiver,
+                    tip_receiver_fee,
                 );
+            let pf_tda = get_distribution_account::<
+                PriorityFeeDistributionAccount,
+                PriorityFeeDistributionAccountWrapper,
+            >(
+                bank,
+                priority_fee_distribution_pubkey,
+                false,
+                tip_receiver,
+                tip_receiver_fee,
+            );
+
             Ok(((*vote_pubkey, vote_account), tda, pf_tda))
         })
         .collect::<Result<_, StakeMetaGeneratorError>>()?;
@@ -323,6 +295,49 @@ pub fn generate_stake_meta_collection(
         epoch: bank.epoch(),
         slot: bank.slot(),
     })
+}
+
+fn get_distribution_account<T, R>(
+    bank: &Arc<Bank>,
+    distribution_account_pubkey: Pubkey,
+    handle_unclaimed_tips_case: bool,
+    tip_receiver: Pubkey,
+    tip_receiver_fee: u64,
+) -> Option<R>
+where
+    T: AccountDeserialize,
+    R: DistributionWrapper<DistributionAccountType = T>,
+{
+    bank.get_account(&distribution_account_pubkey).map_or_else(
+        || None,
+        |mut account_data| {
+            // DAs may be funded with lamports and therefore exist in the bank, but would fail the
+            // deserialization step if the buffer is yet to be allocated thru the init call to the
+            // program.
+            T::try_deserialize(&mut account_data.data()).map_or_else(
+                |_| None,
+                |distribution_account| {
+                    // [TIp Distribution ONLY] this snapshot might have tips that weren't claimed
+                    // by the time the epoch is over assume that it will eventually be cranked and
+                    // credit the excess to this account
+                    if handle_unclaimed_tips_case && distribution_account_pubkey == tip_receiver {
+                        account_data.set_lamports(
+                            account_data
+                                .lamports()
+                                .checked_add(tip_receiver_fee)
+                                .expect("tip overflow"),
+                        );
+                    }
+
+                    Some(R::new_from_account(
+                        distribution_account,
+                        account_data,
+                        distribution_account_pubkey,
+                    ))
+                },
+            )
+        },
+    )
 }
 
 /// Load and deserialize config from Bank. If it does not exist, propagate error.
