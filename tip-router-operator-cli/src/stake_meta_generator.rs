@@ -5,7 +5,7 @@ use std::{
     sync::Arc,
 };
 
-use anchor_lang::{AccountDeserialize, AnchorDeserialize};
+use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
 use jito_priority_fee_distribution_sdk::{
     derive_priority_fee_distribution_account_address, PriorityFeeDistributionAccount,
@@ -13,9 +13,7 @@ use jito_priority_fee_distribution_sdk::{
 use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, TipDistributionAccount};
 use jito_tip_payment_sdk::{jito_tip_payment::accounts::Config, CONFIG_ACCOUNT_SEED};
 use log::*;
-use meta_merkle_tree::generated_merkle_tree::{
-    Delegation, PriorityFeeDistributionMeta, StakeMeta, StakeMetaCollection, TipDistributionMeta,
-};
+use meta_merkle_tree::generated_merkle_tree::{Delegation, StakeMeta, StakeMetaCollection};
 use solana_accounts_db::hardened_unpack::OpenGenesisConfigError;
 use solana_client::client_error::ClientError;
 use solana_ledger::{
@@ -25,15 +23,19 @@ use solana_ledger::{
 use solana_program::{stake_history::StakeHistory, sysvar};
 use solana_runtime::{bank::Bank, stakes::StakeAccount};
 use solana_sdk::{
-    account::{from_account, AccountSharedData, ReadableAccount, WritableAccount},
+    account::{from_account, ReadableAccount},
     pubkey::Pubkey,
 };
 use solana_vote::vote_account::VoteAccount;
 use thiserror::Error;
 
 use crate::{
-    derive_tip_payment_pubkeys, DistributionWrapper, PriorityFeeDistributionAccountWrapper,
-    TipDistributionAccountWrapper,
+    derive_tip_payment_pubkeys,
+    distribution_wrapper::{
+        get_distribution_account, pf_tip_distribution_account_from_tda_wrapper,
+        tip_distribution_account_from_tda_wrapper, PriorityFeeDistributionAccountWrapper,
+        TipDistributionAccountWrapper, TipReceiverInfo,
+    },
 };
 
 #[derive(Error, Debug)]
@@ -71,50 +73,6 @@ impl Display for StakeMetaGeneratorError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Debug::fmt(&self, f)
     }
-}
-
-fn tip_distribution_account_from_tda_wrapper(
-    tda_wrapper: TipDistributionAccountWrapper,
-    // The amount that will be left remaining in the tda to maintain rent exemption status.
-    rent_exempt_amount: u64,
-) -> Result<TipDistributionMeta, StakeMetaGeneratorError> {
-    Ok(TipDistributionMeta {
-        tip_distribution_pubkey: tda_wrapper.tip_distribution_pubkey,
-        total_tips: tda_wrapper
-            .account_data
-            .lamports()
-            .checked_sub(rent_exempt_amount)
-            .ok_or(StakeMetaGeneratorError::CheckedMathError)?,
-        validator_fee_bps: tda_wrapper
-            .tip_distribution_account
-            .validator_commission_bps,
-        merkle_root_upload_authority: tda_wrapper
-            .tip_distribution_account
-            .merkle_root_upload_authority,
-    })
-}
-
-/// Converts the `PriorityFeeDistributionAccountWrapper` to StakeMeta's exptected `PriorityFeeDistributionMeta`
-fn pf_tip_distribution_account_from_tda_wrapper(
-    pf_distribution_account_wrapper: PriorityFeeDistributionAccountWrapper,
-    // The amount that will be left remaining in the tda to maintain rent exemption status.
-    rent_exempt_amount: u64,
-) -> Result<PriorityFeeDistributionMeta, StakeMetaGeneratorError> {
-    Ok(PriorityFeeDistributionMeta {
-        priority_fee_distribution_pubkey: pf_distribution_account_wrapper
-            .priority_fee_distribution_pubkey,
-        total_tips: pf_distribution_account_wrapper
-            .account_data
-            .lamports()
-            .checked_sub(rent_exempt_amount)
-            .ok_or(StakeMetaGeneratorError::CheckedMathError)?,
-        validator_fee_bps: pf_distribution_account_wrapper
-            .priority_fee_distribution_account
-            .validator_commission_bps,
-        merkle_root_upload_authority: pf_distribution_account_wrapper
-            .priority_fee_distribution_account
-            .merkle_root_upload_authority,
-    })
 }
 
 type VoteInfoAndTdas<'a> = Vec<(
@@ -205,20 +163,15 @@ pub fn generate_stake_meta_collection(
                 get_distribution_account::<TipDistributionAccount, TipDistributionAccountWrapper>(
                     bank,
                     tip_distribution_pubkey,
-                    true,
-                    tip_receiver,
-                    tip_receiver_fee,
+                    Some(TipReceiverInfo {
+                        tip_receiver,
+                        tip_receiver_fee,
+                    }),
                 );
             let pf_tda = get_distribution_account::<
                 PriorityFeeDistributionAccount,
                 PriorityFeeDistributionAccountWrapper,
-            >(
-                bank,
-                priority_fee_distribution_pubkey,
-                false,
-                tip_receiver,
-                tip_receiver_fee,
-            );
+            >(bank, priority_fee_distribution_pubkey, None);
 
             Ok(((*vote_pubkey, vote_account), tda, pf_tda))
         })
@@ -297,60 +250,21 @@ pub fn generate_stake_meta_collection(
     })
 }
 
-fn get_distribution_account<T, R>(
-    bank: &Arc<Bank>,
-    distribution_account_pubkey: Pubkey,
-    handle_unclaimed_tips_case: bool,
-    tip_receiver: Pubkey,
-    tip_receiver_fee: u64,
-) -> Option<R>
-where
-    T: AccountDeserialize,
-    R: DistributionWrapper<DistributionAccountType = T>,
-{
-    bank.get_account(&distribution_account_pubkey).map_or_else(
-        || None,
-        |mut account_data| {
-            // DAs may be funded with lamports and therefore exist in the bank, but would fail the
-            // deserialization step if the buffer is yet to be allocated thru the init call to the
-            // program.
-            T::try_deserialize(&mut account_data.data()).map_or_else(
-                |_| None,
-                |distribution_account| {
-                    // [TIp Distribution ONLY] this snapshot might have tips that weren't claimed
-                    // by the time the epoch is over assume that it will eventually be cranked and
-                    // credit the excess to this account
-                    if handle_unclaimed_tips_case && distribution_account_pubkey == tip_receiver {
-                        account_data.set_lamports(
-                            account_data
-                                .lamports()
-                                .checked_add(tip_receiver_fee)
-                                .expect("tip overflow"),
-                        );
-                    }
-
-                    Some(R::new_from_account(
-                        distribution_account,
-                        account_data,
-                        distribution_account_pubkey,
-                    ))
-                },
-            )
-        },
-    )
-}
-
 /// Load and deserialize config from Bank. If it does not exist, propagate error.
 fn get_config(bank: &Arc<Bank>, config_pubkey: &Pubkey) -> Result<Config, StakeMetaGeneratorError> {
-    if let Some(config_account) = bank.get_account(config_pubkey) {
-        Config::try_deserialize(&mut config_account.data())
-            .map_err(|e| StakeMetaGeneratorError::AnchorError(Box::new(e)))
-    } else {
-        // Instead of creating a new config, just return an error
-        Err(StakeMetaGeneratorError::AnchorError(Box::new(
-            anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotInitialized),
-        )))
-    }
+    bank.get_account(config_pubkey).map_or_else(
+        || {
+            Err(StakeMetaGeneratorError::AnchorError(Box::new(
+                anchor_lang::error::Error::from(
+                    anchor_lang::error::ErrorCode::AccountNotInitialized,
+                ),
+            )))
+        },
+        |config_account| {
+            Config::try_deserialize(&mut config_account.data())
+                .map_err(|e| StakeMetaGeneratorError::AnchorError(Box::new(e)))
+        },
+    )
 }
 
 /// Given an [EpochStakes] object, return delegations grouped by voter_pubkey (validator delegated to).
@@ -407,6 +321,9 @@ mod tests {
         CONFIG_SIZE, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
         TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
         TIP_ACCOUNT_SEED_7, TIP_PAYMENT_ACCOUNT_SIZE,
+    };
+    use meta_merkle_tree::generated_merkle_tree::{
+        PriorityFeeDistributionMeta, TipDistributionMeta,
     };
     use solana_runtime::genesis_utils::{
         create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,

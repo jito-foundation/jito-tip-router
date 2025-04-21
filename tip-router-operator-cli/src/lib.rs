@@ -7,6 +7,7 @@ pub mod arg_matches;
 pub mod backup_snapshots;
 pub mod claim;
 pub mod cli;
+pub mod distribution_wrapper;
 pub mod load_and_process_ledger;
 pub mod process_epoch;
 pub mod rpc_utils;
@@ -20,8 +21,6 @@ use std::time::Instant;
 
 use anchor_lang::prelude::*;
 use cli::SnapshotPaths;
-use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
-use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{
     CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
     TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
@@ -35,7 +34,7 @@ use meta_merkle_tree::{
 };
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::bank::Bank;
-use solana_sdk::{account::AccountSharedData, pubkey::Pubkey};
+use solana_sdk::pubkey::Pubkey;
 use stake_meta_generator::generate_stake_meta_collection;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -349,60 +348,6 @@ fn derive_tip_payment_pubkeys(program_id: &Pubkey) -> TipPaymentPubkeys {
         tip_pdas: vec![
             tip_pda_0, tip_pda_1, tip_pda_2, tip_pda_3, tip_pda_4, tip_pda_5, tip_pda_6, tip_pda_7,
         ],
-    }
-}
-
-pub trait DistributionWrapper {
-    type DistributionAccountType;
-
-    fn new_from_account(
-        distribution_account: Self::DistributionAccountType,
-        acount_data: AccountSharedData,
-        pubkey: Pubkey,
-    ) -> Self;
-}
-
-/// Convenience wrapper around [TipDistributionAccount]
-pub struct TipDistributionAccountWrapper {
-    pub tip_distribution_account: TipDistributionAccount,
-    pub account_data: AccountSharedData,
-    pub tip_distribution_pubkey: Pubkey,
-}
-impl DistributionWrapper for TipDistributionAccountWrapper {
-    type DistributionAccountType = TipDistributionAccount;
-
-    fn new_from_account(
-        distribution_account: TipDistributionAccount,
-        acount_data: AccountSharedData,
-        pubkey: Pubkey,
-    ) -> Self {
-        Self {
-            tip_distribution_account: distribution_account,
-            account_data: acount_data,
-            tip_distribution_pubkey: pubkey,
-        }
-    }
-}
-
-/// Convenience wrapper around [PriorityFeeDistributionAccount]
-pub struct PriorityFeeDistributionAccountWrapper {
-    pub priority_fee_distribution_account: PriorityFeeDistributionAccount,
-    pub account_data: AccountSharedData,
-    pub priority_fee_distribution_pubkey: Pubkey,
-}
-impl DistributionWrapper for PriorityFeeDistributionAccountWrapper {
-    type DistributionAccountType = PriorityFeeDistributionAccount;
-
-    fn new_from_account(
-        distribution_account: PriorityFeeDistributionAccount,
-        acount_data: AccountSharedData,
-        pubkey: Pubkey,
-    ) -> Self {
-        Self {
-            priority_fee_distribution_account: distribution_account,
-            account_data: acount_data,
-            priority_fee_distribution_pubkey: pubkey,
-        }
     }
 }
 
