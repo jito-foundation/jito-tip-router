@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
 use anchor_lang::AccountDeserialize;
-use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
-use jito_tip_distribution_sdk::TipDistributionAccount;
+use jito_priority_fee_distribution_sdk::{
+    derive_priority_fee_distribution_account_address, PriorityFeeDistributionAccount,
+};
+use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, TipDistributionAccount};
 use meta_merkle_tree::generated_merkle_tree::{PriorityFeeDistributionMeta, TipDistributionMeta};
 use solana_runtime::bank::Bank;
 use solana_sdk::{
     account::{AccountSharedData, ReadableAccount, WritableAccount},
+    clock::Epoch,
     pubkey::Pubkey,
 };
 
@@ -20,6 +23,12 @@ pub trait DistributionWrapper {
         acount_data: AccountSharedData,
         pubkey: Pubkey,
     ) -> Self;
+
+    fn derive_distribution_account_address(
+        program_id: &Pubkey,
+        vote_pubkey: &Pubkey,
+        epoch: Epoch,
+    ) -> Pubkey;
 }
 
 /// Convenience wrapper around [TipDistributionAccount]
@@ -41,6 +50,14 @@ impl DistributionWrapper for TipDistributionAccountWrapper {
             account_data: acount_data,
             tip_distribution_pubkey: pubkey,
         }
+    }
+
+    fn derive_distribution_account_address(
+        program_id: &Pubkey,
+        vote_pubkey: &Pubkey,
+        epoch: Epoch,
+    ) -> Pubkey {
+        derive_tip_distribution_account_address(program_id, vote_pubkey, epoch).0
     }
 }
 
@@ -64,6 +81,14 @@ impl DistributionWrapper for PriorityFeeDistributionAccountWrapper {
             priority_fee_distribution_pubkey: pubkey,
         }
     }
+
+    fn derive_distribution_account_address(
+        program_id: &Pubkey,
+        vote_pubkey: &Pubkey,
+        epoch: Epoch,
+    ) -> Pubkey {
+        derive_priority_fee_distribution_account_address(program_id, vote_pubkey, epoch).0
+    }
 }
 
 pub struct TipReceiverInfo {
@@ -73,13 +98,16 @@ pub struct TipReceiverInfo {
 
 pub fn get_distribution_account<T, R>(
     bank: &Arc<Bank>,
-    distribution_account_pubkey: Pubkey,
+    program_id: &Pubkey,
+    vote_pubkey: &Pubkey,
     tip_receiver_info: Option<TipReceiverInfo>,
 ) -> Option<R>
 where
     T: AccountDeserialize,
     R: DistributionWrapper<DistributionAccountType = T>,
 {
+    let distribution_account_pubkey =
+        R::derive_distribution_account_address(program_id, vote_pubkey, bank.epoch());
     bank.get_account(&distribution_account_pubkey).map_or_else(
         || None,
         |mut account_data| {

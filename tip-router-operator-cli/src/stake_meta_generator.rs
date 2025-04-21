@@ -7,10 +7,8 @@ use std::{
 
 use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
-use jito_priority_fee_distribution_sdk::{
-    derive_priority_fee_distribution_account_address, PriorityFeeDistributionAccount,
-};
-use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, TipDistributionAccount};
+use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
+use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{jito_tip_payment::accounts::Config, CONFIG_ACCOUNT_SEED};
 use log::*;
 use meta_merkle_tree::generated_merkle_tree::{Delegation, StakeMeta, StakeMetaCollection};
@@ -67,6 +65,8 @@ pub enum StakeMetaGeneratorError {
     GenesisConfigError(#[from] OpenGenesisConfigError),
 
     PanicError(String),
+
+    NoVoteAccounts(u64, u64),
 }
 
 impl Display for StakeMetaGeneratorError {
@@ -91,13 +91,12 @@ pub fn generate_stake_meta_collection(
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     assert!(bank.is_frozen());
 
-    let epoch_vote_accounts = bank.epoch_vote_accounts(bank.epoch()).unwrap_or_else(|| {
-        panic!(
-            "No epoch_vote_accounts found for slot {} at epoch {}",
-            bank.slot(),
-            bank.epoch()
-        )
-    });
+    let epoch_vote_accounts =
+        bank.epoch_vote_accounts(bank.epoch())
+            .ok_or(StakeMetaGeneratorError::NoVoteAccounts(
+                bank.slot(),
+                bank.epoch(),
+            ))?;
 
     let l_stakes = bank.stakes_cache.stakes();
     let delegations = l_stakes.stake_delegations();
@@ -106,7 +105,6 @@ pub fn generate_stake_meta_collection(
     // Get config PDA
     let (config_pda, _) =
         Pubkey::find_program_address(&[CONFIG_ACCOUNT_SEED], tip_payment_program_id);
-
     let config = get_config(bank, &config_pda)?;
 
     let bb_commission_pct: u64 = config.block_builder_commission_pct;
@@ -146,23 +144,11 @@ pub fn generate_stake_meta_collection(
     let vote_pk_and_maybe_tdas: VoteInfoAndTdas<'_> = epoch_vote_accounts
         .iter()
         .map(|(vote_pubkey, (_total_stake, vote_account))| {
-            let tip_distribution_pubkey = derive_tip_distribution_account_address(
-                tip_distribution_program_id,
-                vote_pubkey,
-                bank.epoch(),
-            )
-            .0;
-            let priority_fee_distribution_pubkey =
-                derive_priority_fee_distribution_account_address(
-                    priority_fee_distribution_program_id,
-                    vote_pubkey,
-                    bank.epoch(),
-                )
-                .0;
             let tda =
                 get_distribution_account::<TipDistributionAccount, TipDistributionAccountWrapper>(
                     bank,
-                    tip_distribution_pubkey,
+                    tip_distribution_program_id,
+                    vote_pubkey,
                     Some(TipReceiverInfo {
                         tip_receiver,
                         tip_receiver_fee,
@@ -171,7 +157,12 @@ pub fn generate_stake_meta_collection(
             let pf_tda = get_distribution_account::<
                 PriorityFeeDistributionAccount,
                 PriorityFeeDistributionAccountWrapper,
-            >(bank, priority_fee_distribution_pubkey, None);
+            >(
+                bank,
+                priority_fee_distribution_program_id,
+                vote_pubkey,
+                None,
+            );
 
             Ok(((*vote_pubkey, vote_account), tda, pf_tda))
         })
@@ -314,8 +305,12 @@ fn group_delegations_by_voter_pubkey(
 #[cfg(test)]
 mod tests {
     use anchor_lang::AccountSerialize;
-    use jito_priority_fee_distribution_sdk::PRIORITY_FEE_DISTRIBUTION_SIZE;
-    use jito_tip_distribution_sdk::TIP_DISTRIBUTION_SIZE;
+    use jito_priority_fee_distribution_sdk::{
+        derive_priority_fee_distribution_account_address, PRIORITY_FEE_DISTRIBUTION_SIZE,
+    };
+    use jito_tip_distribution_sdk::{
+        derive_tip_distribution_account_address, TIP_DISTRIBUTION_SIZE,
+    };
     use jito_tip_payment_sdk::{
         jito_tip_payment::{accounts::TipPaymentAccount, types::InitBumps},
         CONFIG_SIZE, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
