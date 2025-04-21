@@ -143,23 +143,13 @@ pub fn generate_stake_meta_collection(
 
     let l_stakes = bank.stakes_cache.stakes();
     let delegations = l_stakes.stake_delegations();
-
     let voter_pubkey_to_delegations = group_delegations_by_voter_pubkey(delegations, bank);
 
     // Get config PDA
     let (config_pda, _) =
         Pubkey::find_program_address(&[CONFIG_ACCOUNT_SEED], tip_payment_program_id);
 
-    // Get config account - don't panic if it exists
-    let config = if let Some(config_account) = bank.get_account(&config_pda) {
-        Config::try_deserialize(&mut config_account.data())
-            .map_err(|e| StakeMetaGeneratorError::AnchorError(Box::new(e)))?
-    } else {
-        // Instead of creating a new config, just return an error
-        return Err(StakeMetaGeneratorError::AnchorError(Box::new(
-            anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotInitialized),
-        )));
-    };
+    let config = get_config(bank, &config_pda)?;
 
     let bb_commission_pct: u64 = config.block_builder_commission_pct;
     let tip_receiver: Pubkey = config.tip_receiver;
@@ -184,6 +174,7 @@ pub fn generate_stake_meta_collection(
         })
         .sum();
     // matches math in tip payment program
+    // REVIEW: [cleanup] mul_div
     let block_builder_tips = excess_tip_balances
         .checked_mul(bb_commission_pct)
         .expect("block_builder_tips overflow")
@@ -193,6 +184,7 @@ pub fn generate_stake_meta_collection(
         .checked_sub(block_builder_tips)
         .expect("tip_receiver_fee doesnt underflow");
 
+    // REVIEW: [cleanup] make a separate function to get the VoteInfoAndTdas from epoch_vote_accounts
     let vote_pk_and_maybe_tdas: VoteInfoAndTdas<'_> = epoch_vote_accounts
         .iter()
         .map(|(vote_pubkey, (_total_stake, vote_account))| {
@@ -260,6 +252,7 @@ pub fn generate_stake_meta_collection(
         })
         .collect::<Result<_, StakeMetaGeneratorError>>()?;
 
+    // REVIEW: [cleanup] make a separate function for this loop
     let mut stake_metas = vec![];
     for ((vote_pubkey, vote_account), maybe_tda, maybe_pf_tda) in vote_pk_and_maybe_tdas {
         if let Some(mut delegations) = voter_pubkey_to_delegations.get(&vote_pubkey).cloned() {
@@ -330,6 +323,19 @@ pub fn generate_stake_meta_collection(
         epoch: bank.epoch(),
         slot: bank.slot(),
     })
+}
+
+/// Load and deserialize config from Bank. If it does not exist, propagate error.
+fn get_config(bank: &Arc<Bank>, config_pubkey: &Pubkey) -> Result<Config, StakeMetaGeneratorError> {
+    if let Some(config_account) = bank.get_account(config_pubkey) {
+        Config::try_deserialize(&mut config_account.data())
+            .map_err(|e| StakeMetaGeneratorError::AnchorError(Box::new(e)))
+    } else {
+        // Instead of creating a new config, just return an error
+        Err(StakeMetaGeneratorError::AnchorError(Box::new(
+            anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotInitialized),
+        )))
+    }
 }
 
 /// Given an [EpochStakes] object, return delegations grouped by voter_pubkey (validator delegated to).
