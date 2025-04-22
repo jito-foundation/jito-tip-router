@@ -118,6 +118,7 @@ pub enum LoadAndProcessLedgerError {
 //     })
 // }
 
+#[allow(clippy::too_many_arguments)]
 pub fn load_and_process_ledger(
     arg_matches: &ArgMatches,
     genesis_config: &GenesisConfig,

@@ -207,6 +207,7 @@ pub fn load_bank_from_snapshot(cli: Cli, slot: u64, save_snapshot: bool) -> Arc<
 }
 
 // STAGE 2 CreateStakeMeta
+#[allow(clippy::too_many_arguments)]
 pub fn create_stake_meta(
     operator_address: String,
     epoch: u64,
