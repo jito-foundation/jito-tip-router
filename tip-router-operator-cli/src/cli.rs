@@ -47,6 +47,12 @@ pub struct Cli {
     #[deprecated(since = "1.1.0", note = "use --save-path instead")]
     pub meta_merkle_tree_dir: Option<PathBuf>,
 
+    #[arg(long, env, default_value = "mainnet")]
+    pub cluster: String,
+
+    #[arg(long, env, default_value = "local")]
+    pub region: String,
+
     #[command(subcommand)]
     pub command: Commands,
 }

@@ -112,6 +112,7 @@ pub async fn emit_claim_mev_tips_metrics(
         0,
         Pubkey::new_unique(),
         &cli.operator_address,
+        &cli.cluster,
     )
     .await?;
 
@@ -119,6 +120,7 @@ pub async fn emit_claim_mev_tips_metrics(
         "tip_router_cli.claim_mev_tips-send_summary",
         ("claim_transactions_left", all_claim_transactions.len(), i64),
         ("epoch", epoch, i64),
+        "cluster" => &cli.cluster,
     );
 
     if all_claim_transactions.is_empty() {
@@ -181,6 +183,7 @@ pub async fn claim_mev_tips_with_emit(
         file_path,
         file_mutex,
         &cli.operator_address,
+        &cli.cluster,
     )
     .await
     {
@@ -191,6 +194,7 @@ pub async fn claim_mev_tips_with_emit(
                 ("epoch", epoch, i64),
                 ("transactions_left", 0, i64),
                 ("elapsed_us", start.elapsed().as_micros(), i64),
+                "cluster" => &cli.cluster,
             );
         }
         Err(ClaimMevError::NotFinished { transactions_left }) => {
@@ -200,6 +204,7 @@ pub async fn claim_mev_tips_with_emit(
                 ("epoch", epoch, i64),
                 ("transactions_left", transactions_left, i64),
                 ("elapsed_us", start.elapsed().as_micros(), i64),
+                "cluster" => &cli.cluster,
             );
         }
         Err(e) => {
@@ -209,6 +214,7 @@ pub async fn claim_mev_tips_with_emit(
                 ("epoch", epoch, i64),
                 ("error", e.to_string(), String),
                 ("elapsed_us", start.elapsed().as_micros(), i64),
+                "cluster" => &cli.cluster,
             );
         }
     }
@@ -230,6 +236,7 @@ pub async fn claim_mev_tips(
     file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
     operator_address: &String,
+    cluster: &str,
 ) -> Result<(), ClaimMevError> {
     let rpc_client = RpcClient::new_with_timeout_and_commitment(
         rpc_url,
@@ -255,6 +262,7 @@ pub async fn claim_mev_tips(
             micro_lamports,
             keypair.pubkey(),
             operator_address,
+            cluster,
         )
         .await?;
 
@@ -263,6 +271,7 @@ pub async fn claim_mev_tips(
             ("claim_transactions_left", all_claim_transactions.len(), i64),
             ("epoch", epoch, i64),
             ("operator", operator_address, String),
+            "cluster" => cluster,
         );
 
         if all_claim_transactions.is_empty() {
@@ -311,6 +320,7 @@ pub async fn claim_mev_tips(
         micro_lamports,
         keypair.pubkey(),
         operator_address,
+        cluster,
     )
     .await?;
     if transactions.is_empty() {
@@ -376,6 +386,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     micro_lamports: u64,
     payer_pubkey: Pubkey,
     operator_address: &String,
+    cluster: &str,
 ) -> Result<Vec<Transaction>, ClaimMevError> {
     let epoch = merkle_trees.epoch;
     let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
@@ -449,6 +460,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         ("claim_statuses_onchain", claim_statuses.len(), i64),
         ("epoch", epoch, i64),
         ("operator", operator_address, String),
+        "cluster" => cluster,
     );
 
     let transactions = build_mev_claim_transactions(
@@ -461,6 +473,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         micro_lamports,
         payer_pubkey,
         ncn,
+        cluster,
     );
 
     Ok(transactions)
@@ -486,6 +499,7 @@ fn build_mev_claim_transactions(
     micro_lamports: u64,
     payer_pubkey: Pubkey,
     ncn_address: Pubkey,
+    cluster: &str,
 ) -> Vec<Transaction> {
     let epoch = merkle_trees.epoch;
     let tip_router_config_address =
@@ -594,7 +608,8 @@ fn build_mev_claim_transactions(
         ),
         ("claim_statuses", claim_statuses.len(), i64),
         ("claim_transactions", transactions.len(), i64),
-        ("epoch", epoch, i64)
+        ("epoch", epoch, i64),
+        "cluster" => cluster,
     );
 
     transactions

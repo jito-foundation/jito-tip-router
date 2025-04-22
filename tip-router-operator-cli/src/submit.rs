@@ -59,6 +59,7 @@ pub async fn submit_recent_epochs_to_ncn(
             tip_distribution_program_id,
             cli_args.submit_as_memo,
             set_merkle_roots,
+            &cli_args.cluster,
         )
         .await
         {
@@ -82,6 +83,7 @@ pub async fn submit_to_ncn(
     tip_distribution_program_id: &Pubkey,
     submit_as_memo: bool,
     set_merkle_roots: bool,
+    cluster: &str,
 ) -> Result<(), anyhow::Error> {
     let epoch_info = client.get_epoch_info().await?;
     let meta_merkle_tree = MetaMerkleTree::new_from_file(meta_merkle_tree_path)?;
@@ -171,7 +173,8 @@ pub async fn submit_to_ncn(
                         String
                     ),
                     ("version", Version::default().to_string(), String),
-                    ("tx_sig", format!("{:?}", signature), String)
+                    ("tx_sig", format!("{:?}", signature), String),
+                    "cluster" => cluster,
                 );
                 info!(
                     "Cast vote for epoch {} with signature {:?}",
@@ -189,7 +192,8 @@ pub async fn submit_to_ncn(
                         String
                     ),
                     ("status", "error", String),
-                    ("error", format!("{:?}", e), String)
+                    ("error", format!("{:?}", e), String),
+                    "cluster" => cluster,
                 );
                 info!(
                     "Failed to cast vote for epoch {}: {:?}",
@@ -237,7 +241,8 @@ pub async fn submit_to_ncn(
                     ("operator_address", operator_address.to_string(), String),
                     ("epoch", tip_router_target_epoch, i64),
                     ("num_success", num_success, i64),
-                    ("num_failed", num_failed, i64)
+                    ("num_failed", num_failed, i64),
+                    "cluster" => cluster,
                 );
                 info!(
                     "Set merkle root for {} tip distribution accounts, failed for {}",
@@ -250,7 +255,8 @@ pub async fn submit_to_ncn(
                     ("operator_address", operator_address.to_string(), String),
                     ("epoch", tip_router_target_epoch, i64),
                     ("status", "error", String),
-                    ("error", format!("{:?}", e), String)
+                    ("error", format!("{:?}", e), String),
+                    "cluster" => cluster,
                 );
                 error!("Failed to set merkle roots: {:?}", e);
             }
