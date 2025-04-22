@@ -5,6 +5,7 @@ use jito_priority_fee_distribution_sdk::{
     derive_priority_fee_distribution_account_address, PriorityFeeDistributionAccount,
 };
 use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, TipDistributionAccount};
+use log::warn;
 use meta_merkle_tree::generated_merkle_tree::{PriorityFeeDistributionMeta, TipDistributionMeta};
 use solana_runtime::bank::Bank;
 use solana_sdk::{
@@ -15,14 +16,17 @@ use solana_sdk::{
 
 use crate::stake_meta_generator::StakeMetaGeneratorError;
 
-pub trait DistributionWrapper {
+pub trait DistributionMeta {
     type DistributionAccountType;
 
     fn new_from_account(
         distribution_account: Self::DistributionAccountType,
-        acount_data: AccountSharedData,
+        account_data: AccountSharedData,
         pubkey: Pubkey,
-    ) -> Self;
+        rent_exempt_amount: u64,
+    ) -> Result<Self, StakeMetaGeneratorError>
+    where
+        Self: Sized;
 
     fn derive_distribution_account_address(
         program_id: &Pubkey,
@@ -31,25 +35,25 @@ pub trait DistributionWrapper {
     ) -> Pubkey;
 }
 
-/// Convenience wrapper around [TipDistributionAccount]
-pub struct TipDistributionAccountWrapper {
-    pub tip_distribution_account: TipDistributionAccount,
-    pub account_data: AccountSharedData,
-    pub tip_distribution_pubkey: Pubkey,
-}
-impl DistributionWrapper for TipDistributionAccountWrapper {
+pub struct WrappedTipDistributionMeta(pub TipDistributionMeta);
+impl DistributionMeta for WrappedTipDistributionMeta {
     type DistributionAccountType = TipDistributionAccount;
 
     fn new_from_account(
-        distribution_account: TipDistributionAccount,
-        acount_data: AccountSharedData,
+        distribution_account: Self::DistributionAccountType,
+        account_data: AccountSharedData,
         pubkey: Pubkey,
-    ) -> Self {
-        Self {
-            tip_distribution_account: distribution_account,
-            account_data: acount_data,
+        rent_exempt_amount: u64,
+    ) -> Result<Self, StakeMetaGeneratorError> {
+        Ok(Self(TipDistributionMeta {
             tip_distribution_pubkey: pubkey,
-        }
+            total_tips: account_data
+                .lamports()
+                .checked_sub(rent_exempt_amount)
+                .ok_or(StakeMetaGeneratorError::CheckedMathError)?,
+            validator_fee_bps: distribution_account.validator_commission_bps,
+            merkle_root_upload_authority: distribution_account.merkle_root_upload_authority,
+        }))
     }
 
     fn derive_distribution_account_address(
@@ -61,25 +65,25 @@ impl DistributionWrapper for TipDistributionAccountWrapper {
     }
 }
 
-/// Convenience wrapper around [PriorityFeeDistributionAccount]
-pub struct PriorityFeeDistributionAccountWrapper {
-    pub priority_fee_distribution_account: PriorityFeeDistributionAccount,
-    pub account_data: AccountSharedData,
-    pub priority_fee_distribution_pubkey: Pubkey,
-}
-impl DistributionWrapper for PriorityFeeDistributionAccountWrapper {
+pub struct WrappedPriorityFeeDistributionMeta(pub PriorityFeeDistributionMeta);
+impl DistributionMeta for WrappedPriorityFeeDistributionMeta {
     type DistributionAccountType = PriorityFeeDistributionAccount;
 
     fn new_from_account(
-        distribution_account: PriorityFeeDistributionAccount,
-        acount_data: AccountSharedData,
+        distribution_account: Self::DistributionAccountType,
+        account_data: AccountSharedData,
         pubkey: Pubkey,
-    ) -> Self {
-        Self {
-            priority_fee_distribution_account: distribution_account,
-            account_data: acount_data,
+        rent_exempt_amount: u64,
+    ) -> Result<Self, StakeMetaGeneratorError> {
+        Ok(Self(PriorityFeeDistributionMeta {
             priority_fee_distribution_pubkey: pubkey,
-        }
+            total_tips: account_data
+                .lamports()
+                .checked_sub(rent_exempt_amount)
+                .ok_or(StakeMetaGeneratorError::CheckedMathError)?,
+            validator_fee_bps: distribution_account.validator_commission_bps,
+            merkle_root_upload_authority: distribution_account.merkle_root_upload_authority,
+        }))
     }
 
     fn derive_distribution_account_address(
@@ -96,7 +100,7 @@ pub struct TipReceiverInfo {
     pub tip_receiver_fee: u64,
 }
 
-pub fn get_distribution_account<T, R>(
+pub fn get_distribution_meta<T, R>(
     bank: &Arc<Bank>,
     program_id: &Pubkey,
     vote_pubkey: &Pubkey,
@@ -104,7 +108,7 @@ pub fn get_distribution_account<T, R>(
 ) -> Option<R>
 where
     T: AccountDeserialize,
-    R: DistributionWrapper<DistributionAccountType = T>,
+    R: DistributionMeta<DistributionAccountType = T>,
 {
     let distribution_account_pubkey =
         R::derive_distribution_account_address(program_id, vote_pubkey, bank.epoch());
@@ -131,57 +135,23 @@ where
                         }
                     }
 
-                    Some(R::new_from_account(
+                    let actual_len = account_data.data().len();
+                    let expected_len = 8_usize.saturating_add(size_of::<T>());
+                    if actual_len != expected_len {
+                        warn!("len mismatch actual={actual_len}, expected={expected_len}");
+                    }
+                    let rent_exempt_amount =
+                        bank.get_minimum_balance_for_rent_exemption(account_data.data().len());
+
+                    R::new_from_account(
                         distribution_account,
                         account_data,
                         distribution_account_pubkey,
-                    ))
+                        rent_exempt_amount,
+                    )
+                    .ok()
                 },
             )
         },
     )
-}
-
-pub fn tip_distribution_account_from_tda_wrapper(
-    tda_wrapper: TipDistributionAccountWrapper,
-    // The amount that will be left remaining in the tda to maintain rent exemption status.
-    rent_exempt_amount: u64,
-) -> Result<TipDistributionMeta, StakeMetaGeneratorError> {
-    Ok(TipDistributionMeta {
-        tip_distribution_pubkey: tda_wrapper.tip_distribution_pubkey,
-        total_tips: tda_wrapper
-            .account_data
-            .lamports()
-            .checked_sub(rent_exempt_amount)
-            .ok_or(StakeMetaGeneratorError::CheckedMathError)?,
-        validator_fee_bps: tda_wrapper
-            .tip_distribution_account
-            .validator_commission_bps,
-        merkle_root_upload_authority: tda_wrapper
-            .tip_distribution_account
-            .merkle_root_upload_authority,
-    })
-}
-
-/// Converts the `PriorityFeeDistributionAccountWrapper` to StakeMeta's exptected `PriorityFeeDistributionMeta`
-pub fn pf_tip_distribution_account_from_tda_wrapper(
-    pf_distribution_account_wrapper: PriorityFeeDistributionAccountWrapper,
-    // The amount that will be left remaining in the tda to maintain rent exemption status.
-    rent_exempt_amount: u64,
-) -> Result<PriorityFeeDistributionMeta, StakeMetaGeneratorError> {
-    Ok(PriorityFeeDistributionMeta {
-        priority_fee_distribution_pubkey: pf_distribution_account_wrapper
-            .priority_fee_distribution_pubkey,
-        total_tips: pf_distribution_account_wrapper
-            .account_data
-            .lamports()
-            .checked_sub(rent_exempt_amount)
-            .ok_or(StakeMetaGeneratorError::CheckedMathError)?,
-        validator_fee_bps: pf_distribution_account_wrapper
-            .priority_fee_distribution_account
-            .validator_commission_bps,
-        merkle_root_upload_authority: pf_distribution_account_wrapper
-            .priority_fee_distribution_account
-            .merkle_root_upload_authority,
-    })
 }
