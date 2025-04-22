@@ -24,7 +24,7 @@ use solana_sdk::{
     account::{from_account, ReadableAccount},
     pubkey::Pubkey,
 };
-use solana_vote::vote_account::VoteAccount;
+use solana_vote::vote_account::{self, VoteAccount};
 use thiserror::Error;
 
 use crate::{
@@ -75,11 +75,12 @@ impl Display for StakeMetaGeneratorError {
     }
 }
 
-type VoteInfoAndTdas<'a> = Vec<(
-    (Pubkey, &'a VoteAccount),
-    Option<TipDistributionAccountWrapper>,
-    Option<PriorityFeeDistributionAccountWrapper>,
-)>;
+struct VoteAndDistributionWrappers<'a> {
+    pub vote_pubkey: Pubkey,
+    pub vote_account: &'a VoteAccount,
+    pub tip_distribution_wrapper: Option<TipDistributionAccountWrapper>,
+    pub priority_fee_distribution_wrapper: Option<PriorityFeeDistributionAccountWrapper>,
+}
 
 /// Creates a collection of [StakeMeta]'s from the given bank.
 #[allow(clippy::significant_drop_tightening)]
@@ -140,43 +141,37 @@ pub fn generate_stake_meta_collection(
         .checked_sub(block_builder_tips)
         .expect("tip_receiver_fee doesnt underflow");
 
-    // REVIEW: [cleanup] make a separate function to get the VoteInfoAndTdas from epoch_vote_accounts
-    let vote_pk_and_maybe_tdas: VoteInfoAndTdas<'_> = epoch_vote_accounts
-        .iter()
-        .map(|(vote_pubkey, (_total_stake, vote_account))| {
-            let tda =
-                get_distribution_account::<TipDistributionAccount, TipDistributionAccountWrapper>(
-                    bank,
-                    tip_distribution_program_id,
-                    vote_pubkey,
-                    Some(TipReceiverInfo {
-                        tip_receiver,
-                        tip_receiver_fee,
-                    }),
-                );
-            let pf_tda = get_distribution_account::<
-                PriorityFeeDistributionAccount,
-                PriorityFeeDistributionAccountWrapper,
-            >(
-                bank,
-                priority_fee_distribution_program_id,
-                vote_pubkey,
-                None,
-            );
 
-            Ok(((*vote_pubkey, vote_account), tda, pf_tda))
+    let vote_pk_and_maybe_tdas: Vec<VoteAndDistributionWrappers<'_>> = epoch_vote_accounts
+        .iter()
+        .map(|(vote_pubkey, (_, vote_account))| {
+            append_distribution_wrappers_to_vote_info(
+                bank,
+                vote_pubkey,
+                vote_account,
+                tip_distribution_program_id,
+                priority_fee_distribution_program_id,
+                tip_receiver,
+                tip_receiver_fee,
+            )
         })
         .collect::<Result<_, StakeMetaGeneratorError>>()?;
 
     // REVIEW: [cleanup] make a separate function for this loop
     let mut stake_metas = vec![];
-    for ((vote_pubkey, vote_account), maybe_tda, maybe_pf_tda) in vote_pk_and_maybe_tdas {
+    for VoteAndDistributionWrappers {
+        vote_pubkey,
+        vote_account,
+        tip_distribution_wrapper,
+        priority_fee_distribution_wrapper,
+    } in vote_pk_and_maybe_tdas
+    {
         if let Some(mut delegations) = voter_pubkey_to_delegations.get(&vote_pubkey).cloned() {
             let total_delegated = delegations.iter().fold(0u64, |sum, delegation| {
                 sum.checked_add(delegation.lamports_delegated).unwrap()
             });
 
-            let maybe_tip_distribution_meta = if let Some(tda) = maybe_tda {
+            let maybe_tip_distribution_meta = if let Some(tda) = tip_distribution_wrapper {
                 let actual_len = tda.account_data.data().len();
                 let expected_len = 8_usize.saturating_add(size_of::<TipDistributionAccount>());
                 if actual_len != expected_len {
@@ -193,23 +188,24 @@ pub fn generate_stake_meta_collection(
                 None
             };
 
-            let maybe_priority_fee_distribution_meta = if let Some(tda) = maybe_pf_tda {
-                let actual_len = tda.account_data.data().len();
-                let expected_len =
-                    8_usize.saturating_add(size_of::<PriorityFeeDistributionAccount>());
-                if actual_len != expected_len {
-                    warn!("len mismatch actual={actual_len}, expected={expected_len}");
-                }
-                let rent_exempt_amount =
-                    bank.get_minimum_balance_for_rent_exemption(tda.account_data.data().len());
+            let maybe_priority_fee_distribution_meta =
+                if let Some(tda) = priority_fee_distribution_wrapper {
+                    let actual_len = tda.account_data.data().len();
+                    let expected_len =
+                        8_usize.saturating_add(size_of::<PriorityFeeDistributionAccount>());
+                    if actual_len != expected_len {
+                        warn!("len mismatch actual={actual_len}, expected={expected_len}");
+                    }
+                    let rent_exempt_amount =
+                        bank.get_minimum_balance_for_rent_exemption(tda.account_data.data().len());
 
-                Some(pf_tip_distribution_account_from_tda_wrapper(
-                    tda,
-                    rent_exempt_amount,
-                )?)
-            } else {
-                None
-            };
+                    Some(pf_tip_distribution_account_from_tda_wrapper(
+                        tda,
+                        rent_exempt_amount,
+                    )?)
+                } else {
+                    None
+                };
 
             let vote_state = vote_account.vote_state();
             delegations.sort();
@@ -238,6 +234,46 @@ pub fn generate_stake_meta_collection(
         bank_hash: bank.hash().to_string(),
         epoch: bank.epoch(),
         slot: bank.slot(),
+    })
+}
+
+
+/// Given the bank and vote account info for a validator, pull the TipDistributionAccount and 
+/// PriorityFeeDistributionAccount information (if it exists)
+fn append_distribution_wrappers_to_vote_info<'a>(
+    bank: &Arc<Bank>,
+    vote_pubkey: &Pubkey,
+    vote_account: &'a VoteAccount,
+    tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
+    tip_receiver: Pubkey,
+    tip_receiver_fee: u64,
+) -> Result<VoteAndDistributionWrappers<'a>, StakeMetaGeneratorError> {
+    let tip_distribution_wrapper =
+        get_distribution_account::<TipDistributionAccount, TipDistributionAccountWrapper>(
+            bank,
+            tip_distribution_program_id,
+            vote_pubkey,
+            Some(TipReceiverInfo {
+                tip_receiver,
+                tip_receiver_fee,
+            }),
+        );
+    let priority_fee_distribution_wrapper = get_distribution_account::<
+        PriorityFeeDistributionAccount,
+        PriorityFeeDistributionAccountWrapper,
+    >(
+        bank,
+        priority_fee_distribution_program_id,
+        vote_pubkey,
+        None,
+    );
+
+    Ok(VoteAndDistributionWrappers {
+        vote_pubkey: *vote_pubkey,
+        vote_account,
+        tip_distribution_wrapper,
+        priority_fee_distribution_wrapper,
     })
 }
 
