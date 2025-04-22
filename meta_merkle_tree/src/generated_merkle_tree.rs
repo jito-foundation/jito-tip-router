@@ -310,61 +310,22 @@ impl TreeNode {
             .checked_add(1)
             .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
 
-        // REVIEW: [cleanup] Could wrap these PDA derivations
-
-        // Must match the seeds from `core::BaseRewardReceiver`. Cannot
-        // use `BaseRewardReceiver::find_program_address` as it would cause
-        // circular dependecies.
-        let base_reward_receiver = Pubkey::find_program_address(
-            &[
-                b"base_reward_receiver",
-                &ncn_address.to_bytes(),
-                &tip_router_target_epoch.to_le_bytes(),
-            ],
-            tip_router_program_id,
-        )
-        .0;
-
-        let (protocol_claim_status_pubkey, protocol_claim_status_bump) =
-            Pubkey::find_program_address(
-                &[
-                    CLAIM_STATUS_SEED,
-                    &base_reward_receiver.to_bytes(),
-                    &distribution_account_pubkey.to_bytes(),
-                ],
+        let mut tree_nodes = vec![
+            Self::generate_base_reward_node(
+                tip_router_program_id,
+                ncn_address,
+                tip_router_target_epoch,
+                distribution_account_pubkey,
                 distribution_program_id,
-            );
-
-        let mut tree_nodes = vec![Self {
-            claimant: base_reward_receiver,
-            claim_status_pubkey: protocol_claim_status_pubkey,
-            claim_status_bump: protocol_claim_status_bump,
-            staker_pubkey: Pubkey::default(),
-            withdrawer_pubkey: Pubkey::default(),
-            amount: protocol_fee_amount,
-            proof: None,
-        }];
-
-        let validator_claimant = stake_meta.validator_vote_account;
-        let (validator_claim_status_pubkey, validator_claim_status_bump) =
-            Pubkey::find_program_address(
-                &[
-                    CLAIM_STATUS_SEED,
-                    &stake_meta.validator_vote_account.to_bytes(),
-                    &distribution_account_pubkey.to_bytes(),
-                ],
+                protocol_fee_amount,
+            ),
+            Self::generate_validator_node(
+                &stake_meta.validator_vote_account,
+                distribution_account_pubkey,
                 distribution_program_id,
-            );
-
-        tree_nodes.push(Self {
-            claimant: validator_claimant,
-            claim_status_pubkey: validator_claim_status_pubkey,
-            claim_status_bump: validator_claim_status_bump,
-            staker_pubkey: Pubkey::default(),
-            withdrawer_pubkey: Pubkey::default(),
-            amount: validator_amount,
-            proof: None,
-        });
+                validator_amount,
+            ),
+        ];
 
         tree_nodes.extend(
             stake_meta
@@ -383,7 +344,7 @@ impl TreeNode {
                             &delegation.stake_account_pubkey.to_bytes(),
                             &distribution_account_pubkey.to_bytes(),
                         ],
-                        &TIP_DISTRIBUTION_ID,
+                        distribution_program_id,
                     );
 
                     Ok(Self {
@@ -400,6 +361,77 @@ impl TreeNode {
         );
 
         Ok(Some(tree_nodes))
+    }
+
+    /// Generates a TreeNode for the NCN's base reward receiver
+    fn generate_base_reward_node(
+        tip_router_program_id: &Pubkey,
+        ncn_address: &Pubkey,
+        epoch: u64,
+        distribution_account_pubkey: &Pubkey,
+        distribution_program_id: &Pubkey,
+        protocol_fee_amount: u64,
+    ) -> Self {
+        // Must match the seeds from `core::BaseRewardReceiver`. Cannot
+        // use `BaseRewardReceiver::find_program_address` as it would cause
+        // circular dependecies.
+        let base_reward_receiver = Pubkey::find_program_address(
+            &[
+                b"base_reward_receiver",
+                &ncn_address.to_bytes(),
+                &epoch.to_le_bytes(),
+            ],
+            tip_router_program_id,
+        )
+        .0;
+
+        let (protocol_claim_status_pubkey, protocol_claim_status_bump) =
+            Pubkey::find_program_address(
+                &[
+                    CLAIM_STATUS_SEED,
+                    &base_reward_receiver.to_bytes(),
+                    &distribution_account_pubkey.to_bytes(),
+                ],
+                distribution_program_id,
+            );
+
+        Self {
+            claimant: base_reward_receiver,
+            claim_status_pubkey: protocol_claim_status_pubkey,
+            claim_status_bump: protocol_claim_status_bump,
+            staker_pubkey: Pubkey::default(),
+            withdrawer_pubkey: Pubkey::default(),
+            amount: protocol_fee_amount,
+            proof: None,
+        }
+    }
+
+    /// Generates a TreeNode for a validator's vote account
+    fn generate_validator_node(
+        validator_vote_account: &Pubkey,
+        distribution_account_pubkey: &Pubkey,
+        distribution_program_id: &Pubkey,
+        amount: u64,
+    ) -> Self {
+        let (validator_claim_status_pubkey, validator_claim_status_bump) =
+            Pubkey::find_program_address(
+                &[
+                    CLAIM_STATUS_SEED,
+                    &validator_vote_account.to_bytes(),
+                    &distribution_account_pubkey.to_bytes(),
+                ],
+                distribution_program_id,
+            );
+
+        Self {
+            claimant: *validator_vote_account,
+            claim_status_pubkey: validator_claim_status_pubkey,
+            claim_status_bump: validator_claim_status_bump,
+            staker_pubkey: Pubkey::default(),
+            withdrawer_pubkey: Pubkey::default(),
+            amount,
+            proof: None,
+        }
     }
 
     fn hash(&self) -> Hash {
