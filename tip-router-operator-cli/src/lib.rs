@@ -7,7 +7,7 @@ pub mod arg_matches;
 pub mod backup_snapshots;
 pub mod claim;
 pub mod cli;
-pub mod distribution_wrapper;
+pub mod distribution_meta;
 pub mod load_and_process_ledger;
 pub mod process_epoch;
 pub mod rpc_utils;

@@ -100,25 +100,25 @@ pub struct TipReceiverInfo {
     pub tip_receiver_fee: u64,
 }
 
-pub fn get_distribution_meta<T, R>(
+pub fn get_distribution_meta<DistributionAccount, DistMeta>(
     bank: &Arc<Bank>,
     program_id: &Pubkey,
     vote_pubkey: &Pubkey,
     tip_receiver_info: Option<TipReceiverInfo>,
-) -> Option<R>
+) -> Option<DistMeta>
 where
-    T: AccountDeserialize,
-    R: DistributionMeta<DistributionAccountType = T>,
+    DistributionAccount: AccountDeserialize,
+    DistMeta: DistributionMeta<DistributionAccountType = DistributionAccount>,
 {
     let distribution_account_pubkey =
-        R::derive_distribution_account_address(program_id, vote_pubkey, bank.epoch());
+        DistMeta::derive_distribution_account_address(program_id, vote_pubkey, bank.epoch());
     bank.get_account(&distribution_account_pubkey).map_or_else(
         || None,
         |mut account_data| {
             // DAs may be funded with lamports and therefore exist in the bank, but would fail the
             // deserialization step if the buffer is yet to be allocated thru the init call to the
             // program.
-            T::try_deserialize(&mut account_data.data()).map_or_else(
+            DistributionAccount::try_deserialize(&mut account_data.data()).map_or_else(
                 |_| None,
                 |distribution_account| {
                     // [TIp Distribution ONLY] this snapshot might have tips that weren't claimed
@@ -136,14 +136,14 @@ where
                     }
 
                     let actual_len = account_data.data().len();
-                    let expected_len = 8_usize.saturating_add(size_of::<T>());
+                    let expected_len = 8_usize.saturating_add(size_of::<DistributionAccount>());
                     if actual_len != expected_len {
                         warn!("len mismatch actual={actual_len}, expected={expected_len}");
                     }
                     let rent_exempt_amount =
                         bank.get_minimum_balance_for_rent_exemption(account_data.data().len());
 
-                    R::new_from_account(
+                    DistMeta::new_from_account(
                         distribution_account,
                         account_data,
                         distribution_account_pubkey,

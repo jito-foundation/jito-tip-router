@@ -27,7 +27,7 @@ use thiserror::Error;
 
 use crate::{
     derive_tip_payment_pubkeys,
-    distribution_wrapper::{
+    distribution_meta::{
         get_distribution_meta, TipReceiverInfo, WrappedPriorityFeeDistributionMeta,
         WrappedTipDistributionMeta,
     },
