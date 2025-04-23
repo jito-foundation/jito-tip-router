@@ -18,6 +18,14 @@ use thiserror::Error;
 
 use crate::{merkle_tree::MerkleTree, utils::get_proof};
 
+pub fn mul_div(a: u64, b: u64, q: u64) -> Result<u64, MerkleRootGeneratorError> {
+    (a as u128)
+        .checked_mul(b as u128)
+        .and_then(|x| x.checked_div(q as u128))
+        .and_then(|x| u64::try_from(x).ok())
+        .ok_or(MerkleRootGeneratorError::CheckedMathError)
+}
+
 #[derive(Error, Debug)]
 pub enum MerkleRootGeneratorError {
     #[error("Account not found")]
@@ -269,27 +277,11 @@ impl TreeNode {
         validator_fee_bps: u16,
         epoch: u64,
     ) -> Result<Option<Vec<Self>>, MerkleRootGeneratorError> {
-        let protocol_fee_amount = u128::checked_div(
-            (total_tips as u128)
-                .checked_mul(protocol_fee_bps as u128)
-                .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
-            MAX_BPS as u128,
-        )
-        .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
-
-        let protocol_fee_amount = u64::try_from(protocol_fee_amount)
-            .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
+        let protocol_fee_amount: u64 = mul_div(total_tips, protocol_fee_bps, MAX_BPS as u64)?;
 
         // For Priority Fee Distributions, there is no validator amount, 0 is passed in for
         // validator_fee_bps
-        let validator_amount = u64::try_from(
-            (total_tips as u128)
-                .checked_mul(validator_fee_bps as u128)
-                .ok_or(MerkleRootGeneratorError::CheckedMathError)?
-                .checked_div(MAX_BPS as u128)
-                .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
-        )
-        .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
+        let validator_amount = mul_div(total_tips, validator_fee_bps as u64, MAX_BPS as u64)?;
 
         let (validator_amount, remaining_total_rewards) = validator_amount
             .checked_add(protocol_fee_amount)
@@ -318,6 +310,51 @@ impl TreeNode {
             .checked_add(1)
             .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
 
+        let mut tree_nodes = vec![
+            Self::generate_base_reward_node(
+                tip_router_program_id,
+                ncn_address,
+                tip_router_target_epoch,
+                distribution_account_pubkey,
+                distribution_program_id,
+                protocol_fee_amount,
+            ),
+            Self::generate_validator_node(
+                &stake_meta.validator_vote_account,
+                distribution_account_pubkey,
+                distribution_program_id,
+                validator_amount,
+            ),
+        ];
+
+        tree_nodes.extend(
+            stake_meta
+                .delegations
+                .iter()
+                .map(|delegation| {
+                    Self::generate_delegator_node(
+                        delegation,
+                        distribution_account_pubkey,
+                        distribution_program_id,
+                        stake_meta.total_delegated,
+                        remaining_total_rewards,
+                    )
+                })
+                .collect::<Result<Vec<Self>, MerkleRootGeneratorError>>()?,
+        );
+
+        Ok(Some(tree_nodes))
+    }
+
+    /// Generates a TreeNode for the NCN's base reward receiver
+    fn generate_base_reward_node(
+        tip_router_program_id: &Pubkey,
+        ncn_address: &Pubkey,
+        epoch: u64,
+        distribution_account_pubkey: &Pubkey,
+        distribution_program_id: &Pubkey,
+        protocol_fee_amount: u64,
+    ) -> Self {
         // Must match the seeds from `core::BaseRewardReceiver`. Cannot
         // use `BaseRewardReceiver::find_program_address` as it would cause
         // circular dependecies.
@@ -325,7 +362,7 @@ impl TreeNode {
             &[
                 b"base_reward_receiver",
                 &ncn_address.to_bytes(),
-                &tip_router_target_epoch.to_le_bytes(),
+                &epoch.to_le_bytes(),
             ],
             tip_router_program_id,
         )
@@ -341,7 +378,7 @@ impl TreeNode {
                 distribution_program_id,
             );
 
-        let mut tree_nodes = vec![Self {
+        Self {
             claimant: base_reward_receiver,
             claim_status_pubkey: protocol_claim_status_pubkey,
             claim_status_bump: protocol_claim_status_bump,
@@ -349,67 +386,69 @@ impl TreeNode {
             withdrawer_pubkey: Pubkey::default(),
             amount: protocol_fee_amount,
             proof: None,
-        }];
+        }
+    }
 
-        let validator_claimant = stake_meta.validator_vote_account;
+    /// Generates a TreeNode for a validator's vote account
+    fn generate_validator_node(
+        validator_vote_account: &Pubkey,
+        distribution_account_pubkey: &Pubkey,
+        distribution_program_id: &Pubkey,
+        amount: u64,
+    ) -> Self {
         let (validator_claim_status_pubkey, validator_claim_status_bump) =
             Pubkey::find_program_address(
                 &[
                     CLAIM_STATUS_SEED,
-                    &stake_meta.validator_vote_account.to_bytes(),
+                    &validator_vote_account.to_bytes(),
                     &distribution_account_pubkey.to_bytes(),
                 ],
                 distribution_program_id,
             );
 
-        tree_nodes.push(Self {
-            claimant: validator_claimant,
+        Self {
+            claimant: *validator_vote_account,
             claim_status_pubkey: validator_claim_status_pubkey,
             claim_status_bump: validator_claim_status_bump,
             staker_pubkey: Pubkey::default(),
             withdrawer_pubkey: Pubkey::default(),
-            amount: validator_amount,
+            amount,
             proof: None,
-        });
+        }
+    }
 
-        let total_delegated = stake_meta.total_delegated as u128;
-        tree_nodes.extend(
-            stake_meta
-                .delegations
-                .iter()
-                .map(|delegation| {
-                    let amount_delegated = delegation.lamports_delegated as u128;
-                    let reward_amount = u64::try_from(
-                        (amount_delegated.checked_mul(remaining_total_rewards as u128))
-                            .ok_or(MerkleRootGeneratorError::CheckedMathError)?
-                            .checked_div(total_delegated)
-                            .ok_or(MerkleRootGeneratorError::CheckedMathError)?,
-                    )
-                    .map_err(|_| MerkleRootGeneratorError::CheckedMathError)?;
+    /// Generates a TreeNode for a given Delegation
+    fn generate_delegator_node(
+        delegation: &Delegation,
+        distribution_account_pubkey: &Pubkey,
+        distribution_program_id: &Pubkey,
+        total_delegated: u64,
+        remaining_total_rewards: u64,
+    ) -> Result<Self, MerkleRootGeneratorError> {
+        let reward_amount = mul_div(
+            delegation.lamports_delegated,
+            remaining_total_rewards,
+            total_delegated,
+        )?;
 
-                    let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
-                        &[
-                            CLAIM_STATUS_SEED,
-                            &delegation.stake_account_pubkey.to_bytes(),
-                            &distribution_account_pubkey.to_bytes(),
-                        ],
-                        &TIP_DISTRIBUTION_ID,
-                    );
-
-                    Ok(Self {
-                        claimant: delegation.stake_account_pubkey,
-                        claim_status_pubkey,
-                        claim_status_bump,
-                        staker_pubkey: delegation.staker_pubkey,
-                        withdrawer_pubkey: delegation.withdrawer_pubkey,
-                        amount: reward_amount,
-                        proof: None,
-                    })
-                })
-                .collect::<Result<Vec<Self>, MerkleRootGeneratorError>>()?,
+        let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
+            &[
+                CLAIM_STATUS_SEED,
+                &delegation.stake_account_pubkey.to_bytes(),
+                &distribution_account_pubkey.to_bytes(),
+            ],
+            distribution_program_id,
         );
 
-        Ok(Some(tree_nodes))
+        Ok(Self {
+            claimant: delegation.stake_account_pubkey,
+            claim_status_pubkey,
+            claim_status_bump,
+            staker_pubkey: delegation.staker_pubkey,
+            withdrawer_pubkey: delegation.withdrawer_pubkey,
+            amount: reward_amount,
+            proof: None,
+        })
     }
 
     fn hash(&self) -> Hash {
