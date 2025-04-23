@@ -332,30 +332,13 @@ impl TreeNode {
                 .delegations
                 .iter()
                 .map(|delegation| {
-                    let reward_amount = mul_div(
-                        delegation.lamports_delegated,
-                        remaining_total_rewards,
-                        stake_meta.total_delegated,
-                    )?;
-
-                    let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
-                        &[
-                            CLAIM_STATUS_SEED,
-                            &delegation.stake_account_pubkey.to_bytes(),
-                            &distribution_account_pubkey.to_bytes(),
-                        ],
+                    Self::generate_delegator_node(
+                        delegation,
+                        distribution_account_pubkey,
                         distribution_program_id,
-                    );
-
-                    Ok(Self {
-                        claimant: delegation.stake_account_pubkey,
-                        claim_status_pubkey,
-                        claim_status_bump,
-                        staker_pubkey: delegation.staker_pubkey,
-                        withdrawer_pubkey: delegation.withdrawer_pubkey,
-                        amount: reward_amount,
-                        proof: None,
-                    })
+                        stake_meta.total_delegated,
+                        remaining_total_rewards,
+                    )
                 })
                 .collect::<Result<Vec<Self>, MerkleRootGeneratorError>>()?,
         );
@@ -432,6 +415,40 @@ impl TreeNode {
             amount,
             proof: None,
         }
+    }
+
+    /// Generates a TreeNode for a given Delegation
+    fn generate_delegator_node(
+        delegation: &Delegation,
+        distribution_account_pubkey: &Pubkey,
+        distribution_program_id: &Pubkey,
+        total_delegated: u64,
+        remaining_total_rewards: u64,
+    ) -> Result<Self, MerkleRootGeneratorError> {
+        let reward_amount = mul_div(
+            delegation.lamports_delegated,
+            remaining_total_rewards,
+            total_delegated,
+        )?;
+
+        let (claim_status_pubkey, claim_status_bump) = Pubkey::find_program_address(
+            &[
+                CLAIM_STATUS_SEED,
+                &delegation.stake_account_pubkey.to_bytes(),
+                &distribution_account_pubkey.to_bytes(),
+            ],
+            distribution_program_id,
+        );
+
+        Ok(Self {
+            claimant: delegation.stake_account_pubkey,
+            claim_status_pubkey,
+            claim_status_bump,
+            staker_pubkey: delegation.staker_pubkey,
+            withdrawer_pubkey: delegation.withdrawer_pubkey,
+            amount: reward_amount,
+            proof: None,
+        })
     }
 
     fn hash(&self) -> Hash {
