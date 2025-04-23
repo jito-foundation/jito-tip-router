@@ -52,6 +52,7 @@ pub fn get_bank_from_ledger(
     desired_slot: &Slot,
     save_snapshot: bool,
     snapshot_save_path: PathBuf,
+    cluster: &str,
 ) -> Arc<Bank> {
     let start_time = Instant::now();
 
@@ -62,6 +63,8 @@ pub fn get_bank_from_ledger(
         ("state", "validate_path_start", String),
         ("step", 0, i64),
         ("version", Version::default().to_string(), String),
+        ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+        "cluster" => cluster
     );
 
     // STEP 1: Load genesis config //
@@ -72,6 +75,7 @@ pub fn get_bank_from_ledger(
         ("state", "load_genesis_start", String),
         ("step", 1, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+        "cluster" => cluster
     );
 
     let genesis_config = match open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE) {
@@ -84,6 +88,7 @@ pub fn get_bank_from_ledger(
                 ("state", "load_genesis", String),
                 ("step", 1, i64),
                 ("error", format!("{:?}", e), String),
+                "cluster" => cluster,
             );
             panic!("Failed to load genesis config: {}", e); // TODO should panic here?
         }
@@ -97,6 +102,7 @@ pub fn get_bank_from_ledger(
         ("state", "load_blockstore_start", String),
         ("step", 2, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+        "cluster" => cluster
     );
 
     let access_type = AccessType::Secondary;
@@ -144,6 +150,7 @@ pub fn get_bank_from_ledger(
                 ("step", 2, i64),
                 ("error", error_str, String),
                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                "cluster" => cluster,
             );
             panic!("{}", error_str);
         }
@@ -157,6 +164,7 @@ pub fn get_bank_from_ledger(
                 ("step", 2, i64),
                 ("error", error_str, String),
                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                "cluster" => cluster,
             );
             panic!("{}", error_str);
         }
@@ -182,6 +190,7 @@ pub fn get_bank_from_ledger(
         ("state", "load_snapshot_config_start", String),
         ("step", 3, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+        "cluster" => cluster
     );
 
     let snapshot_config = SnapshotConfig {
@@ -228,6 +237,7 @@ pub fn get_bank_from_ledger(
                     ("step", 2, i64),
                     ("error", error_str, String),
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                    "cluster" => cluster,
                 );
                 panic!("{}", error_str);
             }
@@ -243,6 +253,7 @@ pub fn get_bank_from_ledger(
                     ("step", 2, i64),
                     ("error", error_str, String),
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                    "cluster" => cluster,
                 );
                 panic!("{}", error_str);
             }
@@ -268,6 +279,7 @@ pub fn get_bank_from_ledger(
             Some(full_snapshots_path),
             Some(incremental_snapshots_path),
             operator_address.clone(),
+            cluster,
         ) {
             Ok(res) => res,
             Err(e) => {
@@ -279,6 +291,7 @@ pub fn get_bank_from_ledger(
                     ("step", 4, i64),
                     ("error", format!("{:?}", e), String),
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                    "cluster" => cluster,
                 );
                 panic!("Failed to load bank forks: {}", e);
             }
@@ -359,6 +372,7 @@ pub fn get_bank_from_ledger(
         ("bank_hash", working_bank.hash().to_string(), String),
         ("step", 5, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+        "cluster" => cluster,
     );
 
     exit.store(true, Ordering::Relaxed);
@@ -384,6 +398,7 @@ pub fn get_bank_from_ledger(
                     ("step", 6, i64),
                     ("error", format!("{:?}", e), String),
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+                    "cluster" => cluster,
                 );
                 panic!("Failed to create snapshot: {}", e);
             }
@@ -412,6 +427,7 @@ pub fn get_bank_from_ledger(
         ("state", "get_bank_from_ledger_success", String),
         ("step", 6, i64),
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
+        "cluster" => cluster,
     );
     working_bank
 }
@@ -523,6 +539,7 @@ mod tests {
             &desired_slot,
             true,
             full_snapshots_path.clone(),
+            "mainnet",
         );
         assert_eq!(res.slot(), desired_slot);
         // Assert that the snapshot was created

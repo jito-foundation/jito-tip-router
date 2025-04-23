@@ -174,7 +174,8 @@ pub async fn loop_stages(
                                 ("status", "error", String),
                                 ("error", e.to_string(), String),
                                 ("state", "create_stake_meta", String),
-                                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                                ("duration_ms", start.elapsed().as_millis() as i64, i64),
+                                "cluster" => &cli.cluster,
                             );
                             panic!("{}", e.to_string());
                         }
@@ -188,6 +189,7 @@ pub async fn loop_stages(
                     tip_payment_program_id,
                     &cli.get_save_path(),
                     save_stages,
+                    &cli.cluster,
                 ));
                 // we should be able to safely drop the bank in this loop
                 bank = None;
@@ -217,6 +219,7 @@ pub async fn loop_stages(
                     protocol_fee_bps,
                     &cli.get_save_path(),
                     save_stages,
+                    &cli.cluster,
                 ));
 
                 stake_meta_collection = None;
@@ -237,6 +240,7 @@ pub async fn loop_stages(
                     // This is defaulted to true because the output file is required by the
                     //  task that sets TipDistributionAccounts' merkle roots
                     true,
+                    &cli.cluster,
                 );
                 datapoint_info!(
                     "tip_router_cli.process_epoch",
@@ -250,6 +254,7 @@ pub async fn loop_stages(
                         String
                     ),
                     ("version", Version::default().to_string(), String),
+                    "cluster" => &cli.cluster,
                 );
                 stage = OperatorState::CastVote;
             }
@@ -270,6 +275,7 @@ pub async fn loop_stages(
                     cli.submit_as_memo,
                     // We let the submit task handle setting merkle roots
                     false,
+                    &cli.cluster,
                 )
                 .await?;
                 stage = OperatorState::WaitForNextEpoch;

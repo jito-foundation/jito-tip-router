@@ -7,6 +7,7 @@ use ::{
     solana_metrics::{datapoint_info, set_host_id},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
+    std::process::Command,
     std::{str::FromStr, sync::Arc, time::Duration},
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
@@ -29,6 +30,21 @@ async fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
 
+    let hostname_cmd = Command::new("hostname")
+        .output()
+        .expect("Failed to execute hostname command");
+
+    let hostname = String::from_utf8_lossy(&hostname_cmd.stdout)
+        .trim()
+        .to_string();
+
+    let host_id = format!(
+        "tip-router-operator-{}-{}-{}",
+        &cli.cluster, &cli.region, &hostname
+    );
+
+    set_host_id(host_id.clone());
+
     // Ensure backup directory and
     cli.force_different_backup_snapshot_dir();
 
@@ -39,11 +55,11 @@ async fn main() -> Result<()> {
         1_800_000, // 30 minutes
     )?;
 
-    set_host_id(cli.operator_address.to_string());
     datapoint_info!(
         "tip_router_cli.version",
         ("operator_address", cli.operator_address.to_string(), String),
-        ("version", Version::default().to_string(), String)
+        ("version", Version::default().to_string(), String),
+        "cluster" => &cli.cluster,
     );
 
     // Will panic if the user did not set --save-path or the deprecated --meta-merkle-tree-dir
@@ -358,6 +374,7 @@ async fn main() -> Result<()> {
                 &tip_distribution_program_id,
                 cli.submit_as_memo,
                 set_merkle_roots,
+                &cli.cluster,
             )
             .await?;
         }
@@ -416,6 +433,7 @@ async fn main() -> Result<()> {
                 &tip_payment_program_id,
                 &save_path,
                 save,
+                &cli.cluster,
             );
         }
         Commands::CreateMerkleTreeCollection {
@@ -446,6 +464,7 @@ async fn main() -> Result<()> {
                 protocol_fee_bps,
                 &save_path,
                 save,
+                &cli.cluster,
             );
         }
         Commands::CreateMetaMerkleTree { epoch, save } => {
@@ -462,6 +481,7 @@ async fn main() -> Result<()> {
                 epoch,
                 &save_path,
                 save,
+                &cli.cluster,
             );
         }
     }

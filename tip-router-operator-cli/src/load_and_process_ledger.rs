@@ -118,6 +118,7 @@ pub enum LoadAndProcessLedgerError {
 //     })
 // }
 
+#[allow(clippy::too_many_arguments)]
 pub fn load_and_process_ledger(
     arg_matches: &ArgMatches,
     genesis_config: &GenesisConfig,
@@ -126,6 +127,7 @@ pub fn load_and_process_ledger(
     snapshot_archive_path: Option<PathBuf>,
     incremental_snapshot_archive_path: Option<PathBuf>,
     operator_address: String,
+    cluster: &str,
 ) -> Result<(Arc<RwLock<BankForks>>, Option<StartingSnapshotHashes>), LoadAndProcessLedgerError> {
     let bank_snapshots_dir = if blockstore.is_primary_access() {
         blockstore.ledger_path().join("snapshot")
@@ -404,6 +406,7 @@ pub fn load_and_process_ledger(
         ("operator", operator_address, String),
         ("state", "process_blockstore_from_root_start", String),
         ("step", 4, i64),
+        "cluster" => cluster,
     );
 
     let result = blockstore_processor::process_blockstore_from_root(

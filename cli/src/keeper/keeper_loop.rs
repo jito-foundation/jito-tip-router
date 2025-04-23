@@ -52,13 +52,14 @@ pub async fn check_and_timeout_error<T>(
     result: &Result<T>,
     error_timeout_ms: u64,
     keeper_epoch: u64,
+    cluster_name: &str,
 ) -> bool {
     if let Err(e) = result {
         let error = format!("{:?}", e);
         let message = format!("Error: [{}] \n{}\n\n", title, error);
 
         log::error!("{}", message);
-        emit_error(title, error, message, keeper_epoch).await;
+        emit_error(title, error, message, keeper_epoch, cluster_name).await;
         timeout_error(error_timeout_ms).await;
         true
     } else {
@@ -89,7 +90,7 @@ pub async fn startup_keeper(
     emit_metrics: bool,
     metrics_only: bool,
     run_migration: bool,
-    cluster_label: String,
+    cluster_name: String,
     region: String,
 ) -> Result<()> {
     let mut state: KeeperState = KeeperState::default();
@@ -115,7 +116,7 @@ pub async fn startup_keeper(
 
     set_host_id(format!(
         "tip-router-keeper_{}_{}_{}",
-        region, cluster_label, hostname
+        region, cluster_name, hostname
     ));
 
     loop {
@@ -130,6 +131,7 @@ pub async fn startup_keeper(
                 &result,
                 error_timeout_ms,
                 state.epoch,
+                &cluster_name,
             )
             .await
             {
@@ -177,13 +179,14 @@ pub async fn startup_keeper(
         // This includes validators info, epoch info, ticket states and more
         if emit_metrics {
             info!("\n\nB. Emit NCN Metrics - {}\n", current_keeper_epoch);
-            let result = emit_ncn_metrics(handler, start_of_loop).await;
+            let result = emit_ncn_metrics(handler, start_of_loop, &cluster_name).await;
 
             check_and_timeout_error(
                 "Emit NCN Metrics".to_string(),
                 &result,
                 error_timeout_ms,
                 state.epoch,
+                &cluster_name,
             )
             .await;
         }
@@ -200,6 +203,7 @@ pub async fn startup_keeper(
                 &result,
                 error_timeout_ms,
                 state.epoch,
+                &cluster_name,
             )
             .await
             {
@@ -219,6 +223,7 @@ pub async fn startup_keeper(
                     &result,
                     error_timeout_ms,
                     state.epoch,
+                    &cluster_name,
                 )
                 .await
                 {
@@ -238,6 +243,7 @@ pub async fn startup_keeper(
                 &result,
                 error_timeout_ms,
                 state.epoch,
+                &cluster_name,
             )
             .await
             {
@@ -268,6 +274,7 @@ pub async fn startup_keeper(
                     &result,
                     error_timeout_ms,
                     state.epoch,
+                    &cluster_name,
                 )
                 .await;
 
@@ -296,6 +303,7 @@ pub async fn startup_keeper(
                 &result,
                 error_timeout_ms,
                 state.epoch,
+                &cluster_name,
             )
             .await;
         }
@@ -323,6 +331,7 @@ pub async fn startup_keeper(
                 &result,
                 error_timeout_ms,
                 state.epoch,
+                &cluster_name,
             )
             .await
             {
@@ -333,13 +342,14 @@ pub async fn startup_keeper(
         // Emits metrics for the Epoch State
         if emit_metrics {
             info!("\n\nD. Emit Epoch Metrics - {}\n", current_keeper_epoch);
-            let result = emit_epoch_metrics(handler, state.epoch).await;
+            let result = emit_epoch_metrics(handler, state.epoch, &cluster_name).await;
 
             check_and_timeout_error(
                 "Emit NCN Metrics".to_string(),
                 &result,
                 error_timeout_ms,
                 state.epoch,
+                &cluster_name,
             )
             .await;
         }
@@ -358,6 +368,7 @@ pub async fn startup_keeper(
                 &result,
                 error_timeout_ms,
                 state.epoch,
+                &cluster_name,
             )
             .await
             {
@@ -365,6 +376,15 @@ pub async fn startup_keeper(
             }
 
             epoch_stall = !run_operations || result.unwrap();
+
+            emit_heartbeat(
+                tick,
+                run_operations,
+                emit_metrics,
+                run_migration,
+                &cluster_name,
+            )
+            .await;
 
             if epoch_stall {
                 info!("\n\nSTALL DETECTED FOR {}\n\n", current_keeper_epoch);
@@ -376,7 +396,6 @@ pub async fn startup_keeper(
             info!("\n\nF. Timeout - {}\n", current_keeper_epoch);
 
             timeout_keeper(loop_timeout_ms).await;
-            emit_heartbeat(tick, run_operations, emit_metrics, run_migration).await;
             tick += 1;
         }
     }
