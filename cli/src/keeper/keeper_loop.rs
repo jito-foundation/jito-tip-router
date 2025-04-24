@@ -377,6 +377,15 @@ pub async fn startup_keeper(
 
             epoch_stall = !run_operations || result.unwrap();
 
+            emit_heartbeat(
+                tick,
+                run_operations,
+                emit_metrics,
+                run_migration,
+                &cluster_name,
+            )
+            .await;
+
             if epoch_stall {
                 info!("\n\nSTALL DETECTED FOR {}\n\n", current_keeper_epoch);
             }
@@ -387,14 +396,6 @@ pub async fn startup_keeper(
             info!("\n\nF. Timeout - {}\n", current_keeper_epoch);
 
             timeout_keeper(loop_timeout_ms).await;
-            emit_heartbeat(
-                tick,
-                run_operations,
-                emit_metrics,
-                run_migration,
-                &cluster_name,
-            )
-            .await;
             tick += 1;
         }
     }

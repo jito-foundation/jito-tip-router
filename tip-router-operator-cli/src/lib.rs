@@ -202,10 +202,12 @@ pub fn load_bank_from_snapshot(cli: Cli, slot: u64, save_snapshot: bool) -> Arc<
         &slot,
         save_snapshot,
         backup_snapshots_dir,
+        &cli.cluster,
     )
 }
 
 // STAGE 2 CreateStakeMeta
+#[allow(clippy::too_many_arguments)]
 pub fn create_stake_meta(
     operator_address: String,
     epoch: u64,
@@ -214,6 +216,7 @@ pub fn create_stake_meta(
     tip_payment_program_id: &Pubkey,
     save_path: &Path,
     save: bool,
+    cluster: &str,
 ) -> StakeMetaCollection {
     let start = Instant::now();
 
@@ -233,7 +236,8 @@ pub fn create_stake_meta(
                 ("status", "error", String),
                 ("error", error_str, String),
                 ("state", "stake_meta_generation", String),
-                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                ("duration_ms", start.elapsed().as_millis() as i64, i64),
+                "cluster" => cluster,
             );
             panic!("{}", error_str);
         }
@@ -259,7 +263,8 @@ pub fn create_stake_meta(
         ("state", "create_stake_meta", String),
         ("step", 2, i64),
         ("epoch", stake_meta_coll.epoch, i64),
-        ("duration_ms", start.elapsed().as_millis() as i64, i64)
+        ("duration_ms", start.elapsed().as_millis() as i64, i64),
+        "cluster" => cluster,
     );
     stake_meta_coll
 }
@@ -275,6 +280,7 @@ pub fn create_merkle_tree_collection(
     protocol_fee_bps: u64,
     save_path: &Path,
     save: bool,
+    cluster: &str,
 ) -> GeneratedMerkleTreeCollection {
     let start = Instant::now();
 
@@ -296,7 +302,8 @@ pub fn create_merkle_tree_collection(
                 ("status", "error", String),
                 ("error", error_str, String),
                 ("state", "merkle_tree_generation", String),
-                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                ("duration_ms", start.elapsed().as_millis() as i64, i64),
+                "cluster" => cluster
             );
             panic!("{}", error_str);
         }
@@ -324,7 +331,8 @@ pub fn create_merkle_tree_collection(
                     ("status", "error", String),
                     ("error", error_str, String),
                     ("state", "merkle_root_file_write", String),
-                    ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                    ("duration_ms", start.elapsed().as_millis() as i64, i64),
+                    "cluster" => cluster
                 );
                 panic!("{:?}", e);
             }
@@ -336,7 +344,8 @@ pub fn create_merkle_tree_collection(
         ("state", "meta_merkle_tree_creation", String),
         ("step", 3, i64),
         ("epoch", epoch, i64),
-        ("duration_ms", start.elapsed().as_millis() as i64, i64)
+        ("duration_ms", start.elapsed().as_millis() as i64, i64),
+        "cluster" => cluster
     );
     merkle_tree_coll
 }
@@ -348,6 +357,7 @@ pub fn create_meta_merkle_tree(
     epoch: u64,
     save_path: &Path,
     save: bool,
+    cluster: &str,
 ) -> MetaMerkleTree {
     let start = Instant::now();
     let meta_merkle_tree =
@@ -362,7 +372,8 @@ pub fn create_meta_merkle_tree(
                     ("status", "error", String),
                     ("error", error_str, String),
                     ("state", "merkle_tree_generation", String),
-                    ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                    ("duration_ms", start.elapsed().as_millis() as i64, i64),
+                    "cluster" => cluster,
                 );
                 panic!("{}", error_str);
             }
@@ -388,7 +399,8 @@ pub fn create_meta_merkle_tree(
                     ("status", "error", String),
                     ("error", error_str, String),
                     ("state", "merkle_root_file_write", String),
-                    ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                    ("duration_ms", start.elapsed().as_millis() as i64, i64),
+                    "cluster" => cluster,
                 );
                 panic!("{:?}", e);
             }
@@ -401,7 +413,8 @@ pub fn create_meta_merkle_tree(
         ("state", "meta_merkle_tree_creation", String),
         ("step", 4, i64),
         ("epoch", epoch, i64),
-        ("duration_ms", start.elapsed().as_millis() as i64, i64)
+        ("duration_ms", start.elapsed().as_millis() as i64, i64),
+        "cluster" => cluster,
     );
 
     meta_merkle_tree
