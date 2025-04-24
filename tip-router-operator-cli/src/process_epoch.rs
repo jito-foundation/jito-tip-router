@@ -18,9 +18,9 @@ use tokio::time;
 use crate::{
     backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
     create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
-    load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
-    stake_meta_file_name, submit::submit_to_ncn, tip_router::get_ncn_config, Cli, OperatorState,
-    Version,
+    load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
+    read_stake_meta_collection, submit::submit_to_ncn, tip_router::get_ncn_config, Cli,
+    OperatorState, Version,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -197,15 +197,10 @@ pub async fn loop_stages(
                 stage = OperatorState::CreateMerkleTreeCollection;
             }
             OperatorState::CreateMerkleTreeCollection => {
-                let some_stake_meta_collection = match stake_meta_collection.to_owned() {
-                    Some(collection) => collection,
-                    None => {
-                        let file = cli
-                            .get_save_path()
-                            .join(stake_meta_file_name(epoch_to_process));
-                        StakeMetaCollection::new_from_file(&file)?
-                    }
-                };
+                let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
+                    || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
+                    |collection| collection,
+                );
                 let config =
                     get_ncn_config(&rpc_client, tip_router_program_id, ncn_address).await?;
                 // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
@@ -233,15 +228,10 @@ pub async fn loop_stages(
                 stage = OperatorState::CreateMetaMerkleTree;
             }
             OperatorState::CreateMetaMerkleTree => {
-                let some_merkle_tree_collection = match merkle_tree_collection.to_owned() {
-                    Some(collection) => collection,
-                    None => {
-                        let file = cli
-                            .get_save_path()
-                            .join(merkle_tree_collection_file_name(epoch_to_process));
-                        GeneratedMerkleTreeCollection::new_from_file(&file)?
-                    }
-                };
+                let some_merkle_tree_collection = merkle_tree_collection.to_owned().map_or_else(
+                    || read_merkle_tree_collection(epoch_to_process, &cli.get_save_path()),
+                    |collection| collection,
+                );
 
                 let merkle_tree = create_meta_merkle_tree(
                     cli.operator_address.clone(),
@@ -268,11 +258,9 @@ pub async fn loop_stages(
                 stage = OperatorState::CastVote;
             }
             OperatorState::CastVote => {
-                let meta_merkle_tree_path = PathBuf::from(format!(
-                    "{}/{}",
-                    cli.get_save_path().display(),
-                    meta_merkle_tree_file_name(epoch_to_process)
-                ));
+                let meta_merkle_tree_path =
+                    meta_merkle_tree_path(epoch_to_process, &cli.get_save_path());
+
                 let operator_address = Pubkey::from_str(&cli.operator_address)?;
                 submit_to_ncn(
                     &rpc_client,

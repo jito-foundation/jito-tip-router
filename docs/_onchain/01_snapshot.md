@@ -4,8 +4,6 @@ category: Jekyll
 layout: post
 ---
 
-# Snapshot
-
 ## Introduction
 
 In order to have fixed voting weights for consensus, a snapshot process is done to track the stake balances of all operators, and the composition of assets for each operator for reward payouts later in the epoch.

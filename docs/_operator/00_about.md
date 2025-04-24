@@ -1,10 +1,8 @@
 ---
-title: About
+title: Node Operator Client
 category: Jekyll
 layout: post
 ---
-
-# Node Operator Client
 
 ## Solana Epoch Snapshot
 

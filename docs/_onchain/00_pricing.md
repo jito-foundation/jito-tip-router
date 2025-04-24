@@ -4,8 +4,6 @@ category: Jekyll
 layout: post
 ---
 
-# Pricing
-
 ## Introduction
 
 The Pricing section of the Jito Tip Router defines the mechanisms for managing and updating price data for supported tokens and vaults within the system.

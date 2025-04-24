@@ -40,6 +40,9 @@ pub struct Cli {
     #[arg(long, env, help = "Path to save data (formerly meta-merkle-tree-dir)")]
     pub save_path: Option<PathBuf>,
 
+    #[arg(long, env, default_value = "/tmp/claim_tips_epoch.txt")]
+    pub claim_tips_epoch_filepath: PathBuf,
+
     #[arg(short, long, env, help = "Path to save data (deprecated)")]
     #[deprecated(since = "1.1.0", note = "use --save-path instead")]
     pub meta_merkle_tree_dir: Option<PathBuf>,
@@ -141,6 +144,9 @@ pub enum Commands {
 
         #[arg(long, env, default_value = "false")]
         claim_tips_metrics: bool,
+
+        #[arg(long, env, default_value_t = 3)]
+        claim_tips_epoch_lookback: u64,
 
         #[arg(long, env, default_value = "wait-for-next-epoch")]
         starting_stage: OperatorState,
