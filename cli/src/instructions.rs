@@ -73,11 +73,11 @@ use jito_vault_client::{
     types::WithdrawalAllocationMethod,
 };
 use jito_vault_core::{
-    config::Config as VaultConfig, vault::Vault, vault_ncn_ticket::VaultNcnTicket,
-    vault_operator_delegation::VaultOperatorDelegation,
+    burn_vault::BurnVault, config::Config as VaultConfig, vault::Vault,
+    vault_ncn_ticket::VaultNcnTicket, vault_operator_delegation::VaultOperatorDelegation,
     vault_update_state_tracker::VaultUpdateStateTracker,
 };
-use log::info;
+use log::{error, info, warn};
 use solana_client::rpc_config::RpcSendTransactionConfig;
 
 use solana_sdk::{
@@ -94,8 +94,11 @@ use solana_sdk::{
     system_program,
     transaction::Transaction,
 };
+use solana_transaction_status::parse_associated_token::spl_associated_token_id;
 use spl_associated_token_account::get_associated_token_address;
-use switchboard_on_demand_client::{CrossbarClient, FetchUpdateParams, PullFeed, QueueAccountData};
+use switchboard_on_demand_client::{
+    CrossbarClient, FetchUpdateParams, PullFeed, QueueAccountData, SPL_TOKEN_PROGRAM_ID,
+};
 use tokio::time::sleep;
 
 // --------------------- ADMIN ------------------------------
@@ -1852,6 +1855,10 @@ pub async fn distribute_ncn_operator_rewards(
         &ncn,
         epoch,
     );
+    warn!(
+        "ncn_reward_receiver: {} : {}",
+        ncn_reward_receiver, operator
+    );
 
     let (operator_snapshot, _, _) = OperatorSnapshot::find_program_address(
         &handler.tip_router_program_id,
@@ -2829,6 +2836,7 @@ pub async fn create_test_ncn(handler: &CliHandler) -> Result<()> {
     let keypair = handler.keypair()?;
 
     let base = Keypair::new();
+
     let (ncn, _, _) = Ncn::find_program_address(&handler.restaking_program_id, &base.pubkey());
 
     let (config, _, _) = RestakingConfig::find_program_address(&handler.restaking_program_id);
@@ -2949,16 +2957,22 @@ pub async fn create_and_add_test_vault(
     let (vault, _, _) = Vault::find_program_address(&handler.vault_program_id, &base.pubkey());
 
     let (vault_config, _, _) = VaultConfig::find_program_address(&handler.vault_program_id);
+    let (burn_vault, _, _) =
+        BurnVault::find_program_address(&handler.vault_program_id, &base.pubkey());
     let (restaking_config, _, _) =
         RestakingConfig::find_program_address(&handler.restaking_program_id);
 
     let all_operators = get_all_operators_in_ncn(handler).await?;
 
     // -------------- Create Mint -----------------
-    let admin_ata = spl_associated_token_account::get_associated_token_address(
+    let admin_st_token_account = spl_associated_token_account::get_associated_token_address(
         &keypair.pubkey(),
         &token_mint.pubkey(),
     );
+    let vault_st_token_account =
+        spl_associated_token_account::get_associated_token_address(&vault, &token_mint.pubkey());
+    let burn_vault_vrt_token_account =
+        spl_associated_token_account::get_associated_token_address(&burn_vault, &vrt_mint.pubkey());
 
     let create_mint_account_ix = create_account(
         &keypair.pubkey(),
@@ -2974,17 +2988,24 @@ pub async fn create_and_add_test_vault(
         None,
         9,
     )?;
-    let create_admin_ata_ix =
+    let create_admin_st_token_account_ix =
         spl_associated_token_account::instruction::create_associated_token_account_idempotent(
             &keypair.pubkey(),
             &keypair.pubkey(),
             &token_mint.pubkey(),
             &handler.token_program_id,
         );
+    let create_vault_st_token_account_ix =
+        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+            &keypair.pubkey(),
+            &vault,
+            &token_mint.pubkey(),
+            &handler.token_program_id,
+        );
     let mint_to_ix = spl_token::instruction::mint_to(
         &handler.token_program_id,
         &token_mint.pubkey(),
-        &admin_ata,
+        &admin_st_token_account,
         &keypair.pubkey(),
         &[],
         1_000_000,
@@ -2995,7 +3016,8 @@ pub async fn create_and_add_test_vault(
         &[
             create_mint_account_ix,
             initialize_mint_ix,
-            create_admin_ata_ix,
+            create_admin_st_token_account_ix,
+            create_vault_st_token_account_ix,
             mint_to_ix,
         ],
         &[&token_mint],
@@ -3013,10 +3035,16 @@ pub async fn create_and_add_test_vault(
         .vrt_mint(vrt_mint.pubkey())
         .st_mint(token_mint.pubkey())
         .reward_fee_bps(reward_fee_bps)
+        .admin_st_token_account(admin_st_token_account)
+        .vault_st_token_account(vault_st_token_account)
+        .burn_vault_vrt_token_account(burn_vault_vrt_token_account)
         .withdrawal_fee_bps(withdrawal_fee_bps)
+        .initialize_token_amount(1)
+        .burn_vault(burn_vault)
         .decimals(9)
         .deposit_fee_bps(deposit_fee_bps)
         .system_program(system_program::id())
+        .associated_token_program(spl_associated_token_id())
         .instruction();
 
     let create_vault_ata_ix =

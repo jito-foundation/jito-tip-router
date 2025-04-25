@@ -366,6 +366,8 @@ pub async fn startup_keeper(
 
             epoch_stall = !run_operations || result.unwrap();
 
+            emit_heartbeat(tick, run_operations, emit_metrics, run_migration).await;
+
             if epoch_stall {
                 info!("\n\nSTALL DETECTED FOR {}\n\n", current_keeper_epoch);
             }
