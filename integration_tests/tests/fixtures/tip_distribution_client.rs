@@ -1,14 +1,22 @@
+use anchor_lang::AccountDeserialize;
+use jito_tip_distribution_sdk::{
+    jito_tip_distribution::{self, accounts::ClaimStatus},
+    TipDistributionAccount,
+};
+use solana_program::{pubkey::Pubkey, system_instruction::transfer};
+use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
+use solana_sdk::{
+    commitment_config::CommitmentLevel,
+    native_token::{sol_to_lamports, LAMPORTS_PER_SOL},
+    signature::{Keypair, Signer},
+    transaction::Transaction,
+    vote::{
+        instruction::CreateVoteAccountConfig,
+        state::{VoteInit, VoteStateVersions},
+    },
+};
+
 use crate::fixtures::TestResult;
-use anchor_lang::AccountDeserialize; // Import this specific trait
-use dotenv::dotenv;
-use log::{error, info};
-use solana_client::rpc_client::RpcClient;
-use solana_sdk::native_token::lamports_to_sol;
-use solana_sdk::pubkey::Pubkey;
-use squads_mpl as MPL;
-use squads_mpl::state::Ms;
-use std::env;
-use std::str::FromStr;
 
 pub struct TipDistributionClient {
     banks_client: BanksClient,
