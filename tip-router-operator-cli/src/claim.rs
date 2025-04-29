@@ -16,7 +16,7 @@ use solana_sdk::{
     commitment_config::CommitmentConfig,
     compute_budget::ComputeBudgetInstruction,
     fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
-    native_token::LAMPORTS_PER_SOL,
+    native_token::{lamports_to_sol, LAMPORTS_PER_SOL},
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
     signer::Signer,
@@ -173,7 +173,7 @@ pub async fn claim_mev_tips_with_emit(
     match claim_mev_tips(
         &merkle_tree_coll,
         rpc_url.clone(),
-        rpc_url,
+        rpc_url.clone(),
         tip_distribution_program_id,
         tip_router_program_id,
         ncn,
@@ -219,7 +219,26 @@ pub async fn claim_mev_tips_with_emit(
         }
     }
 
+    let claimer_balance = get_claimer_balance(rpc_url, &keypair).await?;
+    datapoint_info!(
+        "claimer_info",
+        ("claimer", keypair.pubkey().to_string(), String),
+        ("epoch", epoch, i64),
+        ("lamport_balance", claimer_balance, i64),
+        ("sol_balance", lamports_to_sol(claimer_balance), f64),
+        "cluster" => &cli.cluster,
+    );
+
     Ok(())
+}
+
+pub async fn get_claimer_balance(
+    rpc_url: String,
+    keypair: &Arc<Keypair>,
+) -> Result<u64, ClaimMevError> {
+    let rpc_client = RpcClient::new(rpc_url);
+    let balance = rpc_client.get_balance(&keypair.pubkey()).await?;
+    Ok(balance)
 }
 
 #[allow(clippy::too_many_arguments)]
