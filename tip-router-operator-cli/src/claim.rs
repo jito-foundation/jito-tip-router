@@ -173,7 +173,7 @@ pub async fn claim_mev_tips_with_emit(
     match claim_mev_tips(
         &merkle_tree_coll,
         rpc_url.clone(),
-        rpc_url,
+        rpc_url.clone(),
         tip_distribution_program_id,
         tip_router_program_id,
         ncn,
@@ -232,7 +232,10 @@ pub async fn claim_mev_tips_with_emit(
     Ok(())
 }
 
-pub async fn get_claimer_balance(rpc_url: String, keypair: &Arc<Keypair>) -> Results<u64> {
+pub async fn get_claimer_balance(
+    rpc_url: String,
+    keypair: &Arc<Keypair>,
+) -> Result<u64, ClaimMevError> {
     let rpc_client = RpcClient::new(rpc_url);
     let balance = rpc_client.get_balance(&keypair.pubkey()).await?;
     Ok(balance)
