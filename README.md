@@ -1,4 +1,4 @@
-# Jito MEV Tip Distribution NCN
+# Jito Tip Router
 
 ## Testing Setup
 
@@ -43,7 +43,7 @@
 | Certora  | 2025-01-05 | [ac76352](security_audits/certora.pdf)                                 |
 | Offside  | 2024-10-25 | [443368a](security_audits/offside.pdf)                                 |
 
-# License
+## License
 
 Licensed under either of
 
