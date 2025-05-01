@@ -19,7 +19,7 @@ use crate::{
     backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
     create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
     load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
-    stake_meta_file_name, submit::submit_to_ncn, tip_router::get_ncn_config, Cli, OperatorState,
+    stake_meta_file_name, submit::submit_to_ncn, tip_router::get_ncn_config, OperatorState,
     Version, PRIORITY_FEE_MERKLE_TREE_START_EPOCH,
 };
 
