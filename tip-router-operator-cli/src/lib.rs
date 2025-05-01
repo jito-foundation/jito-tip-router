@@ -1,16 +1,17 @@
 #![allow(clippy::arithmetic_side_effects)]
-pub mod ledger_utils;
-pub mod stake_meta_generator;
-pub mod tip_router;
-pub use crate::cli::{Cli, Commands};
 pub mod arg_matches;
 pub mod backup_snapshots;
 pub mod claim;
 pub mod cli;
+pub mod ledger_utils;
 pub mod load_and_process_ledger;
 pub mod process_epoch;
 pub mod rpc_utils;
+pub mod stake_meta_generator;
 pub mod submit;
+pub mod tip_router;
+
+pub use crate::cli::{Cli, Commands};
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -36,6 +37,8 @@ use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::bank::Bank;
 use solana_sdk::{account::AccountSharedData, pubkey::Pubkey};
 use stake_meta_generator::generate_stake_meta_collection;
+
+pub const PRIORITY_FEE_MERKLE_TREE_START_EPOCH: u64 = 800;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Version {
@@ -84,17 +87,22 @@ pub fn meta_merkle_tree_file_name(epoch: u64) -> String {
 }
 
 // STAGE 1 LoadBankFromSnapshot
-pub fn load_bank_from_snapshot(cli: Cli, slot: u64, save_snapshot: bool) -> Arc<Bank> {
+pub fn load_bank_from_snapshot(
+    operator_address: String,
+    snapshot_paths: SnapshotPaths,
+    slot: u64,
+    save_snapshot: bool,
+) -> Arc<Bank> {
     let SnapshotPaths {
         ledger_path,
         account_paths,
         full_snapshots_path,
         incremental_snapshots_path: _,
         backup_snapshots_dir,
-    } = cli.get_snapshot_paths();
+    } = snapshot_paths;
 
     get_bank_from_ledger(
-        cli.operator_address,
+        operator_address,
         &ledger_path,
         account_paths,
         full_snapshots_path,

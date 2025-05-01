@@ -1,5 +1,5 @@
 [package]
-name = "meta-merkle-tree"
+name = "legacy-meta-merkle-tree"
 description = "Meta Merkle Tree"
 version = { workspace = true }
 authors = { workspace = true }

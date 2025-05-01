@@ -100,6 +100,7 @@ impl Cli {
     }
 }
 
+#[derive(Clone)]
 pub struct SnapshotPaths {
     pub ledger_path: PathBuf,
     pub account_paths: Vec<PathBuf>,

@@ -1,5 +1,5 @@
 [package]
-name = "tip-router-operator-cli"
+name = "legacy-tip-router-operator-cli"
 version = "1.2.0"
 edition = "2021"
 description = "CLI for Jito Tip Router"
@@ -23,7 +23,7 @@ jito-tip-router-client = { workspace = true }
 jito-tip-router-core = { workspace = true }
 jito-tip-router-program = { workspace = true }
 log = { workspace = true }
-meta-merkle-tree = { workspace = true }
+meta-merkle-tree = { package = "legacy-meta-merkle-tree", path = "../meta_merkle_tree" }
 rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
