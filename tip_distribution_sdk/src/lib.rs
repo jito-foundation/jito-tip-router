@@ -1,5 +1,7 @@
 #![allow(clippy::redundant_pub_crate)]
 use anchor_lang::{declare_program, prelude::Pubkey, solana_program::clock::Epoch};
+#[cfg(feature = "testnet")]
+use std::str::FromStr;
 
 declare_program!(jito_tip_distribution);
 pub use jito_tip_distribution::accounts::TipDistributionAccount;
@@ -62,6 +64,12 @@ pub fn derive_merkle_root_upload_authority_address(
     )
 }
 
+#[cfg(feature = "testnet")]
+pub fn id() -> Pubkey {
+    Pubkey::from_str("F2Zu7QZiTYUhPd7u9ukRVwxh7B71oA3NMJcHuCHc29P2").unwrap()
+}
+
+#[cfg(not(feature = "testnet"))]
 pub fn id() -> Pubkey {
     jito_tip_distribution::ID
 }

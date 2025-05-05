@@ -20,7 +20,7 @@ no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
 mainnet-beta = []
-testnet = []
+testnet = ["jito-tip-distribution-sdk/testnet", "jito-priority-fee-distribution-sdk/testnet"]
 devnet = []
 localhost = []
 
