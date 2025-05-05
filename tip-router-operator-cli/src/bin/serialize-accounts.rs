@@ -52,8 +52,7 @@ fn main() {
         bump: args.bump,
     };
 
-    let tip_distribution_program_id =
-        Pubkey::from_str("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7").unwrap();
+    let tip_distribution_program_id = jito_tip_distribution_sdk::id();
     let current_epoch = args.epoch_created_at; // Use the epoch from args or another source
     let tip_distribution_pubkey = derive_tip_distribution_account_address(
         &tip_distribution_program_id,
