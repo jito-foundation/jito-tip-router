@@ -45,7 +45,8 @@ async fn main() -> Result<()> {
 
     set_host_id(host_id.clone());
 
-    let try_catchup = tip_router_operator_cli::solana_cli::catchup(cli.localhost_port);
+    let try_catchup =
+        tip_router_operator_cli::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
     if let Err(e) = try_catchup {
         datapoint_error!(
             "tip_router_cli.main",

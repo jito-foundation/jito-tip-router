@@ -3,8 +3,9 @@ use solana_cli::cli::process_command;
 use solana_cli::cli::CliCommand;
 use solana_cli::cli::CliConfig;
 
-pub fn catchup(our_localhost_port: u16) -> Result<String> {
+pub fn catchup(rpc_url: String, our_localhost_port: u16) -> Result<String> {
     let mut catchup_config = CliConfig::default();
+    catchup_config.json_rpc_url = rpc_url;
     catchup_config.command = CliCommand::Catchup {
         node_json_rpc_url: None,
         node_pubkey: None,
