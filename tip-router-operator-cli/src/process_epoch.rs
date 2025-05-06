@@ -115,6 +115,11 @@ pub async fn loop_stages(
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
     let mut current_epoch_info = rpc_client.get_epoch_info().await?;
 
+    crate::catchup::catchup(
+        "https://jitolab-mainnet-7148.mainnet.rpcpool.com/828c00a9-3097-49da-8338-9ffbda7e406c",
+        8899,
+    );
+
     // Track runs that are starting right at the beginning of a new epoch
     let operator_address = cli.operator_address.clone();
     let mut stage = starting_stage;

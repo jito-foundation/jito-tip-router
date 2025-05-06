@@ -255,7 +255,10 @@ pub fn get_bank_from_ledger(
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
                     "cluster" => cluster,
                 );
-                panic!("{}", error_str);
+                crate::catchup::catchup(
+                    "https://jitolab-mainnet-7148.mainnet.rpcpool.com/828c00a9-3097-49da-8338-9ffbda7e406c",
+                    8899,
+                );
             }
         }
     }

@@ -1,4 +1,5 @@
 #![allow(clippy::arithmetic_side_effects)]
+pub mod catchup;
 pub mod ledger_utils;
 pub mod stake_meta_generator;
 pub mod tip_router;
