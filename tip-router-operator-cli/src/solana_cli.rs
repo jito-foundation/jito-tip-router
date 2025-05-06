@@ -15,7 +15,7 @@ pub fn catchup(rpc_url: String, our_localhost_port: u16) -> Result<String> {
     };
     let result = process_command(&catchup_config);
     if let Err(e) = result {
-        return Err(anyhow!("Failed to execute catchup command: {}", e));
+        return Err(anyhow!("Failed to execute catchup command: {}. Double check the localhost Solana RPC and the provided `localhost_port` argument.", e));
     } else {
         Ok(result.unwrap())
     }
