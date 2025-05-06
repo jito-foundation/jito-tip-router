@@ -16,7 +16,7 @@ pub fn initialize_ix(
     bump: u8,
 ) -> Instruction {
     Instruction {
-        program_id: jito_priority_fee_distribution::ID,
+        program_id: crate::id(),
         accounts: jito_priority_fee_distribution::client::accounts::Initialize {
             config,
             system_program,
@@ -46,7 +46,7 @@ pub fn initialize_priority_fee_distribution_account_ix(
     bump: u8,
 ) -> Instruction {
     Instruction {
-        program_id: jito_priority_fee_distribution::ID,
+        program_id: crate::id(),
         accounts:
             jito_priority_fee_distribution::client::accounts::InitializePriorityFeeDistributionAccount {
                 config,
@@ -79,7 +79,7 @@ pub fn claim_ix(
     bump: u8,
 ) -> Instruction {
     Instruction {
-        program_id: jito_priority_fee_distribution::ID,
+        program_id: crate::id(),
         accounts: jito_priority_fee_distribution::client::accounts::Claim {
             config,
             priority_fee_distribution_account,
@@ -108,7 +108,7 @@ pub fn upload_merkle_root_ix(
     max_num_nodes: u64,
 ) -> Instruction {
     Instruction {
-        program_id: jito_priority_fee_distribution::ID,
+        program_id: crate::id(),
         accounts: jito_priority_fee_distribution::client::accounts::UploadMerkleRoot {
             config,
             merkle_root_upload_authority,
@@ -130,7 +130,7 @@ pub fn close_claim_status_ix(
     claim_status_payer: Pubkey,
 ) -> Instruction {
     Instruction {
-        program_id: jito_priority_fee_distribution::ID,
+        program_id: crate::id(),
         accounts: jito_priority_fee_distribution::client::accounts::CloseClaimStatus {
             config,
             claim_status,
@@ -146,7 +146,7 @@ pub fn migrate_tda_merkle_root_upload_authority_ix(
     merkle_root_upload_config: Pubkey,
 ) -> Instruction {
     Instruction {
-        program_id: jito_priority_fee_distribution::ID,
+        program_id: crate::id(),
         accounts:
             jito_priority_fee_distribution::client::accounts::MigrateTdaMerkleRootUploadAuthority {
                 priority_fee_distribution_account,

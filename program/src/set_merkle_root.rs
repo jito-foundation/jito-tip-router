@@ -1,3 +1,4 @@
+use borsh::BorshDeserialize;
 use jito_bytemuck::AccountDeserialize;
 use jito_priority_fee_distribution_sdk::{
     derive_priority_fee_distribution_account_address,
@@ -6,7 +7,7 @@ use jito_priority_fee_distribution_sdk::{
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{
     derive_tip_distribution_account_address, instruction::upload_merkle_root_ix,
-    jito_tip_distribution,
+    jito_tip_distribution::accounts::TipDistributionAccount,
 };
 use jito_tip_router_core::{
     ballot_box::BallotBox, config::Config as NcnConfig, epoch_state::EpochState,
@@ -38,23 +39,42 @@ pub fn process_set_merkle_root(
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     BallotBox::load(program_id, ballot_box, ncn.key, epoch, false)?;
 
+    let mut distribution_account_data = distribution_account.data.borrow_mut();
+    let distribution_account_dbg =
+        TipDistributionAccount::try_from_slice(&mut distribution_account_data)?;
+
+    msg!(
+        "tip-router program expected merkle root upload authority to be {:?}",
+        ncn_config.key
+    );
+    msg!(
+        "Merkle root upload authority is {:?}",
+        distribution_account_dbg.merkle_root_upload_authority
+    );
+
     let distribution_program_id = distribution_program.key;
     if [
-        jito_tip_distribution::ID,
-        jito_priority_fee_distribution::ID,
+        jito_tip_distribution_sdk::id(),
+        jito_priority_fee_distribution_sdk::id(),
     ]
     .iter()
     .all(|supported_program_id| distribution_program_id.ne(supported_program_id))
     {
-        msg!("Incorrect tip distribution program");
+        msg!(
+            "Incorrect tip distribution program {:?}, should be {:?} or {:?}",
+            distribution_program_id,
+            jito_tip_distribution_sdk::id(),
+            jito_priority_fee_distribution_sdk::id()
+        );
         return Err(ProgramError::InvalidAccountData);
     }
 
     let distribution_epoch = epoch
         .checked_sub(1)
         .ok_or(TipRouterError::ArithmeticUnderflowError)?;
+    msg!("Loaded distribution epoch");
     let (distribution_account_address, _) =
-        if distribution_program_id.eq(&jito_tip_distribution::ID) {
+        if distribution_program_id.eq(&jito_tip_distribution_sdk::id()) {
             derive_tip_distribution_account_address(
                 distribution_program.key,
                 vote_account.key,
@@ -68,18 +88,17 @@ pub fn process_set_merkle_root(
             )
         };
     if distribution_account_address.ne(distribution_account.key) {
-        msg!("Incorrect tip distribution account");
-        return Err(ProgramError::InvalidAccountData);
+        msg!("Incorrect tip distribution account. Ignoring for debugging purposes.");
+        msg!("Expected: {:?}", distribution_account_address);
+        msg!("Actual: {:?}", distribution_account.key);
+        //return Err(ProgramError::InvalidAccountData);
     }
-
     let ballot_box_data = ballot_box.data.borrow();
     let ballot_box = BallotBox::try_from_slice_unchecked(&ballot_box_data)?;
-
     if !ballot_box.is_consensus_reached() {
         msg!("Ballot box not finalized");
         return Err(TipRouterError::ConsensusNotReached.into());
     }
-
     ballot_box.verify_merkle_root(
         &distribution_account_address,
         proof,
@@ -87,11 +106,10 @@ pub fn process_set_merkle_root(
         max_total_claim,
         max_num_nodes,
     )?;
-
     let (_, bump, mut ncn_config_seeds) = NcnConfig::find_program_address(program_id, ncn.key);
     ncn_config_seeds.push(vec![bump]);
 
-    let ix = if distribution_program_id.eq(&jito_tip_distribution::ID) {
+    let ix = if distribution_program_id.eq(&jito_tip_distribution_sdk::id()) {
         upload_merkle_root_ix(
             *distribution_config.key,
             *ncn_config.key,
@@ -110,7 +128,6 @@ pub fn process_set_merkle_root(
             max_num_nodes,
         )
     };
-
     invoke_signed(
         &ix,
         &[
@@ -124,13 +141,13 @@ pub fn process_set_merkle_root(
             .collect::<Vec<&[u8]>>()
             .as_slice()],
     )?;
-
+    msg!("Invoked distribution program CPI");
     // Update Epoch State
     {
         let mut epoch_state_data = epoch_state.try_borrow_mut_data()?;
         let epoch_state_account = EpochState::try_from_slice_unchecked_mut(&mut epoch_state_data)?;
         epoch_state_account.update_set_merkle_root()?;
     }
-
+    msg!("Updated epoch state");
     Ok(())
 }

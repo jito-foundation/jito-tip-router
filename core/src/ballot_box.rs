@@ -244,19 +244,19 @@ pub struct BallotBox {
     /// Slot when this ballot box was created
     slot_created: PodU64,
     /// Slot when consensus was reached
-    slot_consensus_reached: PodU64,
+    pub slot_consensus_reached: PodU64,
     /// Reserved space
     reserved: [u8; 128],
     /// Number of operators that have voted
-    operators_voted: PodU64,
+    pub operators_voted: PodU64,
     /// Number of unique ballots
-    unique_ballots: PodU64,
+    pub unique_ballots: PodU64,
     /// The ballot that got at least 66% of votes
-    winning_ballot: Ballot,
+    pub winning_ballot: Ballot,
     /// Operator votes
-    operator_votes: [OperatorVote; 256],
+    pub operator_votes: [OperatorVote; 256],
     /// Mapping of ballots votes to stake weight
-    ballot_tallies: [BallotTally; 256],
+    pub ballot_tallies: [BallotTally; 256],
 }
 
 impl Discriminator for BallotBox {

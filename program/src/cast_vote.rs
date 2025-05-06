@@ -7,7 +7,9 @@ use jito_tip_router_core::{
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
     error::TipRouterError,
+    ballot_box::{BallotTally, OperatorVote},
 };
+use jito_bytemuck::types::PodU64;
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
     program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar,
@@ -57,7 +59,17 @@ pub fn process_cast_vote(
     };
 
     let mut ballot_box_data = ballot_box.data.borrow_mut();
-    let ballot_box = BallotBox::try_from_slice_unchecked_mut(&mut ballot_box_data)?;
+    let mut ballot_box = BallotBox::try_from_slice_unchecked_mut(&mut ballot_box_data)?;
+
+    if false {
+    ballot_box.ballot_tallies = [BallotTally::default(); 256];
+    ballot_box.operator_votes = [OperatorVote::default(); 256];
+    ballot_box.unique_ballots = PodU64::from(0);
+    ballot_box.operators_voted = PodU64::from(0);
+    ballot_box.winning_ballot = Ballot::default();
+    ballot_box.slot_consensus_reached = PodU64::from(0);
+    return Ok(());
+    }
 
     let total_stake_weights = {
         let epoch_snapshot_data = epoch_snapshot.data.borrow();

@@ -29,8 +29,8 @@ pub fn process_claim_with_payer(
     let distibution_program_id = distribution_program.key;
 
     if [
-        jito_tip_distribution::ID,
-        jito_priority_fee_distribution::ID,
+        jito_tip_distribution_sdk::id(),
+        jito_priority_fee_distribution_sdk::id(),
     ]
     .iter()
     .all(|supported_program_id| distibution_program_id.ne(supported_program_id))
