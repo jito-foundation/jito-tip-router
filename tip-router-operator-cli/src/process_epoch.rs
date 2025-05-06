@@ -115,11 +115,6 @@ pub async fn loop_stages(
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
     let mut current_epoch_info = rpc_client.get_epoch_info().await?;
 
-    crate::catchup::catchup(
-        "https://jitolab-mainnet-7148.mainnet.rpcpool.com/828c00a9-3097-49da-8338-9ffbda7e406c",
-        8899,
-    );
-
     // Track runs that are starting right at the beginning of a new epoch
     let operator_address = cli.operator_address.clone();
     let mut stage = starting_stage;
@@ -158,6 +153,22 @@ pub async fn loop_stages(
                         incremental_snapshots_path: _,
                         backup_snapshots_dir,
                     } = cli.get_snapshot_paths();
+
+                    // Ensure that the local RPC node is caught up to the slot we want to process
+                    let try_catchup = crate::solana_cli::catchup(cli.localhost_port);
+                    if let Err(e) = try_catchup {
+                        datapoint_error!(
+                            "tip_router_cli.create_stake_meta",
+                            ("operator_address", operator_address, String),
+                            ("epoch", epoch_to_process, i64),
+                            ("status", "error", String),
+                            ("error", e.to_string(), String),
+                            ("state", "create_stake_meta", String),
+                            ("duration_ms", start.elapsed().as_millis() as i64, i64),
+                            "cluster" => &cli.cluster,
+                        );
+                        panic!("Failed to catch up: {}", e);
+                    }
 
                     // We can safely expect to use the backup_snapshots_dir as the full snapshot path because
                     //  _get_bank_from_snapshot_at_slot_ expects the snapshot at the exact `slot` to have

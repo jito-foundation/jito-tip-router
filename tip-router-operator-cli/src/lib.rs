@@ -1,5 +1,4 @@
 #![allow(clippy::arithmetic_side_effects)]
-pub mod catchup;
 pub mod ledger_utils;
 pub mod stake_meta_generator;
 pub mod tip_router;
@@ -11,6 +10,7 @@ pub mod cli;
 pub mod load_and_process_ledger;
 pub mod process_epoch;
 pub mod rpc_utils;
+pub mod solana_cli;
 pub mod submit;
 
 use std::fs;
