@@ -58,7 +58,7 @@ async fn main() -> Result<()> {
             ("state", "bootstrap", String),
             "cluster" => &cli.cluster,
         );
-        panic!("Failed to catch up: {}", e);
+        error!("Failed to catch up: {}", e);
     }
 
     if let Ok(command_output) = try_catchup {

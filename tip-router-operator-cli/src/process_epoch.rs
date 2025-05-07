@@ -169,7 +169,7 @@ pub async fn loop_stages(
                             ("duration_ms", start.elapsed().as_millis() as i64, i64),
                             "cluster" => &cli.cluster,
                         );
-                        panic!("Failed to catch up: {}", e);
+                        error!("Failed to catch up: {}", e);
                     }
 
                     if let Ok(command_output) = try_catchup {
