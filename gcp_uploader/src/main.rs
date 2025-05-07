@@ -1,6 +1,11 @@
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
+use env_logger::{
+    fmt::{Color, Formatter, Style, StyledValue},
+    Env,
+};
 use hostname::get as get_hostname_raw;
+use log::{error, info};
 use regex::Regex;
 use std::collections::HashSet;
 use std::path::Path;
@@ -39,6 +44,8 @@ async fn main() -> Result<()> {
     // Parse command line arguments using Clap
     let args = Args::parse();
 
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+
     // Verify directory exists
     let dir_path = Path::new(&args.directory);
     if !dir_path.exists() || !dir_path.is_dir() {
@@ -75,11 +82,11 @@ async fn main() -> Result<()> {
 
     let incremental_file_patterns = vec![&merkle_pattern, &stake_pattern];
 
-    println!(
+    info!(
         "Starting file monitor in {} with {} second polling interval",
         args.directory, args.interval
     );
-    println!("Looking for files matching patterns: '*_merkle_tree_collection.json' and '*_stake_meta_collection.json', and 'snapshot-*.tar.zst'");
+    info!("Looking for files matching patterns: '*_merkle_tree_collection.json' and '*_stake_meta_collection.json', and 'snapshot-*.tar.zst'");
 
     // Main monitoring loop
     loop {
@@ -94,11 +101,11 @@ async fn main() -> Result<()> {
         {
             Ok(uploaded) => {
                 if uploaded > 0 {
-                    println!("Uploaded {} new files", uploaded);
+                    info!("Uploaded {} new files", uploaded);
                 }
             }
             Err(e) => {
-                eprintln!("Error during scan/upload: {}", e);
+                error!("Error during scan/upload: {}", e);
             }
         }
 
@@ -113,11 +120,11 @@ async fn main() -> Result<()> {
         {
             Ok(uploaded) => {
                 if uploaded > 0 {
-                    println!("Uploaded {} new snapshot files", uploaded);
+                    info!("Uploaded {} new snapshot files", uploaded);
                 }
             }
             Err(e) => {
-                eprintln!("Error during scan/upload: {}", e);
+                error!("Error during scan/upload: {}", e);
             }
         }
 
@@ -170,7 +177,7 @@ async fn scan_and_upload_files(
         if let Some(epoch) = try_epoch {
             // We found a matching file, upload it
             if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname).await {
-                eprintln!("Failed to upload {}: {}", filename, e);
+                error!("Failed to upload {}: {}", filename, e);
                 continue;
             }
 
@@ -238,7 +245,7 @@ async fn scan_and_upload_snapshot_files(
                 .to_string();
             // We found a matching file, upload it
             if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname).await {
-                eprintln!("Failed to upload {}: {}", filename, e);
+                error!("Failed to upload {}: {}", filename, e);
                 continue;
             }
             // Mark as uploaded
@@ -261,8 +268,8 @@ async fn upload_file(
     // Create GCS object path (without bucket name)
     let filename = filename.replace("_", "-");
     let object_name = format!("{}/{}/{}", epoch, hostname, filename);
-    println!("Uploading file: {}", file_path.display());
-    println!("To GCS bucket: {}, object: {}", bucket_name, object_name);
+    info!("Uploading file: {}", file_path.display());
+    info!("To GCS bucket: {}, object: {}", bucket_name, object_name);
 
     // Check if object already exists
     let check_output = Command::new("/opt/gcloud/google-cloud-sdk/bin/gcloud")
@@ -278,7 +285,7 @@ async fn upload_file(
 
     // If exit code is 0, file exists
     if check_output.status.success() {
-        println!("File already exists in GCS. Skipping upload.");
+        info!("File already exists in GCS. Skipping upload.");
         return Ok(());
     }
 
@@ -303,7 +310,7 @@ async fn upload_file(
         ));
     }
 
-    println!("Upload successful for {}", filename);
+    info!("Upload successful for {}", filename);
     Ok(())
 }
 
