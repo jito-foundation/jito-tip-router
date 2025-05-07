@@ -45,6 +45,8 @@ async fn main() -> Result<()> {
 
     set_host_id(host_id.clone());
 
+    info!("Ensuring localhost RPC is caught up with remote validator...");
+
     let try_catchup =
         tip_router_operator_cli::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
     if let Err(e) = try_catchup {
