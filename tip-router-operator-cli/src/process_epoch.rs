@@ -154,7 +154,8 @@ pub async fn loop_stages(
                         backup_snapshots_dir,
                     } = cli.get_snapshot_paths();
 
-                    // Ensure that the local RPC node is caught up to the slot we want to process
+                    info!("Ensuring localhost RPC is caught up with remote validator...");
+
                     let try_catchup =
                         crate::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
                     if let Err(e) = try_catchup {
@@ -169,6 +170,10 @@ pub async fn loop_stages(
                             "cluster" => &cli.cluster,
                         );
                         panic!("Failed to catch up: {}", e);
+                    }
+
+                    if let Ok(command_output) = try_catchup {
+                        info!("{}", command_output);
                     }
 
                     // We can safely expect to use the backup_snapshots_dir as the full snapshot path because
