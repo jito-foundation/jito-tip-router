@@ -1,9 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
-use env_logger::{
-    fmt::{Color, Formatter, Style, StyledValue},
-    Env,
-};
+use env_logger::Env;
 use hostname::get as get_hostname_raw;
 use log::{error, info};
 use regex::Regex;
