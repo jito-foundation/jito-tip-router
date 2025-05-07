@@ -61,6 +61,10 @@ async fn main() -> Result<()> {
         panic!("Failed to catch up: {}", e);
     }
 
+    if let Ok(command_output) = try_catchup {
+        info!("{}", command_output);
+    }
+
     // Ensure backup directory and
     cli.force_different_backup_snapshot_dir();
 
