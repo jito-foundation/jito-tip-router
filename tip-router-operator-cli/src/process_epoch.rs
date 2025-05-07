@@ -155,7 +155,8 @@ pub async fn loop_stages(
                     } = cli.get_snapshot_paths();
 
                     // Ensure that the local RPC node is caught up to the slot we want to process
-                    let try_catchup = crate::solana_cli::catchup(cli.localhost_port);
+                    let try_catchup =
+                        crate::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
                     if let Err(e) = try_catchup {
                         datapoint_error!(
                             "tip_router_cli.create_stake_meta",
