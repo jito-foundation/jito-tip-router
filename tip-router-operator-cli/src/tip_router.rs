@@ -43,7 +43,7 @@ pub async fn cast_vote(
     meta_merkle_root: [u8; 32],
     tip_router_epoch: u64,
     submit_as_memo: bool,
-) -> EllipsisClientResult<Signature> {
+) -> Result<Signature> {
     let epoch_state =
         EpochState::find_program_address(tip_router_program_id, ncn, tip_router_epoch).0;
 
@@ -82,10 +82,9 @@ pub async fn cast_vote(
 
     info!("Submitting meta merkle root {:?}", meta_merkle_root);
 
-    let tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
-    client
-        .process_transaction(tx, &[payer, operator_voter])
-        .await
+    let mut tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
+    tx.sign(&[payer, operator_voter], client.fetch_latest_blockhash().await?);
+    Ok(client.send_and_confirm_transaction(&tx).await?)
 }
 
 #[allow(clippy::too_many_arguments)]
