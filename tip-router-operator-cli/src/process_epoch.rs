@@ -158,7 +158,7 @@ pub async fn loop_stages(
 
                     let try_catchup =
                         crate::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
-                    if let Err(e) = try_catchup {
+                    if let Err(ref e) = try_catchup {
                         datapoint_error!(
                             "tip_router_cli.create_stake_meta",
                             ("operator_address", operator_address, String),
