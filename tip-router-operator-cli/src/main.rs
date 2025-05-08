@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
 
     let try_catchup =
         tip_router_operator_cli::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
-    if let Err(e) = try_catchup {
+    if let Err(ref e) = &try_catchup {
         datapoint_error!(
             "tip_router_cli.main",
             ("operator_address", cli.operator_address, String),
@@ -61,7 +61,7 @@ async fn main() -> Result<()> {
         error!("Failed to catch up: {}", e);
     }
 
-    if let Ok(command_output) = try_catchup {
+    if let Ok(command_output) = &try_catchup {
         info!("{}", command_output);
     }
 
