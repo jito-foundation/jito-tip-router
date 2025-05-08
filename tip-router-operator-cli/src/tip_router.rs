@@ -82,8 +82,9 @@ pub async fn cast_vote(
 
     info!("Submitting meta merkle root {:?}", meta_merkle_root);
 
-    let mut tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
-    tx.sign(
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&payer.pubkey()),
         &[payer, operator_voter],
         client.fetch_latest_blockhash().await?,
     );
