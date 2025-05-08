@@ -4,14 +4,14 @@ use solana_sdk::commitment_config::CommitmentConfig;
 use std::{thread::sleep, time::Duration};
 
 pub fn catchup(rpc_url: String, our_localhost_port: u16) -> Result<String> {
-    let rpc_client = RpcClient::new(rpc_url.clone());
+    let rpc_client = RpcClient::new(rpc_url);
     let config = CommitmentConfig::default();
-    let node_json_rpc_url: Option<String> = Some(format!("http://localhost:{our_localhost_port}"));
+    let node_json_rpc_url = format!("http://localhost:{our_localhost_port}");
 
     let sleep_interval = Duration::from_secs(5);
     println!("Connecting...");
 
-    let node_client = RpcClient::new(node_json_rpc_url.unwrap());
+    let node_client = RpcClient::new(node_json_rpc_url);
     let node_pubkey = node_client.get_identity()?;
 
     let reported_node_pubkey = loop {
@@ -96,8 +96,9 @@ pub fn catchup(rpc_url: String, our_localhost_port: u16) -> Result<String> {
                 let average_node_slots_per_second =
                     total_node_slot_delta as f64 / total_sleep_interval.as_secs_f64();
                 let expected_finish_slot = (node_slot as f64
-                    + average_time_remaining * average_node_slots_per_second)
-                    .round();
+                    + average_time_remaining
+                        .mul_add(average_node_slots_per_second, node_slot as f64))
+                .round();
                 format!(
                     " (AVG: {:.1} slots/second, ETA: slot {} in {:?})",
                     average_catchup_slots_per_second,
