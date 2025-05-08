@@ -9,8 +9,10 @@ description = "A tool to continuously monitor and upload epoch-related files to 
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 cloud-storage = "0.11"
+env_logger = { workspace = true }
 futures-util = "0.3.31"
 hostname = "0.3"
+log = { workspace = true }
 regex = "1.10"
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
