@@ -30,7 +30,6 @@ serde_json = { workspace = true }
 solana-account-decoder = { workspace = true }
 solana-accounts-db = { workspace = true }
 solana-clap-utils = { workspace = true }
-solana-cli = { workspace = true }
 solana-client = { workspace = true }
 solana-core = { workspace = true }
 solana-geyser-plugin-manager = { workspace = true }
