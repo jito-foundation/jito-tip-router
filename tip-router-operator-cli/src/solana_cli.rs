@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use solana_client::{client_error::ClientErrorKind, rpc_client::RpcClient};
-use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
+use solana_sdk::commitment_config::CommitmentConfig;
 use std::{thread::sleep, time::Duration};
 
 pub fn catchup(rpc_url: String, our_localhost_port: u16) -> Result<String> {
