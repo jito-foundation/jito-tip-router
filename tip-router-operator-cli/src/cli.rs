@@ -53,6 +53,9 @@ pub struct Cli {
     #[arg(long, env, default_value = "local")]
     pub region: String,
 
+    #[arg(long, env, default_value = "8899")]
+    pub localhost_port: u16,
+
     #[command(subcommand)]
     pub command: Commands,
 }
