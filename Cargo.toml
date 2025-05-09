@@ -27,9 +27,9 @@ codegen-units = 1
 [workspace.package]
 version = "0.0.1"
 authors = ["Jito Network Maintainers <support@jito.network>"]
-repository = "https://github.com/jito-foundation/restaking"
+repository = "https://github.com/jito-foundation/jito-tip-router"
 homepage = "https://jito.network/"
-license = "Apache License 2.0"
+license = "MIT OR Apache-2.0"
 edition = "2021"
 readme = "README.md"
 
