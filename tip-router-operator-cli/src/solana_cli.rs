@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use log::info;
 use solana_client::{client_error::ClientErrorKind, rpc_client::RpcClient};
 use solana_sdk::commitment_config::CommitmentConfig;
 use std::{thread::sleep, time::Duration};
@@ -9,7 +10,7 @@ pub fn catchup(rpc_url: String, our_localhost_port: u16) -> Result<String> {
     let node_json_rpc_url = format!("http://localhost:{our_localhost_port}");
 
     let sleep_interval = Duration::from_secs(5);
-    println!("Connecting...");
+    info!("Connecting...");
 
     let node_client = RpcClient::new(node_json_rpc_url);
     let node_pubkey = node_client.get_identity()?;
@@ -19,7 +20,7 @@ pub fn catchup(rpc_url: String, our_localhost_port: u16) -> Result<String> {
             Ok(reported_node_pubkey) => break reported_node_pubkey,
             Err(err) => {
                 if let ClientErrorKind::Reqwest(err) = err.kind() {
-                    println!("Connection failed: {err}");
+                    info!("Connection failed: {err}");
                     sleep(sleep_interval);
                     continue;
                 }
@@ -108,7 +109,7 @@ pub fn catchup(rpc_url: String, our_localhost_port: u16) -> Result<String> {
             }
         };
 
-        println!(
+        info!(
             "{} slot(s) {} (us:{} them:{}){}",
             slot_distance.abs(),
             if slot_distance >= 0 {
