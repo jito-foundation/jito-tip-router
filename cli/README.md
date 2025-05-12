@@ -1,4 +1,40 @@
-# Tip Router CLI
+# Jito Tip Router CLI
+
+## Overview
+
+The Jito Tip Router CLI is a command-line tool that provides access to Jito Tip Router Program.
+
+## Features
+
+### Transaction Inspection
+
+You can preview transactions before sending them using the --print-tx flag.
+
+```bash
+jito-tip-router-cli -- --print-tx admin-create-config --keypair-path <KEYPAIR_PATH> --ncn <NCN_ADDRESS>
+```
+
+Example output:
+
+```bash
+------ IX ------
+
+RouterBmuRBkPUbgEDMtdvTZ75GBdSREZR5uGUxxxpb
+
+4mgyW8EGjLgq2gfPapQUYE3PGDtsUpYyuHDUj3tT3K6i  W
+RouterBmuRBkPUbgEDMtdvTZ75GBdSREZR5uGUxxxpb
+2V6Abua9BY6Ga8HUeLWSLXh4Gm6oKsn3GpTzP4eYMFqT
+2V6Abua9BY6Ga8HUeLWSLXh4Gm6oKsn3GpTzP4eYMFqT    S
+2V6Abua9BY6Ga8HUeLWSLXh4Gm6oKsn3GpTzP4eYMFqT
+JAAgQEBRyA5Jx6UGWsLNGicohE57cDFsZ58vT9MMDpd9  W
+11111111111111111111111111111111
+
+
+1M3AwPW4zJMasH4186d3fXfvLwMoZYHroPZVyZnhZR
+```
+
+When using this flag, the transaction will not be processed - only printed for inspection.
+Note that instruction data shown in the output is **base58** encoded, which provides a compact text representation of binary data.
 
 ## Official Accounts
 
@@ -19,7 +55,7 @@ cargo install --path ./cli --bin jito-tip-router-cli --locked
 Ensure it has been installed
 
 ```bash
-jito-tip-router-cli -- help
+jito-tip-router-cli --help
 ```
 
 Clone and Install the Restaking and Vault CLI in a different directory
