@@ -23,6 +23,7 @@ jito-tip-payment-sdk = { workspace = true }
 jito-tip-router-client = { workspace = true }
 jito-tip-router-core = { workspace = true }
 jito-tip-router-program = { workspace = true }
+legacy-tip-router-operator-cli = { package = "legacy-tip-router-operator-cli", path = "./repo-at-older-commit/tip-router-operator-cli" }
 log = { workspace = true }
 meta-merkle-tree = { workspace = true }
 rand = { workspace = true }
