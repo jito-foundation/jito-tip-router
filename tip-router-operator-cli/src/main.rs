@@ -82,6 +82,16 @@ async fn main() -> Result<()> {
         "cluster" => &cli.cluster,
     );
 
+    tokio::spawn(async move {
+        loop {
+            datapoint_info!(
+                "tip_router_cli.heartbeat",
+                ("host_id", host_id.clone(), String),
+            );
+            sleep(Duration::from_secs(60)).await;
+        }
+    });
+
     // Will panic if the user did not set --save-path or the deprecated --meta-merkle-tree-dir
     let save_path = cli.get_save_path();
 
