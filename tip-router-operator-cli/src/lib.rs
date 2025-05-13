@@ -10,6 +10,7 @@ pub mod cli;
 pub mod load_and_process_ledger;
 pub mod process_epoch;
 pub mod rpc_utils;
+pub mod solana_cli;
 pub mod submit;
 
 use std::fs;

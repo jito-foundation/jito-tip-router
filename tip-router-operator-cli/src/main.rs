@@ -4,7 +4,7 @@ use ::{
     clap::Parser,
     ellipsis_client::EllipsisClient,
     log::{error, info},
-    solana_metrics::{datapoint_info, set_host_id},
+    solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
     std::process::Command,
@@ -44,6 +44,26 @@ async fn main() -> Result<()> {
     );
 
     set_host_id(host_id.clone());
+
+    info!("Ensuring localhost RPC is caught up with remote validator...");
+
+    let try_catchup =
+        tip_router_operator_cli::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
+    if let Err(ref e) = &try_catchup {
+        datapoint_error!(
+            "tip_router_cli.main",
+            ("operator_address", cli.operator_address, String),
+            ("status", "error", String),
+            ("error", e.to_string(), String),
+            ("state", "bootstrap", String),
+            "cluster" => &cli.cluster,
+        );
+        error!("Failed to catch up: {}", e);
+    }
+
+    if let Ok(command_output) = &try_catchup {
+        info!("{}", command_output);
+    }
 
     // Ensure backup directory and
     cli.force_different_backup_snapshot_dir();

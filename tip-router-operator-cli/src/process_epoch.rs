@@ -154,6 +154,28 @@ pub async fn loop_stages(
                         backup_snapshots_dir,
                     } = cli.get_snapshot_paths();
 
+                    info!("Ensuring localhost RPC is caught up with remote validator...");
+
+                    let try_catchup =
+                        crate::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
+                    if let Err(ref e) = try_catchup {
+                        datapoint_error!(
+                            "tip_router_cli.create_stake_meta",
+                            ("operator_address", operator_address, String),
+                            ("epoch", epoch_to_process, i64),
+                            ("status", "error", String),
+                            ("error", e.to_string(), String),
+                            ("state", "create_stake_meta", String),
+                            ("duration_ms", start.elapsed().as_millis() as i64, i64),
+                            "cluster" => &cli.cluster,
+                        );
+                        error!("Failed to catch up: {}", e);
+                    }
+
+                    if let Ok(command_output) = try_catchup {
+                        info!("{}", command_output);
+                    }
+
                     // We can safely expect to use the backup_snapshots_dir as the full snapshot path because
                     //  _get_bank_from_snapshot_at_slot_ expects the snapshot at the exact `slot` to have
                     //  already been taken.
