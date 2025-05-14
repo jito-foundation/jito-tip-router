@@ -249,6 +249,17 @@ impl FeeConfig {
         updateable_fees.set_ncn_fee_bps(ncn_fee_group, value)
     }
 
+    // ------------------- PRIORITY FEE -------------------
+
+    pub fn set_priority_fee_distribution_fee_bps(
+        &mut self,
+        value: u16,
+        current_epoch: u64,
+    ) -> Result<(), TipRouterError> {
+        let updateable_fees = self.updatable_fees(current_epoch);
+        updateable_fees.set_priority_fee_distribution_fee_bps(value)
+    }
+
     // ------------------- WALLETS -------------------
 
     pub fn base_fee_wallet(&self, base_fee_group: BaseFeeGroup) -> Result<&Pubkey, TipRouterError> {
@@ -293,6 +304,7 @@ impl FeeConfig {
         ncn_fee_group: Option<NcnFeeGroup>,
         new_ncn_fee_bps: Option<u16>,
         current_epoch: u64,
+        priority_fee_distribution_fee_bps: Option<u16>,
     ) -> Result<(), TipRouterError> {
         // IF NEW CHANGES, COPY OVER CURRENT FEES
         {
@@ -316,6 +328,11 @@ impl FeeConfig {
 
         if let Some(new_base_fee_bps) = new_base_fee_bps {
             self.set_base_fee_bps(base_fee_group, new_base_fee_bps, current_epoch)?;
+        }
+
+        // PRIORITY DISTRIBUTION FEE
+        if let Some(fee_bps) = priority_fee_distribution_fee_bps {
+            self.set_priority_fee_distribution_fee_bps(fee_bps, current_epoch)?;
         }
 
         // NCN FEE
@@ -402,9 +419,9 @@ impl FeeConfig {
 pub struct Fees {
     activation_epoch: PodU64,
     /// TipRouter fee used to determine the TipRouter claimant amount for Priority Fee
-    /// Disitributions. The
+    /// Distributions.
     priority_fee_distribution_fee_bps: Fee,
-    reserved: [u8; 112],
+    reserved: [u8; 126],
     /// The groups and split of the Base fee. Currently the DAO base group (index one), is the only
     /// group and takes 100% of the base fees. 2.7% (the base fee) of total MEV tips gets directed
     /// to the DAO.
@@ -423,7 +440,7 @@ impl Fees {
         let mut fees = Self {
             activation_epoch: PodU64::from(epoch),
             priority_fee_distribution_fee_bps: Fee::default(),
-            reserved: [0; 112],
+            reserved: [0; 126],
             base_fee_groups_bps: [Fee::default(); BaseFeeGroup::FEE_GROUP_COUNT],
             ncn_fee_groups_bps: [Fee::default(); NcnFeeGroup::FEE_GROUP_COUNT],
         };
@@ -675,6 +692,7 @@ mod tests {
         const NEW_DEFAULT_NCN_FEE: u16 = 700;
         const NEW_NEW_DEFAULT_NCN_FEE: u16 = 900;
         const STARTING_EPOCH: u64 = 10;
+        const NEW_PRIORITY_DISTRIBUTION_FEE: u16 = 10;
 
         let dao_fee_wallet = Pubkey::new_unique();
         let new_dao_fee_wallet = Pubkey::new_unique();
@@ -697,6 +715,7 @@ mod tests {
                 None,
                 Some(NEW_DEFAULT_NCN_FEE),
                 STARTING_EPOCH,
+                Some(NEW_PRIORITY_DISTRIBUTION_FEE),
             )
             .unwrap();
 
@@ -728,6 +747,11 @@ mod tests {
             next_epoch_fees.ncn_fee_bps(default_ncn_fee_group).unwrap(),
             NEW_DEFAULT_NCN_FEE
         );
+        assert_eq!(current_fees.priority_fee_distribution_fee_bps.fee(), 0);
+        assert_eq!(
+            next_epoch_fees.priority_fee_distribution_fee_bps.fee(),
+            NEW_PRIORITY_DISTRIBUTION_FEE
+        );
 
         // test update again
         fee_config
@@ -739,6 +763,7 @@ mod tests {
                 None,
                 Some(NEW_NEW_DEFAULT_NCN_FEE),
                 STARTING_EPOCH + 1,
+                None,
             )
             .unwrap();
 
@@ -794,7 +819,7 @@ mod tests {
         .unwrap();
 
         fee_config
-            .update_fee_config(None, None, None, None, None, None, STARTING_EPOCH)
+            .update_fee_config(None, None, None, None, None, None, STARTING_EPOCH, None)
             .unwrap();
 
         assert_eq!(fee_config.block_engine_fee_bps(), BLOCK_ENGINE_FEE);
@@ -858,6 +883,7 @@ mod tests {
                     None,
                     None,
                     STARTING_EPOCH,
+                    None,
                 )
                 .unwrap();
 
@@ -891,6 +917,7 @@ mod tests {
                     Some(*ncn_fee_group),
                     Some(NEW_NCN_FEE),
                     STARTING_EPOCH,
+                    None,
                 )
                 .unwrap();
 
@@ -964,6 +991,7 @@ mod tests {
             None,
             None,
             STARTING_EPOCH,
+            None,
         );
 
         assert!(result.is_err());
@@ -976,6 +1004,7 @@ mod tests {
             None,
             None,
             STARTING_EPOCH,
+            None,
         );
 
         assert!(result.is_err());
@@ -988,6 +1017,7 @@ mod tests {
             None,
             Some(MAX_FEE_BPS + 1),
             STARTING_EPOCH,
+            None,
         );
 
         assert!(result.is_err());
