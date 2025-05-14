@@ -301,6 +301,7 @@ impl CliHandler {
                 new_base_fee_bps,
                 ncn_fee_group,
                 new_ncn_fee_bps,
+                new_priority_fee_distribution_fee_bps,
             } => {
                 admin_set_config_fees(
                     self,
@@ -310,6 +311,7 @@ impl CliHandler {
                     new_base_fee_bps,
                     ncn_fee_group,
                     new_ncn_fee_bps,
+                    new_priority_fee_distribution_fee_bps,
                 )
                 .await
             }

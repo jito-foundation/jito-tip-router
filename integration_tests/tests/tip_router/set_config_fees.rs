@@ -37,6 +37,7 @@ mod tests {
                 Some(ncn_fee_group),
                 Some(NEW_NCN_FEE),
                 &ncn_root,
+                None,
             )
             .await?;
 
@@ -100,6 +101,7 @@ mod tests {
                 None,
                 None,
                 &ncn_root,
+                None,
             )
             .await?;
 
@@ -114,6 +116,7 @@ mod tests {
                     None,
                     None,
                     &ncn_root,
+                    None,
                 )
                 .await?;
         }
@@ -129,6 +132,7 @@ mod tests {
                     Some(*group),
                     Some(NEW_NCN_FEE),
                     &ncn_root,
+                    None,
                 )
                 .await?;
         }

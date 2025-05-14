@@ -15,7 +15,7 @@ pub struct Fees {
     pub activation_epoch: u64,
     pub priority_fee_distribution_fee_bps: Fee,
     #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
-    pub reserved: [u8; 112],
+    pub reserved: [u8; 126],
     pub base_fee_groups_bps: [Fee; 8],
     pub ncn_fee_groups_bps: [Fee; 8],
 }

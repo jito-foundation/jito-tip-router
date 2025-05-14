@@ -355,6 +355,7 @@ impl TipRouterClient {
         ncn_fee_group: Option<NcnFeeGroup>,
         new_ncn_fee_bps: Option<u16>,
         ncn_root: &NcnRoot,
+        new_priority_fee_distribution_fee_bps: Option<u16>,
     ) -> TestResult<()> {
         let config_pda =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_root.ncn_pubkey).0;
@@ -368,6 +369,7 @@ impl TipRouterClient {
             ncn_fee_group,
             new_ncn_fee_bps,
             ncn_root,
+            new_priority_fee_distribution_fee_bps,
         )
         .await
     }
@@ -382,6 +384,7 @@ impl TipRouterClient {
         ncn_fee_group: Option<NcnFeeGroup>,
         new_ncn_fee_bps: Option<u16>,
         ncn_root: &NcnRoot,
+        new_priority_fee_distribution_fee_bps: Option<u16>,
     ) -> TestResult<()> {
         let ix = {
             let mut builder = AdminSetConfigFeesBuilder::new();
@@ -412,6 +415,10 @@ impl TipRouterClient {
 
             if let Some(new_ncn_fee_bps) = new_ncn_fee_bps {
                 builder.new_ncn_fee_bps(new_ncn_fee_bps);
+            }
+
+            if let Some(fee_bps) = new_priority_fee_distribution_fee_bps {
+                builder.new_priority_fee_distribution_fee_bps(fee_bps);
             }
 
             builder.instruction()

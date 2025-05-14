@@ -42,7 +42,7 @@ export function getFeesEncoder(): Encoder<FeesArgs> {
   return getStructEncoder([
     ['activationEpoch', getU64Encoder()],
     ['priorityFeeDistributionFeeBps', getFeeEncoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 112 })],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 126 })],
     ['baseFeeGroupsBps', getArrayEncoder(getFeeEncoder(), { size: 8 })],
     ['ncnFeeGroupsBps', getArrayEncoder(getFeeEncoder(), { size: 8 })],
   ]);
@@ -52,7 +52,7 @@ export function getFeesDecoder(): Decoder<Fees> {
   return getStructDecoder([
     ['activationEpoch', getU64Decoder()],
     ['priorityFeeDistributionFeeBps', getFeeDecoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 112 })],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 126 })],
     ['baseFeeGroupsBps', getArrayDecoder(getFeeDecoder(), { size: 8 })],
     ['ncnFeeGroupsBps', getArrayDecoder(getFeeDecoder(), { size: 8 })],
   ]);
