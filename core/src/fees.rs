@@ -1296,6 +1296,7 @@ mod tests {
 
     #[test]
     fn fees_struct_size_is_stable() {
+        // Checks that modified Fees struct has the same size as prev struct.
         #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
         #[repr(C)]
         pub struct OldFees {
