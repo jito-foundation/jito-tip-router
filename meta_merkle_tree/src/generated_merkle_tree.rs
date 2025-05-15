@@ -963,7 +963,7 @@ mod tests {
                 .maybe_priority_fee_distribution_meta
                 .unwrap()
                 .total_tips,
-            max_num_nodes: 4,
+            max_num_nodes: 3,
         };
 
         let tree_nodes = vec![
@@ -1064,7 +1064,7 @@ mod tests {
                 .maybe_priority_fee_distribution_meta
                 .unwrap()
                 .total_tips,
-            max_num_nodes: 4,
+            max_num_nodes: 3,
         };
 
         let expected_generated_merkle_trees = vec![gmt_0, gmt_1, gmt_2, gmt_3];
@@ -1079,7 +1079,6 @@ mod tests {
                             && gmt.distribution_program == expected_gmt.distribution_program
                     })
                     .unwrap();
-
                 assert_eq!(expected_gmt.max_num_nodes, actual_gmt.max_num_nodes);
                 assert_eq!(expected_gmt.max_total_claim, actual_gmt.max_total_claim);
                 assert_eq!(
@@ -1117,16 +1116,25 @@ mod tests {
             &tip_router_program_id,
         )
         .unwrap();
-        // Ensure that validator vote account exists as a claimant in the new merkle tree collection and identity account does not
         merkle_tree_collection
             .generated_merkle_trees
             .iter()
             .for_each(|gmt| {
-                assert!(gmt
-                    .tree_nodes
-                    .iter()
-                    .any(|node| node.claimant == validator_vote_account_0
-                        || node.claimant == validator_vote_account_1));
+                // Ensure that validator vote account exists as a claimant in the new merkle tree collection
+                // only for tip distribution program, and does not contain identity account as claimant.
+                if gmt.distribution_program == TIP_DISTRIBUTION_ID {
+                    assert!(gmt
+                        .tree_nodes
+                        .iter()
+                        .any(|node| node.claimant == validator_vote_account_0
+                            || node.claimant == validator_vote_account_1));
+                } else if gmt.distribution_program == PRIORITY_FEE_DISTRIBUTION_ID {
+                    assert!(!gmt
+                        .tree_nodes
+                        .iter()
+                        .any(|node| node.claimant == validator_vote_account_0
+                            || node.claimant == validator_vote_account_1));
+                }
                 assert!(
                     !(gmt
                         .tree_nodes
