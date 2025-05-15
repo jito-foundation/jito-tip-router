@@ -157,6 +157,19 @@ async fn main() -> Result<()> {
                 std::fs::create_dir_all(&backup_snapshots_dir)?;
             }
 
+            let operator_address = cli.operator_address.clone();
+            let cluster = cli.cluster.clone();
+            tokio::spawn(async move {
+                loop {
+                    datapoint_info!(
+                        "tip_router_cli.heartbeat",
+                        ("operator_address", operator_address, String),
+                        "cluster" => cluster,
+                    );
+                    sleep(Duration::from_secs(60)).await;
+                }
+            });
+
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
                 let keypair_arc = Arc::new(keypair);
