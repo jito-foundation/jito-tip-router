@@ -310,22 +310,24 @@ impl TreeNode {
             .checked_add(1)
             .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
 
-        let mut tree_nodes = vec![
-            Self::generate_base_reward_node(
-                tip_router_program_id,
-                ncn_address,
-                tip_router_target_epoch,
-                distribution_account_pubkey,
-                distribution_program_id,
-                protocol_fee_amount,
-            ),
-            Self::generate_validator_node(
+        let mut tree_nodes = vec![Self::generate_base_reward_node(
+            tip_router_program_id,
+            ncn_address,
+            tip_router_target_epoch,
+            distribution_account_pubkey,
+            distribution_program_id,
+            protocol_fee_amount,
+        )];
+
+        // Generate validator node only if fee is > 0.
+        if validator_amount > 0 {
+            tree_nodes.push(Self::generate_validator_node(
                 &stake_meta.validator_vote_account,
                 distribution_account_pubkey,
                 distribution_program_id,
                 validator_amount,
-            ),
-        ];
+            ))
+        }
 
         tree_nodes.extend(
             stake_meta
@@ -928,15 +930,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: validator_vote_account_0,
-                claim_status_pubkey: pf_claim_statuses[1].0,
-                claim_status_bump: pf_claim_statuses[1].1,
-                staker_pubkey: Pubkey::default(),
-                withdrawer_pubkey: Pubkey::default(),
-                amount: 0, // Validators won't need to claim from Priority Fee distributions
-                proof: None,
-            },
-            TreeNode {
                 claimant: stake_account_0,
                 claim_status_pubkey: pf_claim_statuses[2].0,
                 claim_status_bump: pf_claim_statuses[2].1,
@@ -1036,15 +1029,6 @@ mod tests {
                 staker_pubkey: Pubkey::default(),
                 withdrawer_pubkey: Pubkey::default(),
                 amount: 48_150_000, // 1.5% of 3_210_000_000
-                proof: None,
-            },
-            TreeNode {
-                claimant: validator_vote_account_1,
-                claim_status_pubkey: pf_claim_statuses[5].0,
-                claim_status_bump: pf_claim_statuses[5].1,
-                staker_pubkey: Pubkey::default(),
-                withdrawer_pubkey: Pubkey::default(),
-                amount: 0, // Validators won't need to claim from Priority Fee distributions
                 proof: None,
             },
             TreeNode {
