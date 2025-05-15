@@ -1291,4 +1291,19 @@ mod tests {
 
         assert!(precise_total.eq(&expected));
     }
+
+    use std::mem::size_of;
+
+    #[test]
+    fn fees_struct_size_is_stable() {
+        #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
+        #[repr(C)]
+        pub struct OldFees {
+            activation_epoch: PodU64,
+            reserved: [u8; 128],
+            base_fee_groups_bps: [Fee; 8],
+            ncn_fee_groups_bps: [Fee; 8],
+        }
+        assert_eq!(size_of::<OldFees>(), size_of::<Fees>(),);
+    }
 }
