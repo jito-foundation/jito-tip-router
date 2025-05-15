@@ -83,6 +83,7 @@ mod tests {
         // 10_000 total, base 5000 / 8 = 625
         const NEW_BASE_FEE: u16 = 625;
         const NEW_NCN_FEE: u16 = 625;
+        const NEW_PRIORITY_FEE_DISTRIBUTION_FEE: u16 = 225;
 
         let new_base_fee_wallet = Pubkey::new_unique();
 
@@ -101,7 +102,7 @@ mod tests {
                 None,
                 None,
                 &ncn_root,
-                None,
+                Some(NEW_PRIORITY_FEE_DISTRIBUTION_FEE),
             )
             .await?;
 
@@ -160,6 +161,11 @@ mod tests {
         for group in NcnFeeGroup::all_groups().iter() {
             assert_eq!(current_fees.ncn_fee_bps(*group).unwrap(), NEW_NCN_FEE);
         }
+
+        assert_eq!(
+            current_fees.priority_fee_distribution_fee_bps(),
+            NEW_PRIORITY_FEE_DISTRIBUTION_FEE as u64
+        );
 
         Ok(())
     }
