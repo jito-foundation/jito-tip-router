@@ -337,6 +337,7 @@ impl TestBuilder {
                 None,
                 Some(15),
                 &ncn_root,
+                None,
             )
             .await?;
 
@@ -368,6 +369,7 @@ impl TestBuilder {
                 None,
                 Some(15),
                 &ncn_root,
+                None,
             )
             .await?;
 
@@ -405,6 +407,7 @@ impl TestBuilder {
                 None,
                 Some(ncn_fee_bps),
                 &ncn_root,
+                None,
             )
             .await?;
 

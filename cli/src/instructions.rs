@@ -455,6 +455,7 @@ pub async fn admin_fund_account_payer(handler: &CliHandler, amount: f64) -> Resu
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn admin_set_config_fees(
     handler: &CliHandler,
     new_block_engine_fee_bps: Option<u16>,
@@ -463,6 +464,7 @@ pub async fn admin_set_config_fees(
     new_base_fee_bps: Option<u16>,
     ncn_fee_group: Option<u8>,
     new_ncn_fee_bps: Option<u16>,
+    new_priority_fee_distribution_fee_bps: Option<u16>,
 ) -> Result<()> {
     let keypair = handler.keypair()?;
     let ncn = *handler.ncn()?;
@@ -497,6 +499,10 @@ pub async fn admin_set_config_fees(
         ix.new_ncn_fee_bps(fee);
     }
 
+    if let Some(fee) = new_priority_fee_distribution_fee_bps {
+        ix.new_priority_fee_distribution_fee_bps(fee);
+    }
+
     send_and_log_transaction(
         handler,
         &[ix.instruction()],
@@ -510,6 +516,10 @@ pub async fn admin_set_config_fees(
             format!("New Base Fee BPS: {:?}", new_base_fee_bps),
             format!("NCN Fee Group: {:?}", ncn_fee_group),
             format!("New NCN Fee BPS: {:?}", new_ncn_fee_bps),
+            format!(
+                "New Priority Fee Distribution Fee BPS: {:?}",
+                new_priority_fee_distribution_fee_bps
+            ),
         ],
     )
     .await?;

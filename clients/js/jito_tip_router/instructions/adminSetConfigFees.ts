@@ -74,6 +74,7 @@ export type AdminSetConfigFeesInstructionData = {
   newBaseFeeBps: Option<number>;
   ncnFeeGroup: Option<number>;
   newNcnFeeBps: Option<number>;
+  newPriorityFeeDistributionFeeBps: Option<number>;
 };
 
 export type AdminSetConfigFeesInstructionDataArgs = {
@@ -83,6 +84,7 @@ export type AdminSetConfigFeesInstructionDataArgs = {
   newBaseFeeBps: OptionOrNullable<number>;
   ncnFeeGroup: OptionOrNullable<number>;
   newNcnFeeBps: OptionOrNullable<number>;
+  newPriorityFeeDistributionFeeBps: OptionOrNullable<number>;
 };
 
 export function getAdminSetConfigFeesInstructionDataEncoder(): Encoder<AdminSetConfigFeesInstructionDataArgs> {
@@ -95,6 +97,7 @@ export function getAdminSetConfigFeesInstructionDataEncoder(): Encoder<AdminSetC
       ['newBaseFeeBps', getOptionEncoder(getU16Encoder())],
       ['ncnFeeGroup', getOptionEncoder(getU8Encoder())],
       ['newNcnFeeBps', getOptionEncoder(getU16Encoder())],
+      ['newPriorityFeeDistributionFeeBps', getOptionEncoder(getU16Encoder())],
     ]),
     (value) => ({
       ...value,
@@ -112,6 +115,7 @@ export function getAdminSetConfigFeesInstructionDataDecoder(): Decoder<AdminSetC
     ['newBaseFeeBps', getOptionDecoder(getU16Decoder())],
     ['ncnFeeGroup', getOptionDecoder(getU8Decoder())],
     ['newNcnFeeBps', getOptionDecoder(getU16Decoder())],
+    ['newPriorityFeeDistributionFeeBps', getOptionDecoder(getU16Decoder())],
   ]);
 }
 
@@ -139,6 +143,7 @@ export type AdminSetConfigFeesInput<
   newBaseFeeBps: AdminSetConfigFeesInstructionDataArgs['newBaseFeeBps'];
   ncnFeeGroup: AdminSetConfigFeesInstructionDataArgs['ncnFeeGroup'];
   newNcnFeeBps: AdminSetConfigFeesInstructionDataArgs['newNcnFeeBps'];
+  newPriorityFeeDistributionFeeBps: AdminSetConfigFeesInstructionDataArgs['newPriorityFeeDistributionFeeBps'];
 };
 
 export function getAdminSetConfigFeesInstruction<

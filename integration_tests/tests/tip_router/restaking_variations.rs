@@ -43,6 +43,7 @@ mod tests {
                     None,
                     Some(1),
                     &test_ncn.ncn_root,
+                    None,
                 )
                 .await?;
 
@@ -171,6 +172,7 @@ mod tests {
                     None,
                     Some(1),
                     &test_ncn.ncn_root,
+                    None,
                 )
                 .await?;
 

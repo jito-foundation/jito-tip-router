@@ -310,22 +310,24 @@ impl TreeNode {
             .checked_add(1)
             .ok_or(MerkleRootGeneratorError::CheckedMathError)?;
 
-        let mut tree_nodes = vec![
-            Self::generate_base_reward_node(
-                tip_router_program_id,
-                ncn_address,
-                tip_router_target_epoch,
-                distribution_account_pubkey,
-                distribution_program_id,
-                protocol_fee_amount,
-            ),
-            Self::generate_validator_node(
+        let mut tree_nodes = vec![Self::generate_base_reward_node(
+            tip_router_program_id,
+            ncn_address,
+            tip_router_target_epoch,
+            distribution_account_pubkey,
+            distribution_program_id,
+            protocol_fee_amount,
+        )];
+
+        // Generate validator node only if fee is > 0.
+        if validator_amount > 0 {
+            tree_nodes.push(Self::generate_validator_node(
                 &stake_meta.validator_vote_account,
                 distribution_account_pubkey,
                 distribution_program_id,
                 validator_amount,
-            ),
-        ];
+            ))
+        }
 
         tree_nodes.extend(
             stake_meta
@@ -928,15 +930,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: validator_vote_account_0,
-                claim_status_pubkey: pf_claim_statuses[1].0,
-                claim_status_bump: pf_claim_statuses[1].1,
-                staker_pubkey: Pubkey::default(),
-                withdrawer_pubkey: Pubkey::default(),
-                amount: 0, // Validators won't need to claim from Priority Fee distributions
-                proof: None,
-            },
-            TreeNode {
                 claimant: stake_account_0,
                 claim_status_pubkey: pf_claim_statuses[2].0,
                 claim_status_bump: pf_claim_statuses[2].1,
@@ -970,7 +963,7 @@ mod tests {
                 .maybe_priority_fee_distribution_meta
                 .unwrap()
                 .total_tips,
-            max_num_nodes: 4,
+            max_num_nodes: 3,
         };
 
         let tree_nodes = vec![
@@ -1039,15 +1032,6 @@ mod tests {
                 proof: None,
             },
             TreeNode {
-                claimant: validator_vote_account_1,
-                claim_status_pubkey: pf_claim_statuses[5].0,
-                claim_status_bump: pf_claim_statuses[5].1,
-                staker_pubkey: Pubkey::default(),
-                withdrawer_pubkey: Pubkey::default(),
-                amount: 0, // Validators won't need to claim from Priority Fee distributions
-                proof: None,
-            },
-            TreeNode {
                 claimant: stake_account_2,
                 claim_status_pubkey: pf_claim_statuses[6].0,
                 claim_status_bump: pf_claim_statuses[6].1,
@@ -1080,7 +1064,7 @@ mod tests {
                 .maybe_priority_fee_distribution_meta
                 .unwrap()
                 .total_tips,
-            max_num_nodes: 4,
+            max_num_nodes: 3,
         };
 
         let expected_generated_merkle_trees = vec![gmt_0, gmt_1, gmt_2, gmt_3];
@@ -1095,7 +1079,6 @@ mod tests {
                             && gmt.distribution_program == expected_gmt.distribution_program
                     })
                     .unwrap();
-
                 assert_eq!(expected_gmt.max_num_nodes, actual_gmt.max_num_nodes);
                 assert_eq!(expected_gmt.max_total_claim, actual_gmt.max_total_claim);
                 assert_eq!(
@@ -1133,16 +1116,25 @@ mod tests {
             &tip_router_program_id,
         )
         .unwrap();
-        // Ensure that validator vote account exists as a claimant in the new merkle tree collection and identity account does not
         merkle_tree_collection
             .generated_merkle_trees
             .iter()
             .for_each(|gmt| {
-                assert!(gmt
-                    .tree_nodes
-                    .iter()
-                    .any(|node| node.claimant == validator_vote_account_0
-                        || node.claimant == validator_vote_account_1));
+                // Ensure that validator vote account exists as a claimant in the new merkle tree collection
+                // only for tip distribution program, and does not contain identity account as claimant.
+                if gmt.distribution_program == TIP_DISTRIBUTION_ID {
+                    assert!(gmt
+                        .tree_nodes
+                        .iter()
+                        .any(|node| node.claimant == validator_vote_account_0
+                            || node.claimant == validator_vote_account_1));
+                } else if gmt.distribution_program == PRIORITY_FEE_DISTRIBUTION_ID {
+                    assert!(!gmt
+                        .tree_nodes
+                        .iter()
+                        .any(|node| node.claimant == validator_vote_account_0
+                            || node.claimant == validator_vote_account_1));
+                }
                 assert!(
                     !(gmt
                         .tree_nodes

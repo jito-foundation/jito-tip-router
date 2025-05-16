@@ -228,6 +228,8 @@ pub enum ProgramCommand {
         ncn_fee_group: Option<u8>,
         #[arg(long, help = "New NCN fee in basis points")]
         new_ncn_fee_bps: Option<u16>,
+        #[arg(long, help = "New priority fee distribution fee in basis points")]
+        new_priority_fee_distribution_fee_bps: Option<u16>,
     },
     AdminSetNewAdmin {
         #[arg(long, help = "New admin address")]
