@@ -4,7 +4,7 @@ use ::{
     clap::Parser,
     ellipsis_client::EllipsisClient,
     log::{error, info},
-    solana_metrics::{datapoint_error, datapoint_info, datapoint_trace, set_host_id},
+    solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
     std::process::Command,
@@ -24,7 +24,6 @@ use ::{
     },
     tokio::{sync::Mutex, time::sleep},
 };
-
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -162,7 +161,7 @@ async fn main() -> Result<()> {
             let cluster = cli.cluster.clone();
             tokio::spawn(async move {
                 loop {
-                    datapoint_trace!(
+                    datapoint_info!(
                         "tip_router_cli.heartbeat",
                         ("operator_address", operator_address, String),
                         "cluster" => cluster,
