@@ -25,6 +25,7 @@ use ::{
     tokio::{sync::Mutex, time::sleep},
 };
 
+
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
@@ -166,7 +167,7 @@ async fn main() -> Result<()> {
                         ("operator_address", operator_address, String),
                         "cluster" => cluster,
                     );
-                    sleep(Duration::from_secs(60)).await;
+                    sleep(Duration::from_secs(cli.heartbeat_interval_seconds)).await;
                 }
             });
 
@@ -356,7 +357,7 @@ async fn main() -> Result<()> {
 
                         // Sleep before the next iteration
                         info!("Sleeping for 30 minutes before next claim cycle");
-                        sleep(Duration::from_secs(1800)).await;
+                        sleep(Duration::from_secs(900)).await;
                     }
                 });
             }
