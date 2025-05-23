@@ -56,6 +56,9 @@ pub struct Cli {
     #[arg(long, env, default_value = "8899")]
     pub localhost_port: u16,
 
+    #[arg(long, env, default_value = "900")]
+    pub heartbeat_interval_seconds: u64,
+
     #[command(subcommand)]
     pub command: Commands,
 }
