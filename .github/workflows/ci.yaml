@@ -37,7 +37,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt, clippy
-          toolchain: 1.81.0
+          toolchain: 1.85.0
       - name: Regenerate Shank IDL files
         run: cargo b --release -p jito-tip-router-shank-cli && ./target/release/jito-tip-router-shank-cli
       - name: Verify no changed files
@@ -83,7 +83,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt, clippy
-          toolchain: 1.81.0
+          toolchain: 1.85.0
       - name: Install cargo-sort from crates.io
         uses: baptiste0928/cargo-install@v3
         with:
