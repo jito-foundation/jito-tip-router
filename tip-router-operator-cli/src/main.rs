@@ -356,7 +356,7 @@ async fn main() -> Result<()> {
 
                         // Sleep before the next iteration
                         info!("Sleeping for 30 minutes before next claim cycle");
-                        sleep(Duration::from_secs(900)).await;
+                        sleep(Duration::from_secs(1800)).await;
                     }
                 });
             }
@@ -407,6 +407,7 @@ async fn main() -> Result<()> {
                 &tip_distribution_program_id,
                 cli.submit_as_memo,
                 set_merkle_roots,
+                cli.micro_lamports,
                 &cli.cluster,
             )
             .await?;

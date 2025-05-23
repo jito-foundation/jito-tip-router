@@ -20,6 +20,8 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
+use crate::priority_fees;
+
 /// Fetch and deserialize
 pub async fn get_ncn_config(
     client: &EllipsisClient,
@@ -43,6 +45,7 @@ pub async fn cast_vote(
     meta_merkle_root: [u8; 32],
     tip_router_epoch: u64,
     submit_as_memo: bool,
+    compute_unit_price: u64,
 ) -> Result<Signature> {
     let epoch_state =
         EpochState::find_program_address(tip_router_program_id, ncn, tip_router_epoch).0;
@@ -82,8 +85,15 @@ pub async fn cast_vote(
 
     info!("Submitting meta merkle root {:?}", meta_merkle_root);
 
+    // Configure instruction with priority fees
+    let instructions = priority_fees::configure_instruction(
+        ix,
+        compute_unit_price,
+        Some(1_400_000), // Default compute unit limit
+    );
+
     let tx = Transaction::new_signed_with_payer(
-        &[ix],
+        &instructions,
         Some(&payer.pubkey()),
         &[payer, operator_voter],
         client.fetch_latest_blockhash().await?,
