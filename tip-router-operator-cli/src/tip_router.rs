@@ -86,11 +86,7 @@ pub async fn cast_vote(
     info!("Submitting meta merkle root {:?}", meta_merkle_root);
 
     // Configure instruction with priority fees
-    let instructions = priority_fees::configure_instruction(
-        ix,
-        compute_unit_price,
-        Some(1_400_000), // Default compute unit limit
-    );
+    let instructions = priority_fees::configure_instruction(ix, compute_unit_price, None);
 
     let tx = Transaction::new_signed_with_payer(
         &instructions,

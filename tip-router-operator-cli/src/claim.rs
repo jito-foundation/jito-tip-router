@@ -38,7 +38,7 @@ use tokio::io::BufReader;
 use tokio::sync::Mutex;
 
 use crate::{
-    merkle_tree_collection_file_name,
+    merkle_tree_collection_file_name, priority_fees,
     rpc_utils::{get_batched_accounts, send_until_blockhash_expires},
     Cli,
 };
@@ -607,13 +607,12 @@ fn build_mev_claim_transactions(
     let transactions: Vec<Transaction> = instructions
         .into_iter()
         .map(|claim_ix| {
-            // helps get txs into block easier since default is 400k CUs
-            let compute_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(100_000);
-            let priority_fee_ix = ComputeBudgetInstruction::set_compute_unit_price(micro_lamports);
-            Transaction::new_with_payer(
-                &[compute_limit_ix, priority_fee_ix, claim_ix],
-                Some(&payer_pubkey),
-            )
+            let instructions = priority_fees::configure_instruction(
+                claim_ix,
+                micro_lamports,
+                Some(100_000), // helps get txs into block easier since default is 400k CUs
+            );
+            Transaction::new_with_payer(&instructions, Some(&payer_pubkey))
         })
         .collect();
 

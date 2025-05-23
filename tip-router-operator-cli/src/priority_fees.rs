@@ -3,10 +3,10 @@ use solana_sdk::{compute_budget::ComputeBudgetInstruction, instruction::Instruct
 pub fn configure_instruction(
     instruction: Instruction,
     compute_unit_price: u64,
-    compute_unit_limit: Option<u32>,
+    maybe_compute_unit_limit: Option<u32>,
 ) -> Vec<Instruction> {
     let mut instructions = Vec::new();
-    if let Some(limit) = compute_unit_limit {
+    if let Some(limit) = maybe_compute_unit_limit {
         instructions.push(ComputeBudgetInstruction::set_compute_unit_limit(limit));
     }
     instructions.push(ComputeBudgetInstruction::set_compute_unit_price(
