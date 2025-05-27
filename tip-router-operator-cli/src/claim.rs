@@ -14,7 +14,6 @@ use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{
     account::Account,
     commitment_config::CommitmentConfig,
-    compute_budget::ComputeBudgetInstruction,
     fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
     native_token::{lamports_to_sol, LAMPORTS_PER_SOL},
     pubkey::Pubkey,
