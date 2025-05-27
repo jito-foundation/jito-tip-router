@@ -59,7 +59,7 @@ pub async fn submit_recent_epochs_to_ncn(
             tip_distribution_program_id,
             cli_args.submit_as_memo,
             set_merkle_roots,
-            cli_args.micro_lamports,
+            cli_args.vote_microlamports,
             &cli_args.cluster,
         )
         .await

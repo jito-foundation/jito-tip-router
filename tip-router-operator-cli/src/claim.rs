@@ -179,7 +179,7 @@ pub async fn claim_mev_tips_with_emit(
         ncn,
         &keypair,
         max_loop_duration,
-        cli.micro_lamports,
+        cli.claim_microlamports,
         file_path,
         file_mutex,
         &cli.operator_address,

@@ -33,9 +33,13 @@ pub struct Cli {
     #[arg(long, env, default_value = "false")]
     pub submit_as_memo: bool,
 
-    /// The price to pay for priority fee
+    /// The price to pay for priority fee when claiming tips
     #[arg(long, env, default_value_t = 1)]
-    pub micro_lamports: u64,
+    pub claim_microlamports: u64,
+
+    /// The price to pay for priority fee when voting
+    #[arg(long, env, default_value_t = 1)]
+    pub vote_microlamports: u64,
 
     #[arg(long, env, help = "Path to save data (formerly meta-merkle-tree-dir)")]
     pub save_path: Option<PathBuf>,

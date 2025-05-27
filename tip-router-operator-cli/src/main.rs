@@ -407,7 +407,7 @@ async fn main() -> Result<()> {
                 &tip_distribution_program_id,
                 cli.submit_as_memo,
                 set_merkle_roots,
-                cli.micro_lamports,
+                cli.vote_microlamports,
                 &cli.cluster,
             )
             .await?;

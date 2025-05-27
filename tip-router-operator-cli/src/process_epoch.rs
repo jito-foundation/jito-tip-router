@@ -294,7 +294,7 @@ pub async fn loop_stages(
                     cli.submit_as_memo,
                     // We let the submit task handle setting merkle roots
                     false,
-                    cli.micro_lamports,
+                    cli.vote_microlamports,
                     &cli.cluster,
                 )
                 .await?;
