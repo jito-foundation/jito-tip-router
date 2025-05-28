@@ -94,7 +94,9 @@ async fn main() -> Result<()> {
         full_snapshots_path: {:?}
         snapshot_output_dir: {}
         backup_snapshots_dir: {}
-        save_path: {}",
+        save_path: {},
+        vote_microlamports: {}
+        claim_microlamports: {}",
         cli.keypair_path,
         cli.operator_address,
         cli.rpc_url,
@@ -103,6 +105,8 @@ async fn main() -> Result<()> {
         cli.snapshot_output_dir.display(),
         cli.backup_snapshots_dir.display(),
         save_path.display(),
+        &cli.vote_microlamports,
+        &cli.claim_microlamports,
     );
 
     cli.create_save_path();
