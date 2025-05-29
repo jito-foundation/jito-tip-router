@@ -4,7 +4,7 @@ use ::{
     clap::Parser,
     ellipsis_client::EllipsisClient,
     log::{error, info},
-    solana_metrics::{datapoint_error, datapoint_info, datapoint_trace, set_host_id},
+    solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
     std::process::Command,
@@ -94,7 +94,9 @@ async fn main() -> Result<()> {
         full_snapshots_path: {:?}
         snapshot_output_dir: {}
         backup_snapshots_dir: {}
-        save_path: {}",
+        save_path: {},
+        vote_microlamports: {}
+        claim_microlamports: {}",
         cli.keypair_path,
         cli.operator_address,
         cli.rpc_url,
@@ -103,6 +105,8 @@ async fn main() -> Result<()> {
         cli.snapshot_output_dir.display(),
         cli.backup_snapshots_dir.display(),
         save_path.display(),
+        &cli.vote_microlamports,
+        &cli.claim_microlamports,
     );
 
     cli.create_save_path();
@@ -161,12 +165,12 @@ async fn main() -> Result<()> {
             let cluster = cli.cluster.clone();
             tokio::spawn(async move {
                 loop {
-                    datapoint_trace!(
+                    datapoint_info!(
                         "tip_router_cli.heartbeat",
                         ("operator_address", operator_address, String),
                         "cluster" => cluster,
                     );
-                    sleep(Duration::from_secs(60)).await;
+                    sleep(Duration::from_secs(cli.heartbeat_interval_seconds)).await;
                 }
             });
 
@@ -407,6 +411,7 @@ async fn main() -> Result<()> {
                 &tip_distribution_program_id,
                 cli.submit_as_memo,
                 set_merkle_roots,
+                cli.vote_microlamports,
                 &cli.cluster,
             )
             .await?;

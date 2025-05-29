@@ -14,7 +14,6 @@ use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{
     account::Account,
     commitment_config::CommitmentConfig,
-    compute_budget::ComputeBudgetInstruction,
     fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
     native_token::{lamports_to_sol, LAMPORTS_PER_SOL},
     pubkey::Pubkey,
@@ -38,7 +37,7 @@ use tokio::io::BufReader;
 use tokio::sync::Mutex;
 
 use crate::{
-    merkle_tree_collection_file_name,
+    merkle_tree_collection_file_name, priority_fees,
     rpc_utils::{get_batched_accounts, send_until_blockhash_expires},
     Cli,
 };
@@ -179,7 +178,7 @@ pub async fn claim_mev_tips_with_emit(
         ncn,
         &keypair,
         max_loop_duration,
-        cli.micro_lamports,
+        cli.claim_microlamports,
         file_path,
         file_mutex,
         &cli.operator_address,
@@ -607,13 +606,12 @@ fn build_mev_claim_transactions(
     let transactions: Vec<Transaction> = instructions
         .into_iter()
         .map(|claim_ix| {
-            // helps get txs into block easier since default is 400k CUs
-            let compute_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(100_000);
-            let priority_fee_ix = ComputeBudgetInstruction::set_compute_unit_price(micro_lamports);
-            Transaction::new_with_payer(
-                &[compute_limit_ix, priority_fee_ix, claim_ix],
-                Some(&payer_pubkey),
-            )
+            let instructions = priority_fees::configure_instruction(
+                claim_ix,
+                micro_lamports,
+                Some(100_000), // helps get txs into block easier since default is 400k CUs
+            );
+            Transaction::new_with_payer(&instructions, Some(&payer_pubkey))
         })
         .collect();
 

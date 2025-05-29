@@ -88,6 +88,7 @@ jobs:
         uses: baptiste0928/cargo-install@v3
         with:
           crate: cargo-sort
+          version: 1.0.9
       - run: cargo sort --workspace --check
       - run: cargo fmt --all --check
       - run: |
