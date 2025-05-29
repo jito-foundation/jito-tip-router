@@ -38,7 +38,7 @@ pub struct Cli {
     pub claim_microlamports: u64,
 
     /// The price to pay for priority fee when voting
-    #[arg(long, env, default_value_t = 300000)]
+    #[arg(long, env, default_value_t = 1000000)]
     pub vote_microlamports: u64,
 
     #[arg(long, env, help = "Path to save data (formerly meta-merkle-tree-dir)")]
