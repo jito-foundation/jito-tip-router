@@ -20,6 +20,14 @@
    - NOTE: If you are still on the edge version of Solana CLI probably best to switch back to
      `1.18.26`
 
+To see more info on the Tip Router CLI check out the [CLI documentation](./cli/README.md)
+
+---
+
+## 📖 Documentation
+
+The comprehensive documentation for Tip Router has moved to [jito.network/docs/tiprouter](https://jito.network/docs/tiprouter). The source files are maintained in the [Jito Omnidocs repository](https://github.com/jito-foundation/jito-omnidocs/tree/master/tiprouter).
+
 ## Deploy and Upgrade
 
 - build .so file: `cargo-build-sbf`
