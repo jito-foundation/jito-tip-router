@@ -1,5 +1,4 @@
 use anyhow::Result;
-use ellipsis_client::{ClientSubset, EllipsisClient, EllipsisClientError, EllipsisClientResult};
 use jito_bytemuck::AccountDeserialize;
 use jito_tip_distribution_sdk::{
     derive_config_account_address, jito_tip_distribution::accounts::TipDistributionAccount,
@@ -19,12 +18,14 @@ use solana_sdk::{
     signer::Signer,
     transaction::Transaction,
 };
+use solana_rpc_client::{nonblocking::rpc_client::RpcClient};
+use solana_rpc_client_api::ClientError;
 
 use crate::priority_fees;
 
 /// Fetch and deserialize
 pub async fn get_ncn_config(
-    client: &EllipsisClient,
+    client: &RpcClient,
     tip_router_program_id: &Pubkey,
     ncn_pubkey: &Pubkey,
 ) -> Result<Config> {
@@ -36,7 +37,7 @@ pub async fn get_ncn_config(
 /// Generate and send a CastVote instruction with the merkle root.
 #[allow(clippy::too_many_arguments)]
 pub async fn cast_vote(
-    client: &EllipsisClient,
+    client: &RpcClient,
     payer: &Keypair,
     tip_router_program_id: &Pubkey,
     ncn: &Pubkey,
@@ -99,7 +100,7 @@ pub async fn cast_vote(
 
 #[allow(clippy::too_many_arguments)]
 pub async fn set_merkle_roots_batched(
-    client: &EllipsisClient,
+    client: &RpcClient,
     ncn_address: &Pubkey,
     keypair: &Keypair,
     tip_distribution_program: &Pubkey,

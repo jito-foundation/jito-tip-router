@@ -2,7 +2,6 @@
 use ::{
     anyhow::Result,
     clap::Parser,
-    ellipsis_client::EllipsisClient,
     log::{error, info},
     solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
@@ -69,11 +68,7 @@ async fn main() -> Result<()> {
     cli.force_different_backup_snapshot_dir();
 
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
-    let rpc_client = EllipsisClient::from_rpc_with_timeout(
-        RpcClient::new(cli.rpc_url.clone()),
-        &read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
-        1_800_000, // 30 minutes
-    )?;
+    let rpc_client = RpcClient::new(cli.rpc_url.clone());
 
     datapoint_info!(
         "tip_router_cli.version",

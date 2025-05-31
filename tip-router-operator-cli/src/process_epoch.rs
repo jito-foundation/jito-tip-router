@@ -6,7 +6,6 @@ use std::{
 };
 
 use anyhow::Result;
-use ellipsis_client::EllipsisClient;
 use log::{error, info};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
 use solana_metrics::{datapoint_error, datapoint_info};
@@ -101,7 +100,7 @@ pub async fn wait_for_optimal_incremental_snapshot(
 
 #[allow(clippy::too_many_arguments)]
 pub async fn loop_stages(
-    rpc_client: EllipsisClient,
+    rpc_client: RpcClient,
     cli: Cli,
     starting_stage: OperatorState,
     override_target_slot: Option<u64>,
