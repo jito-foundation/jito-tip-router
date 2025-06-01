@@ -16,10 +16,7 @@ use {
     solana_ledger::{
         bank_forks_utils::{self, BankForksUtilsError},
         blockstore::{Blockstore, BlockstoreError},
-        blockstore_options::{
-            AccessType, BlockstoreOptions, BlockstoreRecoveryMode, LedgerColumnOptions,
-            ShredStorageType,
-        },
+        blockstore_options::{AccessType, BlockstoreOptions, BlockstoreRecoveryMode},
         blockstore_processor::{
             self, BlockstoreProcessorError, ProcessOptions, TransactionStatusSender,
         },
@@ -27,7 +24,9 @@ use {
     },
     solana_measure::measure_time,
     solana_metrics::datapoint_info,
-    solana_rpc::transaction_status_service::TransactionStatusService,
+    solana_rpc::{
+        block_meta_service::BlockMetaService, transaction_status_service::TransactionStatusService,
+    },
     solana_runtime::{
         accounts_background_service::{
             AbsRequestHandlers, AbsRequestSender, AccountsBackgroundService,
@@ -138,6 +137,9 @@ pub fn load_and_process_ledger(
             .join("snapshot")
     };
 
+    // Here we configure the SnapshotConfig. It uses the directories the operator has passed in to
+    // find the best full and incremental snapshot files to use for a desired slot. TipRouter
+    // operators Directories often use different directories than their RPC node's.
     let mut _starting_slot = 0; // default start check with genesis
     let snapshot_config = if arg_matches.is_present("no_snapshot") {
         None
@@ -154,6 +156,7 @@ pub fn load_and_process_ledger(
                 snapshot_utils::get_highest_incremental_snapshot_archive_slot(
                     &incremental_snapshot_archives_dir,
                     full_snapshot_slot,
+                    // REVIEW: Should we be halting this at the desired slot?
                     None,
                 )
                 .unwrap_or_default();
@@ -266,7 +269,7 @@ pub fn load_and_process_ledger(
         let (confirmed_bank_sender, confirmed_bank_receiver) = unbounded();
         drop(confirmed_bank_sender);
         let geyser_service =
-            GeyserPluginService::new(confirmed_bank_receiver, &geyser_config_files)
+            GeyserPluginService::new(confirmed_bank_receiver, false, &geyser_config_files)
                 .map_err(LoadAndProcessLedgerError::GeyserServiceSetup)?;
         (
             geyser_service.get_accounts_update_notifier(),
@@ -277,6 +280,66 @@ pub fn load_and_process_ledger(
     };
 
     let exit = Arc::new(AtomicBool::new(false));
+    // Separate TSS exit flag as it needs to get set at a later point than
+    // the common exit flag. This is coupled to draining TSS receiver queue first.
+    let tss_exit = Arc::new(AtomicBool::new(false));
+
+    let enable_rpc_transaction_history = arg_matches.is_present("enable_rpc_transaction_history");
+
+    let (
+        transaction_status_sender,
+        transaction_status_service,
+        block_meta_sender,
+        block_meta_service,
+    ) = if geyser_plugin_active || enable_rpc_transaction_history {
+        // Need Primary (R/W) access to insert transaction and rewards data;
+        // obtain Primary access if we do not already have it
+        let write_blockstore = if enable_rpc_transaction_history && !blockstore.is_primary_access()
+        {
+            Arc::new(open_blockstore(
+                blockstore.ledger_path(),
+                arg_matches,
+                AccessType::PrimaryForMaintenance,
+            ))
+        } else {
+            blockstore.clone()
+        };
+
+        let (transaction_status_sender, transaction_status_receiver) = unbounded();
+        let transaction_status_service = TransactionStatusService::new(
+            transaction_status_receiver,
+            Arc::default(),
+            enable_rpc_transaction_history,
+            transaction_notifier,
+            write_blockstore.clone(),
+            arg_matches.is_present("enable_extended_tx_metadata_storage"),
+            tss_exit.clone(),
+        );
+
+        let (block_meta_sender, block_meta_receiver) = unbounded();
+        // Nothing else will be interacting with max_complete_rewards_slot
+        let max_complete_rewards_slot = Arc::default();
+        let block_meta_service = BlockMetaService::new(
+            block_meta_receiver,
+            write_blockstore,
+            max_complete_rewards_slot,
+            exit.clone(),
+        );
+
+        (
+            Some(TransactionStatusSender {
+                sender: transaction_status_sender,
+            }),
+            Some(transaction_status_service),
+            Some(block_meta_sender),
+            Some(block_meta_service),
+        )
+    } else {
+        // NOTE: Changed from (transaction_status_sender, None, None, None)
+        //  where transaction_status_sender came from the arguments.
+        (None, None, None, None)
+    };
+
     let (bank_forks, leader_schedule_cache, starting_snapshot_hashes, ..) =
         bank_forks_utils::load_bank_forks(
             genesis_config,
@@ -284,7 +347,7 @@ pub fn load_and_process_ledger(
             account_paths,
             snapshot_config.as_ref(),
             &process_options,
-            None,
+            block_meta_sender.as_ref(),
             None, // Maybe support this later, though
             accounts_update_notifier,
             exit.clone(),
@@ -362,43 +425,6 @@ pub fn load_and_process_ledger(
         process_options.accounts_db_test_hash_calculation,
     );
 
-    let enable_rpc_transaction_history = arg_matches.is_present("enable_rpc_transaction_history");
-
-    let (transaction_status_sender, transaction_status_service) = if geyser_plugin_active
-        || enable_rpc_transaction_history
-    {
-        // Need Primary (R/W) access to insert transaction data;
-        // obtain Primary access if we do not already have it
-        let tss_blockstore = if enable_rpc_transaction_history && !blockstore.is_primary_access() {
-            Arc::new(open_blockstore(
-                blockstore.ledger_path(),
-                arg_matches,
-                AccessType::PrimaryForMaintenance,
-            ))
-        } else {
-            blockstore.clone()
-        };
-
-        let (transaction_status_sender, transaction_status_receiver) = unbounded();
-        let transaction_status_service = TransactionStatusService::new(
-            transaction_status_receiver,
-            Arc::default(),
-            enable_rpc_transaction_history,
-            transaction_notifier,
-            tss_blockstore,
-            false,
-            exit.clone(),
-        );
-        (
-            Some(TransactionStatusSender {
-                sender: transaction_status_sender,
-            }),
-            Some(transaction_status_service),
-        )
-    } else {
-        (None, None)
-    };
-
     // STEP 4: Process blockstore from root //
 
     datapoint_info!(
@@ -426,6 +452,11 @@ pub fn load_and_process_ledger(
     accounts_background_service.join().unwrap();
     accounts_hash_verifier.join().unwrap();
     if let Some(service) = transaction_status_service {
+        // NOTE: Was service.quiesce_and_join_for_tests(tss_exit);
+        //  but this method is behind the "dev-context-only-utils" feature flag.
+        service.join().unwrap();
+    }
+    if let Some(service) = block_meta_service {
         service.join().unwrap();
     }
 
@@ -442,13 +473,6 @@ pub fn open_blockstore(
         .map(BlockstoreRecoveryMode::from);
     let force_update_to_open = matches.is_present("force_update_to_open");
     let enforce_ulimit_nofile = !matches.is_present("ignore_ulimit_nofile_error");
-    let shred_storage_type = get_shred_storage_type(
-        ledger_path,
-        &format!(
-            "Shred storage type cannot be inferred for ledger at {ledger_path:?}, using default \
-             RocksLevel",
-        ),
-    );
 
     match Blockstore::open_with_options(
         ledger_path,
@@ -456,10 +480,7 @@ pub fn open_blockstore(
             access_type: access_type.clone(),
             recovery_mode: wal_recovery_mode.clone(),
             enforce_ulimit_nofile,
-            column_options: LedgerColumnOptions {
-                shred_storage_type,
-                ..LedgerColumnOptions::default()
-            },
+            ..BlockstoreOptions::default()
         },
     ) {
         Ok(blockstore) => blockstore,
@@ -513,20 +534,6 @@ pub fn open_blockstore(
             exit(1);
         }
     }
-}
-
-pub fn get_shred_storage_type(ledger_path: &Path, message: &str) -> ShredStorageType {
-    // TODO: the following shred_storage_type inference must be updated once
-    // the rocksdb options can be constructed via load_options_file() as the
-    // value picked by passing None for `max_shred_storage_size` could affect
-    // the persisted rocksdb options file.
-    ShredStorageType::from_ledger_path(ledger_path, None).map_or_else(
-        || {
-            info!("{}", message);
-            ShredStorageType::RocksLevel
-        },
-        |s| s,
-    )
 }
 
 /// Open blockstore with temporary primary access to allow necessary,

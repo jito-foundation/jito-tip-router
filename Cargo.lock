@@ -214,17 +214,6 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-access-control"
-version = "0.30.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anchor-syn 0.30.1",
- "proc-macro2 1.0.95",
- "quote 1.0.38",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-access-control"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f70fd141a4d18adf11253026b32504f885447048c7494faf5fa83b01af9c0cf"
@@ -246,18 +235,6 @@ dependencies = [
  "proc-macro2 1.0.95",
  "quote 1.0.38",
  "rustversion",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-account"
-version = "0.30.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anchor-syn 0.30.1",
- "bs58 0.5.1",
- "proc-macro2 1.0.95",
- "quote 1.0.38",
  "syn 1.0.109",
 ]
 
@@ -286,16 +263,6 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-constant"
-version = "0.30.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anchor-syn 0.30.1",
- "quote 1.0.38",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-constant"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "730d6df8ae120321c5c25e0779e61789e4b70dc8297102248902022f286102e4"
@@ -318,16 +285,6 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-error"
-version = "0.30.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anchor-syn 0.30.1",
- "quote 1.0.38",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-error"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27e6e449cc3a37b2880b74dcafb8e5a17b954c0e58e376432d7adc646fb333ef"
@@ -344,17 +301,6 @@ source = "git+https://github.com/jito-foundation/jito-solana.git?rev=7ac658920e6
 dependencies = [
  "anchor-syn 0.24.2",
  "anyhow",
- "proc-macro2 1.0.95",
- "quote 1.0.38",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-event"
-version = "0.30.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anchor-syn 0.30.1",
  "proc-macro2 1.0.95",
  "quote 1.0.38",
  "syn 1.0.109",
@@ -399,27 +345,11 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-program"
-version = "0.30.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anchor-lang-idl 0.1.1",
- "anchor-syn 0.30.1",
- "anyhow",
- "bs58 0.5.1",
- "heck 0.3.3",
- "proc-macro2 1.0.95",
- "quote 1.0.38",
- "serde_json",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-attribute-program"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05ecfd49b2aeadeb32f35262230db402abed76ce87e27562b34f61318b2ec83c"
 dependencies = [
- "anchor-lang-idl 0.1.2",
+ "anchor-lang-idl",
  "anchor-syn 0.31.1",
  "anyhow",
  "bs58 0.5.1",
@@ -456,33 +386,11 @@ dependencies = [
 
 [[package]]
 name = "anchor-derive-accounts"
-version = "0.30.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anchor-syn 0.30.1",
- "quote 1.0.38",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-derive-accounts"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be89d160793a88495af462a7010b3978e48e30a630c91de47ce2c1d3cb7a6149"
 dependencies = [
  "anchor-syn 0.31.1",
- "quote 1.0.38",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-derive-serde"
-version = "0.30.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anchor-syn 0.30.1",
- "borsh-derive-internal 0.10.4",
- "proc-macro2 1.0.95",
  "quote 1.0.38",
  "syn 1.0.109",
 ]
@@ -495,16 +403,6 @@ checksum = "abc6ee78acb7bfe0c2dd2abc677aaa4789c0281a0c0ef01dbf6fe85e0fd9e6e4"
 dependencies = [
  "anchor-syn 0.31.1",
  "borsh-derive-internal 0.10.4",
- "proc-macro2 1.0.95",
- "quote 1.0.38",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-derive-space"
-version = "0.30.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
  "proc-macro2 1.0.95",
  "quote 1.0.38",
  "syn 1.0.109",
@@ -546,28 +444,6 @@ dependencies = [
 
 [[package]]
 name = "anchor-lang"
-version = "0.30.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anchor-attribute-access-control 0.30.1",
- "anchor-attribute-account 0.30.1",
- "anchor-attribute-constant 0.30.1",
- "anchor-attribute-error 0.30.1",
- "anchor-attribute-event 0.30.1",
- "anchor-attribute-program 0.30.1",
- "anchor-derive-accounts 0.30.1",
- "anchor-derive-serde 0.30.1",
- "anchor-derive-space 0.30.1",
- "base64 0.21.7",
- "bincode",
- "borsh 0.10.4",
- "bytemuck",
- "solana-program",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "anchor-lang"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6bab117055905e930f762c196e08f861f8dfe7241b92cee46677a3b15561a0a"
@@ -579,9 +455,9 @@ dependencies = [
  "anchor-attribute-event 0.31.1",
  "anchor-attribute-program 0.31.1",
  "anchor-derive-accounts 0.31.1",
- "anchor-derive-serde 0.31.1",
- "anchor-derive-space 0.31.1",
- "anchor-lang-idl 0.1.2",
+ "anchor-derive-serde",
+ "anchor-derive-space",
+ "anchor-lang-idl",
  "base64 0.21.7",
  "bincode",
  "borsh 0.10.4",
@@ -592,24 +468,11 @@ dependencies = [
 
 [[package]]
 name = "anchor-lang-idl"
-version = "0.1.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anchor-lang-idl-spec 0.1.0 (git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280)",
- "anyhow",
- "heck 0.3.3",
- "serde",
- "serde_json",
- "sha2 0.10.8",
-]
-
-[[package]]
-name = "anchor-lang-idl"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32e8599d21995f68e296265aa5ab0c3cef582fd58afec014d01bd0bce18a4418"
 dependencies = [
- "anchor-lang-idl-spec 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "anchor-lang-idl-spec",
  "anyhow",
  "heck 0.3.3",
  "regex",
@@ -629,15 +492,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anchor-lang-idl-spec"
-version = "0.1.0"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anyhow",
- "serde",
-]
-
-[[package]]
 name = "anchor-syn"
 version = "0.24.2"
 source = "git+https://github.com/jito-foundation/jito-solana.git?rev=7ac658920e6381170f38b7172a3833f8d6401000#7ac658920e6381170f38b7172a3833f8d6401000"
@@ -651,23 +505,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.9.9",
- "syn 1.0.109",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "anchor-syn"
-version = "0.30.1"
-source = "git+https://github.com/coral-xyz/anchor?rev=96ed3b791c6fed9ab64cb138397795fe55991280#96ed3b791c6fed9ab64cb138397795fe55991280"
-dependencies = [
- "anyhow",
- "bs58 0.5.1",
- "heck 0.3.3",
- "proc-macro2 1.0.95",
- "quote 1.0.38",
- "serde",
- "serde_json",
- "sha2 0.10.8",
  "syn 1.0.109",
  "thiserror 1.0.69",
 ]
@@ -3745,7 +3582,7 @@ dependencies = [
 name = "jito-tip-distribution-sdk"
 version = "0.0.1"
 dependencies = [
- "anchor-lang 0.30.1",
+ "anchor-lang 0.31.1",
 ]
 
 [[package]]
@@ -3762,14 +3599,14 @@ dependencies = [
 name = "jito-tip-payment-sdk"
 version = "0.0.1"
 dependencies = [
- "anchor-lang 0.30.1",
+ "anchor-lang 0.31.1",
 ]
 
 [[package]]
 name = "jito-tip-router-cli"
 version = "0.0.1"
 dependencies = [
- "anchor-lang 0.30.1",
+ "anchor-lang 0.31.1",
  "anyhow",
  "assert_matches",
  "base64 0.22.1",
@@ -3816,7 +3653,7 @@ dependencies = [
 name = "jito-tip-router-client"
 version = "0.0.1"
 dependencies = [
- "anchor-lang 0.30.1",
+ "anchor-lang 0.31.1",
  "borsh 0.10.4",
  "bytemuck",
  "num-derive",
@@ -3858,7 +3695,7 @@ dependencies = [
 name = "jito-tip-router-integration-tests"
 version = "0.0.1"
 dependencies = [
- "anchor-lang 0.30.1",
+ "anchor-lang 0.31.1",
  "borsh 0.10.4",
  "bytemuck",
  "jito-bytemuck",
@@ -4522,7 +4359,7 @@ dependencies = [
 name = "meta-merkle-tree"
 version = "0.0.1"
 dependencies = [
- "anchor-lang 0.30.1",
+ "anchor-lang 0.31.1",
  "borsh 0.10.4",
  "bytemuck",
  "fast-math",
@@ -11456,7 +11293,7 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 name = "tip-router-operator-cli"
 version = "1.2.0"
 dependencies = [
- "anchor-lang 0.30.1",
+ "anchor-lang 0.31.1",
  "anyhow",
  "base64 0.13.1",
  "clap 2.34.0",

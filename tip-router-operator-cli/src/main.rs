@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
     cli.force_different_backup_snapshot_dir();
 
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
-    let rpc_client = RpcClient::new(cli.rpc_url.clone());
+    let rpc_client = Arc::new(RpcClient::new(cli.rpc_url.clone()));
 
     datapoint_info!(
         "tip_router_cli.version",

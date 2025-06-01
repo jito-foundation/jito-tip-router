@@ -157,7 +157,8 @@ pub async fn set_merkle_roots_batched(
     for _ in 0..instructions.len() {
         results.push(Err(ErrorKind::Custom(
             "Default: Failed to submit instruction".to_string(),
-        ).into()));
+        )
+        .into()));
     }
 
     // TODO Parallel submit instructions

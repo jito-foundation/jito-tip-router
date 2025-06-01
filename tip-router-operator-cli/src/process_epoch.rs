@@ -100,7 +100,7 @@ pub async fn wait_for_optimal_incremental_snapshot(
 
 #[allow(clippy::too_many_arguments)]
 pub async fn loop_stages(
-    rpc_client: RpcClient,
+    rpc_client: Arc<RpcClient>,
     cli: Cli,
     starting_stage: OperatorState,
     override_target_slot: Option<u64>,
