@@ -12,14 +12,15 @@ use jito_tip_router_core::{
 };
 use log::{error, info};
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
+use solana_client::rpc_config::RpcSendTransactionConfig;
+use solana_rpc_client::nonblocking::rpc_client::RpcClient;
+use solana_rpc_client_api::client_error::{ErrorKind, Result as ClientResult};
 use solana_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signature},
     signer::Signer,
     transaction::Transaction,
 };
-use solana_rpc_client::{nonblocking::rpc_client::RpcClient};
-use solana_rpc_client_api::ClientError;
 
 use crate::priority_fees;
 
@@ -93,7 +94,7 @@ pub async fn cast_vote(
         &instructions,
         Some(&payer.pubkey()),
         &[payer, operator_voter],
-        client.fetch_latest_blockhash().await?,
+        client.get_latest_blockhash().await?,
     );
     Ok(client.send_and_confirm_transaction(&tx).await?)
 }
@@ -108,7 +109,7 @@ pub async fn set_merkle_roots_batched(
     epoch: u64,
     tip_distribution_accounts: Vec<(Pubkey, TipDistributionAccount)>,
     meta_merkle_tree: MetaMerkleTree,
-) -> Result<Vec<EllipsisClientResult<Signature>>> {
+) -> Result<Vec<ClientResult<Signature>>> {
     let ballot_box = BallotBox::find_program_address(tip_router_program_id, ncn_address, epoch).0;
 
     let config = Config::find_program_address(tip_router_program_id, ncn_address).0;
@@ -152,11 +153,11 @@ pub async fn set_merkle_roots_batched(
         })
         .collect::<Vec<_>>();
 
-    let mut results = vec![];
+    let mut results: Vec<ClientResult<Signature>> = vec![];
     for _ in 0..instructions.len() {
-        results.push(Err(EllipsisClientError::Other(anyhow::anyhow!(
-            "Default: Failed to submit instruction"
-        ))));
+        results.push(Err(ErrorKind::Custom(
+            "Default: Failed to submit instruction".to_string(),
+        ).into()));
     }
 
     // TODO Parallel submit instructions
@@ -164,9 +165,21 @@ pub async fn set_merkle_roots_batched(
         let mut tx = Transaction::new_with_payer(&[ix], Some(&keypair.pubkey()));
         // Simple retry logic
         for _ in 0..5 {
-            let blockhash = client.fetch_latest_blockhash().await?;
+            let blockhash = client.get_latest_blockhash().await?;
             tx.sign(&[keypair], blockhash);
-            results[i] = client.process_transaction(tx.clone(), &[keypair]).await;
+            results[i] = client
+                .send_transaction_with_config(
+                    &tx,
+                    RpcSendTransactionConfig {
+                        skip_preflight: true,
+                        preflight_commitment: None,
+                        encoding: None,
+                        max_retries: None,
+                        min_context_slot: None,
+                    },
+                )
+                .await;
+
             if results[i].is_ok() {
                 break;
             }
