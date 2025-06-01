@@ -128,10 +128,6 @@ jito-vault-program = { package = "jito-vault-program", git = "https://github.com
 jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade" }
 
 [patch.crates-io]
-# due to deprecations in solana-clock, we need to patch to a prior commit so solana-runtime could
-# compile properly. This should be removable once jito-solana is not dependent on 
-# `UPDATED_HASHES_PER_TICK2` and similarly named constants.
-solana-sdk = { package = "solana-sdk", git = "https://github.com/anza-xyz/solana-sdk", rev = "84954b475e11201a147073d4a21b30fa190fc746" }
 solana-account-decoder = { package = "solana-account-decoder", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-account-decoder-client-types = { package = "solana-account-decoder-client-types", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-accounts-db = { package = "solana-accounts-db", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
