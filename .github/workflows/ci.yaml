@@ -122,7 +122,7 @@ jobs:
         run: cargo-build-sbf
         env:
           TIP_ROUTER_PROGRAM_ID: ${{ env.TIP_ROUTER_PROGRAM_ID }}
-          SBF_OUT_DIR: ${{ github.workspace }}/target/sbf-solana-solana/release
+          SBF_OUT_PATH: ${{ github.workspace }}/target/sbf-solana-solana/release
       - name: Debugging files
         run: |
           echo "FILES IN FIXTURES: \n";
