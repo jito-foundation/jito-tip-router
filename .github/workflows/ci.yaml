@@ -193,7 +193,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: jito_tip_router_program.so
-          path: integration_tests/tests/fixtures/
+          path: ${{ github.workspace }}/integration_tests/tests/fixtures/
+      - name: Debugging files
+        run: |
+          echo "FILES IN FIXTURES: \n";
+          for file in ${{ github.workspace }}/integration_tests/tests/fixtures/*; do
+            echo "$(basename "$file")"
+          done 
       - uses: taiki-e/install-action@nextest
       - run: cargo nextest run --all-features -E 'not test(ledger_utils::tests)'
         env:
