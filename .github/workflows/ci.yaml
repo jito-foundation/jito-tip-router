@@ -127,7 +127,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jito_tip_router_program.so
-          path: target/sbf-solana-solana/release/
+          path: target/sbf-solana-solana/release/jito_tip_router_program.so
           if-no-files-found: error
 
   verified_build:
@@ -194,6 +194,7 @@ jobs:
         with:
           name: jito_tip_router_program.so
           path: ${{ github.workspace }}/integration_tests/tests/fixtures/
+          if-no-files-found: error
       - name: Debugging files
         run: |
           echo "FILES IN FIXTURES: \n";
