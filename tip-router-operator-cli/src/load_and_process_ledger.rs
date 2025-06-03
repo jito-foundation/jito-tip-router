@@ -137,6 +137,12 @@ pub fn load_and_process_ledger(
             .join("snapshot")
     };
 
+    // ledger-tool has a flag that determines if this option is used.
+    // REVIEW: We may want to double check the externalities of having this set to None. Passing
+    // in the process_options.halt_at_slot forces the incremental snapshot to be <= the desired
+    // slot. Not 100% sure what happens when you have an incremental snapshot > than desired slot
+    let snapshot_halt_at_slot = None;
+
     // Here we configure the SnapshotConfig. It uses the directories the operator has passed in to
     // find the best full and incremental snapshot files to use for a desired slot. TipRouter
     // operators Directories often use different directories than their RPC node's.
@@ -156,8 +162,7 @@ pub fn load_and_process_ledger(
                 snapshot_utils::get_highest_incremental_snapshot_archive_slot(
                     &incremental_snapshot_archives_dir,
                     full_snapshot_slot,
-                    // REVIEW: Should we be halting this at the desired slot?
-                    None,
+                    snapshot_halt_at_slot,
                 )
                 .unwrap_or_default();
             _starting_slot = std::cmp::max(full_snapshot_slot, incremental_snapshot_slot);
