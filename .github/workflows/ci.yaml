@@ -123,12 +123,6 @@ jobs:
         env:
           TIP_ROUTER_PROGRAM_ID: ${{ env.TIP_ROUTER_PROGRAM_ID }}
           SBF_OUT_PATH: ${{ github.workspace }}/target/sbf-solana-solana/release
-      - name: Debugging files
-        run: |
-          echo "FILES IN FIXTURES: \n";
-          for file in ${{ github.workspace }}/target/sbf-solana-solana/release/*; do
-            echo "$(basename "$file")"
-          done 
       - name: Upload MEV Tip Distribution NCN program
         uses: actions/upload-artifact@v4
         with:
@@ -201,12 +195,6 @@ jobs:
           name: jito_tip_router_program.so
           path: ${{ github.workspace }}/integration_tests/tests/fixtures/
           if-no-files-found: error
-      - name: Debugging files
-        run: |
-          echo "FILES IN FIXTURES: \n";
-          for file in ${{ github.workspace }}/integration_tests/tests/fixtures/*; do
-            echo "$(basename "$file")"
-          done 
       - uses: taiki-e/install-action@nextest
       - run: cargo nextest run --all-features -E 'not test(ledger_utils::tests)'
         env:
