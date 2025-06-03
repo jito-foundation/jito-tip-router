@@ -9,8 +9,10 @@ use crate::{
     ncn_fee_group::NcnFeeGroup,
 };
 
+#[allow(clippy::too_long_first_doc_paragraph)]
 /// Fee Config. Allows for fee updates to take place in a future epoch without requiring an update.
 /// This is important so all operators calculate the same Merkle root regardless of when fee changes take place.
+///
 #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
 #[repr(C)]
 pub struct FeeConfig {

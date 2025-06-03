@@ -99,7 +99,7 @@ solana-program-error = "2.2.1"
 solana-pubkey = { package = "solana-pubkey", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-account-info = { package = "solana-account-info", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-program-entrypoint = "2.2.1"
-solana-decode-error = "2.2.1"
+solana-decode-error = "=2.2.1"
 solana-security-txt = "1.1.1"
 spl-associated-token-account = { version = "6.0.0", features = ["no-entrypoint"] }
 spl-stake-pool = { version = "2.0.1", features = ["no-entrypoint"] }

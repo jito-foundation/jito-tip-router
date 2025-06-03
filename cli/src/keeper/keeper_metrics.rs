@@ -309,7 +309,7 @@ pub async fn emit_ncn_metrics_operators(handler: &CliHandler, cluster_name: &str
         let operator_account = get_operator(handler, &operator).await?;
 
         // Emitting here so all operators get a trackable has_voted metric for alerts to avoid NoData issue
-        let operator_has_voted = ballot_box_result.as_ref().map_or(false, |ballot_box| {
+        let operator_has_voted = ballot_box_result.as_ref().is_ok_and(|ballot_box| {
             ballot_box.operator_votes().iter().any(|operator_vote| {
                 operator_vote.operator() == &operator && !operator_vote.is_empty()
             })
