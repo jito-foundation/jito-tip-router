@@ -46,24 +46,6 @@ async fn main() -> Result<()> {
 
     info!("Ensuring localhost RPC is caught up with remote validator...");
 
-    let try_catchup =
-        tip_router_operator_cli::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
-    if let Err(ref e) = &try_catchup {
-        datapoint_error!(
-            "tip_router_cli.main",
-            ("operator_address", cli.operator_address, String),
-            ("status", "error", String),
-            ("error", e.to_string(), String),
-            ("state", "bootstrap", String),
-            "cluster" => &cli.cluster,
-        );
-        error!("Failed to catch up: {}", e);
-    }
-
-    if let Ok(command_output) = &try_catchup {
-        info!("{}", command_output);
-    }
-
     // Ensure backup directory and
     cli.force_different_backup_snapshot_dir();
 
@@ -158,6 +140,27 @@ async fn main() -> Result<()> {
 
             let operator_address = cli.operator_address.clone();
             let cluster = cli.cluster.clone();
+
+            let try_catchup = tip_router_operator_cli::solana_cli::catchup(
+                cli.rpc_url.to_owned(),
+                cli.localhost_port,
+            );
+            if let Err(ref e) = &try_catchup {
+                datapoint_error!(
+                    "tip_router_cli.main",
+                    ("operator_address", cli.operator_address, String),
+                    ("status", "error", String),
+                    ("error", e.to_string(), String),
+                    ("state", "bootstrap", String),
+                    "cluster" => &cli.cluster,
+                );
+                error!("Failed to catch up: {}", e);
+            }
+
+            if let Ok(command_output) = &try_catchup {
+                info!("{}", command_output);
+            }
+
             tokio::spawn(async move {
                 loop {
                     datapoint_info!(

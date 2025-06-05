@@ -122,7 +122,12 @@ pub async fn set_merkle_roots_batched(
     let instructions = tip_distribution_accounts
         .iter()
         .filter_map(|(key, tip_distribution_account)| {
-            let meta_merkle_node = meta_merkle_tree.get_node(key);
+            let meta_merkle_node = if let Some(node) = meta_merkle_tree.get_node(key) {
+                node
+            } else {
+                error!("No node found for tip distribution account, maybe the account has zero tips? {:?}", key);
+                return None;
+            };
 
             let proof = if let Some(proof) = meta_merkle_node.proof {
                 proof
