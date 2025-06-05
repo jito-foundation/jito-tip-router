@@ -6,7 +6,6 @@ use std::{
 };
 
 use anyhow::Result;
-use ellipsis_client::EllipsisClient;
 use log::{error, info};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
 use solana_metrics::{datapoint_error, datapoint_info};
@@ -101,7 +100,7 @@ pub async fn wait_for_optimal_incremental_snapshot(
 
 #[allow(clippy::too_many_arguments)]
 pub async fn loop_stages(
-    rpc_client: EllipsisClient,
+    rpc_client: Arc<RpcClient>,
     cli: Cli,
     starting_stage: OperatorState,
     override_target_slot: Option<u64>,
@@ -114,6 +113,7 @@ pub async fn loop_stages(
 ) -> Result<()> {
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
     let mut current_epoch_info = rpc_client.get_epoch_info().await?;
+    let epoch_schedule = rpc_client.get_epoch_schedule().await?;
 
     // Track runs that are starting right at the beginning of a new epoch
     let operator_address = cli.operator_address.clone();
@@ -303,17 +303,9 @@ pub async fn loop_stages(
             OperatorState::WaitForNextEpoch => {
                 current_epoch_info =
                     wait_for_next_epoch(&rpc_client, current_epoch_info.epoch).await;
-                // Get the last slot of the previous epoch
-                let (previous_epoch, previous_epoch_slot) =
-                    if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client).await {
-                        (epoch, slot)
-                    } else {
-                        // TODO: Make a datapoint error
-                        error!("Error getting previous epoch slot");
-                        continue;
-                    };
-                slot_to_process = previous_epoch_slot;
-                epoch_to_process = previous_epoch;
+
+                epoch_to_process = current_epoch_info.epoch - 1;
+                slot_to_process = epoch_schedule.get_last_slot_in_epoch(epoch_to_process);
 
                 stage = OperatorState::LoadBankFromSnapshot;
             }

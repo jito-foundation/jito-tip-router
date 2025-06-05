@@ -3,7 +3,6 @@ use std::time::Duration;
 use std::{path::PathBuf, str::FromStr};
 
 use anchor_lang::AccountDeserialize;
-use ellipsis_client::EllipsisClient;
 use jito_bytemuck::AccountDeserialize as JitoAccountDeserialize;
 use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_router_core::{ballot_box::BallotBox, config::Config};
@@ -26,7 +25,7 @@ use crate::{
 
 #[allow(clippy::too_many_arguments)]
 pub async fn submit_recent_epochs_to_ncn(
-    client: &EllipsisClient,
+    client: &AsyncRpcClient,
     keypair: &Arc<Keypair>,
     ncn_address: &Pubkey,
     tip_router_program_id: &Pubkey,
@@ -74,7 +73,7 @@ pub async fn submit_recent_epochs_to_ncn(
 
 #[allow(clippy::too_many_arguments)]
 pub async fn submit_to_ncn(
-    client: &EllipsisClient,
+    client: &AsyncRpcClient,
     keypair: &Keypair,
     operator_address: &Pubkey,
     meta_merkle_tree_path: &PathBuf,
@@ -270,7 +269,7 @@ pub async fn submit_to_ncn(
 }
 
 async fn get_tip_distribution_accounts_to_upload(
-    client: &EllipsisClient,
+    client: &AsyncRpcClient,
     epoch: u64,
     tip_router_config_address: &Pubkey,
     tip_distribution_program_id: &Pubkey,
