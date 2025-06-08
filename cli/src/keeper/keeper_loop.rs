@@ -141,18 +141,20 @@ pub async fn startup_keeper(
 
         let vaults = get_vault_pubkeys_and_vaults(handler).await?;
 
-        let vaults_need_update: Vec<(Pubkey, Vault)> = vaults
-            .into_iter()
-            .filter(|(_pubkey, vault)| {
-                vault
-                    .is_update_needed(slot, config.epoch_length())
-                    .expect("Config epoch length is 0")
-            })
-            .collect();
-
         // If there is a new epoch, jito vault cranker will do a full vault update on *all* vaults
         // wait until full vaults updated
-        if is_new_epoch && !vaults_need_update.is_empty() && run_operations {
+        if is_new_epoch
+            && !vaults
+                .into_iter()
+                .filter(|(_pubkey, vault)| {
+                    vault
+                        .is_update_needed(slot, config.epoch_length())
+                        .expect("Config epoch length is 0")
+                })
+                .next()
+                .is_none()
+            && run_operations
+        {
             info!(
                 "\n\n-Jito Vault Cranker is still working- {}\n",
                 current_keeper_epoch
