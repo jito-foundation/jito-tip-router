@@ -142,15 +142,11 @@ pub async fn startup_keeper(
         // If there is a new epoch, jito vault cranker will do a full vault update on *all* vaults
         // wait until full vaults updated
         if is_new_epoch
-            && vaults
-                .into_iter()
-                .filter(|(_pubkey, vault)| {
-                    vault
-                        .is_update_needed(slot, config.epoch_length())
-                        .expect("Config epoch length is 0")
-                })
-                .next()
-                .is_some()
+            && vaults.into_iter().any(|(_pubkey, vault)| {
+                vault
+                    .is_update_needed(slot, config.epoch_length())
+                    .expect("Config epoch length is 0")
+            })
             && run_operations
         {
             info!(
