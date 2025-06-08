@@ -17,10 +17,8 @@ use anyhow::{Context, Result};
 use jito_bytemuck::AccountDeserialize;
 use jito_jsm_core::get_epoch;
 use jito_tip_router_core::epoch_state::State;
-use jito_vault_core::vault::Vault;
 use log::info;
 use solana_metrics::set_host_id;
-use solana_sdk::pubkey::Pubkey;
 use std::process::Command;
 use tokio::time::sleep;
 
@@ -144,7 +142,7 @@ pub async fn startup_keeper(
         // If there is a new epoch, jito vault cranker will do a full vault update on *all* vaults
         // wait until full vaults updated
         if is_new_epoch
-            && !vaults
+            && vaults
                 .into_iter()
                 .filter(|(_pubkey, vault)| {
                     vault
@@ -152,7 +150,7 @@ pub async fn startup_keeper(
                         .expect("Config epoch length is 0")
                 })
                 .next()
-                .is_none()
+                .is_some()
             && run_operations
         {
             info!(
