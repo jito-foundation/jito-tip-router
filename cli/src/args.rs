@@ -142,12 +142,6 @@ pub enum ProgramCommand {
         #[arg(
             long,
             env,
-            help = "At the start of the epoch the keeper will update all vaults in the network"
-        )]
-        all_vault_update: bool,
-        #[arg(
-            long,
-            env,
             help = "Emits metrics to Influx - adds a lot of network calls"
         )]
         emit_metrics: bool,

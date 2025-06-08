@@ -1,22 +1,26 @@
 use std::time::Duration;
 
 use crate::{
-    getters::get_guaranteed_epoch_and_slot,
+    getters::{get_guaranteed_epoch_and_slot, get_vault_pubkeys_and_vaults},
     handler::CliHandler,
     instructions::{
         crank_close_epoch_accounts, crank_distribute, crank_post_vote_cooldown,
         crank_register_vaults, crank_set_weight, crank_snapshot, crank_vote, create_epoch_state,
-        migrate_tda_merkle_root_upload_authorities, update_all_vaults_in_network,
+        migrate_tda_merkle_root_upload_authorities,
     },
     keeper::{
         keeper_metrics::{emit_epoch_metrics, emit_error, emit_heartbeat, emit_ncn_metrics},
         keeper_state::KeeperState,
     },
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
+use jito_bytemuck::AccountDeserialize;
+use jito_jsm_core::get_epoch;
 use jito_tip_router_core::epoch_state::State;
+use jito_vault_core::vault::Vault;
 use log::info;
 use solana_metrics::set_host_id;
+use solana_sdk::pubkey::Pubkey;
 use std::process::Command;
 use tokio::time::sleep;
 
@@ -86,7 +90,6 @@ pub async fn startup_keeper(
     loop_timeout_ms: u64,
     error_timeout_ms: u64,
     test_vote: bool,
-    all_vault_update: bool,
     emit_metrics: bool,
     metrics_only: bool,
     run_migration: bool,
@@ -119,24 +122,45 @@ pub async fn startup_keeper(
         region, cluster_name, hostname
     ));
 
-    loop {
-        // If there is a new epoch, this will do a full vault update on *all* vaults
-        // created with restaking - this adds some extra redundancy
-        if is_new_epoch && all_vault_update && run_operations {
-            info!("\n\n-2. Update Vaults - {}\n", current_keeper_epoch);
-            let result = update_all_vaults_in_network(handler).await;
+    let config_address =
+        jito_vault_core::config::Config::find_program_address(&handler.vault_program_id).0;
 
-            if check_and_timeout_error(
-                "Update Vaults".to_string(),
-                &result,
-                error_timeout_ms,
-                state.epoch,
-                &cluster_name,
-            )
-            .await
-            {
-                continue;
-            }
+    let account = handler
+        .rpc_client()
+        .get_account(&config_address)
+        .await
+        .context("Failed to read Jito vault config address")?;
+    let config = jito_vault_core::config::Config::try_from_slice_unchecked(&account.data)
+        .context("Failed to deserialize Jito vault config")?;
+
+    loop {
+        let slot = handler.rpc_client().get_slot().await.context("get slot")?;
+        let epoch = get_epoch(slot, config.epoch_length()).unwrap();
+
+        info!("Checking for vaults to update. Slot: {slot}, Current Epoch: {epoch}");
+
+        let vaults = get_vault_pubkeys_and_vaults(handler).await?;
+
+        let vaults_need_update: Vec<(Pubkey, Vault)> = vaults
+            .into_iter()
+            .filter(|(_pubkey, vault)| {
+                vault
+                    .is_update_needed(slot, config.epoch_length())
+                    .expect("Config epoch length is 0")
+            })
+            .collect();
+
+        // If there is a new epoch, jito vault cranker will do a full vault update on *all* vaults
+        // wait until full vaults updated
+        if is_new_epoch && !vaults_need_update.is_empty() && run_operations {
+            info!(
+                "\n\n-Jito Vault Cranker is still working- {}\n",
+                current_keeper_epoch
+            );
+
+            timeout_keeper(100).await;
+
+            continue;
         }
 
         // This will progress the epoch:

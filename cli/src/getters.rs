@@ -4,6 +4,8 @@ use std::{fmt, time::Duration};
 
 use crate::handler::CliHandler;
 use anyhow::Result;
+use base64::engine::general_purpose;
+use base64::Engine;
 use borsh1::BorshDeserialize;
 use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::slot_toggle::SlotToggleState;
@@ -49,6 +51,41 @@ use spl_stake_pool::{find_withdraw_authority_program_address, state::StakePool};
 use tokio::time::sleep;
 
 // ---------------------- HELPERS ----------------------
+/// Constructs an `RpcProgramAccountsConfig` for querying accounts of a given type `T`.
+///
+/// # Returns
+/// - `Ok(RpcProgramAccountsConfig)`: A valid configuration for filtering accounts in
+///   Solana's RPC API.
+/// - `Err(anyhow::Error)`: If the data size calculation fails (e.g., due to overflow).
+fn get_rpc_program_accounts_config<T: jito_bytemuck::Discriminator>(
+) -> anyhow::Result<RpcProgramAccountsConfig> {
+    let data_size = std::mem::size_of::<T>()
+        .checked_add(8)
+        .ok_or_else(|| anyhow::anyhow!("Failed to add"))?;
+    let encoded_discriminator =
+        general_purpose::STANDARD.encode(vec![T::DISCRIMINATOR, 0, 0, 0, 0, 0, 0, 0]);
+    let memcmp = RpcFilterType::Memcmp(Memcmp::new(
+        0,
+        MemcmpEncodedBytes::Base64(encoded_discriminator),
+    ));
+    let config = RpcProgramAccountsConfig {
+        filters: Some(vec![RpcFilterType::DataSize(data_size as u64), memcmp]),
+        account_config: RpcAccountInfoConfig {
+            encoding: Some(UiAccountEncoding::Base64),
+            data_slice: Some(UiDataSliceConfig {
+                offset: 0,
+                length: data_size,
+            }),
+            commitment: None,
+            min_context_slot: None,
+        },
+        with_context: Some(false),
+        sort_results: Some(false),
+    };
+
+    Ok(config)
+}
+
 // So we can switch between the two implementations
 pub async fn get_account(handler: &CliHandler, account: &Pubkey) -> Result<Option<Account>> {
     let client = handler.rpc_client();
@@ -577,6 +614,35 @@ pub async fn get_vault_operator_delegation(
     Ok(*account)
 }
 
+/// Retrieves all existing `VaultOperatorDelegation` accounts associated with the program.
+///
+/// # Returns
+///
+/// An `anyhow::Result` containing a vector of `(Pubkey, VaultOperatorDelegation)` tuples. Each
+/// tuple represents a vault operator delegation account and includes:
+/// - `Pubkey`: The public key of the vault operator delegation account.
+/// - `VaultOperatorDelegation`: The deserialized vault operator delegation data.
+// pub async fn get_vault_operator_delegations(
+//     handler: &CliHandler,
+// ) -> anyhow::Result<Vec<(Pubkey, VaultOperatorDelegation)>> {
+//     let rpc_client = handler.rpc_client();
+//     let config = get_rpc_program_accounts_config::<VaultOperatorDelegation>()?;
+//
+//     let accounts = rpc_client
+//         .get_program_accounts_with_config(&handler.vault_program_id, config)
+//         .await?;
+//
+//     let delegations: Vec<(Pubkey, VaultOperatorDelegation)> = accounts
+//         .into_iter()
+//         .filter_map(|(pubkey, acc)| {
+//             VaultOperatorDelegation::try_from_slice_unchecked(&acc.data)
+//                 .map_or(None, |v| Some((pubkey, *v)))
+//         })
+//         .collect();
+//
+//     Ok(delegations)
+// }
+
 pub async fn get_operator_vault_ticket(
     handler: &CliHandler,
     vault: &Pubkey,
@@ -882,6 +948,35 @@ pub async fn get_all_vaults(handler: &CliHandler) -> Result<Vec<Pubkey>> {
         .await?;
 
     let vaults: Vec<Pubkey> = results.iter().map(|result| result.0).collect();
+
+    Ok(vaults)
+}
+
+/// Retrieves all existing vaults
+///
+/// # Returns
+///
+/// Returns an `anyhow::Result` containing a vector of `(Pubkey, Vault)` tuples
+/// representing all the vault accounts associated with the program. Each tuple
+/// consists of:
+/// - `Pubkey`: The public key of the vault account.
+/// - `Vault`: The deserialized vault data from the account.
+pub async fn get_vault_pubkeys_and_vaults(
+    handler: &CliHandler,
+) -> anyhow::Result<Vec<(Pubkey, Vault)>> {
+    let rpc_client = handler.rpc_client();
+    let config = get_rpc_program_accounts_config::<Vault>()?;
+
+    let accounts = rpc_client
+        .get_program_accounts_with_config(&handler.vault_program_id, config)
+        .await?;
+
+    let vaults: Vec<(Pubkey, Vault)> = accounts
+        .into_iter()
+        .filter_map(|(pubkey, acc)| {
+            Vault::try_from_slice_unchecked(&acc.data).map_or(None, |v| Some((pubkey, *v)))
+        })
+        .collect();
 
     Ok(vaults)
 }
