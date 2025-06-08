@@ -614,35 +614,6 @@ pub async fn get_vault_operator_delegation(
     Ok(*account)
 }
 
-/// Retrieves all existing `VaultOperatorDelegation` accounts associated with the program.
-///
-/// # Returns
-///
-/// An `anyhow::Result` containing a vector of `(Pubkey, VaultOperatorDelegation)` tuples. Each
-/// tuple represents a vault operator delegation account and includes:
-/// - `Pubkey`: The public key of the vault operator delegation account.
-/// - `VaultOperatorDelegation`: The deserialized vault operator delegation data.
-// pub async fn get_vault_operator_delegations(
-//     handler: &CliHandler,
-// ) -> anyhow::Result<Vec<(Pubkey, VaultOperatorDelegation)>> {
-//     let rpc_client = handler.rpc_client();
-//     let config = get_rpc_program_accounts_config::<VaultOperatorDelegation>()?;
-//
-//     let accounts = rpc_client
-//         .get_program_accounts_with_config(&handler.vault_program_id, config)
-//         .await?;
-//
-//     let delegations: Vec<(Pubkey, VaultOperatorDelegation)> = accounts
-//         .into_iter()
-//         .filter_map(|(pubkey, acc)| {
-//             VaultOperatorDelegation::try_from_slice_unchecked(&acc.data)
-//                 .map_or(None, |v| Some((pubkey, *v)))
-//         })
-//         .collect();
-//
-//     Ok(delegations)
-// }
-
 pub async fn get_operator_vault_ticket(
     handler: &CliHandler,
     vault: &Pubkey,
