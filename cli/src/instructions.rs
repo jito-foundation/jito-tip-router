@@ -14,6 +14,7 @@ use crate::{
     log::{boring_progress_bar, print_base58_tx},
 };
 use anyhow::{anyhow, Ok, Result};
+use jito_bytemuck::AccountDeserialize;
 use jito_restaking_client::instructions::{
     InitializeNcnBuilder, InitializeNcnOperatorStateBuilder, InitializeNcnVaultTicketBuilder,
     InitializeOperatorBuilder, InitializeOperatorVaultTicketBuilder, NcnWarmupOperatorBuilder,
@@ -2342,7 +2343,16 @@ pub async fn get_or_create_ncn_reward_router(
 
 // --------------------- CRANKERS ------------------------------
 
+/// Registers unregistered vaults in the NCN system with the vault registry.
+///
+/// - Fetches all vaults by NCN address and currently registered vaults
+/// - Identifies unregistered vaults by comparing two lists
+/// - For each unregistered vault:
+///     - Retrives vault account data
+///     - Validates the vault's supported mint is registered
+///     - Attempts registration if valid
 pub async fn crank_register_vaults(handler: &CliHandler) -> Result<()> {
+    let rpc_client = handler.rpc_client();
     let all_ncn_vaults = get_all_vaults_in_ncn(handler).await?;
     let vault_registry = get_vault_registry(handler).await?;
     let all_registered_vaults: Vec<Pubkey> = vault_registry
@@ -2357,16 +2367,22 @@ pub async fn crank_register_vaults(handler: &CliHandler) -> Result<()> {
         .copied()
         .collect();
 
-    //TODO check if ST mint is registered first
-
     for vault in vaults_to_register.iter() {
-        let result = register_vault(handler, vault).await;
+        let vault_raw_acc = rpc_client.get_account(vault).await?;
+        let vault_acc = Vault::try_from_slice_unchecked(&vault_raw_acc.data)?;
 
-        if let Err(err) = result {
+        if vault_registry.has_st_mint(&vault_acc.supported_mint) {
+            if let Err(err) = register_vault(handler, vault).await {
+                log::error!(
+                    "Failed to register vault: {:?} with error: {:?}",
+                    vault,
+                    err
+                );
+            }
+        } else {
             log::error!(
-                "Failed to register vault: {:?} with error: {:?}",
+                "Failed to register vault since st_mint has not registered yet: {}",
                 vault,
-                err
             );
         }
     }
