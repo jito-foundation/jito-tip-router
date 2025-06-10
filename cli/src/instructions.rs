@@ -98,6 +98,8 @@ use spl_associated_token_account::get_associated_token_address;
 use switchboard_on_demand_client::{CrossbarClient, FetchUpdateParams, PullFeed, QueueAccountData};
 use tokio::time::sleep;
 
+use jito_priority_fee_distribution_sdk;
+
 // --------------------- ADMIN ------------------------------
 #[allow(clippy::too_many_arguments)]
 pub async fn admin_create_config(
@@ -3350,6 +3352,7 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
     let old_merkle_root_upload_authority =
         Pubkey::from_str("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib").unwrap();
 
+    // Get tip distribution accounts to migrate
     let tip_distribution_accounts = get_tip_distribution_accounts_to_migrate(
         handler,
         &jito_tip_distribution_sdk::id(),
@@ -3358,21 +3361,53 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
     )
     .await?;
 
-    let (merkle_root_upload_config, _) =
-        derive_merkle_root_upload_authority_address(&jito_tip_distribution_sdk::id());
+    // Get priority fee distribution accounts to migrate
+    let priority_fee_distribution_accounts = get_tip_distribution_accounts_to_migrate(
+        handler,
+        &jito_priority_fee_distribution_sdk::id(),
+        &old_merkle_root_upload_authority,
+        epoch,
+    )
+    .await?;
 
-    let ixs = tip_distribution_accounts
+    // Get merkle root upload config addresses for both programs
+    let (tip_merkle_root_upload_config, _) =
+        derive_merkle_root_upload_authority_address(&jito_tip_distribution_sdk::id());
+    let (pf_merkle_root_upload_config, _) =
+        derive_merkle_root_upload_authority_address(&jito_priority_fee_distribution_sdk::id());
+
+    // Create instructions for tip distribution accounts
+    let tip_ixs = tip_distribution_accounts
         .into_iter()
         .map(|pubkey| {
-            migrate_tda_merkle_root_upload_authority_ix(pubkey, merkle_root_upload_config)
+            migrate_tda_merkle_root_upload_authority_ix(pubkey, tip_merkle_root_upload_config)
         })
         .collect::<Vec<_>>();
 
+    // Create instructions for priority fee distribution accounts
+    let pf_ixs = priority_fee_distribution_accounts
+        .into_iter()
+        .map(|pubkey| {
+            jito_priority_fee_distribution_sdk::instruction::migrate_tda_merkle_root_upload_authority_ix(
+                pubkey,
+                pf_merkle_root_upload_config,
+            )
+        })
+        .collect::<Vec<_>>();
+
+    let tip_ixs_len = tip_ixs.len();
+    let pf_ixs_len = pf_ixs.len();
+    let mut all_ixs = tip_ixs;
+    all_ixs.extend(pf_ixs);
+
     info!(
-        "Migrating TDA Merkle Root Upload Authorities: {}",
-        ixs.len()
+        "Migrating TDA Merkle Root Upload Authorities: {} tip distribution accounts, {} priority fee distribution accounts",
+        tip_ixs_len,
+        pf_ixs_len
     );
-    for chunk in ixs.chunks(8) {
+
+    // Process instructions in chunks
+    for chunk in all_ixs.chunks(8) {
         let tx_ixs = std::iter::once(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000))
             .chain(chunk.iter().cloned())
             .collect::<Vec<_>>();

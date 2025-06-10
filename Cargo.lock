@@ -3730,6 +3730,7 @@ dependencies = [
  "futures 0.3.31",
  "jito-bytemuck",
  "jito-jsm-core",
+ "jito-priority-fee-distribution-sdk",
  "jito-restaking-client",
  "jito-restaking-core",
  "jito-restaking-program",
