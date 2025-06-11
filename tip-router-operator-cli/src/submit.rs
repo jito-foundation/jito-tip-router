@@ -21,7 +21,10 @@ use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 use crate::tip_router::send_set_merkle_root_txs;
 use crate::{meta_merkle_tree_file_name, Version};
 use crate::{
-    tip_router::{cast_vote, get_ncn_config, set_merkle_root_instructions},
+    tip_router::{
+        cast_vote, get_ncn_config, set_merkle_root_instructions,
+        set_priority_fee_merkle_root_instructions,
+    },
     Cli,
 };
 
@@ -244,7 +247,7 @@ pub async fn submit_to_ncn(
             tip_distribution_accounts,
             &meta_merkle_tree,
         );
-        let pf_instructions = set_merkle_root_instructions(
+        let pf_instructions = set_priority_fee_merkle_root_instructions(
             ncn_address,
             priority_fee_distribution_program_id,
             tip_router_program_id,
