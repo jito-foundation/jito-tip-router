@@ -124,6 +124,6 @@ weightTableKinobi.accept(renderers.renderRustVisitor(path.join(rustWeightTableCl
     formatCode: true,
     crateFolder: rustWeightTableClientDir,
     deleteFolderBeforeRendering: true,
-    toolchain: "+nightly-2024-07-25"
+    toolchain: "+1.84.1"
 }));
 weightTableKinobi.accept(renderers.renderJavaScriptVisitor(path.join(jsWeightTableClientDir), {}));

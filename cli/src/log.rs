@@ -7,6 +7,7 @@ use env_logger::{
     Env,
 };
 use log::Record;
+use solana_sdk::{bs58, instruction::Instruction};
 use tokio::time::{sleep, Instant};
 pub fn init_logger() {
     env_logger::Builder::from_env(Env::default().default_filter_or("info"))
@@ -161,4 +162,25 @@ pub async fn progress_bar(duration_ms: u64) {
     // Clean up: restore cursor position, clear line, and show cursor
     print!("\x1B[u\x1B[2K\x1B[?25h");
     let _ = std::io::stdout().flush();
+}
+
+pub(crate) fn print_base58_tx(ixs: &[Instruction]) {
+    ixs.iter().for_each(|ix| {
+        log::info!("\n------ IX ------\n");
+
+        println!("{}\n", ix.program_id);
+
+        ix.accounts.iter().for_each(|account| {
+            let pubkey = format!("{}", account.pubkey);
+            let writable = if account.is_writable { "W" } else { "" };
+            let signer = if account.is_signer { "S" } else { "" };
+
+            println!("{:<44} {:>2} {:>1}", pubkey, writable, signer);
+        });
+
+        println!("\n");
+
+        let base58_string = bs58::encode(&ix.data).into_string();
+        println!("{}\n", base58_string);
+    });
 }

@@ -1,5 +1,6 @@
 use solana_program::hash::hashv;
 
+#[allow(clippy::too_long_first_doc_paragraph)]
 /// modified version of https://github.com/saber-hq/merkle-distributor/blob/ac937d1901033ecb7fa3b0db22f7b39569c8e052/programs/merkle-distributor/src/merkle_proof.rs#L8
 /// This function deals with verification of Merkle trees (hash trees).
 /// Direct port of https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.0/contracts/cryptography/MerkleProof.sol

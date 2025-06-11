@@ -2,12 +2,11 @@
 use ::{
     anyhow::Result,
     clap::Parser,
-    ellipsis_client::EllipsisClient,
     log::{error, info},
-    meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection},
-    solana_metrics::{datapoint_info, set_host_id},
+    solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
+    std::process::Command,
     std::{str::FromStr, sync::Arc, time::Duration},
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
@@ -15,8 +14,9 @@ use ::{
         cli::{Cli, Commands, SnapshotPaths},
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_snapshot_at_slot,
-        load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
-        process_epoch, stake_meta_file_name,
+        load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_path,
+        process_epoch, read_merkle_tree_collection, read_stake_meta_collection,
+        stake_meta_file_name,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         tip_router::get_ncn_config,
         Version,
@@ -29,21 +29,34 @@ async fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
 
+    let hostname_cmd = Command::new("hostname")
+        .output()
+        .expect("Failed to execute hostname command");
+
+    let hostname = String::from_utf8_lossy(&hostname_cmd.stdout)
+        .trim()
+        .to_string();
+
+    let host_id = format!(
+        "tip-router-operator-{}-{}-{}",
+        &cli.cluster, &cli.region, &hostname
+    );
+
+    set_host_id(host_id.clone());
+
+    info!("Ensuring localhost RPC is caught up with remote validator...");
+
     // Ensure backup directory and
     cli.force_different_backup_snapshot_dir();
 
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
-    let rpc_client = EllipsisClient::from_rpc_with_timeout(
-        RpcClient::new(cli.rpc_url.clone()),
-        &read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
-        1_800_000, // 30 minutes
-    )?;
+    let rpc_client = Arc::new(RpcClient::new(cli.rpc_url.clone()));
 
-    set_host_id(cli.operator_address.to_string());
     datapoint_info!(
         "tip_router_cli.version",
         ("operator_address", cli.operator_address.to_string(), String),
-        ("version", Version::default().to_string(), String)
+        ("version", Version::default().to_string(), String),
+        "cluster" => &cli.cluster,
     );
 
     // Will panic if the user did not set --save-path or the deprecated --meta-merkle-tree-dir
@@ -58,7 +71,9 @@ async fn main() -> Result<()> {
         full_snapshots_path: {:?}
         snapshot_output_dir: {}
         backup_snapshots_dir: {}
-        save_path: {}",
+        save_path: {},
+        vote_microlamports: {}
+        claim_microlamports: {}",
         cli.keypair_path,
         cli.operator_address,
         cli.rpc_url,
@@ -67,6 +82,8 @@ async fn main() -> Result<()> {
         cli.snapshot_output_dir.display(),
         cli.backup_snapshots_dir.display(),
         save_path.display(),
+        &cli.vote_microlamports,
+        &cli.claim_microlamports,
     );
 
     cli.create_save_path();
@@ -86,6 +103,7 @@ async fn main() -> Result<()> {
             set_merkle_roots,
             claim_tips,
             claim_tips_metrics,
+            claim_tips_epoch_lookback,
         } => {
             assert!(
                 num_monitored_epochs > 0,
@@ -110,6 +128,7 @@ async fn main() -> Result<()> {
             let full_snapshots_path = cli.full_snapshots_path.clone().unwrap();
             let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
             let rpc_url = cli.rpc_url.clone();
+            let claim_tips_epoch_filepath = cli.claim_tips_epoch_filepath.clone();
             let cli_clone: Cli = cli.clone();
 
             if !backup_snapshots_dir.exists() {
@@ -119,6 +138,40 @@ async fn main() -> Result<()> {
                 );
                 std::fs::create_dir_all(&backup_snapshots_dir)?;
             }
+
+            let operator_address = cli.operator_address.clone();
+            let cluster = cli.cluster.clone();
+
+            let try_catchup = tip_router_operator_cli::solana_cli::catchup(
+                cli.rpc_url.to_owned(),
+                cli.localhost_port,
+            );
+            if let Err(ref e) = &try_catchup {
+                datapoint_error!(
+                    "tip_router_cli.main",
+                    ("operator_address", cli.operator_address, String),
+                    ("status", "error", String),
+                    ("error", e.to_string(), String),
+                    ("state", "bootstrap", String),
+                    "cluster" => &cli.cluster,
+                );
+                error!("Failed to catch up: {}", e);
+            }
+
+            if let Ok(command_output) = &try_catchup {
+                info!("{}", command_output);
+            }
+
+            tokio::spawn(async move {
+                loop {
+                    datapoint_info!(
+                        "tip_router_cli.heartbeat",
+                        ("operator_address", operator_address, String),
+                        "cluster" => cluster,
+                    );
+                    sleep(Duration::from_secs(cli.heartbeat_interval_seconds)).await;
+                }
+            });
 
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
@@ -164,10 +217,15 @@ async fn main() -> Result<()> {
                 }
             });
 
+            // Claim tips and emit metrics
+            let file_mutex = Arc::new(Mutex::new(()));
+
             // Run claims if enabled
             if claim_tips_metrics {
                 let cli_clone = cli.clone();
                 let rpc_client_clone = rpc_client.clone();
+                let file_path_ref = claim_tips_epoch_filepath.clone();
+                let file_mutex_ref = file_mutex.clone();
 
                 tokio::spawn(async move {
                     loop {
@@ -180,29 +238,39 @@ async fn main() -> Result<()> {
                                 continue;
                             }
                         };
+                        for epoch_offset in 0..claim_tips_epoch_lookback {
+                            let epoch_to_emit = current_epoch
+                                .checked_sub(epoch_offset)
+                                .expect("Epoch underflow")
+                                .checked_sub(1)
+                                .expect("Epoch overflow");
 
-                        let cli_ref = cli_clone.clone();
-                        match emit_claim_mev_tips_metrics(
-                            &cli_ref,
-                            current_epoch,
-                            tip_distribution_program_id,
-                            priority_fee_distribution_program_id,
-                            tip_router_program_id,
-                            ncn_address,
-                        )
-                        .await
-                        {
-                            Ok(_) => {
-                                info!(
-                                    "Successfully emitted claim metrics for epoch {}",
-                                    current_epoch
-                                );
-                            }
-                            Err(e) => {
-                                error!(
-                                    "Error emitting claim metrics for epoch {}: {}",
-                                    current_epoch, e
-                                );
+                            info!("Emitting Claim Metrics for epoch {}", epoch_to_emit);
+                            let cli_ref = cli_clone.clone();
+                            match emit_claim_mev_tips_metrics(
+                                &cli_ref,
+                                epoch_to_emit,
+                                tip_distribution_program_id,
+                                priority_fee_distribution_program_id,
+                                tip_router_program_id,
+                                ncn_address,
+                                &file_path_ref,
+                                &file_mutex_ref,
+                            )
+                            .await
+                            {
+                                Ok(_) => {
+                                    info!(
+                                        "Successfully emitted claim metrics for epoch {}",
+                                        epoch_to_emit
+                                    );
+                                }
+                                Err(e) => {
+                                    error!(
+                                        "Error emitting claim metrics for epoch {}: {}",
+                                        epoch_to_emit, e
+                                    );
+                                }
                             }
                         }
 
@@ -215,7 +283,6 @@ async fn main() -> Result<()> {
             if claim_tips {
                 let cli_clone = cli.clone();
                 let rpc_client_clone = rpc_client.clone();
-                let file_mutex = Arc::new(Mutex::new(()));
 
                 tokio::spawn(async move {
                     loop {
@@ -233,15 +300,19 @@ async fn main() -> Result<()> {
                         let mut join_handles = Vec::new();
 
                         // Process current epoch and the previous two epochs
-                        for epoch_offset in 0..3 {
+                        for epoch_offset in 0..claim_tips_epoch_lookback {
                             let epoch_to_process = current_epoch
                                 .checked_sub(epoch_offset)
-                                .expect("Epoch underflow");
+                                .expect("Epoch underflow")
+                                .checked_sub(1)
+                                .expect("Epoch overflow");
                             let cli_ref = cli_clone.clone();
+                            let file_path_ref = claim_tips_epoch_filepath.clone();
                             let file_mutex_ref = file_mutex.clone();
 
                             // Create a task for each epoch and add its handle to our vector
                             let handle = tokio::spawn(async move {
+                                info!("Processing claims for epoch {}", epoch_to_process);
                                 let result = claim_mev_tips_with_emit(
                                     &cli_ref,
                                     epoch_to_process,
@@ -250,6 +321,7 @@ async fn main() -> Result<()> {
                                     tip_router_program_id,
                                     ncn_address,
                                     Duration::from_secs(3600),
+                                    &file_path_ref,
                                     &file_mutex_ref,
                                 )
                                 .await;
@@ -357,7 +429,8 @@ async fn main() -> Result<()> {
             epoch,
             set_merkle_roots,
         } => {
-            let meta_merkle_tree_path = cli.get_save_path().join(meta_merkle_tree_file_name(epoch));
+            let meta_merkle_tree_path = meta_merkle_tree_path(epoch, &cli.get_save_path());
+
             info!(
                 "Submitting epoch {} from {}...",
                 epoch,
@@ -376,6 +449,8 @@ async fn main() -> Result<()> {
                 &priority_fee_distribution_program_id,
                 cli.submit_as_memo,
                 set_merkle_roots,
+                cli.vote_microlamports,
+                &cli.cluster,
             )
             .await?;
         }
@@ -387,6 +462,7 @@ async fn main() -> Result<()> {
             epoch,
         } => {
             info!("Claiming tips...");
+            let claim_tips_epoch_filepath = cli.claim_tips_epoch_filepath.clone();
             let file_mutex = Arc::new(Mutex::new(()));
             claim_mev_tips_with_emit(
                 &cli,
@@ -396,6 +472,7 @@ async fn main() -> Result<()> {
                 tip_router_program_id,
                 ncn_address,
                 Duration::from_secs(3600),
+                &claim_tips_epoch_filepath,
                 &file_mutex,
             )
             .await?;
@@ -436,6 +513,7 @@ async fn main() -> Result<()> {
                 &tip_payment_program_id,
                 &save_path,
                 save,
+                &cli.cluster,
             );
         }
         Commands::CreateMerkleTreeCollection {
@@ -445,12 +523,10 @@ async fn main() -> Result<()> {
             save,
         } => {
             // Load the stake_meta_collection from disk
-            let stake_meta_collection = match StakeMetaCollection::new_from_file(
+            let stake_meta_collection = read_stake_meta_collection(
+                epoch,
                 &cli.get_save_path().join(stake_meta_file_name(epoch)),
-            ) {
-                Ok(stake_meta_collection) => stake_meta_collection,
-                Err(e) => panic!("{}", e),
-            };
+            );
             let config = get_ncn_config(&rpc_client, &tip_router_program_id, &ncn_address).await?;
             // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
             //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
@@ -470,16 +546,16 @@ async fn main() -> Result<()> {
                 fees.priority_fee_distribution_fee_bps(),
                 &save_path,
                 save,
+                &cli.cluster,
             );
         }
         Commands::CreateMetaMerkleTree { epoch, save } => {
             // Load the stake_meta_collection from disk
-            let merkle_tree_collection = match GeneratedMerkleTreeCollection::new_from_file(
-                &save_path.join(merkle_tree_collection_file_name(epoch)),
-            ) {
-                Ok(merkle_tree_collection) => merkle_tree_collection,
-                Err(e) => panic!("{}", e),
-            };
+            let merkle_tree_collection = read_merkle_tree_collection(
+                epoch,
+                &cli.get_save_path()
+                    .join(merkle_tree_collection_file_name(epoch)),
+            );
 
             create_meta_merkle_tree(
                 cli.operator_address,
@@ -487,6 +563,7 @@ async fn main() -> Result<()> {
                 epoch,
                 &save_path,
                 save,
+                &cli.cluster,
             );
         }
     }

@@ -96,14 +96,13 @@ impl MetaMerkleTree {
         Ok(())
     }
 
-    pub fn get_node(&self, tip_distribution_account: &Pubkey) -> TreeNode {
+    pub fn get_node(&self, tip_distribution_account: &Pubkey) -> Option<TreeNode> {
         for i in self.tree_nodes.iter() {
             if i.tip_distribution_account == *tip_distribution_account {
-                return i.clone();
+                return Some(i.clone());
             }
         }
-
-        panic!("Claimant not found in tree");
+        None
     }
 
     fn validate(&self) -> Result<()> {
