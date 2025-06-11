@@ -111,7 +111,7 @@ pub async fn admin_create_config(
     fee_wallet: Option<Pubkey>,
     tie_breaker_admin: Option<Pubkey>,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
     let client = handler.rpc_client();
 
     let ncn = *handler.ncn()?;
@@ -184,7 +184,7 @@ pub async fn admin_register_st_mint(
     switchboard_feed: Option<Pubkey>,
     no_feed_weight: Option<u128>,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
 
     let ncn = *handler.ncn()?;
 
@@ -261,7 +261,7 @@ pub async fn admin_set_weight_with_st_mint(
     epoch: u64,
     weight: u128,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
 
     let ncn = *handler.ncn()?;
 
@@ -308,7 +308,7 @@ pub async fn admin_set_tie_breaker(
     epoch: u64,
     meta_merkle_root: [u8; 32],
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
 
     let ncn = *handler.ncn()?;
 
@@ -358,7 +358,7 @@ pub async fn admin_set_new_admin(
     set_fee_admin: bool,
     set_tie_breaker_admin: bool,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
     let ncn = *handler.ncn()?;
 
     let config_pda = TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0;
@@ -409,7 +409,7 @@ pub async fn admin_set_parameters(
     valid_slots_after_consensus: Option<u64>,
     starting_valid_epoch: Option<u64>,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
     let ncn = *handler.ncn()?;
 
     let config_pda = TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0;
@@ -462,7 +462,7 @@ pub async fn admin_set_parameters(
 }
 
 pub async fn admin_fund_account_payer(handler: &CliHandler, amount: f64) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
     let ncn = *handler.ncn()?;
 
     let (account_payer, _, _) =
@@ -499,7 +499,7 @@ pub async fn admin_set_config_fees(
     ncn_fee_group: Option<u8>,
     new_ncn_fee_bps: Option<u16>,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
     let ncn = *handler.ncn()?;
 
     let config_pda = TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0;
@@ -829,7 +829,7 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
 
     let client = handler.rpc_client();
     let switchboard_context = handler.switchboard_context();
-    let payer = handler.keypair()?;
+    let payer = handler.keypair();
 
     if switchboard_feed.eq(&Pubkey::default()) {
         return Ok(());
@@ -1250,7 +1250,7 @@ pub async fn operator_cast_vote(
     epoch: u64,
     meta_merkle_root: [u8; 32],
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
 
     let ncn = *handler.ncn()?;
 
@@ -1673,7 +1673,7 @@ pub async fn distribute_base_rewards(
     base_fee_group: BaseFeeGroup,
     epoch: u64,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
     let ncn = *handler.ncn()?;
 
     let (epoch_state, _, _) =
@@ -1752,7 +1752,7 @@ pub async fn distribute_ncn_vault_rewards(
     ncn_fee_group: NcnFeeGroup,
     epoch: u64,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
     let ncn = *handler.ncn()?;
 
     let (epoch_state, _, _) =
@@ -1868,7 +1868,7 @@ pub async fn distribute_ncn_operator_rewards(
     ncn_fee_group: NcnFeeGroup,
     epoch: u64,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
     let ncn = *handler.ncn()?;
 
     let (epoch_state, _, _) =
@@ -2051,7 +2051,7 @@ pub async fn update_all_vaults_in_network(handler: &CliHandler) -> Result<()> {
 }
 
 pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<()> {
-    let payer = handler.keypair()?;
+    let payer = handler.keypair();
 
     // Get Epoch Info
     let current_slot = get_current_slot(handler).await?;
@@ -2496,7 +2496,7 @@ pub async fn crank_post_vote_cooldown(_: &CliHandler, _: u64) -> Result<()> {
 
 #[allow(clippy::large_stack_frames)]
 pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let voter = handler.keypair()?.pubkey();
+    let voter = handler.keypair().pubkey();
     let meta_merkle_root = [8; 32];
     let operators = get_all_operators_in_ncn(handler).await?;
 
@@ -2532,7 +2532,7 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
         let base_reward_receiver = get_account(handler, &base_reward_receiver_address).await?;
 
         if base_reward_receiver.is_none() {
-            let keypair = handler.keypair()?;
+            let keypair = handler.keypair();
 
             let lamports = sol_to_lamports(0.1);
             let transfer_ix = transfer(&keypair.pubkey(), &base_reward_receiver_address, lamports);
@@ -2866,7 +2866,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 // --------------------- TEST NCN --------------------------------
 
 pub async fn create_test_ncn(handler: &CliHandler) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
 
     let base = Keypair::new();
     let (ncn, _, _) = Ncn::find_program_address(&handler.restaking_program_id, &base.pubkey());
@@ -2897,7 +2897,7 @@ pub async fn create_and_add_test_operator(
     handler: &CliHandler,
     operator_fee_bps: u16,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
 
     let ncn = *handler.ncn()?;
 
@@ -2979,7 +2979,7 @@ pub async fn create_and_add_test_vault(
     withdrawal_fee_bps: u16,
     reward_fee_bps: u16,
 ) -> Result<()> {
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
 
     let ncn = *handler.ncn()?;
 
@@ -3297,7 +3297,7 @@ pub async fn send_transactions(
     signing_keypairs: &[&Keypair],
 ) -> Result<Signature> {
     let client = handler.rpc_client();
-    let keypair = handler.keypair()?;
+    let keypair = handler.keypair();
     let retries = handler.retries;
     let priority_fee_micro_lamports = handler.priority_fee_micro_lamports;
 
