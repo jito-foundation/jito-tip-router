@@ -14,16 +14,15 @@ use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{
     account::Account,
     commitment_config::CommitmentConfig,
-    compute_budget::ComputeBudgetInstruction,
     fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
-    native_token::LAMPORTS_PER_SOL,
+    native_token::{lamports_to_sol, LAMPORTS_PER_SOL},
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
     signer::Signer,
     system_program,
     transaction::Transaction,
 };
-use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::{
     collections::HashMap,
@@ -38,7 +37,7 @@ use tokio::io::BufReader;
 use tokio::sync::Mutex;
 
 use crate::{
-    merkle_tree_collection_file_name,
+    merkle_tree_collection_file_name, priority_fees,
     rpc_utils::{get_batched_accounts, send_until_blockhash_expires},
     Cli,
 };
@@ -83,6 +82,8 @@ pub async fn emit_claim_mev_tips_metrics(
     priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
     ncn: Pubkey,
+    file_path: &PathBuf,
+    file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), anyhow::Error> {
     let meta_merkle_tree_dir = cli.get_save_path().clone();
     let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
@@ -96,6 +97,12 @@ pub async fn emit_claim_mev_tips_metrics(
         CommitmentConfig::confirmed(),
     );
 
+    let epoch = merkle_trees.epoch;
+    let current_epoch = rpc_client.get_epoch_info().await?.epoch;
+    if is_epoch_completed(epoch, current_epoch, file_path, file_mutex).await? {
+        return Ok(());
+    }
+
     let all_claim_transactions = get_claim_transactions_for_valid_unclaimed(
         &rpc_client,
         &merkle_trees,
@@ -106,6 +113,7 @@ pub async fn emit_claim_mev_tips_metrics(
         0,
         Pubkey::new_unique(),
         &cli.operator_address,
+        &cli.cluster,
     )
     .await?;
 
@@ -113,7 +121,12 @@ pub async fn emit_claim_mev_tips_metrics(
         "tip_router_cli.claim_mev_tips-send_summary",
         ("claim_transactions_left", all_claim_transactions.len(), i64),
         ("epoch", epoch, i64),
+        "cluster" => &cli.cluster,
     );
+
+    if all_claim_transactions.is_empty() {
+        add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
+    }
 
     Ok(())
 }
@@ -127,6 +140,7 @@ pub async fn claim_mev_tips_with_emit(
     tip_router_program_id: Pubkey,
     ncn: Pubkey,
     max_loop_duration: Duration,
+    file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), anyhow::Error> {
     let keypair = read_keypair_file(cli.keypair_path.clone())
@@ -161,16 +175,18 @@ pub async fn claim_mev_tips_with_emit(
     match claim_mev_tips(
         &merkle_tree_coll,
         rpc_url.clone(),
-        rpc_url,
+        rpc_url.clone(),
         tip_distribution_program_id,
         priority_fee_distribution_program_id,
         tip_router_program_id,
         ncn,
         &keypair,
         max_loop_duration,
-        cli.micro_lamports,
+        cli.claim_microlamports,
+        file_path,
         file_mutex,
         &cli.operator_address,
+        &cli.cluster,
     )
     .await
     {
@@ -181,6 +197,7 @@ pub async fn claim_mev_tips_with_emit(
                 ("epoch", epoch, i64),
                 ("transactions_left", 0, i64),
                 ("elapsed_us", start.elapsed().as_micros(), i64),
+                "cluster" => &cli.cluster,
             );
         }
         Err(ClaimMevError::NotFinished { transactions_left }) => {
@@ -190,6 +207,7 @@ pub async fn claim_mev_tips_with_emit(
                 ("epoch", epoch, i64),
                 ("transactions_left", transactions_left, i64),
                 ("elapsed_us", start.elapsed().as_micros(), i64),
+                "cluster" => &cli.cluster,
             );
         }
         Err(e) => {
@@ -199,11 +217,31 @@ pub async fn claim_mev_tips_with_emit(
                 ("epoch", epoch, i64),
                 ("error", e.to_string(), String),
                 ("elapsed_us", start.elapsed().as_micros(), i64),
+                "cluster" => &cli.cluster,
             );
         }
     }
 
+    let claimer_balance = get_claimer_balance(rpc_url, &keypair).await?;
+    datapoint_info!(
+        "claimer_info",
+        ("claimer", keypair.pubkey().to_string(), String),
+        ("epoch", epoch, i64),
+        ("lamport_balance", claimer_balance, i64),
+        ("sol_balance", lamports_to_sol(claimer_balance), f64),
+        "cluster" => &cli.cluster,
+    );
+
     Ok(())
+}
+
+pub async fn get_claimer_balance(
+    rpc_url: String,
+    keypair: &Arc<Keypair>,
+) -> Result<u64, ClaimMevError> {
+    let rpc_client = RpcClient::new(rpc_url);
+    let balance = rpc_client.get_balance(&keypair.pubkey()).await?;
+    Ok(balance)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -218,20 +256,23 @@ pub async fn claim_mev_tips(
     keypair: &Arc<Keypair>,
     max_loop_duration: Duration,
     micro_lamports: u64,
+    file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
     operator_address: &String,
+    cluster: &str,
 ) -> Result<(), ClaimMevError> {
-    let epoch = merkle_trees.epoch;
-    if is_epoch_completed(epoch, file_mutex).await? {
-        return Ok(());
-    }
-
     let rpc_client = RpcClient::new_with_timeout_and_commitment(
         rpc_url,
         Duration::from_secs(1800),
         CommitmentConfig::confirmed(),
     );
     let rpc_sender_client = RpcClient::new(rpc_sender_url);
+
+    let epoch = merkle_trees.epoch;
+    let current_epoch = rpc_client.get_epoch_info().await?.epoch;
+    if is_epoch_completed(epoch, current_epoch, file_path, file_mutex).await? {
+        return Ok(());
+    }
 
     let start = Instant::now();
     while start.elapsed() <= max_loop_duration {
@@ -245,6 +286,7 @@ pub async fn claim_mev_tips(
             micro_lamports,
             keypair.pubkey(),
             operator_address,
+            cluster,
         )
         .await?;
 
@@ -253,9 +295,11 @@ pub async fn claim_mev_tips(
             ("claim_transactions_left", all_claim_transactions.len(), i64),
             ("epoch", epoch, i64),
             ("operator", operator_address, String),
+            "cluster" => cluster,
         );
 
         if all_claim_transactions.is_empty() {
+            add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
             return Ok(());
         }
 
@@ -301,10 +345,11 @@ pub async fn claim_mev_tips(
         micro_lamports,
         keypair.pubkey(),
         operator_address,
+        cluster,
     )
     .await?;
     if transactions.is_empty() {
-        add_completed_epoch(epoch, file_mutex).await?;
+        add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
         return Ok(());
     }
 
@@ -345,6 +390,11 @@ pub async fn claim_mev_tips(
     if is_error {
         Err(ClaimMevError::UncaughtError { e: error_str })
     } else {
+        info!(
+            "Not finished claiming for epoch {}, transactions left {}",
+            epoch,
+            transactions.len()
+        );
         Err(ClaimMevError::NotFinished {
             transactions_left: transactions.len(),
         })
@@ -362,6 +412,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     micro_lamports: u64,
     payer_pubkey: Pubkey,
     operator_address: &String,
+    cluster: &str,
 ) -> Result<Vec<Transaction>, ClaimMevError> {
     let epoch = merkle_trees.epoch;
     let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
@@ -435,6 +486,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         ("claim_statuses_onchain", claim_statuses.len(), i64),
         ("epoch", epoch, i64),
         ("operator", operator_address, String),
+        "cluster" => cluster,
     );
 
     let transactions = build_mev_claim_transactions(
@@ -448,6 +500,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         micro_lamports,
         payer_pubkey,
         ncn,
+        cluster,
     );
 
     Ok(transactions)
@@ -474,6 +527,7 @@ fn build_mev_claim_transactions(
     micro_lamports: u64,
     payer_pubkey: Pubkey,
     ncn_address: Pubkey,
+    cluster: &str,
 ) -> Vec<Transaction> {
     let epoch = merkle_trees.epoch;
     let tip_router_config_address =
@@ -582,13 +636,12 @@ fn build_mev_claim_transactions(
     let transactions: Vec<Transaction> = instructions
         .into_iter()
         .map(|claim_ix| {
-            // helps get txs into block easier since default is 400k CUs
-            let compute_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(100_000);
-            let priority_fee_ix = ComputeBudgetInstruction::set_compute_unit_price(micro_lamports);
-            Transaction::new_with_payer(
-                &[compute_limit_ix, priority_fee_ix, claim_ix],
-                Some(&payer_pubkey),
-            )
+            let instructions = priority_fees::configure_instruction(
+                claim_ix,
+                micro_lamports,
+                Some(100_000), // helps get txs into block easier since default is 400k CUs
+            );
+            Transaction::new_with_payer(&instructions, Some(&payer_pubkey))
         })
         .collect();
 
@@ -598,7 +651,8 @@ fn build_mev_claim_transactions(
         ("distribution_accounts", tdas.len(), i64),
         ("claim_statuses", claim_statuses.len(), i64),
         ("claim_transactions", transactions.len(), i64),
-        ("epoch", epoch, i64)
+        ("epoch", epoch, i64),
+        "cluster" => cluster,
     );
 
     transactions
@@ -646,20 +700,37 @@ async fn is_sufficient_balance(
 /// Helper function to check if an epoch is in the completed_claim_epochs.txt file
 pub async fn is_epoch_completed(
     epoch: u64,
+    current_epoch: u64,
+    file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
 ) -> Result<bool, ClaimMevError> {
+    // If we're still on the current epoch, it can't be completed
+    let current_claim_epoch =
+        current_epoch
+            .checked_sub(1)
+            .ok_or(ClaimMevError::CompletedEpochsError(
+                "Epoch underflow".to_string(),
+            ))?;
+
+    if current_claim_epoch == epoch {
+        info!("Do not skip the current claim epoch ( {} )", epoch);
+        return Ok(false);
+    }
+
     // Acquire the mutex lock before file operations
     let _lock = file_mutex.lock().await;
 
-    let path = Path::new("completed_claim_epochs.txt");
-
     // If file doesn't exist, no epochs are completed
-    if !path.exists() {
+    if !file_path.exists() {
+        info!("No completed epochs file found - creating empty");
+        drop(_lock);
+        add_completed_epoch(0, current_epoch, file_path, file_mutex).await?;
+
         return Ok(false);
     }
 
     // Open and read file
-    let file = File::open(path).await.map_err(|e| {
+    let file = File::open(file_path).await.map_err(|e| {
         ClaimMevError::CompletedEpochsError(format!("Failed to open completed epochs file: {}", e))
     })?;
 
@@ -674,6 +745,7 @@ pub async fn is_epoch_completed(
         // Try to parse the line as a u64 and compare with our epoch
         if let Ok(completed_epoch) = line.trim().parse::<u64>() {
             if completed_epoch == epoch {
+                info!("Skipping epoch {} ( already completed )", epoch);
                 return Ok(true);
             }
         }
@@ -682,24 +754,38 @@ pub async fn is_epoch_completed(
         line.clear();
     }
 
+    info!("Epoch {} not found in completed epochs file", epoch);
     Ok(false)
 }
 
 /// Helper function to add an epoch to the completed_claim_epochs.txt file
 pub async fn add_completed_epoch(
     epoch: u64,
+    current_epoch: u64,
+    file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), ClaimMevError> {
+    // If we're still on the current epoch, it can't be completed
+    let current_claim_epoch =
+        current_epoch
+            .checked_sub(1)
+            .ok_or(ClaimMevError::CompletedEpochsError(
+                "Epoch underflow".to_string(),
+            ))?;
+
+    if current_claim_epoch == epoch {
+        info!("Do not write file for current epoch ( {} )", epoch);
+        return Ok(());
+    }
+
     // Acquire the mutex lock before file operations
     let _lock = file_mutex.lock().await;
-
-    let path = Path::new("completed_claim_epochs.txt");
 
     // Create or open file in append mode
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(path)
+        .open(file_path)
         .await
         .map_err(|e| {
             ClaimMevError::CompletedEpochsError(format!(
@@ -715,5 +801,10 @@ pub async fn add_completed_epoch(
             ClaimMevError::CompletedEpochsError(format!("Failed to write epoch to file: {}", e))
         })?;
 
+    info!(
+        "Epoch {} added to completed epochs file ( {} )",
+        epoch,
+        file_path.display()
+    );
     Ok(())
 }

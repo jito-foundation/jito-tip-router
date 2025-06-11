@@ -6,7 +6,6 @@ use std::{
 };
 
 use anyhow::Result;
-use ellipsis_client::EllipsisClient;
 use log::{error, info};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
 use solana_metrics::{datapoint_error, datapoint_info};
@@ -18,9 +17,9 @@ use tokio::time;
 use crate::{
     backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
     create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
-    load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_file_name,
-    stake_meta_file_name, submit::submit_to_ncn, tip_router::get_ncn_config, Cli, OperatorState,
-    Version,
+    load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
+    read_stake_meta_collection, submit::submit_to_ncn, tip_router::get_ncn_config, Cli,
+    OperatorState, Version,
 };
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -101,7 +100,7 @@ pub async fn wait_for_optimal_incremental_snapshot(
 
 #[allow(clippy::too_many_arguments)]
 pub async fn loop_stages(
-    rpc_client: EllipsisClient,
+    rpc_client: Arc<RpcClient>,
     cli: Cli,
     starting_stage: OperatorState,
     override_target_slot: Option<u64>,
@@ -115,6 +114,7 @@ pub async fn loop_stages(
 ) -> Result<()> {
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
     let mut current_epoch_info = rpc_client.get_epoch_info().await?;
+    let epoch_schedule = rpc_client.get_epoch_schedule().await?;
 
     // Track runs that are starting right at the beginning of a new epoch
     let operator_address = cli.operator_address.clone();
@@ -132,6 +132,26 @@ pub async fn loop_stages(
     loop {
         match stage {
             OperatorState::LoadBankFromSnapshot => {
+                info!("Ensuring localhost RPC is caught up with remote validator...");
+
+                let try_catchup =
+                    crate::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
+                if let Err(ref e) = try_catchup {
+                    datapoint_error!(
+                        "tip_router_cli.load_bank_from_snapshot",
+                        ("operator_address", operator_address, String),
+                        ("epoch", epoch_to_process, i64),
+                        ("status", "error", String),
+                        ("error", e.to_string(), String),
+                        ("state", "load_bank_from_snapshot", String),
+                        "cluster" => &cli.cluster,
+                    );
+                    error!("Failed to catch up: {}", e);
+                }
+
+                if let Ok(command_output) = try_catchup {
+                    info!("{}", command_output);
+                }
                 let incremental_snapshots_path = cli.backup_snapshots_dir.clone();
                 wait_for_optimal_incremental_snapshot(incremental_snapshots_path, slot_to_process)
                     .await?;
@@ -154,7 +174,6 @@ pub async fn loop_stages(
                         incremental_snapshots_path: _,
                         backup_snapshots_dir,
                     } = cli.get_snapshot_paths();
-
                     // We can safely expect to use the backup_snapshots_dir as the full snapshot path because
                     //  _get_bank_from_snapshot_at_slot_ expects the snapshot at the exact `slot` to have
                     //  already been taken.
@@ -175,7 +194,8 @@ pub async fn loop_stages(
                                 ("status", "error", String),
                                 ("error", e.to_string(), String),
                                 ("state", "create_stake_meta", String),
-                                ("duration_ms", start.elapsed().as_millis() as i64, i64)
+                                ("duration_ms", start.elapsed().as_millis() as i64, i64),
+                                "cluster" => &cli.cluster,
                             );
                             panic!("{}", e.to_string());
                         }
@@ -190,6 +210,7 @@ pub async fn loop_stages(
                     tip_payment_program_id,
                     &cli.get_save_path(),
                     save_stages,
+                    &cli.cluster,
                 ));
                 // we should be able to safely drop the bank in this loop
                 bank = None;
@@ -197,15 +218,10 @@ pub async fn loop_stages(
                 stage = OperatorState::CreateMerkleTreeCollection;
             }
             OperatorState::CreateMerkleTreeCollection => {
-                let some_stake_meta_collection = match stake_meta_collection.to_owned() {
-                    Some(collection) => collection,
-                    None => {
-                        let file = cli
-                            .get_save_path()
-                            .join(stake_meta_file_name(epoch_to_process));
-                        StakeMetaCollection::new_from_file(&file)?
-                    }
-                };
+                let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
+                    || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
+                    |collection| collection,
+                );
                 let config =
                     get_ncn_config(&rpc_client, tip_router_program_id, ncn_address).await?;
                 // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
@@ -226,6 +242,7 @@ pub async fn loop_stages(
                     fees.priority_fee_distribution_fee_bps(),
                     &cli.get_save_path(),
                     save_stages,
+                    &cli.cluster,
                 ));
 
                 stake_meta_collection = None;
@@ -233,15 +250,10 @@ pub async fn loop_stages(
                 stage = OperatorState::CreateMetaMerkleTree;
             }
             OperatorState::CreateMetaMerkleTree => {
-                let some_merkle_tree_collection = match merkle_tree_collection.to_owned() {
-                    Some(collection) => collection,
-                    None => {
-                        let file = cli
-                            .get_save_path()
-                            .join(merkle_tree_collection_file_name(epoch_to_process));
-                        GeneratedMerkleTreeCollection::new_from_file(&file)?
-                    }
-                };
+                let some_merkle_tree_collection = merkle_tree_collection.to_owned().map_or_else(
+                    || read_merkle_tree_collection(epoch_to_process, &cli.get_save_path()),
+                    |collection| collection,
+                );
 
                 let merkle_tree = create_meta_merkle_tree(
                     cli.operator_address.clone(),
@@ -251,6 +263,7 @@ pub async fn loop_stages(
                     // This is defaulted to true because the output file is required by the
                     //  task that sets TipDistributionAccounts' merkle roots
                     true,
+                    &cli.cluster,
                 );
                 datapoint_info!(
                     "tip_router_cli.process_epoch",
@@ -264,15 +277,14 @@ pub async fn loop_stages(
                         String
                     ),
                     ("version", Version::default().to_string(), String),
+                    "cluster" => &cli.cluster,
                 );
                 stage = OperatorState::CastVote;
             }
             OperatorState::CastVote => {
-                let meta_merkle_tree_path = PathBuf::from(format!(
-                    "{}/{}",
-                    cli.get_save_path().display(),
-                    meta_merkle_tree_file_name(epoch_to_process)
-                ));
+                let meta_merkle_tree_path =
+                    meta_merkle_tree_path(epoch_to_process, &cli.get_save_path());
+
                 let operator_address = Pubkey::from_str(&cli.operator_address)?;
                 submit_to_ncn(
                     &rpc_client,
@@ -287,6 +299,8 @@ pub async fn loop_stages(
                     cli.submit_as_memo,
                     // We let the submit task handle setting merkle roots
                     false,
+                    cli.vote_microlamports,
+                    &cli.cluster,
                 )
                 .await?;
                 stage = OperatorState::WaitForNextEpoch;
@@ -294,17 +308,9 @@ pub async fn loop_stages(
             OperatorState::WaitForNextEpoch => {
                 current_epoch_info =
                     wait_for_next_epoch(&rpc_client, current_epoch_info.epoch).await;
-                // Get the last slot of the previous epoch
-                let (previous_epoch, previous_epoch_slot) =
-                    if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client).await {
-                        (epoch, slot)
-                    } else {
-                        // TODO: Make a datapoint error
-                        error!("Error getting previous epoch slot");
-                        continue;
-                    };
-                slot_to_process = previous_epoch_slot;
-                epoch_to_process = previous_epoch;
+
+                epoch_to_process = current_epoch_info.epoch - 1;
+                slot_to_process = epoch_schedule.get_last_slot_in_epoch(epoch_to_process);
 
                 stage = OperatorState::LoadBankFromSnapshot;
             }

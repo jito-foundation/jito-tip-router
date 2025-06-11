@@ -1,6 +1,6 @@
 use std::fmt;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
 
 #[derive(Parser)]
@@ -107,6 +107,14 @@ pub struct Args {
     #[arg(long, global = true, help = "Verbose mode")]
     pub verbose: bool,
 
+    #[arg(
+        long,
+        global = true,
+        default_value = "false",
+        help = "This will print out the raw TX instead of running it"
+    )]
+    pub print_tx: bool,
+
     #[arg(long, global = true, hide = true)]
     pub markdown_help: bool,
 }
@@ -147,6 +155,15 @@ pub enum ProgramCommand {
         metrics_only: bool,
         #[arg(long, env, help = "Run migration")]
         run_migration: bool,
+        #[arg(long, env, help = "Cluster label for metrics purposes")]
+        cluster: Cluster,
+        #[arg(
+            long,
+            env,
+            default_value = "local",
+            help = "Region for metrics purposes"
+        )]
+        region: String,
     },
     /// Crank Functions
     CrankUpdateAllVaults {},
@@ -440,5 +457,22 @@ impl fmt::Display for Args {
         writeln!(f, "\n")?;
 
         Ok(())
+    }
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+pub enum Cluster {
+    Mainnet,
+    Testnet,
+    Localnet,
+}
+
+impl fmt::Display for Cluster {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Mainnet => write!(f, "mainnet"),
+            Self::Testnet => write!(f, "testnet"),
+            Self::Localnet => write!(f, "localnet"),
+        }
     }
 }

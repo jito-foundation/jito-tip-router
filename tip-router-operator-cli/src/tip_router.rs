@@ -1,5 +1,4 @@
 use anyhow::Result;
-use ellipsis_client::{ClientSubset, EllipsisClient, EllipsisClientError, EllipsisClientResult};
 use jito_bytemuck::AccountDeserialize;
 use jito_tip_distribution_sdk::{
     derive_config_account_address, jito_tip_distribution::accounts::TipDistributionAccount,
@@ -13,6 +12,9 @@ use jito_tip_router_core::{
 };
 use log::{error, info};
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
+use solana_client::rpc_config::RpcSendTransactionConfig;
+use solana_rpc_client::nonblocking::rpc_client::RpcClient;
+use solana_rpc_client_api::client_error::{ErrorKind, Result as ClientResult};
 use solana_sdk::{
     instruction::Instruction,
     pubkey::Pubkey,
@@ -22,10 +24,11 @@ use solana_sdk::{
 };
 
 const MAX_SET_MERKLE_ROOT_IXS_PER_TX: usize = 1;
+use crate::priority_fees;
 
 /// Fetch and deserialize
 pub async fn get_ncn_config(
-    client: &EllipsisClient,
+    client: &RpcClient,
     tip_router_program_id: &Pubkey,
     ncn_pubkey: &Pubkey,
 ) -> Result<Config> {
@@ -37,7 +40,7 @@ pub async fn get_ncn_config(
 /// Generate and send a CastVote instruction with the merkle root.
 #[allow(clippy::too_many_arguments)]
 pub async fn cast_vote(
-    client: &EllipsisClient,
+    client: &RpcClient,
     payer: &Keypair,
     tip_router_program_id: &Pubkey,
     ncn: &Pubkey,
@@ -46,7 +49,8 @@ pub async fn cast_vote(
     meta_merkle_root: [u8; 32],
     tip_router_epoch: u64,
     submit_as_memo: bool,
-) -> EllipsisClientResult<Signature> {
+    compute_unit_price: u64,
+) -> Result<Signature> {
     let epoch_state =
         EpochState::find_program_address(tip_router_program_id, ncn, tip_router_epoch).0;
 
@@ -85,10 +89,16 @@ pub async fn cast_vote(
 
     info!("Submitting meta merkle root {:?}", meta_merkle_root);
 
-    let tx = Transaction::new_with_payer(&[ix], Some(&payer.pubkey()));
-    client
-        .process_transaction(tx, &[payer, operator_voter])
-        .await
+    // Configure instruction with priority fees
+    let instructions = priority_fees::configure_instruction(ix, compute_unit_price, None);
+
+    let tx = Transaction::new_signed_with_payer(
+        &instructions,
+        Some(&payer.pubkey()),
+        &[payer, operator_voter],
+        client.get_latest_blockhash().await?,
+    );
+    Ok(client.send_and_confirm_transaction(&tx).await?)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -113,7 +123,12 @@ pub fn set_merkle_root_instructions(
     let instructions = tip_distribution_accounts
         .iter()
         .filter_map(|(key, tip_distribution_account)| {
-            let meta_merkle_node = meta_merkle_tree.get_node(key);
+            let meta_merkle_node = if let Some(node) = meta_merkle_tree.get_node(key) {
+                node
+            } else {
+                error!("No node found for tip distribution account, maybe the account has zero tips? {:?}", key);
+                return None;
+            };
 
             let proof = if let Some(proof) = meta_merkle_node.proof {
                 proof
@@ -147,16 +162,17 @@ pub fn set_merkle_root_instructions(
 }
 
 pub async fn send_set_merkle_root_txs(
-    client: &EllipsisClient,
+    client: &RpcClient,
     keypair: &Keypair,
     instructions: Vec<Instruction>,
-) -> Result<Vec<EllipsisClientResult<Signature>>> {
+) -> Result<Vec<ClientResult<Signature>>> {
     let num_of_txs = instructions.len().div_ceil(MAX_SET_MERKLE_ROOT_IXS_PER_TX);
     let mut results = Vec::with_capacity(num_of_txs);
-    for _ in 0..num_of_txs {
-        results.push(Err(EllipsisClientError::Other(anyhow::anyhow!(
-            "Default: Failed to submit instruction"
-        ))));
+    for _ in 0..instructions.len() {
+        results.push(Err(ErrorKind::Custom(
+            "Default: Failed to submit instruction".to_string(),
+        )
+        .into()));
     }
 
     for (i, ixs) in instructions
@@ -167,9 +183,21 @@ pub async fn send_set_merkle_root_txs(
         let mut tx = Transaction::new_with_payer(ixs, Some(&keypair.pubkey()));
         // Simple retry logic
         for _ in 0..5 {
-            let blockhash = client.fetch_latest_blockhash().await?;
+            let blockhash = client.get_latest_blockhash().await?;
             tx.sign(&[keypair], blockhash);
-            results[i] = client.process_transaction(tx.clone(), &[keypair]).await;
+            results[i] = client
+                .send_transaction_with_config(
+                    &tx,
+                    RpcSendTransactionConfig {
+                        skip_preflight: true,
+                        preflight_commitment: None,
+                        encoding: None,
+                        max_retries: None,
+                        min_context_slot: None,
+                    },
+                )
+                .await;
+
             if results[i].is_ok() {
                 break;
             }

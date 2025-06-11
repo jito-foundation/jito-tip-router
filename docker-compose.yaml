@@ -22,6 +22,8 @@ services:
       - METRICS_ONLY=false
       - RUN_MIGRATION=false
       - TRANSACTION_RETRIES=2
+      - REGION=${REGION}
+      - CLUSTER=${CLUSTER}
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5
@@ -47,6 +49,8 @@ services:
       - EMIT_METRICS=true
       - METRICS_ONLY=true
       - RUN_MIGRATION=false
+      - REGION=${REGION}
+      - CLUSTER=${CLUSTER}
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5
@@ -73,6 +77,8 @@ services:
       - METRICS_ONLY=false
       - RUN_MIGRATION=true
       - TRANSACTION_RETRIES=5
+      - REGION=${REGION}
+      - CLUSTER=${CLUSTER}
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5

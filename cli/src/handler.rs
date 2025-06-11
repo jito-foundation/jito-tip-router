@@ -61,12 +61,14 @@ pub struct CliHandler {
     switchboard_context: Arc<SbContext>,
     pub retries: u64,
     pub priority_fee_micro_lamports: u64,
+    pub(crate) print_tx: bool,
 }
 
 impl CliHandler {
     pub async fn from_args(args: &Args) -> Result<Self> {
         let rpc_url = args.rpc_url.clone();
         CommitmentConfig::confirmed();
+
         let commitment = CommitmentConfig::from_str(&args.commitment)?;
 
         let keypair = args
@@ -109,6 +111,7 @@ impl CliHandler {
             rpc_client,
             retries: args.transaction_retries,
             priority_fee_micro_lamports: args.priority_fee_micro_lamports,
+            print_tx: args.print_tx,
         };
 
         handler.epoch = {
@@ -182,6 +185,8 @@ impl CliHandler {
                 emit_metrics,
                 metrics_only,
                 run_migration,
+                cluster,
+                region,
             } => {
                 startup_keeper(
                     self,
@@ -192,6 +197,8 @@ impl CliHandler {
                     emit_metrics,
                     metrics_only,
                     run_migration,
+                    cluster.to_string(),
+                    region.to_string(),
                 )
                 .await
             }

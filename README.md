@@ -1,4 +1,4 @@
-# Jito MEV Tip Distribution NCN
+# Jito Tip Router
 
 ## Testing Setup
 
@@ -7,6 +7,14 @@
 1. Set up test-ledger: `./tip-router-operator-cli/scripts/setup-test-ledger.sh`
 2. Build the tip router program: `cargo build-sbf --manifest-path program/Cargo.toml --sbf-out-dir integration_tests/tests/fixtures`
 3. Run tests: `SBF_OUT_DIR=integration_tests/tests/fixtures cargo test`
+
+To see more info on the Tip Router CLI check out the [CLI documentation](./cli/README.md)
+
+---
+
+## 📖 Documentation
+
+The comprehensive documentation for Tip Router has moved to [jito.network/docs/tiprouter](https://jito.network/docs/tiprouter). The source files are maintained in the [Jito Omnidocs repository](https://github.com/jito-foundation/jito-omnidocs/tree/master/tiprouter).
 
 ## Deploy and Upgrade
 
@@ -30,3 +38,10 @@
 |----------|------------|------------------------------------------------------------------------|
 | Certora  | 2025-01-05 | [ac76352](security_audits/certora.pdf)                                 |
 | Offside  | 2024-10-25 | [443368a](security_audits/offside.pdf)                                 |
+
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
