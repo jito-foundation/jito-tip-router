@@ -181,7 +181,7 @@ impl CliHandler {
         &self.switchboard_context
     }
 
-    pub fn keypair(&self) -> &Keypair {
+    pub const fn keypair(&self) -> &Keypair {
         &self.keypair
     }
 
