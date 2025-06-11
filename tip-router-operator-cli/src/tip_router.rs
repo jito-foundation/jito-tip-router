@@ -23,11 +23,8 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
-<<<<<<< HEAD
 const MAX_SET_MERKLE_ROOT_IXS_PER_TX: usize = 1;
-=======
 use crate::priority_fees;
->>>>>>> master
 
 /// Fetch and deserialize
 pub async fn get_ncn_config(
@@ -105,24 +102,14 @@ pub async fn cast_vote(
 }
 
 #[allow(clippy::too_many_arguments)]
-<<<<<<< HEAD
 pub fn set_merkle_root_instructions(
-=======
-pub async fn set_merkle_roots_batched(
-    client: &RpcClient,
->>>>>>> master
     ncn_address: &Pubkey,
     distribution_program: &Pubkey,
     tip_router_program_id: &Pubkey,
     epoch: u64,
     tip_distribution_accounts: Vec<(Pubkey, TipDistributionAccount)>,
-<<<<<<< HEAD
     meta_merkle_tree: &MetaMerkleTree,
 ) -> Vec<Instruction> {
-=======
-    meta_merkle_tree: MetaMerkleTree,
-) -> Result<Vec<ClientResult<Signature>>> {
->>>>>>> master
     let ballot_box = BallotBox::find_program_address(tip_router_program_id, ncn_address, epoch).0;
 
     let config = Config::find_program_address(tip_router_program_id, ncn_address).0;
@@ -174,26 +161,18 @@ pub async fn set_merkle_roots_batched(
     instructions
 }
 
-<<<<<<< HEAD
 pub async fn send_set_merkle_root_txs(
-    client: &EllipsisClient,
+    client: &RpcClient,
     keypair: &Keypair,
     instructions: Vec<Instruction>,
-) -> Result<Vec<EllipsisClientResult<Signature>>> {
+) -> Result<Vec<ClientResult<Signature>>> {
     let num_of_txs = instructions.len().div_ceil(MAX_SET_MERKLE_ROOT_IXS_PER_TX);
     let mut results = Vec::with_capacity(num_of_txs);
-    for _ in 0..num_of_txs {
-        results.push(Err(EllipsisClientError::Other(anyhow::anyhow!(
-            "Default: Failed to submit instruction"
-        ))));
-=======
-    let mut results: Vec<ClientResult<Signature>> = vec![];
     for _ in 0..instructions.len() {
         results.push(Err(ErrorKind::Custom(
             "Default: Failed to submit instruction".to_string(),
         )
         .into()));
->>>>>>> master
     }
 
     for (i, ixs) in instructions

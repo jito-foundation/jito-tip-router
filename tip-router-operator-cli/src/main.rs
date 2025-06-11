@@ -367,39 +367,6 @@ async fn main() -> Result<()> {
                 });
             }
 
-            // If before the new stake meta epoch, use the old loop stages. This old loop
-            // stages will break once it hits the configured priority fee go live date
-            let current_epoch_info = rpc_client.get_epoch_info().await?;
-            let snapshot_paths = cli.get_snapshot_paths();
-            if current_epoch_info.epoch
-                < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
-            {
-                let save_path = cli.get_save_path();
-                legacy_tip_router_operator_cli::process_epoch::loop_stages(
-                    rpc_client.clone(),
-                    cli.keypair_path.clone(),
-                    cli.operator_address.clone(),
-                    legacy_tip_router_operator_cli::cli::SnapshotPaths {
-                        ledger_path: snapshot_paths.ledger_path,
-                        account_paths: snapshot_paths.account_paths,
-                        full_snapshots_path: snapshot_paths.full_snapshots_path,
-                        incremental_snapshots_path: snapshot_paths.incremental_snapshots_path,
-                        backup_snapshots_dir: snapshot_paths.backup_snapshots_dir,
-                    },
-                    save_path,
-                    cli.submit_as_memo,
-                    legacy_tip_router_operator_cli::OperatorState::WaitForNextEpoch,
-                    override_target_slot,
-                    &tip_router_program_id,
-                    &tip_distribution_program_id,
-                    &tip_payment_program_id,
-                    &ncn_address,
-                    save_snapshot,
-                    save_stages,
-                )
-                .await?;
-            }
-
             // Endless loop that transitions between stages of the operator process.
             process_epoch::loop_stages(
                 rpc_client,
