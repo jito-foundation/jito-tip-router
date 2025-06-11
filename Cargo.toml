@@ -73,6 +73,7 @@ solana-account-decoder = { package = "solana-account-decoder", git = "https://gi
 solana-metrics = { package = "solana-metrics", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-accounts-db = { package = "solana-accounts-db", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-clap-utils = { package = "solana-clap-utils", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
+solana-cli-config = { package = "solana-cli-config", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-client = { package = "solana-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-core = { package = "solana-core", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-geyser-plugin-manager = { package = "solana-geyser-plugin-manager", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
