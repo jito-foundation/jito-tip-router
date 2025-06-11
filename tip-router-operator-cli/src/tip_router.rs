@@ -14,9 +14,7 @@ use jito_tip_router_core::{
 use log::{error, info};
 use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use solana_client::rpc_config::RpcSendTransactionConfig;
-use solana_client::rpc_config::RpcSendTransactionConfig;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_rpc_client_api::client_error::{ErrorKind, Result as ClientResult};
 use solana_rpc_client_api::client_error::{ErrorKind, Result as ClientResult};
 use solana_sdk::{
     instruction::Instruction,
