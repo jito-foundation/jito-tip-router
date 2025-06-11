@@ -125,7 +125,7 @@ pub async fn admin_create_config(
     let fee_wallet = fee_wallet.unwrap_or_else(|| keypair.pubkey());
     let tie_breaker_admin = tie_breaker_admin.unwrap_or_else(|| keypair.pubkey());
 
-    let initialize_config_ix = InitializeTipRouterConfigBuilder::new()
+    let mut initialize_config_ix = InitializeTipRouterConfigBuilder::new()
         .config(config)
         .ncn_admin(keypair.pubkey())
         .ncn(ncn)
@@ -139,6 +139,7 @@ pub async fn admin_create_config(
         .tie_breaker_admin(keypair.pubkey())
         .fee_wallet(fee_wallet)
         .instruction();
+    initialize_config_ix.program_id = handler.tip_router_program_id;
 
     let program = client.get_account(&handler.tip_router_program_id).await?;
 
@@ -215,7 +216,8 @@ pub async fn admin_register_st_mint(
         register_st_mint_builder.no_feed_weight(no_feed_weight);
     }
 
-    let register_st_mint_ix = register_st_mint_builder.instruction();
+    let mut register_st_mint_ix = register_st_mint_builder.instruction();
+    register_st_mint_ix.program_id = handler.tip_router_program_id;
 
     let ixs = &[register_st_mint_ix];
     if handler.print_tx {
@@ -271,7 +273,7 @@ pub async fn admin_set_weight_with_st_mint(
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    let admin_set_weight_ix = AdminSetWeightBuilder::new()
+    let mut admin_set_weight_ix = AdminSetWeightBuilder::new()
         .ncn(ncn)
         .weight_table(weight_table)
         .epoch_state(epoch_state)
@@ -280,6 +282,7 @@ pub async fn admin_set_weight_with_st_mint(
         .weight(weight)
         .epoch(epoch)
         .instruction();
+    admin_set_weight_ix.program_id = handler.tip_router_program_id;
 
     let ixs = &[admin_set_weight_ix];
     if handler.print_tx {
@@ -321,7 +324,7 @@ pub async fn admin_set_tie_breaker(
     let (ballot_box, _, _) =
         BallotBox::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    let set_tie_breaker_ix = AdminSetTieBreakerBuilder::new()
+    let mut set_tie_breaker_ix = AdminSetTieBreakerBuilder::new()
         .epoch_state(epoch_state)
         .config(ncn_config)
         .ballot_box(ballot_box)
@@ -330,6 +333,7 @@ pub async fn admin_set_tie_breaker(
         .meta_merkle_root(meta_merkle_root)
         .epoch(epoch)
         .instruction();
+    set_tie_breaker_ix.program_id = handler.tip_router_program_id;
 
     let ixs = &[set_tie_breaker_ix];
     if handler.print_tx {
@@ -373,14 +377,16 @@ pub async fn admin_set_new_admin(
             continue;
         }
 
-        let mut ix = AdminSetNewAdminBuilder::new();
-        ix.config(config_pda)
+        let mut ix = AdminSetNewAdminBuilder::new()
+            .config(config_pda)
             .ncn(ncn)
             .ncn_admin(keypair.pubkey())
             .new_admin(*new_admin)
-            .role(*role);
+            .role(*role)
+            .instruction();
+        ix.program_id = handler.tip_router_program_id;
 
-        let ixs = &[ix.instruction()];
+        let ixs = &[ix];
         if handler.print_tx {
             print_base58_tx(ixs);
         } else {
@@ -433,7 +439,10 @@ pub async fn admin_set_parameters(
         ix.starting_valid_epoch(epoch);
     }
 
-    let ixs = &[ix.instruction()];
+    let mut admin_set_parameters_ix = ix.instruction();
+    admin_set_parameters_ix.program_id = handler.tip_router_program_id;
+
+    let ixs = &[admin_set_parameters_ix];
     if handler.print_tx {
         print_base58_tx(ixs);
     } else {
@@ -532,7 +541,10 @@ pub async fn admin_set_config_fees(
         ix.new_ncn_fee_bps(fee);
     }
 
-    let ixs = &[ix.instruction()];
+    let mut admin_set_config_fees_ix = ix.instruction();
+    admin_set_config_fees_ix.program_id = handler.tip_router_program_id;
+
+    let ixs = &[admin_set_config_fees_ix];
     if handler.print_tx {
         print_base58_tx(ixs);
     } else {
@@ -575,12 +587,13 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
 
     // Skip if vault registry already exists
     if vault_registry_account.is_none() {
-        let initialize_vault_registry_ix = InitializeVaultRegistryBuilder::new()
+        let mut initialize_vault_registry_ix = InitializeVaultRegistryBuilder::new()
             .config(config)
             .account_payer(account_payer)
             .ncn(ncn)
             .vault_registry(vault_registry)
             .instruction();
+        initialize_vault_registry_ix.program_id = handler.tip_router_program_id;
 
         send_and_log_transaction(
             handler,
@@ -595,13 +608,14 @@ pub async fn create_vault_registry(handler: &CliHandler) -> Result<()> {
     // Number of reallocations needed based on VaultRegistry::SIZE
     let num_reallocs = (VaultRegistry::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
 
-    let realloc_vault_registry_ix = ReallocVaultRegistryBuilder::new()
+    let mut realloc_vault_registry_ix = ReallocVaultRegistryBuilder::new()
         .config(config)
         .vault_registry(vault_registry)
         .ncn(ncn)
         .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
+    realloc_vault_registry_ix.program_id = handler.tip_router_program_id;
 
     let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
     realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
@@ -637,7 +651,7 @@ pub async fn register_vault(handler: &CliHandler, vault: &Pubkey) -> Result<()> 
     let (ncn_vault_ticket, _, _) =
         NcnVaultTicket::find_program_address(&handler.restaking_program_id, &ncn, &vault);
 
-    let register_vault_ix = RegisterVaultBuilder::new()
+    let mut register_vault_ix = RegisterVaultBuilder::new()
         .config(tip_router_config)
         .vault_registry(vault_registry)
         .vault(vault)
@@ -645,6 +659,7 @@ pub async fn register_vault(handler: &CliHandler, vault: &Pubkey) -> Result<()> 
         .ncn_vault_ticket(ncn_vault_ticket)
         .vault_registry(vault_registry)
         .instruction();
+    register_vault_ix.program_id = handler.tip_router_program_id;
 
     send_and_log_transaction(
         handler,
@@ -677,7 +692,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
     // Skip if ballot box already exists
     if epoch_state_account.is_none() {
         // Initialize ballot box
-        let initialize_ballot_box_ix = InitializeEpochStateBuilder::new()
+        let mut initialize_ballot_box_ix = InitializeEpochStateBuilder::new()
             .epoch_marker(epoch_marker)
             .config(config)
             .epoch_state(epoch_state)
@@ -686,6 +701,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
             .account_payer(account_payer)
             .system_program(system_program::id())
             .instruction();
+        initialize_ballot_box_ix.program_id = handler.tip_router_program_id;
 
         send_and_log_transaction(
             handler,
@@ -701,7 +717,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
     let num_reallocs = (EpochState::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
 
     // Realloc ballot box
-    let realloc_ballot_box_ix = ReallocEpochStateBuilder::new()
+    let mut realloc_ballot_box_ix = ReallocEpochStateBuilder::new()
         .config(config)
         .epoch_state(epoch_state)
         .ncn(ncn)
@@ -709,6 +725,7 @@ pub async fn create_epoch_state(handler: &CliHandler, epoch: u64) -> Result<()> 
         .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
+    realloc_ballot_box_ix.program_id = handler.tip_router_program_id;
 
     let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
     realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
@@ -757,7 +774,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     // Skip if weight table already exists
     if weight_table_account.is_none() {
         // Initialize weight table
-        let initialize_weight_table_ix = InitializeWeightTableBuilder::new()
+        let mut initialize_weight_table_ix = InitializeWeightTableBuilder::new()
             .epoch_marker(epoch_marker)
             .vault_registry(vault_registry)
             .ncn(ncn)
@@ -767,6 +784,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
+        initialize_weight_table_ix.program_id = handler.tip_router_program_id;
 
         send_and_log_transaction(
             handler,
@@ -782,7 +800,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     let num_reallocs = (WeightTable::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
 
     // Realloc weight table
-    let realloc_weight_table_ix = ReallocWeightTableBuilder::new()
+    let mut realloc_weight_table_ix = ReallocWeightTableBuilder::new()
         .config(config)
         .weight_table(weight_table)
         .ncn(ncn)
@@ -792,6 +810,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
         .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
+    realloc_weight_table_ix.program_id = handler.tip_router_program_id;
 
     let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
     realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
@@ -913,7 +932,7 @@ pub async fn set_weight_with_st_mint(
         );
     }
 
-    let set_weight_ix = SwitchboardSetWeightBuilder::new()
+    let mut set_weight_ix = SwitchboardSetWeightBuilder::new()
         .ncn(ncn)
         .weight_table(weight_table)
         .epoch_state(epoch_state)
@@ -921,6 +940,7 @@ pub async fn set_weight_with_st_mint(
         .switchboard_feed(*switchboard_feed)
         .epoch(epoch)
         .instruction();
+    set_weight_ix.program_id = handler.tip_router_program_id;
 
     send_and_log_transaction(
         handler,
@@ -959,7 +979,7 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
     let (epoch_marker, _, _) =
         EpochMarker::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
-    let initialize_epoch_snapshot_ix = InitializeEpochSnapshotBuilder::new()
+    let mut initialize_epoch_snapshot_ix = InitializeEpochSnapshotBuilder::new()
         .epoch_marker(epoch_marker)
         .config(config)
         .ncn(ncn)
@@ -970,6 +990,7 @@ pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<(
         .system_program(system_program::id())
         .epoch(epoch)
         .instruction();
+    initialize_epoch_snapshot_ix.program_id = handler.tip_router_program_id;
 
     send_and_log_transaction(
         handler,
@@ -1021,7 +1042,7 @@ pub async fn create_operator_snapshot(
     // Skip if operator snapshot already exists
     if operator_snapshot_account.is_none() {
         // Initialize operator snapshot
-        let initialize_operator_snapshot_ix = InitializeOperatorSnapshotBuilder::new()
+        let mut initialize_operator_snapshot_ix = InitializeOperatorSnapshotBuilder::new()
             .epoch_marker(epoch_marker)
             .config(config)
             .ncn(ncn)
@@ -1034,6 +1055,7 @@ pub async fn create_operator_snapshot(
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
+        initialize_operator_snapshot_ix.program_id = handler.tip_router_program_id;
 
         send_and_log_transaction(
             handler,
@@ -1053,7 +1075,7 @@ pub async fn create_operator_snapshot(
     let num_reallocs = (OperatorSnapshot::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
 
     // Realloc operator snapshot
-    let realloc_operator_snapshot_ix = ReallocOperatorSnapshotBuilder::new()
+    let mut realloc_operator_snapshot_ix = ReallocOperatorSnapshotBuilder::new()
         .config(config)
         .restaking_config(RestakingConfig::find_program_address(&handler.restaking_program_id).0)
         .ncn(ncn)
@@ -1066,6 +1088,7 @@ pub async fn create_operator_snapshot(
         .system_program(system_program::id())
         .epoch(epoch)
         .instruction();
+    realloc_operator_snapshot_ix.program_id = handler.tip_router_program_id;
 
     let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
     realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
@@ -1132,7 +1155,7 @@ pub async fn snapshot_vault_operator_delegation(
         epoch,
     );
 
-    let snapshot_vault_operator_delegation_ix = SnapshotVaultOperatorDelegationBuilder::new()
+    let mut snapshot_vault_operator_delegation_ix = SnapshotVaultOperatorDelegationBuilder::new()
         .config(config)
         .epoch_state(epoch_state)
         .restaking_config(restaking_config)
@@ -1147,6 +1170,7 @@ pub async fn snapshot_vault_operator_delegation(
         .operator_snapshot(operator_snapshot)
         .epoch(epoch)
         .instruction();
+    snapshot_vault_operator_delegation_ix.program_id = handler.tip_router_program_id;
 
     send_and_log_transaction(
         handler,
@@ -1187,7 +1211,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     // Skip if ballot box already exists
     if ballot_box_account.is_none() {
         // Initialize ballot box
-        let initialize_ballot_box_ix = InitializeBallotBoxBuilder::new()
+        let mut initialize_ballot_box_ix = InitializeBallotBoxBuilder::new()
             .epoch_marker(epoch_marker)
             .config(config)
             .epoch_state(epoch_state)
@@ -1197,6 +1221,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
             .account_payer(account_payer)
             .system_program(system_program::id())
             .instruction();
+        initialize_ballot_box_ix.program_id = handler.tip_router_program_id;
 
         send_and_log_transaction(
             handler,
@@ -1212,7 +1237,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
     let num_reallocs = (BallotBox::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
 
     // Realloc ballot box
-    let realloc_ballot_box_ix = ReallocBallotBoxBuilder::new()
+    let mut realloc_ballot_box_ix = ReallocBallotBoxBuilder::new()
         .config(config)
         .epoch_state(epoch_state)
         .ballot_box(ballot_box)
@@ -1221,6 +1246,7 @@ pub async fn create_ballot_box(handler: &CliHandler, epoch: u64) -> Result<()> {
         .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
+    realloc_ballot_box_ix.program_id = handler.tip_router_program_id;
 
     let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
     realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
@@ -1275,7 +1301,7 @@ pub async fn operator_cast_vote(
         epoch,
     );
 
-    let cast_vote_ix = CastVoteBuilder::new()
+    let mut cast_vote_ix = CastVoteBuilder::new()
         .config(config)
         .epoch_state(epoch_state)
         .ballot_box(ballot_box)
@@ -1287,6 +1313,7 @@ pub async fn operator_cast_vote(
         .meta_merkle_root(meta_merkle_root)
         .epoch(epoch)
         .instruction();
+    cast_vote_ix.program_id = handler.tip_router_program_id;
 
     send_and_log_transaction(
         handler,
@@ -1326,7 +1353,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
 
     // Skip if base reward router already exists
     if base_reward_router_account.is_none() {
-        let initialize_base_reward_router_ix = InitializeBaseRewardRouterBuilder::new()
+        let mut initialize_base_reward_router_ix = InitializeBaseRewardRouterBuilder::new()
             .epoch_marker(epoch_marker)
             .ncn(ncn)
             .epoch_state(epoch_state)
@@ -1336,6 +1363,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
             .system_program(system_program::id())
             .epoch(epoch)
             .instruction();
+        initialize_base_reward_router_ix.program_id = handler.tip_router_program_id;
 
         send_and_log_transaction(
             handler,
@@ -1350,7 +1378,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
     // Number of reallocations needed based on BaseRewardRouter::SIZE
     let num_reallocs = (BaseRewardRouter::SIZE as f64 / MAX_REALLOC_BYTES as f64).ceil() as u64 - 1;
 
-    let realloc_base_reward_router_ix = ReallocBaseRewardRouterBuilder::new()
+    let mut realloc_base_reward_router_ix = ReallocBaseRewardRouterBuilder::new()
         .config(TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn).0)
         .epoch_state(epoch_state)
         .base_reward_router(base_reward_router)
@@ -1359,6 +1387,7 @@ pub async fn create_base_reward_router(handler: &CliHandler, epoch: u64) -> Resu
         .account_payer(account_payer)
         .system_program(system_program::id())
         .instruction();
+    realloc_base_reward_router_ix.program_id = handler.tip_router_program_id;
 
     let mut realloc_ixs = Vec::with_capacity(num_reallocs as usize);
     realloc_ixs.push(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000));
@@ -1423,7 +1452,7 @@ pub async fn create_ncn_reward_router(
     let (epoch_marker, _, _) =
         EpochMarker::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
-    let initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
+    let mut initialize_ncn_reward_router_ix = InitializeNcnRewardRouterBuilder::new()
         .epoch_marker(epoch_marker)
         .epoch_state(epoch_state)
         .ncn(ncn)
@@ -1436,6 +1465,7 @@ pub async fn create_ncn_reward_router(
         .ncn_fee_group(ncn_fee_group.group)
         .epoch(epoch)
         .instruction();
+    initialize_ncn_reward_router_ix.program_id = handler.tip_router_program_id;
 
     send_and_log_transaction(
         handler,
@@ -1479,7 +1509,7 @@ pub async fn route_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> 
 
     let mut still_routing = true;
     while still_routing {
-        let route_base_rewards_ix = RouteBaseRewardsBuilder::new()
+        let mut route_base_rewards_ix = RouteBaseRewardsBuilder::new()
             .epoch_state(epoch_state)
             .config(config)
             .ncn(ncn)
@@ -1490,6 +1520,7 @@ pub async fn route_base_rewards(handler: &CliHandler, epoch: u64) -> Result<()> 
             .max_iterations(max_iterations)
             .epoch(epoch)
             .instruction();
+        route_base_rewards_ix.program_id = handler.tip_router_program_id;
 
         let instructions = vec![
             ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
@@ -1558,7 +1589,7 @@ pub async fn route_ncn_rewards(
 
     let mut still_routing = true;
     while still_routing {
-        let route_ncn_rewards_ix = RouteNcnRewardsBuilder::new()
+        let mut route_ncn_rewards_ix = RouteNcnRewardsBuilder::new()
             .epoch_state(epoch_state)
             .ncn(ncn)
             .operator(operator)
@@ -1569,6 +1600,7 @@ pub async fn route_ncn_rewards(
             .max_iterations(max_iterations)
             .epoch(epoch)
             .instruction();
+        route_ncn_rewards_ix.program_id = handler.tip_router_program_id;
 
         let instructions = vec![
             ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
@@ -1637,7 +1669,7 @@ pub async fn distribute_base_ncn_rewards(
         epoch,
     );
 
-    let distribute_base_ncn_rewards_ix = DistributeBaseNcnRewardRouteBuilder::new()
+    let mut distribute_base_ncn_rewards_ix = DistributeBaseNcnRewardRouteBuilder::new()
         .epoch_state(epoch_state)
         .config(ncn_config)
         .ncn(ncn)
@@ -1650,6 +1682,7 @@ pub async fn distribute_base_ncn_rewards(
         .ncn_fee_group(ncn_fee_group.group)
         .epoch(epoch)
         .instruction();
+    distribute_base_ncn_rewards_ix.program_id = handler.tip_router_program_id;
 
     send_and_log_transaction(
         handler,
@@ -1706,7 +1739,7 @@ pub async fn distribute_base_rewards(
             &handler.token_program_id,
         );
 
-    let distribute_base_ncn_rewards_ix = DistributeBaseRewardsBuilder::new()
+    let mut distribute_base_ncn_rewards_ix = DistributeBaseRewardsBuilder::new()
         .epoch_state(epoch_state)
         .config(ncn_config)
         .ncn(ncn)
@@ -1725,6 +1758,7 @@ pub async fn distribute_base_rewards(
         .stake_pool_withdraw_authority(stake_pool_accounts.stake_pool_withdraw_authority)
         .stake_pool_program(stake_pool_accounts.stake_pool_program_id)
         .instruction();
+    distribute_base_ncn_rewards_ix.program_id = handler.tip_router_program_id;
 
     send_and_log_transaction(
         handler,
@@ -1797,7 +1831,7 @@ pub async fn distribute_ncn_vault_rewards(
             &handler.token_program_id,
         );
 
-    let distribute_ncn_vault_rewards_ix = DistributeNcnVaultRewardsBuilder::new()
+    let mut distribute_ncn_vault_rewards_ix = DistributeNcnVaultRewardsBuilder::new()
         .epoch_state(epoch_state)
         .config(ncn_config)
         .ncn(ncn)
@@ -1819,6 +1853,7 @@ pub async fn distribute_ncn_vault_rewards(
         .ncn_fee_group(ncn_fee_group.group)
         .epoch(epoch)
         .instruction();
+    distribute_ncn_vault_rewards_ix.program_id = handler.tip_router_program_id;
 
     let vault_account = get_vault(handler, &vault).await?;
     let st_mint = vault_account.supported_mint;
@@ -1913,7 +1948,7 @@ pub async fn distribute_ncn_operator_rewards(
             &handler.token_program_id,
         );
 
-    let distribute_ncn_operator_rewards_ix = DistributeNcnOperatorRewardsBuilder::new()
+    let mut distribute_ncn_operator_rewards_ix = DistributeNcnOperatorRewardsBuilder::new()
         .epoch_state(epoch_state)
         .config(ncn_config)
         .ncn(ncn)
@@ -1934,6 +1969,7 @@ pub async fn distribute_ncn_operator_rewards(
         .ncn_fee_group(ncn_fee_group.group)
         .epoch(epoch)
         .instruction();
+    distribute_ncn_operator_rewards_ix.program_id = handler.tip_router_program_id;
 
     send_and_log_transaction(
         handler,
@@ -2001,10 +2037,12 @@ pub async fn close_epoch_account(
     if let Some(receiver_to_close) = receiver_to_close {
         ix.receiver_to_close(Some(receiver_to_close));
     }
+    let mut close_epoch_account_ix = ix.instruction();
+    close_epoch_account_ix.program_id = handler.tip_router_program_id;
 
     send_and_log_transaction(
         handler,
-        &[ix.instruction()],
+        &[close_epoch_account_ix],
         &[],
         "Close Epoch Account",
         &[
