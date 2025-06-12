@@ -44,7 +44,6 @@ use solana_sdk::{
     native_token::lamports_to_sol,
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
-    signer::Signer,
 };
 use switchboard_on_demand_client::SbContext;
 
@@ -64,45 +63,6 @@ pub struct CliHandler {
     pub retries: u64,
     pub priority_fee_micro_lamports: u64,
     pub(crate) print_tx: bool,
-}
-
-#[rustfmt::skip]
-impl std::fmt::Display for CliHandler {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "\nMEV Tip Distribution NCN CLI Configuration")?;
-        writeln!(f, "═══════════════════════════════════════")?;
-
-        // Network Configuration
-        writeln!(f, "\n📡 Network Settings:")?;
-        writeln!(f, "  • RPC URL:     {}", self.rpc_url)?;
-        writeln!(f, "  • Commitment:  {:?}", self.commitment)?;
-
-        // Program IDs
-        writeln!(f, "\n🔑 Program IDs:")?;
-        writeln!(f, "  • Tip Router:        {}", self.tip_router_program_id)?;
-        writeln!(f, "  • Restaking:         {}", self.restaking_program_id)?;
-        writeln!(f, "  • Vault:             {}", self.vault_program_id)?;
-        writeln!(f, "  • Token:             {}", self.token_program_id)?;
-        writeln!(f, "  • Tip Distribution:  {}", self.tip_distribution_program_id)?;
-
-        // Solana Settings
-        writeln!(f, "\n◎  Solana Settings:")?;
-        writeln!(f, "  • Keypair Pubkey:  {}", self.keypair.pubkey())?;
-        match self.ncn {
-            Some(pubkey) => writeln!(f, "  • NCN:  {pubkey}")?,
-            None => writeln!(f, "  • NCN:  {}", "Not set")?,
-        }
-        writeln!(f, "  • Epoch: {}", self.epoch)?;
-
-        // Optional Settings
-        writeln!(f, "\n⚙️  Additional Settings:")?;
-        writeln!(f, "  • Verbose Mode:  {}", if self.verbose { "Enabled" } else { "Disabled" })?;
-        writeln!(f, "  • Markdown Help: {}", if self.markdown_help { "Enabled" } else { "Disabled" })?;
-
-        writeln!(f, "\n")?;
-
-        Ok(())
-    }
 }
 
 impl CliHandler {
