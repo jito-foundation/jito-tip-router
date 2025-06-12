@@ -2,9 +2,8 @@
 use ::{
     anyhow::Result,
     clap::Parser,
-    ellipsis_client::EllipsisClient,
     log::{error, info},
-    solana_metrics::{datapoint_info, set_host_id},
+    solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
     std::process::Command,
@@ -45,15 +44,13 @@ async fn main() -> Result<()> {
 
     set_host_id(host_id.clone());
 
+    info!("Ensuring localhost RPC is caught up with remote validator...");
+
     // Ensure backup directory and
     cli.force_different_backup_snapshot_dir();
 
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
-    let rpc_client = EllipsisClient::from_rpc_with_timeout(
-        RpcClient::new(cli.rpc_url.clone()),
-        &read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"),
-        1_800_000, // 30 minutes
-    )?;
+    let rpc_client = Arc::new(RpcClient::new(cli.rpc_url.clone()));
 
     datapoint_info!(
         "tip_router_cli.version",
@@ -74,7 +71,9 @@ async fn main() -> Result<()> {
         full_snapshots_path: {:?}
         snapshot_output_dir: {}
         backup_snapshots_dir: {}
-        save_path: {}",
+        save_path: {},
+        vote_microlamports: {}
+        claim_microlamports: {}",
         cli.keypair_path,
         cli.operator_address,
         cli.rpc_url,
@@ -83,6 +82,8 @@ async fn main() -> Result<()> {
         cli.snapshot_output_dir.display(),
         cli.backup_snapshots_dir.display(),
         save_path.display(),
+        &cli.vote_microlamports,
+        &cli.claim_microlamports,
     );
 
     cli.create_save_path();
@@ -136,6 +137,40 @@ async fn main() -> Result<()> {
                 );
                 std::fs::create_dir_all(&backup_snapshots_dir)?;
             }
+
+            let operator_address = cli.operator_address.clone();
+            let cluster = cli.cluster.clone();
+
+            let try_catchup = tip_router_operator_cli::solana_cli::catchup(
+                cli.rpc_url.to_owned(),
+                cli.localhost_port,
+            );
+            if let Err(ref e) = &try_catchup {
+                datapoint_error!(
+                    "tip_router_cli.main",
+                    ("operator_address", cli.operator_address, String),
+                    ("status", "error", String),
+                    ("error", e.to_string(), String),
+                    ("state", "bootstrap", String),
+                    "cluster" => &cli.cluster,
+                );
+                error!("Failed to catch up: {}", e);
+            }
+
+            if let Ok(command_output) = &try_catchup {
+                info!("{}", command_output);
+            }
+
+            tokio::spawn(async move {
+                loop {
+                    datapoint_info!(
+                        "tip_router_cli.heartbeat",
+                        ("operator_address", operator_address, String),
+                        "cluster" => cluster,
+                    );
+                    sleep(Duration::from_secs(cli.heartbeat_interval_seconds)).await;
+                }
+            });
 
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
@@ -374,6 +409,7 @@ async fn main() -> Result<()> {
                 &tip_distribution_program_id,
                 cli.submit_as_memo,
                 set_merkle_roots,
+                cli.vote_microlamports,
                 &cli.cluster,
             )
             .await?;

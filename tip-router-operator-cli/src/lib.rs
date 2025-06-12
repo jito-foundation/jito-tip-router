@@ -8,8 +8,10 @@ pub mod backup_snapshots;
 pub mod claim;
 pub mod cli;
 pub mod load_and_process_ledger;
+pub mod priority_fees;
 pub mod process_epoch;
 pub mod rpc_utils;
+pub mod solana_cli;
 pub mod submit;
 
 use std::fs;

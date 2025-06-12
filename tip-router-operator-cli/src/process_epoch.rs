@@ -6,7 +6,6 @@ use std::{
 };
 
 use anyhow::Result;
-use ellipsis_client::EllipsisClient;
 use log::{error, info};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
 use solana_metrics::{datapoint_error, datapoint_info};
@@ -101,7 +100,7 @@ pub async fn wait_for_optimal_incremental_snapshot(
 
 #[allow(clippy::too_many_arguments)]
 pub async fn loop_stages(
-    rpc_client: EllipsisClient,
+    rpc_client: Arc<RpcClient>,
     cli: Cli,
     starting_stage: OperatorState,
     override_target_slot: Option<u64>,
@@ -114,6 +113,7 @@ pub async fn loop_stages(
 ) -> Result<()> {
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
     let mut current_epoch_info = rpc_client.get_epoch_info().await?;
+    let epoch_schedule = rpc_client.get_epoch_schedule().await?;
 
     // Track runs that are starting right at the beginning of a new epoch
     let operator_address = cli.operator_address.clone();
@@ -131,6 +131,26 @@ pub async fn loop_stages(
     loop {
         match stage {
             OperatorState::LoadBankFromSnapshot => {
+                info!("Ensuring localhost RPC is caught up with remote validator...");
+
+                let try_catchup =
+                    crate::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
+                if let Err(ref e) = try_catchup {
+                    datapoint_error!(
+                        "tip_router_cli.load_bank_from_snapshot",
+                        ("operator_address", operator_address, String),
+                        ("epoch", epoch_to_process, i64),
+                        ("status", "error", String),
+                        ("error", e.to_string(), String),
+                        ("state", "load_bank_from_snapshot", String),
+                        "cluster" => &cli.cluster,
+                    );
+                    error!("Failed to catch up: {}", e);
+                }
+
+                if let Ok(command_output) = try_catchup {
+                    info!("{}", command_output);
+                }
                 let incremental_snapshots_path = cli.backup_snapshots_dir.clone();
                 wait_for_optimal_incremental_snapshot(incremental_snapshots_path, slot_to_process)
                     .await?;
@@ -153,7 +173,6 @@ pub async fn loop_stages(
                         incremental_snapshots_path: _,
                         backup_snapshots_dir,
                     } = cli.get_snapshot_paths();
-
                     // We can safely expect to use the backup_snapshots_dir as the full snapshot path because
                     //  _get_bank_from_snapshot_at_slot_ expects the snapshot at the exact `slot` to have
                     //  already been taken.
@@ -275,6 +294,7 @@ pub async fn loop_stages(
                     cli.submit_as_memo,
                     // We let the submit task handle setting merkle roots
                     false,
+                    cli.vote_microlamports,
                     &cli.cluster,
                 )
                 .await?;
@@ -283,17 +303,9 @@ pub async fn loop_stages(
             OperatorState::WaitForNextEpoch => {
                 current_epoch_info =
                     wait_for_next_epoch(&rpc_client, current_epoch_info.epoch).await;
-                // Get the last slot of the previous epoch
-                let (previous_epoch, previous_epoch_slot) =
-                    if let Ok((epoch, slot)) = get_previous_epoch_last_slot(&rpc_client).await {
-                        (epoch, slot)
-                    } else {
-                        // TODO: Make a datapoint error
-                        error!("Error getting previous epoch slot");
-                        continue;
-                    };
-                slot_to_process = previous_epoch_slot;
-                epoch_to_process = previous_epoch;
+
+                epoch_to_process = current_epoch_info.epoch - 1;
+                slot_to_process = epoch_schedule.get_last_slot_in_epoch(epoch_to_process);
 
                 stage = OperatorState::LoadBankFromSnapshot;
             }

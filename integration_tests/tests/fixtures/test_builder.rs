@@ -661,7 +661,6 @@ impl TestBuilder {
     // 6a. Admin Set weights
     pub async fn add_admin_weights_for_test_ncn(&mut self, test_ncn: &TestNcn) -> TestResult<()> {
         let mut tip_router_client = self.tip_router_client();
-        let mut vault_client = self.vault_program_client();
 
         const WEIGHT: u128 = 100;
 
@@ -671,13 +670,18 @@ impl TestBuilder {
             .do_full_initialize_weight_table(test_ncn.ncn_root.ncn_pubkey, epoch)
             .await?;
 
-        for vault_root in test_ncn.vaults.iter() {
-            let vault = vault_client.get_vault(&vault_root.vault_pubkey).await?;
+        let ncn = test_ncn.ncn_root.ncn_pubkey;
+        let vault_registry = tip_router_client.get_vault_registry(ncn).await?;
 
-            let st_mint = vault.supported_mint;
+        for entry in vault_registry.st_mint_list {
+            if entry.is_empty() {
+                continue;
+            }
+
+            let st_mint = entry.st_mint();
 
             tip_router_client
-                .do_admin_set_weight(test_ncn.ncn_root.ncn_pubkey, epoch, st_mint, WEIGHT)
+                .do_admin_set_weight(test_ncn.ncn_root.ncn_pubkey, epoch, *st_mint, WEIGHT)
                 .await?;
         }
 

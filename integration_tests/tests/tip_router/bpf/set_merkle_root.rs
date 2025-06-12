@@ -270,7 +270,8 @@ mod set_merkle_root {
         // Get proof for vote_account
         let node = meta_merkle_tree_fixture
             .meta_merkle_tree
-            .get_node(&tip_distribution_address);
+            .get_node(&tip_distribution_address)
+            .expect("Node should exist in merkle tree");
         let proof = node.proof.clone().unwrap();
 
         ballot_box_fixture
@@ -423,7 +424,8 @@ mod set_merkle_root {
         // Get proof for vote_account
         let node = meta_merkle_tree_fixture
             .meta_merkle_tree
-            .get_node(&tip_distribution_address);
+            .get_node(&tip_distribution_address)
+            .expect("Node should exist in merkle tree");
         let proof = node.proof.clone().unwrap();
 
         let ballot_box = tip_router_client.get_ballot_box(ncn, epoch).await?;
@@ -508,7 +510,8 @@ mod set_merkle_root {
         .0;
         let node = meta_merkle_tree_fixture
             .meta_merkle_tree
-            .get_node(&tip_distribution_address);
+            .get_node(&tip_distribution_address)
+            .expect("Node should exist in merkle tree");
         let proof = node.proof.clone().unwrap();
 
         fixture.warp_epoch_incremental(1).await?;
