@@ -604,9 +604,9 @@ fn build_mev_claim_transactions(
 
             let mut claim_with_payer_builder = ClaimWithPayerBuilder::new();
             claim_with_payer_builder
+                .config(tip_router_config_address)
                 .account_payer(tip_router_account_payer)
                 .ncn(ncn_address)
-                .tip_distribution_config(tip_distribution_config)
                 .tip_distribution_account(tree.distribution_account)
                 .claim_status(node.claim_status_pubkey)
                 .claimant(node.claimant)
@@ -617,12 +617,12 @@ fn build_mev_claim_transactions(
                 .tip_distribution_program(tree.distribution_program);
 
             if tree.distribution_program.eq(&tip_distribution_program_id) {
-                claim_with_payer_builder.config(tip_router_config_address);
+                claim_with_payer_builder.tip_distribution_config(tip_distribution_config);
             } else if tree
                 .distribution_program
                 .eq(&priority_fee_distribution_program_id)
             {
-                claim_with_payer_builder.config(priority_fee_distribution_config);
+                claim_with_payer_builder.tip_distribution_config(priority_fee_distribution_config);
             } else {
                 panic!("Unknown distribution program for tree");
             }
