@@ -12,14 +12,8 @@ pub struct Args {
     #[arg(long, global = true, help = "Path to the configuration file")]
     pub config_file: Option<PathBuf>,
 
-    #[arg(
-        long,
-        global = true,
-        env = "RPC_URL",
-        default_value = "https://api.mainnet-beta.solana.com",
-        help = "RPC URL to use"
-    )]
-    pub rpc_url: String,
+    #[arg(long, global = true, env = "RPC_URL", help = "RPC URL to use")]
+    pub rpc_url: Option<String>,
 
     #[arg(
         long,
@@ -433,7 +427,9 @@ impl fmt::Display for Args {
 
         // Network Configuration
         writeln!(f, "\n📡 Network Settings:")?;
-        writeln!(f, "  • RPC URL:     {}", self.rpc_url)?;
+        if let Some(rpc_url) = &self.rpc_url {
+            writeln!(f, "  • RPC URL:     {}", rpc_url)?;
+        }
         writeln!(f, "  • Commitment:  {}", self.commitment)?;
 
         // Program IDs

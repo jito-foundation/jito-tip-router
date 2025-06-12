@@ -67,32 +67,47 @@ pub struct CliHandler {
 
 impl CliHandler {
     pub async fn from_args(args: &Args) -> Result<Self> {
-        let rpc_url = args.rpc_url.clone();
         CommitmentConfig::confirmed();
 
         let commitment = CommitmentConfig::from_str(&args.commitment)?;
 
-        let keypair = match &args.config_file {
+        let (keypair, rpc_url) = match &args.config_file {
             Some(config_file) => {
                 let config = Config::load(config_file.as_os_str().to_str().unwrap())?;
+
                 let keypair_path = match &args.keypair_path {
                     Some(path) => path.as_str(),
                     None => config.keypair_path.as_str(),
                 };
-                read_keypair_file(keypair_path)
-                    .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?
+                let keypair = read_keypair_file(keypair_path)
+                    .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?;
+
+                let rpc_url = match &args.rpc_url {
+                    Some(rpc_url) => rpc_url.to_owned(),
+                    None => config.json_rpc_url,
+                };
+
+                (keypair, rpc_url)
             }
             None => {
                 let config_file = solana_cli_config::CONFIG_FILE
                     .as_ref()
                     .ok_or_else(|| anyhow!("unable to get config file path"))?;
                 let config = Config::load(config_file)?;
+
                 let keypair_path = match &args.keypair_path {
                     Some(path) => path.as_str(),
                     None => config.keypair_path.as_str(),
                 };
-                read_keypair_file(keypair_path)
-                    .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?
+                let keypair = read_keypair_file(keypair_path)
+                    .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?;
+
+                let rpc_url = match &args.rpc_url {
+                    Some(rpc_url) => rpc_url.to_owned(),
+                    None => config.json_rpc_url,
+                };
+
+                (keypair, rpc_url)
             }
         };
 
