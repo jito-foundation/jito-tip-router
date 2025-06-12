@@ -1780,9 +1780,7 @@ pub async fn distribute_base_rewards(
 
     if let Err(err) = result {
         let error_message = format!("{:?}", err);
-        recover_from_low_balance_deposit_base(
-            handler, epoch, &error_message
-        ).await?;
+        recover_from_low_balance_deposit_base(handler, epoch, &error_message).await?;
 
         return Err(err);
     }
@@ -1908,8 +1906,13 @@ pub async fn distribute_ncn_vault_rewards(
     if let Err(err) = result {
         let error_message = format!("{:?}", err);
         recover_from_low_balance_deposit_ncn(
-            handler, operator, ncn_fee_group, epoch, &error_message
-        ).await?;
+            handler,
+            operator,
+            ncn_fee_group,
+            epoch,
+            &error_message,
+        )
+        .await?;
 
         return Err(err);
     }
@@ -2008,8 +2011,13 @@ pub async fn distribute_ncn_operator_rewards(
     if let Err(err) = result {
         let error_message = format!("{:?}", err);
         recover_from_low_balance_deposit_ncn(
-            handler, operator, ncn_fee_group, epoch, &error_message
-        ).await?;
+            handler,
+            operator,
+            ncn_fee_group,
+            epoch,
+            &error_message,
+        )
+        .await?;
 
         return Err(err);
     }
@@ -2020,22 +2028,14 @@ pub async fn distribute_ncn_operator_rewards(
 pub async fn recover_from_low_balance_deposit_base(
     handler: &CliHandler,
     epoch: u64,
-    error_message: &String
+    error_message: &String,
 ) -> Result<()> {
     let ncn = handler.ncn()?;
 
+    let (ncn_reward_receiver, _, _) =
+        BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, ncn, epoch);
 
-    let (ncn_reward_receiver, _, _) = BaseRewardReceiver::find_program_address(
-        &handler.tip_router_program_id,
-        ncn,
-        epoch
-    );
-
-    recover_from_low_balance_deposit(
-        handler,
-        &ncn_reward_receiver,
-        error_message
-    ).await
+    recover_from_low_balance_deposit(handler, &ncn_reward_receiver, error_message).await
 }
 
 pub async fn recover_from_low_balance_deposit_ncn(
@@ -2043,7 +2043,7 @@ pub async fn recover_from_low_balance_deposit_ncn(
     operator: &Pubkey,
     ncn_fee_group: NcnFeeGroup,
     epoch: u64,
-    error_message: &String
+    error_message: &String,
 ) -> Result<()> {
     let ncn = handler.ncn()?;
 
@@ -2055,35 +2055,31 @@ pub async fn recover_from_low_balance_deposit_ncn(
         epoch,
     );
 
-    recover_from_low_balance_deposit(
-        handler,
-        &ncn_reward_receiver,
-        error_message
-    ).await
+    recover_from_low_balance_deposit(handler, &ncn_reward_receiver, error_message).await
 }
 
 pub async fn recover_from_low_balance_deposit(
     handler: &CliHandler,
     to: &Pubkey,
-    error_message: &String
+    error_message: &String,
 ) -> Result<()> {
     const RECOVERY_LAMPORTS: u64 = 1000;
-    const RECOVERABLE_ERROR: &str = "Not enough lamports provided for deposit to result in one pool token";
-
-    let keypair = handler.keypair()?;
+    const RECOVERABLE_ERROR: &str =
+        "Not enough lamports provided for deposit to result in one pool token";
 
     if !error_message.contains(RECOVERABLE_ERROR) {
         info!("Error not recoverable: {}", error_message);
-        return Ok(())
+        return Ok(());
     }
 
+    let keypair = handler.keypair();
     let transfer_ix = system_instruction::transfer(&keypair.pubkey(), to, RECOVERY_LAMPORTS);
 
     send_and_log_transaction(
         handler,
         &[transfer_ix],
         &[],
-        "Recovered from low balance deposit",
+        "Recovered From Low Balance Deposit",
         &[
             format!("To: {:?}", to),
             format!("From: {:?}", keypair.pubkey()),
@@ -2094,7 +2090,6 @@ pub async fn recover_from_low_balance_deposit(
 
     Ok(())
 }
-
 
 pub async fn close_epoch_account(
     handler: &CliHandler,
