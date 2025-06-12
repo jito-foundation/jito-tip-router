@@ -93,6 +93,8 @@ pub async fn startup_keeper(
     cluster_name: String,
     region: String,
 ) -> Result<()> {
+    assert!(handler.ncn().is_ok(), "missing NCN address!");
+
     let mut state: KeeperState = KeeperState::default();
     let mut epoch_stall = false;
     let mut current_keeper_epoch = handler.epoch;

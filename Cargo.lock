@@ -3635,6 +3635,7 @@ dependencies = [
  "jito-vault-sdk",
  "log",
  "solana-account-decoder",
+ "solana-cli-config",
  "solana-client",
  "solana-metrics",
  "solana-program",

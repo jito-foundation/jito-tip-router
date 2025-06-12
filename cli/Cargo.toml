@@ -38,6 +38,7 @@ jito-vault-program = { workspace = true }
 jito-vault-sdk = { workspace = true }
 log = { workspace = true }
 solana-account-decoder = { workspace = true }
+solana-cli-config = { workspace = true }
 solana-client = { workspace = true }
 solana-metrics = { workspace = true }
 solana-program = { workspace = true }
