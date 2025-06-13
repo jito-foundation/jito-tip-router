@@ -367,6 +367,174 @@ async fn main() -> Result<()> {
                 });
             }
 
+            // If before the new stake meta epoch, use the old loop stages. This old loop
+
+            // stages will break once it hits the configured priority fee go live date
+
+            let current_epoch_info = rpc_client.get_epoch_info().await?;
+
+            let snapshot_paths = cli.get_snapshot_paths();
+
+            if current_epoch_info.epoch
+                < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
+            {
+                let save_path = cli.get_save_path();
+
+                let legacy_operator_stage = match starting_stage {
+                    tip_router_operator_cli::OperatorState::LoadBankFromSnapshot => {
+                        legacy_tip_router_operator_cli::OperatorState::LoadBankFromSnapshot
+                    }
+                    tip_router_operator_cli::OperatorState::CreateStakeMeta => {
+                        legacy_tip_router_operator_cli::OperatorState::CreateStakeMeta
+                    }
+                    tip_router_operator_cli::OperatorState::CreateMerkleTreeCollection => {
+                        legacy_tip_router_operator_cli::OperatorState::CreateMerkleTreeCollection
+                    }
+                    tip_router_operator_cli::OperatorState::CreateMetaMerkleTree => {
+                        legacy_tip_router_operator_cli::OperatorState::CreateMetaMerkleTree
+                    }
+                    tip_router_operator_cli::OperatorState::CastVote => {
+                        legacy_tip_router_operator_cli::OperatorState::CastVote
+                    }
+                    tip_router_operator_cli::OperatorState::WaitForNextEpoch => {
+                        legacy_tip_router_operator_cli::OperatorState::WaitForNextEpoch
+                    }
+                };
+
+                let legacy_command: legacy_tip_router_operator_cli::Commands = match cli.command {
+                    Commands::Run {
+                        ncn_address,
+                        tip_distribution_program_id,
+                        priority_fee_distribution_program_id,
+                        tip_payment_program_id,
+                        tip_router_program_id,
+                        num_monitored_epochs,
+                        override_target_slot,
+                        set_merkle_roots,
+                        claim_tips,
+                        claim_tips_metrics,
+                        claim_tips_epoch_lookback,
+                        starting_stage: _,
+                        save_stages,
+                        save_snapshot,
+                    } => legacy_tip_router_operator_cli::Commands::Run {
+                        ncn_address,
+                        tip_distribution_program_id,
+                        priority_fee_distribution_program_id,
+                        tip_payment_program_id,
+                        tip_router_program_id,
+                        num_monitored_epochs,
+                        override_target_slot,
+                        set_merkle_roots,
+                        claim_tips,
+                        claim_tips_metrics,
+                        claim_tips_epoch_lookback,
+                        starting_stage: legacy_operator_stage,
+                        save_stages,
+                        save_snapshot,
+                    },
+                    Commands::SnapshotSlot { slot } => {
+                        legacy_tip_router_operator_cli::Commands::SnapshotSlot { slot }
+                    }
+                    Commands::SubmitEpoch {
+                        ncn_address,
+                        tip_distribution_program_id,
+                        priority_fee_distribution_program_id,
+                        tip_router_program_id,
+                        epoch,
+                        set_merkle_roots,
+                    } => legacy_tip_router_operator_cli::Commands::SubmitEpoch {
+                        ncn_address,
+                        tip_distribution_program_id,
+                        priority_fee_distribution_program_id,
+                        tip_router_program_id,
+                        epoch,
+                        set_merkle_roots,
+                    },
+                    Commands::ClaimTips {
+                        tip_router_program_id,
+                        tip_distribution_program_id,
+                        priority_fee_distribution_program_id,
+                        ncn_address,
+                        epoch,
+                    } => legacy_tip_router_operator_cli::Commands::ClaimTips {
+                        tip_router_program_id,
+                        tip_distribution_program_id,
+                        priority_fee_distribution_program_id,
+                        ncn_address,
+                        epoch,
+                    },
+                    Commands::CreateStakeMeta {
+                        epoch,
+                        slot,
+                        tip_distribution_program_id,
+                        priority_fee_distribution_program_id,
+                        tip_payment_program_id,
+                        save,
+                    } => legacy_tip_router_operator_cli::Commands::CreateStakeMeta {
+                        epoch,
+                        slot,
+                        tip_distribution_program_id,
+                        priority_fee_distribution_program_id,
+                        tip_payment_program_id,
+                        save,
+                    },
+                    Commands::CreateMerkleTreeCollection {
+                        tip_router_program_id,
+                        ncn_address,
+                        epoch,
+                        save,
+                    } => legacy_tip_router_operator_cli::Commands::CreateMerkleTreeCollection {
+                        tip_router_program_id,
+                        ncn_address,
+                        epoch,
+                        save,
+                    },
+                    Commands::CreateMetaMerkleTree { epoch, save } => {
+                        legacy_tip_router_operator_cli::Commands::CreateMetaMerkleTree {
+                            epoch,
+                            save,
+                        }
+                    }
+                };
+
+                let legacy_cli = legacy_tip_router_operator_cli::Cli {
+                    keypair_path: cli.keypair_path.clone(),
+                    operator_address: cli.operator_address.clone(),
+                    rpc_url: cli.rpc_url.clone(),
+                    ledger_path: cli.ledger_path.clone(),
+                    full_snapshots_path: cli.full_snapshots_path.clone(),
+                    backup_snapshots_dir: cli.backup_snapshots_dir.clone(),
+                    snapshot_output_dir: cli.snapshot_output_dir.clone(),
+                    submit_as_memo: cli.submit_as_memo,
+                    claim_microlamports: cli.claim_microlamports,
+                    vote_microlamports: cli.vote_microlamports,
+                    save_path: Some(save_path),
+                    claim_tips_epoch_filepath: cli.claim_tips_epoch_filepath.clone(),
+                    meta_merkle_tree_dir: cli.meta_merkle_tree_dir.clone(),
+                    cluster: cli.cluster.clone(),
+                    region: cli.region.clone(),
+                    localhost_port: cli.localhost_port,
+                    heartbeat_interval_seconds: cli.heartbeat_interval_seconds,
+                    command: legacy_command,
+                };
+
+                legacy_tip_router_operator_cli::process_epoch::loop_stages(
+                    rpc_client.clone(),
+                    legacy_cli,
+                    legacy_operator_stage,
+                    override_target_slot,
+                    &tip_router_program_id,
+                    &tip_distribution_program_id,
+                    &priority_fee_distribution_program_id,
+                    &tip_payment_program_id,
+                    &ncn_address,
+                    save_snapshot,
+                    save_stages,
+                )
+                .await?;
+            }
+
             // Endless loop that transitions between stages of the operator process.
             process_epoch::loop_stages(
                 rpc_client,
