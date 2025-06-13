@@ -5,6 +5,7 @@ use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID as PR
 use jito_tip_distribution_sdk::jito_tip_distribution::ID as TIP_DISTRIBUTION_ID;
 use jito_tip_payment_sdk::jito_tip_payment::ID as TIP_PAYMENT_ID;
 use jito_tip_router_program::ID as TIP_ROUTER_ID;
+use legacy_tip_router_operator_cli::TipAccountConfig;
 use meta_merkle_tree::generated_merkle_tree::{
     Delegation, GeneratedMerkleTreeCollection, MerkleRootGeneratorError, StakeMeta,
     StakeMetaCollection, TipDistributionMeta,
@@ -19,7 +20,6 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use tempfile::TempDir;
-use tip_router_operator_cli::TipAccountConfig;
 
 #[allow(dead_code)]
 struct TestContext {
