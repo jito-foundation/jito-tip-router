@@ -2,13 +2,7 @@
 use ::{
     anyhow::Result,
     clap::Parser,
-    log::{error, info},
-    solana_metrics::{datapoint_error, datapoint_info, set_host_id},
-    solana_rpc_client::nonblocking::rpc_client::RpcClient,
-    solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
-    std::process::Command,
-    std::{str::FromStr, sync::Arc, time::Duration},
-    tip_router_operator_cli::{
+    legacy_tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
         claim::{claim_mev_tips_with_emit, emit_claim_mev_tips_metrics},
         cli::{Cli, Commands, SnapshotPaths},
@@ -21,6 +15,12 @@ use ::{
         tip_router::get_ncn_config,
         Version,
     },
+    log::{error, info},
+    solana_metrics::{datapoint_error, datapoint_info, set_host_id},
+    solana_rpc_client::nonblocking::rpc_client::RpcClient,
+    solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
+    std::process::Command,
+    std::{str::FromStr, sync::Arc, time::Duration},
     tokio::{sync::Mutex, time::sleep},
 };
 
@@ -142,7 +142,7 @@ async fn main() -> Result<()> {
             let operator_address = cli.operator_address.clone();
             let cluster = cli.cluster.clone();
 
-            let try_catchup = tip_router_operator_cli::solana_cli::catchup(
+            let try_catchup = legacy_tip_router_operator_cli::solana_cli::catchup(
                 cli.rpc_url.to_owned(),
                 cli.localhost_port,
             );
