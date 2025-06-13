@@ -367,12 +367,6 @@ async fn main() -> Result<()> {
                 });
             }
 
-            // If before the new stake meta epoch, use the old loop stages. This old loop
-
-            // stages will break once it hits the configured priority fee go live date
-
-            let snapshot_paths = cli.get_snapshot_paths();
-
             let current_epoch_info = rpc_client.get_epoch_info().await?;
 
             // Endless loop that transitions between stages of the operator process.
