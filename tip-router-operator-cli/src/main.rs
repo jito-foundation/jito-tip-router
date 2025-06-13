@@ -367,6 +367,8 @@ async fn main() -> Result<()> {
                 });
             }
 
+            let current_epoch_info = rpc_client.get_epoch_info().await?;
+
             // Endless loop that transitions between stages of the operator process.
             process_epoch::loop_stages(
                 rpc_client,
@@ -380,6 +382,7 @@ async fn main() -> Result<()> {
                 &ncn_address,
                 save_snapshot,
                 save_stages,
+                current_epoch_info,
             )
             .await?;
         }
