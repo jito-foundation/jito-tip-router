@@ -15,7 +15,7 @@ use crate::{
 };
 use anyhow::Result;
 use jito_tip_router_core::epoch_state::State;
-use log::info;
+use log::{info, warn};
 use solana_metrics::set_host_id;
 use std::process::Command;
 use tokio::time::sleep;
@@ -377,7 +377,14 @@ pub async fn startup_keeper(
                 continue;
             }
 
-            epoch_stall = !run_operations || result.unwrap();
+            let stall_detected = match result {
+                Ok(stall_detected) => stall_detected,
+                Err(e) => {
+                    warn!("Failed to detect stall for epoch {current_keeper_epoch}: {e:?}");
+                    false
+                }
+            };
+            epoch_stall = !run_operations || stall_detected;
 
             emit_heartbeat(
                 tick,
