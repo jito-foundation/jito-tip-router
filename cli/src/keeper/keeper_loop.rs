@@ -377,7 +377,7 @@ pub async fn startup_keeper(
                 continue;
             }
 
-            epoch_stall = !run_operations || result.unwrap();
+            epoch_stall = !run_operations || result.unwrap_or(false);
 
             emit_heartbeat(
                 tick,
