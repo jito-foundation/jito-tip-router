@@ -1,5 +1,5 @@
 [package]
-name = "tip-router-operator-cli"
+name = "legacy-tip-router-operator-cli"
 version = "1.3.0"
 edition = "2021"
 description = "CLI for Jito Tip Router"
