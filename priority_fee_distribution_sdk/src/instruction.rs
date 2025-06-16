@@ -125,14 +125,13 @@ pub fn upload_merkle_root_ix(
 }
 
 pub fn close_claim_status_ix(
-    config: Pubkey,
+    _config: Pubkey,
     claim_status: Pubkey,
     claim_status_payer: Pubkey,
 ) -> Instruction {
     Instruction {
         program_id: jito_priority_fee_distribution::ID,
         accounts: jito_priority_fee_distribution::client::accounts::CloseClaimStatus {
-            config,
             claim_status,
             claim_status_payer,
         }

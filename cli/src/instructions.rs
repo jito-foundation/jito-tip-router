@@ -546,6 +546,10 @@ pub async fn admin_set_config_fees(
         ix.new_ncn_fee_bps(fee);
     }
 
+    if let Some(fee) = new_priority_fee_distribution_fee_bps {
+        ix.new_priority_fee_distribution_fee_bps(fee);
+    }
+
     let mut admin_set_config_fees_ix = ix.instruction();
     admin_set_config_fees_ix.program_id = handler.tip_router_program_id;
 
@@ -566,6 +570,10 @@ pub async fn admin_set_config_fees(
                 format!("New Base Fee BPS: {:?}", new_base_fee_bps),
                 format!("NCN Fee Group: {:?}", ncn_fee_group),
                 format!("New NCN Fee BPS: {:?}", new_ncn_fee_bps),
+                format!(
+                    "New Priority Fee Distribution Fee BPS: {:?}",
+                    new_priority_fee_distribution_fee_bps
+                ),
             ],
         )
         .await?;

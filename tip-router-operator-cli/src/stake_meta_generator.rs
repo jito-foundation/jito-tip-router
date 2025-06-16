@@ -595,19 +595,22 @@ mod tests {
         );
         let expires_at = bank.epoch() + 3;
 
+        let validator_1_total_priority_fees: u64 = 11_000_000;
+
+        let validator_1_commission_bps = 50;
+        let pf_tip_distro_0_tips =
+            u64::from(validator_1_commission_bps) * validator_1_total_priority_fees / 10_000;
+
         let pf_tda_0 = PriorityFeeDistributionAccount {
             validator_vote_account: validator_keypairs_0.vote_keypair.pubkey(),
             merkle_root_upload_authority,
             merkle_root: None,
             epoch_created_at: bank.epoch(),
-            validator_commission_bps: 50,
+            validator_commission_bps: validator_1_commission_bps,
             expires_at,
             bump: pf_tip_distribution_account_0.1,
+            total_lamports_transferred: pf_tip_distro_0_tips,
         };
-
-        let validator_1_total_priority_fees: u64 = 11_000_000;
-        let pf_tip_distro_0_tips: u64 =
-            validator_1_total_priority_fees * u64::from(pf_tda_0.validator_commission_bps) / 10_000;
 
         let pf_tda_0_fields = (
             pf_tip_distribution_account_0.0,
