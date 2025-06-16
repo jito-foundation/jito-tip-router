@@ -39,6 +39,8 @@ use solana_runtime::bank::Bank;
 use solana_sdk::pubkey::Pubkey;
 use stake_meta_generator::generate_stake_meta_collection;
 
+const PRIORITY_FEE_MERKLE_TREE_START_EPOCH: u64 = u64::MAX;
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct Version {
     pub major: u16,
