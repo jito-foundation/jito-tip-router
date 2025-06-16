@@ -6,7 +6,7 @@ use jito_bytemuck::{
     types::{PodBool, PodU16, PodU64},
     AccountDeserialize, Discriminator,
 };
-use meta_merkle_tree::{meta_merkle_tree::LEAF_PREFIX, tree_node::TreeNode};
+use legacy_meta_merkle_tree::{meta_merkle_tree::LEAF_PREFIX, tree_node::TreeNode};
 use shank::{ShankAccount, ShankType};
 use solana_program::{
     account_info::AccountInfo, hash::hashv, msg, program_error::ProgramError, pubkey::Pubkey,
@@ -629,7 +629,7 @@ impl BallotBox {
 
         let node_hash = hashv(&[LEAF_PREFIX, &tree_node.hash().to_bytes()]);
 
-        if !meta_merkle_tree::verify::verify(
+        if !legacy_meta_merkle_tree::verify::verify(
             proof,
             self.winning_ballot.root(),
             node_hash.to_bytes(),

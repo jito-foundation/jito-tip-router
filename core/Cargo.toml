@@ -19,7 +19,7 @@ jito-restaking-sdk = { workspace = true }
 jito-tip-distribution-sdk = { workspace = true }
 jito-vault-core = { workspace = true }
 jito-vault-sdk = { workspace = true }
-meta-merkle-tree = { workspace = true }
+legacy-meta-merkle-tree = { workspace = true }
 serde = { workspace = true }
 serde_with = { workspace = true }
 shank = { workspace = true }

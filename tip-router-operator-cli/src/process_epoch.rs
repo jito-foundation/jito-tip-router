@@ -6,8 +6,10 @@ use std::{
 };
 
 use anyhow::Result;
+use legacy_meta_merkle_tree::generated_merkle_tree::{
+    GeneratedMerkleTreeCollection, StakeMetaCollection,
+};
 use log::{error, info};
-use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_runtime::bank::Bank;

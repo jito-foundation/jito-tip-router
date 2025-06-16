@@ -6,8 +6,8 @@ use anchor_lang::AccountDeserialize;
 use jito_bytemuck::AccountDeserialize as JitoAccountDeserialize;
 use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_router_core::{ballot_box::BallotBox, config::Config};
+use legacy_meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use log::{debug, error, info};
-use meta_merkle_tree::meta_merkle_tree::MetaMerkleTree;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::nonblocking::rpc_client::RpcClient as AsyncRpcClient;
 use solana_client::{

@@ -7,7 +7,7 @@ use jito_tip_distribution_sdk::{
 use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
 use log::{info, warn};
-use meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection;
+use legacy_meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection;
 use rand::{prelude::SliceRandom, thread_rng};
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSimulateTransactionConfig};
 use solana_metrics::{datapoint_error, datapoint_info};

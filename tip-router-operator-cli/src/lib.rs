@@ -29,11 +29,11 @@ use jito_tip_payment_sdk::{
     TIP_ACCOUNT_SEED_7,
 };
 use ledger_utils::get_bank_from_ledger;
-use log::info;
-use meta_merkle_tree::generated_merkle_tree::StakeMetaCollection;
-use meta_merkle_tree::{
+use legacy_meta_merkle_tree::generated_merkle_tree::StakeMetaCollection;
+use legacy_meta_merkle_tree::{
     generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
 };
+use log::info;
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::bank::Bank;
 use solana_sdk::{account::AccountSharedData, pubkey::Pubkey};

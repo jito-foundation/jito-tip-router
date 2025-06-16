@@ -9,10 +9,10 @@ use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
 use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, TipDistributionAccount};
 use jito_tip_payment_sdk::{jito_tip_payment::accounts::Config, CONFIG_ACCOUNT_SEED};
-use log::*;
-use meta_merkle_tree::generated_merkle_tree::{
+use legacy_meta_merkle_tree::generated_merkle_tree::{
     Delegation, StakeMeta, StakeMetaCollection, TipDistributionMeta,
 };
+use log::*;
 use solana_accounts_db::hardened_unpack::OpenGenesisConfigError;
 use solana_client::client_error::ClientError;
 use solana_ledger::{
