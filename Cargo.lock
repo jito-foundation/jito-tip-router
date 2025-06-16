@@ -12586,3 +12586,8 @@ dependencies = [
 name = "solana-bench-tps"
 version = "2.2.14"
 source = "git+https://github.com/jito-foundation/jito-solana.git?rev=7ac658920e6381170f38b7172a3833f8d6401000#7ac658920e6381170f38b7172a3833f8d6401000"
+
+[[patch.unused]]
+name = "solana-runtime"
+version = "2.2.16"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=3f81361d#3f81361da8acdd743631f9533fe8a26488848aca"
