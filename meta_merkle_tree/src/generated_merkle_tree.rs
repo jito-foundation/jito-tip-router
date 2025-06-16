@@ -319,16 +319,6 @@ impl TreeNode {
             protocol_fee_amount,
         )];
 
-        // Generate validator node only if fee is > 0.
-        if validator_amount > 0 {
-            tree_nodes.push(Self::generate_validator_node(
-                &stake_meta.validator_vote_account,
-                distribution_account_pubkey,
-                distribution_program_id,
-                validator_amount,
-            ))
-        }
-
         tree_nodes.extend(
             stake_meta
                 .delegations
