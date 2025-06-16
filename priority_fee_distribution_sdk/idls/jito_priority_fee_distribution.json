@@ -2,7 +2,7 @@
   "address": "Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3",
   "metadata": {
     "name": "jito_priority_fee_distribution",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "spec": "0.1.0",
     "description": "Priority fee distribution program, responsible for distributing funds to entitled parties."
   },
@@ -100,17 +100,13 @@
       ],
       "accounts": [
         {
-          "name": "config"
-        },
-        {
           "name": "claim_status",
           "writable": true
         },
         {
           "name": "claim_status_payer",
           "docs": [
-            "Receiver of the funds.",
-            ""
+            "Receiver of the funds."
           ],
           "writable": true
         }
@@ -342,6 +338,42 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "transfer_priority_fee_tips",
+      "discriminator": [
+        195,
+        208,
+        218,
+        42,
+        198,
+        181,
+        69,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "priority_fee_distribution_account",
+          "writable": true
+        },
+        {
+          "name": "from",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "lamports",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "update_config",
@@ -726,6 +758,13 @@
         "kind": "struct",
         "fields": [
           {
+            "name": "claim_status_payer",
+            "docs": [
+              "The account that pays the rent for this account"
+            ],
+            "type": "pubkey"
+          },
+          {
             "name": "expires_at",
             "docs": [
               "The epoch (upto and including) that tip funds can be claimed.",
@@ -827,6 +866,13 @@
               "The maximum commission a validator can set on their distribution account."
             ],
             "type": "u16"
+          },
+          {
+            "name": "go_live_epoch",
+            "docs": [
+              "The epoch where lamports are transferred to the priority fee distribution account."
+            ],
+            "type": "u64"
           },
           {
             "name": "bump",
@@ -975,7 +1021,7 @@
     {
       "name": "PriorityFeeDistributionAccount",
       "docs": [
-        "The account that validators register as **tip_receiver** with the tip-payment program."
+        "The account that validators send priority fees to"
       ],
       "type": {
         "kind": "struct",
@@ -1026,6 +1072,13 @@
             "name": "expires_at",
             "docs": [
               "The epoch (upto and including) that tip funds can be claimed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_lamports_transferred",
+            "docs": [
+              "The total lamports transferred to this account."
             ],
             "type": "u64"
           },
