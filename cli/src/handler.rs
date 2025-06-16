@@ -33,6 +33,7 @@ use jito_tip_router_core::{
 };
 use log::info;
 use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
+use solana_cli_config::Config;
 use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
@@ -49,7 +50,7 @@ use switchboard_on_demand_client::SbContext;
 pub struct CliHandler {
     pub rpc_url: String,
     pub commitment: CommitmentConfig,
-    keypair: Option<Keypair>,
+    keypair: Keypair,
     pub restaking_program_id: Pubkey,
     pub vault_program_id: Pubkey,
     pub tip_router_program_id: Pubkey,
@@ -71,19 +72,34 @@ impl CliHandler {
 
         let commitment = CommitmentConfig::from_str(&args.commitment)?;
 
-        let keypair = args
-            .keypair_path
-            .as_ref()
-            .map(|k| read_keypair_file(k).unwrap());
+        let keypair = match &args.config_file {
+            Some(config_file) => {
+                let config = Config::load(config_file.as_os_str().to_str().unwrap())?;
+                let keypair_path = match &args.keypair_path {
+                    Some(path) => path.as_str(),
+                    None => config.keypair_path.as_str(),
+                };
+                read_keypair_file(keypair_path)
+                    .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?
+            }
+            None => {
+                let config_file = solana_cli_config::CONFIG_FILE
+                    .as_ref()
+                    .ok_or_else(|| anyhow!("unable to get config file path"))?;
+                let config = Config::load(config_file)?;
+                let keypair_path = match &args.keypair_path {
+                    Some(path) => path.as_str(),
+                    None => config.keypair_path.as_str(),
+                };
+                read_keypair_file(keypair_path)
+                    .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?
+            }
+        };
 
         let restaking_program_id = Pubkey::from_str(&args.restaking_program_id)?;
-
         let vault_program_id = Pubkey::from_str(&args.vault_program_id)?;
-
         let tip_router_program_id = Pubkey::from_str(&args.tip_router_program_id)?;
-
         let tip_distribution_program_id = Pubkey::from_str(&args.tip_distribution_program_id)?;
-
         let token_program_id = Pubkey::from_str(&args.token_program_id)?;
 
         let ncn = args
@@ -165,8 +181,8 @@ impl CliHandler {
         &self.switchboard_context
     }
 
-    pub fn keypair(&self) -> Result<&Keypair> {
-        self.keypair.as_ref().ok_or_else(|| anyhow!("No keypair"))
+    pub const fn keypair(&self) -> &Keypair {
+        &self.keypair
     }
 
     pub fn ncn(&self) -> Result<&Pubkey> {

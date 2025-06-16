@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, path::PathBuf};
 
 use clap::{Parser, Subcommand, ValueEnum};
 use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
@@ -8,6 +8,9 @@ use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
 pub struct Args {
     #[command(subcommand)]
     pub command: ProgramCommand,
+
+    #[arg(long, global = true, help = "Path to the configuration file")]
+    pub config_file: Option<PathBuf>,
 
     #[arg(
         long,
