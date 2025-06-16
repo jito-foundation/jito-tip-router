@@ -89,7 +89,7 @@ solana-rpc-client-api = { git = "https://github.com/jito-foundation/jito-solana.
 solana-runtime = { package = "solana-runtime", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-streamer = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-sdk = "=2.2.2"
-solana-clock = "=2.2.1"
+solana-clock = "=2.2.2"
 solana-stake-program = { package = "solana-stake-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-vote = { package = "solana-vote", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-unified-scheduler-pool = { package = "solana-unified-scheduler-pool", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
@@ -182,7 +182,7 @@ solana-rpc = { package = "solana-rpc", git = "https://github.com/jito-foundation
 solana-rpc-client = { package = "solana-rpc-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-rpc-client-api = { package = "solana-rpc-client-api", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-rpc-client-nonce-utils = { package = "solana-rpc-client-nonce-utils", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
-solana-runtime = { package = "solana-runtime", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
+solana-runtime = { package = "solana-runtime", git = "https://github.com/jito-foundation/jito-solana.git", rev = "3f81361d" }
 solana-runtime-transaction = { package = "solana-runtime-transaction", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-send-transaction-service = { package = "solana-send-transaction-service", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
 solana-stake-program = { package = "solana-stake-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "7ac658920e6381170f38b7172a3833f8d6401000" }
