@@ -197,7 +197,8 @@ pub async fn handle_claim_mev_tips(
     rpc_url: String,
 ) -> Result<(), anyhow::Error> {
     let meta_merkle_tree_dir = cli.get_save_path().clone();
-    let mut merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&meta_merkle_tree_dir)
+    let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
+    let mut merkle_tree_coll = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
         .map_err(|e| anyhow::anyhow!(e))?;
 
     let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
