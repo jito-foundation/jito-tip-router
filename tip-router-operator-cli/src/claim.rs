@@ -149,7 +149,7 @@ pub async fn claim_mev_tips_with_emit(
         .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {:?}", e))?;
     let keypair = Arc::new(keypair);
     let rpc_url = cli.rpc_url.clone();
-    if epoch < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH {
+    if epoch >= legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH {
         handle_claim_mev_tips(
             cli,
             epoch,
