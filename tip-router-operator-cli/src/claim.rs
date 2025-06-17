@@ -296,6 +296,7 @@ pub async fn legacy_handle_claim_mev_tips(
     rpc_url: String,
 ) -> Result<(), anyhow::Error> {
     let meta_merkle_tree_dir = cli.get_save_path().clone();
+    let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
     let mut merkle_tree_coll =
         LegacyGeneratedMerkleTreeCollection::new_from_file(&meta_merkle_tree_dir)
             .map_err(|e| anyhow::anyhow!(e))?;
