@@ -306,7 +306,6 @@ impl Commands {
             } => legacy_tip_router_operator_cli::Commands::Run {
                 ncn_address,
                 tip_distribution_program_id,
-                priority_fee_distribution_program_id,
                 tip_payment_program_id,
                 tip_router_program_id,
                 num_monitored_epochs,
@@ -332,7 +331,6 @@ impl Commands {
             } => legacy_tip_router_operator_cli::Commands::SubmitEpoch {
                 ncn_address,
                 tip_distribution_program_id,
-                priority_fee_distribution_program_id,
                 tip_router_program_id,
                 epoch,
                 set_merkle_roots,
@@ -346,7 +344,6 @@ impl Commands {
             } => legacy_tip_router_operator_cli::Commands::ClaimTips {
                 tip_router_program_id,
                 tip_distribution_program_id,
-                priority_fee_distribution_program_id,
                 ncn_address,
                 epoch,
             },
@@ -361,7 +358,6 @@ impl Commands {
                 epoch,
                 slot,
                 tip_distribution_program_id,
-                priority_fee_distribution_program_id,
                 tip_payment_program_id,
                 save,
             },

@@ -215,18 +215,18 @@ pub async fn loop_stages(
                 if current_epoch_info.epoch
                     < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
                 {
-                    stake_meta_collection =
-                        Some(legacy_tip_router_operator_cli::create_stake_meta(
+                    stake_meta_collection = Some(StakeMetaCollection::from_legacy(
+                        legacy_tip_router_operator_cli::create_stake_meta(
                             operator_address.clone(),
                             epoch_to_process,
                             bank.as_ref().expect("Bank was not set"),
                             tip_distribution_program_id,
-                            priority_fee_distribution_program_id,
                             tip_payment_program_id,
                             &cli.get_save_path(),
                             save_stages,
                             &cli.cluster,
-                        ));
+                        ),
+                    ));
                 } else {
                     stake_meta_collection = Some(create_stake_meta(
                         operator_address.clone(),
@@ -266,9 +266,9 @@ pub async fn loop_stages(
                                 &cli.get_save_path(),
                             )
                         },
-                        |collection| collection,
+                        |collection| collection.to_legacy(),
                     );
-                    merkle_tree_collection = Some(
+                    merkle_tree_collection = Some(GeneratedMerkleTreeCollection::from_legacy(
                         legacy_tip_router_operator_cli::create_merkle_tree_collection(
                             cli.operator_address.clone(),
                             tip_router_program_id,
@@ -276,12 +276,11 @@ pub async fn loop_stages(
                             epoch_to_process,
                             ncn_address,
                             protocol_fee_bps,
-                            fees.priority_fee_distribution_fee_bps(),
                             &cli.get_save_path(),
                             save_stages,
                             &cli.cluster,
                         ),
-                    );
+                    ));
                 } else {
                     let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
                         || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
@@ -318,7 +317,7 @@ pub async fn loop_stages(
                                     &cli.get_save_path(),
                                 )
                             },
-                            |collection| collection,
+                            |collection| collection.to_legacy(&tip_distribution_program_id),
                         );
                     let merkle_tree = legacy_tip_router_operator_cli::create_meta_merkle_tree(
                         cli.operator_address.clone(),

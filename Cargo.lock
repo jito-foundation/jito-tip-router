@@ -4069,6 +4069,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
+name = "legacy-meta-merkle-tree"
+version = "0.0.1"
+dependencies = [
+ "anchor-lang 0.31.1",
+ "borsh 0.10.4",
+ "bytemuck",
+ "fast-math",
+ "hex",
+ "jito-bytemuck",
+ "jito-jsm-core",
+ "jito-restaking-core",
+ "jito-restaking-sdk",
+ "jito-tip-distribution-sdk",
+ "jito-tip-payment-sdk",
+ "jito-vault-core",
+ "jito-vault-sdk",
+ "log",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "shank",
+ "solana-program",
+ "solana-sdk",
+ "spl-associated-token-account",
+ "spl-math",
+ "spl-token 7.0.0",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "legacy-tip-router-operator-cli"
 version = "1.3.0"
 dependencies = [
@@ -4083,14 +4113,13 @@ dependencies = [
  "im",
  "itertools 0.11.0",
  "jito-bytemuck",
- "jito-priority-fee-distribution-sdk",
  "jito-tip-distribution-sdk",
  "jito-tip-payment-sdk",
  "jito-tip-router-client",
  "jito-tip-router-core",
  "jito-tip-router-program",
+ "legacy-meta-merkle-tree",
  "log",
- "meta-merkle-tree",
  "rand 0.8.5",
  "serde",
  "serde_json",
@@ -4436,6 +4465,7 @@ dependencies = [
  "jito-tip-payment-sdk",
  "jito-vault-core",
  "jito-vault-sdk",
+ "legacy-meta-merkle-tree",
  "log",
  "rand 0.8.5",
  "serde",
@@ -11374,6 +11404,7 @@ dependencies = [
  "jito-tip-router-client",
  "jito-tip-router-core",
  "jito-tip-router-program",
+ "legacy-meta-merkle-tree",
  "legacy-tip-router-operator-cli",
  "log",
  "meta-merkle-tree",
