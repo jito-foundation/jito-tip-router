@@ -34,7 +34,7 @@ use {
         },
         bank_forks::BankForks,
         prioritization_fee_cache::PrioritizationFeeCache,
-        snapshot_config::{SnapshotConfig, SnapshotUsage},
+        snapshot_config::SnapshotConfig,
         snapshot_hash::StartingSnapshotHashes,
         snapshot_utils::{self, clean_orphaned_account_snapshot_dirs},
     },
