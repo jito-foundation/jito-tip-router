@@ -4,10 +4,11 @@ use anchor_lang::prelude::AnchorSerialize;
 use jito_tip_distribution_sdk::jito_tip_distribution::ID as TIP_DISTRIBUTION_ID;
 use jito_tip_payment_sdk::jito_tip_payment::ID as TIP_PAYMENT_ID;
 use jito_tip_router_program::ID as TIP_ROUTER_ID;
-use meta_merkle_tree::generated_merkle_tree::{
+use legacy_meta_merkle_tree::generated_merkle_tree::{
     Delegation, GeneratedMerkleTreeCollection, MerkleRootGeneratorError, StakeMeta,
     StakeMetaCollection, TipDistributionMeta,
 };
+use legacy_tip_router_operator_cli::TipAccountConfig;
 use solana_program::stake::state::StakeStateV2;
 use solana_program_test::*;
 use solana_sdk::{
@@ -18,7 +19,6 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use tempfile::TempDir;
-use tip_router_operator_cli::TipAccountConfig;
 
 #[allow(dead_code)]
 struct TestContext {
