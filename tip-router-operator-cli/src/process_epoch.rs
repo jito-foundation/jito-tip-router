@@ -111,7 +111,6 @@ pub async fn loop_stages(
     ncn_address: &Pubkey,
     enable_snapshots: bool,
     save_stages: bool,
-    current_epoch_info: EpochInfo,
 ) -> Result<()> {
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
     let mut current_epoch_info = rpc_client.get_epoch_info().await?;
@@ -317,7 +316,7 @@ pub async fn loop_stages(
                                     &cli.get_save_path(),
                                 )
                             },
-                            |collection| collection.to_legacy(&tip_distribution_program_id),
+                            |collection| collection.to_legacy(),
                         );
                     let merkle_tree = legacy_tip_router_operator_cli::create_meta_merkle_tree(
                         cli.operator_address.clone(),

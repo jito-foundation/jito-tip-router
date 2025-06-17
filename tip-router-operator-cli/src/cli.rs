@@ -291,7 +291,7 @@ impl Commands {
             Commands::Run {
                 ncn_address,
                 tip_distribution_program_id,
-                priority_fee_distribution_program_id,
+                priority_fee_distribution_program_id: _,
                 tip_payment_program_id,
                 tip_router_program_id,
                 num_monitored_epochs,
@@ -324,7 +324,7 @@ impl Commands {
             Commands::SubmitEpoch {
                 ncn_address,
                 tip_distribution_program_id,
-                priority_fee_distribution_program_id,
+                priority_fee_distribution_program_id: _,
                 tip_router_program_id,
                 epoch,
                 set_merkle_roots,
@@ -338,7 +338,7 @@ impl Commands {
             Commands::ClaimTips {
                 tip_router_program_id,
                 tip_distribution_program_id,
-                priority_fee_distribution_program_id,
+                priority_fee_distribution_program_id: _,
                 ncn_address,
                 epoch,
             } => legacy_tip_router_operator_cli::Commands::ClaimTips {
@@ -351,7 +351,7 @@ impl Commands {
                 epoch,
                 slot,
                 tip_distribution_program_id,
-                priority_fee_distribution_program_id,
+                priority_fee_distribution_program_id: _,
                 tip_payment_program_id,
                 save,
             } => legacy_tip_router_operator_cli::Commands::CreateStakeMeta {

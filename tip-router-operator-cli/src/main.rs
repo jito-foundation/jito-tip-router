@@ -382,7 +382,6 @@ async fn main() -> Result<()> {
                 &ncn_address,
                 save_snapshot,
                 save_stages,
-                current_epoch_info,
             )
             .await?;
         }
