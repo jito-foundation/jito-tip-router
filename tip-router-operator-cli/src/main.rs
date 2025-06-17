@@ -275,29 +275,28 @@ async fn main() -> Result<()> {
                             }
                             } else {
                                 match legacy_tip_router_operator_cli::claim::emit_claim_mev_tips_metrics(
-                                &cli_ref.as_legacy(),
-                                epoch_to_emit,
-                                tip_distribution_program_id,
-                                tip_router_program_id,
-                                ncn_address,
-                                &file_path_ref,
-                                &file_mutex_ref,
-                            )
-                            .await
-                            {
-                                Ok(_) => {
-                                    info!(
-                                        "Successfully emitted claim metrics for epoch {}",
-                                        epoch_to_emit
-                                    );
+                                    &cli_ref.as_legacy(),
+                                    epoch_to_emit,
+                                    tip_distribution_program_id,
+                                    tip_router_program_id,
+                                    ncn_address,
+                                    &file_path_ref,
+                                    &file_mutex_ref,
+                                ).await
+                                {
+                                    Ok(_) => {
+                                        info!(
+                                            "Successfully emitted claim metrics for epoch {}",
+                                            epoch_to_emit
+                                        );
+                                    }
+                                    Err(e) => {
+                                        error!(
+                                            "Error emitting claim metrics for epoch {}: {}",
+                                            epoch_to_emit, e
+                                        );
+                                    }
                                 }
-                                Err(e) => {
-                                    error!(
-                                        "Error emitting claim metrics for epoch {}: {}",
-                                        epoch_to_emit, e
-                                    );
-                                }
-                            }
                             }
                         }
 
