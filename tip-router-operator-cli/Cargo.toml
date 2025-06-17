@@ -22,7 +22,7 @@ jito-tip-router-client = { workspace = true }
 jito-tip-router-core = { workspace = true }
 jito-tip-router-program = { workspace = true }
 log = { workspace = true }
-legacy-meta-merkle-tree = { workspace = true }
+legacy-meta-merkle-tree = { path = "../meta_merkle_tree" }
 rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
