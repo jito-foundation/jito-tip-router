@@ -149,7 +149,21 @@ pub async fn claim_mev_tips_with_emit(
         .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {:?}", e))?;
     let keypair = Arc::new(keypair);
     let rpc_url = cli.rpc_url.clone();
-    if epoch >= legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH {
+    if epoch < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH {
+        legacy_handle_claim_mev_tips(
+            cli,
+            epoch,
+            tip_distribution_program_id,
+            tip_router_program_id,
+            ncn,
+            max_loop_duration,
+            &file_path,
+            file_mutex,
+            &keypair,
+            rpc_url,
+        )
+        .await?;
+    } else {
         handle_claim_mev_tips(
             cli,
             epoch,
@@ -164,22 +178,7 @@ pub async fn claim_mev_tips_with_emit(
             rpc_url,
         )
         .await?;
-    } else {
-        legacy_handle_claim_mev_tips(
-            cli,
-            epoch,
-            tip_distribution_program_id,
-            tip_router_program_id,
-            ncn,
-            max_loop_duration,
-            &file_path,
-            file_mutex,
-            &keypair,
-            rpc_url,
-        )
-        .await?;
     }
-
     Ok(())
 }
 
