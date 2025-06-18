@@ -198,6 +198,8 @@ jobs:
           name: jito_tip_router_program.so
           path: ${{ github.workspace }}/integration_tests/tests/fixtures/
           if-no-files-found: error
+      - name: Init git submodules 
+        run: git submodule update --init --recursive
       - uses: taiki-e/install-action@nextest
       - run: cargo nextest run --all-features -E 'not test(ledger_utils::tests)'
         env:
