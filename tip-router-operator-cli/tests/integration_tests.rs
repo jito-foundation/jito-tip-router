@@ -230,7 +230,7 @@ async fn test_legacy_merkle_tree_generation() -> Result<(), Box<dyn std::error::
     const VALIDATOR_FEE_BPS: u16 = 1000;
     const TOTAL_TIPS: u64 = 1_000_000;
     let ncn_address = Pubkey::new_unique();
-    let epoch = 0u64;
+    let epoch = 777u64;
 
     let mut test_context = TestContext::new()
         .await
@@ -284,7 +284,7 @@ async fn test_legacy_merkle_tree_generation() -> Result<(), Box<dyn std::error::
 
     assert_eq!(
         generated_tree.merkle_root.to_string(),
-        "GigiMW98ktUQUnR2VygMPgg1NqsYNqYH7hNRpfBnt2zb"
+        "CB7NQ5BhwhcSEW1JUBtE5qV9kzyaF5G5YrF3NBvCYbF"
     );
 
     let nodes = &generated_tree.tree_nodes;
@@ -305,21 +305,16 @@ async fn test_legacy_merkle_tree_generation() -> Result<(), Box<dyn std::error::
         .expect("Protocol fee node should exist");
     assert_eq!(protocol_fee_node.amount, protocol_fee_amount);
 
-    println!(
-        "Nodes {:?} Stake Meta Collection: {:?}",
-        nodes, stake_meta_collection
-    );
-
     // Verify validator fee node
     let validator_fee_node = nodes
         .iter()
-        .find(|node| node.claimant == stake_meta_collection.stake_metas[0].validator_node_pubkey)
+        .find(|node| node.claimant == stake_meta_collection.stake_metas[0].validator_vote_account)
         .expect("Validator fee node should exist");
     assert_eq!(validator_fee_node.amount, validator_fee_amount);
 
     let has_no_validator_vote_nodes = nodes
         .iter()
-        .all(|node| node.claimant != stake_meta_collection.stake_metas[0].validator_vote_account);
+        .all(|node| node.claimant != stake_meta_collection.stake_metas[0].validator_node_pubkey);
     assert!(has_no_validator_vote_nodes);
 
     // Verify delegator nodes
@@ -432,11 +427,6 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         .find(|node| node.claimant == protocol_fee_recipient)
         .expect("Protocol fee node should exist");
     assert_eq!(protocol_fee_node.amount, protocol_fee_amount);
-
-    println!(
-        "Nodes {:?} Stake Meta Collection: {:?}",
-        nodes, stake_meta_collection
-    );
 
     // Verify validator fee node
     let validator_fee_node = nodes
