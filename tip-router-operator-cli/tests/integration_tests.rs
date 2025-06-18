@@ -385,8 +385,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
     // Set the account
     test_context.context.set_account(&config_pda, &account);
 
-    let stake_meta_collection =
-        test_context.create_test_stake_meta(TOTAL_TIPS, VALIDATOR_FEE_BPS);
+    let stake_meta_collection = test_context.create_test_stake_meta(TOTAL_TIPS, VALIDATOR_FEE_BPS);
 
     let protocol_fee_amount =
         (((TOTAL_TIPS as u128) * (PROTOCOL_FEE_BPS as u128)) / 10000u128) as u64;
