@@ -1132,6 +1132,15 @@ mod tests {
                 proof: None,
             },
             TreeNode {
+                claimant: validator_vote_account_0,
+                claim_status_pubkey: claim_statuses[1].0,
+                claim_status_bump: claim_statuses[1].1,
+                staker_pubkey: Pubkey::default(),
+                withdrawer_pubkey: Pubkey::default(),
+                amount: 0,
+                proof: None,
+            },
+            TreeNode {
                 claimant: stake_account_0,
                 claim_status_pubkey: pf_claim_statuses[2].0,
                 claim_status_bump: pf_claim_statuses[2].1,
@@ -1234,6 +1243,15 @@ mod tests {
                 proof: None,
             },
             TreeNode {
+                claimant: validator_vote_account_1,
+                claim_status_pubkey: claim_statuses[5].0,
+                claim_status_bump: claim_statuses[5].1,
+                staker_pubkey: Pubkey::default(),
+                withdrawer_pubkey: Pubkey::default(),
+                amount: 0,
+                proof: None,
+            },
+            TreeNode {
                 claimant: stake_account_2,
                 claim_status_pubkey: pf_claim_statuses[6].0,
                 claim_status_bump: pf_claim_statuses[6].1,
@@ -1287,6 +1305,10 @@ mod tests {
                     expected_gmt.distribution_account,
                     actual_gmt.distribution_account
                 );
+                println!(
+                    "Actual tree nodes: {:#?}\n Expected tree nodes: {:#?}\n Actual tree nodes len: {:?}\n Expected tree nodes len: {:?}",
+                    actual_gmt.tree_nodes, expected_gmt.tree_nodes, actual_gmt.tree_nodes.len(), expected_gmt.tree_nodes.len()
+                );
                 assert_eq!(expected_gmt.tree_nodes.len(), actual_gmt.tree_nodes.len());
                 expected_gmt
                     .tree_nodes
@@ -1331,7 +1353,7 @@ mod tests {
                         .any(|node| node.claimant == validator_vote_account_0
                             || node.claimant == validator_vote_account_1));
                 } else if gmt.distribution_program == PRIORITY_FEE_DISTRIBUTION_ID {
-                    assert!(!gmt
+                    assert!(gmt
                         .tree_nodes
                         .iter()
                         .any(|node| node.claimant == validator_vote_account_0
