@@ -393,6 +393,13 @@ impl TreeNode {
             protocol_fee_amount,
         )];
 
+        tree_nodes.push(Self::generate_validator_node(
+            &stake_meta.validator_vote_account,
+            distribution_account_pubkey,
+            distribution_program_id,
+            validator_amount,
+        ));
+
         tree_nodes.extend(
             stake_meta
                 .delegations
@@ -1158,7 +1165,7 @@ mod tests {
                 .maybe_priority_fee_distribution_meta
                 .unwrap()
                 .total_tips,
-            max_num_nodes: 3,
+            max_num_nodes: 4,
         };
 
         let tree_nodes = vec![
@@ -1259,7 +1266,7 @@ mod tests {
                 .maybe_priority_fee_distribution_meta
                 .unwrap()
                 .total_tips,
-            max_num_nodes: 3,
+            max_num_nodes: 4, // stake acc 1 + stake acc 2 + protocol fee recipient + validator
         };
 
         let expected_generated_merkle_trees = vec![gmt_0, gmt_1, gmt_2, gmt_3];

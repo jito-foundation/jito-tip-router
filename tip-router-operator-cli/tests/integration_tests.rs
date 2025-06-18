@@ -5,6 +5,11 @@ use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID as PR
 use jito_tip_distribution_sdk::jito_tip_distribution::ID as TIP_DISTRIBUTION_ID;
 use jito_tip_payment_sdk::jito_tip_payment::ID as TIP_PAYMENT_ID;
 use jito_tip_router_program::ID as TIP_ROUTER_ID;
+use legacy_meta_merkle_tree::generated_merkle_tree::Delegation as LegacyDelegation;
+use legacy_meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection as LegacyGeneratedMerkleTreeCollection;
+use legacy_meta_merkle_tree::generated_merkle_tree::StakeMeta as LegacyStakeMeta;
+use legacy_meta_merkle_tree::generated_merkle_tree::StakeMetaCollection as LegacyStakeMetaCollection;
+use legacy_meta_merkle_tree::generated_merkle_tree::TipDistributionMeta as LegacyTipDistributionMeta;
 use meta_merkle_tree::generated_merkle_tree::{
     Delegation, GeneratedMerkleTreeCollection, MerkleRootGeneratorError, StakeMeta,
     StakeMetaCollection, TipDistributionMeta,
@@ -183,10 +188,43 @@ impl TestContext {
             priority_fee_distribution_program_id: self.priority_fee_distribution_program_id,
         }
     }
+
+    fn create_legacy_test_stake_meta(
+        &self,
+        total_tips: u64,
+        validator_fee_bps: u16,
+    ) -> LegacyStakeMetaCollection {
+        let stake_meta = LegacyStakeMeta {
+            validator_vote_account: self.vote_account.pubkey(),
+            validator_node_pubkey: self.stake_accounts[0].pubkey(),
+            maybe_tip_distribution_meta: Some(LegacyTipDistributionMeta {
+                total_tips,
+                merkle_root_upload_authority: self.payer.pubkey(),
+                tip_distribution_pubkey: self.tip_distribution_program_id,
+                validator_fee_bps,
+            }),
+            delegations: vec![LegacyDelegation {
+                stake_account_pubkey: self.stake_accounts[1].pubkey(),
+                staker_pubkey: self.payer.pubkey(),
+                withdrawer_pubkey: self.payer.pubkey(),
+                lamports_delegated: 1_000_000,
+            }],
+            total_delegated: 1_000_000,
+            commission: 10,
+        };
+
+        LegacyStakeMetaCollection {
+            epoch: 0,
+            stake_metas: vec![stake_meta],
+            bank_hash: "test_bank_hash".to_string(),
+            slot: 0,
+            tip_distribution_program_id: self.tip_distribution_program_id,
+        }
+    }
 }
 
 #[tokio::test]
-async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_legacy_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>> {
     // Constants
     const PROTOCOL_FEE_BPS: u64 = 300;
     const VALIDATOR_FEE_BPS: u16 = 1000;
@@ -225,7 +263,135 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
     // Set the account
     test_context.context.set_account(&config_pda, &account);
 
-    let stake_meta_collection = test_context.create_test_stake_meta(TOTAL_TIPS, VALIDATOR_FEE_BPS);
+    let stake_meta_collection =
+        test_context.create_legacy_test_stake_meta(TOTAL_TIPS, VALIDATOR_FEE_BPS);
+
+    let protocol_fee_amount =
+        (((TOTAL_TIPS as u128) * (PROTOCOL_FEE_BPS as u128)) / 10000u128) as u64;
+    let validator_fee_amount =
+        (((TOTAL_TIPS as u128) * (VALIDATOR_FEE_BPS as u128)) / 10000u128) as u64;
+
+    // Then use it in generate_merkle_root
+    let merkle_tree_coll = LegacyGeneratedMerkleTreeCollection::new_from_stake_meta_collection(
+        stake_meta_collection.clone(),
+        &ncn_address,
+        epoch,
+        PROTOCOL_FEE_BPS,
+        &jito_tip_router_program::id(),
+    )?;
+
+    let generated_tree = &merkle_tree_coll.generated_merkle_trees[0];
+
+    assert_eq!(
+        generated_tree.merkle_root.to_string(),
+        "GigiMW98ktUQUnR2VygMPgg1NqsYNqYH7hNRpfBnt2zb"
+    );
+
+    let nodes = &generated_tree.tree_nodes;
+
+    // Get the protocol fee recipient PDA - use the same derivation as in the implementation
+    let (protocol_fee_recipient, _) = Pubkey::find_program_address(
+        &[
+            b"base_reward_receiver",
+            &ncn_address.to_bytes(),
+            &(epoch + 1).to_le_bytes(),
+        ],
+        &TIP_ROUTER_ID,
+    );
+
+    let protocol_fee_node = nodes
+        .iter()
+        .find(|node| node.claimant == protocol_fee_recipient)
+        .expect("Protocol fee node should exist");
+    assert_eq!(protocol_fee_node.amount, protocol_fee_amount);
+
+    println!(
+        "Nodes {:?} Stake Meta Collection: {:?}",
+        nodes, stake_meta_collection
+    );
+
+    // Verify validator fee node
+    let validator_fee_node = nodes
+        .iter()
+        .find(|node| node.claimant == stake_meta_collection.stake_metas[0].validator_node_pubkey)
+        .expect("Validator fee node should exist");
+    assert_eq!(validator_fee_node.amount, validator_fee_amount);
+
+    let has_no_validator_vote_nodes = nodes
+        .iter()
+        .all(|node| node.claimant != stake_meta_collection.stake_metas[0].validator_vote_account);
+    assert!(has_no_validator_vote_nodes);
+
+    // Verify delegator nodes
+    for delegation in &stake_meta_collection.stake_metas[0].delegations {
+        let delegator_node = nodes
+            .iter()
+            .find(|node| node.claimant == delegation.stake_account_pubkey);
+
+        assert!(delegator_node.is_some(), "Delegator node should exist");
+    }
+
+    // Verify node structure
+    for node in nodes {
+        assert_ne!(
+            node.claimant,
+            Pubkey::default(),
+            "Node claimant should not be default"
+        );
+        assert_ne!(
+            node.claim_status_pubkey,
+            Pubkey::default(),
+            "Node claim status should not be default"
+        );
+        assert!(node.amount > 0, "Node amount should be greater than 0");
+        assert!(node.proof.is_some(), "Node should have a proof");
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>> {
+    // Constants
+    const PROTOCOL_FEE_BPS: u64 = 300;
+    const VALIDATOR_FEE_BPS: u16 = 1000;
+    const TOTAL_TIPS: u64 = 1_000_000;
+    let ncn_address = Pubkey::new_unique();
+    let epoch = 9999u64;
+
+    let mut test_context = TestContext::new()
+        .await
+        .map_err(|_e| MerkleRootGeneratorError::MerkleTreeTestError)?;
+
+    // Get config PDA
+    let (config_pda, bump) = Pubkey::find_program_address(&[b"config"], &TIP_DISTRIBUTION_ID);
+
+    // Create config account with protocol fee
+    let config = TipAccountConfig {
+        authority: test_context.payer.pubkey(),
+        protocol_fee_bps: PROTOCOL_FEE_BPS, // 3% protocol fee
+        bump,
+    };
+
+    // Create config account
+    let space = 32 + 2 + 1; // pubkey (32) + u16 (2) + u8 (1)
+    let rent = test_context.context.banks_client.get_rent().await?;
+
+    // Create account data
+    let mut account =
+        AccountSharedData::new(rent.minimum_balance(space), space, &TIP_DISTRIBUTION_ID);
+
+    let mut config_data = vec![0u8; space];
+    let _ = config.serialize(&mut config_data);
+
+    // Create account with data
+    account.set_data(config_data);
+
+    // Set the account
+    test_context.context.set_account(&config_pda, &account);
+
+    let stake_meta_collection =
+        test_context.create_test_stake_meta(TOTAL_TIPS, VALIDATOR_FEE_BPS);
 
     let protocol_fee_amount =
         (((TOTAL_TIPS as u128) * (PROTOCOL_FEE_BPS as u128)) / 10000u128) as u64;
@@ -246,7 +412,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
 
     assert_eq!(
         generated_tree.merkle_root.to_string(),
-        "DMKiigJDovqCc3oya8TiZFQ6zSxsm6Ms2HNHMgAwMcop"
+        "AT9D7XkShDSeWWSDmCXr4RPkFcLYY9tLaSZeKX21NffS"
     );
 
     let nodes = &generated_tree.tree_nodes;
@@ -266,6 +432,11 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         .find(|node| node.claimant == protocol_fee_recipient)
         .expect("Protocol fee node should exist");
     assert_eq!(protocol_fee_node.amount, protocol_fee_amount);
+
+    println!(
+        "Nodes {:?} Stake Meta Collection: {:?}",
+        nodes, stake_meta_collection
+    );
 
     // Verify validator fee node
     let validator_fee_node = nodes
