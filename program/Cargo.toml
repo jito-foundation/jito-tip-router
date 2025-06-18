@@ -11,7 +11,7 @@ readme = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "jito_tip_router_program"
+name = "legacy_jito_tip_router_program"
 
 [features]
 no-entrypoint = []
