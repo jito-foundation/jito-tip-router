@@ -74,22 +74,20 @@ pub enum OperatorState {
 }
 
 impl OperatorState {
-    pub fn as_legacy(&self) -> legacy_tip_router_operator_cli::OperatorState {
+    pub const fn as_legacy(&self) -> legacy_tip_router_operator_cli::OperatorState {
         match self {
-            OperatorState::LoadBankFromSnapshot => {
+            Self::LoadBankFromSnapshot => {
                 legacy_tip_router_operator_cli::OperatorState::LoadBankFromSnapshot
             }
-            OperatorState::CreateStakeMeta => {
-                legacy_tip_router_operator_cli::OperatorState::CreateStakeMeta
-            }
-            OperatorState::CreateMerkleTreeCollection => {
+            Self::CreateStakeMeta => legacy_tip_router_operator_cli::OperatorState::CreateStakeMeta,
+            Self::CreateMerkleTreeCollection => {
                 legacy_tip_router_operator_cli::OperatorState::CreateMerkleTreeCollection
             }
-            OperatorState::CreateMetaMerkleTree => {
+            Self::CreateMetaMerkleTree => {
                 legacy_tip_router_operator_cli::OperatorState::CreateMetaMerkleTree
             }
-            OperatorState::CastVote => legacy_tip_router_operator_cli::OperatorState::CastVote,
-            OperatorState::WaitForNextEpoch => {
+            Self::CastVote => legacy_tip_router_operator_cli::OperatorState::CastVote,
+            Self::WaitForNextEpoch => {
                 legacy_tip_router_operator_cli::OperatorState::WaitForNextEpoch
             }
         }

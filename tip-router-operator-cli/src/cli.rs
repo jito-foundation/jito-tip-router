@@ -67,6 +67,8 @@ pub struct Cli {
     pub command: Commands,
 }
 
+#[allow(unused_assignments)]
+#[allow(deprecated)]
 impl Cli {
     pub fn as_legacy(&self) -> legacy_tip_router_operator_cli::Cli {
         legacy_tip_router_operator_cli::Cli {
@@ -286,9 +288,9 @@ pub enum Commands {
 }
 
 impl Commands {
-    pub fn as_legacy(self) -> legacy_tip_router_operator_cli::Commands {
+    pub const fn as_legacy(self) -> legacy_tip_router_operator_cli::Commands {
         match self {
-            Commands::Run {
+            Self::Run {
                 ncn_address,
                 tip_distribution_program_id,
                 priority_fee_distribution_program_id: _,
@@ -318,10 +320,10 @@ impl Commands {
                 save_stages,
                 save_snapshot,
             },
-            Commands::SnapshotSlot { slot } => {
+            Self::SnapshotSlot { slot } => {
                 legacy_tip_router_operator_cli::Commands::SnapshotSlot { slot }
             }
-            Commands::SubmitEpoch {
+            Self::SubmitEpoch {
                 ncn_address,
                 tip_distribution_program_id,
                 priority_fee_distribution_program_id: _,
@@ -335,7 +337,7 @@ impl Commands {
                 epoch,
                 set_merkle_roots,
             },
-            Commands::ClaimTips {
+            Self::ClaimTips {
                 tip_router_program_id,
                 tip_distribution_program_id,
                 priority_fee_distribution_program_id: _,
@@ -347,7 +349,7 @@ impl Commands {
                 ncn_address,
                 epoch,
             },
-            Commands::CreateStakeMeta {
+            Self::CreateStakeMeta {
                 epoch,
                 slot,
                 tip_distribution_program_id,
@@ -361,7 +363,7 @@ impl Commands {
                 tip_payment_program_id,
                 save,
             },
-            Commands::CreateMerkleTreeCollection {
+            Self::CreateMerkleTreeCollection {
                 tip_router_program_id,
                 ncn_address,
                 epoch,
@@ -372,7 +374,7 @@ impl Commands {
                 epoch,
                 save,
             },
-            Commands::CreateMetaMerkleTree { epoch, save } => {
+            Self::CreateMetaMerkleTree { epoch, save } => {
                 legacy_tip_router_operator_cli::Commands::CreateMetaMerkleTree { epoch, save }
             }
         }

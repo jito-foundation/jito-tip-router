@@ -157,7 +157,7 @@ pub async fn claim_mev_tips_with_emit(
             tip_router_program_id,
             ncn,
             max_loop_duration,
-            &file_path,
+            file_path,
             file_mutex,
             &keypair,
             rpc_url,
@@ -172,7 +172,7 @@ pub async fn claim_mev_tips_with_emit(
             tip_router_program_id,
             ncn,
             max_loop_duration,
-            &file_path,
+            file_path,
             file_mutex,
             &keypair,
             rpc_url,
@@ -182,6 +182,7 @@ pub async fn claim_mev_tips_with_emit(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn handle_claim_mev_tips(
     cli: &Cli,
     epoch: u64,
@@ -228,7 +229,7 @@ pub async fn handle_claim_mev_tips(
         priority_fee_distribution_program_id,
         tip_router_program_id,
         ncn,
-        &keypair,
+        keypair,
         max_loop_duration,
         cli.claim_microlamports,
         file_path,
@@ -270,7 +271,7 @@ pub async fn handle_claim_mev_tips(
         }
     }
 
-    let claimer_balance = get_claimer_balance(rpc_url, &keypair).await?;
+    let claimer_balance = get_claimer_balance(rpc_url, keypair).await?;
     datapoint_info!(
         "claimer_info",
         ("claimer", keypair.pubkey().to_string(), String),
@@ -282,6 +283,7 @@ pub async fn handle_claim_mev_tips(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn legacy_handle_claim_mev_tips(
     cli: &Cli,
     epoch: u64,
@@ -327,7 +329,7 @@ pub async fn legacy_handle_claim_mev_tips(
         tip_distribution_program_id,
         tip_router_program_id,
         ncn,
-        &keypair,
+        keypair,
         max_loop_duration,
         cli.claim_microlamports,
         file_path,
@@ -369,7 +371,7 @@ pub async fn legacy_handle_claim_mev_tips(
         }
     }
 
-    let claimer_balance = get_claimer_balance(rpc_url, &keypair).await?;
+    let claimer_balance = get_claimer_balance(rpc_url, keypair).await?;
     datapoint_info!(
         "claimer_info",
         ("claimer", keypair.pubkey().to_string(), String),

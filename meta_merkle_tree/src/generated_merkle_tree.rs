@@ -167,7 +167,7 @@ impl GeneratedMerkleTree {
     }
 
     pub fn from_legacy(legacy_tree: LegacyGeneratedMerkleTree) -> Self {
-        GeneratedMerkleTree {
+        Self {
             distribution_program: TIP_DISTRIBUTION_ID, // Legacy trees are always from the tip
             // distribution program
             distribution_account: legacy_tree.tip_distribution_account,
@@ -286,7 +286,7 @@ impl GeneratedMerkleTreeCollection {
             generated_merkle_trees: legacy_collection
                 .generated_merkle_trees
                 .into_iter()
-                .map(|legacy_tree| GeneratedMerkleTree::from_legacy(legacy_tree))
+                .map(GeneratedMerkleTree::from_legacy)
                 .collect(),
             bank_hash: legacy_collection.bank_hash,
             epoch: legacy_collection.epoch,
@@ -334,6 +334,7 @@ pub struct TreeNode {
     pub proof: Option<Vec<[u8; 32]>>,
 }
 
+#[allow(dead_code)]
 impl TreeNode {
     /// Given a StakeMeta for a validator, extract the tree nodes for a given
     /// _distribution_program_. _distribution_program_ should match
@@ -607,7 +608,7 @@ impl StakeMetaCollection {
             stake_metas: legacy_stake_meta_collection
                 .stake_metas
                 .into_iter()
-                .map(|meta| StakeMeta::from_legacy(meta))
+                .map(StakeMeta::from_legacy)
                 .collect(),
             tip_distribution_program_id: legacy_stake_meta_collection.tip_distribution_program_id,
             priority_fee_distribution_program_id: PRIORITY_FEE_DISTRIBUTION_ID,
@@ -710,7 +711,7 @@ pub struct TipDistributionMeta {
 }
 
 impl TipDistributionMeta {
-    pub fn to_legacy(&self) -> LegacyDistributionMeta {
+    pub const fn to_legacy(&self) -> LegacyDistributionMeta {
         LegacyDistributionMeta {
             merkle_root_upload_authority: self.merkle_root_upload_authority,
             tip_distribution_pubkey: self.tip_distribution_pubkey,
@@ -719,7 +720,7 @@ impl TipDistributionMeta {
         }
     }
 
-    pub fn from_legacy(legacy_meta: LegacyDistributionMeta) -> Self {
+    pub const fn from_legacy(legacy_meta: LegacyDistributionMeta) -> Self {
         Self {
             merkle_root_upload_authority: legacy_meta.merkle_root_upload_authority,
             tip_distribution_pubkey: legacy_meta.tip_distribution_pubkey,
@@ -761,7 +762,7 @@ pub struct Delegation {
 }
 
 impl Delegation {
-    pub fn to_legacy(&self) -> LegacyDelegation {
+    pub const fn to_legacy(&self) -> LegacyDelegation {
         LegacyDelegation {
             stake_account_pubkey: self.stake_account_pubkey,
             staker_pubkey: self.staker_pubkey,
@@ -770,7 +771,7 @@ impl Delegation {
         }
     }
 
-    pub fn from_legacy(legacy_delegation: LegacyDelegation) -> Self {
+    pub const fn from_legacy(legacy_delegation: LegacyDelegation) -> Self {
         Self {
             stake_account_pubkey: legacy_delegation.stake_account_pubkey,
             staker_pubkey: legacy_delegation.staker_pubkey,

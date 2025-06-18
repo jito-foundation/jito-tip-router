@@ -304,8 +304,7 @@ pub async fn loop_stages(
                 stage = OperatorState::CreateMetaMerkleTree;
             }
             OperatorState::CreateMetaMerkleTree => {
-                let mut merkle_root = [0u8; 32];
-                if current_epoch_info.epoch
+                let merkle_root = if current_epoch_info.epoch
                     < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
                 {
                     let some_merkle_tree_collection =
@@ -328,7 +327,7 @@ pub async fn loop_stages(
                         true,
                         &cli.cluster,
                     );
-                    merkle_root = merkle_tree.merkle_root;
+                    merkle_tree.merkle_root
                 } else {
                     let some_merkle_tree_collection =
                         merkle_tree_collection.to_owned().map_or_else(
@@ -345,8 +344,8 @@ pub async fn loop_stages(
                         true,
                         &cli.cluster,
                     );
-                    merkle_root = merkle_tree.merkle_root;
-                }
+                    merkle_tree.merkle_root
+                };
 
                 datapoint_info!(
                     "tip_router_cli.process_epoch",
