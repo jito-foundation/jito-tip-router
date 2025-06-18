@@ -118,13 +118,13 @@ jobs:
         run: sh -c "$(curl -sSfL https://release.anza.xyz/v2.2.14/install)"
       - name: add to path
         run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+      - name: Init git submodules 
+        run: git submodule update --init --recursive
       - name: Building programs
         run: cargo-build-sbf
         env:
           TIP_ROUTER_PROGRAM_ID: ${{ env.TIP_ROUTER_PROGRAM_ID }}
           SBF_OUT_PATH: ${{ github.workspace }}/target/sbf-solana-solana/release
-      - name: Init git submodules 
-        run: git submodule update --init --recursive
       - name: Upload MEV Tip Distribution NCN program
         uses: actions/upload-artifact@v4
         with:
