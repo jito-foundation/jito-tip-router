@@ -3,6 +3,13 @@ use jito_tip_distribution_sdk::{
     jito_tip_distribution::ID as TIP_DISTRIBUTION_ID, CLAIM_STATUS_SEED,
 };
 use jito_vault_core::MAX_BPS;
+use legacy_meta_merkle_tree::generated_merkle_tree::Delegation as LegacyDelegation;
+use legacy_meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTree as LegacyGeneratedMerkleTree;
+use legacy_meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection as LegacyGeneratedMerkleTreeCollection;
+use legacy_meta_merkle_tree::generated_merkle_tree::StakeMeta as LegacyStakeMeta;
+use legacy_meta_merkle_tree::generated_merkle_tree::StakeMetaCollection as LegacyStakeMetaCollection;
+use legacy_meta_merkle_tree::generated_merkle_tree::TipDistributionMeta as LegacyDistributionMeta;
+use legacy_meta_merkle_tree::generated_merkle_tree::TreeNode as LegacyTreeNode;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use solana_program::{
     clock::{Epoch, Slot},
@@ -158,6 +165,46 @@ impl GeneratedMerkleTree {
             max_total_claim: total_tips,
         })
     }
+
+    pub fn from_legacy(legacy_tree: LegacyGeneratedMerkleTree) -> Self {
+        GeneratedMerkleTree {
+            distribution_program: TIP_DISTRIBUTION_ID, // Legacy trees are always from the tip
+            // distribution program
+            distribution_account: legacy_tree.tip_distribution_account,
+            merkle_root_upload_authority: legacy_tree.merkle_root_upload_authority,
+            merkle_root: legacy_tree.merkle_root,
+            tree_nodes: legacy_tree
+                .tree_nodes
+                .into_iter()
+                .map(TreeNode::from_legacy)
+                .collect(),
+            max_total_claim: legacy_tree.max_total_claim,
+            max_num_nodes: legacy_tree.max_num_nodes,
+        }
+    }
+
+    pub fn to_legacy(&self) -> LegacyGeneratedMerkleTree {
+        LegacyGeneratedMerkleTree {
+            tip_distribution_account: self.distribution_account,
+            merkle_root_upload_authority: self.merkle_root_upload_authority,
+            merkle_root: self.merkle_root,
+            tree_nodes: self
+                .tree_nodes
+                .iter()
+                .map(|node| LegacyTreeNode {
+                    claimant: node.claimant,
+                    claim_status_pubkey: node.claim_status_pubkey,
+                    claim_status_bump: node.claim_status_bump,
+                    staker_pubkey: node.staker_pubkey,
+                    withdrawer_pubkey: node.withdrawer_pubkey,
+                    amount: node.amount,
+                    proof: node.proof.clone(),
+                })
+                .collect(),
+            max_total_claim: self.max_total_claim,
+            max_num_nodes: self.max_num_nodes,
+        }
+    }
 }
 
 impl GeneratedMerkleTreeCollection {
@@ -233,6 +280,32 @@ impl GeneratedMerkleTreeCollection {
         file.write_all(serialized.as_bytes())?;
         Ok(())
     }
+
+    pub fn from_legacy(legacy_collection: LegacyGeneratedMerkleTreeCollection) -> Self {
+        Self {
+            generated_merkle_trees: legacy_collection
+                .generated_merkle_trees
+                .into_iter()
+                .map(|legacy_tree| GeneratedMerkleTree::from_legacy(legacy_tree))
+                .collect(),
+            bank_hash: legacy_collection.bank_hash,
+            epoch: legacy_collection.epoch,
+            slot: legacy_collection.slot,
+        }
+    }
+
+    pub fn to_legacy(&self) -> LegacyGeneratedMerkleTreeCollection {
+        LegacyGeneratedMerkleTreeCollection {
+            generated_merkle_trees: self
+                .generated_merkle_trees
+                .iter()
+                .map(|tree| tree.to_legacy())
+                .collect(),
+            bank_hash: self.bank_hash.clone(),
+            epoch: self.epoch,
+            slot: self.slot,
+        }
+    }
 }
 
 #[derive(Clone, Eq, Debug, Hash, PartialEq, Deserialize, Serialize)]
@@ -283,7 +356,7 @@ impl TreeNode {
         // validator_fee_bps
         let validator_amount = mul_div(total_tips, validator_fee_bps as u64, MAX_BPS as u64)?;
 
-        let (validator_amount, remaining_total_rewards) = validator_amount
+        let (_validator_amount, remaining_total_rewards) = validator_amount
             .checked_add(protocol_fee_amount)
             .map_or((validator_amount, None), |total_fees| {
                 if total_fees > total_tips {
@@ -318,16 +391,6 @@ impl TreeNode {
             distribution_program_id,
             protocol_fee_amount,
         )];
-
-        // Generate validator node only if fee is > 0.
-        if validator_amount > 0 {
-            tree_nodes.push(Self::generate_validator_node(
-                &stake_meta.validator_vote_account,
-                distribution_account_pubkey,
-                distribution_program_id,
-                validator_amount,
-            ))
-        }
 
         tree_nodes.extend(
             stake_meta
@@ -459,6 +522,30 @@ impl TreeNode {
         hasher.hash(self.amount.to_le_bytes().as_ref());
         hasher.result()
     }
+
+    pub fn from_legacy(legacy_tree_node: LegacyTreeNode) -> Self {
+        Self {
+            claimant: legacy_tree_node.claimant,
+            claim_status_pubkey: legacy_tree_node.claim_status_pubkey,
+            claim_status_bump: legacy_tree_node.claim_status_bump,
+            staker_pubkey: legacy_tree_node.staker_pubkey,
+            withdrawer_pubkey: legacy_tree_node.withdrawer_pubkey,
+            amount: legacy_tree_node.amount,
+            proof: legacy_tree_node.proof,
+        }
+    }
+
+    pub fn to_legacy(&self) -> LegacyTreeNode {
+        LegacyTreeNode {
+            claimant: self.claimant,
+            claim_status_pubkey: self.claim_status_pubkey,
+            claim_status_bump: self.claim_status_bump,
+            staker_pubkey: self.staker_pubkey,
+            withdrawer_pubkey: self.withdrawer_pubkey,
+            amount: self.amount,
+            proof: self.proof.clone(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -500,6 +587,35 @@ impl StakeMetaCollection {
         let mut file = File::create(path).unwrap();
         file.write_all(serialized.as_bytes()).unwrap();
     }
+
+    pub fn to_legacy(&self) -> LegacyStakeMetaCollection {
+        LegacyStakeMetaCollection {
+            stake_metas: self
+                .stake_metas
+                .iter()
+                .map(|meta| meta.to_legacy())
+                .collect(),
+            tip_distribution_program_id: self.tip_distribution_program_id,
+            bank_hash: self.bank_hash.clone(),
+            epoch: self.epoch,
+            slot: self.slot,
+        }
+    }
+
+    pub fn from_legacy(legacy_stake_meta_collection: LegacyStakeMetaCollection) -> Self {
+        Self {
+            stake_metas: legacy_stake_meta_collection
+                .stake_metas
+                .into_iter()
+                .map(|meta| StakeMeta::from_legacy(meta))
+                .collect(),
+            tip_distribution_program_id: legacy_stake_meta_collection.tip_distribution_program_id,
+            priority_fee_distribution_program_id: PRIORITY_FEE_DISTRIBUTION_ID,
+            bank_hash: legacy_stake_meta_collection.bank_hash,
+            epoch: legacy_stake_meta_collection.epoch,
+            slot: legacy_stake_meta_collection.slot,
+        }
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
@@ -524,6 +640,44 @@ pub struct StakeMeta {
 
     /// The validator's delegation commission rate as a percentage between 0-100.
     pub commission: u8,
+}
+
+impl StakeMeta {
+    pub fn to_legacy(&self) -> LegacyStakeMeta {
+        LegacyStakeMeta {
+            validator_vote_account: self.validator_vote_account,
+            validator_node_pubkey: self.validator_node_pubkey,
+            maybe_tip_distribution_meta: self
+                .maybe_tip_distribution_meta
+                .as_ref()
+                .map(|meta| meta.to_legacy()),
+            delegations: self
+                .delegations
+                .iter()
+                .map(|delegation| delegation.to_legacy())
+                .collect(),
+            total_delegated: self.total_delegated,
+            commission: self.commission,
+        }
+    }
+
+    pub fn from_legacy(legacy_stake_meta: LegacyStakeMeta) -> Self {
+        Self {
+            validator_vote_account: legacy_stake_meta.validator_vote_account,
+            validator_node_pubkey: legacy_stake_meta.validator_node_pubkey,
+            maybe_tip_distribution_meta: legacy_stake_meta
+                .maybe_tip_distribution_meta
+                .map(TipDistributionMeta::from_legacy),
+            maybe_priority_fee_distribution_meta: None, // Legacy does not have priority fee distribution
+            delegations: legacy_stake_meta
+                .delegations
+                .into_iter()
+                .map(Delegation::from_legacy)
+                .collect(),
+            total_delegated: legacy_stake_meta.total_delegated,
+            commission: legacy_stake_meta.commission,
+        }
+    }
 }
 
 impl Ord for StakeMeta {
@@ -555,6 +709,26 @@ pub struct TipDistributionMeta {
     pub validator_fee_bps: u16,
 }
 
+impl TipDistributionMeta {
+    pub fn to_legacy(&self) -> LegacyDistributionMeta {
+        LegacyDistributionMeta {
+            merkle_root_upload_authority: self.merkle_root_upload_authority,
+            tip_distribution_pubkey: self.tip_distribution_pubkey,
+            total_tips: self.total_tips,
+            validator_fee_bps: self.validator_fee_bps,
+        }
+    }
+
+    pub fn from_legacy(legacy_meta: LegacyDistributionMeta) -> Self {
+        Self {
+            merkle_root_upload_authority: legacy_meta.merkle_root_upload_authority,
+            tip_distribution_pubkey: legacy_meta.tip_distribution_pubkey,
+            total_tips: legacy_meta.total_tips,
+            validator_fee_bps: legacy_meta.validator_fee_bps,
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub struct PriorityFeeDistributionMeta {
     #[serde(with = "pubkey_string_conversion")]
@@ -584,6 +758,26 @@ pub struct Delegation {
 
     /// Lamports delegated by the stake account
     pub lamports_delegated: u64,
+}
+
+impl Delegation {
+    pub fn to_legacy(&self) -> LegacyDelegation {
+        LegacyDelegation {
+            stake_account_pubkey: self.stake_account_pubkey,
+            staker_pubkey: self.staker_pubkey,
+            withdrawer_pubkey: self.withdrawer_pubkey,
+            lamports_delegated: self.lamports_delegated,
+        }
+    }
+
+    pub fn from_legacy(legacy_delegation: LegacyDelegation) -> Self {
+        Self {
+            stake_account_pubkey: legacy_delegation.stake_account_pubkey,
+            staker_pubkey: legacy_delegation.staker_pubkey,
+            withdrawer_pubkey: legacy_delegation.withdrawer_pubkey,
+            lamports_delegated: legacy_delegation.lamports_delegated,
+        }
+    }
 }
 
 impl Ord for Delegation {

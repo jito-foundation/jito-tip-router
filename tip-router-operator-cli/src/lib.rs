@@ -73,6 +73,29 @@ pub enum OperatorState {
     WaitForNextEpoch,
 }
 
+impl OperatorState {
+    pub fn as_legacy(&self) -> legacy_tip_router_operator_cli::OperatorState {
+        match self {
+            OperatorState::LoadBankFromSnapshot => {
+                legacy_tip_router_operator_cli::OperatorState::LoadBankFromSnapshot
+            }
+            OperatorState::CreateStakeMeta => {
+                legacy_tip_router_operator_cli::OperatorState::CreateStakeMeta
+            }
+            OperatorState::CreateMerkleTreeCollection => {
+                legacy_tip_router_operator_cli::OperatorState::CreateMerkleTreeCollection
+            }
+            OperatorState::CreateMetaMerkleTree => {
+                legacy_tip_router_operator_cli::OperatorState::CreateMetaMerkleTree
+            }
+            OperatorState::CastVote => legacy_tip_router_operator_cli::OperatorState::CastVote,
+            OperatorState::WaitForNextEpoch => {
+                legacy_tip_router_operator_cli::OperatorState::WaitForNextEpoch
+            }
+        }
+    }
+}
+
 pub fn stake_meta_file_name(epoch: u64) -> String {
     format!("{}_stake_meta_collection.json", epoch)
 }

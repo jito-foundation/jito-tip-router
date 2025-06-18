@@ -1,4 +1,4 @@
 [submodule "tip-router-operator-cli/repo-at-older-commit"]
 	path = tip-router-operator-cli/repo-at-older-commit
-	url = https://github.com/jito-foundation/jito-tip-router.git
-	branch = v1.2.0-operator-legacy
+        url = https://github.com/jito-foundation/jito-tip-router.git
+        branch = v1.3.0-legacy
