@@ -1305,10 +1305,6 @@ mod tests {
                     expected_gmt.distribution_account,
                     actual_gmt.distribution_account
                 );
-                println!(
-                    "Actual tree nodes: {:#?}\n Expected tree nodes: {:#?}\n Actual tree nodes len: {:?}\n Expected tree nodes len: {:?}",
-                    actual_gmt.tree_nodes, expected_gmt.tree_nodes, actual_gmt.tree_nodes.len(), expected_gmt.tree_nodes.len()
-                );
                 assert_eq!(expected_gmt.tree_nodes.len(), actual_gmt.tree_nodes.len());
                 expected_gmt
                     .tree_nodes
@@ -1345,20 +1341,12 @@ mod tests {
             .iter()
             .for_each(|gmt| {
                 // Ensure that validator vote account exists as a claimant in the new merkle tree collection
-                // only for tip distribution program, and does not contain identity account as claimant.
-                if gmt.distribution_program == TIP_DISTRIBUTION_ID {
-                    assert!(gmt
-                        .tree_nodes
-                        .iter()
-                        .any(|node| node.claimant == validator_vote_account_0
-                            || node.claimant == validator_vote_account_1));
-                } else if gmt.distribution_program == PRIORITY_FEE_DISTRIBUTION_ID {
-                    assert!(gmt
-                        .tree_nodes
-                        .iter()
-                        .any(|node| node.claimant == validator_vote_account_0
-                            || node.claimant == validator_vote_account_1));
-                }
+                // and does not contain identity account as claimant.
+                assert!(gmt
+                    .tree_nodes
+                    .iter()
+                    .any(|node| node.claimant == validator_vote_account_0
+                        || node.claimant == validator_vote_account_1));
                 assert!(
                     !(gmt
                         .tree_nodes
