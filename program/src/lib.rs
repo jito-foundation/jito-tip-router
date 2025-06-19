@@ -319,6 +319,7 @@ pub fn process_instruction(
             new_base_fee_bps,
             ncn_fee_group,
             new_ncn_fee_bps,
+            new_priority_fee_distribution_fee_bps,
         } => {
             msg!("Instruction: AdminSetConfigFees");
             process_admin_set_config_fees(
@@ -330,6 +331,7 @@ pub fn process_instruction(
                 new_base_fee_bps,
                 ncn_fee_group,
                 new_ncn_fee_bps,
+                new_priority_fee_distribution_fee_bps,
             )
         }
         TipRouterInstruction::AdminSetNewAdmin { role } => {

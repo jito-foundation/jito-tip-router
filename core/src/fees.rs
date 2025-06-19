@@ -251,6 +251,17 @@ impl FeeConfig {
         updateable_fees.set_ncn_fee_bps(ncn_fee_group, value)
     }
 
+    // ------------------- PRIORITY FEE -------------------
+
+    pub fn set_priority_fee_distribution_fee_bps(
+        &mut self,
+        value: u16,
+        current_epoch: u64,
+    ) -> Result<(), TipRouterError> {
+        let updateable_fees = self.updatable_fees(current_epoch);
+        updateable_fees.set_priority_fee_distribution_fee_bps(value)
+    }
+
     // ------------------- WALLETS -------------------
 
     pub fn base_fee_wallet(&self, base_fee_group: BaseFeeGroup) -> Result<&Pubkey, TipRouterError> {
@@ -295,6 +306,7 @@ impl FeeConfig {
         ncn_fee_group: Option<NcnFeeGroup>,
         new_ncn_fee_bps: Option<u16>,
         current_epoch: u64,
+        priority_fee_distribution_fee_bps: Option<u16>,
     ) -> Result<(), TipRouterError> {
         // IF NEW CHANGES, COPY OVER CURRENT FEES
         {
@@ -318,6 +330,11 @@ impl FeeConfig {
 
         if let Some(new_base_fee_bps) = new_base_fee_bps {
             self.set_base_fee_bps(base_fee_group, new_base_fee_bps, current_epoch)?;
+        }
+
+        // PRIORITY DISTRIBUTION FEE
+        if let Some(fee_bps) = priority_fee_distribution_fee_bps {
+            self.set_priority_fee_distribution_fee_bps(fee_bps, current_epoch)?;
         }
 
         // NCN FEE
@@ -403,9 +420,16 @@ impl FeeConfig {
 #[repr(C)]
 pub struct Fees {
     activation_epoch: PodU64,
-
-    reserved: [u8; 128],
+    /// TipRouter fee used to determine the TipRouter claimant amount for Priority Fee
+    /// Distributions.
+    priority_fee_distribution_fee_bps: Fee,
+    reserved: [u8; 126],
+    /// The groups and split of the Base fee. Currently the DAO base group (index one), is the only
+    /// group and takes 100% of the base fees. 2.7% (the base fee) of total MEV tips gets directed
+    /// to the DAO.
     base_fee_groups_bps: [Fee; 8],
+    /// The groups and split of the NCN fees. Currently LST vaults and JTO vaults each get 50%.
+    /// 30bps of total MEV tips gets split evenly between the two groups.
     ncn_fee_groups_bps: [Fee; 8],
 }
 
@@ -417,7 +441,8 @@ impl Fees {
     ) -> Result<Self, TipRouterError> {
         let mut fees = Self {
             activation_epoch: PodU64::from(epoch),
-            reserved: [0; 128],
+            priority_fee_distribution_fee_bps: Fee::default(),
+            reserved: [0; 126],
             base_fee_groups_bps: [Fee::default(); BaseFeeGroup::FEE_GROUP_COUNT],
             ncn_fee_groups_bps: [Fee::default(); NcnFeeGroup::FEE_GROUP_COUNT],
         };
@@ -431,6 +456,10 @@ impl Fees {
     // ------ Getters -----------------
     pub fn activation_epoch(&self) -> u64 {
         self.activation_epoch.into()
+    }
+
+    pub fn priority_fee_distribution_fee_bps(&self) -> u64 {
+        self.priority_fee_distribution_fee_bps.fee().into()
     }
 
     pub fn base_fee_bps(&self, base_fee_group: BaseFeeGroup) -> Result<u16, TipRouterError> {
@@ -493,6 +522,19 @@ impl Fees {
     // ------ Setters -----------------
     fn set_activation_epoch(&mut self, value: u64) {
         self.activation_epoch = PodU64::from(value);
+    }
+
+    pub fn set_priority_fee_distribution_fee_bps(
+        &mut self,
+        value: u16,
+    ) -> Result<(), TipRouterError> {
+        if value as u64 > MAX_FEE_BPS {
+            return Err(TipRouterError::FeeCapExceeded);
+        }
+
+        self.priority_fee_distribution_fee_bps = Fee::new(value);
+
+        Ok(())
     }
 
     pub fn set_base_fee_bps(
@@ -652,6 +694,7 @@ mod tests {
         const NEW_DEFAULT_NCN_FEE: u16 = 700;
         const NEW_NEW_DEFAULT_NCN_FEE: u16 = 900;
         const STARTING_EPOCH: u64 = 10;
+        const NEW_PRIORITY_DISTRIBUTION_FEE: u16 = 10;
 
         let dao_fee_wallet = Pubkey::new_unique();
         let new_dao_fee_wallet = Pubkey::new_unique();
@@ -674,6 +717,7 @@ mod tests {
                 None,
                 Some(NEW_DEFAULT_NCN_FEE),
                 STARTING_EPOCH,
+                Some(NEW_PRIORITY_DISTRIBUTION_FEE),
             )
             .unwrap();
 
@@ -705,6 +749,11 @@ mod tests {
             next_epoch_fees.ncn_fee_bps(default_ncn_fee_group).unwrap(),
             NEW_DEFAULT_NCN_FEE
         );
+        assert_eq!(current_fees.priority_fee_distribution_fee_bps.fee(), 0);
+        assert_eq!(
+            next_epoch_fees.priority_fee_distribution_fee_bps.fee(),
+            NEW_PRIORITY_DISTRIBUTION_FEE
+        );
 
         // test update again
         fee_config
@@ -716,6 +765,7 @@ mod tests {
                 None,
                 Some(NEW_NEW_DEFAULT_NCN_FEE),
                 STARTING_EPOCH + 1,
+                None,
             )
             .unwrap();
 
@@ -771,7 +821,7 @@ mod tests {
         .unwrap();
 
         fee_config
-            .update_fee_config(None, None, None, None, None, None, STARTING_EPOCH)
+            .update_fee_config(None, None, None, None, None, None, STARTING_EPOCH, None)
             .unwrap();
 
         assert_eq!(fee_config.block_engine_fee_bps(), BLOCK_ENGINE_FEE);
@@ -835,6 +885,7 @@ mod tests {
                     None,
                     None,
                     STARTING_EPOCH,
+                    None,
                 )
                 .unwrap();
 
@@ -868,6 +919,7 @@ mod tests {
                     Some(*ncn_fee_group),
                     Some(NEW_NCN_FEE),
                     STARTING_EPOCH,
+                    None,
                 )
                 .unwrap();
 
@@ -941,6 +993,7 @@ mod tests {
             None,
             None,
             STARTING_EPOCH,
+            None,
         );
 
         assert!(result.is_err());
@@ -953,6 +1006,7 @@ mod tests {
             None,
             None,
             STARTING_EPOCH,
+            None,
         );
 
         assert!(result.is_err());
@@ -965,6 +1019,7 @@ mod tests {
             None,
             Some(MAX_FEE_BPS + 1),
             STARTING_EPOCH,
+            None,
         );
 
         assert!(result.is_err());
@@ -995,18 +1050,28 @@ mod tests {
 
         let fees = fee_config.updatable_fees(10);
         fees.set_base_fee_bps(base_fee_group, 400).unwrap();
+        fees.set_priority_fee_distribution_fee_bps(150).unwrap();
         fees.set_activation_epoch(11);
 
         assert_eq!(fee_config.fee_1.base_fee_bps(base_fee_group).unwrap(), 400);
+        assert_eq!(
+            fee_config.fee_1.priority_fee_distribution_fee_bps.fee(),
+            150
+        );
         assert_eq!(fee_config.fee_1.activation_epoch(), 11);
 
         fee_config.fee_2.set_activation_epoch(13);
 
         let fees = fee_config.updatable_fees(12);
         fees.set_base_fee_bps(base_fee_group, 500).unwrap();
+        fees.set_priority_fee_distribution_fee_bps(200).unwrap();
         fees.set_activation_epoch(13);
 
         assert_eq!(fee_config.fee_2.base_fee_bps(base_fee_group).unwrap(), 500);
+        assert_eq!(
+            fee_config.fee_2.priority_fee_distribution_fee_bps.fee(),
+            200
+        );
         assert_eq!(fee_config.fee_2.activation_epoch(), 13);
 
         assert_eq!(fee_config.updatable_fees(u64::MAX).activation_epoch(), 11);
@@ -1227,5 +1292,21 @@ mod tests {
         let expected = PreciseNumber::new((BASE_FEE + NCN_FEE) as u128).unwrap();
 
         assert!(precise_total.eq(&expected));
+    }
+
+    use std::mem::size_of;
+
+    #[test]
+    fn fees_struct_size_is_stable() {
+        // Checks that modified Fees struct has the same size as prev struct.
+        #[derive(Debug, Clone, Copy, Zeroable, ShankType, Pod)]
+        #[repr(C)]
+        pub struct OldFees {
+            activation_epoch: PodU64,
+            reserved: [u8; 128],
+            base_fee_groups_bps: [Fee; 8],
+            ncn_fee_groups_bps: [Fee; 8],
+        }
+        assert_eq!(size_of::<OldFees>(), size_of::<Fees>(),);
     }
 }

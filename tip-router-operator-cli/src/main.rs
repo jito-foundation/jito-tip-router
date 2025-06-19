@@ -92,6 +92,7 @@ async fn main() -> Result<()> {
         Commands::Run {
             ncn_address,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             tip_payment_program_id,
             tip_router_program_id,
             save_snapshot,
@@ -182,6 +183,7 @@ async fn main() -> Result<()> {
                         &ncn_address,
                         &tip_router_program_id,
                         &tip_distribution_program_id,
+                        &priority_fee_distribution_program_id,
                         num_monitored_epochs,
                         &cli_clone,
                         set_merkle_roots,
@@ -245,10 +247,12 @@ async fn main() -> Result<()> {
 
                             info!("Emitting Claim Metrics for epoch {}", epoch_to_emit);
                             let cli_ref = cli_clone.clone();
+                            if epoch_to_emit >= legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH {
                             match emit_claim_mev_tips_metrics(
                                 &cli_ref,
                                 epoch_to_emit,
                                 tip_distribution_program_id,
+                                priority_fee_distribution_program_id,
                                 tip_router_program_id,
                                 ncn_address,
                                 &file_path_ref,
@@ -267,6 +271,31 @@ async fn main() -> Result<()> {
                                         "Error emitting claim metrics for epoch {}: {}",
                                         epoch_to_emit, e
                                     );
+                                }
+                            }
+                            } else {
+                                match legacy_tip_router_operator_cli::claim::emit_claim_mev_tips_metrics(
+                                    &cli_ref.as_legacy(),
+                                    epoch_to_emit,
+                                    tip_distribution_program_id,
+                                    tip_router_program_id,
+                                    ncn_address,
+                                    &file_path_ref,
+                                    &file_mutex_ref,
+                                ).await
+                                {
+                                    Ok(_) => {
+                                        info!(
+                                            "Successfully emitted claim metrics for epoch {}",
+                                            epoch_to_emit
+                                        );
+                                    }
+                                    Err(e) => {
+                                        error!(
+                                            "Error emitting claim metrics for epoch {}: {}",
+                                            epoch_to_emit, e
+                                        );
+                                    }
                                 }
                             }
                         }
@@ -314,6 +343,7 @@ async fn main() -> Result<()> {
                                     &cli_ref,
                                     epoch_to_process,
                                     tip_distribution_program_id,
+                                    priority_fee_distribution_program_id,
                                     tip_router_program_id,
                                     ncn_address,
                                     Duration::from_secs(3600),
@@ -371,6 +401,7 @@ async fn main() -> Result<()> {
                 override_target_slot,
                 &tip_router_program_id,
                 &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
                 &tip_payment_program_id,
                 &ncn_address,
                 save_snapshot,
@@ -386,6 +417,7 @@ async fn main() -> Result<()> {
         Commands::SubmitEpoch {
             ncn_address,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             tip_router_program_id,
             epoch,
             set_merkle_roots,
@@ -407,6 +439,7 @@ async fn main() -> Result<()> {
                 &ncn_address,
                 &tip_router_program_id,
                 &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
                 cli.submit_as_memo,
                 set_merkle_roots,
                 cli.vote_microlamports,
@@ -417,6 +450,7 @@ async fn main() -> Result<()> {
         Commands::ClaimTips {
             tip_router_program_id,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             ncn_address,
             epoch,
         } => {
@@ -427,6 +461,7 @@ async fn main() -> Result<()> {
                 &cli,
                 epoch,
                 tip_distribution_program_id,
+                priority_fee_distribution_program_id,
                 tip_router_program_id,
                 ncn_address,
                 Duration::from_secs(3600),
@@ -439,6 +474,7 @@ async fn main() -> Result<()> {
             epoch,
             slot,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             tip_payment_program_id,
             save,
         } => {
@@ -466,6 +502,7 @@ async fn main() -> Result<()> {
                 epoch,
                 &Arc::new(bank),
                 &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
                 &tip_payment_program_id,
                 &save_path,
                 save,
@@ -488,6 +525,7 @@ async fn main() -> Result<()> {
             //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
             //  use epoch + 1 here
             let ballot_epoch = epoch.checked_add(1).unwrap();
+            let fees = config.fee_config.current_fees(ballot_epoch);
             let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 
             // Generate the merkle tree collection
@@ -498,6 +536,7 @@ async fn main() -> Result<()> {
                 epoch,
                 &ncn_address,
                 protocol_fee_bps,
+                fees.priority_fee_distribution_fee_bps(),
                 &save_path,
                 save,
                 &cli.cluster,

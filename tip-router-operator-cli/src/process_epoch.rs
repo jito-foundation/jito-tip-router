@@ -106,6 +106,7 @@ pub async fn loop_stages(
     override_target_slot: Option<u64>,
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     ncn_address: &Pubkey,
     enable_snapshots: bool,
@@ -155,11 +156,21 @@ pub async fn loop_stages(
                 wait_for_optimal_incremental_snapshot(incremental_snapshots_path, slot_to_process)
                     .await?;
 
-                bank = Some(load_bank_from_snapshot(
-                    cli.clone(),
-                    slot_to_process,
-                    enable_snapshots,
-                ));
+                if current_epoch_info.epoch
+                    < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
+                {
+                    bank = Some(legacy_tip_router_operator_cli::load_bank_from_snapshot(
+                        cli.as_legacy(),
+                        slot_to_process,
+                        enable_snapshots,
+                    ));
+                } else {
+                    bank = Some(load_bank_from_snapshot(
+                        cli.clone(),
+                        slot_to_process,
+                        enable_snapshots,
+                    ));
+                }
                 // Transition to the next stage
                 stage = OperatorState::CreateStakeMeta;
             }
@@ -200,67 +211,142 @@ pub async fn loop_stages(
                         }
                     }
                 }
-                stake_meta_collection = Some(create_stake_meta(
-                    operator_address.clone(),
-                    epoch_to_process,
-                    bank.as_ref().expect("Bank was not set"),
-                    tip_distribution_program_id,
-                    tip_payment_program_id,
-                    &cli.get_save_path(),
-                    save_stages,
-                    &cli.cluster,
-                ));
+                if current_epoch_info.epoch
+                    < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
+                {
+                    stake_meta_collection = Some(StakeMetaCollection::from_legacy(
+                        legacy_tip_router_operator_cli::create_stake_meta(
+                            operator_address.clone(),
+                            epoch_to_process,
+                            bank.as_ref().expect("Bank was not set"),
+                            tip_distribution_program_id,
+                            tip_payment_program_id,
+                            &cli.get_save_path(),
+                            save_stages,
+                            &cli.cluster,
+                        ),
+                    ));
+                } else {
+                    stake_meta_collection = Some(create_stake_meta(
+                        operator_address.clone(),
+                        epoch_to_process,
+                        bank.as_ref().expect("Bank was not set"),
+                        tip_distribution_program_id,
+                        priority_fee_distribution_program_id,
+                        tip_payment_program_id,
+                        &cli.get_save_path(),
+                        save_stages,
+                        &cli.cluster,
+                    ));
+                }
                 // we should be able to safely drop the bank in this loop
                 bank = None;
                 // Transition to the next stage
                 stage = OperatorState::CreateMerkleTreeCollection;
             }
             OperatorState::CreateMerkleTreeCollection => {
-                let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
-                    || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
-                    |collection| collection,
-                );
                 let config =
                     get_ncn_config(&rpc_client, tip_router_program_id, ncn_address).await?;
                 // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
                 //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
                 //  use epoch + 1 here
                 let ballot_epoch = epoch_to_process.checked_add(1).unwrap();
+                let fees = config.fee_config.current_fees(ballot_epoch);
                 let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 
                 // Generate the merkle tree collection
-                merkle_tree_collection = Some(create_merkle_tree_collection(
-                    cli.operator_address.clone(),
-                    tip_router_program_id,
-                    some_stake_meta_collection,
-                    epoch_to_process,
-                    ncn_address,
-                    protocol_fee_bps,
-                    &cli.get_save_path(),
-                    save_stages,
-                    &cli.cluster,
-                ));
+                if current_epoch_info.epoch
+                    < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
+                {
+                    let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
+                        || {
+                            legacy_tip_router_operator_cli::read_stake_meta_collection(
+                                epoch_to_process,
+                                &cli.get_save_path(),
+                            )
+                        },
+                        |collection| collection.to_legacy(),
+                    );
+                    merkle_tree_collection = Some(GeneratedMerkleTreeCollection::from_legacy(
+                        legacy_tip_router_operator_cli::create_merkle_tree_collection(
+                            cli.operator_address.clone(),
+                            tip_router_program_id,
+                            some_stake_meta_collection,
+                            epoch_to_process,
+                            ncn_address,
+                            protocol_fee_bps,
+                            &cli.get_save_path(),
+                            save_stages,
+                            &cli.cluster,
+                        ),
+                    ));
+                } else {
+                    let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
+                        || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
+                        |collection| collection,
+                    );
+                    merkle_tree_collection = Some(create_merkle_tree_collection(
+                        cli.operator_address.clone(),
+                        tip_router_program_id,
+                        some_stake_meta_collection,
+                        epoch_to_process,
+                        ncn_address,
+                        protocol_fee_bps,
+                        fees.priority_fee_distribution_fee_bps(),
+                        &cli.get_save_path(),
+                        save_stages,
+                        &cli.cluster,
+                    ));
+                }
 
                 stake_meta_collection = None;
                 // Transition to the next stage
                 stage = OperatorState::CreateMetaMerkleTree;
             }
             OperatorState::CreateMetaMerkleTree => {
-                let some_merkle_tree_collection = merkle_tree_collection.to_owned().map_or_else(
-                    || read_merkle_tree_collection(epoch_to_process, &cli.get_save_path()),
-                    |collection| collection,
-                );
+                let merkle_root = if current_epoch_info.epoch
+                    < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
+                {
+                    let some_merkle_tree_collection =
+                        merkle_tree_collection.to_owned().map_or_else(
+                            || {
+                                legacy_tip_router_operator_cli::read_merkle_tree_collection(
+                                    epoch_to_process,
+                                    &cli.get_save_path(),
+                                )
+                            },
+                            |collection| collection.to_legacy(),
+                        );
+                    let merkle_tree = legacy_tip_router_operator_cli::create_meta_merkle_tree(
+                        cli.operator_address.clone(),
+                        some_merkle_tree_collection,
+                        epoch_to_process,
+                        &cli.get_save_path(),
+                        // This is defaulted to true because the output file is required by the
+                        //  task that sets TipDistributionAccounts' merkle roots
+                        true,
+                        &cli.cluster,
+                    );
+                    merkle_tree.merkle_root
+                } else {
+                    let some_merkle_tree_collection =
+                        merkle_tree_collection.to_owned().map_or_else(
+                            || read_merkle_tree_collection(epoch_to_process, &cli.get_save_path()),
+                            |collection| collection,
+                        );
+                    let merkle_tree = create_meta_merkle_tree(
+                        cli.operator_address.clone(),
+                        some_merkle_tree_collection,
+                        epoch_to_process,
+                        &cli.get_save_path(),
+                        // This is defaulted to true because the output file is required by the
+                        //  task that sets TipDistributionAccounts' merkle roots
+                        true,
+                        &cli.cluster,
+                    );
+                    merkle_tree.merkle_root
+                };
 
-                let merkle_tree = create_meta_merkle_tree(
-                    cli.operator_address.clone(),
-                    some_merkle_tree_collection,
-                    epoch_to_process,
-                    &cli.get_save_path(),
-                    // This is defaulted to true because the output file is required by the
-                    //  task that sets TipDistributionAccounts' merkle roots
-                    true,
-                    &cli.cluster,
-                );
                 datapoint_info!(
                     "tip_router_cli.process_epoch",
                     ("operator_address", operator_address, String),
@@ -269,7 +355,7 @@ pub async fn loop_stages(
                     ("state", "epoch_processing_completed", String),
                     (
                         "meta_merkle_root",
-                        format!("{:?}", merkle_tree.merkle_root),
+                        format!("{:?}", merkle_root),
                         String
                     ),
                     ("version", Version::default().to_string(), String),
@@ -291,6 +377,7 @@ pub async fn loop_stages(
                     ncn_address,
                     tip_router_program_id,
                     tip_distribution_program_id,
+                    priority_fee_distribution_program_id,
                     cli.submit_as_memo,
                     // We let the submit task handle setting merkle roots
                     false,

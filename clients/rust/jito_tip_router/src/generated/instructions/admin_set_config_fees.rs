@@ -84,6 +84,7 @@ pub struct AdminSetConfigFeesInstructionArgs {
     pub new_base_fee_bps: Option<u16>,
     pub ncn_fee_group: Option<u8>,
     pub new_ncn_fee_bps: Option<u16>,
+    pub new_priority_fee_distribution_fee_bps: Option<u16>,
 }
 
 /// Instruction builder for `AdminSetConfigFees`.
@@ -104,6 +105,7 @@ pub struct AdminSetConfigFeesBuilder {
     new_base_fee_bps: Option<u16>,
     ncn_fee_group: Option<u8>,
     new_ncn_fee_bps: Option<u16>,
+    new_priority_fee_distribution_fee_bps: Option<u16>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
@@ -162,6 +164,15 @@ impl AdminSetConfigFeesBuilder {
         self.new_ncn_fee_bps = Some(new_ncn_fee_bps);
         self
     }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn new_priority_fee_distribution_fee_bps(
+        &mut self,
+        new_priority_fee_distribution_fee_bps: u16,
+    ) -> &mut Self {
+        self.new_priority_fee_distribution_fee_bps = Some(new_priority_fee_distribution_fee_bps);
+        self
+    }
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -194,6 +205,9 @@ impl AdminSetConfigFeesBuilder {
             new_base_fee_bps: self.new_base_fee_bps.clone(),
             ncn_fee_group: self.ncn_fee_group.clone(),
             new_ncn_fee_bps: self.new_ncn_fee_bps.clone(),
+            new_priority_fee_distribution_fee_bps: self
+                .new_priority_fee_distribution_fee_bps
+                .clone(),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -343,6 +357,7 @@ impl<'a, 'b> AdminSetConfigFeesCpiBuilder<'a, 'b> {
             new_base_fee_bps: None,
             ncn_fee_group: None,
             new_ncn_fee_bps: None,
+            new_priority_fee_distribution_fee_bps: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -404,6 +419,16 @@ impl<'a, 'b> AdminSetConfigFeesCpiBuilder<'a, 'b> {
         self.instruction.new_ncn_fee_bps = Some(new_ncn_fee_bps);
         self
     }
+    /// `[optional argument]`
+    #[inline(always)]
+    pub fn new_priority_fee_distribution_fee_bps(
+        &mut self,
+        new_priority_fee_distribution_fee_bps: u16,
+    ) -> &mut Self {
+        self.instruction.new_priority_fee_distribution_fee_bps =
+            Some(new_priority_fee_distribution_fee_bps);
+        self
+    }
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -452,6 +477,10 @@ impl<'a, 'b> AdminSetConfigFeesCpiBuilder<'a, 'b> {
             new_base_fee_bps: self.instruction.new_base_fee_bps.clone(),
             ncn_fee_group: self.instruction.ncn_fee_group.clone(),
             new_ncn_fee_bps: self.instruction.new_ncn_fee_bps.clone(),
+            new_priority_fee_distribution_fee_bps: self
+                .instruction
+                .new_priority_fee_distribution_fee_bps
+                .clone(),
         };
         let instruction = AdminSetConfigFeesCpi {
             __program: self.instruction.__program,
@@ -482,6 +511,7 @@ struct AdminSetConfigFeesCpiBuilderInstruction<'a, 'b> {
     new_base_fee_bps: Option<u16>,
     ncn_fee_group: Option<u8>,
     new_ncn_fee_bps: Option<u16>,
+    new_priority_fee_distribution_fee_bps: Option<u16>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,

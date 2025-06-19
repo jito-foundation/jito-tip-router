@@ -1786,6 +1786,12 @@
           "type": {
             "option": "u16"
           }
+        },
+        {
+          "name": "newPriorityFeeDistributionFeeBps",
+          "type": {
+            "option": "u16"
+          }
         }
       ],
       "discriminant": {
@@ -3171,11 +3177,17 @@
             }
           },
           {
+            "name": "priorityFeeDistributionFeeBps",
+            "type": {
+              "defined": "Fee"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                128
+                126
               ]
             }
           },

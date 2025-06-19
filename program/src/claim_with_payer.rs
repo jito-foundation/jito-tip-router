@@ -1,3 +1,5 @@
+use jito_priority_fee_distribution_sdk::instruction::claim_ix as priority_fee_distribution_claim_ix;
+use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution;
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{instruction::claim_ix, jito_tip_distribution};
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
@@ -13,7 +15,7 @@ pub fn process_claim_with_payer(
     amount: u64,
     bump: u8,
 ) -> ProgramResult {
-    let [account_payer, config, ncn, tip_distribution_config, tip_distribution_account, claim_status, claimant, tip_distribution_program, system_program] =
+    let [account_payer, config, ncn, distribution_config, distribution_account, claim_status, claimant, distribution_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -24,8 +26,16 @@ pub fn process_claim_with_payer(
     Config::load(program_id, config, ncn.key, false)?;
     AccountPayer::load(program_id, account_payer, ncn.key, true)?;
 
-    if tip_distribution_program.key.ne(&jito_tip_distribution::ID) {
-        msg!("Incorrect tip distribution program");
+    let distibution_program_id = distribution_program.key;
+
+    if [
+        jito_tip_distribution::ID,
+        jito_priority_fee_distribution::ID,
+    ]
+    .iter()
+    .all(|supported_program_id| distibution_program_id.ne(supported_program_id))
+    {
+        msg!("Incorrect distribution program");
         return Err(ProgramError::InvalidAccountData);
     }
 
@@ -35,11 +45,10 @@ pub fn process_claim_with_payer(
         AccountPayer::find_program_address(program_id, ncn.key);
     account_payer_seeds.push(vec![account_payer_bump]);
 
-    // Invoke the claim instruction with our program as the payer
-    invoke_signed(
-        &claim_ix(
-            *tip_distribution_config.key,
-            *tip_distribution_account.key,
+    let ix = if distibution_program_id.eq(&jito_tip_distribution::ID) {
+        claim_ix(
+            *distribution_config.key,
+            *distribution_account.key,
             *config.key,
             *claim_status.key,
             *claimant.key,
@@ -48,10 +57,28 @@ pub fn process_claim_with_payer(
             proof,
             amount,
             bump,
-        ),
+        )
+    } else {
+        priority_fee_distribution_claim_ix(
+            *distribution_config.key,
+            *distribution_account.key,
+            *config.key,
+            *claim_status.key,
+            *claimant.key,
+            *account_payer.key,
+            *system_program.key,
+            proof,
+            amount,
+            bump,
+        )
+    };
+
+    // Invoke the claim instruction with our program as the payer
+    invoke_signed(
+        &ix,
         &[
-            tip_distribution_config.clone(),
-            tip_distribution_account.clone(),
+            distribution_config.clone(),
+            distribution_account.clone(),
             config.clone(),
             claim_status.clone(),
             claimant.clone(),

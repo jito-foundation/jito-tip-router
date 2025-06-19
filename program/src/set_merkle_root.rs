@@ -1,4 +1,8 @@
 use jito_bytemuck::AccountDeserialize;
+use jito_priority_fee_distribution_sdk::{
+    derive_priority_fee_distribution_account_address,
+    instruction::upload_merkle_root_ix as pf_upload_merkle_root_ix, jito_priority_fee_distribution,
+};
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{
     derive_tip_distribution_account_address, instruction::upload_merkle_root_ix,
@@ -13,6 +17,7 @@ use solana_program::{
     program_error::ProgramError, pubkey::Pubkey,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_set_merkle_root(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -22,7 +27,7 @@ pub fn process_set_merkle_root(
     max_num_nodes: u64,
     epoch: u64,
 ) -> ProgramResult {
-    let [epoch_state, ncn_config, ncn, ballot_box, vote_account, tip_distribution_account, tip_distribution_config, tip_distribution_program] =
+    let [epoch_state, ncn_config, ncn, ballot_box, vote_account, distribution_account, distribution_config, distribution_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -33,21 +38,36 @@ pub fn process_set_merkle_root(
     Ncn::load(&jito_restaking_program::id(), ncn, false)?;
     BallotBox::load(program_id, ballot_box, ncn.key, epoch, false)?;
 
-    if tip_distribution_program.key.ne(&jito_tip_distribution::ID) {
+    let distribution_program_id = distribution_program.key;
+    if [
+        jito_tip_distribution::ID,
+        jito_priority_fee_distribution::ID,
+    ]
+    .iter()
+    .all(|supported_program_id| distribution_program_id.ne(supported_program_id))
+    {
         msg!("Incorrect tip distribution program");
         return Err(ProgramError::InvalidAccountData);
     }
 
-    let tip_distribution_epoch = epoch
+    let distribution_epoch = epoch
         .checked_sub(1)
         .ok_or(TipRouterError::ArithmeticUnderflowError)?;
-    let (tip_distribution_address, _) = derive_tip_distribution_account_address(
-        tip_distribution_program.key,
-        vote_account.key,
-        tip_distribution_epoch,
-    );
-
-    if tip_distribution_address.ne(tip_distribution_account.key) {
+    let (distribution_account_address, _) =
+        if distribution_program_id.eq(&jito_tip_distribution::ID) {
+            derive_tip_distribution_account_address(
+                distribution_program.key,
+                vote_account.key,
+                distribution_epoch,
+            )
+        } else {
+            derive_priority_fee_distribution_account_address(
+                distribution_program.key,
+                vote_account.key,
+                distribution_epoch,
+            )
+        };
+    if distribution_account_address.ne(distribution_account.key) {
         msg!("Incorrect tip distribution account");
         return Err(ProgramError::InvalidAccountData);
     }
@@ -61,7 +81,7 @@ pub fn process_set_merkle_root(
     }
 
     ballot_box.verify_merkle_root(
-        &tip_distribution_address,
+        &distribution_account_address,
         proof,
         &merkle_root,
         max_total_claim,
@@ -71,18 +91,31 @@ pub fn process_set_merkle_root(
     let (_, bump, mut ncn_config_seeds) = NcnConfig::find_program_address(program_id, ncn.key);
     ncn_config_seeds.push(vec![bump]);
 
-    invoke_signed(
-        &upload_merkle_root_ix(
-            *tip_distribution_config.key,
+    let ix = if distribution_program_id.eq(&jito_tip_distribution::ID) {
+        upload_merkle_root_ix(
+            *distribution_config.key,
             *ncn_config.key,
-            *tip_distribution_account.key,
+            *distribution_account.key,
             merkle_root,
             max_total_claim,
             max_num_nodes,
-        ),
+        )
+    } else {
+        pf_upload_merkle_root_ix(
+            *distribution_config.key,
+            *ncn_config.key,
+            *distribution_account.key,
+            merkle_root,
+            max_total_claim,
+            max_num_nodes,
+        )
+    };
+
+    invoke_signed(
+        &ix,
         &[
-            tip_distribution_config.clone(),
-            tip_distribution_account.clone(),
+            distribution_config.clone(),
+            distribution_account.clone(),
             ncn_config.clone(),
         ],
         &[ncn_config_seeds

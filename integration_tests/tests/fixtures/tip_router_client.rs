@@ -1,4 +1,5 @@
 use jito_bytemuck::AccountDeserialize;
+use jito_priority_fee_distribution_sdk::derive_priority_fee_distribution_account_address;
 use jito_restaking_core::{
     config::Config, ncn_operator_state::NcnOperatorState, ncn_vault_ticket::NcnVaultTicket,
 };
@@ -354,6 +355,7 @@ impl TipRouterClient {
         ncn_fee_group: Option<NcnFeeGroup>,
         new_ncn_fee_bps: Option<u16>,
         ncn_root: &NcnRoot,
+        new_priority_fee_distribution_fee_bps: Option<u16>,
     ) -> TestResult<()> {
         let config_pda =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_root.ncn_pubkey).0;
@@ -367,6 +369,7 @@ impl TipRouterClient {
             ncn_fee_group,
             new_ncn_fee_bps,
             ncn_root,
+            new_priority_fee_distribution_fee_bps,
         )
         .await
     }
@@ -381,6 +384,7 @@ impl TipRouterClient {
         ncn_fee_group: Option<NcnFeeGroup>,
         new_ncn_fee_bps: Option<u16>,
         ncn_root: &NcnRoot,
+        new_priority_fee_distribution_fee_bps: Option<u16>,
     ) -> TestResult<()> {
         let ix = {
             let mut builder = AdminSetConfigFeesBuilder::new();
@@ -411,6 +415,10 @@ impl TipRouterClient {
 
             if let Some(new_ncn_fee_bps) = new_ncn_fee_bps {
                 builder.new_ncn_fee_bps(new_ncn_fee_bps);
+            }
+
+            if let Some(fee_bps) = new_priority_fee_distribution_fee_bps {
+                builder.new_priority_fee_distribution_fee_bps(fee_bps);
             }
 
             builder.instruction()
@@ -1379,6 +1387,7 @@ impl TipRouterClient {
         &mut self,
         ncn: Pubkey,
         vote_account: Pubkey,
+        distribution_program: Pubkey,
         proof: Vec<[u8; 32]>,
         merkle_root: [u8; 32],
         max_total_claim: u64,
@@ -1389,25 +1398,42 @@ impl TipRouterClient {
         let ballot_box =
             BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let tip_distribution_program = jito_tip_distribution::ID;
-        let tip_distribution_account = derive_tip_distribution_account_address(
-            &tip_distribution_program,
-            &vote_account,
-            epoch - 1,
-        )
-        .0;
+        let (distribution_account, distribution_config) = if distribution_program
+            .eq(&jito_tip_distribution::ID)
+        {
+            let tip_distribution_account = derive_tip_distribution_account_address(
+                &distribution_program,
+                &vote_account,
+                epoch - 1,
+            )
+            .0;
 
-        let tip_distribution_config =
-            jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program).0;
+            let tip_distribution_config =
+                jito_tip_distribution_sdk::derive_config_account_address(&distribution_program).0;
+            (tip_distribution_account, tip_distribution_config)
+        } else {
+            let distribution_account = derive_priority_fee_distribution_account_address(
+                &distribution_program,
+                &vote_account,
+                epoch - 1,
+            )
+            .0;
+
+            let config = jito_priority_fee_distribution_sdk::derive_config_account_address(
+                &distribution_program,
+            )
+            .0;
+            (distribution_account, config)
+        };
 
         self.set_merkle_root(
             config,
             ncn,
             ballot_box,
             vote_account,
-            tip_distribution_account,
-            tip_distribution_config,
-            tip_distribution_program,
+            distribution_account,
+            distribution_config,
+            distribution_program,
             proof,
             merkle_root,
             max_total_claim,
@@ -1423,9 +1449,9 @@ impl TipRouterClient {
         ncn: Pubkey,
         ballot_box: Pubkey,
         vote_account: Pubkey,
-        tip_distribution_account: Pubkey,
-        tip_distribution_config: Pubkey,
-        tip_distribution_program: Pubkey,
+        distribution_account: Pubkey,
+        distribution_config: Pubkey,
+        distribution_program: Pubkey,
         proof: Vec<[u8; 32]>,
         merkle_root: [u8; 32],
         max_total_claim: u64,
@@ -1441,9 +1467,9 @@ impl TipRouterClient {
             .ncn(ncn)
             .ballot_box(ballot_box)
             .vote_account(vote_account)
-            .tip_distribution_account(tip_distribution_account)
-            .tip_distribution_config(tip_distribution_config)
-            .tip_distribution_program(tip_distribution_program)
+            .tip_distribution_account(distribution_account)
+            .tip_distribution_config(distribution_config)
+            .tip_distribution_program(distribution_program)
             .proof(proof)
             .merkle_root(merkle_root)
             .max_total_claim(max_total_claim)
@@ -2366,7 +2392,8 @@ impl TipRouterClient {
         &mut self,
         ncn: Pubkey,
         claimant: Pubkey,
-        tip_distribution_account: Pubkey,
+        distribution_account: Pubkey,
+        distribution_program: Pubkey,
         proof: Vec<[u8; 32]>,
         amount: u64,
     ) -> TestResult<()> {
@@ -2375,24 +2402,25 @@ impl TipRouterClient {
 
         let (config, _, _) = NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn);
 
-        let tip_distribution_program = jito_tip_distribution::ID;
-        let tip_distribution_config =
-            jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program).0;
+        // NOTE: Config and ClaimStatus seeds are the same between Tip Distribution and Priority
+        //  Fee Distribution programs, so it's ok to use the same SDK.
+        let distribution_config =
+            jito_tip_distribution_sdk::derive_config_account_address(&distribution_program).0;
 
         let (claim_status, claim_status_bump) =
             jito_tip_distribution_sdk::derive_claim_status_account_address(
-                &tip_distribution_program,
+                &distribution_program,
                 &claimant,
-                &tip_distribution_account,
+                &distribution_account,
             );
 
         self.claim_with_payer(
             ncn,
             config,
             account_payer,
-            tip_distribution_config,
-            tip_distribution_account,
-            tip_distribution_program,
+            distribution_config,
+            distribution_account,
+            distribution_program,
             claim_status,
             claimant,
             proof,
@@ -2407,9 +2435,9 @@ impl TipRouterClient {
         ncn: Pubkey,
         config: Pubkey,
         account_payer: Pubkey,
-        tip_distribution_config: Pubkey,
-        tip_distribution_account: Pubkey,
-        tip_distribution_program: Pubkey,
+        distribution_config: Pubkey,
+        distribution_account: Pubkey,
+        distribution_program: Pubkey,
         claim_status: Pubkey,
         claimant: Pubkey,
         proof: Vec<[u8; 32]>,
@@ -2420,9 +2448,9 @@ impl TipRouterClient {
             .account_payer(account_payer)
             .ncn(ncn)
             .config(config)
-            .tip_distribution_config(tip_distribution_config)
-            .tip_distribution_account(tip_distribution_account)
-            .tip_distribution_program(tip_distribution_program)
+            .tip_distribution_config(distribution_config)
+            .tip_distribution_account(distribution_account)
+            .tip_distribution_program(distribution_program)
             .claim_status(claim_status)
             .claimant(claimant)
             .system_program(system_program::id())
@@ -2574,5 +2602,18 @@ pub fn assert_tip_router_error<T>(
     assert_eq!(
         test_error.err().unwrap().to_transaction_error().unwrap(),
         TransactionError::InstructionError(0, InstructionError::Custom(tip_router_error as u32))
+    );
+}
+
+#[inline(always)]
+#[track_caller]
+pub fn assert_instruction_error<T>(
+    test_error: Result<T, TestError>,
+    instruction_error: InstructionError,
+) {
+    assert!(test_error.is_err());
+    assert_eq!(
+        test_error.err().unwrap().to_transaction_error().unwrap(),
+        TransactionError::InstructionError(0, instruction_error)
     );
 }

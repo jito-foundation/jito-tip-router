@@ -47,11 +47,10 @@ impl TreeNode {
     }
 }
 
-// TODO replace this with the GeneratedMerkleTree from the Operator module once that's created
 impl From<GeneratedMerkleTree> for TreeNode {
     fn from(generated_merkle_tree: GeneratedMerkleTree) -> Self {
         Self {
-            tip_distribution_account: generated_merkle_tree.tip_distribution_account,
+            tip_distribution_account: generated_merkle_tree.distribution_account,
             validator_merkle_root: generated_merkle_tree.merkle_root.to_bytes(),
             max_total_claim: generated_merkle_tree.max_total_claim,
             max_num_nodes: generated_merkle_tree.max_num_nodes,

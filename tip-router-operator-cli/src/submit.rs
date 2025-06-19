@@ -1,9 +1,9 @@
 use std::sync::Arc;
-use std::time::Duration;
 use std::{path::PathBuf, str::FromStr};
 
 use anchor_lang::AccountDeserialize;
 use jito_bytemuck::AccountDeserialize as JitoAccountDeserialize;
+use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_router_core::{ballot_box::BallotBox, config::Config};
 use log::{debug, error, info};
@@ -17,9 +17,13 @@ use solana_client::{
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 
+use crate::tip_router::send_set_merkle_root_txs;
 use crate::{meta_merkle_tree_file_name, Version};
 use crate::{
-    tip_router::{cast_vote, get_ncn_config, set_merkle_roots_batched},
+    tip_router::{
+        cast_vote, get_ncn_config, set_merkle_root_instructions,
+        set_priority_fee_merkle_root_instructions,
+    },
     Cli,
 };
 
@@ -30,6 +34,7 @@ pub async fn submit_recent_epochs_to_ncn(
     ncn_address: &Pubkey,
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
     num_monitored_epochs: u64,
     cli_args: &Cli,
     set_merkle_roots: bool,
@@ -56,6 +61,7 @@ pub async fn submit_recent_epochs_to_ncn(
             ncn_address,
             tip_router_program_id,
             tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             cli_args.submit_as_memo,
             set_merkle_roots,
             cli_args.vote_microlamports,
@@ -81,6 +87,7 @@ pub async fn submit_to_ncn(
     ncn_address: &Pubkey,
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
     submit_as_memo: bool,
     set_merkle_roots: bool,
     compute_unit_price: u64,
@@ -216,24 +223,41 @@ pub async fn submit_to_ncn(
         )
         .await?;
 
+        // Fetch the distribution accounts from the Priority Fee Distribution program
+        let priority_fee_distribution_accounts = get_priority_fee_distribution_accounts_to_upload(
+            client,
+            merkle_root_epoch,
+            &config_pda,
+            priority_fee_distribution_program_id,
+        )
+        .await?;
+
         info!(
-            "Setting merkle roots for {} tip distribution accounts",
-            tip_distribution_accounts.len()
+            "Setting merkle roots for {} tip distribution accounts and {} priority fee distribution accounts",
+            tip_distribution_accounts.len(),
+            priority_fee_distribution_accounts.len()
         );
 
-        // For each TipDistributionAccount returned, if it has no root uploaded, upload root with set_merkle_root
-        match set_merkle_roots_batched(
-            client,
+        let mut instructions = set_merkle_root_instructions(
             ncn_address,
-            keypair,
             tip_distribution_program_id,
             tip_router_program_id,
             tip_router_target_epoch,
             tip_distribution_accounts,
-            meta_merkle_tree,
-        )
-        .await
-        {
+            &meta_merkle_tree,
+        );
+        let pf_instructions = set_priority_fee_merkle_root_instructions(
+            ncn_address,
+            priority_fee_distribution_program_id,
+            tip_router_program_id,
+            tip_router_target_epoch,
+            priority_fee_distribution_accounts,
+            &meta_merkle_tree,
+        );
+        instructions.extend(pf_instructions);
+
+        // For each TipDistributionAccount returned, if it has no root uploaded, upload root with set_merkle_root
+        match send_set_merkle_root_txs(client, keypair, instructions).await {
             Ok(res) => {
                 let num_success = res.iter().filter(|r| r.is_ok()).count();
                 let num_failed = res.iter().filter(|r| r.is_err()).count();
@@ -274,8 +298,6 @@ async fn get_tip_distribution_accounts_to_upload(
     tip_router_config_address: &Pubkey,
     tip_distribution_program_id: &Pubkey,
 ) -> Result<Vec<(Pubkey, TipDistributionAccount)>, anyhow::Error> {
-    let rpc_client = AsyncRpcClient::new_with_timeout(client.url(), Duration::from_secs(1800));
-
     // Filters assume merkle root is None
     let filters = vec![
         RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
@@ -292,7 +314,7 @@ async fn get_tip_distribution_accounts_to_upload(
         )),
     ];
 
-    let tip_distribution_accounts = rpc_client
+    let tip_distribution_accounts = client
         .get_program_accounts_with_config(
             tip_distribution_program_id,
             RpcProgramAccountsConfig {
@@ -311,6 +333,63 @@ async fn get_tip_distribution_accounts_to_upload(
         .filter_map(|(pubkey, account)| {
             let tip_distribution_account =
                 TipDistributionAccount::try_deserialize(&mut account.data.as_slice());
+            tip_distribution_account.map_or(None, |tip_distribution_account| {
+                if tip_distribution_account.epoch_created_at == epoch
+                    && tip_distribution_account.merkle_root_upload_authority
+                        == *tip_router_config_address
+                {
+                    Some((pubkey, tip_distribution_account))
+                } else {
+                    None
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+
+    Ok(tip_distribution_accounts)
+}
+
+async fn get_priority_fee_distribution_accounts_to_upload(
+    client: &AsyncRpcClient,
+    epoch: u64,
+    tip_router_config_address: &Pubkey,
+    tip_distribution_program_id: &Pubkey,
+) -> Result<Vec<(Pubkey, PriorityFeeDistributionAccount)>, anyhow::Error> {
+    // Filters assume merkle root is None
+    let filters = vec![
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            8     // Discriminator
+            + 32, // Pubkey - validator_vote_account
+            tip_router_config_address.to_bytes().to_vec(),
+        )),
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            8    // Discriminator
+            + 32 // Pubkey - validator_vote_account
+            + 32 // Pubkey - merkle_root_upload_authority
+            + 1, // Option - "None" merkle_root
+            epoch.to_le_bytes().to_vec(),
+        )),
+    ];
+
+    let tip_distribution_accounts = client
+        .get_program_accounts_with_config(
+            tip_distribution_program_id,
+            RpcProgramAccountsConfig {
+                filters: Some(filters),
+                account_config: RpcAccountInfoConfig {
+                    encoding: Some(UiAccountEncoding::Base64),
+                    ..RpcAccountInfoConfig::default()
+                },
+                ..RpcProgramAccountsConfig::default()
+            },
+        )
+        .await?;
+
+    let tip_distribution_accounts = tip_distribution_accounts
+        .into_iter()
+        .filter_map(|(pubkey, account)| {
+            let tip_distribution_account =
+                PriorityFeeDistributionAccount::try_deserialize(&mut account.data.as_slice());
             tip_distribution_account.map_or(None, |tip_distribution_account| {
                 if tip_distribution_account.epoch_created_at == epoch
                     && tip_distribution_account.merkle_root_upload_authority

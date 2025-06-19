@@ -1,5 +1,6 @@
 use anyhow::Result;
 use jito_bytemuck::AccountDeserialize;
+use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::{
     derive_config_account_address, jito_tip_distribution::accounts::TipDistributionAccount,
 };
@@ -16,12 +17,14 @@ use solana_client::rpc_config::RpcSendTransactionConfig;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_rpc_client_api::client_error::{ErrorKind, Result as ClientResult};
 use solana_sdk::{
+    instruction::Instruction,
     pubkey::Pubkey,
     signature::{Keypair, Signature},
     signer::Signer,
     transaction::Transaction,
 };
 
+const MAX_SET_MERKLE_ROOT_IXS_PER_TX: usize = 1;
 use crate::priority_fees;
 
 /// Fetch and deserialize
@@ -100,25 +103,24 @@ pub async fn cast_vote(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn set_merkle_roots_batched(
-    client: &RpcClient,
+pub fn set_merkle_root_instructions(
     ncn_address: &Pubkey,
-    keypair: &Keypair,
-    tip_distribution_program: &Pubkey,
+    distribution_program: &Pubkey,
     tip_router_program_id: &Pubkey,
     epoch: u64,
     tip_distribution_accounts: Vec<(Pubkey, TipDistributionAccount)>,
-    meta_merkle_tree: MetaMerkleTree,
-) -> Result<Vec<ClientResult<Signature>>> {
+    meta_merkle_tree: &MetaMerkleTree,
+) -> Vec<Instruction> {
     let ballot_box = BallotBox::find_program_address(tip_router_program_id, ncn_address, epoch).0;
 
     let config = Config::find_program_address(tip_router_program_id, ncn_address).0;
 
     let epoch_state = EpochState::find_program_address(tip_router_program_id, ncn_address, epoch).0;
 
-    let tip_distribution_config = derive_config_account_address(tip_distribution_program).0;
+    let tip_distribution_config = derive_config_account_address(distribution_program).0;
 
-    // Given a list of target TipDistributionAccounts and a meta merkle tree, fetch each meta merkle root, create its instruction, and call set_merkle_root
+    // Given a list of target TipDistributionAccounts and a meta merkle tree, fetch each meta
+    //  merkle root, create its instruction, and call set_merkle_root
     let instructions = tip_distribution_accounts
         .iter()
         .filter_map(|(key, tip_distribution_account)| {
@@ -146,7 +148,7 @@ pub async fn set_merkle_roots_batched(
                 .vote_account(vote_account)
                 .tip_distribution_account(*key)
                 .tip_distribution_config(tip_distribution_config)
-                .tip_distribution_program(*tip_distribution_program)
+                .tip_distribution_program(*distribution_program)
                 .proof(proof)
                 .merkle_root(meta_merkle_node.validator_merkle_root)
                 .max_total_claim(meta_merkle_node.max_total_claim)
@@ -157,8 +159,16 @@ pub async fn set_merkle_roots_batched(
             Some(ix)
         })
         .collect::<Vec<_>>();
+    instructions
+}
 
-    let mut results: Vec<ClientResult<Signature>> = vec![];
+pub async fn send_set_merkle_root_txs(
+    client: &RpcClient,
+    keypair: &Keypair,
+    instructions: Vec<Instruction>,
+) -> Result<Vec<ClientResult<Signature>>> {
+    let num_of_txs = instructions.len().div_ceil(MAX_SET_MERKLE_ROOT_IXS_PER_TX);
+    let mut results = Vec::with_capacity(num_of_txs);
     for _ in 0..instructions.len() {
         results.push(Err(ErrorKind::Custom(
             "Default: Failed to submit instruction".to_string(),
@@ -166,9 +176,12 @@ pub async fn set_merkle_roots_batched(
         .into()));
     }
 
-    // TODO Parallel submit instructions
-    for (i, ix) in instructions.into_iter().enumerate() {
-        let mut tx = Transaction::new_with_payer(&[ix], Some(&keypair.pubkey()));
+    for (i, ixs) in instructions
+        .chunks(MAX_SET_MERKLE_ROOT_IXS_PER_TX)
+        .enumerate()
+    {
+        // TODO: Add compute unit instructions
+        let mut tx = Transaction::new_with_payer(ixs, Some(&keypair.pubkey()));
         // Simple retry logic
         for _ in 0..5 {
             let blockhash = client.get_latest_blockhash().await?;
@@ -191,6 +204,62 @@ pub async fn set_merkle_roots_batched(
             }
         }
     }
-
     Ok(results)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn set_priority_fee_merkle_root_instructions(
+    ncn_address: &Pubkey,
+    distribution_program: &Pubkey,
+    tip_router_program_id: &Pubkey,
+    epoch: u64,
+    tip_distribution_accounts: Vec<(Pubkey, PriorityFeeDistributionAccount)>,
+    meta_merkle_tree: &MetaMerkleTree,
+) -> Vec<Instruction> {
+    let ballot_box = BallotBox::find_program_address(tip_router_program_id, ncn_address, epoch).0;
+
+    let config = Config::find_program_address(tip_router_program_id, ncn_address).0;
+
+    let epoch_state = EpochState::find_program_address(tip_router_program_id, ncn_address, epoch).0;
+
+    let tip_distribution_config = derive_config_account_address(distribution_program).0;
+
+    // Given a list of target TipDistributionAccounts and a meta merkle tree, fetch each meta
+    //  merkle root, create its instruction, and call set_merkle_root
+    let instructions = tip_distribution_accounts
+        .iter()
+        .filter_map(|(key, tip_distribution_account)| {
+            let meta_merkle_node = meta_merkle_tree
+                .get_node(key)
+                .expect("Node exists in meta merkle");
+
+            let proof = if let Some(proof) = meta_merkle_node.proof {
+                proof
+            } else {
+                error!("No proof found for tip distribution account {:?}", key);
+                return None;
+            };
+
+            let vote_account = tip_distribution_account.validator_vote_account;
+
+            let ix = SetMerkleRootBuilder::new()
+                .epoch_state(epoch_state)
+                .config(config)
+                .ncn(*ncn_address)
+                .ballot_box(ballot_box)
+                .vote_account(vote_account)
+                .tip_distribution_account(*key)
+                .tip_distribution_config(tip_distribution_config)
+                .tip_distribution_program(*distribution_program)
+                .proof(proof)
+                .merkle_root(meta_merkle_node.validator_merkle_root)
+                .max_total_claim(meta_merkle_node.max_total_claim)
+                .max_num_nodes(meta_merkle_node.max_num_nodes)
+                .epoch(epoch)
+                .instruction();
+
+            Some(ix)
+        })
+        .collect::<Vec<_>>();
+    instructions
 }
