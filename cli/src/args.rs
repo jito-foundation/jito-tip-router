@@ -424,6 +424,13 @@ pub enum ProgramCommand {
             help = "Reward fee BPS"
         )]
         reward_fee_bps: u16,
+        #[arg(
+            long,
+            env = "INITIALIZE_TOKEN_AMOUNT",
+            default_value_t = 100,
+            help = "Initialize token amount"
+        )]
+        initialize_token_amount: u64,
     },
 }
 
