@@ -74,8 +74,8 @@ use jito_vault_client::{
     types::WithdrawalAllocationMethod,
 };
 use jito_vault_core::{
-    config::Config as VaultConfig, vault::Vault, vault_ncn_ticket::VaultNcnTicket,
-    vault_operator_delegation::VaultOperatorDelegation,
+    burn_vault::BurnVault, config::Config as VaultConfig, vault::Vault,
+    vault_ncn_ticket::VaultNcnTicket, vault_operator_delegation::VaultOperatorDelegation,
     vault_update_state_tracker::VaultUpdateStateTracker,
 };
 use log::info;
@@ -95,7 +95,9 @@ use solana_sdk::{
     system_program,
     transaction::Transaction,
 };
-use spl_associated_token_account::get_associated_token_address;
+use spl_associated_token_account::{
+    get_associated_token_address, instruction::create_associated_token_account_idempotent,
+};
 use switchboard_on_demand_client::{CrossbarClient, FetchUpdateParams, PullFeed, QueueAccountData};
 use tokio::time::sleep;
 
@@ -2940,16 +2942,17 @@ pub async fn create_test_ncn(handler: &CliHandler) -> Result<()> {
     let (config, _, _) = RestakingConfig::find_program_address(&handler.restaking_program_id);
 
     let mut ix_builder = InitializeNcnBuilder::new();
-    ix_builder
+    let mut ix = ix_builder
         .config(config)
         .admin(keypair.pubkey())
         .base(base.pubkey())
         .ncn(ncn)
         .instruction();
+    ix.program_id = handler.restaking_program_id;
 
     send_and_log_transaction(
         handler,
-        &[ix_builder.instruction()],
+        &[ix],
         &[&base],
         "Created Test Ncn",
         &[format!("NCN: {:?}", ncn)],
@@ -3044,6 +3047,7 @@ pub async fn create_and_add_test_vault(
     deposit_fee_bps: u16,
     withdrawal_fee_bps: u16,
     reward_fee_bps: u16,
+    initialize_token_amount: u64,
 ) -> Result<()> {
     let keypair = handler.keypair();
 
@@ -3110,42 +3114,57 @@ pub async fn create_and_add_test_vault(
     )
     .await?;
 
+    let vault_st_token_account = get_associated_token_address(&vault, &token_mint.pubkey());
+
+    let (burn_vault, _, _) =
+        BurnVault::find_program_address(&handler.vault_program_id, &base.pubkey());
+
+    let burn_vault_vrt_token_account =
+        get_associated_token_address(&burn_vault, &vrt_mint.pubkey());
+
     // -------------- Initialize Vault --------------
-    let initialize_vault_ix = InitializeVaultBuilder::new()
+    let mut initialize_vault_ix_builder = InitializeVaultBuilder::new();
+    initialize_vault_ix_builder
         .config(vault_config)
-        .admin(keypair.pubkey())
-        .base(base.pubkey())
         .vault(vault)
         .vrt_mint(vrt_mint.pubkey())
         .st_mint(token_mint.pubkey())
+        .admin(keypair.pubkey())
+        .base(base.pubkey())
+        .admin_st_token_account(admin_ata)
+        .vault_st_token_account(vault_st_token_account)
+        .burn_vault(burn_vault)
+        .burn_vault_vrt_token_account(burn_vault_vrt_token_account)
+        .associated_token_program(spl_associated_token_account::id())
         .reward_fee_bps(reward_fee_bps)
         .withdrawal_fee_bps(withdrawal_fee_bps)
         .decimals(9)
         .deposit_fee_bps(deposit_fee_bps)
         .system_program(system_program::id())
-        .instruction();
+        .initialize_token_amount(initialize_token_amount);
+    let mut initialize_vault_ix = initialize_vault_ix_builder.instruction();
+    initialize_vault_ix.program_id = handler.vault_program_id;
 
-    let create_vault_ata_ix =
-        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
-            &keypair.pubkey(),
-            &vault,
-            &token_mint.pubkey(),
-            &handler.token_program_id,
-        );
-    let create_admin_vrt_ata_ix =
-        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
-            &keypair.pubkey(),
-            &keypair.pubkey(),
-            &vrt_mint.pubkey(),
-            &handler.token_program_id,
-        );
-    let create_vault_vrt_ata_ix =
-        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
-            &keypair.pubkey(),
-            &vault,
-            &vrt_mint.pubkey(),
-            &handler.token_program_id,
-        );
+    let create_admin_vrt_ata_ix = create_associated_token_account_idempotent(
+        &keypair.pubkey(),
+        &keypair.pubkey(),
+        &vrt_mint.pubkey(),
+        &handler.token_program_id,
+    );
+
+    let admin_st_token_account_ix = create_associated_token_account_idempotent(
+        &keypair.pubkey(),
+        &keypair.pubkey(),
+        &token_mint.pubkey(),
+        &spl_token::ID,
+    );
+
+    let vault_st_token_account_ix = create_associated_token_account_idempotent(
+        &keypair.pubkey(),
+        &vault,
+        &token_mint.pubkey(),
+        &spl_token::ID,
+    );
 
     let vault_token_ata = get_associated_token_address(&vault, &token_mint.pubkey());
     let admin_token_ata = get_associated_token_address(&keypair.pubkey(), &token_mint.pubkey());
@@ -3167,10 +3186,10 @@ pub async fn create_and_add_test_vault(
     send_and_log_transaction(
         handler,
         &[
+            admin_st_token_account_ix,
+            vault_st_token_account_ix,
             initialize_vault_ix,
-            create_vault_ata_ix,
             create_admin_vrt_ata_ix,
-            create_vault_vrt_ata_ix,
             mint_to_ix,
         ],
         &[&base, &vrt_mint],

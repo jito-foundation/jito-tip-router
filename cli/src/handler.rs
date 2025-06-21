@@ -870,9 +870,16 @@ impl CliHandler {
                 deposit_fee_bps,
                 withdrawal_fee_bps,
                 reward_fee_bps,
+                initialize_token_amount,
             } => {
-                create_and_add_test_vault(self, deposit_fee_bps, withdrawal_fee_bps, reward_fee_bps)
-                    .await
+                create_and_add_test_vault(
+                    self,
+                    deposit_fee_bps,
+                    withdrawal_fee_bps,
+                    reward_fee_bps,
+                    initialize_token_amount,
+                )
+                .await
             }
         }
     }
