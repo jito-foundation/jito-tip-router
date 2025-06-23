@@ -17,14 +17,14 @@ im = "15.1"
 itertools = "0.11"
 jito-bytemuck = { workspace = true }
 jito-priority-fee-distribution-sdk = { workspace = true }
+jito-restaking-client = { workspace = true }
+jito-restaking-core = { workspace = true }
+jito-restaking-program = { workspace = true }
 jito-tip-distribution-sdk = { workspace = true }
 jito-tip-payment-sdk = { workspace = true }
 jito-tip-router-client = { workspace = true }
 jito-tip-router-core = { workspace = true }
 jito-tip-router-program = { workspace = true }
-jito-restaking-client = { workspace = true }
-jito-restaking-core = { workspace = true }
-jito-restaking-program = { workspace = true }
 legacy-meta-merkle-tree = { package = "legacy-meta-merkle-tree", path = "./repo-at-older-commit/meta_merkle_tree" }
 legacy-tip-router-operator-cli = { package = "legacy-tip-router-operator-cli", path = "./repo-at-older-commit/tip-router-operator-cli" }
 log = { workspace = true }
