@@ -171,6 +171,9 @@ pub enum Commands {
         #[arg(long, env)]
         tip_router_program_id: Pubkey,
 
+        #[arg(long, env)]
+        restaking_program_id: Option<Pubkey>,
+
         #[arg(long, env, default_value = "3")]
         num_monitored_epochs: u64,
 
@@ -296,6 +299,7 @@ impl Commands {
                 priority_fee_distribution_program_id: _,
                 tip_payment_program_id,
                 tip_router_program_id,
+                restaking_program_id: _,
                 num_monitored_epochs,
                 override_target_slot,
                 set_merkle_roots,

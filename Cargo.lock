@@ -3436,7 +3436,7 @@ checksum = "d75a2a4b1b190afb6f5425f10f6a8f959d2ea0b9c2b1d79553551850539e4674"
 [[package]]
 name = "jito-account-traits-derive"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 dependencies = [
  "proc-macro2 1.0.95",
  "quote 1.0.38",
@@ -3446,7 +3446,7 @@ dependencies = [
 [[package]]
 name = "jito-bytemuck"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -3457,12 +3457,13 @@ dependencies = [
 [[package]]
 name = "jito-jsm-core"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
  "jito-bytemuck",
  "shank",
+ "solana-decode-error",
  "solana-program",
  "spl-associated-token-account",
  "spl-token 7.0.0",
@@ -3505,7 +3506,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-client"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 dependencies = [
  "anchor-lang 0.31.1",
  "borsh 0.10.4",
@@ -3522,12 +3523,12 @@ dependencies = [
 [[package]]
 name = "jito-restaking-client-common"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 
 [[package]]
 name = "jito-restaking-core"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -3544,7 +3545,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-program"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 dependencies = [
  "borsh 0.10.4",
  "cfg-if 1.0.0",
@@ -3565,7 +3566,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-sdk"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 dependencies = [
  "borsh 0.10.4",
  "shank",
@@ -3780,7 +3781,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-client"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 dependencies = [
  "anchor-lang 0.31.1",
  "borsh 0.10.4",
@@ -3797,7 +3798,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-core"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -3815,7 +3816,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-program"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 dependencies = [
  "borsh 0.10.4",
  "cfg-if 1.0.0",
@@ -3836,7 +3837,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-sdk"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?branch=v2.2-upgrade#7452e90ffe1f9686c561a4f30c2caed500048a42"
+source = "git+https://github.com/jito-foundation/restaking?rev=175b594f24c8913448942685c7345f7521dd0a41#175b594f24c8913448942685c7345f7521dd0a41"
 dependencies = [
  "borsh 0.10.4",
  "shank",
@@ -11391,7 +11392,7 @@ version = "2.0.0"
 dependencies = [
  "anchor-lang 0.31.1",
  "anyhow",
- "base64 0.13.1",
+ "base64 0.22.1",
  "clap 2.34.0",
  "clap 4.5.23",
  "crossbeam-channel",
@@ -11401,6 +11402,9 @@ dependencies = [
  "itertools 0.11.0",
  "jito-bytemuck",
  "jito-priority-fee-distribution-sdk",
+ "jito-restaking-client",
+ "jito-restaking-core",
+ "jito-restaking-program",
  "jito-tip-distribution-sdk",
  "jito-tip-payment-sdk",
  "jito-tip-router-client",

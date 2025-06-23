@@ -45,24 +45,24 @@ futures = "0.3.21"
 getrandom = { version = "0.1.16", features = ["custom"] }
 hex = "0.4.3"
 home = "=0.5.9" # Custom for compatibility with rust 1.75
-jito-account-traits-derive = { package = "jito-account-traits-derive", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade" }
-jito-bytemuck = { package = "jito-bytemuck", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade" }
-jito-jsm-core = { package = "jito-jsm-core", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade" }
+jito-account-traits-derive = { package = "jito-account-traits-derive", git = "https://github.com/jito-foundation/restaking", rev = "175b594f24c8913448942685c7345f7521dd0a41" }
+jito-bytemuck = { package = "jito-bytemuck", git = "https://github.com/jito-foundation/restaking", rev = "175b594f24c8913448942685c7345f7521dd0a41" }
+jito-jsm-core = { package = "jito-jsm-core", git = "https://github.com/jito-foundation/restaking", rev = "175b594f24c8913448942685c7345f7521dd0a41" }
 jito-priority-fee-distribution-sdk = { path = "./priority_fee_distribution_sdk", version = "=0.0.1" }
-jito-restaking-client = { package = "jito-restaking-client", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade" }
-jito-restaking-core = { package = "jito-restaking-core", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade" }
-jito-restaking-program = { package = "jito-restaking-program", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade", features = ["no-entrypoint"] }
-jito-restaking-sdk = { package = "jito-restaking-sdk", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade" }
+jito-restaking-client = { package = "jito-restaking-client", git = "https://github.com/jito-foundation/restaking", rev = "175b594f24c8913448942685c7345f7521dd0a41" }
+jito-restaking-core = { package = "jito-restaking-core", git = "https://github.com/jito-foundation/restaking", rev = "175b594f24c8913448942685c7345f7521dd0a41" }
+jito-restaking-program = { package = "jito-restaking-program", git = "https://github.com/jito-foundation/restaking", rev = "175b594f24c8913448942685c7345f7521dd0a41", features = ["no-entrypoint"] }
+jito-restaking-sdk = { package = "jito-restaking-sdk", git = "https://github.com/jito-foundation/restaking", rev = "175b594f24c8913448942685c7345f7521dd0a41" }
 jito-tip-distribution-sdk = { path = "./tip_distribution_sdk", version = "=0.0.1" }
 jito-tip-payment-sdk = { path = "./tip_payment_sdk", version = "=0.0.1" }
 jito-tip-router-client = { path = "./clients/rust/jito_tip_router", version = "0.0.1" }
 jito-tip-router-core = { path = "./core", version = "=0.0.1" }
 jito-tip-router-program = { path = "./program", version = "=0.0.1" }
 jito-tip-router-shank-cli = { path = "./shank_cli", version = "=0.0.1" }
-jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade" }
-jito-vault-core = { package = "jito-vault-core", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade" }
-jito-vault-program = { package = "jito-vault-program", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade", features = ["no-entrypoint"] }
-jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", branch = "v2.2-upgrade" }
+jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", rev = "175b594f24c8913448942685c7345f7521dd0a41" }
+jito-vault-core = { package = "jito-vault-core", git = "https://github.com/jito-foundation/restaking", rev = "175b594f24c8913448942685c7345f7521dd0a41" }
+jito-vault-program = { package = "jito-vault-program", git = "https://github.com/jito-foundation/restaking", rev = "175b594f24c8913448942685c7345f7521dd0a41", features = ["no-entrypoint"] }
+jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", rev = "175b594f24c8913448942685c7345f7521dd0a41" }
 log = "0.4.22"
 matches = "0.1.10"
 meta-merkle-tree = { path = "./meta_merkle_tree", version = "=0.0.1" }
