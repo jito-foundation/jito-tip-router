@@ -234,7 +234,6 @@ async fn main() -> Result<()> {
                 .get_program_accounts_with_config(&restaking_program_id, config)
                 .await?;
 
-            let mut ixs = Vec::with_capacity(ncn_vault_tickets.len());
             for (_ncn_vault_ticket_addr, ncn_vault_ticket_acc) in ncn_vault_tickets {
                 let ncn_vault_ticket =
                     NcnVaultTicket::try_from_slice_unchecked(&ncn_vault_ticket_acc.data)?;
@@ -258,20 +257,22 @@ async fn main() -> Result<()> {
                     let mut ix = ix_builder.instruction();
                     ix.program_id = restaking_program_id;
 
-                    ixs.push(ix);
+                    let blockhash = rpc_client.get_latest_blockhash().await?;
+                    let tx = Transaction::new_signed_with_payer(
+                        &[ix],
+                        Some(&keypair.pubkey()),
+                        &[keypair.clone()],
+                        blockhash,
+                    );
+                    let result = rpc_client.send_and_confirm_transaction(&tx).await?;
+
+                    info!("Transaction confirmed: {:?}", result);
+                    info!(
+                        "Created OperatorVault Ticket, Operator: {operator_address}, Vault: {}",
+                        ncn_vault_ticket.vault
+                    );
                 }
             }
-
-            let blockhash = rpc_client.get_latest_blockhash().await?;
-            let tx = Transaction::new_signed_with_payer(
-                &ixs,
-                Some(&keypair.pubkey()),
-                &[keypair.clone()],
-                blockhash,
-            );
-            let result = rpc_client.send_and_confirm_transaction(&tx).await?;
-
-            info!("Transaction confirmed: {:?}", result);
 
             if !backup_snapshots_dir.exists() {
                 info!(
