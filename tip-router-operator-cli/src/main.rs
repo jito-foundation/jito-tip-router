@@ -153,7 +153,7 @@ async fn main() -> Result<()> {
             let cluster = cli.cluster.clone();
 
             let restaking_program_id = restaking_program_id
-                .map_or_else(|| jito_restaking_program::id(), |program_id| program_id);
+                .map_or_else(jito_restaking_program::id, |program_id| program_id);
 
             let slot = rpc_client.get_slot().await?;
             let restaking_config_addr =
