@@ -1,13 +1,30 @@
 #![allow(clippy::integer_division)]
 use ::{
     anyhow::Result,
+    base64::{engine::general_purpose, Engine},
     clap::Parser,
-    log::{error, info},
+    jito_bytemuck::{AccountDeserialize, Discriminator},
+    jito_restaking_client::instructions::{
+        InitializeOperatorVaultTicketBuilder, OperatorWarmupNcnBuilder,
+    },
+    jito_restaking_core::{
+        config::Config as RestakingConfig, ncn_operator_state::NcnOperatorState,
+        ncn_vault_ticket::NcnVaultTicket, operator_vault_ticket::OperatorVaultTicket,
+    },
+    log::{error, info, warn},
+    solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig},
+    solana_client::{
+        rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
+        rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
+    },
     solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
-    solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
-    std::process::Command,
-    std::{str::FromStr, sync::Arc, time::Duration},
+    solana_sdk::{
+        pubkey::Pubkey,
+        signer::{keypair::read_keypair_file, Signer},
+        transaction::Transaction,
+    },
+    std::{process::Command, str::FromStr, sync::Arc, time::Duration},
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
         claim::{claim_mev_tips_with_emit, emit_claim_mev_tips_metrics},
@@ -50,6 +67,7 @@ async fn main() -> Result<()> {
     cli.force_different_backup_snapshot_dir();
 
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
+    let keypair = Arc::new(keypair);
     let rpc_client = Arc::new(RpcClient::new(cli.rpc_url.clone()));
 
     datapoint_info!(
@@ -95,6 +113,7 @@ async fn main() -> Result<()> {
             priority_fee_distribution_program_id,
             tip_payment_program_id,
             tip_router_program_id,
+            restaking_program_id,
             save_snapshot,
             num_monitored_epochs,
             override_target_slot,
@@ -130,6 +149,133 @@ async fn main() -> Result<()> {
             let rpc_url = cli.rpc_url.clone();
             let claim_tips_epoch_filepath = cli.claim_tips_epoch_filepath.clone();
             let cli_clone: Cli = cli.clone();
+            let operator_address = cli.operator_address.clone();
+            let cluster = cli.cluster.clone();
+
+            let restaking_program_id = match restaking_program_id {
+                Some(program_id) => program_id,
+                None => jito_restaking_program::id(),
+            };
+
+            let slot = rpc_client.get_slot().await?;
+            let restaking_config_addr =
+                RestakingConfig::find_program_address(&restaking_program_id).0;
+            let restaking_config_acc = rpc_client.get_account(&restaking_config_addr).await?;
+            let restaking_config =
+                RestakingConfig::try_from_slice_unchecked(&restaking_config_acc.data)?;
+
+            let ncn_operator_state_addr = NcnOperatorState::find_program_address(
+                &restaking_program_id,
+                &ncn_address,
+                &Pubkey::from_str(operator_address.as_str()).unwrap(),
+            )
+            .0;
+            match rpc_client.get_account(&ncn_operator_state_addr).await {
+                Ok(account) => {
+                    let ncn_operator_state =
+                        NcnOperatorState::try_from_slice_unchecked(&account.data)?;
+                    if ncn_operator_state
+                        .operator_opt_in_state
+                        .is_active(slot, restaking_config.epoch_length())?
+                    {
+                        let mut ix_builder = OperatorWarmupNcnBuilder::new();
+                        ix_builder
+                            .config(restaking_config_addr)
+                            .ncn(ncn_address)
+                            .operator(Pubkey::from_str(operator_address.as_str()).unwrap())
+                            .ncn_operator_state(ncn_operator_state_addr)
+                            .admin(keypair.pubkey());
+                        let mut ix = ix_builder.instruction();
+                        ix.program_id = restaking_program_id;
+
+                        let blockhash = rpc_client.get_latest_blockhash().await?;
+                        let tx = Transaction::new_signed_with_payer(
+                            &[ix],
+                            Some(&keypair.pubkey()),
+                            &[keypair.clone()],
+                            blockhash,
+                        );
+                        let result = rpc_client.send_and_confirm_transaction(&tx).await?;
+
+                        info!("Transaction confirmed: {:?}", result);
+                    }
+                }
+                Err(e) => warn!("Failed to find NcnOperatorState, Please contact NCN admin!: {e}"),
+            }
+
+            let config = {
+                let data_size = std::mem::size_of::<NcnVaultTicket>()
+                    .checked_add(8)
+                    .ok_or_else(|| anyhow::anyhow!("Failed to add"))?
+                    .checked_add(32)
+                    .ok_or_else(|| anyhow::anyhow!("Failed to add"))?;
+                let mut slice = Vec::new();
+                slice.extend(vec![NcnVaultTicket::DISCRIMINATOR, 0, 0, 0, 0, 0, 0, 0]);
+                slice.extend_from_slice(ncn_address.as_array());
+                let encoded_slice = general_purpose::STANDARD.encode(slice);
+                let memcmp = RpcFilterType::Memcmp(Memcmp::new(
+                    0,
+                    MemcmpEncodedBytes::Base64(encoded_slice),
+                ));
+                let config = RpcProgramAccountsConfig {
+                    filters: Some(vec![RpcFilterType::DataSize(data_size as u64), memcmp]),
+                    account_config: RpcAccountInfoConfig {
+                        encoding: Some(UiAccountEncoding::Base64),
+                        data_slice: Some(UiDataSliceConfig {
+                            offset: 0,
+                            length: data_size,
+                        }),
+                        commitment: None,
+                        min_context_slot: None,
+                    },
+                    with_context: Some(false),
+                    sort_results: Some(false),
+                };
+
+                config
+            };
+            let ncn_vault_tickets = rpc_client
+                .get_program_accounts_with_config(&restaking_program_id, config)
+                .await?;
+
+            let mut ixs = Vec::with_capacity(ncn_vault_tickets.len());
+            for (_ncn_vault_ticket_addr, ncn_vault_ticket_acc) in ncn_vault_tickets {
+                let ncn_vault_ticket =
+                    NcnVaultTicket::try_from_slice_unchecked(&ncn_vault_ticket_acc.data)?;
+
+                let operator_vault_ticket_addr = OperatorVaultTicket::find_program_address(
+                    &restaking_program_id,
+                    &Pubkey::from_str(operator_address.as_str()).unwrap(),
+                    &ncn_vault_ticket.vault,
+                )
+                .0;
+
+                if let Err(_e) = rpc_client.get_account(&operator_vault_ticket_addr).await {
+                    let mut ix_builder = InitializeOperatorVaultTicketBuilder::new();
+                    ix_builder
+                        .config(restaking_config_addr)
+                        .operator(Pubkey::from_str(operator_address.as_str()).unwrap())
+                        .vault(ncn_vault_ticket.vault)
+                        .admin(keypair.pubkey())
+                        .operator_vault_ticket(operator_vault_ticket_addr)
+                        .payer(keypair.pubkey());
+                    let mut ix = ix_builder.instruction();
+                    ix.program_id = restaking_program_id;
+
+                    ixs.push(ix);
+                }
+            }
+
+            let blockhash = rpc_client.get_latest_blockhash().await?;
+            let tx = Transaction::new_signed_with_payer(
+                &ixs,
+                Some(&keypair.pubkey()),
+                &[keypair.clone()],
+                blockhash,
+            );
+            let result = rpc_client.send_and_confirm_transaction(&tx).await?;
+
+            info!("Transaction confirmed: {:?}", result);
 
             if !backup_snapshots_dir.exists() {
                 info!(
@@ -138,9 +284,6 @@ async fn main() -> Result<()> {
                 );
                 std::fs::create_dir_all(&backup_snapshots_dir)?;
             }
-
-            let operator_address = cli.operator_address.clone();
-            let cluster = cli.cluster.clone();
 
             let try_catchup = tip_router_operator_cli::solana_cli::catchup(
                 cli.rpc_url.to_owned(),
@@ -175,7 +318,7 @@ async fn main() -> Result<()> {
 
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
-                let keypair_arc = Arc::new(keypair);
+                let keypair_arc = keypair.clone();
                 loop {
                     if let Err(e) = submit_recent_epochs_to_ncn(
                         &rpc_client_clone,
