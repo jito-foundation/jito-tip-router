@@ -152,10 +152,8 @@ async fn main() -> Result<()> {
             let operator_address = cli.operator_address.clone();
             let cluster = cli.cluster.clone();
 
-            let restaking_program_id = match restaking_program_id {
-                Some(program_id) => program_id,
-                None => jito_restaking_program::id(),
-            };
+            let restaking_program_id = restaking_program_id
+                .map_or_else(|| jito_restaking_program::id(), |program_id| program_id);
 
             let slot = rpc_client.get_slot().await?;
             let restaking_config_addr =
@@ -217,7 +215,7 @@ async fn main() -> Result<()> {
                     0,
                     MemcmpEncodedBytes::Base64(encoded_slice),
                 ));
-                let config = RpcProgramAccountsConfig {
+                RpcProgramAccountsConfig {
                     filters: Some(vec![RpcFilterType::DataSize(data_size as u64), memcmp]),
                     account_config: RpcAccountInfoConfig {
                         encoding: Some(UiAccountEncoding::Base64),
@@ -230,9 +228,7 @@ async fn main() -> Result<()> {
                     },
                     with_context: Some(false),
                     sort_results: Some(false),
-                };
-
-                config
+                }
             };
             let ncn_vault_tickets = rpc_client
                 .get_program_accounts_with_config(&restaking_program_id, config)
