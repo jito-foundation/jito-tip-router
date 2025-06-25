@@ -86,13 +86,12 @@ impl CliHandler {
                 let config_file = solana_cli_config::CONFIG_FILE
                     .as_ref()
                     .ok_or_else(|| anyhow!("unable to get config file path"))?;
-                let config = Config::load(config_file)?;
-                let keypair_path = match &args.keypair_path {
-                    Some(path) => path.as_str(),
-                    None => config.keypair_path.as_str(),
-                };
-                read_keypair_file(keypair_path)
-                    .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?
+                match Config::load(config_file) {
+                    Ok(config) => read_keypair_file(config.keypair_path.as_str())
+                        .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?,
+                    Err(_) => read_keypair_file(&args.keypair_path.clone().unwrap())
+                        .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?,
+                }
             }
         };
 
