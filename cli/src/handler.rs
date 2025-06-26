@@ -89,7 +89,7 @@ impl CliHandler {
                 match Config::load(config_file) {
                     Ok(config) => read_keypair_file(config.keypair_path.as_str())
                         .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?,
-                    Err(_) => read_keypair_file(&args.keypair_path.clone().unwrap())
+                    Err(_) => read_keypair_file(args.keypair_path.clone().unwrap())
                         .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?,
                 }
             }
