@@ -9,7 +9,7 @@ use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
 use legacy_meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection as LegacyGeneratedMerkleTreeCollection;
 use legacy_tip_router_operator_cli::claim::ClaimMevError as LegacyClaimMevError;
 use log::{info, warn};
-use meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection;
+use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, TreeNode};
 use rand::{prelude::SliceRandom, thread_rng};
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSimulateTransactionConfig};
 use solana_metrics::{datapoint_error, datapoint_info};
@@ -592,7 +592,9 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .flatten()
         .collect_vec();
 
-    let tree_nodes = if validator_tree_nodes.is_empty() {
+    let remaining_validator_claims = get_claim_status_accounts_for_nodes(rpc_client, &validator_tree_nodes).await?;
+
+    let tree_nodes = if remaining_validator_claims.is_empty() {
         all_tree_nodes.to_owned()
     } else {
         validator_tree_nodes.to_owned()
@@ -622,6 +624,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .iter()
         .map(|tree_node| tree_node.claimant)
         .collect_vec();
+    
     let claimants: HashMap<Pubkey, Account> = get_batched_accounts(rpc_client, &claimant_pubkeys)
         .await?
         .into_iter()
@@ -672,6 +675,25 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     );
 
     Ok((transactions, all_tree_nodes.len()))
+}
+
+pub async fn get_claim_status_accounts_for_nodes(
+    rpc_client: &RpcClient,
+    tree_nodes: &[&TreeNode],
+) -> Result<Vec<Account>, ClaimMevError> {
+    let claim_status_pubkeys = tree_nodes
+        .iter()
+        .map(|tree_node| tree_node.claim_status_pubkey)
+        .collect_vec();
+
+    let claim_statuses: HashMap<Pubkey, Account> =
+        get_batched_accounts(rpc_client, &claim_status_pubkeys)
+            .await?
+            .into_iter()
+            .filter_map(|(pubkey, a)| Some((pubkey, a?)))
+            .collect();
+
+    Ok(claim_statuses.values().cloned().collect())
 }
 
 /// Returns a list of claim transactions for valid, unclaimed MEV tips
