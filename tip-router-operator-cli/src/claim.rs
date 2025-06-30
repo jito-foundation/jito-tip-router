@@ -105,7 +105,7 @@ pub async fn emit_claim_mev_tips_metrics(
         return Ok(());
     }
 
-    let all_claim_transactions = get_claim_transactions_for_valid_unclaimed(
+    let (_claims_to_process, num_total_unprocessed) = get_claim_transactions_for_valid_unclaimed(
         &rpc_client,
         &merkle_trees,
         tip_distribution_program_id,
@@ -121,12 +121,12 @@ pub async fn emit_claim_mev_tips_metrics(
 
     datapoint_info!(
         "tip_router_cli.claim_mev_tips-send_summary",
-        ("claim_transactions_left", all_claim_transactions.len(), i64),
+        ("claim_transactions_left", num_total_unprocessed, i64),
         ("epoch", epoch, i64),
         "cluster" => &cli.cluster,
     );
 
-    if all_claim_transactions.is_empty() {
+    if num_total_unprocessed == 0 {
         add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
     }
 
@@ -424,36 +424,37 @@ pub async fn claim_mev_tips(
 
     let start = Instant::now();
     while start.elapsed() <= max_loop_duration {
-        let mut all_claim_transactions = get_claim_transactions_for_valid_unclaimed(
-            &rpc_client,
-            merkle_trees,
-            tip_distribution_program_id,
-            priority_fee_distribution_program_id,
-            tip_router_program_id,
-            ncn,
-            micro_lamports,
-            keypair.pubkey(),
-            operator_address,
-            cluster,
-        )
-        .await?;
+        let (mut claims_to_process, num_total_unprocessed_claims) =
+            get_claim_transactions_for_valid_unclaimed(
+                &rpc_client,
+                merkle_trees,
+                tip_distribution_program_id,
+                priority_fee_distribution_program_id,
+                tip_router_program_id,
+                ncn,
+                micro_lamports,
+                keypair.pubkey(),
+                operator_address,
+                cluster,
+            )
+            .await?;
 
         datapoint_info!(
             "tip_router_cli.claim_mev_tips-send_summary",
-            ("claim_transactions_left", all_claim_transactions.len(), i64),
+            ("claim_transactions_left", num_total_unprocessed_claims, i64),
             ("epoch", epoch, i64),
             ("operator", operator_address, String),
             "cluster" => cluster,
         );
 
-        if all_claim_transactions.is_empty() {
+        if num_total_unprocessed_claims == 0 {
             add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
             return Ok(());
         }
 
-        all_claim_transactions.shuffle(&mut thread_rng());
+        claims_to_process.shuffle(&mut thread_rng());
 
-        for transactions in all_claim_transactions.chunks(2_000) {
+        for transactions in claims_to_process.chunks(2_000) {
             let transactions: Vec<_> = transactions.to_vec();
             // only check balance for the ones we need to currently send since reclaim rent running in parallel
             if let Some((start_balance, desired_balance, sol_to_deposit)) =
@@ -483,7 +484,7 @@ pub async fn claim_mev_tips(
         }
     }
 
-    let transactions = get_claim_transactions_for_valid_unclaimed(
+    let (transactions, num_total_unprocessed_claims) = get_claim_transactions_for_valid_unclaimed(
         &rpc_client,
         merkle_trees,
         tip_distribution_program_id,
@@ -496,7 +497,7 @@ pub async fn claim_mev_tips(
         cluster,
     )
     .await?;
-    if transactions.is_empty() {
+    if num_total_unprocessed_claims == 0 {
         add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
         return Ok(());
     }
@@ -561,11 +562,11 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     payer_pubkey: Pubkey,
     operator_address: &String,
     cluster: &str,
-) -> Result<Vec<Transaction>, ClaimMevError> {
+) -> Result<(Vec<Transaction>, usize), ClaimMevError> {
     let epoch = merkle_trees.epoch;
     let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
 
-    let tree_nodes = merkle_trees
+    let all_tree_nodes = merkle_trees
         .generated_merkle_trees
         .iter()
         .filter_map(|tree| {
@@ -578,9 +579,28 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .flatten()
         .collect_vec();
 
+    let validator_tree_nodes = merkle_trees
+        .generated_merkle_trees
+        .iter()
+        .filter_map(|tree| {
+            if tree.merkle_root_upload_authority != tip_router_config_address {
+                return None;
+            }
+
+            Some(vec![&tree.tree_nodes[1]])
+        })
+        .flatten()
+        .collect_vec();
+
+    let tree_nodes = if validator_tree_nodes.is_empty() {
+        all_tree_nodes.to_owned()
+    } else {
+        validator_tree_nodes.to_owned()
+    };
+
     info!(
         "reading {} tip distribution related accounts for epoch {}",
-        tree_nodes.len(),
+        all_tree_nodes.len(),
         epoch
     );
 
@@ -651,7 +671,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         cluster,
     );
 
-    Ok(transactions)
+    Ok((transactions, all_tree_nodes.len()))
 }
 
 /// Returns a list of claim transactions for valid, unclaimed MEV tips
