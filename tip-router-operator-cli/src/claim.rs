@@ -592,7 +592,8 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .flatten()
         .collect_vec();
 
-    let remaining_validator_claims = get_claim_status_accounts_for_nodes(rpc_client, &validator_tree_nodes).await?;
+    let remaining_validator_claims =
+        get_claim_status_accounts_for_nodes(rpc_client, &validator_tree_nodes).await?;
 
     let tree_nodes = if remaining_validator_claims.is_empty() {
         all_tree_nodes.to_owned()
@@ -624,7 +625,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .iter()
         .map(|tree_node| tree_node.claimant)
         .collect_vec();
-    
+
     let claimants: HashMap<Pubkey, Account> = get_batched_accounts(rpc_client, &claimant_pubkeys)
         .await?
         .into_iter()
