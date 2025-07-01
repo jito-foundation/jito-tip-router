@@ -357,7 +357,7 @@ impl TreeNode {
         // validator_fee_bps
         let validator_amount = mul_div(total_tips, validator_fee_bps as u64, MAX_BPS as u64)?;
 
-        let (_validator_amount, remaining_total_rewards) = validator_amount
+        let (validator_amount, remaining_total_rewards) = validator_amount
             .checked_add(protocol_fee_amount)
             .map_or((validator_amount, None), |total_fees| {
                 if total_fees > total_tips {
@@ -1322,6 +1322,274 @@ mod tests {
                             expected_tree_node.amount,
                             actual_tree_node.amount
                         );
+                    });
+                assert_eq!(expected_gmt.merkle_root, actual_gmt.merkle_root);
+            });
+
+        let epoch = 761;
+        let merkle_tree_collection = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
+            stake_meta_collection.clone(),
+            &ncn_address,
+            epoch,
+            300,
+            150,
+            &tip_router_program_id,
+        )
+        .unwrap();
+        merkle_tree_collection
+            .generated_merkle_trees
+            .iter()
+            .for_each(|gmt| {
+                // Ensure that validator vote account exists as a claimant in the new merkle tree collection
+                // and does not contain identity account as claimant.
+                assert!(gmt
+                    .tree_nodes
+                    .iter()
+                    .any(|node| node.claimant == validator_vote_account_0
+                        || node.claimant == validator_vote_account_1));
+                assert!(
+                    !(gmt
+                        .tree_nodes
+                        .iter()
+                        .any(|node| node.claimant == validator_id_0
+                            || node.claimant == validator_id_1))
+                );
+            });
+    }
+
+    #[test]
+    fn test_new_from_stake_meta_collection_total_fees_greater_than_total_tips() {
+        let merkle_root_upload_authority = Pubkey::new_unique();
+        let tip_distribution_program_id = TIP_DISTRIBUTION_ID;
+        let priority_fee_distribution_program_id = PRIORITY_FEE_DISTRIBUTION_ID;
+        let tip_router_program_id = Pubkey::new_unique();
+        let (tda_0, tda_1) = (Pubkey::new_unique(), Pubkey::new_unique());
+        let (pf_tda_0, pf_tda_1) = (Pubkey::new_unique(), Pubkey::new_unique());
+        let stake_account_0 = Pubkey::new_unique();
+        let stake_account_1 = Pubkey::new_unique();
+        let stake_account_2 = Pubkey::new_unique();
+        let stake_account_3 = Pubkey::new_unique();
+        let staker_account_0 = Pubkey::new_unique();
+        let staker_account_1 = Pubkey::new_unique();
+        let staker_account_2 = Pubkey::new_unique();
+        let staker_account_3 = Pubkey::new_unique();
+        let validator_vote_account_0 = Pubkey::new_unique();
+        let validator_vote_account_1 = Pubkey::new_unique();
+        let validator_id_0 = Pubkey::new_unique();
+        let validator_id_1 = Pubkey::new_unique();
+        let ncn_address = Pubkey::new_unique();
+        let epoch = 737;
+
+        let stake_meta_collection = StakeMetaCollection {
+            stake_metas: vec![StakeMeta {
+                validator_vote_account: validator_vote_account_0,
+                validator_node_pubkey: validator_id_0,
+                maybe_tip_distribution_meta: Some(TipDistributionMeta {
+                    merkle_root_upload_authority,
+                    tip_distribution_pubkey: tda_0,
+                    total_tips: 1_900_122_111_000,
+                    validator_fee_bps: 10_000,
+                }),
+                delegations: vec![
+                    Delegation {
+                        stake_account_pubkey: stake_account_0,
+                        staker_pubkey: staker_account_0,
+                        withdrawer_pubkey: staker_account_0,
+                        lamports_delegated: 123_999_123_555,
+                    },
+                    Delegation {
+                        stake_account_pubkey: stake_account_1,
+                        staker_pubkey: staker_account_1,
+                        withdrawer_pubkey: staker_account_1,
+                        lamports_delegated: 144_555_444_556,
+                    },
+                ],
+                total_delegated: 1_555_123_000_333_454_000,
+                commission: 100,
+                maybe_priority_fee_distribution_meta: Some(PriorityFeeDistributionMeta {
+                    merkle_root_upload_authority,
+                    priority_fee_distribution_pubkey: pf_tda_0,
+                    total_tips: 2_546_000_000,
+                    validator_fee_bps: 10_000,
+                }),
+            }],
+            tip_distribution_program_id,
+            priority_fee_distribution_program_id,
+            bank_hash: Hash::new_unique().to_string(),
+            epoch: 100,
+            slot: 2_000_000,
+        };
+
+        let merkle_tree_collection = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
+            stake_meta_collection.clone(),
+            &ncn_address,
+            epoch,
+            300,
+            150,
+            &tip_router_program_id,
+        )
+        .unwrap();
+
+        assert_eq!(stake_meta_collection.epoch, merkle_tree_collection.epoch);
+        assert_eq!(
+            stake_meta_collection.bank_hash,
+            merkle_tree_collection.bank_hash
+        );
+        assert_eq!(stake_meta_collection.slot, merkle_tree_collection.slot);
+        assert_eq!(
+            stake_meta_collection.stake_metas.len() * 2,
+            merkle_tree_collection.generated_merkle_trees.len()
+        );
+
+        let protocol_fee_recipient = Pubkey::find_program_address(
+            &[
+                b"base_reward_receiver",
+                &ncn_address.to_bytes(),
+                &(epoch + 1).to_le_bytes(),
+            ],
+            &tip_router_program_id,
+        )
+        .0;
+
+        let claim_statuses = &[
+            (protocol_fee_recipient, tda_0),
+            (validator_vote_account_0, tda_0),
+            (stake_account_0, tda_0),
+            (stake_account_1, tda_0),
+            (protocol_fee_recipient, tda_1),
+            (validator_vote_account_1, tda_1),
+            (stake_account_2, tda_1),
+            (stake_account_3, tda_1),
+        ]
+        .iter()
+        .map(|(claimant, tda)| {
+            Pubkey::find_program_address(
+                &[CLAIM_STATUS_SEED, &claimant.to_bytes(), &tda.to_bytes()],
+                &TIP_DISTRIBUTION_ID,
+            )
+        })
+        .collect::<Vec<(Pubkey, u8)>>();
+
+        let pf_claim_statuses = &[
+            (protocol_fee_recipient, pf_tda_0),
+            (validator_vote_account_0, pf_tda_0),
+            (stake_account_0, pf_tda_0),
+            (stake_account_1, pf_tda_0),
+            (protocol_fee_recipient, pf_tda_1),
+            (validator_vote_account_1, pf_tda_1),
+            (stake_account_2, pf_tda_1),
+            (stake_account_3, pf_tda_1),
+        ]
+        .iter()
+        .map(|(claimant, tda)| {
+            Pubkey::find_program_address(
+                &[CLAIM_STATUS_SEED, &claimant.to_bytes(), &tda.to_bytes()],
+                &PRIORITY_FEE_DISTRIBUTION_ID,
+            )
+        })
+        .collect::<Vec<(Pubkey, u8)>>();
+
+        let tree_nodes = vec![
+            TreeNode {
+                claimant: protocol_fee_recipient,
+                claim_status_pubkey: claim_statuses[0].0,
+                claim_status_bump: claim_statuses[0].1,
+                staker_pubkey: Pubkey::default(),
+                withdrawer_pubkey: Pubkey::default(),
+                amount: 57_003_663_330, // 3% of 1_900_122_111_000
+                proof: None,
+            },
+            TreeNode {
+                claimant: validator_vote_account_0,
+                claim_status_pubkey: claim_statuses[1].0,
+                claim_status_bump: claim_statuses[1].1,
+                staker_pubkey: Pubkey::default(),
+                withdrawer_pubkey: Pubkey::default(),
+                amount: (1_900_122_111_000i128 - 57_003_663_330i128) as u64,
+                proof: None,
+            },
+            TreeNode {
+                claimant: stake_account_0,
+                claim_status_pubkey: claim_statuses[2].0,
+                claim_status_bump: claim_statuses[2].1,
+                staker_pubkey: staker_account_0,
+                withdrawer_pubkey: staker_account_0,
+                amount: 0, // Update to match actual amount
+                proof: None,
+            },
+            TreeNode {
+                claimant: stake_account_1,
+                claim_status_pubkey: claim_statuses[3].0,
+                claim_status_bump: claim_statuses[3].1,
+                staker_pubkey: staker_account_1,
+                withdrawer_pubkey: staker_account_1,
+                amount: 0, // Update to match actual amount
+                proof: None,
+            },
+        ];
+
+        let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
+        let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
+        let gmt_0 = GeneratedMerkleTree {
+            distribution_program: TIP_DISTRIBUTION_ID,
+            distribution_account: tda_0,
+            merkle_root_upload_authority,
+            merkle_root: *merkle_tree.get_root().unwrap(),
+            tree_nodes,
+            max_total_claim: stake_meta_collection.stake_metas[0]
+                .clone()
+                .maybe_tip_distribution_meta
+                .unwrap()
+                .total_tips,
+            max_num_nodes: 4,
+        };
+
+        let expected_generated_merkle_trees = vec![gmt_0];
+        let actual_generated_merkle_trees = merkle_tree_collection.generated_merkle_trees;
+        expected_generated_merkle_trees
+            .iter()
+            .for_each(|expected_gmt| {
+                let actual_gmt = actual_generated_merkle_trees
+                    .iter()
+                    .find(|gmt| {
+                        gmt.distribution_account == expected_gmt.distribution_account
+                            && gmt.distribution_program == expected_gmt.distribution_program
+                    })
+                    .unwrap();
+                assert_eq!(expected_gmt.max_num_nodes, actual_gmt.max_num_nodes);
+                assert_eq!(expected_gmt.max_total_claim, actual_gmt.max_total_claim);
+                assert_eq!(
+                    expected_gmt.distribution_account,
+                    actual_gmt.distribution_account
+                );
+                assert_eq!(expected_gmt.tree_nodes.len(), actual_gmt.tree_nodes.len());
+                expected_gmt
+                    .tree_nodes
+                    .iter()
+                    .for_each(|expected_tree_node| {
+                        let actual_tree_node = actual_gmt
+                            .tree_nodes
+                            .iter()
+                            .find(|tree_node| tree_node.claimant == expected_tree_node.claimant)
+                            .unwrap();
+                        if expected_tree_node.claimant == validator_vote_account_0 {
+                            // Difference should be the protocol fee bps against the total tips
+                            let expected_amount =
+                                ((expected_gmt.max_total_claim as i128) * 9700i128 / 10_000i128)
+                                    as u64;
+                            let actual_amount = actual_tree_node.amount;
+                            assert_eq!(
+                                expected_amount, actual_amount,
+                                "Expected amount: {}, Actual amount: {}",
+                                expected_amount, actual_amount
+                            );
+                        } else {
+                            assert_eq!(
+                                expected_tree_node.amount, actual_tree_node.amount,
+                                "Expected amount: {}, Actual amount: {}",
+                                expected_tree_node.amount, actual_tree_node.amount
+                            );
+                        }
                     });
                 assert_eq!(expected_gmt.merkle_root, actual_gmt.merkle_root);
             });
