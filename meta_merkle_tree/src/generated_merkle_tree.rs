@@ -1364,7 +1364,7 @@ mod tests {
         let priority_fee_distribution_program_id = PRIORITY_FEE_DISTRIBUTION_ID;
         let tip_router_program_id = Pubkey::new_unique();
         let (tda_0, tda_1) = (Pubkey::new_unique(), Pubkey::new_unique());
-        let (pf_tda_0, pf_tda_1) = (Pubkey::new_unique(), Pubkey::new_unique());
+        let pf_tda_0 = Pubkey::new_unique();
         let stake_account_0 = Pubkey::new_unique();
         let stake_account_1 = Pubkey::new_unique();
         let stake_account_2 = Pubkey::new_unique();
