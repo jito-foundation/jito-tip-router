@@ -1371,12 +1371,10 @@ mod tests {
         let stake_account_3 = Pubkey::new_unique();
         let staker_account_0 = Pubkey::new_unique();
         let staker_account_1 = Pubkey::new_unique();
-        let staker_account_2 = Pubkey::new_unique();
-        let staker_account_3 = Pubkey::new_unique();
+
         let validator_vote_account_0 = Pubkey::new_unique();
         let validator_vote_account_1 = Pubkey::new_unique();
         let validator_id_0 = Pubkey::new_unique();
-        let validator_id_1 = Pubkey::new_unique();
         let ncn_address = Pubkey::new_unique();
         let epoch = 737;
 
@@ -1470,25 +1468,6 @@ mod tests {
         })
         .collect::<Vec<(Pubkey, u8)>>();
 
-        let pf_claim_statuses = &[
-            (protocol_fee_recipient, pf_tda_0),
-            (validator_vote_account_0, pf_tda_0),
-            (stake_account_0, pf_tda_0),
-            (stake_account_1, pf_tda_0),
-            (protocol_fee_recipient, pf_tda_1),
-            (validator_vote_account_1, pf_tda_1),
-            (stake_account_2, pf_tda_1),
-            (stake_account_3, pf_tda_1),
-        ]
-        .iter()
-        .map(|(claimant, tda)| {
-            Pubkey::find_program_address(
-                &[CLAIM_STATUS_SEED, &claimant.to_bytes(), &tda.to_bytes()],
-                &PRIORITY_FEE_DISTRIBUTION_ID,
-            )
-        })
-        .collect::<Vec<(Pubkey, u8)>>();
-
         let tree_nodes = vec![
             TreeNode {
                 claimant: protocol_fee_recipient,
@@ -1505,7 +1484,7 @@ mod tests {
                 claim_status_bump: claim_statuses[1].1,
                 staker_pubkey: Pubkey::default(),
                 withdrawer_pubkey: Pubkey::default(),
-                amount: (1_900_122_111_000i128 - 57_003_663_330i128) as u64,
+                amount: (1_900_122_111_000i128 - 57_003_663_330i128) as u64, // 97% of total tips
                 proof: None,
             },
             TreeNode {
@@ -1514,7 +1493,7 @@ mod tests {
                 claim_status_bump: claim_statuses[2].1,
                 staker_pubkey: staker_account_0,
                 withdrawer_pubkey: staker_account_0,
-                amount: 0, // Update to match actual amount
+                amount: 0,
                 proof: None,
             },
             TreeNode {
@@ -1523,7 +1502,7 @@ mod tests {
                 claim_status_bump: claim_statuses[3].1,
                 staker_pubkey: staker_account_1,
                 withdrawer_pubkey: staker_account_1,
-                amount: 0, // Update to match actual amount
+                amount: 0,
                 proof: None,
             },
         ];
