@@ -3,7 +3,7 @@ use anchor_lang::{declare_program, prelude::Pubkey, solana_program::clock::Epoch
 
 declare_program!(jito_tip_distribution);
 pub use jito_tip_distribution::accounts::TipDistributionAccount;
-
+pub use jito_tip_distribution::accounts::ClaimStatus;
 pub mod instruction;
 
 pub const CONFIG_SEED: &[u8] = b"CONFIG_ACCOUNT";

@@ -2,7 +2,7 @@ use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::{
-    derive_claim_status_account_address, TipDistributionAccount, CLAIM_STATUS_SIZE, CONFIG_SEED,
+    derive_claim_status_account_address, ClaimStatus, TipDistributionAccount, CLAIM_STATUS_SIZE, CONFIG_SEED,
 };
 use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
@@ -598,7 +598,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .collect_vec();
 
     let remaining_validator_claims =
-        get_claim_status_accounts_for_nodes(rpc_client, &validator_tree_nodes).await?;
+    get_unprocessed_claims_for_validators(rpc_client, &validator_tree_nodes).await?;
 
     let validators_processed = remaining_validator_claims.is_empty();
     let tree_nodes = if validators_processed {
@@ -652,26 +652,21 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
 
     let elapsed_us = start.elapsed().as_micros();
 
-    // can be helpful for determining mismatch in state between requested and read
-    datapoint_info!(
-        "tip_router_cli.get_claim_transactions_account_data",
-        ("elapsed_us", elapsed_us, i64),
-        ("tdas", tda_pubkeys.len(), i64),
-        ("tdas_onchain", tdas.len(), i64),
-        ("epoch", epoch, i64),
-        ("operator", operator_address, String),
-        "cluster" => cluster,
-    );
-
     if validators_processed {
+        // can be helpful for determining mismatch in state between requested and read
         datapoint_info!(
             "tip_router_cli.get_claim_transactions_account_data",
+            ("elapsed_us", elapsed_us, i64),
+            ("tdas", tda_pubkeys.len(), i64),
+            ("tdas_onchain", tdas.len(), i64),
+            ("epoch", epoch, i64),
             ("claimants", claimant_pubkeys.len(), i64),
             ("claim_statuses", claim_status_pubkeys.len(), i64),
             ("claimants_onchain", claimants.len(), i64),
             ("claim_statuses_onchain", claim_statuses.len(), i64),
+            ("operator", operator_address, String),
             "cluster" => cluster,
-        )
+        );
     }
 
     let transactions = build_mev_claim_transactions(
@@ -691,7 +686,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     Ok((transactions, validators_processed))
 }
 
-pub async fn get_claim_status_accounts_for_nodes(
+pub async fn get_unprocessed_claims_for_validators(
     rpc_client: &RpcClient,
     tree_nodes: &[&TreeNode],
 ) -> Result<Vec<Account>, ClaimMevError> {
@@ -707,7 +702,16 @@ pub async fn get_claim_status_accounts_for_nodes(
             .filter_map(|(pubkey, a)| Some((pubkey, a?)))
             .collect();
 
-    Ok(claim_statuses.values().cloned().collect())
+    let deserialized_claim_statuses = claim_statuses.values().map(|a| {
+        (ClaimStatus::try_deserialize(&mut a.data.as_slice()).unwrap(), a)
+    });
+
+    let unprocessed_claim_statuses = deserialized_claim_statuses
+    .filter(|(c, _)| !c.is_claimed)
+    .map(|(_, a)| a.clone())
+    .collect();
+
+    Ok(unprocessed_claim_statuses)
 }
 
 /// Returns a list of claim transactions for valid, unclaimed MEV tips

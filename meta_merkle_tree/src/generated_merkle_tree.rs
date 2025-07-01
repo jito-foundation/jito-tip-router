@@ -357,7 +357,7 @@ impl TreeNode {
         // validator_fee_bps
         let validator_amount = mul_div(total_tips, validator_fee_bps as u64, MAX_BPS as u64)?;
 
-        let (_validator_amount, remaining_total_rewards) = validator_amount
+        let (validator_amount, remaining_total_rewards) = validator_amount
             .checked_add(protocol_fee_amount)
             .map_or((validator_amount, None), |total_fees| {
                 if total_fees > total_tips {
