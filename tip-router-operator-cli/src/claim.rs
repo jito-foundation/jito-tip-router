@@ -595,7 +595,8 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     let remaining_validator_claims =
         get_claim_status_accounts_for_nodes(rpc_client, &validator_tree_nodes).await?;
 
-    let tree_nodes = if remaining_validator_claims.is_empty() {
+    let validators_processed = remaining_validator_claims.is_empty();
+    let tree_nodes = if validators_processed {
         all_tree_nodes.to_owned()
     } else {
         validator_tree_nodes.to_owned()
@@ -652,14 +653,21 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         ("elapsed_us", elapsed_us, i64),
         ("tdas", tda_pubkeys.len(), i64),
         ("tdas_onchain", tdas.len(), i64),
-        ("claimants", claimant_pubkeys.len(), i64),
-        ("claimants_onchain", claimants.len(), i64),
-        ("claim_statuses", claim_status_pubkeys.len(), i64),
-        ("claim_statuses_onchain", claim_statuses.len(), i64),
         ("epoch", epoch, i64),
         ("operator", operator_address, String),
         "cluster" => cluster,
     );
+
+    if validators_processed {
+        datapoint_info!(
+            "tip_router_cli.get_claim_transactions_account_data",
+            ("claimants", claimant_pubkeys.len(), i64),
+            ("claim_statuses", claim_status_pubkeys.len(), i64),
+            ("claimants_onchain", claimants.len(), i64),
+            ("claim_statuses_onchain", claim_statuses.len(), i64),
+            "cluster" => cluster,
+        )
+    }
 
     let transactions = build_mev_claim_transactions(
         tip_distribution_program_id,
