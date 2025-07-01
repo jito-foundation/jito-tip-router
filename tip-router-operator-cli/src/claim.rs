@@ -2,7 +2,8 @@ use anchor_lang::AccountDeserialize;
 use itertools::Itertools;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::{
-    derive_claim_status_account_address, ClaimStatus, TipDistributionAccount, CLAIM_STATUS_SIZE, CONFIG_SEED,
+    derive_claim_status_account_address, ClaimStatus, TipDistributionAccount, CLAIM_STATUS_SIZE,
+    CONFIG_SEED,
 };
 use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
@@ -598,7 +599,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .collect_vec();
 
     let remaining_validator_claims =
-    get_unprocessed_claims_for_validators(rpc_client, &validator_tree_nodes).await?;
+        get_unprocessed_claims_for_validators(rpc_client, &validator_tree_nodes).await?;
 
     let validators_processed = remaining_validator_claims.is_empty();
     let tree_nodes = if validators_processed {
@@ -703,13 +704,16 @@ pub async fn get_unprocessed_claims_for_validators(
             .collect();
 
     let deserialized_claim_statuses = claim_statuses.values().map(|a| {
-        (ClaimStatus::try_deserialize(&mut a.data.as_slice()).unwrap(), a)
+        (
+            ClaimStatus::try_deserialize(&mut a.data.as_slice()).unwrap(),
+            a,
+        )
     });
 
     let unprocessed_claim_statuses = deserialized_claim_statuses
-    .filter(|(c, _)| !c.is_claimed)
-    .map(|(_, a)| a.clone())
-    .collect();
+        .filter(|(c, _)| !c.is_claimed)
+        .map(|(_, a)| a.clone())
+        .collect();
 
     Ok(unprocessed_claim_statuses)
 }
