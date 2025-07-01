@@ -105,7 +105,7 @@ pub async fn emit_claim_mev_tips_metrics(
         return Ok(());
     }
 
-    let (_claims_to_process, num_total_unprocessed) = get_claim_transactions_for_valid_unclaimed(
+    let (claims_to_process, validators_processed) = get_claim_transactions_for_valid_unclaimed(
         &rpc_client,
         &merkle_trees,
         tip_distribution_program_id,
@@ -119,14 +119,16 @@ pub async fn emit_claim_mev_tips_metrics(
     )
     .await?;
 
-    datapoint_info!(
-        "tip_router_cli.claim_mev_tips-send_summary",
-        ("claim_transactions_left", num_total_unprocessed, i64),
-        ("epoch", epoch, i64),
-        "cluster" => &cli.cluster,
-    );
+    if validators_processed {
+        datapoint_info!(
+            "tip_router_cli.claim_mev_tips-send_summary",
+            ("claim_transactions_left", claims_to_process.len(), i64),
+            ("epoch", epoch, i64),
+            "cluster" => &cli.cluster,
+        );
+    }
 
-    if num_total_unprocessed == 0 {
+    if validators_processed && claims_to_process.is_empty() {
         add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
     }
 
@@ -424,7 +426,7 @@ pub async fn claim_mev_tips(
 
     let start = Instant::now();
     while start.elapsed() <= max_loop_duration {
-        let (mut claims_to_process, num_total_unprocessed_claims) =
+        let (mut claims_to_process, validators_processed) =
             get_claim_transactions_for_valid_unclaimed(
                 &rpc_client,
                 merkle_trees,
@@ -439,15 +441,17 @@ pub async fn claim_mev_tips(
             )
             .await?;
 
-        datapoint_info!(
-            "tip_router_cli.claim_mev_tips-send_summary",
-            ("claim_transactions_left", num_total_unprocessed_claims, i64),
-            ("epoch", epoch, i64),
-            ("operator", operator_address, String),
-            "cluster" => cluster,
-        );
+        if validators_processed {
+            datapoint_info!(
+                "tip_router_cli.claim_mev_tips-send_summary",
+                ("claim_transactions_left", claims_to_process.len(), i64),
+                ("epoch", epoch, i64),
+                ("operator", operator_address, String),
+                "cluster" => cluster,
+            );
+        }
 
-        if num_total_unprocessed_claims == 0 {
+        if validators_processed && claims_to_process.is_empty() {
             add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
             return Ok(());
         }
@@ -484,7 +488,7 @@ pub async fn claim_mev_tips(
         }
     }
 
-    let (transactions, num_total_unprocessed_claims) = get_claim_transactions_for_valid_unclaimed(
+    let (transactions, validators_processed) = get_claim_transactions_for_valid_unclaimed(
         &rpc_client,
         merkle_trees,
         tip_distribution_program_id,
@@ -497,7 +501,8 @@ pub async fn claim_mev_tips(
         cluster,
     )
     .await?;
-    if num_total_unprocessed_claims == 0 {
+
+    if validators_processed && transactions.is_empty() {
         add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
         return Ok(());
     }
@@ -562,7 +567,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     payer_pubkey: Pubkey,
     operator_address: &String,
     cluster: &str,
-) -> Result<(Vec<Transaction>, usize), ClaimMevError> {
+) -> Result<(Vec<Transaction>, bool), ClaimMevError> {
     let epoch = merkle_trees.epoch;
     let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
 
@@ -683,7 +688,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         cluster,
     );
 
-    Ok((transactions, all_tree_nodes.len()))
+    Ok((transactions, validators_processed))
 }
 
 pub async fn get_claim_status_accounts_for_nodes(
