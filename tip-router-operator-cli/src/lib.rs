@@ -14,6 +14,7 @@ pub mod process_epoch;
 pub mod rpc_utils;
 pub mod solana_cli;
 pub mod submit;
+pub mod tip_distribution_stats;
 
 use std::fs;
 use std::path::{Path, PathBuf};

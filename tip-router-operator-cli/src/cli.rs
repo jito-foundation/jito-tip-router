@@ -285,6 +285,16 @@ pub enum Commands {
         #[arg(long, env, default_value = "true")]
         save: bool,
     },
+    GetTipDistributionStats {
+        #[arg(long, env)]
+        tip_distribution_program_id: Pubkey,
+
+        #[arg(long, env)]
+        priority_fee_distribution_program_id: Pubkey,
+
+        #[arg(long, env)]
+        epoch: u64,
+    },
 }
 
 impl Commands {
@@ -376,6 +386,10 @@ impl Commands {
             },
             Self::CreateMetaMerkleTree { epoch, save } => {
                 legacy_tip_router_operator_cli::Commands::CreateMetaMerkleTree { epoch, save }
+            }
+            Self::GetTipDistributionStats { .. } => {
+                // This command doesn't exist in legacy, so we'll panic
+                panic!("GetTipDistributionStats command not supported in legacy mode")
             }
         }
     }

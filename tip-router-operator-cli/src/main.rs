@@ -17,6 +17,7 @@ use ::{
         load_bank_from_snapshot, meta_merkle_tree_path, process_epoch, read_merkle_tree_collection,
         read_stake_meta_collection,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
+        tip_distribution_stats::get_tip_distribution_stats,
         tip_router::get_ncn_config,
         Version,
     },
@@ -550,6 +551,20 @@ async fn main() -> Result<()> {
                 save,
                 &cli.cluster,
             );
+        }
+        Commands::GetTipDistributionStats {
+            tip_distribution_program_id,
+            priority_fee_distribution_program_id,
+            epoch,
+        } => {
+            info!("Getting tip distribution stats for epoch {}...", epoch);
+            get_tip_distribution_stats(
+                &rpc_client,
+                &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
+                epoch,
+            )
+            .await?;
         }
     }
     Ok(())
