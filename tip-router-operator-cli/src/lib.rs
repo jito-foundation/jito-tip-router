@@ -3,6 +3,7 @@ pub mod ledger_utils;
 pub mod stake_meta_generator;
 pub mod tip_router;
 pub use crate::cli::{Cli, Commands};
+pub mod account_analyzer;
 pub mod arg_matches;
 pub mod backup_snapshots;
 pub mod claim;

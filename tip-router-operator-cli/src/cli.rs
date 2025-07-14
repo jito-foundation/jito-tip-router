@@ -285,10 +285,26 @@ pub enum Commands {
         #[arg(long, env, default_value = "true")]
         save: bool,
     },
+    AnalyzeAccounts {
+        #[arg(long, env)]
+        tip_distribution_program_id: Pubkey,
+
+        #[arg(long, env)]
+        tip_router_program_id: Pubkey,
+
+        #[arg(short, long, env)]
+        ncn_address: Pubkey,
+
+        #[arg(long, env)]
+        epoch: u64,
+
+        #[arg(long, env)]
+        json_data: String,
+    },
 }
 
 impl Commands {
-    pub const fn as_legacy(self) -> legacy_tip_router_operator_cli::Commands {
+    pub fn as_legacy(self) -> legacy_tip_router_operator_cli::Commands {
         match self {
             Self::Run {
                 ncn_address,
@@ -377,6 +393,16 @@ impl Commands {
             Self::CreateMetaMerkleTree { epoch, save } => {
                 legacy_tip_router_operator_cli::Commands::CreateMetaMerkleTree { epoch, save }
             }
+            Self::AnalyzeAccounts {
+                tip_distribution_program_id,
+                tip_router_program_id,
+                ncn_address,
+                epoch,
+                json_data: _,
+            } => legacy_tip_router_operator_cli::Commands::CreateMetaMerkleTree {
+                epoch,
+                save: false,
+            },
         }
     }
 }
