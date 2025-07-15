@@ -747,7 +747,7 @@ impl EpochState {
             .set_epoch_snapshot(AccountStatus::Closed);
     }
 
-    pub fn close_operator_snapshot(&mut self, ncn_operator_index: usize) {
+    pub const fn close_operator_snapshot(&mut self, ncn_operator_index: usize) {
         self.account_status
             .set_operator_snapshot(ncn_operator_index, AccountStatus::Closed);
     }
