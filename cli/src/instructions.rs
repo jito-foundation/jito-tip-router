@@ -936,12 +936,13 @@ pub async fn set_weight_with_st_mint(
     // Crank Switchboard
     let result = crank_switchboard(handler, switchboard_feed).await;
     if let Err(e) = result {
+        let switchboard_feed = format!(
+            "https://ondemand.switchboard.xyz/solana/mainnet/feed/{}",
+            switchboard_feed
+        );
         log::error!(
             "\n\nFailed to crank switchboard - will need manual crank at {}\n\nError:\n{:?}\n",
-            format!(
-                "https://ondemand.switchboard.xyz/solana/mainnet/feed/{}",
-                switchboard_feed
-            ),
+            switchboard_feed,
             e
         );
     }
@@ -2124,9 +2125,7 @@ pub async fn close_epoch_account(
 
     let account_already_closed = get_account(handler, &account_to_close)
         .await?
-        .map_or(true, |account| {
-            account.data.is_empty() || account.lamports == 0
-        });
+        .is_none_or(|account| account.data.is_empty() || account.lamports == 0);
     if account_already_closed {
         info!("Account already closed: {:?}", account_to_close);
         return Ok(());
@@ -2370,7 +2369,7 @@ pub async fn get_or_create_weight_table(handler: &CliHandler, epoch: u64) -> Res
 
     if get_account(handler, &weight_table)
         .await?
-        .map_or(true, |table| table.data.len() < WeightTable::SIZE)
+        .is_none_or(|table| table.data.len() < WeightTable::SIZE)
     {
         create_weight_table(handler, epoch).await?;
         check_created(handler, &weight_table).await?;
@@ -2388,7 +2387,7 @@ pub async fn get_or_create_epoch_snapshot(
 
     if get_account(handler, &epoch_snapshot)
         .await?
-        .map_or(true, |snapshot| snapshot.data.len() < EpochSnapshot::SIZE)
+        .is_none_or(|snapshot| snapshot.data.len() < EpochSnapshot::SIZE)
     {
         create_epoch_snapshot(handler, epoch).await?;
         check_created(handler, &epoch_snapshot).await?;
@@ -2412,9 +2411,7 @@ pub async fn get_or_create_operator_snapshot(
 
     if get_account(handler, &operator_snapshot)
         .await?
-        .map_or(true, |snapshot| {
-            snapshot.data.len() < OperatorSnapshot::SIZE
-        })
+        .is_none_or(|snapshot| snapshot.data.len() < OperatorSnapshot::SIZE)
     {
         create_operator_snapshot(handler, operator, epoch).await?;
         check_created(handler, &operator_snapshot).await?;
@@ -2430,7 +2427,7 @@ pub async fn get_or_create_ballot_box(handler: &CliHandler, epoch: u64) -> Resul
 
     if get_account(handler, &ballot_box)
         .await?
-        .map_or(true, |ballot_box| ballot_box.data.len() < BallotBox::SIZE)
+        .is_none_or(|ballot_box| ballot_box.data.len() < BallotBox::SIZE)
     {
         create_ballot_box(handler, epoch).await?;
         check_created(handler, &ballot_box).await?;
@@ -2448,7 +2445,7 @@ pub async fn get_or_create_base_reward_router(
 
     if get_account(handler, &base_reward_router)
         .await?
-        .map_or(true, |router| router.data.len() < BaseRewardRouter::SIZE)
+        .is_none_or(|router| router.data.len() < BaseRewardRouter::SIZE)
     {
         create_base_reward_router(handler, epoch).await?;
         check_created(handler, &base_reward_router).await?;
@@ -2485,7 +2482,7 @@ pub async fn get_or_create_ncn_reward_router(
 
     if get_account(handler, &ncn_reward_router)
         .await?
-        .map_or(true, |router| router.data.len() < NcnRewardRouter::SIZE)
+        .is_none_or(|router| router.data.len() < NcnRewardRouter::SIZE)
     {
         create_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await?;
         check_created(handler, &ncn_reward_router).await?;
