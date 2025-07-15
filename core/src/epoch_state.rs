@@ -102,7 +102,7 @@ impl EpochAccountStatus {
         )
     }
 
-    pub fn set_epoch_state(&mut self, status: AccountStatus) {
+    pub const fn set_epoch_state(&mut self, status: AccountStatus) {
         self.epoch_state = status as u8;
     }
 
@@ -110,11 +110,11 @@ impl EpochAccountStatus {
         self.weight_table = status as u8;
     }
 
-    pub fn set_epoch_snapshot(&mut self, status: AccountStatus) {
+    pub const fn set_epoch_snapshot(&mut self, status: AccountStatus) {
         self.epoch_snapshot = status as u8;
     }
 
-    pub fn set_operator_snapshot(&mut self, index: usize, status: AccountStatus) {
+    pub const fn set_operator_snapshot(&mut self, index: usize, status: AccountStatus) {
         self.operator_snapshot[index] = status as u8;
     }
 
@@ -122,7 +122,7 @@ impl EpochAccountStatus {
         self.ballot_box = status as u8;
     }
 
-    pub fn set_base_reward_router(&mut self, status: AccountStatus) {
+    pub const fn set_base_reward_router(&mut self, status: AccountStatus) {
         self.base_reward_router = status as u8;
     }
 
