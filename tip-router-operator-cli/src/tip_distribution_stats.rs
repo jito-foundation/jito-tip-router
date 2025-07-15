@@ -184,12 +184,12 @@ async fn process_priority_fee_distribution_account(
 }
 
 fn print_tip_distribution_summary(stats: &[TipDistributionStats], epoch: u64) {
-    println!("\n=== Epoch {} Tip Distribution Statistics ===", epoch);
-    println!(
+    info!("\n=== Epoch {} Tip Distribution Statistics ===", epoch);
+    info!(
         "{:<50} {:<15} {:<10} {:<10}",
         "Account", "Total (SOL)", "Type", "Commission"
     );
-    println!("{:-<85}", "");
+    info!("{:-<85}", "");
 
     let mut total_total = 0u64;
 
@@ -202,7 +202,7 @@ fn print_tip_distribution_summary(stats: &[TipDistributionStats], epoch: u64) {
         };
         let commission_pct = stat.validator_commission_bps as f64 / 100.0;
 
-        println!(
+        info!(
             "{:<50} {:<15.6} {:<10} {:<10.2}",
             format!("{}", stat.account_pubkey),
             total_sol,
@@ -213,10 +213,10 @@ fn print_tip_distribution_summary(stats: &[TipDistributionStats], epoch: u64) {
         total_total += stat.total_lamports;
     }
 
-    println!("{:-<85}", "");
+    info!("{:-<85}", "");
     let total_total_sol = total_total as f64 / 1_000_000_000.0;
 
-    println!(
+    info!(
         "{:<50} {:<15.6} {:<10} {:<10}",
         "TOTAL", total_total_sol, "ALL", ""
     );
