@@ -190,7 +190,7 @@ jobs:
       - name: Install Protobuf Compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libudev-dev
+          sudo apt-get install -y protobuf-compiler libudev-dev llvm-dev clang libclang-dev
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Download MEV Tip Distribution NCN program
         uses: actions/download-artifact@v4
