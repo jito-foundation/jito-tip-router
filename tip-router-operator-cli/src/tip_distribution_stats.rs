@@ -25,10 +25,8 @@ pub async fn get_tip_distribution_stats(
 ) -> Result<()> {
     info!("Fetching tip distribution accounts for epoch {}...", epoch);
 
-    let rpc_client_with_timeout = RpcClient::new_with_timeout(
-        rpc_client.url().to_string(),
-        std::time::Duration::from_secs(1800),
-    );
+    let rpc_client_with_timeout =
+        RpcClient::new_with_timeout(rpc_client.url(), std::time::Duration::from_secs(1800));
 
     let tip_distribution_accounts = get_tip_distribution_accounts_for_epoch(
         &rpc_client_with_timeout,
