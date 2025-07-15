@@ -81,7 +81,7 @@ use jito_vault_core::{
 };
 use log::info;
 use solana_client::rpc_config::RpcSendTransactionConfig;
-
+#[allow(deprecated)]
 use solana_sdk::{
     clock::DEFAULT_SLOTS_PER_EPOCH,
     compute_budget::ComputeBudgetInstruction,

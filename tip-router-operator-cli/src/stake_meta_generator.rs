@@ -159,16 +159,16 @@ pub fn generate_stake_meta_collection(
                     vote_pubkey,
                     None);
 
-                let vote_state = vote_account.vote_state();
+                let vote_state = vote_account.vote_state_view();
                 delegations.sort();
                 Some(StakeMeta {
                     maybe_tip_distribution_meta: maybe_tip_distribution_meta.map(|x| x.0),
                     maybe_priority_fee_distribution_meta: maybe_priority_fee_distribution_meta.map(|x| x.0),
-                    validator_node_pubkey: vote_state.node_pubkey,
+                    validator_node_pubkey: *vote_state.node_pubkey(),
                     validator_vote_account: *vote_pubkey,
                     delegations,
                     total_delegated,
-                    commission: vote_state.commission,
+                    commission: vote_state.commission(),
                 })
             })})
         .collect();

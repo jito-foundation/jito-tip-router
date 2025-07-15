@@ -12,6 +12,7 @@ use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, Tre
 use rand::{prelude::SliceRandom, thread_rng};
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSimulateTransactionConfig};
 use solana_metrics::{datapoint_error, datapoint_info};
+#[allow(deprecated)]
 use solana_sdk::{
     account::Account,
     commitment_config::CommitmentConfig,
