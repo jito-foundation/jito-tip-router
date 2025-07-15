@@ -7,8 +7,6 @@ use jito_tip_distribution_sdk::{
 };
 use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
-use legacy_meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection as LegacyGeneratedMerkleTreeCollection;
-use legacy_tip_router_operator_cli::claim::ClaimMevError as LegacyClaimMevError;
 use log::{info, warn};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, TreeNode};
 use rand::{prelude::SliceRandom, thread_rng};
@@ -152,36 +150,20 @@ pub async fn claim_mev_tips_with_emit(
         .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {:?}", e))?;
     let keypair = Arc::new(keypair);
     let rpc_url = cli.rpc_url.clone();
-    if epoch < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH {
-        legacy_handle_claim_mev_tips(
-            cli,
-            epoch,
-            tip_distribution_program_id,
-            tip_router_program_id,
-            ncn,
-            max_loop_duration,
-            file_path,
-            file_mutex,
-            &keypair,
-            rpc_url,
-        )
-        .await?;
-    } else {
-        handle_claim_mev_tips(
-            cli,
-            epoch,
-            tip_distribution_program_id,
-            priority_fee_distribution_program_id,
-            tip_router_program_id,
-            ncn,
-            max_loop_duration,
-            file_path,
-            file_mutex,
-            &keypair,
-            rpc_url,
-        )
-        .await?;
-    }
+    handle_claim_mev_tips(
+        cli,
+        epoch,
+        tip_distribution_program_id,
+        priority_fee_distribution_program_id,
+        tip_router_program_id,
+        ncn,
+        max_loop_duration,
+        file_path,
+        file_mutex,
+        &keypair,
+        rpc_url,
+    )
+    .await?;
     Ok(())
 }
 
@@ -253,106 +235,6 @@ pub async fn handle_claim_mev_tips(
             );
         }
         Err(ClaimMevError::NotFinished { transactions_left }) => {
-            datapoint_info!(
-                "claim_mev_workflow",
-                ("operator", cli.operator_address, String),
-                ("epoch", epoch, i64),
-                ("transactions_left", transactions_left, i64),
-                ("elapsed_us", start.elapsed().as_micros(), i64),
-                "cluster" => &cli.cluster,
-            );
-        }
-        Err(e) => {
-            datapoint_error!(
-                "claim_mev_workflow",
-                ("operator", cli.operator_address, String),
-                ("epoch", epoch, i64),
-                ("error", e.to_string(), String),
-                ("elapsed_us", start.elapsed().as_micros(), i64),
-                "cluster" => &cli.cluster,
-            );
-        }
-    }
-
-    let claimer_balance = get_claimer_balance(rpc_url, keypair).await?;
-    datapoint_info!(
-        "claimer_info",
-        ("claimer", keypair.pubkey().to_string(), String),
-        ("epoch", epoch, i64),
-        ("lamport_balance", claimer_balance, i64),
-        ("sol_balance", lamports_to_sol(claimer_balance), f64),
-        "cluster" => &cli.cluster,
-    );
-    Ok(())
-}
-
-#[allow(clippy::too_many_arguments)]
-pub async fn legacy_handle_claim_mev_tips(
-    cli: &Cli,
-    epoch: u64,
-    tip_distribution_program_id: Pubkey,
-    tip_router_program_id: Pubkey,
-    ncn: Pubkey,
-    max_loop_duration: Duration,
-    file_path: &PathBuf,
-    file_mutex: &Arc<Mutex<()>>,
-    keypair: &Arc<Keypair>,
-    rpc_url: String,
-) -> Result<(), anyhow::Error> {
-    let meta_merkle_tree_dir = cli.get_save_path().clone();
-    let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
-    let mut merkle_tree_coll =
-        LegacyGeneratedMerkleTreeCollection::new_from_file(&merkle_tree_coll_path)
-            .map_err(|e| anyhow::anyhow!(e))?;
-
-    let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
-
-    // Fix wrong claim status pubkeys for 1 epoch -- noop if already correct
-    for tree in merkle_tree_coll.generated_merkle_trees.iter_mut() {
-        if tree.merkle_root_upload_authority != tip_router_config_address {
-            continue;
-        }
-        for node in tree.tree_nodes.iter_mut() {
-            let (claim_status_pubkey, claim_status_bump) = derive_claim_status_account_address(
-                &tip_distribution_program_id,
-                &node.claimant,
-                &tree.tip_distribution_account,
-            );
-            node.claim_status_pubkey = claim_status_pubkey;
-            node.claim_status_bump = claim_status_bump;
-        }
-    }
-
-    let start = Instant::now();
-
-    match legacy_tip_router_operator_cli::claim::claim_mev_tips(
-        &merkle_tree_coll,
-        rpc_url.clone(),
-        rpc_url.clone(),
-        tip_distribution_program_id,
-        tip_router_program_id,
-        ncn,
-        keypair,
-        max_loop_duration,
-        cli.claim_microlamports,
-        file_path,
-        file_mutex,
-        &cli.operator_address,
-        &cli.cluster,
-    )
-    .await
-    {
-        Ok(()) => {
-            datapoint_info!(
-                "claim_mev_workflow",
-                ("operator", cli.operator_address, String),
-                ("epoch", epoch, i64),
-                ("transactions_left", 0, i64),
-                ("elapsed_us", start.elapsed().as_micros(), i64),
-                "cluster" => &cli.cluster,
-            );
-        }
-        Err(LegacyClaimMevError::NotFinished { transactions_left }) => {
             datapoint_info!(
                 "claim_mev_workflow",
                 ("operator", cli.operator_address, String),
