@@ -18,8 +18,6 @@ use thiserror::Error;
 
 use crate::{merkle_tree::MerkleTree, utils::get_proof};
 
-pub const VOTE_ACCOUNT_CLAIM_CALCULATION_UPDATE_EPOCH: u64 = 815;
-
 pub fn mul_div(a: u64, b: u64, q: u64) -> Result<u64, MerkleRootGeneratorError> {
     (a as u128)
         .checked_mul(b as u128)
