@@ -245,6 +245,9 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
 
     let generated_tree = &merkle_tree_coll.generated_merkle_trees[0];
 
+    println!("Stake Meta Collection: {:?}", stake_meta_collection);
+    println!("Generated Merkle Tree: {:?}", generated_tree);
+
     assert_eq!(
         generated_tree.merkle_root.to_string(),
         "AT9D7XkShDSeWWSDmCXr4RPkFcLYY9tLaSZeKX21NffS"
