@@ -285,6 +285,7 @@ mod tests {
         assert_eq!(u32::from(TipRouterError::IncorrectWeightTableAdmin), 0x2200);
     }
 
+    #[allow(deprecated)]
     #[test]
     fn test_decode_error_type() {
         assert_eq!(
