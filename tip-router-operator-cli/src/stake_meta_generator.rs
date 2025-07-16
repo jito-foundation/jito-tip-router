@@ -267,6 +267,7 @@ mod tests {
     use solana_runtime::genesis_utils::{
         create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
     };
+    #[allow(deprecated)]
     use solana_sdk::{
         self,
         account::{from_account, AccountSharedData},
