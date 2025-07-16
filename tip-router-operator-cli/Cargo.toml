@@ -22,8 +22,6 @@ jito-tip-payment-sdk = { workspace = true }
 jito-tip-router-client = { workspace = true }
 jito-tip-router-core = { workspace = true }
 jito-tip-router-program = { workspace = true }
-legacy-meta-merkle-tree = { package = "legacy-meta-merkle-tree", path = "./repo-at-older-commit/meta_merkle_tree" }
-legacy-tip-router-operator-cli = { package = "legacy-tip-router-operator-cli", path = "./repo-at-older-commit/tip-router-operator-cli" }
 log = { workspace = true }
 meta-merkle-tree = { workspace = true }
 rand = { workspace = true }

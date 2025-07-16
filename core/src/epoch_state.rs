@@ -102,27 +102,27 @@ impl EpochAccountStatus {
         )
     }
 
-    pub fn set_epoch_state(&mut self, status: AccountStatus) {
+    pub const fn set_epoch_state(&mut self, status: AccountStatus) {
         self.epoch_state = status as u8;
     }
 
-    pub fn set_weight_table(&mut self, status: AccountStatus) {
+    pub const fn set_weight_table(&mut self, status: AccountStatus) {
         self.weight_table = status as u8;
     }
 
-    pub fn set_epoch_snapshot(&mut self, status: AccountStatus) {
+    pub const fn set_epoch_snapshot(&mut self, status: AccountStatus) {
         self.epoch_snapshot = status as u8;
     }
 
-    pub fn set_operator_snapshot(&mut self, index: usize, status: AccountStatus) {
+    pub const fn set_operator_snapshot(&mut self, index: usize, status: AccountStatus) {
         self.operator_snapshot[index] = status as u8;
     }
 
-    pub fn set_ballot_box(&mut self, status: AccountStatus) {
+    pub const fn set_ballot_box(&mut self, status: AccountStatus) {
         self.ballot_box = status as u8;
     }
 
-    pub fn set_base_reward_router(&mut self, status: AccountStatus) {
+    pub const fn set_base_reward_router(&mut self, status: AccountStatus) {
         self.base_reward_router = status as u8;
     }
 
@@ -563,7 +563,7 @@ impl EpochState {
     }
 
     // ------------ UPDATERS ------------
-    pub fn update_realloc_epoch_state(&mut self) {
+    pub const fn update_realloc_epoch_state(&mut self) {
         self.account_status.set_epoch_state(AccountStatus::Created);
     }
 
@@ -734,29 +734,29 @@ impl EpochState {
         self.is_closing = PodBool::from(true);
     }
 
-    pub fn close_epoch_state(&mut self) {
+    pub const fn close_epoch_state(&mut self) {
         self.account_status.set_epoch_state(AccountStatus::Closed);
     }
 
-    pub fn close_weight_table(&mut self) {
+    pub const fn close_weight_table(&mut self) {
         self.account_status.set_weight_table(AccountStatus::Closed);
     }
 
-    pub fn close_epoch_snapshot(&mut self) {
+    pub const fn close_epoch_snapshot(&mut self) {
         self.account_status
             .set_epoch_snapshot(AccountStatus::Closed);
     }
 
-    pub fn close_operator_snapshot(&mut self, ncn_operator_index: usize) {
+    pub const fn close_operator_snapshot(&mut self, ncn_operator_index: usize) {
         self.account_status
             .set_operator_snapshot(ncn_operator_index, AccountStatus::Closed);
     }
 
-    pub fn close_ballot_box(&mut self) {
+    pub const fn close_ballot_box(&mut self) {
         self.account_status.set_ballot_box(AccountStatus::Closed);
     }
 
-    pub fn close_base_reward_router(&mut self) {
+    pub const fn close_base_reward_router(&mut self) {
         self.account_status
             .set_base_reward_router(AccountStatus::Closed);
     }

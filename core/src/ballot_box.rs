@@ -410,7 +410,7 @@ impl BallotBox {
         &self.operator_votes
     }
 
-    pub fn set_winning_ballot(&mut self, ballot: &Ballot) {
+    pub const fn set_winning_ballot(&mut self, ballot: &Ballot) {
         self.winning_ballot = *ballot;
     }
 

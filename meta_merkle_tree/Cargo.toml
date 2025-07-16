@@ -24,7 +24,6 @@ jito-tip-distribution-sdk = { workspace = true }
 jito-tip-payment-sdk = { workspace = true }
 jito-vault-core = { workspace = true }
 jito-vault-sdk = { workspace = true }
-legacy-meta-merkle-tree = { package = "legacy-meta-merkle-tree", path = "../tip-router-operator-cli/repo-at-older-commit/meta_merkle_tree" }
 log = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
