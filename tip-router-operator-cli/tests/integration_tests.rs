@@ -248,10 +248,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
     println!("Stake Meta Collection: {:?}", stake_meta_collection);
     println!("Generated Merkle Tree: {:?}", generated_tree);
 
-    assert_eq!(
-        generated_tree.merkle_root.to_string(),
-        "AT9D7XkShDSeWWSDmCXr4RPkFcLYY9tLaSZeKX21NffS"
-    );
+
 
     let nodes = &generated_tree.tree_nodes;
 
@@ -264,6 +261,13 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         ],
         &TIP_ROUTER_ID,
     );
+
+    println!("Protocol fee recipient: {:?}", protocol_fee_recipient);
+    println!("Protocol fee amount: {:?}", protocol_fee_amount);
+    println!("Validator fee amount: {:?}", validator_fee_amount);
+    println!("NCN address: {:?}", ncn_address);
+    println!("Epoch + 1: {:?}", epoch + 1);
+    println!("TIP_ROUTER_ID: {:?}", TIP_ROUTER_ID);
 
     let protocol_fee_node = nodes
         .iter()
@@ -308,5 +312,9 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         assert!(node.proof.is_some(), "Node should have a proof");
     }
 
+    assert_eq!(
+        generated_tree.merkle_root.to_string(),
+        "AT9D7XkShDSeWWSDmCXr4RPkFcLYY9tLaSZeKX21NffS"
+    );
     Ok(())
 }
