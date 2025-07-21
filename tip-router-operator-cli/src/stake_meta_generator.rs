@@ -794,7 +794,11 @@ mod tests {
         vote_account: &Pubkey,
         delegation_amount: u64,
     ) -> Pubkey {
-        let minimum_delegation = solana_stake_program::get_minimum_delegation(false);
+        let minimum_delegation = solana_stake_program::get_minimum_delegation(
+            bank.feature_set
+                .runtime_features()
+                .stake_raise_minimum_delegation_to_1_sol,
+        );
         assert!(
             delegation_amount >= minimum_delegation,
             "{}",
