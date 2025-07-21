@@ -19,6 +19,7 @@ use solana_sdk::{
     system_instruction,
     transaction::Transaction,
 };
+use std::str::FromStr;
 use tempfile::TempDir;
 use tip_router_operator_cli::TipAccountConfig;
 
@@ -192,7 +193,10 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
     const PROTOCOL_FEE_BPS: u64 = 300;
     const VALIDATOR_FEE_BPS: u16 = 1000;
     const TOTAL_TIPS: u64 = 1_000_000;
-    let ncn_address = Pubkey::new_unique();
+    // This used to be Pubkey::new_unique(), however, since upgrading to solana-pubkey 2.4.0,
+    // the output of new_unique() has changed. This is a hardcoded address used to continue
+    // to prove that the merkle root has remained the same.
+    let ncn_address = Pubkey::from_str("1111111QLbz7JHiBTspS962RLKV8GndWFwiEaqKM").unwrap();
     let epoch = 9999u64;
 
     let mut test_context = TestContext::new()
@@ -245,10 +249,10 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
 
     let generated_tree = &merkle_tree_coll.generated_merkle_trees[0];
 
-    println!("Stake Meta Collection: {:?}", stake_meta_collection);
-    println!("Generated Merkle Tree: {:?}", generated_tree);
-
-
+    assert_eq!(
+        generated_tree.merkle_root.to_string(),
+        "AT9D7XkShDSeWWSDmCXr4RPkFcLYY9tLaSZeKX21NffS"
+    );
 
     let nodes = &generated_tree.tree_nodes;
 
@@ -261,13 +265,6 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         ],
         &TIP_ROUTER_ID,
     );
-
-    println!("Protocol fee recipient: {:?}", protocol_fee_recipient);
-    println!("Protocol fee amount: {:?}", protocol_fee_amount);
-    println!("Validator fee amount: {:?}", validator_fee_amount);
-    println!("NCN address: {:?}", ncn_address);
-    println!("Epoch + 1: {:?}", epoch + 1);
-    println!("TIP_ROUTER_ID: {:?}", TIP_ROUTER_ID);
 
     let protocol_fee_node = nodes
         .iter()
@@ -312,9 +309,5 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         assert!(node.proof.is_some(), "Node should have a proof");
     }
 
-    assert_eq!(
-        generated_tree.merkle_root.to_string(),
-        "AT9D7XkShDSeWWSDmCXr4RPkFcLYY9tLaSZeKX21NffS"
-    );
     Ok(())
 }
