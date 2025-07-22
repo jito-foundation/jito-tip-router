@@ -145,7 +145,6 @@ pub fn load_and_process_ledger(
     // Here we configure the SnapshotConfig. It uses the directories the operator has passed in to
     // find the best full and incremental snapshot files to use for a desired slot. TipRouter
     // operators Directories often use different directories than their RPC node's.
-    // TODO: There are upstream changes in v2.3.X that require dependencies upgrades
     let mut starting_slot = 0; // default start check with genesis
     let snapshot_config = {
         let full_snapshot_archives_dir =
@@ -289,7 +288,6 @@ pub fn load_and_process_ledger(
 
     let enable_rpc_transaction_history = arg_matches.is_present("enable_rpc_transaction_history");
 
-    // TODO: There are some upstream changes on master (v2.3.X) here
     let (transaction_status_sender, transaction_status_service) =
         if geyser_plugin_active || enable_rpc_transaction_history {
             // Need Primary (R/W) access to insert transaction and rewards data;
