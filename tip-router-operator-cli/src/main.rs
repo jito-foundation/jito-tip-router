@@ -49,7 +49,8 @@ async fn main() -> Result<()> {
     // Ensure backup directory and
     cli.force_different_backup_snapshot_dir();
 
-    let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
+    let keypair =
+        Arc::new(read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"));
     let rpc_client = Arc::new(RpcClient::new(cli.rpc_url.clone()));
 
     datapoint_info!(
@@ -128,6 +129,7 @@ async fn main() -> Result<()> {
             let full_snapshots_path = cli.full_snapshots_path.clone().unwrap();
             let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
             let rpc_url = cli.rpc_url.clone();
+            let rpc_url_for_close_accounts = cli.rpc_url.clone();
             let claim_tips_epoch_filepath = cli.claim_tips_epoch_filepath.clone();
             let cli_clone: Cli = cli.clone();
 
@@ -146,7 +148,7 @@ async fn main() -> Result<()> {
                 cli.rpc_url.to_owned(),
                 cli.localhost_port,
             );
-            if let Err(ref e) = &try_catchup {
+            /*if let Err(ref e) = &try_catchup {
                 datapoint_error!(
                     "tip_router_cli.main",
                     ("operator_address", cli.operator_address, String),
@@ -156,7 +158,7 @@ async fn main() -> Result<()> {
                     "cluster" => &cli.cluster,
                 );
                 error!("Failed to catch up: {}", e);
-            }
+            }*/
 
             if let Ok(command_output) = &try_catchup {
                 info!("{}", command_output);
@@ -173,9 +175,9 @@ async fn main() -> Result<()> {
                 }
             });
 
+            let keypair_arc = Arc::clone(&keypair);
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
-                let keypair_arc = Arc::new(keypair);
                 loop {
                     if let Err(e) = submit_recent_epochs_to_ncn(
                         &rpc_client_clone,
@@ -196,13 +198,13 @@ async fn main() -> Result<()> {
                 }
             });
 
-            let cli_clone: Cli = cli.clone();
+            let save_path = cli.clone().get_save_path();
+
             // Track incremental snapshots and backup to `backup_snapshots_dir`
             tokio::spawn(async move {
-                let save_path = cli_clone.get_save_path();
                 loop {
                     if let Err(e) = BackupSnapshotMonitor::new(
-                        &rpc_url,
+                        rpc_url.clone().as_str(),
                         full_snapshots_path.clone(),
                         backup_snapshots_dir.clone(),
                         override_target_slot,
@@ -393,7 +395,29 @@ async fn main() -> Result<()> {
                 });
             }
 
-            // Endless loop that transitions between stages of the operator process.
+            #[cfg(feature = "close-expired-accounts")]
+            {
+                tokio::spawn(async move {
+                    loop {
+                        info!("Checking for expired accounts to close...");
+                        if let Err(e) = process_epoch::close_expired_accounts(
+                            &rpc_url_for_close_accounts,
+                            tip_distribution_program_id,
+                            priority_fee_distribution_program_id,
+                            Arc::clone(&keypair),
+                            Duration::from_secs(3600),
+                            true, // should_reclaim_tdas
+                            100000,
+                            num_monitored_epochs,
+                        )
+                        .await
+                        {
+                            error!("Error closing expired accounts: {}", e);
+                        }
+                        sleep(Duration::from_secs(3600 * 6)).await;
+                    }
+                });
+            } // Endless loop that transitions between stages of the operator process.
             process_epoch::loop_stages(
                 rpc_client,
                 cli,
@@ -432,7 +456,7 @@ async fn main() -> Result<()> {
             let operator_address = Pubkey::from_str(&cli.operator_address)?;
             submit_to_ncn(
                 &rpc_client,
-                &keypair,
+                &keypair.clone(),
                 &operator_address,
                 &meta_merkle_tree_path,
                 epoch,
