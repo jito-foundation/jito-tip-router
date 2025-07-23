@@ -149,7 +149,7 @@ async fn main() -> Result<()> {
                 cli.rpc_url.to_owned(),
                 cli.localhost_port,
             );
-            /*if let Err(ref e) = &try_catchup {
+            if let Err(ref e) = &try_catchup {
                 datapoint_error!(
                     "tip_router_cli.main",
                     ("operator_address", cli.operator_address, String),
@@ -159,7 +159,7 @@ async fn main() -> Result<()> {
                     "cluster" => &cli.cluster,
                 );
                 error!("Failed to catch up: {}", e);
-            }*/
+            }
 
             if let Ok(command_output) = &try_catchup {
                 info!("{}", command_output);

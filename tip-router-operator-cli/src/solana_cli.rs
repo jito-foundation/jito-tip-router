@@ -5,7 +5,6 @@ use solana_sdk::commitment_config::CommitmentConfig;
 use std::{thread::sleep, time::Duration};
 
 pub fn catchup(rpc_url: String, our_localhost_port: u16) -> Result<String> {
-    return Ok("".to_string());
     let rpc_client = RpcClient::new(rpc_url);
     let config = CommitmentConfig::default();
     let node_json_rpc_url = format!("http://localhost:{our_localhost_port}");

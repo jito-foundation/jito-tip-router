@@ -24,7 +24,7 @@ use solana_client::{
 use solana_sdk::signature::Signer;
 
 use crate::{rpc_utils, tx_utils::pack_transactions};
-use solana_metrics::{datapoint_error, datapoint_info};
+use solana_metrics::datapoint_info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig, pubkey::Pubkey, signature::Keypair,
@@ -48,15 +48,14 @@ pub async fn close_expired_accounts(
     signer: Arc<Keypair>,
     num_monitored_epochs: u64,
 ) -> Result<()> {
-    let should_reclaim_tdas = false;
     let epochs_to_process = {
         // Use default timeout and commitment config for fetching the current epoch
         let rpc_client = rpc_utils::new_rpc_client(rpc_url);
         let current_epoch = rpc_client.get_epoch_info().await?.epoch;
-        ((current_epoch - num_monitored_epochs)..current_epoch)
+        (current_epoch - num_monitored_epochs)..current_epoch
     };
     for epoch in epochs_to_process {
-        let rpc_client = rpc_utils::new_high_timeout_rpc_client(rpc_url.clone());
+        let rpc_client = rpc_utils::new_high_timeout_rpc_client(rpc_url);
         info!("Fetching TipDistribution and PriorityFeeDistribution Claim Statuses expiring in epoch {}", epoch);
         let start = Instant::now();
         let (tip_distribution_claim_accounts, priority_fee_distribution_claim_accounts) =
@@ -85,7 +84,7 @@ pub async fn close_expired_accounts(
             ("duration", duration.as_secs(), i64),
         );
 
-        let rpc_client = rpc_utils::new_high_timeout_rpc_client(rpc_url.clone());
+        let rpc_client = rpc_utils::new_high_timeout_rpc_client(rpc_url);
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(Duration::from_secs(300)).await;
@@ -138,7 +137,7 @@ pub async fn close_expired_accounts(
         .concat();
 
         info!("Processing {} close claim transactions", transactions.len());
-        let rpc_client = rpc_utils::new_rpc_client(rpc_url.clone());
+        let rpc_client = rpc_utils::new_rpc_client(rpc_url);
         for batch in transactions.chunks_mut(5000) {
             let start = Instant::now();
             let mut blockhash = rpc_client.get_latest_blockhash().await?;
