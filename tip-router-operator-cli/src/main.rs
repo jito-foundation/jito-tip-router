@@ -250,7 +250,6 @@ async fn main() -> Result<()> {
 
                             info!("Emitting Claim Metrics for epoch {}", epoch_to_emit);
                             let cli_ref = cli_clone.clone();
-                            if epoch_to_emit >= legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH {
                             match emit_claim_mev_tips_metrics(
                                 &cli_ref,
                                 epoch_to_emit,
@@ -276,35 +275,10 @@ async fn main() -> Result<()> {
                                     );
                                 }
                             }
-                            } else {
-                                match legacy_tip_router_operator_cli::claim::emit_claim_mev_tips_metrics(
-                                    &cli_ref.as_legacy(),
-                                    epoch_to_emit,
-                                    tip_distribution_program_id,
-                                    tip_router_program_id,
-                                    ncn_address,
-                                    &file_path_ref,
-                                    &file_mutex_ref,
-                                ).await
-                                {
-                                    Ok(_) => {
-                                        info!(
-                                            "Successfully emitted claim metrics for epoch {}",
-                                            epoch_to_emit
-                                        );
-                                    }
-                                    Err(e) => {
-                                        error!(
-                                            "Error emitting claim metrics for epoch {}: {}",
-                                            epoch_to_emit, e
-                                        );
-                                    }
-                                }
-                            }
-                        }
 
-                        info!("Sleeping for 30 minutes before next emit claim cycle");
-                        sleep(Duration::from_secs(1800)).await;
+                            info!("Sleeping for 30 minutes before next emit claim cycle");
+                            sleep(Duration::from_secs(1800)).await;
+                        }
                     }
                 });
             }
