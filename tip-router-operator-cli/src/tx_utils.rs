@@ -1,6 +1,8 @@
 use solana_sdk::{instruction::Instruction, pubkey::Pubkey, transaction::Transaction};
 
-// Vector of transactions, each containing as many instructions as possible while staying under the size limit
+#[allow(clippy::integer_division)]
+#[allow(clippy::arithmetic_side_effects)]
+#[allow(clippy::manual_div_ceil)]
 pub fn pack_transactions(
     instructions: Vec<Instruction>,
     payer: Pubkey,
@@ -16,7 +18,6 @@ pub fn pack_transactions(
         let temp_transaction = Transaction::new_with_payer(&temp_instructions, Some(&payer));
         let transaction_size = temp_transaction.message.serialize().len();
 
-        #[allow(clippy::manual_div_ceil)]
         let estimated_base64_size = (transaction_size * 4 + 2) / 3; // Ceiling division for base64
 
         if estimated_base64_size > max_transaction_size {
