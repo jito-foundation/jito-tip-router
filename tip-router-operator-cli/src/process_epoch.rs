@@ -5,27 +5,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use anchor_lang::{AccountDeserialize, Discriminator};
-use anyhow::Result;
-use jito_tip_distribution_sdk::{
-    jito_tip_distribution::accounts::ClaimStatus, TipDistributionAccount,
-};
-use log::{error, info};
-use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
-use solana_account_decoder::UiAccountEncoding;
-use solana_metrics::{datapoint_error, datapoint_info};
-use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_runtime::bank::Bank;
-use solana_sdk::{
-    account::Account,
-    commitment_config::CommitmentConfig,
-    epoch_info::EpochInfo,
-    pubkey::Pubkey,
-    signature::{read_keypair_file, Keypair},
-};
-use tokio::time;
-use solana_client::{rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig}, rpc_filter::{Memcmp, RpcFilterType}};
-use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use crate::{
     backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
     create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
@@ -33,175 +12,17 @@ use crate::{
     read_stake_meta_collection, submit::submit_to_ncn, tip_router::get_ncn_config, Cli,
     OperatorState, Version,
 };
+use anyhow::Result;
+use log::{error, info};
+use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
+use solana_metrics::{datapoint_error, datapoint_info};
+use solana_rpc_client::nonblocking::rpc_client::RpcClient;
+use solana_runtime::bank::Bank;
+use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::read_keypair_file};
+use tokio::time;
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
 const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined
-
-pub async fn fetch_reclaimable_accounts(rpc_client: &RpcClient, tip_distribution_program_id: Pubkey, priority_fee_distribution_program_id: Pubkey) -> Result<(Vec<(Pubkey, Account)>, Vec<(Pubkey, Account)>)> {
-    let tda_filter = vec![
-        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-            0,
-            TipDistributionAccount::DISCRIMINATOR.to_vec(),
-        )),
-    ];
-    let tda_accounts = rpc_client
-        .get_program_accounts_with_config(
-            &tip_distribution_program_id,
-            RpcProgramAccountsConfig {
-                filters: Some(tda_filter),
-                account_config: RpcAccountInfoConfig {
-                    encoding: Some(UiAccountEncoding::Base64),
-                    ..RpcAccountInfoConfig::default()
-                },
-                ..RpcProgramAccountsConfig::default()
-            },
-        );
-
-    let pfda_filter = vec![
-        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-            0,
-            PriorityFeeDistributionAccount::DISCRIMINATOR.to_vec(),
-        )),
-    ];
-    let pfda_accounts = rpc_client.get_program_accounts_with_config(
-        &priority_fee_distribution_program_id,
-        RpcProgramAccountsConfig {
-            filters: Some(pfda_filter),
-            account_config: RpcAccountInfoConfig {
-                encoding: Some(UiAccountEncoding::Base64),
-                ..RpcAccountInfoConfig::default()
-            },
-            ..RpcProgramAccountsConfig::default()
-        },
-    );
-
-    let (tda_accounts, pfda_accounts) = tokio::join!(tda_accounts, pfda_accounts);
-
-    Ok((tda_accounts?, pfda_accounts?))
-}
-
-async fn fetch_reclaimable_claims(rpc_client: &RpcClient, tip_distribution_program_id: Pubkey, priority_fee_distribution_program_id: Pubkey, num_monitored_epochs: u64) -> Result<(Vec<(Pubkey, Account)>, Vec<(Pubkey, Account)>)> {
-    let epochs_to_fetch = (815..816);
-    let tip_distribution_claim_filters = epochs_to_fetch.clone().flat_map(|epoch: u64| {
-        vec![
-        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-                0 ,
-                jito_tip_distribution_sdk::jito_tip_distribution::accounts::ClaimStatus::DISCRIMINATOR.to_vec(),
-            )),
-            RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-                105,
-                (epoch).to_le_bytes().to_vec(),
-            )),
-        ]
-    }).collect();
-
-    let tip_distribution_claim_accounts = rpc_client.get_program_accounts_with_config(
-        &tip_distribution_program_id,
-        RpcProgramAccountsConfig {
-            filters: Some(tip_distribution_claim_filters),
-            account_config: RpcAccountInfoConfig {
-                encoding: Some(UiAccountEncoding::Base64),
-                ..RpcAccountInfoConfig::default()
-            },
-            ..RpcProgramAccountsConfig::default()
-        },
-    );
-
-    let priority_fee_distribution_claim_filters = epochs_to_fetch.clone().flat_map(|epoch: u64| {
-        vec![
-        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-            0,
-            jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::accounts::ClaimStatus::DISCRIMINATOR.to_vec(),
-        )),
-        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-            40,
-            (epoch+10).to_le_bytes().to_vec(),
-        )),
-        ]
-    }).collect();
-    let priority_fee_distribution_claim_accounts = rpc_client.get_program_accounts_with_config(
-        &priority_fee_distribution_program_id,
-        RpcProgramAccountsConfig {
-            filters: Some(priority_fee_distribution_claim_filters),
-            account_config: RpcAccountInfoConfig {
-                encoding: Some(UiAccountEncoding::Base64),
-                ..RpcAccountInfoConfig::default()
-            },
-            ..RpcProgramAccountsConfig::default()
-        },
-    );
-
-    let (tip_distribution_claim_accounts, priority_fee_distribution_claim_accounts) = tokio::join!(tip_distribution_claim_accounts, priority_fee_distribution_claim_accounts);
-
-    Ok((tip_distribution_claim_accounts?, priority_fee_distribution_claim_accounts?))
-}
-
-#[cfg(feature = "close-expired-accounts")]
-pub async fn close_expired_accounts(
-    rpc_url: &str,
-    tip_distribution_program_id: Pubkey,
-    priority_fee_distribution_program_id: Pubkey,
-    signer: Arc<Keypair>,
-    max_loop_duration: Duration,
-    // Optionally reclaim TipDistributionAccount rents on behalf of validators.
-    should_reclaim_tdas: bool,
-    micro_lamports: u64,
-    num_monitored_epochs: u64,
-) -> Result<()> {
-    let rpc_client = RpcClient::new_with_timeout_and_commitment(
-        rpc_url.to_string(),
-        Duration::from_secs(1800),
-        CommitmentConfig::processed(),
-    );
-    /*info!("Fetching TipDistributionAccounts and PriorityFeeDistributionAccounts");
-    let start = Instant::now();
-    let (tda_accounts, pfda_accounts) = fetch_reclaimable_accounts(&rpc_client, tip_distribution_program_id, priority_fee_distribution_program_id).await?;
-    let duration = start.elapsed();
-    info!("Found {} TipDistributionAccounts and {} PriorityFeeDistributionAccounts in {:?}", tda_accounts.len(), pfda_accounts.len(), duration);
-
-    let current_epoch = rpc_client.get_epoch_info().await?.epoch;
-    let expired_tda_accounts = find_expired_tda_accounts(&tda_accounts, current_epoch);
-    info!("Found {} expired TipDistributionAccounts", expired_tda_accounts.len());
-
-    let expired_pfda_accounts = find_expired_pfda_accounts(&pfda_accounts, current_epoch);
-    info!("Found {} expired PriorityFeeDistributionAccounts", expired_pfda_accounts.len());*/
-    
-    info!("Fetching TipDistribution and PriorityFeeDistribution Claim Statuses");
-    let start = Instant::now();
-    let (tip_distribution_claim_accounts, priority_fee_distribution_claim_accounts) = fetch_reclaimable_claims(&rpc_client, tip_distribution_program_id, priority_fee_distribution_program_id, num_monitored_epochs).await?;
-    let duration = start.elapsed();
-    info!("Found {} TipDistribution Claim Statuses and {} PriorityFeeDistribution Claim Statuses in {:?}", tip_distribution_claim_accounts.len(), priority_fee_distribution_claim_accounts.len(), duration);
-
-    Ok(())
-}
-
-fn find_expired_tda_accounts(accounts: &[(Pubkey, Account)], epoch: u64) -> Vec<Pubkey> {
-    info!("Filtering expired TipDistributionAccounts");
-    let mut expired_accounts = vec![];
-    for (pubkey,  account) in accounts {
-        let tip_distribution_account = TipDistributionAccount::try_deserialize(&mut account.data.as_slice());
-        if let Ok(tip_distribution_account) = tip_distribution_account {
-            if tip_distribution_account.expires_at < epoch {
-                expired_accounts.push(*pubkey);
-            }
-        }
-    }
-    expired_accounts
-}
-
-fn find_expired_pfda_accounts(accounts: &[(Pubkey, Account)], epoch: u64) -> Vec<Pubkey> {
-    info!("Filtering expired PriorityFeeDistributionAccounts");
-    let mut expired_accounts = vec![];
-    for (pubkey, account) in accounts {
-        let priority_fee_distribution_account = PriorityFeeDistributionAccount::try_deserialize(&mut account.data.as_slice());
-        if let Ok(priority_fee_distribution_account) = priority_fee_distribution_account {
-            if priority_fee_distribution_account.expires_at < epoch {
-                expired_accounts.push(*pubkey);
-            }
-        }
-    }
-    expired_accounts
-}
 
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> EpochInfo {
     loop {

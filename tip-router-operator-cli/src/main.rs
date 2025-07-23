@@ -15,7 +15,7 @@ use ::{
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_snapshot_at_slot,
         load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_path,
-        process_epoch, read_merkle_tree_collection, read_stake_meta_collection,
+        process_epoch, read_merkle_tree_collection, read_stake_meta_collection, reclaim,
         stake_meta_file_name,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         tip_router::get_ncn_config,
@@ -395,26 +395,22 @@ async fn main() -> Result<()> {
                 });
             }
 
-            #[cfg(feature = "close-expired-accounts")]
             {
                 tokio::spawn(async move {
                     loop {
                         info!("Checking for expired accounts to close...");
-                        if let Err(e) = process_epoch::close_expired_accounts(
+                        if let Err(e) = reclaim::close_expired_accounts(
                             &rpc_url_for_close_accounts,
                             tip_distribution_program_id,
                             priority_fee_distribution_program_id,
                             Arc::clone(&keypair),
-                            Duration::from_secs(3600),
-                            true, // should_reclaim_tdas
-                            100000,
                             num_monitored_epochs,
                         )
                         .await
                         {
                             error!("Error closing expired accounts: {}", e);
                         }
-                        sleep(Duration::from_secs(3600 * 6)).await;
+                        sleep(Duration::from_secs(1800)).await;
                     }
                 });
             } // Endless loop that transitions between stages of the operator process.

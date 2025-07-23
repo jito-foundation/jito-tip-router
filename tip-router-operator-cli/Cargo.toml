@@ -4,9 +4,6 @@ version = "2.1.0"
 edition = "2021"
 description = "CLI for Jito Tip Router"
 
-[features]
-close-expired-accounts = []
-
 [dependencies]
 anchor-lang = { workspace = true }
 anyhow = { workspace = true }
