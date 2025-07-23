@@ -195,6 +195,9 @@ pub enum Commands {
         #[arg(long, env, default_value = "true")]
         save_stages: bool,
 
+        #[arg(long, env, default_value = "false")]
+        reclaim_expired_accounts: bool,
+
         #[arg(
             long,
             env,
@@ -305,6 +308,7 @@ impl Commands {
                 starting_stage,
                 save_stages,
                 save_snapshot,
+                reclaim_expired_accounts: _,
             } => legacy_tip_router_operator_cli::Commands::Run {
                 ncn_address,
                 tip_distribution_program_id,

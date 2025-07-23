@@ -105,6 +105,7 @@ async fn main() -> Result<()> {
             claim_tips,
             claim_tips_metrics,
             claim_tips_epoch_lookback,
+            reclaim_expired_accounts,
         } => {
             assert!(
                 num_monitored_epochs > 0,
@@ -395,7 +396,7 @@ async fn main() -> Result<()> {
                 });
             }
 
-            {
+            if reclaim_expired_accounts {
                 tokio::spawn(async move {
                     loop {
                         info!("Checking for expired accounts to close...");

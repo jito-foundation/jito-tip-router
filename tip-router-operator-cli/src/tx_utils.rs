@@ -1,4 +1,3 @@
-use solana_client::rpc_client::RpcClient;
 use solana_sdk::{instruction::Instruction, pubkey::Pubkey, transaction::Transaction};
 
 // Vector of transactions, each containing as many instructions as possible while staying under the size limit
