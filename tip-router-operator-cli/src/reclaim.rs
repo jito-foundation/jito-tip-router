@@ -262,11 +262,10 @@ pub async fn fetch_expired_distribution_accounts(
         .flat_map(|(pubkey, account)| {
             let tip_distribution_account =
                 TipDistributionAccount::try_deserialize(&mut account.data.as_slice());
-            if let Ok(tip_distribution_account) = tip_distribution_account {
-                vec![(*pubkey, tip_distribution_account)]
-            } else {
-                vec![]
-            }
+            tip_distribution_account.map_or_else(
+                |_| vec![],
+                |tip_distribution_account| vec![(*pubkey, tip_distribution_account)],
+            )
         })
         .collect();
     let pfda_accounts = pfda_accounts?
@@ -274,11 +273,12 @@ pub async fn fetch_expired_distribution_accounts(
         .flat_map(|(pubkey, account)| {
             let priority_fee_distribution_account =
                 PriorityFeeDistributionAccount::try_deserialize(&mut account.data.as_slice());
-            if let Ok(priority_fee_distribution_account) = priority_fee_distribution_account {
-                vec![(*pubkey, priority_fee_distribution_account)]
-            } else {
-                vec![]
-            }
+            priority_fee_distribution_account.map_or_else(
+                |_| vec![],
+                |priority_fee_distribution_account| {
+                    vec![(*pubkey, priority_fee_distribution_account)]
+                },
+            )
         })
         .collect();
     Ok((tda_accounts, pfda_accounts))
@@ -349,11 +349,10 @@ async fn fetch_expired_claim_statuses(
         .flat_map(|(pubkey, account)| {
             let tip_distribution_claim_status =
                 TipDistributionClaimStatus::try_deserialize(&mut account.data.as_slice());
-            if let Ok(tip_distribution_claim_status) = tip_distribution_claim_status {
-                vec![(*pubkey, tip_distribution_claim_status)]
-            } else {
-                vec![]
-            }
+            tip_distribution_claim_status.map_or_else(
+                |_| vec![],
+                |tip_distribution_claim_status| vec![(*pubkey, tip_distribution_claim_status)],
+            )
         })
         .collect();
 
@@ -362,13 +361,12 @@ async fn fetch_expired_claim_statuses(
         .flat_map(|(pubkey, account)| {
             let priority_fee_distribution_claim_status =
                 PriorityFeeDistributionClaimStatus::try_deserialize(&mut account.data.as_slice());
-            if let Ok(priority_fee_distribution_claim_status) =
-                priority_fee_distribution_claim_status
-            {
-                vec![(*pubkey, priority_fee_distribution_claim_status)]
-            } else {
-                vec![]
-            }
+            priority_fee_distribution_claim_status.map_or_else(
+                |_| vec![],
+                |priority_fee_distribution_claim_status| {
+                    vec![(*pubkey, priority_fee_distribution_claim_status)]
+                },
+            )
         })
         .collect();
 
