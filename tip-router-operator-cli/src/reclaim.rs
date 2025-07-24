@@ -21,6 +21,7 @@ use solana_client::{
 use solana_sdk::signature::Signer;
 
 use crate::{rpc_utils, tx_utils::pack_transactions};
+use rand::seq::SliceRandom;
 use solana_metrics::datapoint_info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{pubkey::Pubkey, signature::Keypair, transaction::Transaction};
@@ -87,6 +88,7 @@ pub async fn close_expired_accounts(
 
         info!("Processing {} close claim transactions", transactions.len());
         let rpc_client = rpc_utils::new_rpc_client(rpc_url);
+        transactions.shuffle(&mut rand::thread_rng());
         for batch in transactions.chunks_mut(100_000) {
             let start = Instant::now();
             let mut blockhash = rpc_client.get_latest_blockhash().await?;
