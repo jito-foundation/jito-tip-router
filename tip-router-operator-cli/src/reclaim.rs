@@ -192,7 +192,6 @@ pub async fn close_expired_distribution_accounts(
             &tip_distribution_accounts,
             tip_distribution_program_id,
             signer.pubkey(),
-            epoch,
         )
         .await?;
         let close_priority_fee_claim_transactions =
@@ -201,7 +200,6 @@ pub async fn close_expired_distribution_accounts(
                 &priority_fee_distribution_accounts,
                 priority_fee_distribution_program_id,
                 signer.pubkey(),
-                epoch,
             )
             .await?;
         let mut transactions = [
@@ -282,7 +280,6 @@ async fn close_tip_distribution_account_transactions(
     accounts: &[(Pubkey, TipDistributionAccount)],
     tip_distribution_program_id: Pubkey,
     payer: Pubkey,
-    target_epoch: u64,
 ) -> Result<Vec<Transaction>> {
     let config_pubkey =
         jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program_id).0;
@@ -297,7 +294,7 @@ async fn close_tip_distribution_account_transactions(
         )
         .await?
         .value
-        .ok_or(anyhow::anyhow!("Config account not found"))?;
+        .ok_or_else(|| anyhow::anyhow!("Config account not found"))?;
 
     let tip_distribution_config =
         TipDistributionConfig::try_deserialize(&mut config_account.data.as_slice())?;
@@ -324,7 +321,6 @@ async fn close_priority_fee_distribution_account_transactions(
     accounts: &[(Pubkey, PriorityFeeDistributionAccount)],
     priority_fee_distribution_program_id: Pubkey,
     payer: Pubkey,
-    target_epoch: u64,
 ) -> Result<Vec<Transaction>> {
     let config_pubkey = jito_priority_fee_distribution_sdk::derive_config_account_address(
         &priority_fee_distribution_program_id,
@@ -340,7 +336,7 @@ async fn close_priority_fee_distribution_account_transactions(
         )
         .await?
         .value
-        .ok_or(anyhow::anyhow!("Config account not found"))?;
+        .ok_or_else(|| anyhow::anyhow!("Config account not found"))?;
 
     let priority_fee_distribution_config =
         PriorityFeeDistributionConfig::try_deserialize(&mut config_account.data.as_slice())?;
