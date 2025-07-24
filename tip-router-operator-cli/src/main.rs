@@ -15,7 +15,7 @@ use ::{
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_snapshot_at_slot,
         load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_path,
-        process_epoch, read_merkle_tree_collection, read_stake_meta_collection,
+        process_epoch, read_merkle_tree_collection, read_stake_meta_collection, reclaim,
         stake_meta_file_name,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         tip_router::get_ncn_config,
@@ -49,7 +49,8 @@ async fn main() -> Result<()> {
     // Ensure backup directory and
     cli.force_different_backup_snapshot_dir();
 
-    let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
+    let keypair =
+        Arc::new(read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"));
     let rpc_client = Arc::new(RpcClient::new(cli.rpc_url.clone()));
 
     datapoint_info!(
@@ -104,6 +105,7 @@ async fn main() -> Result<()> {
             claim_tips,
             claim_tips_metrics,
             claim_tips_epoch_lookback,
+            reclaim_expired_accounts,
         } => {
             assert!(
                 num_monitored_epochs > 0,
@@ -173,9 +175,9 @@ async fn main() -> Result<()> {
                 }
             });
 
+            let keypair_arc = Arc::clone(&keypair);
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
-                let keypair_arc = Arc::new(keypair);
                 loop {
                     if let Err(e) = submit_recent_epochs_to_ncn(
                         &rpc_client_clone,
@@ -196,13 +198,13 @@ async fn main() -> Result<()> {
                 }
             });
 
-            let cli_clone: Cli = cli.clone();
+            let save_path = cli.clone().get_save_path();
+
             // Track incremental snapshots and backup to `backup_snapshots_dir`
             tokio::spawn(async move {
-                let save_path = cli_clone.get_save_path();
                 loop {
                     if let Err(e) = BackupSnapshotMonitor::new(
-                        &rpc_url,
+                        rpc_url.clone().as_str(),
                         full_snapshots_path.clone(),
                         backup_snapshots_dir.clone(),
                         override_target_slot,
@@ -367,7 +369,26 @@ async fn main() -> Result<()> {
                 });
             }
 
-            // Endless loop that transitions between stages of the operator process.
+            if reclaim_expired_accounts {
+                let rpc_url = cli.rpc_url.clone();
+                tokio::spawn(async move {
+                    loop {
+                        info!("Checking for expired accounts to close...");
+                        if let Err(e) = reclaim::close_expired_accounts(
+                            &rpc_url,
+                            tip_distribution_program_id,
+                            priority_fee_distribution_program_id,
+                            Arc::clone(&keypair),
+                            num_monitored_epochs,
+                        )
+                        .await
+                        {
+                            error!("Error closing expired accounts: {}", e);
+                        }
+                        sleep(Duration::from_secs(1800)).await;
+                    }
+                });
+            } // Endless loop that transitions between stages of the operator process.
             process_epoch::loop_stages(
                 rpc_client,
                 cli,
@@ -406,7 +427,7 @@ async fn main() -> Result<()> {
             let operator_address = Pubkey::from_str(&cli.operator_address)?;
             submit_to_ncn(
                 &rpc_client,
-                &keypair,
+                &keypair.clone(),
                 &operator_address,
                 &meta_merkle_tree_path,
                 epoch,
