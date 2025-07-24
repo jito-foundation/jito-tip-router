@@ -214,7 +214,15 @@ pub async fn fetch_expired_distribution_accounts(
             TipDistributionAccount::DISCRIMINATOR.to_vec(),
         )),
         RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-            137,
+            8 // Discriminator
+            + 32 // vote_account
+            + 32 // merkle_root_upload_authority
+            + 1  // Option<MerkleRoot>
+            + 32 // merkle_root.root
+            + 8  // merkle_root.max_total_claim
+            + 8  // merkle_root.max_num_nodes
+            + 8  // merkle_root.total_funds_claimed
+            + 8, // merkle_root.num_nodes_claimed
             target_epoch.to_le_bytes().to_vec(),
         )),
     ];
@@ -236,7 +244,15 @@ pub async fn fetch_expired_distribution_accounts(
             PriorityFeeDistributionAccount::DISCRIMINATOR.to_vec(),
         )),
         RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-            137,
+            8 // Discriminator
+            + 32 // vote_account
+            + 32 // merkle_root_upload_authority
+            + 1  // Option<MerkleRoot>
+            + 32 // merkle_root.root
+            + 8  // merkle_root.max_total_claim
+            + 8  // merkle_root.max_num_nodes
+            + 8  // merkle_root.total_funds_claimed
+            + 8, // merkle_root.num_nodes_claimed
             target_epoch.to_le_bytes().to_vec(),
         )),
     ];
@@ -297,7 +313,11 @@ async fn fetch_expired_claim_statuses(
                 .to_vec(),
         )),
         RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-            89,
+            8 // Discriminator
+            + 32 // claimant
+            + 32 // claim_status_payer
+            + 8 // slot_claimed_at
+            + 8, // amount
             target_epoch.to_le_bytes().to_vec(),
         )),
     ];
@@ -320,7 +340,8 @@ async fn fetch_expired_claim_statuses(
             jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::accounts::ClaimStatus::DISCRIMINATOR.to_vec(),
         )),
         RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-            40,
+            8 // Discriminator
+            + 32, // claim_status_payer
             target_epoch.to_le_bytes().to_vec(),
         )),
     ];
