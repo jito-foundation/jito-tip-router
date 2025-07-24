@@ -108,59 +108,9 @@ pub async fn close_expired_accounts(
                 batch.len(),
                 duration.as_secs()
             );
-            nonblocking_emit_expired_claim_metrics(
-                rpc_url.to_string(),
-                tip_distribution_program_id,
-                priority_fee_distribution_program_id,
-                epoch,
-            );
         }
     }
     Ok(())
-}
-
-// "Drop the future on the floor" with tokio::spawn and return immediately
-fn nonblocking_emit_expired_claim_metrics(
-    rpc_url: String,
-    tip_distribution_program_id: Pubkey,
-    priority_fee_distribution_program_id: Pubkey,
-    epoch: u64,
-) {
-    tokio::spawn(async move {
-        let start = Instant::now();
-        let rpc_client = rpc_utils::new_high_timeout_rpc_client(&rpc_url.clone());
-        let maybe_fetch = fetch_expired_claim_statuses(
-            &rpc_client,
-            tip_distribution_program_id,
-            priority_fee_distribution_program_id,
-            epoch,
-        )
-        .await;
-        if let Err(e) = maybe_fetch {
-            error!("Error fetching expired claim statuses: {:?}", e);
-            return;
-        }
-        let duration = start.elapsed();
-        if let Ok((tip_distribution_claim_accounts, priority_fee_distribution_claim_accounts)) =
-            maybe_fetch
-        {
-            datapoint_info!(
-                "tip_router_cli.expired_claim_statuses",
-                (
-                    "expired_tip_claim_statuses",
-                    tip_distribution_claim_accounts.len(),
-                    i64
-                ),
-                (
-                    "expired_pf_claim_statuses",
-                    priority_fee_distribution_claim_accounts.len(),
-                    i64
-                ),
-                ("epoch", epoch, i64),
-                ("duration", duration.as_secs(), i64),
-            );
-        }
-    });
 }
 
 fn close_tip_claim_transactions(
