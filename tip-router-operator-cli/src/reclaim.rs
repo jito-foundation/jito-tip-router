@@ -3,13 +3,20 @@ use std::{sync::Arc, time::Instant};
 use anchor_lang::{AccountDeserialize, Discriminator};
 use anyhow::Result;
 use jito_priority_fee_distribution_sdk::{
-    instruction::close_claim_status_ix as close_pf_claim_status_ix,
+    instruction::{
+        close_claim_status_ix as close_pf_claim_status_ix,
+        close_priority_fee_distribution_account_ix,
+    },
     jito_priority_fee_distribution::accounts::ClaimStatus as PriorityFeeDistributionClaimStatus,
+    jito_priority_fee_distribution::accounts::Config as PriorityFeeDistributionConfig,
     PriorityFeeDistributionAccount,
 };
 use jito_tip_distribution_sdk::{
-    instruction::close_claim_status_ix as close_tip_claim_status_ix,
+    instruction::{
+        close_claim_status_ix as close_tip_claim_status_ix, close_tip_distribution_account_ix,
+    },
     jito_tip_distribution::accounts::ClaimStatus as TipDistributionClaimStatus,
+    jito_tip_distribution::accounts::Config as TipDistributionConfig,
     TipDistributionAccount,
 };
 use log::{error, info};
@@ -29,6 +36,32 @@ use solana_sdk::{pubkey::Pubkey, signature::Keypair, transaction::Transaction};
 const MAX_TRANSACTION_SIZE: usize = 1232;
 
 pub async fn close_expired_accounts(
+    rpc_url: &str,
+    tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
+    signer: Arc<Keypair>,
+    num_monitored_epochs: u64,
+) -> Result<()> {
+    close_expired_distribution_accounts(
+        rpc_url,
+        tip_distribution_program_id,
+        priority_fee_distribution_program_id,
+        signer.clone(),
+        num_monitored_epochs,
+    )
+    .await?;
+    close_expired_claims(
+        rpc_url,
+        tip_distribution_program_id,
+        priority_fee_distribution_program_id,
+        signer.clone(),
+        num_monitored_epochs,
+    )
+    .await?;
+    Ok(())
+}
+
+pub async fn close_expired_claims(
     rpc_url: &str,
     tip_distribution_program_id: Pubkey,
     priority_fee_distribution_program_id: Pubkey,
@@ -56,7 +89,6 @@ pub async fn close_expired_accounts(
         let duration = start.elapsed();
         datapoint_info!(
             "tip_router_cli.expired_claim_statuses",
-            ("epoch", epoch, i64),
             (
                 "expired_tip_claim_statuses",
                 tip_distribution_claim_accounts.len(),
@@ -68,6 +100,7 @@ pub async fn close_expired_accounts(
                 i64
             ),
             ("duration", duration.as_secs(), i64),
+            "epoch" => epoch.to_string(),
         );
 
         let close_tip_claim_transactions = close_tip_claim_transactions(
@@ -104,6 +137,100 @@ pub async fn close_expired_accounts(
             let duration = start.elapsed();
             info!(
                 "Processed batch of {} close claim transactions in {:?} seconds",
+                batch.len(),
+                duration.as_secs()
+            );
+        }
+    }
+    Ok(())
+}
+
+pub async fn close_expired_distribution_accounts(
+    rpc_url: &str,
+    tip_distribution_program_id: Pubkey,
+    priority_fee_distribution_program_id: Pubkey,
+    signer: Arc<Keypair>,
+    num_monitored_epochs: u64,
+) -> Result<()> {
+    let epochs_to_process = {
+        // Use default timeout and commitment config for fetching the current epoch
+        let rpc_client = rpc_utils::new_rpc_client(rpc_url);
+        let current_epoch = rpc_client.get_epoch_info().await?.epoch;
+        (current_epoch - num_monitored_epochs)..current_epoch
+    };
+    for epoch in epochs_to_process {
+        let rpc_client = rpc_utils::new_high_timeout_rpc_client(rpc_url);
+        info!("Fetching distribution accounts expiring in epoch {}", epoch);
+        let start = Instant::now();
+        let (tip_distribution_accounts, priority_fee_distribution_accounts) =
+            fetch_expired_distribution_accounts(
+                &rpc_client,
+                tip_distribution_program_id,
+                priority_fee_distribution_program_id,
+                epoch,
+            )
+            .await?;
+        let duration = start.elapsed();
+        datapoint_info!(
+            "tip_router_cli.expired_distribution_accounts",
+            (
+                "expired_tip_distribution_accounts",
+                tip_distribution_accounts.len(),
+                i64
+            ),
+            (
+                "expired_priority_fee_distribution_accounts",
+                priority_fee_distribution_accounts.len(),
+                i64
+            ),
+            ("duration", duration.as_secs(), i64),
+            "epoch" => epoch.to_string(),
+        );
+
+        let close_tip_claim_transactions = close_tip_distribution_account_transactions(
+            &rpc_client,
+            &tip_distribution_accounts,
+            tip_distribution_program_id,
+            signer.pubkey(),
+            epoch,
+        )
+        .await?;
+        let close_priority_fee_claim_transactions =
+            close_priority_fee_distribution_account_transactions(
+                &rpc_client,
+                &priority_fee_distribution_accounts,
+                priority_fee_distribution_program_id,
+                signer.pubkey(),
+                epoch,
+            )
+            .await?;
+        let mut transactions = [
+            close_tip_claim_transactions,
+            close_priority_fee_claim_transactions,
+        ]
+        .concat();
+
+        info!(
+            "Processing {} close distribution account transactions",
+            transactions.len()
+        );
+        let rpc_client = rpc_utils::new_rpc_client(rpc_url);
+        transactions.shuffle(&mut rand::thread_rng());
+        for batch in transactions.chunks_mut(100_000) {
+            let start = Instant::now();
+            let mut blockhash = rpc_client.get_latest_blockhash().await?;
+            for transaction in batch.iter_mut() {
+                transaction.sign(&[&signer], blockhash);
+                let maybe_signature = rpc_client.send_transaction(transaction).await;
+                if let Err(e) = maybe_signature {
+                    // Fetch a new blockhash if the transaction failed
+                    blockhash = rpc_client.get_latest_blockhash().await?;
+                    error!("Error sending transaction: {:?}", e);
+                }
+            }
+            let duration = start.elapsed();
+            info!(
+                "Processed batch of {} close distribution account transactions in {:?} seconds",
                 batch.len(),
                 duration.as_secs()
             );
@@ -150,6 +277,91 @@ fn close_priority_fee_claim_transactions(
     pack_transactions(instructions, payer, MAX_TRANSACTION_SIZE)
 }
 
+async fn close_tip_distribution_account_transactions(
+    rpc_client: &RpcClient,
+    accounts: &[(Pubkey, TipDistributionAccount)],
+    tip_distribution_program_id: Pubkey,
+    payer: Pubkey,
+    target_epoch: u64,
+) -> Result<Vec<Transaction>> {
+    let config_pubkey =
+        jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program_id).0;
+
+    let config_account = rpc_client
+        .get_account_with_config(
+            &config_pubkey,
+            RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
+            },
+        )
+        .await?
+        .value
+        .ok_or(anyhow::anyhow!("Config account not found"))?;
+
+    let tip_distribution_config =
+        TipDistributionConfig::try_deserialize(&mut config_account.data.as_slice())?;
+
+    let instructions: Vec<_> = accounts
+        .iter()
+        .map(|(pubkey, account)| {
+            close_tip_distribution_account_ix(
+                config_pubkey,
+                *pubkey,
+                tip_distribution_config.expired_funds_account,
+                account.validator_vote_account,
+                payer,
+                account.epoch_created_at,
+            )
+        })
+        .collect();
+
+    Ok(pack_transactions(instructions, payer, MAX_TRANSACTION_SIZE))
+}
+
+async fn close_priority_fee_distribution_account_transactions(
+    rpc_client: &RpcClient,
+    accounts: &[(Pubkey, PriorityFeeDistributionAccount)],
+    priority_fee_distribution_program_id: Pubkey,
+    payer: Pubkey,
+    target_epoch: u64,
+) -> Result<Vec<Transaction>> {
+    let config_pubkey = jito_priority_fee_distribution_sdk::derive_config_account_address(
+        &priority_fee_distribution_program_id,
+    )
+    .0;
+    let config_account = rpc_client
+        .get_account_with_config(
+            &config_pubkey,
+            RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
+            },
+        )
+        .await?
+        .value
+        .ok_or(anyhow::anyhow!("Config account not found"))?;
+
+    let priority_fee_distribution_config =
+        PriorityFeeDistributionConfig::try_deserialize(&mut config_account.data.as_slice())?;
+
+    let instructions: Vec<_> = accounts
+        .iter()
+        .map(|(pubkey, account)| {
+            close_priority_fee_distribution_account_ix(
+                config_pubkey,
+                *pubkey,
+                priority_fee_distribution_config.expired_funds_account,
+                account.validator_vote_account,
+                payer,
+                account.epoch_created_at,
+            )
+        })
+        .collect();
+
+    Ok(pack_transactions(instructions, payer, MAX_TRANSACTION_SIZE))
+}
+
 pub async fn fetch_expired_distribution_accounts(
     rpc_client: &RpcClient,
     tip_distribution_program_id: Pubkey,
@@ -173,7 +385,9 @@ pub async fn fetch_expired_distribution_accounts(
             + 8  // merkle_root.max_total_claim
             + 8  // merkle_root.max_num_nodes
             + 8  // merkle_root.total_funds_claimed
-            + 8, // merkle_root.num_nodes_claimed
+            + 8  // merkle_root.num_nodes_claimed
+            + 8  // epoch_created_at
+            + 2, // commission_bps
             target_epoch.to_le_bytes().to_vec(),
         )),
     ];
@@ -203,7 +417,9 @@ pub async fn fetch_expired_distribution_accounts(
             + 8  // merkle_root.max_total_claim
             + 8  // merkle_root.max_num_nodes
             + 8  // merkle_root.total_funds_claimed
-            + 8, // merkle_root.num_nodes_claimed
+            + 8  // merkle_root.num_nodes_claimed
+            + 8  // epoch_created_at
+            + 2, // commission_bps
             target_epoch.to_le_bytes().to_vec(),
         )),
     ];
