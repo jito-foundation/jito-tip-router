@@ -15,7 +15,7 @@ use jito_tip_distribution_sdk::{
     jito_tip_distribution::accounts::ClaimStatus as TipDistributionClaimStatus,
     TipDistributionAccount,
 };
-use log::{debug, info};
+use log::{error, info};
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
@@ -56,7 +56,7 @@ pub async fn close_expired_accounts(
     };
     for epoch in epochs_to_process {
         let rpc_client = rpc_utils::new_high_timeout_rpc_client(rpc_url);
-        info!("Fetching TipDistribution and PriorityFeeDistribution Claim Statuses expiring in epoch {}", epoch);
+        info!("Fetching claim status accounts expiring in epoch {}", epoch);
         let start = Instant::now();
         let (tip_distribution_claim_accounts, priority_fee_distribution_claim_accounts) =
             fetch_expired_claim_statuses(
@@ -67,7 +67,6 @@ pub async fn close_expired_accounts(
             )
             .await?;
         let duration = start.elapsed();
-        info!("Found {} TipDistribution Claim Statuses and {} PriorityFeeDistribution claim statuses with expiration epoch {} in {:?}", tip_distribution_claim_accounts.len(), priority_fee_distribution_claim_accounts.len(), epoch, duration);
         datapoint_info!(
             "tip_router_cli.expired_claim_statuses",
             ("epoch", epoch, i64),
@@ -83,43 +82,7 @@ pub async fn close_expired_accounts(
             ),
             ("duration", duration.as_secs(), i64),
         );
-
-        let rpc_client = rpc_utils::new_high_timeout_rpc_client(rpc_url);
-        tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(Duration::from_secs(300)).await;
-                let start = Instant::now();
-                let (tip_distribution_claim_accounts, priority_fee_distribution_claim_accounts) =
-                    fetch_expired_claim_statuses(
-                        &rpc_client,
-                        tip_distribution_program_id,
-                        priority_fee_distribution_program_id,
-                        epoch,
-                    )
-                    .await
-                    .unwrap_or_else(|e| {
-                        debug!("Error fetching expired claim statuses: {:?}", e);
-                        (vec![], vec![])
-                    });
-                let duration = start.elapsed();
-                datapoint_info!(
-                    "tip_router_cli.expired_claim_statuses",
-                    ("epoch", epoch, i64),
-                    (
-                        "expired_tip_claim_statuses",
-                        tip_distribution_claim_accounts.len(),
-                        i64
-                    ),
-                    (
-                        "expired_pf_claim_statuses",
-                        priority_fee_distribution_claim_accounts.len(),
-                        i64
-                    ),
-                    ("duration", duration.as_secs(), i64),
-                );
-            }
-        });
-
+        
         let close_tip_claim_transactions = close_tip_claim_transactions(
             &tip_distribution_claim_accounts,
             tip_distribution_program_id,
@@ -147,7 +110,7 @@ pub async fn close_expired_accounts(
                 if let Err(e) = maybe_signature {
                     // Fetch a new blockhash if the transaction failed
                     blockhash = rpc_client.get_latest_blockhash().await?;
-                    debug!("Error sending transaction: {:?}", e);
+                    error!("Error sending transaction: {:?}", e);
                 }
             }
             let duration = start.elapsed();
@@ -156,9 +119,39 @@ pub async fn close_expired_accounts(
                 batch.len(),
                 duration.as_secs()
             );
+            nonblocking_emit_expired_claim_metrics(rpc_url.to_string(), tip_distribution_program_id, priority_fee_distribution_program_id, epoch);
         }
     }
     Ok(())
+}
+
+// "Drop the future on the floor" with tokio::spawn and return immediately
+fn nonblocking_emit_expired_claim_metrics(rpc_url: String, tip_distribution_program_id: Pubkey, priority_fee_distribution_program_id: Pubkey, epoch: u64){
+    tokio::spawn(async move {
+        let start = Instant::now();
+        let rpc_client = rpc_utils::new_high_timeout_rpc_client(&rpc_url.clone());
+        let maybe_fetch = fetch_expired_claim_statuses(
+            &rpc_client,
+            tip_distribution_program_id,
+            priority_fee_distribution_program_id,
+            epoch,
+        )
+        .await;
+        if let Err(e) = maybe_fetch {
+            error!("Error fetching expired claim statuses: {:?}", e);
+            return;
+        }
+        let duration = start.elapsed();
+        if let Ok((tip_distribution_claim_accounts, priority_fee_distribution_claim_accounts)) = maybe_fetch {
+            datapoint_info!(
+                "tip_router_cli.expired_claim_statuses",
+                ("expired_tip_claim_statuses", tip_distribution_claim_accounts.len(), i64),
+                ("expired_pf_claim_statuses", priority_fee_distribution_claim_accounts.len(), i64),
+                ("epoch", epoch, i64),
+                ("duration", duration.as_secs(), i64),
+            );
+        }
+    });
 }
 
 fn close_tip_claim_transactions(
