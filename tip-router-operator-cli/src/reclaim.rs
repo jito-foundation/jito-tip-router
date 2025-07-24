@@ -191,11 +191,8 @@ fn close_priority_fee_claim_transactions(
 
     let instructions: Vec<_> = accounts
         .iter()
-        .map(|(pubkey, _account)| {
-            // For priority fee distribution, we need to derive the claim_status_payer
-            // This is typically the claimant who created the claim status account
-            // For now, we'll use the signer as the payer since we don't have access to the original claimant
-            close_pf_claim_status_ix(config_pubkey, *pubkey, payer)
+        .map(|(pubkey, account)| {
+            close_pf_claim_status_ix(config_pubkey, *pubkey, account.claim_status_payer)
         })
         .collect();
 
