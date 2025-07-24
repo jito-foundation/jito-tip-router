@@ -113,6 +113,7 @@ impl AccountPayer {
             Self::transfer(program_id, ncn, account_payer, account, required_lamports)?;
         }
 
+        #[allow(deprecated)]
         account.realloc(new_size, false)?;
         Ok(())
     }
@@ -136,6 +137,7 @@ impl AccountPayer {
         **account_to_close.lamports.borrow_mut() = 0;
 
         account_to_close.assign(&solana_program::system_program::id());
+        #[allow(deprecated)]
         account_to_close.realloc(0, false)?;
 
         Ok(())

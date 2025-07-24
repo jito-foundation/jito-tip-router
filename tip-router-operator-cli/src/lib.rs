@@ -74,27 +74,6 @@ pub enum OperatorState {
     WaitForNextEpoch,
 }
 
-impl OperatorState {
-    pub const fn as_legacy(&self) -> legacy_tip_router_operator_cli::OperatorState {
-        match self {
-            Self::LoadBankFromSnapshot => {
-                legacy_tip_router_operator_cli::OperatorState::LoadBankFromSnapshot
-            }
-            Self::CreateStakeMeta => legacy_tip_router_operator_cli::OperatorState::CreateStakeMeta,
-            Self::CreateMerkleTreeCollection => {
-                legacy_tip_router_operator_cli::OperatorState::CreateMerkleTreeCollection
-            }
-            Self::CreateMetaMerkleTree => {
-                legacy_tip_router_operator_cli::OperatorState::CreateMetaMerkleTree
-            }
-            Self::CastVote => legacy_tip_router_operator_cli::OperatorState::CastVote,
-            Self::WaitForNextEpoch => {
-                legacy_tip_router_operator_cli::OperatorState::WaitForNextEpoch
-            }
-        }
-    }
-}
-
 pub fn stake_meta_file_name(epoch: u64) -> String {
     format!("{}_stake_meta_collection.json", epoch)
 }
