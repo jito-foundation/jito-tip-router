@@ -130,7 +130,6 @@ async fn main() -> Result<()> {
             let full_snapshots_path = cli.full_snapshots_path.clone().unwrap();
             let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
             let rpc_url = cli.rpc_url.clone();
-            let rpc_url_for_close_accounts = cli.rpc_url.clone();
             let claim_tips_epoch_filepath = cli.claim_tips_epoch_filepath.clone();
             let cli_clone: Cli = cli.clone();
 
@@ -371,11 +370,12 @@ async fn main() -> Result<()> {
             }
 
             if reclaim_expired_accounts {
+                let rpc_url = cli.rpc_url.clone();
                 tokio::spawn(async move {
                     loop {
                         info!("Checking for expired accounts to close...");
                         if let Err(e) = reclaim::close_expired_accounts(
-                            &rpc_url_for_close_accounts,
+                            &rpc_url,
                             tip_distribution_program_id,
                             priority_fee_distribution_program_id,
                             Arc::clone(&keypair),
