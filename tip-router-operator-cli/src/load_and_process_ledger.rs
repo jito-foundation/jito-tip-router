@@ -440,14 +440,16 @@ pub fn load_and_process_ledger(
     .map_err(LoadAndProcessLedgerError::ProcessBlockstoreFromRoot);
 
     exit.store(true, Ordering::Relaxed);
-    accounts_background_service.join().unwrap();
-    accounts_hash_verifier.join().unwrap();
-    if let Some(service) = transaction_status_service {
-        // NOTE: Was service.quiesce_and_join_for_tests(tss_exit);
-        //  but this method is behind the "dev-context-only-utils" feature flag.
-        service.join().unwrap();
-    }
-
+    // Non-blocking
+    tokio::spawn(async move {
+        accounts_background_service.join().unwrap();
+        accounts_hash_verifier.join().unwrap();
+        if let Some(service) = transaction_status_service {
+            // NOTE: Was service.quiesce_and_join_for_tests(tss_exit);
+            //  but this method is behind the "dev-context-only-utils" feature flag.
+            service.join().unwrap();
+        }
+    });
     result
 }
 
