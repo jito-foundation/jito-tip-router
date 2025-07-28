@@ -385,6 +385,14 @@ impl KeeperState {
         Ok(*state)
     }
 
+    /// Detects if the current epoch is in a stalled state.
+    ///
+    /// # Stall Detection
+    /// 1. **Epoch Completed**: If `is_epoch_completed` is true
+    /// 2. **Vote State**: When the current state is `State::Vote`
+    /// 3. **Post-Vote Cooldown**: When in `State::PostVoteCooldown`
+    /// 4. **Insufficient Rewards**: During `State::Distribute`, if total rewards to be distributed
+    ///    are less than **10,000** (dust threshold)
     pub async fn detect_stall(&mut self, handler: &CliHandler) -> Result<bool> {
         if self.is_epoch_completed {
             return Ok(true);
