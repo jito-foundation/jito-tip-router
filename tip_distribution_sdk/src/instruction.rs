@@ -140,6 +140,29 @@ pub fn close_claim_status_ix(
     }
 }
 
+pub fn close_tip_distribution_account_ix(
+    config: Pubkey,
+    tip_distribution_account: Pubkey,
+    expired_funds_account: Pubkey,
+    validator_vote_account: Pubkey,
+    signer: Pubkey,
+    epoch: u64,
+) -> Instruction {
+    Instruction {
+        program_id: jito_tip_distribution::ID,
+        accounts: jito_tip_distribution::client::accounts::CloseTipDistributionAccount {
+            config,
+            tip_distribution_account,
+            expired_funds_account,
+            validator_vote_account,
+            signer,
+        }
+        .to_account_metas(None),
+        data: jito_tip_distribution::client::args::CloseTipDistributionAccount { _epoch: epoch }
+            .data(),
+    }
+}
+
 pub fn migrate_tda_merkle_root_upload_authority_ix(
     tip_distribution_account: Pubkey,
     merkle_root_upload_config: Pubkey,

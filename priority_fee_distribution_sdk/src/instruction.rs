@@ -140,6 +140,32 @@ pub fn close_claim_status_ix(
     }
 }
 
+pub fn close_priority_fee_distribution_account_ix(
+    config: Pubkey,
+    priority_fee_distribution_account: Pubkey,
+    expired_funds_account: Pubkey,
+    validator_vote_account: Pubkey,
+    signer: Pubkey,
+    epoch: u64,
+) -> Instruction {
+    Instruction {
+        program_id: jito_priority_fee_distribution::ID,
+        accounts:
+            jito_priority_fee_distribution::client::accounts::ClosePriorityFeeDistributionAccount {
+                config,
+                priority_fee_distribution_account,
+                expired_funds_account,
+                validator_vote_account,
+                signer,
+            }
+            .to_account_metas(None),
+        data: jito_priority_fee_distribution::client::args::ClosePriorityFeeDistributionAccount {
+            _epoch: epoch,
+        }
+        .data(),
+    }
+}
+
 pub fn migrate_tda_merkle_root_upload_authority_ix(
     priority_fee_distribution_account: Pubkey,
     merkle_root_upload_config: Pubkey,
