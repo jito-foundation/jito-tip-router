@@ -70,11 +70,12 @@
                   "type": "__expr__",
                   "uid": "__expr__"
                 },
-                "expression": "$B < $C",
+                "expression": "B",
                 "intervalMs": 1000,
                 "maxDataPoints": 43200,
+                "reducer": "last",
                 "refId": "D",
-                "type": "math"
+                "type": "reduce"
               }
             },
             {
@@ -87,11 +88,12 @@
                   "type": "__expr__",
                   "uid": "__expr__"
                 },
-                "expression": "$B > 0",
+                "expression": "C",
                 "intervalMs": 1000,
                 "maxDataPoints": 43200,
+                "reducer": "last",
                 "refId": "E",
-                "type": "math"
+                "type": "reduce"
               }
             },
             {
@@ -104,7 +106,7 @@
                   "type": "__expr__",
                   "uid": "__expr__"
                 },
-                "expression": "$D == 0 && $E == 1",
+                "expression": "$D >= $E && $D > 0",
                 "intervalMs": 1000,
                 "maxDataPoints": 43200,
                 "refId": "F",
