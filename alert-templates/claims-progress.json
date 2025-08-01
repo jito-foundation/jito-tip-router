@@ -30,7 +30,7 @@
             },
             {
               "refId": "B",
-              "relativeTimeRange": { "from": 0, "to": 0 },
+              "relativeTimeRange": { "from": 600, "to": 0 },
               "datasourceUid": "eeaeqrzm41logf",
               "model": {
                 "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
