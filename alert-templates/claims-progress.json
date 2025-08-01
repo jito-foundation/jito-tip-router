@@ -14,7 +14,7 @@
           "data": [
             {
               "refId": "A",
-              "relativeTimeRange": { "from": 3600, "to": 0 },
+              "relativeTimeRange": { "from": 604800, "to": 0 },
               "datasourceUid": "eeaeqrzm41logf",
               "model": {
                 "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
@@ -25,49 +25,39 @@
                 "refId": "A",
                 "resultFormat": "time_series",
                 "select": [[{ "params": ["claim_transactions_left"], "type": "field" }]],
-                "tags": [
-                  {
-                    "key": "operator::field",
-                    "operator": "=~",
-                    "value": "/.*/"
-                  }
-                ]
+                "tags": []
               }
             },
             {
               "refId": "B",
               "relativeTimeRange": { "from": 0, "to": 0 },
-              "datasourceUid": "__expr__",
+              "datasourceUid": "eeaeqrzm41logf",
               "model": {
-                "datasource": {
-                  "name": "Expression",
-                  "type": "__expr__",
-                  "uid": "__expr__"
-                },
-                "expression": "A",
-                "intervalMs": 1000,
-                "maxDataPoints": 43200,
-                "reducer": "last",
+                "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
+                "groupBy": [{ "params": ["epoch"], "type": "tag" }],
+                "measurement": "tip_router_cli.claim_mev_tips-send_summary",
+                "orderByTime": "ASC",
+                "policy": "default",
                 "refId": "B",
-                "type": "reduce"
+                "resultFormat": "time_series",
+                "select": [[{ "params": ["claim_transactions_left"], "type": "field" }]],
+                "tags": []
               }
             },
             {
               "refId": "C",
-              "relativeTimeRange": { "from": 1800, "to": 900 },
-              "datasourceUid": "__expr__",
+              "relativeTimeRange": { "from": 7200, "to": 3600 },
+              "datasourceUid": "eeaeqrzm41logf",
               "model": {
-                "datasource": {
-                  "name": "Expression",
-                  "type": "__expr__",
-                  "uid": "__expr__"
-                },
-                "expression": "A",
-                "intervalMs": 1000,
-                "maxDataPoints": 43200,
-                "reducer": "last",
+                "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
+                "groupBy": [{ "params": ["epoch"], "type": "tag" }],
+                "measurement": "tip_router_cli.claim_mev_tips-send_summary",
+                "orderByTime": "ASC",
+                "policy": "default",
                 "refId": "C",
-                "type": "reduce"
+                "resultFormat": "time_series",
+                "select": [[{ "params": ["claim_transactions_left"], "type": "field" }]],
+                "tags": []
               }
             },
             {
@@ -80,7 +70,7 @@
                   "type": "__expr__",
                   "uid": "__expr__"
                 },
-                "expression": "$B - $C",
+                "expression": "$B < $C",
                 "intervalMs": 1000,
                 "maxDataPoints": 43200,
                 "refId": "D",
@@ -114,7 +104,7 @@
                   "type": "__expr__",
                   "uid": "__expr__"
                 },
-                "expression": "$D >= 0 && $E == 1",
+                "expression": "$D == 0 && $E == 1",
                 "intervalMs": 1000,
                 "maxDataPoints": 43200,
                 "refId": "F",
@@ -124,10 +114,10 @@
           ],
           "noDataState": "NoData",
           "execErrState": "Error",
-          "for": "15m",
+          "for": "2h",
           "keepFiringFor": "0s",
           "annotations": {
-            "description": "Claims progress has stalled for epoch {{ $labels.epoch }}. Current outstanding claims: {{ $values.B.Value }}. No progress made in the last 15 minutes.",
+            "description": "Claims progress has stalled for epoch {{ $labels.epoch }}. Current outstanding claims: {{ $values.B.Value }}. No progress made in the last 1 hour.",
             "summary": "Tip Router claims processing appears to be stuck"
           },
           "labels": {
@@ -142,7 +132,7 @@
           "data": [
             {
               "refId": "A",
-              "relativeTimeRange": { "from": 7200, "to": 0 },
+              "relativeTimeRange": { "from": 604800, "to": 0 },
               "datasourceUid": "eeaeqrzm41logf",
               "model": {
                 "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
@@ -153,13 +143,7 @@
                 "refId": "A",
                 "resultFormat": "time_series",
                 "select": [[{ "params": ["claim_transactions_left"], "type": "field" }]],
-                "tags": [
-                  {
-                    "key": "operator::field",
-                    "operator": "=~",
-                    "value": "/.*/"
-                  }
-                ]
+                "tags": []
               }
             },
             {
@@ -182,7 +166,7 @@
             },
             {
               "refId": "C",
-              "relativeTimeRange": { "from": 7200, "to": 0 },
+              "relativeTimeRange": { "from": 604800, "to": 0 },
               "datasourceUid": "__expr__",
               "model": {
                 "datasource": {
@@ -218,10 +202,10 @@
           ],
           "noDataState": "NoData",
           "execErrState": "Error",
-          "for": "30m",
+          "for": "18h",
           "keepFiringFor": "0s",
           "annotations": {
-            "description": "Claims for epoch {{ $labels.epoch }} have been running for over 2 hours. Outstanding claims: {{ $values.B.Value }}. Initial claims: {{ $values.C.Value }}.",
+            "description": "Claims for epoch {{ $labels.epoch }} have been running for over 18 hours. Outstanding claims: {{ $values.B.Value }}. Initial claims: {{ $values.C.Value }}.",
             "summary": "Tip Router claims processing is taking unusually long"
           },
           "labels": {
@@ -236,7 +220,7 @@
           "data": [
             {
               "refId": "A",
-              "relativeTimeRange": { "from": 1800, "to": 0 },
+              "relativeTimeRange": { "from": 604800, "to": 0 },
               "datasourceUid": "eeaeqrzm41logf",
               "model": {
                 "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
@@ -247,13 +231,7 @@
                 "refId": "A",
                 "resultFormat": "time_series",
                 "select": [[{ "params": ["claim_transactions_left"], "type": "field" }]],
-                "tags": [
-                  {
-                    "key": "operator::field",
-                    "operator": "=~",
-                    "value": "/.*/"
-                  }
-                ]
+                "tags": []
               }
             },
             {
