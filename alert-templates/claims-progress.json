@@ -10,7 +10,7 @@
         {
           "uid": "claims_progress_stalled",
           "title": "Claims Progress Stalled",
-          "condition": "F",
+          "condition": "E",
           "data": [
             {
               "refId": "A",
@@ -30,7 +30,7 @@
             },
             {
               "refId": "B",
-              "relativeTimeRange": { "from": 600, "to": 0 },
+              "relativeTimeRange": { "from": 604800, "to": 3600 },
               "datasourceUid": "eeaeqrzm41logf",
               "model": {
                 "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
@@ -46,18 +46,20 @@
             },
             {
               "refId": "C",
-              "relativeTimeRange": { "from": 7200, "to": 3600 },
-              "datasourceUid": "eeaeqrzm41logf",
+              "relativeTimeRange": { "from": 0, "to": 0 },
+              "datasourceUid": "__expr__",
               "model": {
-                "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
-                "groupBy": [{ "params": ["epoch"], "type": "tag" }],
-                "measurement": "tip_router_cli.claim_mev_tips-send_summary",
-                "orderByTime": "ASC",
-                "policy": "default",
+                "datasource": {
+                  "name": "Expression",
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 1000,
+                "reducer": "last",
                 "refId": "C",
-                "resultFormat": "time_series",
-                "select": [[{ "params": ["claim_transactions_left"], "type": "field" }]],
-                "tags": []
+                "type": "reduce"
               }
             },
             {
@@ -72,7 +74,7 @@
                 },
                 "expression": "B",
                 "intervalMs": 1000,
-                "maxDataPoints": 43200,
+                "maxDataPoints": 1000,
                 "reducer": "last",
                 "refId": "D",
                 "type": "reduce"
@@ -88,28 +90,10 @@
                   "type": "__expr__",
                   "uid": "__expr__"
                 },
-                "expression": "C",
+                "expression": "$C >= $D && $C > 0",
                 "intervalMs": 1000,
-                "maxDataPoints": 43200,
-                "reducer": "last",
+                "maxDataPoints": 1000,
                 "refId": "E",
-                "type": "reduce"
-              }
-            },
-            {
-              "refId": "F",
-              "relativeTimeRange": { "from": 0, "to": 0 },
-              "datasourceUid": "__expr__",
-              "model": {
-                "datasource": {
-                  "name": "Expression",
-                  "type": "__expr__",
-                  "uid": "__expr__"
-                },
-                "expression": "$D >= $E && $D > 0",
-                "intervalMs": 1000,
-                "maxDataPoints": 43200,
-                "refId": "F",
                 "type": "math"
               }
             }
@@ -119,7 +103,7 @@
           "for": "2h",
           "keepFiringFor": "0s",
           "annotations": {
-            "description": "Claims progress has stalled for epoch {{ $labels.epoch }}. Current outstanding claims: {{ $values.B.Value }}. No progress made in the last 1 hour.",
+            "description": "Claims progress has stalled for epoch {{ $labels.epoch }}. Current outstanding claims: {{ $values.C.Value }}. Claims 1 hour ago: {{ $values.D.Value }}. No progress made in the last 1 hour.",
             "summary": "Tip Router claims processing appears to be stuck"
           },
           "labels": {
