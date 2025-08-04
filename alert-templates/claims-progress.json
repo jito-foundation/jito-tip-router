@@ -14,34 +14,24 @@
           "data": [
             {
               "refId": "A",
-              "relativeTimeRange": { "from": 604800, "to": 0 },
+              "relativeTimeRange": { "from": 172800, "to": 0 },
               "datasourceUid": "eeaeqrzm41logf",
               "model": {
                 "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
-                "groupBy": [{ "params": ["epoch"], "type": "tag" }],
-                "measurement": "tip_router_cli.claim_mev_tips-send_summary",
-                "orderByTime": "ASC",
-                "policy": "default",
+                "query": "SELECT \"claim_transactions_left\" FROM \"tip_router_cli.claim_mev_tips-send_summary\" WHERE time >= now() - 2d AND time <= now() GROUP BY \"epoch\"::field",
                 "refId": "A",
-                "resultFormat": "time_series",
-                "select": [[{ "params": ["claim_transactions_left"], "type": "field" }]],
-                "tags": []
+                "resultFormat": "time_series"
               }
             },
             {
               "refId": "B",
-              "relativeTimeRange": { "from": 604800, "to": 3600 },
+              "relativeTimeRange": { "from": 172800, "to": 3600 },
               "datasourceUid": "eeaeqrzm41logf",
               "model": {
                 "datasource": { "type": "influxdb", "uid": "eeaeqrzm41logf" },
-                "groupBy": [{ "params": ["epoch"], "type": "tag" }],
-                "measurement": "tip_router_cli.claim_mev_tips-send_summary",
-                "orderByTime": "ASC",
-                "policy": "default",
+                "query": "SELECT \"claim_transactions_left\" FROM \"tip_router_cli.claim_mev_tips-send_summary\" WHERE time >= now() - 2d AND time <= now() - 1h GROUP BY \"epoch\"::field",
                 "refId": "B",
-                "resultFormat": "time_series",
-                "select": [[{ "params": ["claim_transactions_left"], "type": "field" }]],
-                "tags": []
+                "resultFormat": "time_series"
               }
             },
             {
@@ -90,7 +80,7 @@
                   "type": "__expr__",
                   "uid": "__expr__"
                 },
-                "expression": "$C >= $D && $C > 0",
+                "expression": "$C == $D && $C > 0",
                 "intervalMs": 1000,
                 "maxDataPoints": 1000,
                 "refId": "E",
