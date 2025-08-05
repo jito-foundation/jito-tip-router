@@ -232,10 +232,13 @@ pub async fn submit_to_ncn(
         )
         .await?;
 
+        let num_tip_distribution_accounts = tip_distribution_accounts.len();
+        let num_priority_fee_distribution_accounts = priority_fee_distribution_accounts.len();
+
         info!(
             "Setting merkle roots for {} tip distribution accounts and {} priority fee distribution accounts",
-            tip_distribution_accounts.len(),
-            priority_fee_distribution_accounts.len()
+            num_tip_distribution_accounts,
+            num_priority_fee_distribution_accounts
         );
 
         let mut instructions = set_merkle_root_instructions(
@@ -268,6 +271,7 @@ pub async fn submit_to_ncn(
                     ("epoch", tip_router_target_epoch, i64),
                     ("num_success", num_success, i64),
                     ("num_failed", num_failed, i64),
+                    ("total_distribution_accounts", num_tip_distribution_accounts + num_priority_fee_distribution_accounts, i64),
                     "cluster" => cluster,
                 );
                 info!(
