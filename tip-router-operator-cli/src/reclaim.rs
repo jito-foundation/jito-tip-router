@@ -477,6 +477,7 @@ async fn fetch_expired_claim_statuses(
         )),
         RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
             8 // Discriminator
+            + 1 // is_claimed
             + 32 // claimant
             + 32 // claim_status_payer
             + 8 // slot_claimed_at
