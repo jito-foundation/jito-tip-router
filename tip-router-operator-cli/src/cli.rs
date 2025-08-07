@@ -273,6 +273,6 @@ pub enum Commands {
         priority_fee_distribution_program_id: Pubkey,
 
         #[arg(long, env)]
-        epoch: u64,
+        epoch: Option<u64>,
     },
 }

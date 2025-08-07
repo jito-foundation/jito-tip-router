@@ -552,12 +552,20 @@ async fn main() -> Result<()> {
             priority_fee_distribution_program_id,
             epoch,
         } => {
-            info!("Getting tip distribution stats for epoch {}...", epoch);
+            let stats_epoch = if let Some(epoch) = epoch {
+                epoch
+            } else {
+                rpc_client.get_epoch_info().await?.epoch
+            };
+            info!(
+                "Getting tip distribution stats for epoch {}...",
+                stats_epoch
+            );
             get_tip_distribution_stats(
                 &rpc_client,
                 &tip_distribution_program_id,
                 &priority_fee_distribution_program_id,
-                epoch,
+                stats_epoch,
             )
             .await?;
         }
