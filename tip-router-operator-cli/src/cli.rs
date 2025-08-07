@@ -172,6 +172,9 @@ pub enum Commands {
         #[arg(long, env, default_value = "true")]
         save_stages: bool,
 
+        #[arg(long, env, default_value = "false")]
+        reclaim_expired_accounts: bool,
+
         #[arg(
             long,
             env,

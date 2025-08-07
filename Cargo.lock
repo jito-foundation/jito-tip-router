@@ -66,7 +66,7 @@ dependencies = [
 [[package]]
 name = "agave-banking-stage-ingress-types"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "crossbeam-channel",
  "solana-perf",
@@ -75,7 +75,7 @@ dependencies = [
 [[package]]
 name = "agave-feature-set"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "ahash 0.8.12",
  "solana-epoch-schedule",
@@ -88,7 +88,7 @@ dependencies = [
 [[package]]
 name = "agave-geyser-plugin-interface"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "log",
  "solana-clock",
@@ -101,7 +101,7 @@ dependencies = [
 [[package]]
 name = "agave-io-uring"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "io-uring",
  "libc",
@@ -113,7 +113,7 @@ dependencies = [
 [[package]]
 name = "agave-precompiles"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "bincode",
@@ -134,7 +134,7 @@ dependencies = [
 [[package]]
 name = "agave-reserved-account-keys"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "solana-pubkey",
@@ -144,7 +144,7 @@ dependencies = [
 [[package]]
 name = "agave-transaction-view"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "solana-hash",
  "solana-message",
@@ -159,7 +159,7 @@ dependencies = [
 [[package]]
 name = "agave-xdp"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "aya",
  "caps",
@@ -226,7 +226,7 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 [[package]]
 name = "anchor-attribute-access-control"
 version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-syn 0.24.2",
  "anyhow",
@@ -251,7 +251,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-account"
 version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-syn 0.24.2",
  "anyhow",
@@ -278,7 +278,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-constant"
 version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-syn 0.24.2",
  "proc-macro2 1.0.95",
@@ -299,7 +299,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-error"
 version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-syn 0.24.2",
  "proc-macro2 1.0.95",
@@ -321,7 +321,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-event"
 version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-syn 0.24.2",
  "anyhow",
@@ -345,7 +345,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-interface"
 version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-syn 0.24.2",
  "anyhow",
@@ -358,7 +358,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-program"
 version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-syn 0.24.2",
  "anyhow",
@@ -387,7 +387,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-state"
 version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-syn 0.24.2",
  "anyhow",
@@ -399,7 +399,7 @@ dependencies = [
 [[package]]
 name = "anchor-derive-accounts"
 version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-syn 0.24.2",
  "anyhow",
@@ -446,7 +446,7 @@ dependencies = [
 [[package]]
 name = "anchor-lang"
 version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-attribute-access-control 0.24.2",
  "anchor-attribute-account 0.24.2",
@@ -520,7 +520,7 @@ dependencies = [
 [[package]]
 name = "anchor-syn"
 version = "0.24.2"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anyhow",
  "bs58 0.3.1",
@@ -1558,6 +1558,7 @@ checksum = "0b023947811758c97c59bf9d1c188fd619ad4718dcaa767947df1cadb14f39f4"
 dependencies = [
  "glob",
  "libc",
+ "libloading 0.8.8",
 ]
 
 [[package]]
@@ -3646,7 +3647,7 @@ dependencies = [
 [[package]]
 name = "jito-programs-vote-state"
 version = "0.1.5"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-lang 0.24.2",
  "bincode",
@@ -3658,7 +3659,7 @@ dependencies = [
 [[package]]
 name = "jito-protos"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bytes",
  "prost 0.11.9",
@@ -3742,7 +3743,7 @@ dependencies = [
 [[package]]
 name = "jito-tip-distribution"
 version = "0.1.5"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-lang 0.24.2",
  "default-env",
@@ -3761,7 +3762,7 @@ dependencies = [
 [[package]]
 name = "jito-tip-payment"
 version = "0.1.5"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-lang 0.24.2",
  "default-env",
@@ -4279,6 +4280,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "libloading"
+version = "0.8.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07033963ba89ebaf1584d767badaa2e8fcec21aedea6b8c0346d487d49c28667"
+dependencies = [
+ "cfg-if 1.0.1",
+ "windows-targets 0.48.5",
+]
+
+[[package]]
 name = "libm"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4297,13 +4308,14 @@ dependencies = [
 
 [[package]]
 name = "librocksdb-sys"
-version = "0.17.1+9.9.3"
+version = "0.16.0+8.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b7869a512ae9982f4d46ba482c2a304f1efd80c6412a3d4bf57bb79a619679f"
+checksum = "ce3d60bc059831dc1c83903fb45c103f75db65c5a7bf22272764d9cc683e348c"
 dependencies = [
  "bindgen",
  "bzip2-sys",
  "cc",
+ "glob",
  "libc",
  "libz-sys",
  "lz4-sys",
@@ -6051,9 +6063,9 @@ dependencies = [
 
 [[package]]
 name = "rocksdb"
-version = "0.23.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26ec73b20525cb235bad420f911473b69f9fe27cc856c5461bccd7e4af037f43"
+checksum = "6bd13e55d6d7b8cd0ea569161127567cd587676c99f4472f779a0279aa60a7a7"
 dependencies = [
  "libc",
  "librocksdb-sys",
@@ -6827,7 +6839,7 @@ dependencies = [
 [[package]]
 name = "solana-account-decoder"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "Inflector",
  "base64 0.22.1",
@@ -6869,7 +6881,7 @@ dependencies = [
 [[package]]
 name = "solana-account-decoder-client-types"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "base64 0.22.1",
  "bs58 0.5.1",
@@ -6897,7 +6909,7 @@ dependencies = [
 [[package]]
 name = "solana-accounts-db"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-io-uring",
  "ahash 0.8.12",
@@ -6987,7 +6999,7 @@ dependencies = [
 [[package]]
 name = "solana-banks-client"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "borsh 1.5.7",
  "futures 0.3.31",
@@ -7014,7 +7026,7 @@ dependencies = [
 [[package]]
 name = "solana-banks-interface"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "serde",
  "serde_derive",
@@ -7034,7 +7046,7 @@ dependencies = [
 [[package]]
 name = "solana-banks-server"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "bincode",
@@ -7098,7 +7110,7 @@ dependencies = [
 [[package]]
 name = "solana-bloom"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bv",
  "fnv",
@@ -7137,7 +7149,7 @@ dependencies = [
 [[package]]
 name = "solana-bpf-loader-program"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bincode",
  "libsecp256k1 0.6.0",
@@ -7183,7 +7195,7 @@ dependencies = [
 [[package]]
 name = "solana-bucket-map"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bv",
  "bytemuck",
@@ -7201,7 +7213,7 @@ dependencies = [
 [[package]]
 name = "solana-builtins"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "solana-bpf-loader-program",
@@ -7221,7 +7233,7 @@ dependencies = [
 [[package]]
 name = "solana-builtins-default-costs"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "ahash 0.8.12",
@@ -7239,7 +7251,7 @@ dependencies = [
 [[package]]
 name = "solana-bundle"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anchor-lang 0.24.2",
  "itertools 0.12.1",
@@ -7269,7 +7281,7 @@ dependencies = [
 [[package]]
 name = "solana-bundle-sdk"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "digest 0.10.7",
  "itertools 0.12.1",
@@ -7281,7 +7293,7 @@ dependencies = [
 [[package]]
 name = "solana-clap-utils"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "chrono",
  "clap 2.34.0",
@@ -7309,7 +7321,7 @@ dependencies = [
 [[package]]
 name = "solana-cli-config"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "dirs-next",
  "serde",
@@ -7323,7 +7335,7 @@ dependencies = [
 [[package]]
 name = "solana-client"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "async-trait",
  "bincode",
@@ -7423,7 +7435,7 @@ dependencies = [
 [[package]]
 name = "solana-compute-budget"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "solana-fee-structure",
  "solana-program-runtime",
@@ -7432,7 +7444,7 @@ dependencies = [
 [[package]]
 name = "solana-compute-budget-instruction"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "log",
@@ -7465,7 +7477,7 @@ dependencies = [
 [[package]]
 name = "solana-compute-budget-program"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "solana-program-runtime",
 ]
@@ -7486,7 +7498,7 @@ dependencies = [
 [[package]]
 name = "solana-connection-cache"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "async-trait",
  "bincode",
@@ -7508,7 +7520,7 @@ dependencies = [
 [[package]]
 name = "solana-core"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-banking-stage-ingress-types",
  "agave-feature-set",
@@ -7653,7 +7665,7 @@ dependencies = [
 [[package]]
 name = "solana-cost-model"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "ahash 0.8.12",
@@ -7694,7 +7706,7 @@ dependencies = [
 [[package]]
 name = "solana-curve25519"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bytemuck",
  "bytemuck_derive",
@@ -7748,7 +7760,7 @@ dependencies = [
 [[package]]
 name = "solana-entry"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bincode",
  "crossbeam-channel",
@@ -7842,7 +7854,7 @@ dependencies = [
 [[package]]
 name = "solana-faucet"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bincode",
  "clap 2.34.0",
@@ -7907,7 +7919,7 @@ dependencies = [
 [[package]]
 name = "solana-fee"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "solana-fee-structure",
@@ -7970,14 +7982,14 @@ dependencies = [
 [[package]]
 name = "solana-geyser-plugin-manager"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-geyser-plugin-interface",
  "bs58 0.5.1",
  "crossbeam-channel",
  "json5",
  "jsonrpc-core",
- "libloading",
+ "libloading 0.7.4",
  "log",
  "serde_json",
  "solana-account",
@@ -8000,7 +8012,7 @@ dependencies = [
 [[package]]
 name = "solana-gossip"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "arrayvec",
@@ -8182,7 +8194,7 @@ dependencies = [
 [[package]]
 name = "solana-lattice-hash"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "base64 0.22.1",
  "blake3",
@@ -8193,7 +8205,7 @@ dependencies = [
 [[package]]
 name = "solana-ledger"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "agave-reserved-account-keys",
@@ -8348,7 +8360,7 @@ dependencies = [
 [[package]]
 name = "solana-loader-v4-program"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "log",
  "qualifier_attr",
@@ -8372,7 +8384,7 @@ dependencies = [
 [[package]]
 name = "solana-log-collector"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "log",
 ]
@@ -8393,12 +8405,12 @@ dependencies = [
 [[package]]
 name = "solana-measure"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 
 [[package]]
 name = "solana-merkle-tree"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "fast-math",
  "solana-hash",
@@ -8431,7 +8443,7 @@ dependencies = [
 [[package]]
 name = "solana-metrics"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "crossbeam-channel",
  "gethostname",
@@ -8461,7 +8473,7 @@ checksum = "307fb2f78060995979e9b4f68f833623565ed4e55d3725f100454ce78a99a1a3"
 [[package]]
 name = "solana-net-utils"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anyhow",
  "bincode",
@@ -8543,7 +8555,7 @@ dependencies = [
 [[package]]
 name = "solana-perf"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "ahash 0.8.12",
  "bincode",
@@ -8574,7 +8586,7 @@ dependencies = [
 [[package]]
 name = "solana-poh"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "core_affinity",
  "crossbeam-channel",
@@ -8607,7 +8619,7 @@ dependencies = [
 [[package]]
 name = "solana-poseidon"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "ark-bn254",
  "light-poseidon",
@@ -8788,7 +8800,7 @@ dependencies = [
 [[package]]
 name = "solana-program-runtime"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -8830,7 +8842,7 @@ dependencies = [
 [[package]]
 name = "solana-program-test"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "assert_matches",
@@ -8919,7 +8931,7 @@ dependencies = [
 [[package]]
 name = "solana-pubsub-client"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "crossbeam-channel",
  "futures-util",
@@ -8945,7 +8957,7 @@ dependencies = [
 [[package]]
 name = "solana-quic-client"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "async-lock",
  "async-trait",
@@ -8983,7 +8995,7 @@ dependencies = [
 [[package]]
 name = "solana-rayon-threadlimit"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "num_cpus",
 ]
@@ -8991,7 +9003,7 @@ dependencies = [
 [[package]]
 name = "solana-remote-wallet"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "console",
  "dialoguer",
@@ -9076,7 +9088,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "base64 0.22.1",
@@ -9164,7 +9176,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc-client"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -9203,7 +9215,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc-client-api"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anyhow",
  "jsonrpc-core",
@@ -9228,7 +9240,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc-client-nonce-utils"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "solana-account",
  "solana-commitment-config",
@@ -9244,7 +9256,7 @@ dependencies = [
 [[package]]
 name = "solana-rpc-client-types"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "base64 0.22.1",
  "bs58 0.5.1",
@@ -9269,7 +9281,7 @@ dependencies = [
 [[package]]
 name = "solana-runtime"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "agave-precompiles",
@@ -9406,7 +9418,7 @@ dependencies = [
 [[package]]
 name = "solana-runtime-plugin"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "crossbeam-channel",
  "json5",
@@ -9415,7 +9427,7 @@ dependencies = [
  "jsonrpc-derive",
  "jsonrpc-ipc-server",
  "jsonrpc-server-utils",
- "libloading",
+ "libloading 0.7.4",
  "log",
  "solana-runtime",
  "solana-validator-exit",
@@ -9425,7 +9437,7 @@ dependencies = [
 [[package]]
 name = "solana-runtime-transaction"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-transaction-view",
  "log",
@@ -9631,7 +9643,7 @@ dependencies = [
 [[package]]
 name = "solana-send-transaction-service"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "async-trait",
  "crossbeam-channel",
@@ -9802,7 +9814,7 @@ dependencies = [
 [[package]]
 name = "solana-stake-program"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "bincode",
@@ -9830,7 +9842,7 @@ dependencies = [
 [[package]]
 name = "solana-storage-bigtable"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-reserved-account-keys",
  "backoff",
@@ -9871,7 +9883,7 @@ dependencies = [
 [[package]]
 name = "solana-storage-proto"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bincode",
  "bs58 0.5.1",
@@ -9895,7 +9907,7 @@ dependencies = [
 [[package]]
 name = "solana-streamer"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "async-channel",
  "bytes",
@@ -9941,7 +9953,7 @@ dependencies = [
 [[package]]
 name = "solana-svm"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "ahash 0.8.12",
  "itertools 0.12.1",
@@ -9990,7 +10002,7 @@ dependencies = [
 [[package]]
 name = "solana-svm-callback"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "solana-account",
  "solana-precompile-error",
@@ -10000,12 +10012,12 @@ dependencies = [
 [[package]]
 name = "solana-svm-feature-set"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 
 [[package]]
 name = "solana-svm-rent-collector"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "solana-account",
  "solana-clock",
@@ -10020,7 +10032,7 @@ dependencies = [
 [[package]]
 name = "solana-svm-transaction"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "solana-hash",
  "solana-message",
@@ -10049,7 +10061,7 @@ dependencies = [
 [[package]]
 name = "solana-system-program"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bincode",
  "log",
@@ -10137,7 +10149,7 @@ dependencies = [
 [[package]]
 name = "solana-thin-client"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bincode",
  "log",
@@ -10171,7 +10183,7 @@ checksum = "6af261afb0e8c39252a04d026e3ea9c405342b08c871a2ad8aa5448e068c784c"
 [[package]]
 name = "solana-timings"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "eager",
  "enum-iterator",
@@ -10181,7 +10193,7 @@ dependencies = [
 [[package]]
 name = "solana-tls-utils"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "rustls 0.23.29",
  "solana-keypair",
@@ -10193,7 +10205,7 @@ dependencies = [
 [[package]]
 name = "solana-tpu-client"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "async-trait",
  "bincode",
@@ -10226,7 +10238,7 @@ dependencies = [
 [[package]]
 name = "solana-tpu-client-next"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "async-trait",
  "log",
@@ -10279,7 +10291,7 @@ dependencies = [
 [[package]]
 name = "solana-transaction-context"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bincode",
  "serde",
@@ -10324,7 +10336,7 @@ dependencies = [
 [[package]]
 name = "solana-transaction-metrics-tracker"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -10339,7 +10351,7 @@ dependencies = [
 [[package]]
 name = "solana-transaction-status"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "Inflector",
  "agave-reserved-account-keys",
@@ -10382,7 +10394,7 @@ dependencies = [
 [[package]]
 name = "solana-transaction-status-client-types"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -10404,7 +10416,7 @@ dependencies = [
 [[package]]
 name = "solana-turbine"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "agave-xdp",
@@ -10456,7 +10468,7 @@ dependencies = [
 [[package]]
 name = "solana-type-overrides"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "rand 0.8.5",
 ]
@@ -10464,7 +10476,7 @@ dependencies = [
 [[package]]
 name = "solana-udp-client"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "async-trait",
  "solana-connection-cache",
@@ -10479,7 +10491,7 @@ dependencies = [
 [[package]]
 name = "solana-unified-scheduler-logic"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "assert_matches",
  "solana-pubkey",
@@ -10492,7 +10504,7 @@ dependencies = [
 [[package]]
 name = "solana-unified-scheduler-pool"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-banking-stage-ingress-types",
  "aquamarine",
@@ -10532,7 +10544,7 @@ checksum = "7bbf6d7a3c0b28dd5335c52c0e9eae49d0ae489a8f324917faf0ded65a812c1d"
 [[package]]
 name = "solana-version"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "rand 0.8.5",
@@ -10546,7 +10558,7 @@ dependencies = [
 [[package]]
 name = "solana-vote"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "bincode",
  "itertools 0.12.1",
@@ -10599,7 +10611,7 @@ dependencies = [
 [[package]]
 name = "solana-vote-program"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "bincode",
@@ -10631,7 +10643,7 @@ dependencies = [
 [[package]]
 name = "solana-wen-restart"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "anyhow",
  "log",
@@ -10658,7 +10670,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-elgamal-proof-program"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "bytemuck",
@@ -10674,7 +10686,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-sdk"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.22.1",
@@ -10709,7 +10721,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-token-proof-program"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "agave-feature-set",
  "bytemuck",
@@ -10725,7 +10737,7 @@ dependencies = [
 [[package]]
 name = "solana-zk-token-sdk"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.22.1",
@@ -12062,7 +12074,7 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tip-router-operator-cli"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "anchor-lang 0.31.1",
  "anyhow",
@@ -13570,7 +13582,7 @@ source = "git+https://github.com/jito-foundation/jito-solana.git?rev=902402111e0
 [[patch.unused]]
 name = "solana-bench-tps"
 version = "2.3.3"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=382240ace9b5c1829e5a0bca55c7c7afb7d64aa0#382240ace9b5c1829e5a0bca55c7c7afb7d64aa0"
+source = "git+https://github.com/jito-foundation/jito-solana.git?rev=e61f23851231eea25d403fc0400e51ae3c9e54c1#e61f23851231eea25d403fc0400e51ae3c9e54c1"
 
 [[patch.unused]]
 name = "solana-config-program"

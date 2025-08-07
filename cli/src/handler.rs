@@ -66,22 +66,18 @@ pub struct CliHandler {
 }
 
 impl CliHandler {
+    /// Creates a new `CliHandler` instance from command-line arguments.
+    ///
+    /// # Configuration Loading
+    /// 1. If `args.config_file` is specified, loads from that file
+    /// 2. Otherwise, loads from the default Solana CLI config file
     pub async fn from_args(args: &Args) -> Result<Self> {
-        let rpc_url = args.rpc_url.clone();
         CommitmentConfig::confirmed();
-
         let commitment = CommitmentConfig::from_str(&args.commitment)?;
 
-        let keypair = match &args.config_file {
-            Some(config_file) => {
-                let config = Config::load(config_file.as_os_str().to_str().unwrap())?;
-                let keypair_path = match &args.keypair_path {
-                    Some(path) => path.as_str(),
-                    None => config.keypair_path.as_str(),
-                };
-                read_keypair_file(keypair_path)
-                    .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?
-            }
+        // Load config - either from specified file or default
+        let config = match &args.config_file {
+            Some(config_file) => Config::load(config_file.as_os_str().to_str().unwrap())?,
             None => {
                 let config_file = solana_cli_config::CONFIG_FILE
                     .as_ref()
@@ -91,9 +87,14 @@ impl CliHandler {
                         .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?,
                     Err(_) => read_keypair_file(args.keypair_path.clone().unwrap())
                         .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?,
-                }
             }
         };
+
+        let keypair_path = args.keypair_path.as_deref().unwrap_or(&config.keypair_path);
+        let keypair = read_keypair_file(keypair_path)
+            .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?;
+
+        let rpc_url = args.rpc_url.clone().unwrap_or(config.json_rpc_url);
 
         let restaking_program_id = Pubkey::from_str(&args.restaking_program_id)?;
         let vault_program_id = Pubkey::from_str(&args.vault_program_id)?;
@@ -869,9 +870,16 @@ impl CliHandler {
                 deposit_fee_bps,
                 withdrawal_fee_bps,
                 reward_fee_bps,
+                initialize_token_amount,
             } => {
-                create_and_add_test_vault(self, deposit_fee_bps, withdrawal_fee_bps, reward_fee_bps)
-                    .await
+                create_and_add_test_vault(
+                    self,
+                    deposit_fee_bps,
+                    withdrawal_fee_bps,
+                    reward_fee_bps,
+                    initialize_token_amount,
+                )
+                .await
             }
         }
     }
