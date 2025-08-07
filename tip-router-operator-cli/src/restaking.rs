@@ -1,22 +1,21 @@
 use std::sync::Arc;
 
 use base64::{engine::general_purpose, Engine};
-use jito_bytemuck::AccountDeserialize;
-use jito_bytemuck::Discriminator;
-use jito_restaking_client::instructions::InitializeOperatorVaultTicketBuilder;
-use jito_restaking_client::instructions::OperatorWarmupNcnBuilder;
-use jito_restaking_core::ncn_operator_state::NcnOperatorState;
-use jito_restaking_core::operator_vault_ticket::OperatorVaultTicket;
-use jito_restaking_core::{config::Config as RestakingConfig, ncn_vault_ticket::NcnVaultTicket};
+use jito_bytemuck::{AccountDeserialize, Discriminator};
+use jito_restaking_client::instructions::{
+    InitializeOperatorVaultTicketBuilder, OperatorWarmupNcnBuilder,
+};
+use jito_restaking_core::{
+    config::Config as RestakingConfig, ncn_operator_state::NcnOperatorState,
+    ncn_vault_ticket::NcnVaultTicket, operator_vault_ticket::OperatorVaultTicket,
+};
 use log::{info, warn};
-use solana_account_decoder::UiAccountEncoding;
-use solana_account_decoder::UiDataSliceConfig;
-use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_client::rpc_config::RpcAccountInfoConfig;
-use solana_client::rpc_config::RpcProgramAccountsConfig;
-use solana_client::rpc_filter::Memcmp;
-use solana_client::rpc_filter::MemcmpEncodedBytes;
-use solana_client::rpc_filter::RpcFilterType;
+use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
+use solana_client::{
+    nonblocking::rpc_client::RpcClient,
+    rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
+    rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
+};
 use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction};
 
 /// Handles jito-restaking-program operation
