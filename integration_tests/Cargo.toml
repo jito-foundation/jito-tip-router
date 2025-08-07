@@ -9,12 +9,17 @@ license = { workspace = true }
 edition = { workspace = true }
 readme = { workspace = true }
 
+[dependencies]
+jito-tip-router-client = { workspace = true }
+log = "0.4.21"
+
 [dev-dependencies]
 anchor-lang = { workspace = true }
 borsh = { workspace = true }
 bytemuck = { workspace = true }
 jito-bytemuck = { workspace = true }
 jito-jsm-core = { workspace = true }
+jito-priority-fee-distribution-sdk = { workspace = true }
 jito-restaking-core = { workspace = true }
 jito-restaking-program = { workspace = true }
 jito-restaking-sdk = { workspace = true }
@@ -35,8 +40,4 @@ spl-stake-pool = { workspace = true }
 spl-token = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
-
-[dependencies]
-jito-tip-router-client = { workspace = true }
-log = "0.4.21"
 

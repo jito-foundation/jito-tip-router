@@ -77,6 +77,7 @@ impl<'a> Proof<'a> {
 }
 
 impl MerkleTree {
+    #[allow(clippy::manual_div_ceil)]
     #[allow(clippy::integer_division)]
     const fn next_level_len(level_len: usize) -> usize {
         if level_len == 1 {

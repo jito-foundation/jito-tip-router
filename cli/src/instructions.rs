@@ -13,6 +13,7 @@ use crate::{
     handler::CliHandler,
     log::{boring_progress_bar, print_base58_tx},
 };
+
 use anyhow::{anyhow, Ok, Result};
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_client::instructions::{
@@ -80,7 +81,7 @@ use jito_vault_core::{
 };
 use log::info;
 use solana_client::rpc_config::RpcSendTransactionConfig;
-
+#[allow(deprecated)]
 use solana_sdk::{
     clock::DEFAULT_SLOTS_PER_EPOCH,
     compute_budget::ComputeBudgetInstruction,
@@ -91,13 +92,15 @@ use solana_sdk::{
     rent::Rent,
     signature::{Keypair, Signature},
     signer::Signer,
-    system_instruction::{create_account, transfer},
+    system_instruction::{self, create_account, transfer},
     system_program,
     transaction::Transaction,
 };
 use spl_associated_token_account::get_associated_token_address;
 use switchboard_on_demand_client::{CrossbarClient, FetchUpdateParams, PullFeed, QueueAccountData};
 use tokio::time::sleep;
+
+use jito_priority_fee_distribution_sdk;
 
 // --------------------- ADMIN ------------------------------
 #[allow(clippy::too_many_arguments)]
@@ -500,6 +503,7 @@ pub async fn admin_fund_account_payer(handler: &CliHandler, amount: f64) -> Resu
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn admin_set_config_fees(
     handler: &CliHandler,
     new_block_engine_fee_bps: Option<u16>,
@@ -508,6 +512,7 @@ pub async fn admin_set_config_fees(
     new_base_fee_bps: Option<u16>,
     ncn_fee_group: Option<u8>,
     new_ncn_fee_bps: Option<u16>,
+    new_priority_fee_distribution_fee_bps: Option<u16>,
 ) -> Result<()> {
     let keypair = handler.keypair();
     let ncn = *handler.ncn()?;
@@ -542,6 +547,10 @@ pub async fn admin_set_config_fees(
         ix.new_ncn_fee_bps(fee);
     }
 
+    if let Some(fee) = new_priority_fee_distribution_fee_bps {
+        ix.new_priority_fee_distribution_fee_bps(fee);
+    }
+
     let mut admin_set_config_fees_ix = ix.instruction();
     admin_set_config_fees_ix.program_id = handler.tip_router_program_id;
 
@@ -562,6 +571,10 @@ pub async fn admin_set_config_fees(
                 format!("New Base Fee BPS: {:?}", new_base_fee_bps),
                 format!("NCN Fee Group: {:?}", ncn_fee_group),
                 format!("New NCN Fee BPS: {:?}", new_ncn_fee_bps),
+                format!(
+                    "New Priority Fee Distribution Fee BPS: {:?}",
+                    new_priority_fee_distribution_fee_bps
+                ),
             ],
         )
         .await?;
@@ -923,12 +936,13 @@ pub async fn set_weight_with_st_mint(
     // Crank Switchboard
     let result = crank_switchboard(handler, switchboard_feed).await;
     if let Err(e) = result {
+        let switchboard_feed = format!(
+            "https://ondemand.switchboard.xyz/solana/mainnet/feed/{}",
+            switchboard_feed
+        );
         log::error!(
             "\n\nFailed to crank switchboard - will need manual crank at {}\n\nError:\n{:?}\n",
-            format!(
-                "https://ondemand.switchboard.xyz/solana/mainnet/feed/{}",
-                switchboard_feed
-            ),
+            switchboard_feed,
             e
         );
     }
@@ -1761,7 +1775,7 @@ pub async fn distribute_base_rewards(
         .instruction();
     distribute_base_ncn_rewards_ix.program_id = handler.tip_router_program_id;
 
-    send_and_log_transaction(
+    let result = send_and_log_transaction(
         handler,
         &[
             create_base_fee_wallet_ata_ix,
@@ -1775,7 +1789,14 @@ pub async fn distribute_base_rewards(
             format!("Epoch: {:?}", epoch),
         ],
     )
-    .await?;
+    .await;
+
+    if let Err(err) = result {
+        let error_message = format!("{:?}", err);
+        recover_from_low_balance_deposit_base(handler, epoch, &error_message).await?;
+
+        return Err(err);
+    }
 
     Ok(())
 }
@@ -1875,7 +1896,7 @@ pub async fn distribute_ncn_vault_rewards(
         .vrt_mint(vrt_mint)
         .instruction();
 
-    send_and_log_transaction(
+    let result = send_and_log_transaction(
         handler,
         &[
             ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
@@ -1893,7 +1914,21 @@ pub async fn distribute_ncn_vault_rewards(
             format!("Epoch: {:?}", epoch),
         ],
     )
-    .await?;
+    .await;
+
+    if let Err(err) = result {
+        let error_message = format!("{:?}", err);
+        recover_from_low_balance_deposit_ncn(
+            handler,
+            operator,
+            ncn_fee_group,
+            epoch,
+            &error_message,
+        )
+        .await?;
+
+        return Err(err);
+    }
 
     Ok(())
 }
@@ -1972,7 +2007,7 @@ pub async fn distribute_ncn_operator_rewards(
         .instruction();
     distribute_ncn_operator_rewards_ix.program_id = handler.tip_router_program_id;
 
-    send_and_log_transaction(
+    let result = send_and_log_transaction(
         handler,
         &[create_operator_ata_ix, distribute_ncn_operator_rewards_ix],
         &[],
@@ -1982,6 +2017,86 @@ pub async fn distribute_ncn_operator_rewards(
             format!("Operator: {:?}", operator),
             format!("NCN Fee Group: {:?}", ncn_fee_group.group),
             format!("Epoch: {:?}", epoch),
+        ],
+    )
+    .await;
+
+    if let Err(err) = result {
+        let error_message = format!("{:?}", err);
+        recover_from_low_balance_deposit_ncn(
+            handler,
+            operator,
+            ncn_fee_group,
+            epoch,
+            &error_message,
+        )
+        .await?;
+
+        return Err(err);
+    }
+
+    Ok(())
+}
+
+pub async fn recover_from_low_balance_deposit_base(
+    handler: &CliHandler,
+    epoch: u64,
+    error_message: &String,
+) -> Result<()> {
+    let ncn = handler.ncn()?;
+
+    let (ncn_reward_receiver, _, _) =
+        BaseRewardReceiver::find_program_address(&handler.tip_router_program_id, ncn, epoch);
+
+    recover_from_low_balance_deposit(handler, &ncn_reward_receiver, error_message).await
+}
+
+pub async fn recover_from_low_balance_deposit_ncn(
+    handler: &CliHandler,
+    operator: &Pubkey,
+    ncn_fee_group: NcnFeeGroup,
+    epoch: u64,
+    error_message: &String,
+) -> Result<()> {
+    let ncn = handler.ncn()?;
+
+    let (ncn_reward_receiver, _, _) = NcnRewardReceiver::find_program_address(
+        &handler.tip_router_program_id,
+        ncn_fee_group,
+        operator,
+        ncn,
+        epoch,
+    );
+
+    recover_from_low_balance_deposit(handler, &ncn_reward_receiver, error_message).await
+}
+
+pub async fn recover_from_low_balance_deposit(
+    handler: &CliHandler,
+    to: &Pubkey,
+    error_message: &String,
+) -> Result<()> {
+    const RECOVERY_LAMPORTS: u64 = 1000;
+    const RECOVERABLE_ERROR: &str =
+        "Not enough lamports provided for deposit to result in one pool token";
+
+    if !error_message.contains(RECOVERABLE_ERROR) {
+        info!("Error not recoverable: {}", error_message);
+        return Ok(());
+    }
+
+    let keypair = handler.keypair();
+    let transfer_ix = system_instruction::transfer(&keypair.pubkey(), to, RECOVERY_LAMPORTS);
+
+    send_and_log_transaction(
+        handler,
+        &[transfer_ix],
+        &[],
+        "Recovered From Low Balance Deposit",
+        &[
+            format!("To: {:?}", to),
+            format!("From: {:?}", keypair.pubkey()),
+            format!("Amount: {:?}", RECOVERY_LAMPORTS),
         ],
     )
     .await?;
@@ -2010,9 +2125,7 @@ pub async fn close_epoch_account(
 
     let account_already_closed = get_account(handler, &account_to_close)
         .await?
-        .map_or(true, |account| {
-            account.data.is_empty() || account.lamports == 0
-        });
+        .is_none_or(|account| account.data.is_empty() || account.lamports == 0);
     if account_already_closed {
         info!("Account already closed: {:?}", account_to_close);
         return Ok(());
@@ -2256,7 +2369,7 @@ pub async fn get_or_create_weight_table(handler: &CliHandler, epoch: u64) -> Res
 
     if get_account(handler, &weight_table)
         .await?
-        .map_or(true, |table| table.data.len() < WeightTable::SIZE)
+        .is_none_or(|table| table.data.len() < WeightTable::SIZE)
     {
         create_weight_table(handler, epoch).await?;
         check_created(handler, &weight_table).await?;
@@ -2274,7 +2387,7 @@ pub async fn get_or_create_epoch_snapshot(
 
     if get_account(handler, &epoch_snapshot)
         .await?
-        .map_or(true, |snapshot| snapshot.data.len() < EpochSnapshot::SIZE)
+        .is_none_or(|snapshot| snapshot.data.len() < EpochSnapshot::SIZE)
     {
         create_epoch_snapshot(handler, epoch).await?;
         check_created(handler, &epoch_snapshot).await?;
@@ -2298,9 +2411,7 @@ pub async fn get_or_create_operator_snapshot(
 
     if get_account(handler, &operator_snapshot)
         .await?
-        .map_or(true, |snapshot| {
-            snapshot.data.len() < OperatorSnapshot::SIZE
-        })
+        .is_none_or(|snapshot| snapshot.data.len() < OperatorSnapshot::SIZE)
     {
         create_operator_snapshot(handler, operator, epoch).await?;
         check_created(handler, &operator_snapshot).await?;
@@ -2316,7 +2427,7 @@ pub async fn get_or_create_ballot_box(handler: &CliHandler, epoch: u64) -> Resul
 
     if get_account(handler, &ballot_box)
         .await?
-        .map_or(true, |ballot_box| ballot_box.data.len() < BallotBox::SIZE)
+        .is_none_or(|ballot_box| ballot_box.data.len() < BallotBox::SIZE)
     {
         create_ballot_box(handler, epoch).await?;
         check_created(handler, &ballot_box).await?;
@@ -2334,7 +2445,7 @@ pub async fn get_or_create_base_reward_router(
 
     if get_account(handler, &base_reward_router)
         .await?
-        .map_or(true, |router| router.data.len() < BaseRewardRouter::SIZE)
+        .is_none_or(|router| router.data.len() < BaseRewardRouter::SIZE)
     {
         create_base_reward_router(handler, epoch).await?;
         check_created(handler, &base_reward_router).await?;
@@ -2371,7 +2482,7 @@ pub async fn get_or_create_ncn_reward_router(
 
     if get_account(handler, &ncn_reward_router)
         .await?
-        .map_or(true, |router| router.data.len() < NcnRewardRouter::SIZE)
+        .is_none_or(|router| router.data.len() < NcnRewardRouter::SIZE)
     {
         create_ncn_reward_router(handler, ncn_fee_group, operator, epoch).await?;
         check_created(handler, &ncn_reward_router).await?;
@@ -2719,11 +2830,11 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
                 if let Err(err) = result {
                     log::error!(
-                    "Failed to distribute ncn operator rewards for operator: {:?} in epoch: {:?} with error: {:?}",
-                    operator,
-                    epoch,
-                    err
-                );
+                        "Failed to distribute ncn operator rewards for operator: {:?} in epoch: {:?} with error: {:?}",
+                        operator,
+                        epoch,
+                        err
+                    );
                     continue;
                 }
             }
@@ -3444,6 +3555,7 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
     let old_merkle_root_upload_authority =
         Pubkey::from_str("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib").unwrap();
 
+    // Get tip distribution accounts to migrate
     let tip_distribution_accounts = get_tip_distribution_accounts_to_migrate(
         handler,
         &jito_tip_distribution_sdk::id(),
@@ -3452,21 +3564,53 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
     )
     .await?;
 
-    let (merkle_root_upload_config, _) =
-        derive_merkle_root_upload_authority_address(&jito_tip_distribution_sdk::id());
+    // Get priority fee distribution accounts to migrate
+    let priority_fee_distribution_accounts = get_tip_distribution_accounts_to_migrate(
+        handler,
+        &jito_priority_fee_distribution_sdk::id(),
+        &old_merkle_root_upload_authority,
+        epoch,
+    )
+    .await?;
 
-    let ixs = tip_distribution_accounts
+    // Get merkle root upload config addresses for both programs
+    let (tip_merkle_root_upload_config, _) =
+        derive_merkle_root_upload_authority_address(&jito_tip_distribution_sdk::id());
+    let (pf_merkle_root_upload_config, _) =
+        derive_merkle_root_upload_authority_address(&jito_priority_fee_distribution_sdk::id());
+
+    // Create instructions for tip distribution accounts
+    let tip_ixs = tip_distribution_accounts
         .into_iter()
         .map(|pubkey| {
-            migrate_tda_merkle_root_upload_authority_ix(pubkey, merkle_root_upload_config)
+            migrate_tda_merkle_root_upload_authority_ix(pubkey, tip_merkle_root_upload_config)
         })
         .collect::<Vec<_>>();
 
+    // Create instructions for priority fee distribution accounts
+    let pf_ixs = priority_fee_distribution_accounts
+        .into_iter()
+        .map(|pubkey| {
+            jito_priority_fee_distribution_sdk::instruction::migrate_tda_merkle_root_upload_authority_ix(
+                pubkey,
+                pf_merkle_root_upload_config,
+            )
+        })
+        .collect::<Vec<_>>();
+
+    let tip_ixs_len = tip_ixs.len();
+    let pf_ixs_len = pf_ixs.len();
+    let mut all_ixs = tip_ixs;
+    all_ixs.extend(pf_ixs);
+
     info!(
-        "Migrating TDA Merkle Root Upload Authorities: {}",
-        ixs.len()
+        "Migrating TDA Merkle Root Upload Authorities: {} tip distribution accounts, {} priority fee distribution accounts",
+        tip_ixs_len,
+        pf_ixs_len
     );
-    for chunk in ixs.chunks(8) {
+
+    // Process instructions in chunks
+    for chunk in all_ixs.chunks(8) {
         let tx_ixs = std::iter::once(ComputeBudgetInstruction::set_compute_unit_limit(1_400_000))
             .chain(chunk.iter().cloned())
             .collect::<Vec<_>>();

@@ -86,6 +86,7 @@ mod tests {
                     Some(NcnFeeGroup::lst()),
                     Some(15),
                     &test_ncn.ncn_root,
+                    None,
                 )
                 .await?;
 
@@ -98,6 +99,7 @@ mod tests {
                     Some(NcnFeeGroup::jto()),
                     Some(15),
                     &test_ncn.ncn_root,
+                    None,
                 )
                 .await?;
 
@@ -421,6 +423,7 @@ mod fuzz_tests {
                     Some(NcnFeeGroup::lst()),
                     Some(config.lst_fee_bps),
                     &test_ncn.ncn_root,
+                    None,
                 )
                 .await?;
 
@@ -433,6 +436,7 @@ mod fuzz_tests {
                     Some(NcnFeeGroup::jto()),
                     Some(config.jto_fee_bps),
                     &test_ncn.ncn_root,
+                    None,
                 )
                 .await?;
 

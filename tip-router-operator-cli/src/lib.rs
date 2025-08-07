@@ -7,12 +7,15 @@ pub mod arg_matches;
 pub mod backup_snapshots;
 pub mod claim;
 pub mod cli;
+pub mod distribution_meta;
 pub mod load_and_process_ledger;
 pub mod priority_fees;
 pub mod process_epoch;
+pub mod reclaim;
 pub mod rpc_utils;
 pub mod solana_cli;
 pub mod submit;
+pub mod tx_utils;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -22,7 +25,6 @@ use std::time::Instant;
 
 use anchor_lang::prelude::*;
 use cli::SnapshotPaths;
-use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{
     CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
     TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
@@ -36,7 +38,7 @@ use meta_merkle_tree::{
 };
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::bank::Bank;
-use solana_sdk::{account::AccountSharedData, pubkey::Pubkey};
+use solana_sdk::pubkey::Pubkey;
 use stake_meta_generator::generate_stake_meta_collection;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -215,6 +217,7 @@ pub fn create_stake_meta(
     epoch: u64,
     bank: &Arc<Bank>,
     tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     save_path: &Path,
     save: bool,
@@ -226,6 +229,7 @@ pub fn create_stake_meta(
     let stake_meta_coll = match generate_stake_meta_collection(
         bank,
         tip_distribution_program_id,
+        priority_fee_distribution_program_id,
         tip_payment_program_id,
     ) {
         Ok(stake_meta) => stake_meta,
@@ -280,6 +284,7 @@ pub fn create_merkle_tree_collection(
     epoch: u64,
     ncn_address: &Pubkey,
     protocol_fee_bps: u64,
+    pf_distribution_protocol_fee_bps: u64,
     save_path: &Path,
     save: bool,
     cluster: &str,
@@ -292,6 +297,7 @@ pub fn create_merkle_tree_collection(
         ncn_address,
         epoch,
         protocol_fee_bps,
+        pf_distribution_protocol_fee_bps,
         tip_router_program_id,
     ) {
         Ok(merkle_tree_coll) => merkle_tree_coll,
@@ -459,13 +465,6 @@ fn derive_tip_payment_pubkeys(program_id: &Pubkey) -> TipPaymentPubkeys {
             tip_pda_0, tip_pda_1, tip_pda_2, tip_pda_3, tip_pda_4, tip_pda_5, tip_pda_6, tip_pda_7,
         ],
     }
-}
-
-/// Convenience wrapper around [TipDistributionAccount]
-pub struct TipDistributionAccountWrapper {
-    pub tip_distribution_account: TipDistributionAccount,
-    pub account_data: AccountSharedData,
-    pub tip_distribution_pubkey: Pubkey,
 }
 
 fn get_validator_cmdline() -> Result<String> {

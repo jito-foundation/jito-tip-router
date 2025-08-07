@@ -146,6 +146,17 @@ pub fn set_ledger_tool_arg_matches(
         .default_value("base64")
         .help("Print account data in specified format when printing account contents.");
 
+    // let rent = Rent::default();
+    // let default_bootstrap_validator_lamports = &sol_to_lamports(500.0)
+    //     .max(VoteState::get_rent_exempt_reserve(&rent))
+    //     .to_string();
+    // let default_bootstrap_validator_stake_lamports = &sol_to_lamports(0.5)
+    //     .max(rent.minimum_balance(StakeStateV2::size_of()))
+    //     .to_string();
+    // let default_graph_vote_account_mode = GraphVoteAccountMode::default();
+
+    // let mut measure_total_execution_time = Measure::start("ledger tool");
+
     let app = App::new("tip-router-operator-cli")
         .about("Tip Router Operator CLI")
         .version("0.1.0")
@@ -205,6 +216,7 @@ pub fn set_ledger_tool_arg_matches(
                 .value_name("METHOD")
                 .takes_value(true)
                 // .possible_values(BlockVerificationMethod::cli_names())
+                // .default_value(BlockVerificationMethod::default().into())
                 .global(true), // .help(BlockVerificationMethod::cli_message()),
         )
         .arg(
@@ -239,6 +251,7 @@ pub fn set_ledger_tool_arg_matches(
         .subcommand(
             SubCommand::with_name("create-snapshot")
                 .about("Create a new ledger snapshot")
+                // REVIEW: Missing .arg(&os_memory_stats_reporting_arg)
                 .arg(&load_genesis_config_arg)
                 .args(&accounts_db_config_args)
                 .args(&snapshot_config_args)
@@ -434,6 +447,20 @@ pub fn set_ledger_tool_arg_matches(
                         .takes_value(true)
                         .help("Snapshot archive format to use.")
                         .conflicts_with("no_snapshot"),
+                )
+                .arg(
+                    Arg::with_name("snapshot_zstd_compression_level")
+                        .long("snapshot-zstd-compression-level")
+                        .default_value("0")
+                        .value_name("LEVEL")
+                        .takes_value(true)
+                        .help("The compression level to use when archiving with zstd")
+                        .long_help(
+                            "The compression level to use when archiving with zstd. \
+                             Higher compression levels generally produce higher \
+                             compression ratio at the expense of speed and memory. \
+                             See the zstd manpage for more information.",
+                        ),
                 )
                 .arg(
                     Arg::with_name("enable_capitalization_change")

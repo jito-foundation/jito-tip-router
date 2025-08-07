@@ -67,6 +67,8 @@ pub struct Cli {
     pub command: Commands,
 }
 
+#[allow(unused_assignments)]
+#[allow(deprecated)]
 impl Cli {
     #[allow(deprecated)]
     pub fn get_save_path(&self) -> PathBuf {
@@ -138,6 +140,9 @@ pub enum Commands {
         tip_distribution_program_id: Pubkey,
 
         #[arg(long, env)]
+        priority_fee_distribution_program_id: Pubkey,
+
+        #[arg(long, env)]
         tip_payment_program_id: Pubkey,
 
         #[arg(long, env)]
@@ -167,6 +172,9 @@ pub enum Commands {
         #[arg(long, env, default_value = "true")]
         save_stages: bool,
 
+        #[arg(long, env, default_value = "false")]
+        reclaim_expired_accounts: bool,
+
         #[arg(
             long,
             env,
@@ -188,6 +196,9 @@ pub enum Commands {
         tip_distribution_program_id: Pubkey,
 
         #[arg(long, env)]
+        priority_fee_distribution_program_id: Pubkey,
+
+        #[arg(long, env)]
         tip_router_program_id: Pubkey,
 
         #[arg(long, env)]
@@ -203,6 +214,10 @@ pub enum Commands {
         /// Tip distribution program ID
         #[arg(long, env)]
         tip_distribution_program_id: Pubkey,
+
+        /// Priority fee distribution program ID
+        #[arg(long, env)]
+        priority_fee_distribution_program_id: Pubkey,
 
         #[arg(short, long, env)]
         ncn_address: Pubkey,
@@ -220,6 +235,9 @@ pub enum Commands {
 
         #[arg(long, env)]
         tip_distribution_program_id: Pubkey,
+
+        #[arg(long, env)]
+        priority_fee_distribution_program_id: Pubkey,
 
         #[arg(long, env)]
         tip_payment_program_id: Pubkey,

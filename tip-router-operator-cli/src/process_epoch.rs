@@ -5,6 +5,13 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::{
+    backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
+    create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
+    load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
+    read_stake_meta_collection, submit::submit_to_ncn, tip_router::get_ncn_config, Cli,
+    OperatorState, Version,
+};
 use anyhow::Result;
 use log::{error, info};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
@@ -13,14 +20,6 @@ use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_runtime::bank::Bank;
 use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::read_keypair_file};
 use tokio::time;
-
-use crate::{
-    backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
-    create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
-    load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
-    read_stake_meta_collection, submit::submit_to_ncn, tip_router::get_ncn_config, Cli,
-    OperatorState, Version,
-};
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
 const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined
@@ -106,6 +105,7 @@ pub async fn loop_stages(
     override_target_slot: Option<u64>,
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
     tip_payment_program_id: &Pubkey,
     ncn_address: &Pubkey,
     enable_snapshots: bool,
@@ -205,6 +205,7 @@ pub async fn loop_stages(
                     epoch_to_process,
                     bank.as_ref().expect("Bank was not set"),
                     tip_distribution_program_id,
+                    priority_fee_distribution_program_id,
                     tip_payment_program_id,
                     &cli.get_save_path(),
                     save_stages,
@@ -216,19 +217,20 @@ pub async fn loop_stages(
                 stage = OperatorState::CreateMerkleTreeCollection;
             }
             OperatorState::CreateMerkleTreeCollection => {
-                let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
-                    || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
-                    |collection| collection,
-                );
                 let config =
                     get_ncn_config(&rpc_client, tip_router_program_id, ncn_address).await?;
                 // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
                 //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
                 //  use epoch + 1 here
                 let ballot_epoch = epoch_to_process.checked_add(1).unwrap();
+                let fees = config.fee_config.current_fees(ballot_epoch);
                 let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 
                 // Generate the merkle tree collection
+                let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
+                    || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
+                    |collection| collection,
+                );
                 merkle_tree_collection = Some(create_merkle_tree_collection(
                     cli.operator_address.clone(),
                     tip_router_program_id,
@@ -236,6 +238,7 @@ pub async fn loop_stages(
                     epoch_to_process,
                     ncn_address,
                     protocol_fee_bps,
+                    fees.priority_fee_distribution_fee_bps(),
                     &cli.get_save_path(),
                     save_stages,
                     &cli.cluster,
@@ -246,21 +249,25 @@ pub async fn loop_stages(
                 stage = OperatorState::CreateMetaMerkleTree;
             }
             OperatorState::CreateMetaMerkleTree => {
-                let some_merkle_tree_collection = merkle_tree_collection.to_owned().map_or_else(
-                    || read_merkle_tree_collection(epoch_to_process, &cli.get_save_path()),
-                    |collection| collection,
-                );
+                let merkle_root = {
+                    let some_merkle_tree_collection =
+                        merkle_tree_collection.to_owned().map_or_else(
+                            || read_merkle_tree_collection(epoch_to_process, &cli.get_save_path()),
+                            |collection| collection,
+                        );
+                    let merkle_tree = create_meta_merkle_tree(
+                        cli.operator_address.clone(),
+                        some_merkle_tree_collection,
+                        epoch_to_process,
+                        &cli.get_save_path(),
+                        // This is defaulted to true because the output file is required by the
+                        //  task that sets TipDistributionAccounts' merkle roots
+                        true,
+                        &cli.cluster,
+                    );
+                    merkle_tree.merkle_root
+                };
 
-                let merkle_tree = create_meta_merkle_tree(
-                    cli.operator_address.clone(),
-                    some_merkle_tree_collection,
-                    epoch_to_process,
-                    &cli.get_save_path(),
-                    // This is defaulted to true because the output file is required by the
-                    //  task that sets TipDistributionAccounts' merkle roots
-                    true,
-                    &cli.cluster,
-                );
                 datapoint_info!(
                     "tip_router_cli.process_epoch",
                     ("operator_address", operator_address, String),
@@ -269,7 +276,7 @@ pub async fn loop_stages(
                     ("state", "epoch_processing_completed", String),
                     (
                         "meta_merkle_root",
-                        format!("{:?}", merkle_tree.merkle_root),
+                        format!("{:?}", merkle_root),
                         String
                     ),
                     ("version", Version::default().to_string(), String),
@@ -291,6 +298,7 @@ pub async fn loop_stages(
                     ncn_address,
                     tip_router_program_id,
                     tip_distribution_program_id,
+                    priority_fee_distribution_program_id,
                     cli.submit_as_memo,
                     // We let the submit task handle setting merkle roots
                     false,

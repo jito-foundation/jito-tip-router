@@ -705,7 +705,6 @@ impl VaultProgramClient {
                 vault,
                 &vrt_mint.pubkey(),
                 &st_mint.pubkey(),
-                // TODO: Review these keys, maybe refactor to use restaking
                 &admin_st_token_account,
                 &vault_st_token_account,
                 &burn_vault,

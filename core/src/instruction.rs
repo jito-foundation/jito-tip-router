@@ -211,7 +211,7 @@ pub enum TipRouterInstruction {
         epoch: u64,
     },
 
-    /// Set the merkle root after consensus is reached
+    /// Set the [tip distributor] merkle root after consensus is reached
     #[account(0, writable, name = "epoch_state")]
     #[account(1, writable, name = "config")]
     #[account(2, name = "ncn")]
@@ -437,6 +437,7 @@ pub enum TipRouterInstruction {
         new_base_fee_bps: Option<u16>,
         ncn_fee_group: Option<u8>,
         new_ncn_fee_bps: Option<u16>,
+        new_priority_fee_distribution_fee_bps: Option<u16>,
     },
 
     /// Sets a new secondary admin for the NCN

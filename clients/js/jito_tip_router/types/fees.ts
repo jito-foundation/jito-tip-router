@@ -24,6 +24,7 @@ import { getFeeDecoder, getFeeEncoder, type Fee, type FeeArgs } from '.';
 
 export type Fees = {
   activationEpoch: bigint;
+  priorityFeeDistributionFeeBps: Fee;
   reserved: Array<number>;
   baseFeeGroupsBps: Array<Fee>;
   ncnFeeGroupsBps: Array<Fee>;
@@ -31,6 +32,7 @@ export type Fees = {
 
 export type FeesArgs = {
   activationEpoch: number | bigint;
+  priorityFeeDistributionFeeBps: FeeArgs;
   reserved: Array<number>;
   baseFeeGroupsBps: Array<FeeArgs>;
   ncnFeeGroupsBps: Array<FeeArgs>;
@@ -39,7 +41,8 @@ export type FeesArgs = {
 export function getFeesEncoder(): Encoder<FeesArgs> {
   return getStructEncoder([
     ['activationEpoch', getU64Encoder()],
-    ['reserved', getArrayEncoder(getU8Encoder(), { size: 128 })],
+    ['priorityFeeDistributionFeeBps', getFeeEncoder()],
+    ['reserved', getArrayEncoder(getU8Encoder(), { size: 126 })],
     ['baseFeeGroupsBps', getArrayEncoder(getFeeEncoder(), { size: 8 })],
     ['ncnFeeGroupsBps', getArrayEncoder(getFeeEncoder(), { size: 8 })],
   ]);
@@ -48,7 +51,8 @@ export function getFeesEncoder(): Encoder<FeesArgs> {
 export function getFeesDecoder(): Decoder<Fees> {
   return getStructDecoder([
     ['activationEpoch', getU64Decoder()],
-    ['reserved', getArrayDecoder(getU8Decoder(), { size: 128 })],
+    ['priorityFeeDistributionFeeBps', getFeeDecoder()],
+    ['reserved', getArrayDecoder(getU8Decoder(), { size: 126 })],
     ['baseFeeGroupsBps', getArrayDecoder(getFeeDecoder(), { size: 8 })],
     ['ncnFeeGroupsBps', getArrayDecoder(getFeeDecoder(), { size: 8 })],
   ]);

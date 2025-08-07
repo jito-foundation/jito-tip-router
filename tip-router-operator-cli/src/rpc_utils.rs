@@ -20,6 +20,18 @@ use solana_sdk::{
 use solana_transaction_status::TransactionStatus;
 use tokio::time::sleep;
 
+pub fn new_rpc_client(rpc_url: &str) -> RpcClient {
+    RpcClient::new(rpc_url.to_string())
+}
+
+pub fn new_high_timeout_rpc_client(rpc_url: &str) -> RpcClient {
+    RpcClient::new_with_timeout_and_commitment(
+        rpc_url.to_string(),
+        std::time::Duration::from_secs(1800),
+        solana_sdk::commitment_config::CommitmentConfig::finalized(),
+    )
+}
+
 pub async fn get_batched_accounts(
     rpc_client: &RpcClient,
     pubkeys: &[Pubkey],

@@ -3,6 +3,7 @@ use std::{
     fmt::{Debug, Formatter},
 };
 
+use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution;
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
 use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
@@ -35,6 +36,7 @@ use spl_stake_pool::find_withdraw_authority_program_address;
 
 use super::{
     generated_switchboard_accounts::get_switchboard_accounts,
+    priority_fee_distribution_client::PriorityFeeDistributionClient,
     restaking_client::NcnRoot,
     stake_pool_client::{PoolRoot, StakePoolClient},
     tip_distribution_client::TipDistributionClient,
@@ -113,6 +115,11 @@ impl TestBuilder {
             // Tests that invoke this program should be in the "bpf" module so we can run them separately with the bpf vm.
             // Anchor programs do not expose a compatible entrypoint for solana_program_test::processor!
             program_test.add_program("jito_tip_distribution", jito_tip_distribution::ID, None);
+            program_test.add_program(
+                "jito_priority_fee_distribution",
+                jito_priority_fee_distribution::ID,
+                None,
+            );
 
             program_test
         } else {
@@ -257,6 +264,13 @@ impl TestBuilder {
         )
     }
 
+    pub fn priority_fee_distribution_client(&self) -> PriorityFeeDistributionClient {
+        PriorityFeeDistributionClient::new(
+            self.context.banks_client.clone(),
+            self.context.payer.insecure_clone(),
+        )
+    }
+
     pub fn stake_pool_client(&self) -> StakePoolClient {
         StakePoolClient::new(
             self.context.banks_client.clone(),
@@ -323,6 +337,7 @@ impl TestBuilder {
                 None,
                 Some(15),
                 &ncn_root,
+                None,
             )
             .await?;
 
@@ -354,6 +369,7 @@ impl TestBuilder {
                 None,
                 Some(15),
                 &ncn_root,
+                None,
             )
             .await?;
 
@@ -391,6 +407,7 @@ impl TestBuilder {
                 None,
                 Some(ncn_fee_bps),
                 &ncn_root,
+                None,
             )
             .await?;
 

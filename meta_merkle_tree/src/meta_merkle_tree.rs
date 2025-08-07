@@ -68,7 +68,6 @@ impl MetaMerkleTree {
         Ok(tree)
     }
 
-    // TODO replace this with the GeneratedMerkleTreeCollection from the Operator module once that's created
     pub fn new_from_generated_merkle_tree_collection(
         generated_merkle_tree_collection: GeneratedMerkleTreeCollection,
     ) -> Result<Self> {
@@ -289,6 +288,7 @@ mod tests {
 
     #[test]
     fn test_new_from_generated_merkle_tree_collection() {
+        let tip_distribution_program_id = Pubkey::new_unique();
         // Create test tree nodes for each generated tree
         let tree1_nodes = vec![
             generated_merkle_tree::TreeNode {
@@ -335,7 +335,8 @@ mod tests {
         // Create test data with proper tree nodes
         let generated_trees = vec![
             GeneratedMerkleTree {
-                tip_distribution_account: Pubkey::new_unique(),
+                distribution_program: tip_distribution_program_id,
+                distribution_account: Pubkey::new_unique(),
                 merkle_root_upload_authority: Pubkey::new_unique(),
                 merkle_root: Hash::new_unique(),
                 tree_nodes: tree1_nodes,
@@ -343,7 +344,8 @@ mod tests {
                 max_num_nodes: 5,
             },
             GeneratedMerkleTree {
-                tip_distribution_account: Pubkey::new_unique(),
+                distribution_program: tip_distribution_program_id,
+                distribution_account: Pubkey::new_unique(),
                 merkle_root_upload_authority: Pubkey::new_unique(),
                 merkle_root: Hash::new_unique(),
                 tree_nodes: tree2_nodes,
@@ -380,11 +382,11 @@ mod tests {
             let matched_tree = generated_collection
                 .generated_merkle_trees
                 .iter()
-                .find(|x| x.tip_distribution_account == node.tip_distribution_account)
+                .find(|x| x.distribution_account == node.tip_distribution_account)
                 .unwrap();
             assert_eq!(
                 node.tip_distribution_account,
-                matched_tree.tip_distribution_account
+                matched_tree.distribution_account
             );
             assert_eq!(node.max_total_claim, matched_tree.max_total_claim);
             assert_eq!(node.max_num_nodes, matched_tree.max_num_nodes);
