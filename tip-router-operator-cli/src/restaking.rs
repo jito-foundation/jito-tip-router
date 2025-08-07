@@ -19,22 +19,30 @@ use solana_client::rpc_filter::MemcmpEncodedBytes;
 use solana_client::rpc_filter::RpcFilterType;
 use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction};
 
+/// Handles jito-restaking-program operation
 pub struct RestakingHandler {
+    /// RPC Client
     rpc_client: Arc<RpcClient>,
 
+    /// Jito Restaking program ID
     restaking_program_id: Pubkey,
 
+    /// Jito Restaking wonfiguration public key
     restaking_config_address: Pubkey,
 
+    /// NCN address
     ncn_address: Pubkey,
 
+    /// Operator address
     operator_address: Pubkey,
 
+    /// Keypair
     keypair: Arc<Keypair>,
 }
 
 impl RestakingHandler {
-    pub fn new(
+    /// Initialize [`RestakingHandler`]
+    pub const fn new(
         rpc_client: Arc<RpcClient>,
         restaking_program_id: Pubkey,
         restaking_config_address: Pubkey,
@@ -52,6 +60,10 @@ impl RestakingHandler {
         }
     }
 
+    /// Warmup NCN <> Operator state
+    ///
+    /// - Check if there is an [`NcnOperatorState`] state and loudly warn (but not fail) if there is not existing
+    /// - If the [`NcnOperatorState`] ticket exists and the operator is not warmed up, execute that instruction (`operator_warmup_ncn`)
     pub async fn warmup_operator(&self) -> anyhow::Result<()> {
         let slot = self.rpc_client.get_slot().await?;
         let restaking_config_acc = self
@@ -102,6 +114,9 @@ impl RestakingHandler {
         Ok(())
     }
 
+    /// Create Operator <> Vault tickets
+    ///
+    /// - For all vaults that have [`NcnVaultTicket`] with the NCN address, build and execute the instructions to create [`OperatorVaultTicket`] tickets, if they have not been created already.
     pub async fn create_operator_vault_tickets(&self) -> anyhow::Result<()> {
         let config = {
             let data_size = std::mem::size_of::<NcnVaultTicket>()
