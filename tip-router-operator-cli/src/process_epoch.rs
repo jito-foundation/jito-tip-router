@@ -5,6 +5,13 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::{
+    backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
+    create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
+    load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
+    read_stake_meta_collection, submit::submit_to_ncn, tip_router::get_ncn_config, Cli,
+    OperatorState, Version,
+};
 use anyhow::Result;
 use log::{error, info};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
@@ -13,14 +20,6 @@ use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_runtime::bank::Bank;
 use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::read_keypair_file};
 use tokio::time;
-
-use crate::{
-    backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
-    create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
-    load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
-    read_stake_meta_collection, submit::submit_to_ncn, tip_router::get_ncn_config, Cli,
-    OperatorState, Version,
-};
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
 const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined
@@ -156,21 +155,11 @@ pub async fn loop_stages(
                 wait_for_optimal_incremental_snapshot(incremental_snapshots_path, slot_to_process)
                     .await?;
 
-                if current_epoch_info.epoch
-                    < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
-                {
-                    bank = Some(legacy_tip_router_operator_cli::load_bank_from_snapshot(
-                        cli.as_legacy(),
-                        slot_to_process,
-                        enable_snapshots,
-                    ));
-                } else {
-                    bank = Some(load_bank_from_snapshot(
-                        cli.clone(),
-                        slot_to_process,
-                        enable_snapshots,
-                    ));
-                }
+                bank = Some(load_bank_from_snapshot(
+                    cli.clone(),
+                    slot_to_process,
+                    enable_snapshots,
+                ));
                 // Transition to the next stage
                 stage = OperatorState::CreateStakeMeta;
             }
@@ -211,34 +200,17 @@ pub async fn loop_stages(
                         }
                     }
                 }
-                if current_epoch_info.epoch
-                    < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
-                {
-                    stake_meta_collection = Some(StakeMetaCollection::from_legacy(
-                        legacy_tip_router_operator_cli::create_stake_meta(
-                            operator_address.clone(),
-                            epoch_to_process,
-                            bank.as_ref().expect("Bank was not set"),
-                            tip_distribution_program_id,
-                            tip_payment_program_id,
-                            &cli.get_save_path(),
-                            save_stages,
-                            &cli.cluster,
-                        ),
-                    ));
-                } else {
-                    stake_meta_collection = Some(create_stake_meta(
-                        operator_address.clone(),
-                        epoch_to_process,
-                        bank.as_ref().expect("Bank was not set"),
-                        tip_distribution_program_id,
-                        priority_fee_distribution_program_id,
-                        tip_payment_program_id,
-                        &cli.get_save_path(),
-                        save_stages,
-                        &cli.cluster,
-                    ));
-                }
+                stake_meta_collection = Some(create_stake_meta(
+                    operator_address.clone(),
+                    epoch_to_process,
+                    bank.as_ref().expect("Bank was not set"),
+                    tip_distribution_program_id,
+                    priority_fee_distribution_program_id,
+                    tip_payment_program_id,
+                    &cli.get_save_path(),
+                    save_stages,
+                    &cli.cluster,
+                ));
                 // we should be able to safely drop the bank in this loop
                 bank = None;
                 // Transition to the next stage
@@ -255,80 +227,29 @@ pub async fn loop_stages(
                 let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 
                 // Generate the merkle tree collection
-                if current_epoch_info.epoch
-                    < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
-                {
-                    let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
-                        || {
-                            legacy_tip_router_operator_cli::read_stake_meta_collection(
-                                epoch_to_process,
-                                &cli.get_save_path(),
-                            )
-                        },
-                        |collection| collection.to_legacy(),
-                    );
-                    merkle_tree_collection = Some(GeneratedMerkleTreeCollection::from_legacy(
-                        legacy_tip_router_operator_cli::create_merkle_tree_collection(
-                            cli.operator_address.clone(),
-                            tip_router_program_id,
-                            some_stake_meta_collection,
-                            epoch_to_process,
-                            ncn_address,
-                            protocol_fee_bps,
-                            &cli.get_save_path(),
-                            save_stages,
-                            &cli.cluster,
-                        ),
-                    ));
-                } else {
-                    let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
-                        || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
-                        |collection| collection,
-                    );
-                    merkle_tree_collection = Some(create_merkle_tree_collection(
-                        cli.operator_address.clone(),
-                        tip_router_program_id,
-                        some_stake_meta_collection,
-                        epoch_to_process,
-                        ncn_address,
-                        protocol_fee_bps,
-                        fees.priority_fee_distribution_fee_bps(),
-                        &cli.get_save_path(),
-                        save_stages,
-                        &cli.cluster,
-                    ));
-                }
+                let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
+                    || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
+                    |collection| collection,
+                );
+                merkle_tree_collection = Some(create_merkle_tree_collection(
+                    cli.operator_address.clone(),
+                    tip_router_program_id,
+                    some_stake_meta_collection,
+                    epoch_to_process,
+                    ncn_address,
+                    protocol_fee_bps,
+                    fees.priority_fee_distribution_fee_bps(),
+                    &cli.get_save_path(),
+                    save_stages,
+                    &cli.cluster,
+                ));
 
                 stake_meta_collection = None;
                 // Transition to the next stage
                 stage = OperatorState::CreateMetaMerkleTree;
             }
             OperatorState::CreateMetaMerkleTree => {
-                let merkle_root = if current_epoch_info.epoch
-                    < legacy_tip_router_operator_cli::PRIORITY_FEE_MERKLE_TREE_START_EPOCH
-                {
-                    let some_merkle_tree_collection =
-                        merkle_tree_collection.to_owned().map_or_else(
-                            || {
-                                legacy_tip_router_operator_cli::read_merkle_tree_collection(
-                                    epoch_to_process,
-                                    &cli.get_save_path(),
-                                )
-                            },
-                            |collection| collection.to_legacy(),
-                        );
-                    let merkle_tree = legacy_tip_router_operator_cli::create_meta_merkle_tree(
-                        cli.operator_address.clone(),
-                        some_merkle_tree_collection,
-                        epoch_to_process,
-                        &cli.get_save_path(),
-                        // This is defaulted to true because the output file is required by the
-                        //  task that sets TipDistributionAccounts' merkle roots
-                        true,
-                        &cli.cluster,
-                    );
-                    merkle_tree.merkle_root
-                } else {
+                let merkle_root = {
                     let some_merkle_tree_collection =
                         merkle_tree_collection.to_owned().map_or_else(
                             || read_merkle_tree_collection(epoch_to_process, &cli.get_save_path()),

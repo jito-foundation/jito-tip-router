@@ -66,35 +66,35 @@ pub struct CliHandler {
 }
 
 impl CliHandler {
+    /// Creates a new `CliHandler` instance from command-line arguments.
+    ///
+    /// # Configuration Loading
+    /// 1. If `args.config_file` is specified, loads from that file
+    /// 2. Otherwise, loads from the default Solana CLI config file
     pub async fn from_args(args: &Args) -> Result<Self> {
-        let rpc_url = args.rpc_url.clone();
         CommitmentConfig::confirmed();
-
         let commitment = CommitmentConfig::from_str(&args.commitment)?;
 
-        let keypair = match &args.config_file {
-            Some(config_file) => {
-                let config = Config::load(config_file.as_os_str().to_str().unwrap())?;
-                let keypair_path = match &args.keypair_path {
-                    Some(path) => path.as_str(),
-                    None => config.keypair_path.as_str(),
-                };
-                read_keypair_file(keypair_path)
-                    .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?
-            }
+        // Load config - either from specified file or default
+        let config = match &args.config_file {
+            Some(config_file) => Config::load(config_file.as_os_str().to_str().unwrap())?,
             None => {
                 let config_file = solana_cli_config::CONFIG_FILE
                     .as_ref()
                     .ok_or_else(|| anyhow!("unable to get config file path"))?;
-                let config = Config::load(config_file)?;
-                let keypair_path = match &args.keypair_path {
-                    Some(path) => path.as_str(),
-                    None => config.keypair_path.as_str(),
-                };
-                read_keypair_file(keypair_path)
-                    .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?
+                match Config::load(config_file) {
+                    Ok(config) => read_keypair_file(config.keypair_path.as_str())
+                        .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?,
+                    Err(_) => read_keypair_file(args.keypair_path.clone().unwrap())
+                        .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?,
             }
         };
+
+        let keypair_path = args.keypair_path.as_deref().unwrap_or(&config.keypair_path);
+        let keypair = read_keypair_file(keypair_path)
+            .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?;
+
+        let rpc_url = args.rpc_url.clone().unwrap_or(config.json_rpc_url);
 
         let restaking_program_id = Pubkey::from_str(&args.restaking_program_id)?;
         let vault_program_id = Pubkey::from_str(&args.vault_program_id)?;
@@ -351,16 +351,16 @@ impl CliHandler {
             }
 
             // Instructions
-            ProgramCommand::CreateVaultRegistry {} => create_vault_registry(self).await,
+            ProgramCommand::CreateVaultRegistry => create_vault_registry(self).await,
 
             ProgramCommand::RegisterVault { vault } => {
                 let vault = Pubkey::from_str(&vault).expect("error parsing vault");
                 register_vault(self, &vault).await
             }
 
-            ProgramCommand::CreateEpochState {} => create_epoch_state(self, self.epoch).await,
+            ProgramCommand::CreateEpochState => create_epoch_state(self, self.epoch).await,
 
-            ProgramCommand::CreateWeightTable {} => create_weight_table(self, self.epoch).await,
+            ProgramCommand::CreateWeightTable => create_weight_table(self, self.epoch).await,
             ProgramCommand::CrankSwitchboard { switchboard_feed } => {
                 let switchboard_feed =
                     Pubkey::from_str(&switchboard_feed).expect("error parsing switchboard feed");
@@ -371,7 +371,7 @@ impl CliHandler {
                 set_weight(self, &vault, self.epoch).await
             }
 
-            ProgramCommand::CreateEpochSnapshot {} => create_epoch_snapshot(self, self.epoch).await,
+            ProgramCommand::CreateEpochSnapshot => create_epoch_snapshot(self, self.epoch).await,
             ProgramCommand::CreateOperatorSnapshot { operator } => {
                 let operator = Pubkey::from_str(&operator).expect("error parsing operator");
                 create_operator_snapshot(self, &operator, self.epoch).await
@@ -382,7 +382,7 @@ impl CliHandler {
                 snapshot_vault_operator_delegation(self, &vault, &operator, self.epoch).await
             }
 
-            ProgramCommand::CreateBallotBox {} => create_ballot_box(self, self.epoch).await,
+            ProgramCommand::CreateBallotBox => create_ballot_box(self, self.epoch).await,
             ProgramCommand::OperatorCastVote {
                 operator,
                 meta_merkle_root,
@@ -399,7 +399,7 @@ impl CliHandler {
                 // admin_cast_vote(self, &operator, root).await
             }
 
-            ProgramCommand::CreateBaseRewardRouter {} => {
+            ProgramCommand::CreateBaseRewardRouter => {
                 create_base_reward_router(self, self.epoch).await
             }
 
@@ -413,7 +413,7 @@ impl CliHandler {
                 create_ncn_reward_router(self, ncn_fee_group, &operator, self.epoch).await
             }
 
-            ProgramCommand::RouteBaseRewards {} => route_base_rewards(self, self.epoch).await,
+            ProgramCommand::RouteBaseRewards => route_base_rewards(self, self.epoch).await,
 
             ProgramCommand::RouteNcnRewards {
                 operator,
@@ -436,7 +436,7 @@ impl CliHandler {
             }
 
             // Getters
-            ProgramCommand::GetNcn {} => {
+            ProgramCommand::GetNcn => {
                 let ncn = get_ncn(self).await?;
                 info!("NCN: {:?}", ncn);
                 Ok(())
@@ -469,18 +469,18 @@ impl CliHandler {
                 info!("Vault Operator Delegation: {:?}", vault_operator_delegation);
                 Ok(())
             }
-            ProgramCommand::GetAllOperatorsInNcn {} => {
+            ProgramCommand::GetAllOperatorsInNcn => {
                 let operators = get_all_operators_in_ncn(self).await?;
 
                 info!("Operators: {:?}", operators);
                 Ok(())
             }
-            ProgramCommand::GetAllVaultsInNcn {} => {
+            ProgramCommand::GetAllVaultsInNcn => {
                 let vaults = get_all_vaults_in_ncn(self).await?;
                 info!("Vaults: {:?}", vaults);
                 Ok(())
             }
-            ProgramCommand::GetAllTickets {} => {
+            ProgramCommand::GetAllTickets => {
                 let all_tickets = get_all_tickets(self).await?;
 
                 for tickets in all_tickets.iter() {
@@ -489,22 +489,22 @@ impl CliHandler {
 
                 Ok(())
             }
-            ProgramCommand::GetTipRouterConfig {} => {
+            ProgramCommand::GetTipRouterConfig => {
                 let config = get_tip_router_config(self).await?;
                 info!("{}", config);
                 Ok(())
             }
-            ProgramCommand::GetVaultRegistry {} => {
+            ProgramCommand::GetVaultRegistry => {
                 let vault_registry = get_vault_registry(self).await?;
                 info!("{}", vault_registry);
                 Ok(())
             }
-            ProgramCommand::GetWeightTable {} => {
+            ProgramCommand::GetWeightTable => {
                 let weight_table = get_weight_table(self, self.epoch).await?;
                 info!("{}", weight_table);
                 Ok(())
             }
-            ProgramCommand::GetEpochState {} => {
+            ProgramCommand::GetEpochState => {
                 let is_epoch_complete = get_is_epoch_completed(self, self.epoch).await?;
 
                 if is_epoch_complete {
@@ -547,7 +547,7 @@ impl CliHandler {
 
                 Ok(())
             }
-            ProgramCommand::GetEpochSnapshot {} => {
+            ProgramCommand::GetEpochSnapshot => {
                 let epoch_snapshot = get_epoch_snapshot(self, self.epoch).await?;
                 info!("{}", epoch_snapshot);
                 Ok(())
@@ -558,12 +558,12 @@ impl CliHandler {
                 info!("{}", operator_snapshot);
                 Ok(())
             }
-            ProgramCommand::GetBallotBox {} => {
+            ProgramCommand::GetBallotBox => {
                 let ballot_box = get_ballot_box(self, self.epoch).await?;
                 info!("{}", ballot_box);
                 Ok(())
             }
-            ProgramCommand::GetBaseRewardReceiverAddress {} => {
+            ProgramCommand::GetBaseRewardReceiverAddress => {
                 let (base_reward_receiver_address, _, _) = BaseRewardReceiver::find_program_address(
                     &self.tip_router_program_id,
                     self.ncn()?,
@@ -572,7 +572,7 @@ impl CliHandler {
                 info!("Base Reward Receiver: {}", base_reward_receiver_address);
                 Ok(())
             }
-            ProgramCommand::GetBaseRewardRouter {} => {
+            ProgramCommand::GetBaseRewardRouter => {
                 let total_rewards_to_be_distributed =
                     get_total_rewards_to_be_distributed(self, self.epoch).await?;
                 let base_reward_router = get_base_reward_router(self, self.epoch).await?;
@@ -614,7 +614,7 @@ impl CliHandler {
                 );
                 Ok(())
             }
-            ProgramCommand::GetAllNcnRewardRouters {} => {
+            ProgramCommand::GetAllNcnRewardRouters => {
                 let all_operators = get_all_operators_in_ncn(self).await?;
                 let rent = self
                     .rpc_client
@@ -648,7 +648,7 @@ impl CliHandler {
 
                 Ok(())
             }
-            ProgramCommand::GetAccountPayer {} => {
+            ProgramCommand::GetAccountPayer => {
                 let account_payer = get_account_payer(self).await?;
                 let (account_payer_address, _, _) =
                     AccountPayer::find_program_address(&self.tip_router_program_id, self.ncn()?);
@@ -659,7 +659,7 @@ impl CliHandler {
                 );
                 Ok(())
             }
-            ProgramCommand::GetTotalEpochRentCost {} => {
+            ProgramCommand::GetTotalEpochRentCost => {
                 let total_epoch_rent_cost = get_total_epoch_rent_cost(self).await?;
                 info!(
                     "\n\n--- Total Epoch Rent Cost ---\nCost: {}\n",
@@ -667,13 +667,13 @@ impl CliHandler {
                 );
                 Ok(())
             }
-            ProgramCommand::GetStakePool {} => {
+            ProgramCommand::GetStakePool => {
                 let stake_pool = get_stake_pool(self).await?;
                 info!("Stake Pool: {:?}", stake_pool);
                 Ok(())
             }
 
-            ProgramCommand::GetOperatorStakes {} => {
+            ProgramCommand::GetOperatorStakes => {
                 // Get epoch snapshot for total stake
                 let epoch_snapshot = get_epoch_snapshot(self, self.epoch).await?;
 
@@ -703,7 +703,7 @@ impl CliHandler {
                 Ok(())
             }
 
-            ProgramCommand::GetVaultStakes {} => {
+            ProgramCommand::GetVaultStakes => {
                 let operators = get_all_operators_in_ncn(self).await?;
                 let epoch_snapshot = get_epoch_snapshot(self, self.epoch).await?;
                 let mut vault_stakes = HashMap::new();
@@ -745,7 +745,7 @@ impl CliHandler {
                 Ok(())
             }
 
-            ProgramCommand::GetVaultOperatorStakes {} => {
+            ProgramCommand::GetVaultOperatorStakes => {
                 let operators = get_all_operators_in_ncn(self).await?;
                 let epoch_snapshot = get_epoch_snapshot(self, self.epoch).await?;
                 let mut vault_operator_stakes: HashMap<Pubkey, HashMap<Pubkey, u128>> =
@@ -815,7 +815,7 @@ impl CliHandler {
 
                 Ok(())
             }
-            ProgramCommand::GetAllOptedInValidators {} => {
+            ProgramCommand::GetAllOptedInValidators => {
                 let results = get_all_opted_in_validators(self).await?;
 
                 fn validators_to_csv_string(validators: &Vec<OptedInValidatorInfo>) -> String {
@@ -858,11 +858,11 @@ impl CliHandler {
             }
 
             // Testers
-            ProgramCommand::Test {} => {
+            ProgramCommand::Test => {
                 info!("Test!");
                 Ok(())
             }
-            ProgramCommand::CreateTestNcn {} => create_test_ncn(self).await,
+            ProgramCommand::CreateTestNcn => create_test_ncn(self).await,
             ProgramCommand::CreateAndAddTestOperator { operator_fee_bps } => {
                 create_and_add_test_operator(self, operator_fee_bps).await
             }

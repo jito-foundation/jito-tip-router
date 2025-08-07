@@ -1,3 +1,4 @@
+#[allow(deprecated)]
 use solana_program::{decode_error::DecodeError, program_error::ProgramError};
 use thiserror::Error;
 
@@ -189,6 +190,7 @@ pub enum TipRouterError {
     MarkerExists,
 }
 
+#[allow(deprecated)]
 impl<T> DecodeError<T> for TipRouterError {
     fn type_of() -> &'static str {
         "jito::weight_table"
@@ -283,6 +285,7 @@ mod tests {
         assert_eq!(u32::from(TipRouterError::IncorrectWeightTableAdmin), 0x2200);
     }
 
+    #[allow(deprecated)]
     #[test]
     fn test_decode_error_type() {
         assert_eq!(

@@ -159,16 +159,16 @@ pub fn generate_stake_meta_collection(
                     vote_pubkey,
                     None);
 
-                let vote_state = vote_account.vote_state();
+                let vote_state = vote_account.vote_state_view();
                 delegations.sort();
                 Some(StakeMeta {
                     maybe_tip_distribution_meta: maybe_tip_distribution_meta.map(|x| x.0),
                     maybe_priority_fee_distribution_meta: maybe_priority_fee_distribution_meta.map(|x| x.0),
-                    validator_node_pubkey: vote_state.node_pubkey,
+                    validator_node_pubkey: *vote_state.node_pubkey(),
                     validator_vote_account: *vote_pubkey,
                     delegations,
                     total_delegated,
-                    commission: vote_state.commission,
+                    commission: vote_state.commission(),
                 })
             })})
         .collect();
@@ -267,6 +267,7 @@ mod tests {
     use solana_runtime::genesis_utils::{
         create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
     };
+    #[allow(deprecated)]
     use solana_sdk::{
         self,
         account::{from_account, AccountSharedData},
@@ -793,7 +794,11 @@ mod tests {
         vote_account: &Pubkey,
         delegation_amount: u64,
     ) -> Pubkey {
-        let minimum_delegation = solana_stake_program::get_minimum_delegation(&bank.feature_set);
+        let minimum_delegation = solana_stake_program::get_minimum_delegation(
+            bank.feature_set
+                .runtime_features()
+                .stake_raise_minimum_delegation_to_1_sol,
+        );
         assert!(
             delegation_amount >= minimum_delegation,
             "{}",

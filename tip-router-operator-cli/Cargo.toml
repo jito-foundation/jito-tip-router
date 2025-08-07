@@ -1,6 +1,6 @@
 [package]
 name = "tip-router-operator-cli"
-version = "2.0.0"
+version = "2.2.0"
 edition = "2021"
 description = "CLI for Jito Tip Router"
 
@@ -25,8 +25,6 @@ jito-tip-payment-sdk = { workspace = true }
 jito-tip-router-client = { workspace = true }
 jito-tip-router-core = { workspace = true }
 jito-tip-router-program = { workspace = true }
-legacy-meta-merkle-tree = { package = "legacy-meta-merkle-tree", path = "./repo-at-older-commit/meta_merkle_tree" }
-legacy-tip-router-operator-cli = { package = "legacy-tip-router-operator-cli", path = "./repo-at-older-commit/tip-router-operator-cli" }
 log = { workspace = true }
 meta-merkle-tree = { workspace = true }
 rand = { workspace = true }

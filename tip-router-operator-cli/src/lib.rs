@@ -11,9 +11,11 @@ pub mod distribution_meta;
 pub mod load_and_process_ledger;
 pub mod priority_fees;
 pub mod process_epoch;
+pub mod reclaim;
 pub mod rpc_utils;
 pub mod solana_cli;
 pub mod submit;
+pub mod tx_utils;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -71,27 +73,6 @@ pub enum OperatorState {
     CreateMetaMerkleTree,
     CastVote,
     WaitForNextEpoch,
-}
-
-impl OperatorState {
-    pub const fn as_legacy(&self) -> legacy_tip_router_operator_cli::OperatorState {
-        match self {
-            Self::LoadBankFromSnapshot => {
-                legacy_tip_router_operator_cli::OperatorState::LoadBankFromSnapshot
-            }
-            Self::CreateStakeMeta => legacy_tip_router_operator_cli::OperatorState::CreateStakeMeta,
-            Self::CreateMerkleTreeCollection => {
-                legacy_tip_router_operator_cli::OperatorState::CreateMerkleTreeCollection
-            }
-            Self::CreateMetaMerkleTree => {
-                legacy_tip_router_operator_cli::OperatorState::CreateMetaMerkleTree
-            }
-            Self::CastVote => legacy_tip_router_operator_cli::OperatorState::CastVote,
-            Self::WaitForNextEpoch => {
-                legacy_tip_router_operator_cli::OperatorState::WaitForNextEpoch
-            }
-        }
-    }
 }
 
 pub fn stake_meta_file_name(epoch: u64) -> String {
