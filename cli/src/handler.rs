@@ -87,6 +87,7 @@ impl CliHandler {
                         .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?,
                     Err(_) => read_keypair_file(args.keypair_path.clone().unwrap())
                         .map_err(|e| anyhow!("Failed to read keypair path: {e:?}"))?,
+                }
             }
         };
 
