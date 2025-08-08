@@ -16,6 +16,7 @@ use ::{
         ledger_utils::get_bank_from_snapshot_at_slot,
         load_bank_from_snapshot, meta_merkle_tree_path, process_epoch, read_merkle_tree_collection,
         read_stake_meta_collection, reclaim,
+        restaking::RestakingHandler,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         tip_distribution_stats::get_tip_distribution_stats,
         tip_router::get_ncn_config,
