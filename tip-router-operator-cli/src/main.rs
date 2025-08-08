@@ -14,11 +14,10 @@ use ::{
         cli::{Cli, Commands, SnapshotPaths},
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_snapshot_at_slot,
-        load_bank_from_snapshot, merkle_tree_collection_file_name, meta_merkle_tree_path,
-        process_epoch, read_merkle_tree_collection, read_stake_meta_collection, reclaim,
-        restaking::RestakingHandler,
-        stake_meta_file_name,
+        load_bank_from_snapshot, meta_merkle_tree_path, process_epoch, read_merkle_tree_collection,
+        read_stake_meta_collection, reclaim,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
+        tip_distribution_stats::get_tip_distribution_stats,
         tip_router::get_ncn_config,
         Version,
     },
@@ -525,10 +524,7 @@ async fn main() -> Result<()> {
             save,
         } => {
             // Load the stake_meta_collection from disk
-            let stake_meta_collection = read_stake_meta_collection(
-                epoch,
-                &cli.get_save_path().join(stake_meta_file_name(epoch)),
-            );
+            let stake_meta_collection = read_stake_meta_collection(epoch, &cli.get_save_path());
             let config = get_ncn_config(&rpc_client, &tip_router_program_id, &ncn_address).await?;
             // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
             //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
@@ -553,11 +549,7 @@ async fn main() -> Result<()> {
         }
         Commands::CreateMetaMerkleTree { epoch, save } => {
             // Load the stake_meta_collection from disk
-            let merkle_tree_collection = read_merkle_tree_collection(
-                epoch,
-                &cli.get_save_path()
-                    .join(merkle_tree_collection_file_name(epoch)),
-            );
+            let merkle_tree_collection = read_merkle_tree_collection(epoch, &cli.get_save_path());
 
             create_meta_merkle_tree(
                 cli.operator_address,
@@ -567,6 +559,28 @@ async fn main() -> Result<()> {
                 save,
                 &cli.cluster,
             );
+        }
+        Commands::GetTipDistributionStats {
+            tip_distribution_program_id,
+            priority_fee_distribution_program_id,
+            epoch,
+        } => {
+            let stats_epoch = if let Some(epoch) = epoch {
+                epoch
+            } else {
+                rpc_client.get_epoch_info().await?.epoch
+            };
+            info!(
+                "Getting tip distribution stats for epoch {}...",
+                stats_epoch
+            );
+            get_tip_distribution_stats(
+                &rpc_client,
+                &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
+                stats_epoch,
+            )
+            .await?;
         }
     }
     Ok(())
