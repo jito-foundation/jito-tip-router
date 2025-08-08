@@ -12078,7 +12078,7 @@ version = "2.2.0"
 dependencies = [
  "anchor-lang 0.31.1",
  "anyhow",
- "base64 0.13.1",
+ "base64 0.22.1",
  "clap 2.34.0",
  "clap 4.5.41",
  "crossbeam-channel",
@@ -12088,6 +12088,9 @@ dependencies = [
  "itertools 0.11.0",
  "jito-bytemuck",
  "jito-priority-fee-distribution-sdk",
+ "jito-restaking-client",
+ "jito-restaking-core",
+ "jito-restaking-program",
  "jito-tip-distribution-sdk",
  "jito-tip-payment-sdk",
  "jito-tip-router-client",

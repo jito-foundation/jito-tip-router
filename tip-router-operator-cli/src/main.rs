@@ -2,12 +2,12 @@
 use ::{
     anyhow::Result,
     clap::Parser,
+    jito_restaking_core::config::Config as RestakingConfig,
     log::{error, info},
     solana_metrics::{datapoint_error, datapoint_info, set_host_id},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{pubkey::Pubkey, signer::keypair::read_keypair_file},
-    std::process::Command,
-    std::{str::FromStr, sync::Arc, time::Duration},
+    std::{process::Command, str::FromStr, sync::Arc, time::Duration},
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
         claim::{claim_mev_tips_with_emit, emit_claim_mev_tips_metrics},
@@ -16,6 +16,7 @@ use ::{
         ledger_utils::get_bank_from_snapshot_at_slot,
         load_bank_from_snapshot, meta_merkle_tree_path, process_epoch, read_merkle_tree_collection,
         read_stake_meta_collection, reclaim,
+        restaking::RestakingHandler,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         tip_distribution_stats::get_tip_distribution_stats,
         tip_router::get_ncn_config,
@@ -96,6 +97,7 @@ async fn main() -> Result<()> {
             priority_fee_distribution_program_id,
             tip_payment_program_id,
             tip_router_program_id,
+            restaking_program_id,
             save_snapshot,
             num_monitored_epochs,
             override_target_slot,
@@ -132,6 +134,21 @@ async fn main() -> Result<()> {
             let rpc_url = cli.rpc_url.clone();
             let claim_tips_epoch_filepath = cli.claim_tips_epoch_filepath.clone();
             let cli_clone: Cli = cli.clone();
+            let operator_address = cli.operator_address.clone();
+            let cluster = cli.cluster.clone();
+            let restaking_config_address =
+                RestakingConfig::find_program_address(&restaking_program_id).0;
+
+            let restaking_handler = RestakingHandler::new(
+                rpc_client.clone(),
+                restaking_program_id,
+                restaking_config_address,
+                ncn_address,
+                Pubkey::from_str(cli.operator_address.as_str()).unwrap(),
+                keypair.clone(),
+            );
+            restaking_handler.warmup_operator().await?;
+            restaking_handler.create_operator_vault_tickets().await?;
 
             if !backup_snapshots_dir.exists() {
                 info!(
@@ -140,9 +157,6 @@ async fn main() -> Result<()> {
                 );
                 std::fs::create_dir_all(&backup_snapshots_dir)?;
             }
-
-            let operator_address = cli.operator_address.clone();
-            let cluster = cli.cluster.clone();
 
             let try_catchup = tip_router_operator_cli::solana_cli::catchup(
                 cli.rpc_url.to_owned(),
