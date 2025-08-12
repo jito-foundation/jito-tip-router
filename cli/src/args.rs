@@ -12,14 +12,8 @@ pub struct Args {
     #[arg(long, global = true, help = "Path to the configuration file")]
     pub config_file: Option<PathBuf>,
 
-    #[arg(
-        long,
-        global = true,
-        env = "RPC_URL",
-        default_value = "https://api.mainnet-beta.solana.com",
-        help = "RPC URL to use"
-    )]
-    pub rpc_url: String,
+    #[arg(long, global = true, env = "RPC_URL", help = "RPC URL to use")]
+    pub rpc_url: Option<String>,
 
     #[arg(
         long,
@@ -424,6 +418,13 @@ pub enum ProgramCommand {
             help = "Reward fee BPS"
         )]
         reward_fee_bps: u16,
+        #[arg(
+            long,
+            env = "INITIALIZE_TOKEN_AMOUNT",
+            default_value_t = 100,
+            help = "Initialize token amount"
+        )]
+        initialize_token_amount: u64,
     },
 }
 
@@ -435,7 +436,7 @@ impl fmt::Display for Args {
 
         // Network Configuration
         writeln!(f, "\n📡 Network Settings:")?;
-        writeln!(f, "  • RPC URL:     {}", self.rpc_url)?;
+        writeln!(f, "  • RPC URL:     {}", self.rpc_url.as_ref().unwrap_or(&String::new()))?;
         writeln!(f, "  • Commitment:  {}", self.commitment)?;
 
         // Program IDs
