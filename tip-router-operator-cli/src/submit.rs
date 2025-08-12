@@ -232,13 +232,10 @@ pub async fn submit_to_ncn(
         )
         .await?;
 
-        let num_tip_distribution_accounts = tip_distribution_accounts.len();
-        let num_priority_fee_distribution_accounts = priority_fee_distribution_accounts.len();
-
         info!(
             "Setting merkle roots for {} tip distribution accounts and {} priority fee distribution accounts",
-            num_tip_distribution_accounts,
-            num_priority_fee_distribution_accounts
+            tip_distribution_accounts.len(),
+            priority_fee_distribution_accounts.len()
         );
 
         let mut instructions = set_merkle_root_instructions(
