@@ -8,6 +8,7 @@ pub mod backup_snapshots;
 pub mod claim;
 pub mod cli;
 pub mod distribution_meta;
+mod epoch_percentage;
 pub mod load_and_process_ledger;
 pub mod priority_fees;
 pub mod process_epoch;

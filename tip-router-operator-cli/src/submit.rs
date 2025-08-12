@@ -15,10 +15,10 @@ use solana_client::{
     rpc_filter::{Memcmp, RpcFilterType},
 };
 use solana_metrics::{datapoint_error, datapoint_info};
-use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, pubkey::Pubkey, signature::Keypair};
+use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 
 use crate::tip_router::send_set_merkle_root_txs;
-use crate::{meta_merkle_tree_file_name, Version};
+use crate::{epoch_percentage, meta_merkle_tree_file_name, Version};
 use crate::{
     tip_router::{
         cast_vote, get_ncn_config, set_merkle_root_instructions,
@@ -264,10 +264,7 @@ pub async fn submit_to_ncn(
             Ok(res) => {
                 let num_success = res.iter().filter(|r| r.is_ok()).count();
                 let num_failed = res.iter().filter(|r| r.is_err()).count();
-
-                let current_slot = client.get_slot().await.unwrap_or(epoch_info.absolute_slot);
-                let epoch_percentage = (current_slot as f64 % DEFAULT_SLOTS_PER_EPOCH as f64)
-                    / DEFAULT_SLOTS_PER_EPOCH as f64;
+                let epoch_percentage = epoch_percentage::get(client).await.unwrap_or(0f64);
 
                 datapoint_info!(
                     "tip_router_cli.set_merkle_root",
@@ -275,8 +272,6 @@ pub async fn submit_to_ncn(
                     ("epoch", tip_router_target_epoch, i64),
                     ("num_success", num_success, i64),
                     ("num_failed", num_failed, i64),
-                    ("total_distribution_accounts", num_tip_distribution_accounts + num_priority_fee_distribution_accounts, i64),
-                    ("current_slot", current_slot, i64),
                     ("epoch_percentage", epoch_percentage, f64),
                     "cluster" => cluster,
                 );

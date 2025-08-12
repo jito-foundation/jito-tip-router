@@ -15,7 +15,6 @@ use solana_metrics::{datapoint_error, datapoint_info};
 #[allow(deprecated)]
 use solana_sdk::{
     account::Account,
-    clock::DEFAULT_SLOTS_PER_EPOCH,
     commitment_config::CommitmentConfig,
     fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
     native_token::{lamports_to_sol, LAMPORTS_PER_SOL},
@@ -40,7 +39,7 @@ use tokio::io::BufReader;
 use tokio::sync::Mutex;
 
 use crate::{
-    merkle_tree_collection_file_name, priority_fees,
+    epoch_percentage, merkle_tree_collection_file_name, priority_fees,
     rpc_utils::{get_batched_accounts, send_until_blockhash_expires},
     Cli,
 };
@@ -121,15 +120,12 @@ pub async fn emit_claim_mev_tips_metrics(
     .await?;
 
     if validators_processed {
-        let current_slot = rpc_client.get_slot().await.unwrap_or(0);
-        let epoch_percentage =
-            (current_slot as f64 % DEFAULT_SLOTS_PER_EPOCH as f64) / DEFAULT_SLOTS_PER_EPOCH as f64;
+        let epoch_percentage = epoch_percentage::get(&rpc_client).await.unwrap_or(0f64);
 
         datapoint_info!(
             "tip_router_cli.claim_mev_tips-send_summary",
             ("claim_transactions_left", claims_to_process.len(), i64),
             ("epoch", epoch, i64),
-            ("current_slot", current_slot, i64),
             ("epoch_percentage", epoch_percentage, f64),
             "cluster" => &cli.cluster,
         );
@@ -334,16 +330,13 @@ pub async fn claim_mev_tips(
             .await?;
 
         if validators_processed {
-            let current_slot = rpc_client.get_slot().await.unwrap_or(0);
-            let epoch_percentage = (current_slot as f64 % DEFAULT_SLOTS_PER_EPOCH as f64)
-                / DEFAULT_SLOTS_PER_EPOCH as f64;
+            let epoch_percentage = epoch_percentage::get(&rpc_client).await.unwrap_or(0f64);
 
             datapoint_info!(
                 "tip_router_cli.claim_mev_tips-send_summary",
                 ("claim_transactions_left", claims_to_process.len(), i64),
                 ("epoch", epoch, i64),
                 ("operator", operator_address, String),
-                ("current_slot", current_slot, i64),
                 ("epoch_percentage", epoch_percentage, f64),
                 "cluster" => cluster,
             );
