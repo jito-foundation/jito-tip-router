@@ -39,7 +39,7 @@ use tokio::io::BufReader;
 use tokio::sync::Mutex;
 
 use crate::{
-    epoch_percentage, merkle_tree_collection_file_name, priority_fees,
+    get_epoch_percentage, merkle_tree_collection_file_name, priority_fees,
     rpc_utils::{get_batched_accounts, send_until_blockhash_expires},
     Cli,
 };
@@ -120,7 +120,7 @@ pub async fn emit_claim_mev_tips_metrics(
     .await?;
 
     if validators_processed {
-        match epoch_percentage::get(&rpc_client).await {
+        match get_epoch_percentage(&rpc_client).await {
             Ok(epoch_percentage) => {
                 datapoint_info!(
                     "tip_router_cli.claim_mev_tips-send_summary",
@@ -334,7 +334,7 @@ pub async fn claim_mev_tips(
             .await?;
 
         if validators_processed {
-            match epoch_percentage::get(&rpc_client).await {
+            match get_epoch_percentage(&rpc_client).await {
                 Ok(epoch_percentage) => {
                     datapoint_info!(
                         "tip_router_cli.claim_mev_tips-send_summary",

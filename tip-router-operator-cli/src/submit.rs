@@ -18,7 +18,7 @@ use solana_metrics::{datapoint_error, datapoint_info};
 use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 
 use crate::tip_router::send_set_merkle_root_txs;
-use crate::{epoch_percentage, meta_merkle_tree_file_name, Version};
+use crate::{get_epoch_percentage, meta_merkle_tree_file_name, Version};
 use crate::{
     tip_router::{
         cast_vote, get_ncn_config, set_merkle_root_instructions,
@@ -261,7 +261,7 @@ pub async fn submit_to_ncn(
             Ok(res) => {
                 let num_success = res.iter().filter(|r| r.is_ok()).count();
                 let num_failed = res.iter().filter(|r| r.is_err()).count();
-                match epoch_percentage::get(client).await {
+                match get_epoch_percentage(client).await {
                     Ok(epoch_percentage) => {
                         datapoint_info!(
                             "tip_router_cli.set_merkle_root",
