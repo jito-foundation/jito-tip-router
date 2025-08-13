@@ -39,7 +39,7 @@ use tokio::io::BufReader;
 use tokio::sync::Mutex;
 
 use crate::{
-    merkle_tree_collection_file_name, priority_fees,
+    get_epoch_percentage, merkle_tree_collection_file_name, priority_fees,
     rpc_utils::{get_batched_accounts, send_until_blockhash_expires},
     Cli,
 };
@@ -120,12 +120,20 @@ pub async fn emit_claim_mev_tips_metrics(
     .await?;
 
     if validators_processed {
-        datapoint_info!(
-            "tip_router_cli.claim_mev_tips-send_summary",
-            ("claim_transactions_left", claims_to_process.len(), i64),
-            ("epoch", epoch, i64),
-            "cluster" => &cli.cluster,
-        );
+        match get_epoch_percentage(&rpc_client).await {
+            Ok(epoch_percentage) => {
+                datapoint_info!(
+                    "tip_router_cli.claim_mev_tips-send_summary",
+                    ("claim_transactions_left", claims_to_process.len(), i64),
+                    ("epoch", epoch, i64),
+                    ("epoch_percentage", epoch_percentage, f64),
+                    "cluster" => &cli.cluster,
+                );
+            }
+            Err(e) => {
+                warn!("Failed to fetch epoch percentage for claims: {:?}", e);
+            }
+        }
     }
 
     if validators_processed && claims_to_process.is_empty() {
@@ -326,13 +334,21 @@ pub async fn claim_mev_tips(
             .await?;
 
         if validators_processed {
-            datapoint_info!(
-                "tip_router_cli.claim_mev_tips-send_summary",
-                ("claim_transactions_left", claims_to_process.len(), i64),
-                ("epoch", epoch, i64),
-                ("operator", operator_address, String),
-                "cluster" => cluster,
-            );
+            match get_epoch_percentage(&rpc_client).await {
+                Ok(epoch_percentage) => {
+                    datapoint_info!(
+                        "tip_router_cli.claim_mev_tips-send_summary",
+                        ("claim_transactions_left", claims_to_process.len(), i64),
+                        ("epoch", epoch, i64),
+                        ("operator", operator_address, String),
+                        ("epoch_percentage", epoch_percentage, f64),
+                        "cluster" => cluster,
+                    );
+                }
+                Err(e) => {
+                    warn!("Failed to fetch epoch percentage for claims: {:?}", e);
+                }
+            }
         }
 
         if validators_processed && claims_to_process.is_empty() {
