@@ -148,6 +148,9 @@ pub enum Commands {
         #[arg(long, env)]
         tip_router_program_id: Pubkey,
 
+        #[arg(long, env, default_value = "jito_restaking_program::id()")]
+        restaking_program_id: Pubkey,
+
         #[arg(long, env, default_value = "3")]
         num_monitored_epochs: u64,
 

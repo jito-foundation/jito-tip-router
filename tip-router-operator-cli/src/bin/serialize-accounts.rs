@@ -1,6 +1,7 @@
 use std::{fs::File, io::Write, str::FromStr};
 
 use anchor_lang::prelude::*;
+use base64::{engine::general_purpose, Engine};
 use clap::Parser;
 use jito_tip_distribution_sdk::{
     derive_tip_distribution_account_address, TipDistributionAccount, TIP_DISTRIBUTION_SIZE,
@@ -71,7 +72,7 @@ fn main() {
         .expect("Failed to serialize account");
 
     // Encode the binary data as base64
-    let base64_data = base64::encode(binary_data);
+    let base64_data = general_purpose::STANDARD.encode(binary_data);
 
     // Create the JSON structure
     let json_data = json!({

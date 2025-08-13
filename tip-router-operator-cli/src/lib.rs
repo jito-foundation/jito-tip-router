@@ -12,6 +12,7 @@ pub mod load_and_process_ledger;
 pub mod priority_fees;
 pub mod process_epoch;
 pub mod reclaim;
+pub mod restaking;
 pub mod rpc_utils;
 pub mod solana_cli;
 pub mod submit;
