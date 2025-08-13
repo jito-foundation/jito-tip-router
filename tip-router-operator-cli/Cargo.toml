@@ -7,7 +7,7 @@ description = "CLI for Jito Tip Router"
 [dependencies]
 anchor-lang = { workspace = true }
 anyhow = { workspace = true }
-base64 = "0.13"
+base64 = { workspace = true }
 clap = { workspace = true }
 clap_old = { workspace = true }
 crossbeam-channel = "0.5.15"
@@ -17,6 +17,9 @@ im = "15.1"
 itertools = "0.11"
 jito-bytemuck = { workspace = true }
 jito-priority-fee-distribution-sdk = { workspace = true }
+jito-restaking-client = { workspace = true }
+jito-restaking-core = { workspace = true }
+jito-restaking-program = { workspace = true }
 jito-tip-distribution-sdk = { workspace = true }
 jito-tip-payment-sdk = { workspace = true }
 jito-tip-router-client = { workspace = true }
