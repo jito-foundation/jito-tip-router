@@ -234,6 +234,8 @@ pub async fn loop_stages(
                 merkle_tree_collection = Some(create_merkle_tree_collection(
                     cli.operator_address.clone(),
                     tip_router_program_id,
+                    tip_distribution_program_id,
+                    priority_fee_distribution_program_id,
                     some_stake_meta_collection,
                     epoch_to_process,
                     ncn_address,

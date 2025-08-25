@@ -284,6 +284,8 @@ pub fn create_stake_meta(
 pub fn create_merkle_tree_collection(
     operator_address: String,
     tip_router_program_id: &Pubkey,
+    tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
     stake_meta_collection: StakeMetaCollection,
     epoch: u64,
     ncn_address: &Pubkey,
@@ -303,6 +305,8 @@ pub fn create_merkle_tree_collection(
         protocol_fee_bps,
         pf_distribution_protocol_fee_bps,
         tip_router_program_id,
+        tip_distribution_program_id,
+        priority_fee_distribution_program_id,
     ) {
         Ok(merkle_tree_coll) => merkle_tree_coll,
         Err(e) => {

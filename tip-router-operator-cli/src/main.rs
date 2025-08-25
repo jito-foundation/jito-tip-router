@@ -520,6 +520,8 @@ async fn main() -> Result<()> {
         }
         Commands::CreateMerkleTreeCollection {
             tip_router_program_id,
+            tip_distribution_program_id,
+            priority_fee_distribution_program_id,
             ncn_address,
             epoch,
             save,
@@ -538,6 +540,8 @@ async fn main() -> Result<()> {
             create_merkle_tree_collection(
                 cli.operator_address,
                 &tip_router_program_id,
+                &tip_distribution_program_id,
+                &priority_fee_distribution_program_id,
                 stake_meta_collection,
                 epoch,
                 &ncn_address,

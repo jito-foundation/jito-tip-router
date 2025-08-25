@@ -1,7 +1,4 @@
-use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID as PRIORITY_FEE_DISTRIBUTION_ID;
-use jito_tip_distribution_sdk::{
-    jito_tip_distribution::ID as TIP_DISTRIBUTION_ID, CLAIM_STATUS_SEED,
-};
+use jito_tip_distribution_sdk::CLAIM_STATUS_SEED;
 use jito_vault_core::MAX_BPS;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use solana_program::{
@@ -75,12 +72,14 @@ impl GeneratedMerkleTree {
         stake_meta: &StakeMeta,
         tip_router_program_id: &Pubkey,
         distribution_program: &Pubkey,
+        tip_distribution_program_id: &Pubkey,
+        priority_fee_distribution_program_id: &Pubkey,
         ncn_address: &Pubkey,
         protocol_fee_bps: u64,
         epoch: u64,
     ) -> Result<Self, MerkleRootGeneratorError> {
         let (mut tree_nodes, tip_distribution_pubkey, merkle_root_upload_authority, total_tips) =
-            if distribution_program.eq(&TIP_DISTRIBUTION_ID) {
+            if distribution_program.eq(tip_distribution_program_id) {
                 let tip_distribution_meta =
                     stake_meta.maybe_tip_distribution_meta.as_ref().unwrap();
 
@@ -105,7 +104,7 @@ impl GeneratedMerkleTree {
                     tip_distribution_meta.merkle_root_upload_authority,
                     tip_distribution_meta.total_tips,
                 )
-            } else if distribution_program.eq(&PRIORITY_FEE_DISTRIBUTION_ID) {
+            } else if distribution_program.eq(priority_fee_distribution_program_id) {
                 let priority_fee_distribution_meta = stake_meta
                     .maybe_priority_fee_distribution_meta
                     .as_ref()
@@ -170,6 +169,8 @@ impl GeneratedMerkleTreeCollection {
         protocol_fee_bps: u64,
         pf_distribution_protocol_fee_bps: u64,
         tip_router_program_id: &Pubkey,
+        tip_distribution_program_id: &Pubkey,
+        priority_fee_distribution_program_id: &Pubkey,
     ) -> Result<Self, MerkleRootGeneratorError> {
         let generated_merkle_trees = stake_meta_collection
             .stake_metas
@@ -185,7 +186,9 @@ impl GeneratedMerkleTreeCollection {
                         GeneratedMerkleTree::new_from_stake_meta_for_distribution_program(
                             &stake_meta,
                             tip_router_program_id,
-                            &TIP_DISTRIBUTION_ID,
+                            tip_distribution_program_id,
+                            tip_distribution_program_id,
+                            priority_fee_distribution_program_id,
                             ncn_address,
                             protocol_fee_bps,
                             epoch,
@@ -198,7 +201,9 @@ impl GeneratedMerkleTreeCollection {
                         GeneratedMerkleTree::new_from_stake_meta_for_distribution_program(
                             &stake_meta,
                             tip_router_program_id,
-                            &PRIORITY_FEE_DISTRIBUTION_ID,
+                            priority_fee_distribution_program_id,
+                            tip_distribution_program_id,
+                            priority_fee_distribution_program_id,
                             ncn_address,
                             pf_distribution_protocol_fee_bps,
                             epoch,
@@ -644,19 +649,19 @@ where
 mod tests {
     use super::*;
     use crate::verify;
-    use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID as PRIORITY_FEE_DISTRIBUTION_ID;
 
     #[test]
     fn test_merkle_tree_verify() {
         // Create the merkle tree and proofs
         let tda = Pubkey::new_unique();
+        let tip_distribution_program_id = jito_tip_distribution_sdk::jito_tip_distribution::ID;
         let (acct_0, acct_1) = (Pubkey::new_unique(), Pubkey::new_unique());
         let claim_statuses = &[(acct_0, tda), (acct_1, tda)]
             .iter()
             .map(|(claimant, tda)| {
                 Pubkey::find_program_address(
                     &[CLAIM_STATUS_SEED, &claimant.to_bytes(), &tda.to_bytes()],
-                    &TIP_DISTRIBUTION_ID,
+                    &tip_distribution_program_id,
                 )
             })
             .collect::<Vec<(Pubkey, u8)>>();
@@ -700,8 +705,9 @@ mod tests {
     #[test]
     fn test_new_from_stake_meta_collection_happy_path() {
         let merkle_root_upload_authority = Pubkey::new_unique();
-        let tip_distribution_program_id = TIP_DISTRIBUTION_ID;
-        let priority_fee_distribution_program_id = PRIORITY_FEE_DISTRIBUTION_ID;
+        let tip_distribution_program_id = jito_tip_distribution_sdk::jito_tip_distribution::ID;
+        let priority_fee_distribution_program_id =
+            jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID;
         let tip_router_program_id = Pubkey::new_unique();
         let (tda_0, tda_1) = (Pubkey::new_unique(), Pubkey::new_unique());
         let (pf_tda_0, pf_tda_1) = (Pubkey::new_unique(), Pubkey::new_unique());
@@ -801,6 +807,8 @@ mod tests {
             300,
             150,
             &tip_router_program_id,
+            &tip_distribution_program_id,
+            &priority_fee_distribution_program_id,
         )
         .unwrap();
 
@@ -839,7 +847,7 @@ mod tests {
         .map(|(claimant, tda)| {
             Pubkey::find_program_address(
                 &[CLAIM_STATUS_SEED, &claimant.to_bytes(), &tda.to_bytes()],
-                &TIP_DISTRIBUTION_ID,
+                &tip_distribution_program_id,
             )
         })
         .collect::<Vec<(Pubkey, u8)>>();
@@ -858,7 +866,7 @@ mod tests {
         .map(|(claimant, tda)| {
             Pubkey::find_program_address(
                 &[CLAIM_STATUS_SEED, &claimant.to_bytes(), &tda.to_bytes()],
-                &PRIORITY_FEE_DISTRIBUTION_ID,
+                &priority_fee_distribution_program_id,
             )
         })
         .collect::<Vec<(Pubkey, u8)>>();
@@ -905,7 +913,7 @@ mod tests {
         let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
         let gmt_0 = GeneratedMerkleTree {
-            distribution_program: TIP_DISTRIBUTION_ID,
+            distribution_program: tip_distribution_program_id,
             distribution_account: tda_0,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
@@ -962,7 +970,7 @@ mod tests {
         let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
         let gmt_1 = GeneratedMerkleTree {
-            distribution_program: PRIORITY_FEE_DISTRIBUTION_ID,
+            distribution_program: priority_fee_distribution_program_id,
             distribution_account: pf_tda_0,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
@@ -1016,7 +1024,7 @@ mod tests {
         let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
         let gmt_2 = GeneratedMerkleTree {
-            distribution_program: TIP_DISTRIBUTION_ID,
+            distribution_program: tip_distribution_program_id,
             distribution_account: tda_1,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
@@ -1072,7 +1080,7 @@ mod tests {
         let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
         let gmt_3 = GeneratedMerkleTree {
-            distribution_program: PRIORITY_FEE_DISTRIBUTION_ID,
+            distribution_program: priority_fee_distribution_program_id,
             distribution_account: pf_tda_1,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
@@ -1132,6 +1140,8 @@ mod tests {
             300,
             150,
             &tip_router_program_id,
+            &tip_distribution_program_id,
+            &priority_fee_distribution_program_id,
         )
         .unwrap();
         merkle_tree_collection
@@ -1158,8 +1168,9 @@ mod tests {
     #[test]
     fn test_new_from_stake_meta_collection_updated_full_commission_claim() {
         let merkle_root_upload_authority = Pubkey::new_unique();
-        let tip_distribution_program_id = TIP_DISTRIBUTION_ID;
-        let priority_fee_distribution_program_id = PRIORITY_FEE_DISTRIBUTION_ID;
+        let tip_distribution_program_id = jito_tip_distribution_sdk::jito_tip_distribution::ID;
+        let priority_fee_distribution_program_id =
+            jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID;
         let tip_router_program_id = Pubkey::new_unique();
         let (tda_0, tda_1) = (Pubkey::new_unique(), Pubkey::new_unique());
         let pf_tda_0 = Pubkey::new_unique();
@@ -1223,6 +1234,8 @@ mod tests {
             300,
             150,
             &tip_router_program_id,
+            &tip_distribution_program_id,
+            &priority_fee_distribution_program_id,
         )
         .unwrap();
 
@@ -1261,7 +1274,7 @@ mod tests {
         .map(|(claimant, tda)| {
             Pubkey::find_program_address(
                 &[CLAIM_STATUS_SEED, &claimant.to_bytes(), &tda.to_bytes()],
-                &TIP_DISTRIBUTION_ID,
+                &tip_distribution_program_id,
             )
         })
         .collect::<Vec<(Pubkey, u8)>>();
@@ -1308,7 +1321,7 @@ mod tests {
         let hashed_nodes: Vec<[u8; 32]> = tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
         let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
         let gmt_0 = GeneratedMerkleTree {
-            distribution_program: TIP_DISTRIBUTION_ID,
+            distribution_program: tip_distribution_program_id,
             distribution_account: tda_0,
             merkle_root_upload_authority,
             merkle_root: *merkle_tree.get_root().unwrap(),
