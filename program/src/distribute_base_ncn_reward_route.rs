@@ -13,6 +13,7 @@ use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
     pubkey::Pubkey,
 };
+use solana_system_interface::instruction as system_instruction;
 
 /// Can be backfilled for previous epochs
 pub fn process_distribute_base_ncn_reward_route(
@@ -79,7 +80,7 @@ pub fn process_distribute_base_ncn_reward_route(
         base_reward_receiver_seeds.push(vec![base_reward_receiver_bump]);
 
         solana_program::program::invoke_signed(
-            &solana_program::system_instruction::transfer(
+            &system_instruction::transfer(
                 base_reward_receiver.key,
                 ncn_reward_receiver.key,
                 rewards,

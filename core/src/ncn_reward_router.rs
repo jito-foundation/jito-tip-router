@@ -9,9 +9,10 @@ use jito_vault_core::MAX_BPS;
 use shank::{ShankAccount, ShankType};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction, system_program,
-    sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
+use solana_system_interface::instruction::transfer as transfer_ix;
+use solana_system_interface::program as system_program;
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{
@@ -730,7 +731,7 @@ impl NcnRewardReceiver {
         }
 
         invoke_signed(
-            &system_instruction::transfer(&ncn_reward_receiver_address, to.key, lamports),
+            &transfer_ix(&ncn_reward_receiver_address, to.key, lamports),
             &[ncn_reward_receiver.clone(), to.clone()],
             &[ncn_reward_receiver_seeds
                 .iter()

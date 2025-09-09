@@ -23,10 +23,12 @@ meta-merkle-tree = { workspace = true }
 serde = { workspace = true }
 serde_with = { workspace = true }
 shank = { workspace = true }
+solana-decode-error = { workspace = true }
 solana-program = { workspace = true }
-spl-associated-token-account = { workspace = true }
+spl-associated-token-account-interface = { workspace = true }
 spl-math = { workspace = true }
-spl-token = { workspace = true }
+spl-token-interface = { workspace = true }
+solana-system-interface = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]

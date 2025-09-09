@@ -34,7 +34,10 @@ pub fn process_distribute_base_rewards(
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
     load_associated_token_account(base_fee_wallet_ata, base_fee_wallet.key, &JITOSOL_MINT)?;
 
-    if stake_pool_program.key.ne(&spl_stake_pool::id()) {
+    // No spl_stake_pool_interface yet.. gross conversion
+    let spl_stake_pool_id = Pubkey::new_from_array(spl_stake_pool::id().to_bytes());
+
+    if stake_pool_program.key.ne(&spl_stake_pool_id) {
         msg!("Incorrect stake pool program ID");
         return Err(ProgramError::InvalidAccountData);
     }

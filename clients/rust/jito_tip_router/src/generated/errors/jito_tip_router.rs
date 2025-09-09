@@ -285,8 +285,9 @@ pub enum JitoTipRouterError {
     MarkerExists = 0x2251,
 }
 
-impl solana_program::program_error::PrintProgramError for JitoTipRouterError {
+/*impl solana_program::program_error::PrintProgramError for JitoTipRouterError {
     fn print<E>(&self) {
         solana_program::msg!(&self.to_string());
     }
 }
+*/

@@ -1,5 +1,5 @@
-use anchor_lang::AccountDeserialize;
 use anyhow::Result;
+use borsh::de::BorshDeserialize;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::TipDistributionAccount;
 use log::info;
@@ -95,7 +95,7 @@ async fn get_tip_distribution_accounts_for_epoch(
     let mut result = Vec::new();
     for (pubkey, account) in accounts {
         if let Ok(tip_distribution_account) =
-            TipDistributionAccount::try_deserialize(&mut account.data.as_slice())
+            TipDistributionAccount::try_from_slice(&mut account.data.as_slice())
         {
             if tip_distribution_account.epoch_created_at == epoch {
                 result.push((pubkey, tip_distribution_account));
@@ -128,7 +128,7 @@ async fn get_priority_fee_distribution_accounts_for_epoch(
     let mut result = Vec::new();
     for (pubkey, account) in accounts {
         if let Ok(priority_fee_distribution_account) =
-            PriorityFeeDistributionAccount::try_deserialize(&mut account.data.as_slice())
+            PriorityFeeDistributionAccount::try_from_slice(&mut account.data.as_slice())
         {
             if priority_fee_distribution_account.epoch_created_at == epoch {
                 result.push((pubkey, priority_fee_distribution_account));

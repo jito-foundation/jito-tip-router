@@ -1,8 +1,6 @@
-use anchor_lang::{
-    prelude::Pubkey, solana_program::instruction::Instruction, InstructionData, ToAccountMetas,
-};
-
-use crate::jito_tip_distribution;
+use solana_program::instruction::Instruction;
+use solana_pubkey::Pubkey;
+use solana_sdk::instruction::AccountMeta;
 
 #[allow(clippy::too_many_arguments)]
 pub fn initialize_ix(
@@ -16,21 +14,20 @@ pub fn initialize_ix(
     bump: u8,
 ) -> Instruction {
     Instruction {
-        program_id: jito_tip_distribution::ID,
-        accounts: jito_tip_distribution::client::accounts::Initialize {
-            config,
-            system_program,
-            initializer,
-        }
-        .to_account_metas(None),
-        data: jito_tip_distribution::client::args::Initialize {
-            authority,
-            expired_funds_account,
-            num_epochs_valid,
-            max_validator_commission_bps,
-            bump,
-        }
-        .data(),
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(config, false),
+            AccountMeta::new_readonly(system_program, false),
+            AccountMeta::new_readonly(initializer, true),
+        ],
+        data: vec![], /*jito_tip_distribution::client::args::Initialize {
+                          authority,
+                          expired_funds_account,
+                          num_epochs_valid,
+                          max_validator_commission_bps,
+                          bump,
+                      }
+                      .data(),*/
     }
 }
 
@@ -46,21 +43,20 @@ pub fn initialize_tip_distribution_account_ix(
     bump: u8,
 ) -> Instruction {
     Instruction {
-        program_id: jito_tip_distribution::ID,
-        accounts: jito_tip_distribution::client::accounts::InitializeTipDistributionAccount {
-            config,
-            tip_distribution_account,
-            system_program,
-            validator_vote_account,
-            signer,
-        }
-        .to_account_metas(None),
-        data: jito_tip_distribution::client::args::InitializeTipDistributionAccount {
-            merkle_root_upload_authority,
-            validator_commission_bps,
-            bump,
-        }
-        .data(),
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(config, false),
+            AccountMeta::new(tip_distribution_account, false),
+            AccountMeta::new_readonly(system_program, false),
+            AccountMeta::new_readonly(validator_vote_account, false),
+            AccountMeta::new_readonly(signer, true),
+        ],
+        data: vec![], /*jito_tip_distribution::client::args::InitializeTipDistributionAccount {
+                          merkle_root_upload_authority,
+                          validator_commission_bps,
+                          bump,
+                      }
+                      .data(),*/
     }
 }
 
@@ -78,23 +74,22 @@ pub fn claim_ix(
     bump: u8,
 ) -> Instruction {
     Instruction {
-        program_id: jito_tip_distribution::ID,
-        accounts: jito_tip_distribution::client::accounts::Claim {
-            config,
-            tip_distribution_account,
-            merkle_root_upload_authority,
-            claim_status,
-            claimant,
-            payer,
-            system_program,
-        }
-        .to_account_metas(None),
-        data: jito_tip_distribution::client::args::Claim {
-            proof,
-            amount,
-            bump,
-        }
-        .data(),
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(config, false),
+            AccountMeta::new(tip_distribution_account, false),
+            AccountMeta::new_readonly(merkle_root_upload_authority, false),
+            AccountMeta::new(claim_status, false),
+            AccountMeta::new_readonly(claimant, true),
+            AccountMeta::new_readonly(payer, true),
+            AccountMeta::new_readonly(system_program, false),
+        ],
+        data: vec![], /*jito_tip_distribution::client::args::Claim {
+                          proof,
+                          amount,
+                          bump,
+                      }
+                      .data(),*/
     }
 }
 
@@ -107,19 +102,25 @@ pub fn upload_merkle_root_ix(
     max_num_nodes: u64,
 ) -> Instruction {
     Instruction {
-        program_id: jito_tip_distribution::ID,
-        accounts: jito_tip_distribution::client::accounts::UploadMerkleRoot {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(config, false),
+            AccountMeta::new_readonly(merkle_root_upload_authority, true),
+            AccountMeta::new(tip_distribution_account, false),
+        ],
+        /*jito_tip_distribution::client::accounts::UploadMerkleRoot {
             config,
             merkle_root_upload_authority,
             tip_distribution_account,
         }
-        .to_account_metas(None),
-        data: jito_tip_distribution::client::args::UploadMerkleRoot {
+        .to_account_metas(None),*/
+        data: vec![],
+        /*jito_tip_distribution::client::args::UploadMerkleRoot {
             root,
             max_total_claim,
             max_num_nodes,
         }
-        .data(),
+        .data(),*/
     }
 }
 
@@ -129,14 +130,13 @@ pub fn close_claim_status_ix(
     claim_status_payer: Pubkey,
 ) -> Instruction {
     Instruction {
-        program_id: jito_tip_distribution::ID,
-        accounts: jito_tip_distribution::client::accounts::CloseClaimStatus {
-            config,
-            claim_status,
-            claim_status_payer,
-        }
-        .to_account_metas(None),
-        data: jito_tip_distribution::client::args::CloseClaimStatus {}.data(),
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(config, false),
+            AccountMeta::new(claim_status, false),
+            AccountMeta::new_readonly(claim_status_payer, true),
+        ],
+        data: vec![], //jito_tip_distribution::client::args::CloseClaimStatus {}.data(),
     }
 }
 
@@ -149,17 +149,16 @@ pub fn close_tip_distribution_account_ix(
     epoch: u64,
 ) -> Instruction {
     Instruction {
-        program_id: jito_tip_distribution::ID,
-        accounts: jito_tip_distribution::client::accounts::CloseTipDistributionAccount {
-            config,
-            tip_distribution_account,
-            expired_funds_account,
-            validator_vote_account,
-            signer,
-        }
-        .to_account_metas(None),
-        data: jito_tip_distribution::client::args::CloseTipDistributionAccount { _epoch: epoch }
-            .data(),
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(config, false),
+            AccountMeta::new(tip_distribution_account, false),
+            AccountMeta::new(expired_funds_account, false),
+            AccountMeta::new_readonly(validator_vote_account, false),
+            AccountMeta::new_readonly(signer, true),
+        ],
+        data: vec![], /*jito_tip_distribution::client::args::CloseTipDistributionAccount { _epoch: epoch }
+                      .data(),*/
     }
 }
 
@@ -168,12 +167,11 @@ pub fn migrate_tda_merkle_root_upload_authority_ix(
     merkle_root_upload_config: Pubkey,
 ) -> Instruction {
     Instruction {
-        program_id: jito_tip_distribution::ID,
-        accounts: jito_tip_distribution::client::accounts::MigrateTdaMerkleRootUploadAuthority {
-            tip_distribution_account,
-            merkle_root_upload_config,
-        }
-        .to_account_metas(None),
-        data: jito_tip_distribution::client::args::MigrateTdaMerkleRootUploadAuthority {}.data(),
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(tip_distribution_account, false),
+            AccountMeta::new_readonly(merkle_root_upload_config, true),
+        ],
+        data: vec![], /*jito_tip_distribution::client::args::MigrateTdaMerkleRootUploadAuthority {}.data(),*/
     }
 }

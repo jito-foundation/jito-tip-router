@@ -51,8 +51,7 @@ impl ReallocVaultRegistry {
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let data = ReallocVaultRegistryInstructionData::new()
-            .try_to_vec()
+        let data = borsh::to_vec(&ReallocVaultRegistryInstructionData::new())
             .unwrap();
 
         solana_program::instruction::Instruction {
@@ -267,8 +266,7 @@ impl<'a, 'b> ReallocVaultRegistryCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let data = ReallocVaultRegistryInstructionData::new()
-            .try_to_vec()
+        let data = borsh::to_vec(&ReallocVaultRegistryInstructionData::new())
             .unwrap();
 
         let instruction = solana_program::instruction::Instruction {

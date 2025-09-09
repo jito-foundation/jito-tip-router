@@ -1,14 +1,8 @@
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Display, Formatter},
-    sync::Arc,
-};
-
-use anchor_lang::AccountDeserialize;
+use borsh::de::BorshDeserialize;
 use itertools::Itertools;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::TipDistributionAccount;
-use jito_tip_payment_sdk::{jito_tip_payment::accounts::Config, CONFIG_ACCOUNT_SEED};
+use jito_tip_payment_sdk::{Config, CONFIG_ACCOUNT_SEED};
 use log::*;
 use meta_merkle_tree::generated_merkle_tree::{Delegation, StakeMeta, StakeMetaCollection};
 use solana_accounts_db::hardened_unpack::OpenGenesisConfigError;
@@ -17,11 +11,17 @@ use solana_ledger::{
     bank_forks_utils::BankForksUtilsError, blockstore::BlockstoreError,
     blockstore_processor::BlockstoreProcessorError,
 };
-use solana_program::{stake_history::StakeHistory, sysvar};
 use solana_runtime::{bank::Bank, stakes::StakeAccount};
 use solana_sdk::{
     account::{from_account, ReadableAccount},
     pubkey::Pubkey,
+};
+use solana_stake_interface::stake_history::StakeHistory;
+use solana_stake_interface::sysvar::stake_history;
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Display, Formatter},
+    sync::Arc,
 };
 use thiserror::Error;
 
@@ -35,8 +35,7 @@ use crate::{
 
 #[derive(Error, Debug)]
 pub enum StakeMetaGeneratorError {
-    #[error(transparent)]
-    AnchorError(#[from] Box<anchor_lang::error::Error>),
+    AnchorError(String),
 
     #[error(transparent)]
     BlockstoreError(#[from] BlockstoreError),
@@ -187,19 +186,15 @@ pub fn generate_stake_meta_collection(
 
 /// Load and deserialize config from Bank. If it does not exist, propagate error.
 fn get_config(bank: &Arc<Bank>, config_pubkey: &Pubkey) -> Result<Config, StakeMetaGeneratorError> {
-    bank.get_account(config_pubkey).map_or_else(
-        || {
-            Err(StakeMetaGeneratorError::AnchorError(Box::new(
-                anchor_lang::error::Error::from(
-                    anchor_lang::error::ErrorCode::AccountNotInitialized,
-                ),
-            )))
-        },
-        |config_account| {
-            Config::try_deserialize(&mut config_account.data())
-                .map_err(|e| StakeMetaGeneratorError::AnchorError(Box::new(e)))
-        },
-    )
+    bank.get_account(config_pubkey)
+        .ok_or_else(|| {
+            StakeMetaGeneratorError::AnchorError(String::from("Config account not found in bank"))
+        })
+        .and_then(|config_account| {
+            Config::try_from_slice(&mut config_account.data()).map_err(|_| {
+                StakeMetaGeneratorError::AnchorError(String::from("Failed to deserialize config"))
+            })
+        })
 }
 
 /// Given an [EpochStakes] object, return delegations grouped by voter_pubkey (validator delegated to).
@@ -212,10 +207,8 @@ fn group_delegations_by_voter_pubkey(
         .filter(|(_stake_pubkey, stake_account)| {
             stake_account.delegation().stake(
                 bank.epoch(),
-                &from_account::<StakeHistory, _>(
-                    &bank.get_account(&sysvar::stake_history::id()).unwrap(),
-                )
-                .unwrap(),
+                &from_account::<StakeHistory, _>(&bank.get_account(&stake_history::id()).unwrap())
+                    .unwrap(),
                 bank.new_warmup_cooldown_rate_epoch(),
             ) > 0
         })
@@ -248,7 +241,6 @@ fn group_delegations_by_voter_pubkey(
 
 #[cfg(test)]
 mod tests {
-    use anchor_lang::AccountSerialize;
     use jito_priority_fee_distribution_sdk::{
         derive_priority_fee_distribution_account_address, PRIORITY_FEE_DISTRIBUTION_SIZE,
     };
@@ -256,10 +248,9 @@ mod tests {
         derive_tip_distribution_account_address, TIP_DISTRIBUTION_SIZE,
     };
     use jito_tip_payment_sdk::{
-        jito_tip_payment::{accounts::TipPaymentAccount, types::InitBumps},
         CONFIG_SIZE, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
         TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
-        TIP_ACCOUNT_SEED_7, TIP_PAYMENT_ACCOUNT_SIZE,
+        TIP_ACCOUNT_SEED_7, TIP_PAYMENT_ACCOUNT_SIZE, {InitBumps, TipPaymentAccount},
     };
     use meta_merkle_tree::generated_merkle_tree::{
         PriorityFeeDistributionMeta, TipDistributionMeta,
@@ -474,7 +465,7 @@ mod tests {
                     != stake.stake(
                         bank.epoch(),
                         &from_account::<StakeHistory, _>(
-                            &bank.get_account(&sysvar::stake_history::id()).unwrap(),
+                            &bank.get_account(&stake_history::id()).unwrap(),
                         )
                         .unwrap(),
                         bank.new_warmup_cooldown_rate_epoch(),
@@ -808,7 +799,7 @@ mod tests {
             )
         );
         if let Some(from_account) = bank.get_account(&from_keypair.pubkey()) {
-            assert_eq!(from_account.owner(), &solana_sdk::system_program::id());
+            assert_eq!(from_account.owner(), &system_program::id());
         } else {
             panic!("from_account DNE");
         }

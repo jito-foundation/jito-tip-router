@@ -5,8 +5,8 @@ edition = "2021"
 description = "CLI for Jito Tip Router"
 
 [dependencies]
-anchor-lang = { workspace = true }
 anyhow = { workspace = true }
+borsh = { workspace = true }
 base64 = { workspace = true }
 clap = { workspace = true }
 clap_old = { workspace = true }
@@ -24,7 +24,7 @@ jito-tip-distribution-sdk = { workspace = true }
 jito-tip-payment-sdk = { workspace = true }
 jito-tip-router-client = { workspace = true }
 jito-tip-router-core = { workspace = true }
-jito-tip-router-program = { workspace = true }
+#jito-tip-router-program = { workspace = true }
 log = { workspace = true }
 meta-merkle-tree = { workspace = true }
 rand = { workspace = true }
@@ -35,6 +35,9 @@ solana-accounts-db = { workspace = true }
 solana-clap-utils = { workspace = true }
 solana-client = { workspace = true }
 solana-core = { workspace = true }
+solana-commitment-config = { workspace = true }
+solana-compute-budget-interface = { workspace = true }
+solana-genesis-config = { workspace = true }
 solana-geyser-plugin-manager = { workspace = true }
 solana-gossip = { workspace = true }
 solana-ledger = { workspace = true }
@@ -47,11 +50,13 @@ solana-rpc-client-api = { workspace = true }
 solana-runtime = { workspace = true }
 solana-sdk = { workspace = true }
 solana-stake-program = { workspace = true }
+solana-stake-interface = { workspace = true }
 solana-streamer = { workspace = true }
+solana-system-interface = { workspace = true }
 solana-transaction-status = { workspace = true }
 solana-unified-scheduler-pool = { workspace = true }
 solana-vote = { workspace = true }
-spl-memo = { workspace = true }
+spl-memo-interface = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 

@@ -1,4 +1,4 @@
-use anchor_lang::AccountDeserialize;
+use borsh::de::BorshDeserialize;
 use itertools::Itertools;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::{
@@ -11,19 +11,19 @@ use log::{info, warn};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, TreeNode};
 use rand::{prelude::SliceRandom, thread_rng};
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSimulateTransactionConfig};
+use solana_commitment_config::CommitmentConfig;
 use solana_metrics::{datapoint_error, datapoint_info};
 #[allow(deprecated)]
 use solana_sdk::{
     account::Account,
-    commitment_config::CommitmentConfig,
     fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
-    native_token::{lamports_to_sol, LAMPORTS_PER_SOL},
+    native_token::LAMPORTS_PER_SOL,
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
     signer::Signer,
-    system_program,
     transaction::Transaction,
 };
+use solana_system_interface::program as system_program;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{
@@ -52,8 +52,8 @@ pub enum ClaimMevError {
     #[error(transparent)]
     JsonError(#[from] serde_json::Error),
 
-    #[error(transparent)]
-    AnchorError(anchor_lang::error::Error),
+    #[error("Failed to deserialize account data: {0}")]
+    AnchorError(String),
 
     #[error(transparent)]
     RpcError(#[from] solana_rpc_client_api::client_error::Error),
@@ -271,7 +271,7 @@ pub async fn handle_claim_mev_tips(
         ("claimer", keypair.pubkey().to_string(), String),
         ("epoch", epoch, i64),
         ("lamport_balance", claimer_balance, i64),
-        ("sol_balance", lamports_to_sol(claimer_balance), f64),
+        ("sol_balance", (claimer_balance * LAMPORTS_PER_SOL) as f64, f64),
         "cluster" => &cli.cluster,
     );
     Ok(())
@@ -604,7 +604,7 @@ pub async fn get_unprocessed_claims_for_validators(
 
     let deserialized_claim_statuses = claim_statuses.values().map(|a| {
         (
-            ClaimStatus::try_deserialize(&mut a.data.as_slice()).unwrap(),
+            ClaimStatus::try_from_slice(&mut a.data.as_slice()).unwrap(),
             a,
         )
     });
@@ -665,7 +665,7 @@ fn build_mev_claim_transactions(
         let distribution_account = tdas.get(&tree.distribution_account).unwrap();
         if tree.distribution_program.eq(&tip_distribution_program_id) {
             let tda =
-                TipDistributionAccount::try_deserialize(&mut distribution_account.data.as_slice());
+                TipDistributionAccount::try_from_slice(&mut distribution_account.data.as_slice());
             match tda {
                 Ok(tda) => {
                     // can continue here, as there might be tip distribution accounts this account doesn't upload for
@@ -681,7 +681,7 @@ fn build_mev_claim_transactions(
             .distribution_program
             .eq(&priority_fee_distribution_program_id)
         {
-            let pfda = PriorityFeeDistributionAccount::try_deserialize(
+            let pfda = PriorityFeeDistributionAccount::try_from_slice(
                 &mut distribution_account.data.as_slice(),
             );
             match pfda {

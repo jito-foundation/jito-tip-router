@@ -15,7 +15,6 @@ anchor = []
 anchor-idl-build = []
 
 [dependencies]
-anchor-lang = { workspace = true }
 borsh = { workspace = true }
 bytemuck = { workspace = true }
 num-derive = { workspace = true }

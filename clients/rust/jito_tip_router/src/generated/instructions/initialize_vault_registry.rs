@@ -51,8 +51,7 @@ impl InitializeVaultRegistry {
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let data = InitializeVaultRegistryInstructionData::new()
-            .try_to_vec()
+        let data = borsh::to_vec(&InitializeVaultRegistryInstructionData::new())
             .unwrap();
 
         solana_program::instruction::Instruction {
@@ -267,8 +266,7 @@ impl<'a, 'b> InitializeVaultRegistryCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let data = InitializeVaultRegistryInstructionData::new()
-            .try_to_vec()
+        let data = borsh::to_vec(&InitializeVaultRegistryInstructionData::new())
             .unwrap();
 
         let instruction = solana_program::instruction::Instruction {

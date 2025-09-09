@@ -64,7 +64,9 @@ pub fn process_distribute_ncn_operator_rewards(
     )?;
     load_associated_token_account(operator_ata, operator.key, &JITOSOL_MINT)?;
 
-    if stake_pool_program.key.ne(&spl_stake_pool::id()) {
+    let spl_stake_pool_id = Pubkey::new_from_array(spl_stake_pool::id().to_bytes());
+
+    if stake_pool_program.key.ne(&spl_stake_pool_id) {
         msg!("Incorrect stake pool program ID");
         return Err(ProgramError::InvalidAccountData);
     }
