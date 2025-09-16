@@ -118,7 +118,8 @@ where
             // DAs may be funded with lamports and therefore exist in the bank, but would fail the
             // deserialization step if the buffer is yet to be allocated thru the init call to the
             // program.
-            DistributionAccount::try_from_slice(&mut account_data.data()).map_or_else(
+            let mut distribution_account_data = account_data.data()[8..].to_vec();
+            DistributionAccount::try_from_slice(&mut distribution_account_data).map_or_else(
                 |_| None,
                 |distribution_account| {
                     // [TIp Distribution ONLY] this snapshot might have tips that weren't claimed

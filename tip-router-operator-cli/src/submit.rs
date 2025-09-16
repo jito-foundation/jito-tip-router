@@ -341,7 +341,7 @@ async fn get_tip_distribution_accounts_to_upload(
         .into_iter()
         .filter_map(|(pubkey, account)| {
             let tip_distribution_account =
-                TipDistributionAccount::try_from_slice(&mut account.data.as_slice());
+                TipDistributionAccount::try_deserialize(&mut account.data.as_slice());
             tip_distribution_account.map_or(None, |tip_distribution_account| {
                 if tip_distribution_account.epoch_created_at == epoch
                     && tip_distribution_account.merkle_root_upload_authority
@@ -398,7 +398,7 @@ async fn get_priority_fee_distribution_accounts_to_upload(
         .into_iter()
         .filter_map(|(pubkey, account)| {
             let tip_distribution_account =
-                PriorityFeeDistributionAccount::try_from_slice(&mut account.data.as_slice());
+                PriorityFeeDistributionAccount::try_deserialize(&mut account.data.as_slice());
             tip_distribution_account.map_or(None, |tip_distribution_account| {
                 if tip_distribution_account.epoch_created_at == epoch
                     && tip_distribution_account.merkle_root_upload_authority
