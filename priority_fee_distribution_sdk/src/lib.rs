@@ -40,13 +40,13 @@ pub struct Config {
 impl Config {
     pub const DISCRIMINATOR: [u8; 8] = [0; 8];
 
-    pub fn try_deserialize(data: &[u8]) -> Result<Self> {
+    pub fn try_from_slice(data: &[u8]) -> Result<Self> {
         let (discriminator, remainder) = data.split_at(8);
         anyhow::ensure!(
             discriminator == Self::DISCRIMINATOR,
             "Invalid discriminator"
         );
-        Ok(Self::try_from_slice(&remainder)?)
+        Ok(<Self as BorshDeserialize>::try_from_slice(&remainder)?)
     }
 }
 
@@ -63,13 +63,13 @@ pub struct ClaimStatus {
 impl ClaimStatus {
     pub const DISCRIMINATOR: [u8; 8] = [0; 8];
 
-    pub fn try_deserialize(data: &[u8]) -> Result<Self> {
+    pub fn try_from_slice(data: &[u8]) -> Result<Self> {
         let (discriminator, remainder) = data.split_at(8);
         anyhow::ensure!(
             discriminator == Self::DISCRIMINATOR,
             "Invalid discriminator"
         );
-        Ok(Self::try_from_slice(&remainder)?)
+        Ok(<Self as BorshDeserialize>::try_from_slice(&remainder)?)
     }
 }
 
@@ -104,13 +104,13 @@ pub struct PriorityFeeDistributionAccount {
 impl PriorityFeeDistributionAccount {
     pub const DISCRIMINATOR: [u8; 8] = [0; 8];
 
-    pub fn try_deserialize(data: &[u8]) -> Result<Self> {
+    pub fn try_from_slice(data: &[u8]) -> Result<Self> {
         let (discriminator, remainder) = data.split_at(8);
         anyhow::ensure!(
             discriminator == Self::DISCRIMINATOR,
             "Invalid discriminator"
         );
-        Ok(Self::try_from_slice(&remainder)?)
+        Ok(<Self as BorshDeserialize>::try_from_slice(&remainder)?)
     }
 }
 

@@ -604,7 +604,7 @@ pub async fn get_unprocessed_claims_for_validators(
 
     let deserialized_claim_statuses = claim_statuses.values().map(|a| {
         (
-            ClaimStatus::try_from_slice(&mut a.data.as_slice()).unwrap(),
+            ClaimStatus::try_from_slice(&a.data).unwrap(),
             a,
         )
     });

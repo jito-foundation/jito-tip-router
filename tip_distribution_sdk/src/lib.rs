@@ -39,13 +39,13 @@ pub struct Config {
 impl Config {
     pub const DISCRIMINATOR: [u8; 8] = [0x9b, 0x0c, 0xaa, 0xe0, 0x1e, 0xfa, 0xcc, 82];
 
-    pub fn try_deserialize(data: &[u8]) -> Result<Self> {
+    pub fn try_from_slice(data: &[u8]) -> Result<Self> {
         let (discriminator, remainder) = data.split_at(8);
         anyhow::ensure!(
             discriminator == Self::DISCRIMINATOR,
             "Invalid discriminator"
         );
-        Ok(Self::try_from_slice(&remainder)?)
+        Ok(<Self as BorshDeserialize>::try_from_slice(&remainder)?)
     }
 }
 
@@ -94,13 +94,13 @@ pub struct TipDistributionAccount {
 impl TipDistributionAccount {
     pub const DISCRIMINATOR: [u8; 8] = [0x55, 0x40, 0x71, 0xc6, 0xea, 0x5e, 0x78, 0x7b];
 
-    pub fn try_deserialize(data: &[u8]) -> Result<Self> {
+    pub fn try_from_slice(data: &[u8]) -> Result<Self> {
         let (discriminator, remainder) = data.split_at(8);
         anyhow::ensure!(
             discriminator == Self::DISCRIMINATOR,
             "Invalid discriminator"
         );
-        Ok(Self::try_from_slice(&remainder)?)
+        Ok(<Self as BorshDeserialize>::try_from_slice(&remainder)?)
     }
 }
 
@@ -132,13 +132,13 @@ pub struct ClaimStatus {
 impl ClaimStatus {
     pub const DISCRIMINATOR: [u8; 8] = [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
 
-    pub fn try_deserialize(data: &[u8]) -> Result<Self> {
+    pub fn try_from_slice(data: &[u8]) -> Result<Self> {
         let (discriminator, remainder) = data.split_at(8);
         anyhow::ensure!(
             discriminator == Self::DISCRIMINATOR,
             "Invalid discriminator"
         );
-        Ok(Self::try_from_slice(&remainder)?)
+        Ok(<Self as BorshDeserialize>::try_from_slice(&remainder)?)
     }
 }
 
