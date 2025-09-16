@@ -1,6 +1,16 @@
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::instruction::Instruction;
 use solana_pubkey::Pubkey;
 use solana_sdk::instruction::AccountMeta;
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct Initialize {
+    authority: Pubkey,
+    expired_funds_account: Pubkey,
+    num_epochs_valid: u64,
+    max_validator_commission_bps: u16,
+    bump: u8,
+}
 
 #[allow(clippy::too_many_arguments)]
 pub fn initialize_ix(
@@ -20,15 +30,22 @@ pub fn initialize_ix(
             AccountMeta::new_readonly(system_program, false),
             AccountMeta::new_readonly(initializer, true),
         ],
-        data: vec![], /*jito_tip_distribution::client::args::Initialize {
-                          authority,
-                          expired_funds_account,
-                          num_epochs_valid,
-                          max_validator_commission_bps,
-                          bump,
-                      }
-                      .data(),*/
+        data: borsh::to_vec(&Initialize {
+            authority,
+            expired_funds_account,
+            num_epochs_valid,
+            max_validator_commission_bps,
+            bump,
+        })
+        .expect("Failed to serialize instruction data"),
     }
+}
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct InitializeTipDistributionAccount {
+    merkle_root_upload_authority: Pubkey,
+    validator_commission_bps: u16,
+    bump: u8,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -51,13 +68,20 @@ pub fn initialize_tip_distribution_account_ix(
             AccountMeta::new_readonly(validator_vote_account, false),
             AccountMeta::new_readonly(signer, true),
         ],
-        data: vec![], /*jito_tip_distribution::client::args::InitializeTipDistributionAccount {
-                          merkle_root_upload_authority,
-                          validator_commission_bps,
-                          bump,
-                      }
-                      .data(),*/
+        data: borsh::to_vec(&InitializeTipDistributionAccount {
+            merkle_root_upload_authority,
+            validator_commission_bps,
+            bump,
+        })
+        .expect("Failed to serialize instruction data"),
     }
+}
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct Claim {
+    proof: Vec<[u8; 32]>,
+    amount: u64,
+    bump: u8,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -84,13 +108,20 @@ pub fn claim_ix(
             AccountMeta::new_readonly(payer, true),
             AccountMeta::new_readonly(system_program, false),
         ],
-        data: vec![], /*jito_tip_distribution::client::args::Claim {
-                          proof,
-                          amount,
-                          bump,
-                      }
-                      .data(),*/
+        data: borsh::to_vec(&Claim {
+            proof,
+            amount,
+            bump,
+        })
+        .expect("Failed to serialize instruction data"),
     }
+}
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct UploadMerkleRoot {
+    root: [u8; 32],
+    max_total_claim: u64,
+    max_num_nodes: u64,
 }
 
 pub fn upload_merkle_root_ix(
@@ -108,21 +139,17 @@ pub fn upload_merkle_root_ix(
             AccountMeta::new_readonly(merkle_root_upload_authority, true),
             AccountMeta::new(tip_distribution_account, false),
         ],
-        /*jito_tip_distribution::client::accounts::UploadMerkleRoot {
-            config,
-            merkle_root_upload_authority,
-            tip_distribution_account,
-        }
-        .to_account_metas(None),*/
-        data: vec![],
-        /*jito_tip_distribution::client::args::UploadMerkleRoot {
+        data: borsh::to_vec(&UploadMerkleRoot {
             root,
             max_total_claim,
             max_num_nodes,
-        }
-        .data(),*/
+        })
+        .expect("Failed to serialize instruction data"),
     }
 }
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct CloseClaimStatus {}
 
 pub fn close_claim_status_ix(
     config: Pubkey,
@@ -136,8 +163,13 @@ pub fn close_claim_status_ix(
             AccountMeta::new(claim_status, false),
             AccountMeta::new_readonly(claim_status_payer, true),
         ],
-        data: vec![], //jito_tip_distribution::client::args::CloseClaimStatus {}.data(),
+        data: borsh::to_vec(&CloseClaimStatus {}).expect("Failed to serialize instruction data"),
     }
+}
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct CloseTipDistributionAccount {
+    _epoch: u64,
 }
 
 pub fn close_tip_distribution_account_ix(
@@ -157,10 +189,13 @@ pub fn close_tip_distribution_account_ix(
             AccountMeta::new_readonly(validator_vote_account, false),
             AccountMeta::new_readonly(signer, true),
         ],
-        data: vec![], /*jito_tip_distribution::client::args::CloseTipDistributionAccount { _epoch: epoch }
-                      .data(),*/
+        data: borsh::to_vec(&CloseTipDistributionAccount { _epoch: epoch })
+            .expect("Failed to serialize instruction data"),
     }
 }
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct MigrateTdaMerkleRootUploadAuthority {}
 
 pub fn migrate_tda_merkle_root_upload_authority_ix(
     tip_distribution_account: Pubkey,
@@ -172,6 +207,7 @@ pub fn migrate_tda_merkle_root_upload_authority_ix(
             AccountMeta::new(tip_distribution_account, false),
             AccountMeta::new_readonly(merkle_root_upload_config, true),
         ],
-        data: vec![], /*jito_tip_distribution::client::args::MigrateTdaMerkleRootUploadAuthority {}.data(),*/
+        data: borsh::to_vec(&MigrateTdaMerkleRootUploadAuthority {})
+            .expect("Failed to serialize instruction data"),
     }
 }

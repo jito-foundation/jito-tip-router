@@ -127,12 +127,12 @@ pub async fn close_expired_claims(
             let mut blockhash = rpc_client.get_latest_blockhash().await?;
             for transaction in batch.iter_mut() {
                 transaction.sign(&[&signer], blockhash);
-                /*let maybe_signature = rpc_client.send_transaction(transaction).await;
+                let maybe_signature = rpc_client.send_transaction(transaction).await;
                 if let Err(e) = maybe_signature {
                     // Fetch a new blockhash if the transaction failed
                     blockhash = rpc_client.get_latest_blockhash().await?;
                     error!("Error sending transaction: {:?}", e);
-                }*/
+                }
             }
             let duration = start.elapsed();
             info!(
@@ -188,6 +188,7 @@ pub async fn close_expired_distribution_accounts(
         );
 
         if tip_distribution_accounts.is_empty() && priority_fee_distribution_accounts.is_empty() {
+            info!("No expired distribution accounts found in epoch {}", epoch);
             continue;
         }
         let close_tip_claim_transactions = close_tip_distribution_account_transactions(
@@ -222,12 +223,12 @@ pub async fn close_expired_distribution_accounts(
             let mut blockhash = rpc_client.get_latest_blockhash().await?;
             for transaction in batch.iter_mut() {
                 transaction.sign(&[&signer], blockhash);
-                /*let maybe_signature = rpc_client.send_transaction(transaction).await;
+                let maybe_signature = rpc_client.send_transaction(transaction).await;
                 if let Err(e) = maybe_signature {
                     // Fetch a new blockhash if the transaction failed
                     blockhash = rpc_client.get_latest_blockhash().await?;
                     error!("Error sending transaction: {:?}", e);
-                }*/
+                }
             }
             let duration = start.elapsed();
             info!(
@@ -299,8 +300,7 @@ async fn close_tip_distribution_account_transactions(
         .value
         .ok_or_else(|| anyhow::anyhow!("Config account not found"))?;
 
-    let tip_distribution_config =
-        TipDistributionConfig::try_from_slice(&config_account.data)?;
+    let tip_distribution_config = TipDistributionConfig::try_from_slice(&config_account.data)?;
 
     let instructions: Vec<_> = accounts
         .iter()

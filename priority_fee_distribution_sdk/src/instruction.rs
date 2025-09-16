@@ -1,5 +1,15 @@
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{instruction::Instruction, pubkey::Pubkey};
 use solana_sdk::instruction::AccountMeta;
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct Initialize {
+    authority: Pubkey,
+    expired_funds_account: Pubkey,
+    num_epochs_valid: u64,
+    max_validator_commission_bps: u16,
+    bump: u8,
+}
 
 #[allow(clippy::too_many_arguments)]
 pub fn initialize_ix(
@@ -19,21 +29,22 @@ pub fn initialize_ix(
             AccountMeta::new_readonly(system_program, false),
             AccountMeta::new_readonly(initializer, true),
         ],
-        /*jito_priority_fee_distribution::client::accounts::Initialize {
-            config,
-            system_program,
-            initializer,
-        }
-        .to_account_metas(None),*/
-        data: vec![], /*jito_priority_fee_distribution::client::args::Initialize {
-                          authority,
-                          expired_funds_account,
-                          num_epochs_valid,
-                          max_validator_commission_bps,
-                          bump,
-                      }
-                      .data(),*/
+        data: borsh::to_vec(&Initialize {
+            authority,
+            expired_funds_account,
+            num_epochs_valid,
+            max_validator_commission_bps,
+            bump,
+        })
+        .expect("Failed to serialize instruction data"),
     }
+}
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct InitializeTipDistributionAccount {
+    merkle_root_upload_authority: Pubkey,
+    validator_commission_bps: u16,
+    bump: u8,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -56,22 +67,20 @@ pub fn initialize_priority_fee_distribution_account_ix(
             AccountMeta::new_readonly(validator_vote_account, false),
             AccountMeta::new_readonly(signer, true),
         ],
-        /*jito_priority_fee_distribution::client::accounts::InitializePriorityFeeDistributionAccount {
-            config,
-            priority_fee_distribution_account,
-            system_program,
-            validator_vote_account,
-            signer,
-        }
-        .to_account_metas(None),*/
-        data: vec![],
-        /*jito_priority_fee_distribution::client::args::InitializePriorityFeeDistributionAccount {
+        data: borsh::to_vec(&InitializeTipDistributionAccount {
             merkle_root_upload_authority,
             validator_commission_bps,
             bump,
-        }
-        .data(),*/
+        })
+        .expect("Failed to serialize instruction data"),
     }
+}
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct Claim {
+    proof: Vec<[u8; 32]>,
+    amount: u64,
+    _bump: u8,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -98,24 +107,20 @@ pub fn claim_ix(
             AccountMeta::new(payer, true),
             AccountMeta::new_readonly(system_program, false),
         ],
-        /*jito_priority_fee_distribution::client::accounts::Claim {
-            config,
-            priority_fee_distribution_account,
-            merkle_root_upload_authority,
-            claim_status,
-            claimant,
-            payer,
-            system_program,
-        }
-        .to_account_metas(None),*/
-        data: vec![],
-        /*jito_priority_fee_distribution::client::args::Claim {
+        data: borsh::to_vec(&Claim {
             proof,
             amount,
             _bump: bump,
-        }
-        .data(),*/
+        })
+        .expect("Failed to serialize instruction data"),
     }
+}
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct UploadMerkleRoot {
+    root: [u8; 32],
+    max_total_claim: u64,
+    max_num_nodes: u64,
 }
 
 pub fn upload_merkle_root_ix(
@@ -133,21 +138,17 @@ pub fn upload_merkle_root_ix(
             AccountMeta::new_readonly(merkle_root_upload_authority, true),
             AccountMeta::new(priority_fee_distribution_account, false),
         ],
-        /*jito_priority_fee_distribution::client::accounts::UploadMerkleRoot {
-            config,
-            merkle_root_upload_authority,
-            priority_fee_distribution_account,
-        }
-        .to_account_metas(None),*/
-        data: vec![],
-        /*jito_priority_fee_distribution::client::args::UploadMerkleRoot {
+        data: borsh::to_vec(&UploadMerkleRoot {
             root,
             max_total_claim,
             max_num_nodes,
-        }
-        .data(),*/
+        })
+        .expect("Failed to serialize instruction data"),
     }
 }
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct CloseClaimStatus {}
 
 pub fn close_claim_status_ix(
     _config: Pubkey,
@@ -160,13 +161,13 @@ pub fn close_claim_status_ix(
             AccountMeta::new(claim_status, false),
             AccountMeta::new(claim_status_payer, true),
         ],
-        /*jito_priority_fee_distribution::client::accounts::CloseClaimStatus {
-            claim_status,
-            claim_status_payer,
-        }
-        .to_account_metas(None),*/
-        data: vec![], /*jito_priority_fee_distribution::client::args::CloseClaimStatus {}.data(),*/
+        data: borsh::to_vec(&CloseClaimStatus {}).expect("Failed to serialize instruction data"),
     }
+}
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct ClosePriorityFeeDistributionAccount {
+    _epoch: u64,
 }
 
 pub fn close_priority_fee_distribution_account_ix(
@@ -186,20 +187,13 @@ pub fn close_priority_fee_distribution_account_ix(
             AccountMeta::new_readonly(validator_vote_account, false),
             AccountMeta::new_readonly(signer, true),
         ],
-        /*jito_priority_fee_distribution::client::accounts::ClosePriorityFeeDistributionAccount {
-            config,
-            priority_fee_distribution_account,
-            expired_funds_account,
-            validator_vote_account,
-            signer,
-        }
-        .to_account_metas(None),*/
-        data: vec![], /*jito_priority_fee_distribution::client::args::ClosePriorityFeeDistributionAccount {
-                          _epoch: epoch,
-                      }
-                      .data(),*/
+        data: borsh::to_vec(&ClosePriorityFeeDistributionAccount { _epoch: epoch })
+            .expect("Failed to serialize instruction data"),
     }
 }
+
+#[derive(Debug, BorshDeserialize, BorshSerialize)]
+struct MigrateTdaMerkleRootUploadAuthority {}
 
 pub fn migrate_tda_merkle_root_upload_authority_ix(
     priority_fee_distribution_account: Pubkey,
@@ -211,12 +205,7 @@ pub fn migrate_tda_merkle_root_upload_authority_ix(
             AccountMeta::new(priority_fee_distribution_account, false),
             AccountMeta::new_readonly(merkle_root_upload_config, true),
         ],
-        /*jito_priority_fee_distribution::client::accounts::MigrateTdaMerkleRootUploadAuthority {
-            priority_fee_distribution_account,
-            merkle_root_upload_config,
-        }
-        .to_account_metas(None),*/
-        data: vec![], /*jito_priority_fee_distribution::client::args::MigrateTdaMerkleRootUploadAuthority {}
-                      .data(),*/
+        data: borsh::to_vec(&MigrateTdaMerkleRootUploadAuthority {})
+            .expect("Failed to serialize instruction data"),
     }
 }
