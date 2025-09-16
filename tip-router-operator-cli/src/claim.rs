@@ -271,7 +271,7 @@ pub async fn handle_claim_mev_tips(
         ("claimer", keypair.pubkey().to_string(), String),
         ("epoch", epoch, i64),
         ("lamport_balance", claimer_balance, i64),
-        ("sol_balance", (claimer_balance * LAMPORTS_PER_SOL) as f64, f64),
+        ("sol_balance", (claimer_balance / LAMPORTS_PER_SOL) as f64, f64),
         "cluster" => &cli.cluster,
     );
     Ok(())
