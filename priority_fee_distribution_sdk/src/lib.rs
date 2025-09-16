@@ -1,4 +1,5 @@
 pub mod instruction;
+use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{epoch_schedule::Epoch, pubkey::Pubkey};
 use std::str::FromStr;
@@ -38,6 +39,15 @@ pub struct Config {
 
 impl Config {
     pub const DISCRIMINATOR: [u8; 8] = [0; 8];
+
+    pub fn deserialize(data: &[u8]) -> Result<Self> {
+        let (discriminator, remainder) = data.split_at(8);
+        anyhow::ensure!(
+            discriminator == Self::DISCRIMINATOR,
+            "Invalid discriminator"
+        );
+        Ok(Self::try_from_slice(remainder)?)
+    }
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -52,6 +62,15 @@ pub struct ClaimStatus {
 
 impl ClaimStatus {
     pub const DISCRIMINATOR: [u8; 8] = [0; 8];
+
+    pub fn deserialize(data: &[u8]) -> Result<Self> {
+        let (discriminator, remainder) = data.split_at(8);
+        anyhow::ensure!(
+            discriminator == Self::DISCRIMINATOR,
+            "Invalid discriminator"
+        );
+        Ok(Self::try_from_slice(remainder)?)
+    }
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -84,6 +103,15 @@ pub struct PriorityFeeDistributionAccount {
 
 impl PriorityFeeDistributionAccount {
     pub const DISCRIMINATOR: [u8; 8] = [0; 8];
+
+    pub fn deserialize(data: &[u8]) -> Result<Self> {
+        let (discriminator, remainder) = data.split_at(8);
+        anyhow::ensure!(
+            discriminator == Self::DISCRIMINATOR,
+            "Invalid discriminator"
+        );
+        Ok(Self::try_from_slice(remainder)?)
+    }
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]

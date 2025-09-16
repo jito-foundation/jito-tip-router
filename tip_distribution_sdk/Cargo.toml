@@ -10,6 +10,7 @@ edition = { workspace = true }
 readme = { workspace = true }
 
 [dependencies]
+anyhow = { workspace = true }
 borsh = { workspace = true }
 solana-program = { workspace = true }
 solana-pubkey = { workspace = true }
