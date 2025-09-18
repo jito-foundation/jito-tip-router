@@ -3880,6 +3880,7 @@ dependencies = [
 name = "jito-tip-payment-sdk"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "borsh 1.5.7",
  "solana-program 3.0.0",
  "solana-pubkey 3.0.0",
