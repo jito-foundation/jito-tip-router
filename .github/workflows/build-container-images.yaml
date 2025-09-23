@@ -1,0 +1,66 @@
+name: Build Container Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_config:
+        description: 'Service configuration'
+        required: true
+        default: 'ncn-keeper'
+        type: choice
+        options:
+          - ncn-keeper
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-container:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Determine Docker target and image name
+      id: config
+      run: |
+        case "${{ github.event.inputs.service_config }}" in
+          "ncn-keeper")
+            echo "target=jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
+            echo "service=jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
+            echo "image_name=${{ github.repository }}/jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
+            ;;
+        esac
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ steps.config.outputs.image_name }}
+        tags: |
+          type=raw,value={{sha}}
+          type=raw,value=latest
+
+    - name: Build and push container
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./cli/Dockerfile
+        target: ${{ steps.config.outputs.target }}
+        platforms: linux/amd64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
