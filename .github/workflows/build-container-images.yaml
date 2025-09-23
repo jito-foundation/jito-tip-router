@@ -6,14 +6,13 @@ on:
       service_config:
         description: 'Service configuration'
         required: true
-        default: 'jito-tip-router-keeper'
+        default: 'ncn-keeper'
         type: choice
         options:
-          - jito-tip-router-ncn-keeper
+          - ncn-keeper
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-container:
@@ -33,20 +32,32 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Determine Docker target and image name
+      id: config
+      run: |
+        case "${{ github.event.inputs.service_config }}" in
+          "ncn-keeper")
+            echo "target=jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
+            echo "service=jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
+            echo "image_name=${{ github.repository }}/jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
+            ;;
+        esac
+
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        images: ${{ env.REGISTRY }}/${{ steps.config.outputs.image_name }}
         tags: |
-          type=raw,value=${{ github.ref_name }}-${{ github.event.inputs.service_config }}-{{sha}}
-          type=raw,value=${{ github.ref_name }}-${{ github.event.inputs.service_config }}-latest
+          type=raw,value={{sha}}
+          type=raw,value=latest
 
     - name: Build and push container
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./cli/Dockerfile
+        target: ${{ steps.config.outputs.target }}
         platforms: linux/amd64
         push: true
         tags: ${{ steps.meta.outputs.tags }}
