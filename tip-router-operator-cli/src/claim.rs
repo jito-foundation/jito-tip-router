@@ -665,7 +665,7 @@ fn build_mev_claim_transactions(
         let distribution_account = tdas.get(&tree.distribution_account).unwrap();
         if tree.distribution_program.eq(&tip_distribution_program_id) {
             let tda =
-                TipDistributionAccount::try_from_slice(&mut distribution_account.data.as_slice());
+                TipDistributionAccount::deserialize(&mut distribution_account.data.as_slice());
             match tda {
                 Ok(tda) => {
                     // can continue here, as there might be tip distribution accounts this account doesn't upload for
@@ -681,7 +681,7 @@ fn build_mev_claim_transactions(
             .distribution_program
             .eq(&priority_fee_distribution_program_id)
         {
-            let pfda = PriorityFeeDistributionAccount::try_from_slice(
+            let pfda = PriorityFeeDistributionAccount::deserialize(
                 &mut distribution_account.data.as_slice(),
             );
             match pfda {

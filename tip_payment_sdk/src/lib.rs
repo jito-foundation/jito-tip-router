@@ -1,6 +1,7 @@
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
+use std::str::FromStr;
 
 pub const CONFIG_ACCOUNT_SEED: &[u8] = b"CONFIG_ACCOUNT";
 pub const TIP_ACCOUNT_SEED_0: &[u8] = b"TIP_ACCOUNT_0";
@@ -57,4 +58,10 @@ impl Config {
     }
 }
 
+#[derive(BorshSerialize, BorshDeserialize, Default)]
 pub struct TipPaymentAccount {}
+
+pub fn id() -> Pubkey {
+    Pubkey::from_str("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt")
+        .expect("Failed to parse program id")
+}

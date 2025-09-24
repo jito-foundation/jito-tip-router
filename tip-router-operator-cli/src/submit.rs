@@ -341,7 +341,7 @@ async fn get_tip_distribution_accounts_to_upload(
         .into_iter()
         .filter_map(|(pubkey, account)| {
             let tip_distribution_account =
-                TipDistributionAccount::try_from_slice(&account.data);
+                TipDistributionAccount::deserialize(&mut &account.data[8..]);
             tip_distribution_account.map_or(None, |tip_distribution_account| {
                 if tip_distribution_account.epoch_created_at == epoch
                     && tip_distribution_account.merkle_root_upload_authority
@@ -349,6 +349,7 @@ async fn get_tip_distribution_accounts_to_upload(
                 {
                     Some((pubkey, tip_distribution_account))
                 } else {
+                    warn!("Tip distribution account likely ");
                     None
                 }
             })

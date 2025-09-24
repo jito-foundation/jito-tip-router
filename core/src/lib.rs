@@ -19,3 +19,5 @@ pub mod utils;
 pub mod vault_registry;
 pub mod weight_entry;
 pub mod weight_table;
+
+pub use constants::ID;

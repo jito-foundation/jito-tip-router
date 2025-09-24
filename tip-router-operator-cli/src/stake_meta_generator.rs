@@ -241,6 +241,8 @@ fn group_delegations_by_voter_pubkey(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use borsh::BorshSerialize;
     use jito_priority_fee_distribution_sdk::{
         derive_priority_fee_distribution_account_address, PRIORITY_FEE_DISTRIBUTION_SIZE,
     };
@@ -264,17 +266,16 @@ mod tests {
         account::{from_account, AccountSharedData},
         message::Message,
         signature::{Keypair, Signer},
-        stake::{
-            self,
-            state::{Authorized, Lockup},
-        },
-        stake_history::StakeHistory,
         sysvar,
         transaction::Transaction,
     };
+    use solana_stake_interface::{
+        self,
+        stake_history::StakeHistory,
+        state::{Authorized, Lockup},
+    };
     use solana_stake_program::stake_state;
-
-    use super::*;
+    use solana_system_interface::program as system_program;
 
     #[test]
     fn test_generate_stake_meta_collection_happy_path() {
@@ -317,31 +318,11 @@ mod tests {
         let delegator_3_pk = delegator_3.pubkey();
         let delegator_4_pk = delegator_4.pubkey();
 
-        let d_0_data = AccountSharedData::new(
-            300_000_000_000_000 * 10,
-            0,
-            &solana_sdk::system_program::id(),
-        );
-        let d_1_data = AccountSharedData::new(
-            100_000_203_000_000 * 10,
-            0,
-            &solana_sdk::system_program::id(),
-        );
-        let d_2_data = AccountSharedData::new(
-            100_000_235_899_000 * 10,
-            0,
-            &solana_sdk::system_program::id(),
-        );
-        let d_3_data = AccountSharedData::new(
-            200_000_000_000_000 * 10,
-            0,
-            &solana_sdk::system_program::id(),
-        );
-        let d_4_data = AccountSharedData::new(
-            100_000_000_777_000 * 10,
-            0,
-            &solana_sdk::system_program::id(),
-        );
+        let d_0_data = AccountSharedData::new(300_000_000_000_000 * 10, 0, &system_program::id());
+        let d_1_data = AccountSharedData::new(100_000_203_000_000 * 10, 0, &system_program::id());
+        let d_2_data = AccountSharedData::new(100_000_235_899_000 * 10, 0, &system_program::id());
+        let d_3_data = AccountSharedData::new(200_000_000_000_000 * 10, 0, &system_program::id());
+        let d_4_data = AccountSharedData::new(100_000_000_777_000 * 10, 0, &system_program::id());
 
         bank.store_account(&delegator_0_pk, &d_0_data);
         bank.store_account(&delegator_1_pk, &d_1_data);
@@ -806,7 +787,7 @@ mod tests {
         assert!(bank.get_account(vote_account).is_some());
 
         let stake_keypair = Keypair::new();
-        let instructions = stake::instruction::create_account_and_delegate_stake(
+        let instructions = solana_stake_interface::instruction::create_account_and_delegate_stake(
             &from_keypair.pubkey(),
             &stake_keypair.pubkey(),
             vote_account,
@@ -842,7 +823,7 @@ mod tests {
 
         let mut data: [u8; TIP_DISTRIBUTION_SIZE] = [0u8; TIP_DISTRIBUTION_SIZE];
         let mut cursor = std::io::Cursor::new(&mut data[..]);
-        tda.try_serialize(&mut cursor).unwrap();
+        tda.serialize(&mut cursor).unwrap();
 
         account_data.set_data(data.to_vec());
         account_data
@@ -861,7 +842,7 @@ mod tests {
 
         let mut data: [u8; PRIORITY_FEE_DISTRIBUTION_SIZE] = [0u8; PRIORITY_FEE_DISTRIBUTION_SIZE];
         let mut cursor = std::io::Cursor::new(&mut data[..]);
-        pfda.try_serialize(&mut cursor).unwrap();
+        pfda.serialize(&mut cursor).unwrap();
 
         account_data.set_data(data.to_vec());
         account_data
@@ -912,7 +893,7 @@ mod tests {
 
         let mut config_data: [u8; CONFIG_SIZE] = [0u8; CONFIG_SIZE];
         let mut config_cursor = std::io::Cursor::new(&mut config_data[..]);
-        config.try_serialize(&mut config_cursor).unwrap();
+        config.serialize(&mut config_cursor).unwrap();
         config_account_data.set_data(config_data.to_vec());
         account_datas.push((config_pda.0, config_account_data));
 
@@ -925,9 +906,7 @@ mod tests {
 
             let mut data: [u8; TIP_PAYMENT_ACCOUNT_SIZE] = [0u8; TIP_PAYMENT_ACCOUNT_SIZE];
             let mut cursor = std::io::Cursor::new(&mut data[..]);
-            TipPaymentAccount::default()
-                .try_serialize(&mut cursor)
-                .unwrap();
+            TipPaymentAccount::default().serialize(&mut cursor).unwrap();
             tip_account_data.set_data(data.to_vec());
 
             (pubkey, tip_account_data)

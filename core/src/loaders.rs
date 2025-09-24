@@ -91,7 +91,6 @@ mod tests {
             &mut data,
             &program_id,
             false,
-            0,
         );
 
         let result = check_load(
@@ -117,7 +116,6 @@ mod tests {
             &mut data,
             &bad_owner,
             false,
-            0,
         );
 
         let result = check_load(
@@ -139,7 +137,6 @@ mod tests {
             &mut bad_data,
             &program_id,
             false,
-            0,
         );
 
         let result = check_load(
@@ -164,7 +161,6 @@ mod tests {
             &mut data,
             &program_id,
             false,
-            0,
         );
 
         let result = check_load(
@@ -187,7 +183,6 @@ mod tests {
             &mut bad_data,
             &program_id,
             false,
-            0,
         );
 
         let result = check_load(
@@ -209,7 +204,6 @@ mod tests {
             &mut data,
             &program_id,
             false,
-            0,
         );
 
         let result = check_load(

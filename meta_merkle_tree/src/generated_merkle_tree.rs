@@ -646,7 +646,6 @@ where
 mod tests {
     use super::*;
     use crate::verify;
-    use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID as PRIORITY_FEE_DISTRIBUTION_ID;
 
     #[test]
     fn test_merkle_tree_verify() {
