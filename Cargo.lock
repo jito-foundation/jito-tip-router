@@ -2719,6 +2719,9 @@ dependencies = [
  "log",
  "regex",
  "serde_json",
+ "solana-client",
+ "solana-metrics",
+ "solana-rpc-client",
  "tokio",
 ]
 
