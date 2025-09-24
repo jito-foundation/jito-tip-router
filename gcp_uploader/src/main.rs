@@ -347,6 +347,7 @@ async fn emit_current_epoch_snapshot_metric(
         .get_epoch_info()
         .with_context(|| format!("Failed to fetch epoch info from {}", rpc_url))?;
     let epoch = epoch_info.epoch;
+    let slot_index = epoch_info.slot_index;
 
     // Build GCS prefix path used by upload_file: {epoch}/{hostname}/snapshot-*.tar.zst
     // First, list objects under epoch/hostname and look for any snapshot-*.tar.zst
@@ -371,7 +372,8 @@ async fn emit_current_epoch_snapshot_metric(
     datapoint_info!(
         "tip_router_gcp_uploader.snapshot_present",
         ("epoch", epoch as i64, i64),
-        ("present", uploaded, bool),
+        ("slot_index", slot_index as i64, i64),
+        ("present_i", uploaded as i64, i64),
         "cluster" => cluster,
         "hostname" => hostname,
         "bucket" => bucket_name,
