@@ -212,7 +212,7 @@ async fn scan_and_upload_files(
 }
 
 /// Scans directory for snapshots & uploads after deriving the associated epoch
-#[allow(clippy::arithmetic_side_effects)]
+#[allow(clippy::arithmetic_side_effects, clippy::integer_division)]
 async fn scan_and_upload_snapshot_files(
     dir_path: &Path,
     bucket_name: &str,
@@ -359,21 +359,22 @@ async fn emit_current_epoch_snapshot_metric(
         .output()
         .with_context(|| "Failed to execute gcloud ls for snapshot metric")?;
 
-    let mut uploaded = false;
-    if list_output.status.success() {
+    let uploaded = if list_output.status.success() {
         let stdout = String::from_utf8_lossy(&list_output.stdout);
-        uploaded = stdout
+        stdout
             .lines()
-            .any(|line| line.contains("snapshot-") && line.ends_with(".tar.zst"));
-    }
+            .any(|line| line.contains("snapshot-") && line.ends_with(".tar.zst"))
+    } else {
+        false
+    };
 
     datapoint_info!(
         "tip_router_gcp_uploader.snapshot_present",
-        ("hostname", hostname.to_string(), String),
-        ("bucket", bucket_name.to_string(), String),
         ("epoch", epoch as i64, i64),
         ("present", uploaded, bool),
         "cluster" => cluster,
+        "hostname" => hostname,
+        "bucket" => bucket_name,
     );
 
     Ok(())
