@@ -492,7 +492,7 @@ mod tests {
         let ledger_path = PathBuf::from("./tests/fixtures/test-ledger");
         let account_paths = vec![ledger_path.join("accounts/run")];
         let full_snapshots_path = ledger_path.clone();
-        let snapshot_slot = 100;
+        let snapshot_slot = 8301;
         let bank = get_bank_from_snapshot_at_slot(
             snapshot_slot,
             &full_snapshots_path,
