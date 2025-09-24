@@ -3,16 +3,16 @@ FROM rust:1.85.0-slim-bookworm as builder
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
+    libudev-dev \
+    clang \
+    pkg-config \
+    libssl-dev \
     build-essential \
     llvm-dev \
     libclang-dev \
-    clang \
+    cmake \
     protobuf-compiler \
-    git \
-    pkg-config \
-    libssl-dev \
-    libudev-dev \
-    cmake
+    git
 RUN update-ca-certificates
 
 # Set up build directory
