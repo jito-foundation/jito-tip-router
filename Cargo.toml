@@ -57,7 +57,7 @@ jito-tip-distribution-sdk = { path = "./tip_distribution_sdk", version = "=0.0.1
 jito-tip-payment-sdk = { path = "./tip_payment_sdk", version = "=0.0.1" }
 jito-tip-router-client = { path = "./clients/rust/jito_tip_router", version = "0.0.1" }
 jito-tip-router-core = { path = "./core", version = "=0.0.1" }
-#jito-tip-router-program = { path = "./program", version = "=0.0.1" }
+jito-tip-router-program = { path = "./program", version = "=0.0.1" }
 jito-tip-router-shank-cli = { path = "./shank_cli", version = "=0.0.1" }
 jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", rev = "3c84d3a43c6dfb5bd7f759c9330bda910cd42939" }
 jito-vault-core = { package = "jito-vault-core", git = "https://github.com/jito-foundation/restaking", rev = "3c84d3a43c6dfb5bd7f759c9330bda910cd42939" }
@@ -78,6 +78,7 @@ serde_with = "3.9.0"
 shank = "0.4.2"
 shank_idl = "0.4.2"
 solana-account-decoder = { package = "solana-account-decoder", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
+solana-address-lookup-table-interface = { version = "=3.0.0" }
 solana-account-info = { package = "solana-account-info", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-accounts-db = { package = "solana-accounts-db", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-clap-utils = { package = "solana-clap-utils", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }

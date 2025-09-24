@@ -40,15 +40,15 @@ pub struct Config {
 impl Config {
     pub const DISCRIMINATOR: [u8; 8] = [0x9b, 0x0c, 0xaa, 0xe0, 0x1e, 0xfa, 0xcc, 0x82];
 
-    pub fn try_from_slice(data: &[u8]) -> Result<Self> {
+    pub fn deserialize(data: &[u8]) -> Result<Self> {
         anyhow::ensure!(data.len() >= 8, "Account data too short");
         anyhow::ensure!(data.len() >= CONFIG_SIZE, "Invalid account size");
-        let (discriminator, remainder) = data.split_at(8);
+        let (discriminator, mut remainder) = data.split_at(8);
         anyhow::ensure!(
             discriminator == Self::DISCRIMINATOR,
             "Invalid discriminator"
         );
-        Ok(<Self as BorshDeserialize>::try_from_slice(&remainder)?)
+        Ok(<Self as BorshDeserialize>::deserialize(&mut remainder)?)
     }
 }
 
@@ -65,15 +65,15 @@ pub struct ClaimStatus {
 impl ClaimStatus {
     pub const DISCRIMINATOR: [u8; 8] = [0x16, 0xb7, 0xf9, 0x9d, 0xf7, 0x5f, 0x96, 0x60];
 
-    pub fn try_from_slice(data: &[u8]) -> Result<Self> {
+    pub fn deserialize(data: &[u8]) -> Result<Self> {
         anyhow::ensure!(data.len() >= 8, "Account data too short");
         anyhow::ensure!(data.len() >= CLAIM_STATUS_SIZE, "Invalid account size");
-        let (discriminator, remainder) = data.split_at(8);
+        let (discriminator, mut remainder) = data.split_at(8);
         anyhow::ensure!(
             discriminator == Self::DISCRIMINATOR,
             "Invalid discriminator"
         );
-        Ok(<Self as BorshDeserialize>::try_from_slice(&remainder)?)
+        Ok(<Self as BorshDeserialize>::deserialize(&mut remainder)?)
     }
 }
 
@@ -108,18 +108,18 @@ pub struct PriorityFeeDistributionAccount {
 impl PriorityFeeDistributionAccount {
     pub const DISCRIMINATOR: [u8; 8] = [0xa3, 0xb7, 0xfe, 0x0c, 0x79, 0x89, 0xeb, 0x1b];
 
-    pub fn try_from_slice(data: &[u8]) -> Result<Self> {
+    pub fn deserialize(data: &[u8]) -> Result<Self> {
         anyhow::ensure!(data.len() >= 8, "Account data too short");
         anyhow::ensure!(
             data.len() >= PRIORITY_FEE_DISTRIBUTION_SIZE,
             "Invalid account size"
         );
-        let (discriminator, remainder) = data.split_at(8);
+        let (discriminator, mut remainder) = data.split_at(8);
         anyhow::ensure!(
             discriminator == Self::DISCRIMINATOR,
             "Invalid discriminator"
         );
-        Ok(<Self as BorshDeserialize>::try_from_slice(&remainder)?)
+        Ok(<Self as BorshDeserialize>::deserialize(&mut remainder)?)
     }
 }
 

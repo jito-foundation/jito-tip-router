@@ -1,9 +1,8 @@
-use anchor_lang::AccountDeserialize;
 use jito_priority_fee_distribution_sdk::{
-    jito_priority_fee_distribution::{self, accounts::ClaimStatus},
     PriorityFeeDistributionAccount,
+    {self, accounts::ClaimStatus},
 };
-use solana_program::{pubkey::Pubkey, system_instruction::transfer};
+use solana_program::pubkey::Pubkey;
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 use solana_sdk::{
     commitment_config::CommitmentLevel,
@@ -15,6 +14,7 @@ use solana_sdk::{
         state::{VoteInit, VoteStateVersions},
     },
 };
+use solana_system_interface::instruction::transfer;
 
 use crate::fixtures::TestResult;
 
@@ -69,7 +69,7 @@ impl PriorityFeeDistributionClient {
     ) -> TestResult<PriorityFeeDistributionAccount> {
         let (priority_fee_distribution_address, _) =
             jito_priority_fee_distribution_sdk::derive_priority_fee_distribution_account_address(
-                &jito_priority_fee_distribution::ID,
+                &jito_priority_fee_distribution_sdk::id(),
                 &vote_account,
                 target_epoch,
             );
@@ -80,7 +80,7 @@ impl PriorityFeeDistributionClient {
             .unwrap();
         let mut priority_fee_distribution_data = priority_fee_distribution_account.data.as_slice();
         let priority_fee_distribution =
-            PriorityFeeDistributionAccount::try_deserialize(&mut priority_fee_distribution_data)?;
+            PriorityFeeDistributionAccount::deserialize(&mut priority_fee_distribution_data)?;
 
         Ok(priority_fee_distribution)
     }
@@ -92,7 +92,7 @@ impl PriorityFeeDistributionClient {
     ) -> TestResult<ClaimStatus> {
         let (claim_status_address, _) =
             jito_priority_fee_distribution_sdk::derive_claim_status_account_address(
-                &jito_priority_fee_distribution::ID,
+                &jito_priority_fee_distribution_sdk::id(),
                 &claimant,
                 &priority_fee_distribution_account,
             );
@@ -142,9 +142,9 @@ impl PriorityFeeDistributionClient {
 
     pub async fn do_initialize(&mut self, authority: Pubkey) -> TestResult<()> {
         let (config, bump) = jito_priority_fee_distribution_sdk::derive_config_account_address(
-            &jito_priority_fee_distribution::ID,
+            &jito_priority_fee_distribution_sdk::id(),
         );
-        let system_program = solana_program::system_program::id();
+        let system_program = solana_system_interface::program::id();
         let initializer = self.payer.pubkey();
         let expired_funds_account = authority;
         let num_epochs_valid = 10;
@@ -203,14 +203,14 @@ impl PriorityFeeDistributionClient {
         validator_commission_bps: u16,
     ) -> TestResult<()> {
         let (config, _) = jito_priority_fee_distribution_sdk::derive_config_account_address(
-            &jito_priority_fee_distribution::ID,
+            &jito_priority_fee_distribution_sdk::id(),
         );
-        let system_program = solana_program::system_program::id();
+        let system_program = solana_system_interface::program::id();
         let validator_vote_account = vote_keypair.pubkey();
         self.airdrop(&validator_vote_account, 1.0).await?;
         let (priority_fee_distribution_account, account_bump) =
             jito_priority_fee_distribution_sdk::derive_priority_fee_distribution_account_address(
-                &jito_priority_fee_distribution::ID,
+                &jito_priority_fee_distribution_sdk::id(),
                 &validator_vote_account,
                 epoch,
             );
@@ -269,18 +269,18 @@ impl PriorityFeeDistributionClient {
         merkle_root_upload_authority: Pubkey,
     ) -> TestResult<()> {
         let (config, _) = jito_priority_fee_distribution_sdk::derive_config_account_address(
-            &jito_priority_fee_distribution::ID,
+            &jito_priority_fee_distribution_sdk::id(),
         );
-        let system_program = solana_program::system_program::id();
+        let system_program = solana_system_interface::program::id();
         let (priority_fee_distribution_account, _) =
             jito_priority_fee_distribution_sdk::derive_priority_fee_distribution_account_address(
-                &jito_priority_fee_distribution::ID,
+                &jito_priority_fee_distribution_sdk::id(),
                 &claimant,
                 epoch,
             );
         let (claim_status, claim_status_bump) =
             jito_priority_fee_distribution_sdk::derive_claim_status_account_address(
-                &jito_priority_fee_distribution::ID,
+                &jito_priority_fee_distribution_sdk::id(),
                 &claimant,
                 &priority_fee_distribution_account,
             );

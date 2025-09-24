@@ -3,7 +3,7 @@ use jito_priority_fee_distribution_sdk::derive_priority_fee_distribution_account
 use jito_restaking_core::{
     config::Config, ncn_operator_state::NcnOperatorState, ncn_vault_ticket::NcnVaultTicket,
 };
-use jito_tip_distribution_sdk::{derive_tip_distribution_account_address, jito_tip_distribution};
+use jito_tip_distribution_sdk::derive_tip_distribution_account_address;
 use jito_tip_router_client::{
     instructions::{
         AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
@@ -43,7 +43,6 @@ use jito_vault_core::{
 };
 use solana_program::{
     hash::Hash, instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
-    system_instruction::transfer,
 };
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 #[allow(deprecated)]
@@ -54,6 +53,7 @@ use solana_sdk::{
     system_program,
     transaction::{Transaction, TransactionError},
 };
+use solana_system_interface::instruction::transfer;
 use spl_associated_token_account::{
     get_associated_token_address, instruction::create_associated_token_account_idempotent,
 };
@@ -1400,7 +1400,7 @@ impl TipRouterClient {
             BallotBox::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
         let (distribution_account, distribution_config) = if distribution_program
-            .eq(&jito_tip_distribution::ID)
+            .eq(&jito_tip_distribution_sdk::id())
         {
             let tip_distribution_account = derive_tip_distribution_account_address(
                 &distribution_program,
@@ -1892,15 +1892,17 @@ impl TipRouterClient {
             &self.payer.pubkey(),
             &base_fee_wallet,
             &JITOSOL_MINT,
-            &spl_token::id(),
+            &spl_token_interface::id(),
         );
         let (base_reward_receiver, _, _) =
             BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch);
 
         // stake pool accounts
         let stake_pool = pool_root.pool_address;
-        let (stake_pool_withdraw_authority, _) =
-            find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool);
+        let (stake_pool_withdraw_authority, _) = find_withdraw_authority_program_address(
+            &jito_tip_router_program::spl_stake_pool_id(),
+            &stake_pool,
+        );
         let reserve_stake = pool_root.reserve_stake;
         let manager_fee_account = pool_root.manager_fee_account;
         let referrer_pool_tokens_account = pool_root.referrer_pool_tokens_account;
@@ -1913,14 +1915,14 @@ impl TipRouterClient {
             .base_reward_receiver(base_reward_receiver)
             .base_fee_wallet(*base_fee_wallet)
             .base_fee_wallet_ata(base_fee_wallet_ata)
-            .stake_pool_program(spl_stake_pool::id())
+            .stake_pool_program(jito_tip_router_program::spl_stake_pool_id())
             .stake_pool(stake_pool)
             .stake_pool_withdraw_authority(stake_pool_withdraw_authority)
             .reserve_stake(reserve_stake)
             .manager_fee_account(manager_fee_account)
             .referrer_pool_tokens_account(referrer_pool_tokens_account)
             .pool_mint(JITOSOL_MINT)
-            .token_program(spl_token::id())
+            .token_program(spl_token_interface::id())
             .system_program(system_program::id())
             .base_fee_group(base_fee_group.group)
             .epoch(epoch)
@@ -2049,8 +2051,10 @@ impl TipRouterClient {
 
         // Add stake pool accounts
         let stake_pool = pool_root.pool_address;
-        let (stake_pool_withdraw_authority, _) =
-            find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool);
+        let (stake_pool_withdraw_authority, _) = find_withdraw_authority_program_address(
+            &jito_tip_router_program::spl_stake_pool_id(),
+            &stake_pool,
+        );
         let reserve_stake = pool_root.reserve_stake;
         let manager_fee_account = pool_root.manager_fee_account;
         let referrer_pool_tokens_account = pool_root.referrer_pool_tokens_account;
@@ -2060,7 +2064,7 @@ impl TipRouterClient {
             &self.payer.pubkey(),
             &operator,
             &JITOSOL_MINT,
-            &spl_token::id(),
+            &spl_token_interface::id(),
         );
 
         let operator_snapshot = OperatorSnapshot::find_program_address(
@@ -2083,14 +2087,14 @@ impl TipRouterClient {
             .operator_snapshot(operator_snapshot)
             .ncn_reward_router(ncn_reward_router)
             .ncn_reward_receiver(ncn_reward_receiver)
-            .stake_pool_program(spl_stake_pool::id())
+            .stake_pool_program(jito_tip_router_program::spl_stake_pool_id())
             .stake_pool(stake_pool)
             .stake_pool_withdraw_authority(stake_pool_withdraw_authority)
             .reserve_stake(reserve_stake)
             .manager_fee_account(manager_fee_account)
             .referrer_pool_tokens_account(referrer_pool_tokens_account)
             .pool_mint(JITOSOL_MINT)
-            .token_program(spl_token::id())
+            .token_program(spl_token_interface::id())
             .system_program(system_program::id())
             .ncn_fee_group(ncn_fee_group.group)
             .epoch(epoch)
@@ -2142,8 +2146,10 @@ impl TipRouterClient {
 
         // Add stake pool accounts
         let stake_pool = pool_root.pool_address;
-        let (stake_pool_withdraw_authority, _) =
-            find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool);
+        let (stake_pool_withdraw_authority, _) = find_withdraw_authority_program_address(
+            &jito_tip_router_program::spl_stake_pool_id(),
+            &stake_pool,
+        );
         let reserve_stake = pool_root.reserve_stake;
         let manager_fee_account = pool_root.manager_fee_account;
         let referrer_pool_tokens_account = pool_root.referrer_pool_tokens_account;
@@ -2154,7 +2160,7 @@ impl TipRouterClient {
             &self.payer.pubkey(),
             &vault,
             &JITOSOL_MINT,
-            &spl_token::id(),
+            &spl_token_interface::id(),
         );
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
@@ -2169,14 +2175,14 @@ impl TipRouterClient {
             .operator_snapshot(operator_snapshot)
             .ncn_reward_router(ncn_reward_router)
             .ncn_reward_receiver(ncn_reward_receiver)
-            .stake_pool_program(spl_stake_pool::id())
+            .stake_pool_program(jito_tip_router_program::spl_stake_pool_id())
             .stake_pool(stake_pool)
             .stake_pool_withdraw_authority(stake_pool_withdraw_authority)
             .reserve_stake(reserve_stake)
             .manager_fee_account(manager_fee_account)
             .referrer_pool_tokens_account(referrer_pool_tokens_account)
             .pool_mint(JITOSOL_MINT)
-            .token_program(spl_token::id())
+            .token_program(spl_token_interface::id())
             .system_program(system_program::id())
             .ncn_fee_group(ncn_fee_group.group)
             .epoch(epoch)

@@ -114,8 +114,11 @@ impl StakePoolClient {
         let manager_fee_account = get_associated_token_address(&manager.pubkey(), &pool_mint);
         let referrer_pool_tokens_account = Keypair::new();
 
-        let withdraw_authority =
-            find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool.pubkey()).0;
+        let withdraw_authority = find_withdraw_authority_program_address(
+            &jito_tip_router_program::spl_stake_pool_id(),
+            &stake_pool.pubkey(),
+        )
+        .0;
 
         let reserve_stake_ix = vec![
             system_instruction::create_account(
@@ -140,7 +143,7 @@ impl StakePoolClient {
                 &self.payer.pubkey(),
                 &manager.pubkey(),
                 &pool_mint,
-                &spl_token::id(),
+                &spl_token_interface::id(),
             );
 
         let validator_list_size = get_instance_packed_len(&ValidatorList::new(max_validators))?;
@@ -152,7 +155,7 @@ impl StakePoolClient {
                 .await?
                 .minimum_balance(validator_list_size),
             validator_list_size as u64,
-            &spl_stake_pool::id(),
+            &jito_tip_router_program::spl_stake_pool_id(),
         );
 
         let create_pool_ix = system_instruction::create_account(
@@ -163,11 +166,11 @@ impl StakePoolClient {
                 .await?
                 .minimum_balance(get_packed_len::<StakePool>()),
             get_packed_len::<StakePool>() as u64,
-            &spl_stake_pool::id(),
+            &jito_tip_router_program::spl_stake_pool_id(),
         );
 
         let init_pool_ix = instruction::initialize(
-            &spl_stake_pool::id(),
+            &jito_tip_router_program::spl_stake_pool_id(),
             &stake_pool.pubkey(),
             &manager.pubkey(),
             staker,
@@ -176,7 +179,7 @@ impl StakePoolClient {
             &reserve_stake.pubkey(),
             &pool_mint,
             &manager_fee_account,
-            &spl_token::id(),
+            &spl_token_interface::id(),
             None,
             fee,
             withdrawal_fee,
@@ -216,14 +219,14 @@ impl StakePoolClient {
 
     pub async fn update_stake_pool_balance(&mut self, pool_root: &PoolRoot) -> TestResult<()> {
         let ix = instruction::update_stake_pool_balance(
-            &spl_stake_pool::id(),
+            &jito_tip_router_program::spl_stake_pool_id(),
             &pool_root.pool_address,
             &pool_root.withdraw_authority,
             &pool_root.validator_list,
             &pool_root.reserve_stake,
             &pool_root.manager_fee_account,
             &pool_root.pool_mint,
-            &spl_token::id(),
+            &spl_token_interface::id(),
         );
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;

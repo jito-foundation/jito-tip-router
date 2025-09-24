@@ -3,9 +3,7 @@ use std::{
     fmt::{Debug, Formatter},
 };
 
-use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution;
 use jito_restaking_core::{config::Config, ncn_vault_ticket::NcnVaultTicket};
-use jito_tip_distribution_sdk::jito_tip_distribution;
 use jito_tip_router_core::{
     account_payer::AccountPayer,
     ballot_box::BallotBox,
@@ -20,7 +18,6 @@ use jito_tip_router_core::{
 };
 use solana_program::{
     clock::Clock, native_token::sol_to_lamports, program_pack::Pack, pubkey::Pubkey,
-    system_instruction::transfer,
 };
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
@@ -77,7 +74,7 @@ impl Debug for TestBuilder {
 }
 
 pub fn token_mint_account(withdraw_authority: &Pubkey) -> Account {
-    let account = spl_token::state::Mint {
+    let account = spl_token_interface::state::Mint {
         mint_authority: solana_sdk::program_option::COption::Some(*withdraw_authority),
         supply: 0,
         decimals: 9,
@@ -87,11 +84,11 @@ pub fn token_mint_account(withdraw_authority: &Pubkey) -> Account {
 
     let mut data = [0; 82];
 
-    spl_token::state::Mint::pack(account, &mut data).unwrap();
+    spl_token_interface::state::Mint::pack(account, &mut data).unwrap();
 
     Account {
         lamports: 1000000000,
-        owner: spl_token::id(),
+        owner: spl_token_interface::id(),
         executable: false,
         rent_epoch: 0,
         data: data.to_vec(),
@@ -110,14 +107,22 @@ impl TestBuilder {
             );
             program_test.add_program("jito_vault_program", jito_vault_program::id(), None);
             program_test.add_program("jito_restaking_program", jito_restaking_program::id(), None);
-            program_test.add_program("spl_stake_pool", spl_stake_pool::id(), None);
+            program_test.add_program(
+                "spl_stake_pool",
+                jito_tip_router_program::spl_stake_pool_id(),
+                None,
+            );
 
             // Tests that invoke this program should be in the "bpf" module so we can run them separately with the bpf vm.
             // Anchor programs do not expose a compatible entrypoint for solana_program_test::processor!
-            program_test.add_program("jito_tip_distribution", jito_tip_distribution::ID, None);
+            program_test.add_program(
+                "jito_tip_distribution",
+                jito_tip_distribution_sdk::id(),
+                None,
+            );
             program_test.add_program(
                 "jito_priority_fee_distribution",
-                jito_priority_fee_distribution::ID,
+                jito_priority_fee_distribution_sdk::id(),
                 None,
             );
 
@@ -140,7 +145,7 @@ impl TestBuilder {
             );
             program_test.add_program(
                 "spl_stake_pool",
-                spl_stake_pool::id(),
+                jito_tip_router_program::spl_stake_pool_id(),
                 processor!(spl_stake_pool::processor::Processor::process),
             );
             program_test
@@ -158,7 +163,7 @@ impl TestBuilder {
         // Stake pool keypair is needed to create the pool, and JitoSOL mint authority is based on this keypair
         let stake_pool_keypair = Keypair::new();
         let jitosol_mint_authority = find_withdraw_authority_program_address(
-            &spl_stake_pool::id(),
+            &jito_tip_router_program::spl_stake_pool_id(),
             &stake_pool_keypair.pubkey(),
         );
         // Needed to create JitoSOL mint since we don't have access to the original keypair in the tests
@@ -174,10 +179,11 @@ impl TestBuilder {
         &mut self,
         wallet: &Pubkey,
         mint: &Pubkey,
-    ) -> Result<Option<spl_token::state::Account>, BanksClientError> {
-        let ata = spl_associated_token_account::get_associated_token_address(wallet, mint);
+    ) -> Result<Option<spl_token_interface::state::Account>, BanksClientError> {
+        let ata =
+            spl_associated_token_account_interface::get_associated_token_address(wallet, mint);
         self.get_account(&ata).await.map(|opt_acct| {
-            opt_acct.map(|acct| spl_token::state::Account::unpack(&acct.data).unwrap())
+            opt_acct.map(|acct| spl_token_interface::state::Account::unpack(&acct.data).unwrap())
         })
     }
 
