@@ -16,6 +16,7 @@ use jito_tip_router_core::{
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
     weight_table::WeightTable,
 };
+use solana_commitment_config::CommitmentLevel;
 use solana_program::{
     clock::Clock, native_token::sol_to_lamports, program_pack::Pack, pubkey::Pubkey,
 };
@@ -23,7 +24,6 @@ use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestC
 use solana_sdk::{
     account::Account,
     clock::DEFAULT_SLOTS_PER_EPOCH,
-    commitment_config::CommitmentLevel,
     epoch_schedule::EpochSchedule,
     native_token::lamports_to_sol,
     signature::{Keypair, Signer},
@@ -180,8 +180,9 @@ impl TestBuilder {
         wallet: &Pubkey,
         mint: &Pubkey,
     ) -> Result<Option<spl_token_interface::state::Account>, BanksClientError> {
-        let ata =
-            spl_associated_token_account_interface::get_associated_token_address(wallet, mint);
+        let ata = spl_associated_token_account_interface::address::get_associated_token_address(
+            wallet, mint,
+        );
         self.get_account(&ata).await.map(|opt_acct| {
             opt_acct.map(|acct| spl_token_interface::state::Account::unpack(&acct.data).unwrap())
         })
@@ -293,7 +294,11 @@ impl TestBuilder {
             .banks_client
             .process_transaction_with_preflight_and_commitment(
                 Transaction::new_signed_with_payer(
-                    &[transfer(&self.context.payer.pubkey(), to, lamports)],
+                    &[solana_system_interface::instruction::transfer(
+                        &self.context.payer.pubkey(),
+                        to,
+                        lamports,
+                    )],
                     Some(&self.context.payer.pubkey()),
                     &[&self.context.payer],
                     blockhash,

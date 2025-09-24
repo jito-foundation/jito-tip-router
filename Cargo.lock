@@ -4005,6 +4005,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "jito-tip-router-integration-tests"
+version = "0.0.1"
+dependencies = [
+ "borsh 1.5.7",
+ "bytemuck",
+ "jito-bytemuck",
+ "jito-jsm-core",
+ "jito-priority-fee-distribution-sdk",
+ "jito-restaking-core",
+ "jito-restaking-program",
+ "jito-restaking-sdk",
+ "jito-tip-distribution-sdk",
+ "jito-tip-router-client",
+ "jito-tip-router-core",
+ "jito-tip-router-program",
+ "jito-vault-core",
+ "jito-vault-program",
+ "jito-vault-sdk",
+ "log",
+ "meta-merkle-tree",
+ "shank",
+ "solana-commitment-config",
+ "solana-compute-budget-interface",
+ "solana-program 3.0.0",
+ "solana-program-test",
+ "solana-sdk",
+ "solana-security-txt",
+ "solana-stake-interface 2.0.1",
+ "solana-system-interface 2.0.0",
+ "solana-vote-interface 4.0.2",
+ "spl-associated-token-account-interface",
+ "spl-token-interface",
+ "thiserror 2.0.16",
+ "tokio",
+]
+
+[[package]]
 name = "jito-tip-router-program"
 version = "0.0.1"
 dependencies = [
@@ -11376,6 +11413,32 @@ name = "solana-vote-interface"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66631ddbe889dab5ec663294648cd1df395ec9df7a4476e7b3e095604cfdb539"
+dependencies = [
+ "bincode",
+ "cfg_eval",
+ "num-derive",
+ "num-traits",
+ "serde",
+ "serde_derive",
+ "serde_with",
+ "solana-clock 3.0.0",
+ "solana-hash 3.0.0",
+ "solana-instruction 3.0.0",
+ "solana-instruction-error",
+ "solana-pubkey 3.0.0",
+ "solana-rent 3.0.0",
+ "solana-sdk-ids 3.0.0",
+ "solana-serde-varint 3.0.0",
+ "solana-serialize-utils 3.1.0",
+ "solana-short-vec 3.0.0",
+ "solana-system-interface 2.0.0",
+]
+
+[[package]]
+name = "solana-vote-interface"
+version = "4.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c33f1a30b1e61944e52afef0992a2be93720c5770eaf1f6d8e6e34f87d90e754"
 dependencies = [
  "bincode",
  "cfg_eval",

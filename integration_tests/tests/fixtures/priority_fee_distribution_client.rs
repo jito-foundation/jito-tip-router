@@ -1,20 +1,19 @@
 use jito_priority_fee_distribution_sdk::{
-    PriorityFeeDistributionAccount,
-    {self, accounts::ClaimStatus},
+    PriorityFeeDistributionAccount, {self, ClaimStatus},
 };
+use solana_commitment_config::CommitmentLevel;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 use solana_sdk::{
-    commitment_config::CommitmentLevel,
     native_token::{sol_to_lamports, LAMPORTS_PER_SOL},
     signature::{Keypair, Signer},
     transaction::Transaction,
-    vote::{
-        instruction::CreateVoteAccountConfig,
-        state::{VoteInit, VoteStateVersions},
-    },
 };
 use solana_system_interface::instruction::transfer;
+use solana_vote_interface::{
+    instruction::CreateVoteAccountConfig,
+    state::{VoteInit, VoteStateVersions},
+};
 
 use crate::fixtures::TestResult;
 
@@ -102,7 +101,7 @@ impl PriorityFeeDistributionClient {
             .await?
             .unwrap();
         let mut claim_status_data = claim_status_account.data.as_slice();
-        let claim_status = ClaimStatus::try_deserialize(&mut claim_status_data)?;
+        let claim_status = ClaimStatus::deserialize(&mut claim_status_data)?;
         Ok(claim_status)
     }
 
@@ -117,13 +116,13 @@ impl PriorityFeeDistributionClient {
             commission: 0,
         };
 
-        let ixs = solana_program::vote::instruction::create_account_with_config(
+        let ixs = solana_vote_interface::instruction::create_account_with_config(
             &self.payer.pubkey(),
             &vote_keypair.pubkey(),
             &vote_init,
             LAMPORTS_PER_SOL,
             CreateVoteAccountConfig {
-                space: VoteStateVersions::vote_state_size_of(true) as u64,
+                space: solana_vote_interface::state::vote_state_v3::VoteStateV3::size_of() as u64,
                 with_seed: None,
             },
         );

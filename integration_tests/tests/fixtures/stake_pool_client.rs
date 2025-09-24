@@ -1,18 +1,17 @@
 #![allow(deprecated)] // using deprecated borsh to align with mainnet stake pool version
 use jito_tip_router_core::constants::JITOSOL_MINT;
+use solana_commitment_config::CommitmentLevel;
 use solana_program::{
     borsh1::{get_instance_packed_len, get_packed_len},
     pubkey::Pubkey,
-    stake,
 };
 use solana_program_test::BanksClient;
 use solana_sdk::{
-    commitment_config::CommitmentLevel,
     signature::{Keypair, Signer},
-    system_instruction,
     transaction::Transaction,
 };
-use spl_associated_token_account::get_associated_token_address;
+use solana_system_interface::instruction as system_instruction;
+use spl_associated_token_account_interface::address::get_associated_token_address;
 use spl_stake_pool::{
     find_withdraw_authority_program_address, instruction,
     state::{Fee, StakePool, ValidatorList},
@@ -126,20 +125,20 @@ impl StakePoolClient {
                 &reserve_stake.pubkey(),
                 MINIMUM_RESERVE_LAMPORTS,
                 STAKE_STATE_LEN as u64,
-                &stake::program::id(),
+                &solana_stake_interface::program::id(),
             ),
-            stake::instruction::initialize(
+            solana_stake_interface::instruction::initialize(
                 &reserve_stake.pubkey(),
-                &stake::state::Authorized {
+                &solana_stake_interface::state::Authorized {
                     staker: withdraw_authority,
                     withdrawer: withdraw_authority,
                 },
-                &stake::state::Lockup::default(),
+                &solana_stake_interface::state::Lockup::default(),
             ),
         ];
 
         let manager_fee_account_ix =
-            spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+            spl_associated_token_account_interface::instruction::create_associated_token_account_idempotent(
                 &self.payer.pubkey(),
                 &manager.pubkey(),
                 &pool_mint,

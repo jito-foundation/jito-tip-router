@@ -22,25 +22,21 @@ use jito_vault_sdk::{
     },
 };
 use log::info;
+use solana_commitment_config::CommitmentLevel;
 use solana_program::{
-    clock::Clock,
-    native_token::sol_to_lamports,
-    program_pack::Pack,
-    pubkey::Pubkey,
-    rent::Rent,
-    system_instruction::{create_account, transfer},
+    clock::Clock, native_token::sol_to_lamports, program_pack::Pack, pubkey::Pubkey, rent::Rent,
 };
 use solana_program_test::{BanksClient, BanksClientError, ProgramTestBanksClientExt};
 use solana_sdk::{
-    commitment_config::CommitmentLevel,
     instruction::InstructionError,
     signature::{Keypair, Signer},
     transaction::{Transaction, TransactionError},
 };
+use solana_system_interface::instruction::{create_account, transfer};
 use spl_associated_token_account_interface::{
-    get_associated_token_address, instruction::create_associated_token_account_idempotent,
+    address::get_associated_token_address, instruction::create_associated_token_account_idempotent,
 };
-use spl_token_interface_interface::state::Account as SPLTokenAccount;
+use spl_token_interface::state::Account as SPLTokenAccount;
 
 use crate::fixtures::{TestError, TestResult};
 

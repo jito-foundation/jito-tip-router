@@ -1,10 +1,7 @@
 mod set_merkle_root {
-    use jito_priority_fee_distribution_sdk::{
-        derive_priority_fee_distribution_account_address, jito_priority_fee_distribution,
-    };
+    use jito_priority_fee_distribution_sdk::derive_priority_fee_distribution_account_address;
     use jito_tip_distribution_sdk::{
         derive_claim_status_account_address, derive_tip_distribution_account_address,
-        jito_tip_distribution,
     };
     use jito_tip_router_core::{
         ballot_box::{Ballot, BallotBox},
@@ -46,10 +43,10 @@ mod set_merkle_root {
         epoch: u64,
     ) -> generated_merkle_tree::TreeNode {
         let (claim_status_pubkey, claim_status_bump) = derive_claim_status_account_address(
-            &jito_tip_distribution::ID,
+            &jito_tip_distribution_sdk::id(),
             &claimant_staker_withdrawer,
             &derive_tip_distribution_account_address(
-                &jito_tip_distribution::ID,
+                &jito_tip_distribution_sdk::id(),
                 &claimant_staker_withdrawer,
                 epoch - 1,
             )
@@ -88,7 +85,7 @@ mod set_merkle_root {
             maybe_tip_distribution_meta: Some(TipDistributionMeta {
                 merkle_root_upload_authority,
                 tip_distribution_pubkey: derive_tip_distribution_account_address(
-                    &jito_tip_distribution::ID,
+                    &jito_tip_distribution_sdk::id(),
                     &vote_account,
                     target_epoch,
                 )
@@ -102,7 +99,7 @@ mod set_merkle_root {
             maybe_priority_fee_distribution_meta: Some(PriorityFeeDistributionMeta {
                 merkle_root_upload_authority,
                 priority_fee_distribution_pubkey: derive_priority_fee_distribution_account_address(
-                    &jito_priority_fee_distribution::ID,
+                    &jito_priority_fee_distribution_sdk::id(),
                     &vote_account,
                     target_epoch,
                 )
@@ -119,7 +116,7 @@ mod set_merkle_root {
             maybe_tip_distribution_meta: Some(TipDistributionMeta {
                 merkle_root_upload_authority: other_validator,
                 tip_distribution_pubkey: derive_tip_distribution_account_address(
-                    &jito_tip_distribution::ID,
+                    &jito_tip_distribution_sdk::id(),
                     &other_validator,
                     target_epoch,
                 )
@@ -153,7 +150,7 @@ mod set_merkle_root {
         .map_err(TestError::from)?;
 
         let test_tip_distribution_account = derive_tip_distribution_account_address(
-            &jito_tip_distribution::ID,
+            &jito_tip_distribution_sdk::id(),
             &vote_account,
             target_epoch,
         )
@@ -226,7 +223,7 @@ mod set_merkle_root {
             .do_initialize_tip_distribution_account(ncn_config_address, vote_keypair, epoch, 100)
             .await?;
         let (tip_distribution_account, _) = derive_tip_distribution_account_address(
-            &jito_tip_distribution::ID,
+            &jito_tip_distribution_sdk::id(),
             &vote_account,
             epoch,
         );
@@ -282,7 +279,7 @@ mod set_merkle_root {
             .await;
 
         let tip_distribution_address = derive_tip_distribution_account_address(
-            &jito_tip_distribution::ID,
+            &jito_tip_distribution_sdk::id(),
             &vote_account,
             epoch - 1,
         )
@@ -310,7 +307,7 @@ mod set_merkle_root {
             .do_set_merkle_root(
                 ncn_address,
                 vote_account,
-                jito_tip_distribution::ID,
+                jito_tip_distribution_sdk::id(),
                 vec![[1; 32]],
                 node.validator_merkle_root,
                 node.max_total_claim,
@@ -325,7 +322,7 @@ mod set_merkle_root {
             .do_set_merkle_root(
                 ncn_address,
                 vote_account,
-                jito_tip_distribution::ID,
+                jito_tip_distribution_sdk::id(),
                 proof,
                 node.validator_merkle_root,
                 node.max_total_claim,
@@ -368,7 +365,7 @@ mod set_merkle_root {
                 ncn_address,
                 target_claimant,
                 tip_distribution_account,
-                jito_tip_distribution::ID,
+                jito_tip_distribution_sdk::id(),
                 target_claimant_node_proof.clone(),
                 target_claimant_node_amount,
             )
@@ -439,7 +436,7 @@ mod set_merkle_root {
             .do_cast_vote(ncn, operator, operator_admin, winning_root, epoch)
             .await?;
         let tip_distribution_address = derive_tip_distribution_account_address(
-            &jito_tip_distribution::ID,
+            &jito_tip_distribution_sdk::id(),
             &vote_account,
             epoch - 1,
         )
@@ -475,7 +472,7 @@ mod set_merkle_root {
             .do_set_merkle_root(
                 ncn,
                 vote_account,
-                jito_tip_distribution::ID,
+                jito_tip_distribution_sdk::id(),
                 proof,
                 node.validator_merkle_root,
                 node.max_total_claim,
@@ -528,7 +525,7 @@ mod set_merkle_root {
             create_meta_merkle_tree(vote_account, ncn_config_address, ncn, epoch)?;
 
         let tip_distribution_address = derive_tip_distribution_account_address(
-            &jito_tip_distribution::ID,
+            &jito_tip_distribution_sdk::id(),
             &vote_account,
             epoch,
         )
@@ -557,7 +554,7 @@ mod set_merkle_root {
             .do_set_merkle_root(
                 ncn,
                 vote_account,
-                jito_tip_distribution::ID,
+                jito_tip_distribution_sdk::id(),
                 proof,
                 node.validator_merkle_root,
                 node.max_total_claim,
@@ -596,7 +593,7 @@ mod set_merkle_root {
             .do_initialize_tip_distribution_account(ncn_config_address, vote_keypair, epoch, 100)
             .await?;
         let (tip_distribution_account, _) = derive_tip_distribution_account_address(
-            &jito_tip_distribution::ID,
+            &jito_tip_distribution_sdk::id(),
             &vote_account,
             epoch,
         );
@@ -652,7 +649,7 @@ mod set_merkle_root {
             .await;
 
         let tip_distribution_address = derive_tip_distribution_account_address(
-            &jito_tip_distribution::ID,
+            &jito_tip_distribution_sdk::id(),
             &vote_account,
             epoch - 1,
         )
@@ -676,8 +673,10 @@ mod set_merkle_root {
             .unwrap();
 
         // Invoke set_merkle_root
-        let tip_distribution_config =
-            jito_tip_distribution_sdk::derive_config_account_address(&jito_tip_distribution::ID).0;
+        let tip_distribution_config = jito_tip_distribution_sdk::derive_config_account_address(
+            &jito_tip_distribution_sdk::id(),
+        )
+        .0;
         let res = tip_router_client
             .set_merkle_root(
                 ncn_config_address,
@@ -686,7 +685,7 @@ mod set_merkle_root {
                 vote_account,
                 node.tip_distribution_account,
                 tip_distribution_config,
-                jito_priority_fee_distribution::ID,
+                jito_priority_fee_distribution_sdk::id(),
                 proof,
                 node.validator_merkle_root,
                 node.max_total_claim,

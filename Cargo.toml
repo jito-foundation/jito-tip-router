@@ -4,7 +4,7 @@ members = [
     "clients/rust/jito_tip_router",
     "core",
     "gcp_uploader",
-    #"integration_tests",
+    "integration_tests",
     "priority_fee_distribution_sdk",
     "program",
     "shank_cli",
@@ -113,6 +113,7 @@ solana-streamer = { git = "https://github.com/jito-foundation/jito-solana.git", 
 solana-transaction-status = { package = "solana-transaction-status", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-unified-scheduler-pool = { package = "solana-unified-scheduler-pool", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-vote = { package = "solana-vote", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
+solana-vote-interface = { version = "=4.0.2", features=["bincode"] }
 #solana-zk-sdk = { package = "solana-zk-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 #solana-zk-token-sdk = { package = "solana-zk-token-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 spl-associated-token-account-interface = { version = "2.0.0" }
