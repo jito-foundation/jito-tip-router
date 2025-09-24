@@ -1,12 +1,13 @@
+use anyhow;
 use meta_merkle_tree::{error::MerkleTreeError, generated_merkle_tree::MerkleRootGeneratorError};
 use solana_program::{instruction::InstructionError, program_error::ProgramError};
 use solana_program_test::BanksClientError;
 use solana_sdk::transaction::TransactionError;
 use thiserror::Error;
-
 pub mod generated_switchboard_accounts;
 pub mod priority_fee_distribution_client;
 pub mod restaking_client;
+pub mod spl_stake_pool;
 pub mod stake_pool_client;
 pub mod test_builder;
 pub mod tip_distribution_client;
@@ -27,8 +28,14 @@ pub enum TestError {
     MerkleRootGeneratorError(#[from] MerkleRootGeneratorError),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-    #[error(transparent)]
-    AnchorError(#[from] anchor_lang::error::Error),
+    #[error("Failed to deserialize account data: {0}")]
+    AnchorError(String),
+}
+
+impl From<anyhow::Error> for TestError {
+    fn from(err: anyhow::Error) -> Self {
+        TestError::ProgramError(ProgramError::Custom(err.to_string().parse().unwrap_or(0)))
+    }
 }
 
 impl TestError {

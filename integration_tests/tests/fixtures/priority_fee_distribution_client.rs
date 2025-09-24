@@ -5,15 +5,12 @@ use solana_commitment_config::CommitmentLevel;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 use solana_sdk::{
-    native_token::{sol_to_lamports, LAMPORTS_PER_SOL},
+    native_token::{sol_str_to_lamports, LAMPORTS_PER_SOL},
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
 use solana_system_interface::instruction::transfer;
-use solana_vote_interface::{
-    instruction::CreateVoteAccountConfig,
-    state::{VoteInit, VoteStateVersions},
-};
+use solana_vote_interface::{instruction::CreateVoteAccountConfig, state::VoteInit};
 
 use crate::fixtures::TestResult;
 
@@ -50,7 +47,11 @@ impl PriorityFeeDistributionClient {
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 Transaction::new_signed_with_payer(
-                    &[transfer(&self.payer.pubkey(), to, sol_to_lamports(sol))],
+                    &[transfer(
+                        &self.payer.pubkey(),
+                        to,
+                        sol_str_to_lamports(&sol.to_string()).unwrap(),
+                    )],
                     Some(&self.payer.pubkey()),
                     &[&self.payer],
                     new_blockhash,

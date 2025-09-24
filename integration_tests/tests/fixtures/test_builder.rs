@@ -16,20 +16,20 @@ use jito_tip_router_core::{
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
     weight_table::WeightTable,
 };
+use jito_tip_router_program::find_withdraw_authority_program_address;
 use solana_commitment_config::CommitmentLevel;
 use solana_program::{
-    clock::Clock, native_token::sol_to_lamports, program_pack::Pack, pubkey::Pubkey,
+    clock::Clock, native_token::sol_str_to_lamports, program_pack::Pack, pubkey::Pubkey,
 };
 use solana_program_test::{processor, BanksClientError, ProgramTest, ProgramTestContext};
 use solana_sdk::{
     account::Account,
     clock::DEFAULT_SLOTS_PER_EPOCH,
     epoch_schedule::EpochSchedule,
-    native_token::lamports_to_sol,
+    native_token::LAMPORTS_PER_SOL,
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
-use spl_stake_pool::find_withdraw_authority_program_address;
 
 use super::{
     generated_switchboard_accounts::get_switchboard_accounts,
@@ -146,7 +146,7 @@ impl TestBuilder {
             program_test.add_program(
                 "spl_stake_pool",
                 jito_tip_router_program::spl_stake_pool_id(),
-                processor!(spl_stake_pool::processor::Processor::process),
+                None,
             );
             program_test
         };
@@ -289,7 +289,7 @@ impl TestBuilder {
     #[allow(dead_code)]
     pub async fn transfer(&mut self, to: &Pubkey, sol: f64) -> Result<(), BanksClientError> {
         let blockhash = self.context.banks_client.get_latest_blockhash().await?;
-        let lamports = sol_to_lamports(sol);
+        let lamports = sol_str_to_lamports(&sol.to_string()).unwrap();
         self.context
             .banks_client
             .process_transaction_with_preflight_and_commitment(
@@ -477,7 +477,7 @@ impl TestBuilder {
         const DEPOSIT_FEE_BPS: u16 = 0;
         const WITHDRAWAL_FEE_BPS: u16 = 0;
         const REWARD_FEE_BPS: u16 = 0;
-        let mint_amount: u64 = sol_to_lamports(100_000_000.0);
+        let mint_amount: u64 = sol_str_to_lamports(&100_000_000.0.to_string()).unwrap();
 
         let should_generate = token_mint.is_none();
         let pass_through = if token_mint.is_some() {
@@ -950,7 +950,7 @@ impl TestBuilder {
         let base_reward_receiver =
             BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let sol_rewards = lamports_to_sol(rewards);
+        let sol_rewards = (rewards / LAMPORTS_PER_SOL) as f64;
 
         // send rewards to the base reward router
         println!("Airdropping {} SOL to base reward receiver", sol_rewards);
@@ -1187,7 +1187,8 @@ impl TestBuilder {
 
                 // DAO wallet is also the payer wallet
                 assert_eq!(
-                    dao_wallet_balance_before + sol_to_lamports(EXTRA_SOL_TO_AIRDROP)
+                    dao_wallet_balance_before
+                        + sol_str_to_lamports(&EXTRA_SOL_TO_AIRDROP.to_string()).unwrap()
                         - lamports_per_signature,
                     dao_wallet_balance_after
                 );
@@ -1256,7 +1257,8 @@ impl TestBuilder {
 
             // DAO wallet is also the payer wallet
             assert_eq!(
-                dao_wallet_balance_before + sol_to_lamports(EXTRA_SOL_TO_AIRDROP)
+                dao_wallet_balance_before
+                    + sol_str_to_lamports(&EXTRA_SOL_TO_AIRDROP.to_string()).unwrap()
                     - lamports_per_signature,
                 dao_wallet_balance_after
             );

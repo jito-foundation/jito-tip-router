@@ -403,7 +403,6 @@ pub fn spl_stake_pool_id() -> Pubkey {
 }
 
 // This code was copied from https://github.com/solana-program/stake-pool/blob/main/program/src/instruction.rs#L2019
-
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq, BorshSerialize, BorshDeserialize)]
 pub enum StakePoolInstruction {
@@ -524,4 +523,17 @@ fn deposit_sol_internal(
             data: borsh::to_vec(&StakePoolInstruction::DepositSol(lamports_in)).unwrap(),
         }
     }
+}
+
+/// Seed for withdraw authority seed
+const AUTHORITY_WITHDRAW: &[u8] = b"withdraw";
+
+pub fn find_withdraw_authority_program_address(
+    program_id: &Pubkey,
+    stake_pool_address: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[stake_pool_address.as_ref(), AUTHORITY_WITHDRAW],
+        program_id,
+    )
 }

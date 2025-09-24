@@ -38,13 +38,14 @@ use jito_tip_router_core::{
     vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
+use jito_tip_router_program::find_withdraw_authority_program_address;
 use jito_vault_core::{
     vault_ncn_ticket::VaultNcnTicket, vault_operator_delegation::VaultOperatorDelegation,
 };
 use solana_commitment_config::CommitmentLevel;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
 use solana_program::{
-    hash::Hash, instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
+    hash::Hash, instruction::InstructionError, native_token::sol_str_to_lamports, pubkey::Pubkey,
 };
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 #[allow(deprecated)]
@@ -57,7 +58,6 @@ use solana_system_interface::program as system_program;
 use spl_associated_token_account_interface::{
     address::get_associated_token_address, instruction::create_associated_token_account_idempotent,
 };
-use spl_stake_pool::find_withdraw_authority_program_address;
 
 use super::{restaking_client::NcnRoot, stake_pool_client::PoolRoot};
 use crate::fixtures::{TestError, TestResult};
@@ -105,7 +105,11 @@ impl TipRouterClient {
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 Transaction::new_signed_with_payer(
-                    &[transfer(&self.payer.pubkey(), to, sol_to_lamports(sol))],
+                    &[transfer(
+                        &self.payer.pubkey(),
+                        to,
+                        sol_str_to_lamports(&sol.to_string()).unwrap(),
+                    )],
                     Some(&self.payer.pubkey()),
                     &[&self.payer],
                     new_blockhash,

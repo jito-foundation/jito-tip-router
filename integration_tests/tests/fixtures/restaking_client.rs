@@ -19,7 +19,7 @@ use jito_restaking_sdk::{
 };
 use solana_commitment_config::CommitmentLevel;
 use solana_program::{
-    instruction::InstructionError, native_token::sol_to_lamports, pubkey::Pubkey,
+    instruction::InstructionError, native_token::sol_str_to_lamports, pubkey::Pubkey,
 };
 use solana_program_test::{BanksClient, ProgramTestBanksClientExt};
 use solana_sdk::{
@@ -1079,7 +1079,11 @@ impl RestakingProgramClient {
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 Transaction::new_signed_with_payer(
-                    &[transfer(&self.payer.pubkey(), to, sol_to_lamports(sol))],
+                    &[transfer(
+                        &self.payer.pubkey(),
+                        to,
+                        sol_str_to_lamports(&sol.to_string()).unwrap(),
+                    )],
                     Some(&self.payer.pubkey()),
                     &[&self.payer],
                     new_blockhash,

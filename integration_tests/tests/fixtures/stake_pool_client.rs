@@ -1,4 +1,8 @@
 #![allow(deprecated)] // using deprecated borsh to align with mainnet stake pool version
+use super::spl_stake_pool::{
+    find_withdraw_authority_program_address, initialize as stake_pool_initialize,
+    update_stake_pool_balance, Fee, StakePool, ValidatorList,
+};
 use jito_tip_router_core::constants::JITOSOL_MINT;
 use solana_commitment_config::CommitmentLevel;
 use solana_program::{
@@ -12,10 +16,6 @@ use solana_sdk::{
 };
 use solana_system_interface::instruction as system_instruction;
 use spl_associated_token_account_interface::address::get_associated_token_address;
-use spl_stake_pool::{
-    find_withdraw_authority_program_address, instruction,
-    state::{Fee, StakePool, ValidatorList},
-};
 
 use crate::fixtures::TestResult;
 
@@ -157,18 +157,19 @@ impl StakePoolClient {
             &jito_tip_router_program::spl_stake_pool_id(),
         );
 
+        let packed_len = std::mem::size_of::<StakePool>();
         let create_pool_ix = system_instruction::create_account(
             &self.payer.pubkey(),
             &stake_pool.pubkey(),
             self.banks_client
                 .get_rent()
                 .await?
-                .minimum_balance(get_packed_len::<StakePool>()),
-            get_packed_len::<StakePool>() as u64,
+                .minimum_balance(packed_len),
+            packed_len as u64,
             &jito_tip_router_program::spl_stake_pool_id(),
         );
 
-        let init_pool_ix = instruction::initialize(
+        let init_pool_ix = stake_pool_initialize(
             &jito_tip_router_program::spl_stake_pool_id(),
             &stake_pool.pubkey(),
             &manager.pubkey(),
@@ -217,7 +218,7 @@ impl StakePoolClient {
     }
 
     pub async fn update_stake_pool_balance(&mut self, pool_root: &PoolRoot) -> TestResult<()> {
-        let ix = instruction::update_stake_pool_balance(
+        let ix = update_stake_pool_balance(
             &jito_tip_router_program::spl_stake_pool_id(),
             &pool_root.pool_address,
             &pool_root.withdraw_authority,
