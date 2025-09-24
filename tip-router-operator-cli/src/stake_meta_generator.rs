@@ -191,7 +191,7 @@ fn get_config(bank: &Arc<Bank>, config_pubkey: &Pubkey) -> Result<Config, StakeM
             StakeMetaGeneratorError::AnchorError(String::from("Config account not found in bank"))
         })
         .and_then(|config_account| {
-            Config::deserialize(&mut config_account.data().as_ref()).map_err(|_| {
+            Config::deserialize(&mut &config_account.data()[8..]).map_err(|_| {
                 StakeMetaGeneratorError::AnchorError(String::from("Failed to deserialize config"))
             })
         })
@@ -822,7 +822,7 @@ mod tests {
             AccountSharedData::new(lamports, TIP_DISTRIBUTION_SIZE, tip_distribution_program_id);
 
         let mut data: [u8; TIP_DISTRIBUTION_SIZE] = [0u8; TIP_DISTRIBUTION_SIZE];
-        let mut cursor = std::io::Cursor::new(&mut data[..]);
+        let mut cursor = std::io::Cursor::new(&mut data[8..]);
         tda.serialize(&mut cursor).unwrap();
 
         account_data.set_data(data.to_vec());
@@ -841,7 +841,7 @@ mod tests {
         );
 
         let mut data: [u8; PRIORITY_FEE_DISTRIBUTION_SIZE] = [0u8; PRIORITY_FEE_DISTRIBUTION_SIZE];
-        let mut cursor = std::io::Cursor::new(&mut data[..]);
+        let mut cursor = std::io::Cursor::new(&mut data[8..]);
         pfda.serialize(&mut cursor).unwrap();
 
         account_data.set_data(data.to_vec());
