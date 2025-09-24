@@ -13,6 +13,8 @@ ExecStart=/home/core/jito-tip-router/target/release/gcp_uploader \
 Restart=always
 RestartSec=10
 Environment="RUST_LOG=info"
+Environment="SOLANA_METRICS_CONFIG="
+Environment="RPC_URL="
 
 [Install]
 WantedBy=multi-user.target

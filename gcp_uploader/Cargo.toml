@@ -15,7 +15,6 @@ hostname = "0.3"
 log = { workspace = true }
 regex = "1.10"
 serde_json = { workspace = true }
-tokio = { workspace = true, features = ["full"] }
 solana-client = { workspace = true }
 solana-metrics = { workspace = true }
-solana-rpc-client = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
