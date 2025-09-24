@@ -35,16 +35,23 @@ mod snapshot_vault_operator_delegation;
 mod switchboard_set_weight;
 
 use admin_set_new_admin::process_admin_set_new_admin;
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use initialize_epoch_state::process_initialize_epoch_state;
 use jito_tip_router_core::instruction::TipRouterInstruction;
 use realloc_epoch_state::process_realloc_epoch_state;
+use solana_program::pubkey;
 use solana_program::{
-    account_info::AccountInfo, declare_id, entrypoint::ProgramResult, msg,
-    program_error::ProgramError, pubkey::Pubkey,
+    account_info::AccountInfo,
+    declare_id,
+    entrypoint::ProgramResult,
+    instruction::{AccountMeta, Instruction},
+    msg,
+    program_error::ProgramError,
+    pubkey::Pubkey,
 };
 #[cfg(not(feature = "no-entrypoint"))]
 use solana_security_txt::security_txt;
+use solana_system_interface::program as system_program;
 
 use crate::{
     admin_initialize_config::process_admin_initialize_config,
@@ -386,6 +393,135 @@ pub fn process_instruction(
                 switchboard_feed,
                 no_feed_weight,
             )
+        }
+    }
+}
+
+// TODO: Remove all code below when spl-stake-pool-interface is released
+pub fn spl_stake_pool_id() -> Pubkey {
+    pubkey!("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy")
+}
+
+// This code was copied from https://github.com/solana-program/stake-pool/blob/main/program/src/instruction.rs#L2019
+
+#[repr(C)]
+#[derive(Clone, Debug, PartialEq, BorshSerialize, BorshDeserialize)]
+pub enum StakePoolInstruction {
+    ///   Deposit SOL directly into the pool's reserve account, with a
+    ///   specified slippage constraint. The output is a "pool" token
+    ///   representing ownership into the pool. Inputs are converted at the
+    ///   current ratio.
+    ///
+    ///   0. `[w]` Stake pool
+    ///   1. `[]` Stake pool withdraw authority
+    ///   2. `[w]` Reserve stake account, to deposit SOL
+    ///   3. `[s]` Account providing the lamports to be deposited into the pool
+    ///   4. `[w]` User account to receive pool tokens
+    ///   5. `[w]` Account to receive fee tokens
+    ///   6. `[w]` Account to receive a portion of fee as referral fees
+    ///   7. `[w]` Pool token mint account
+    ///   8. `[]` System program account
+    ///   9. `[]` Token program id
+    ///  10. `[s]` (Optional) Stake pool sol deposit authority.
+    DepositSolWithSlippage {
+        /// Amount of lamports to deposit into the reserve
+        lamports_in: u64,
+        /// Minimum amount of pool tokens that must be received
+        minimum_pool_tokens_out: u64,
+    },
+    ///   Deposit SOL directly into the pool's reserve account. The output is a
+    ///   "pool" token representing ownership into the pool. Inputs are
+    ///   converted to the current ratio.
+    ///
+    ///   0. `[w]` Stake pool
+    ///   1. `[]` Stake pool withdraw authority
+    ///   2. `[w]` Reserve stake account, to deposit SOL
+    ///   3. `[s]` Account providing the lamports to be deposited into the pool
+    ///   4. `[w]` User account to receive pool tokens
+    ///   5. `[w]` Account to receive fee tokens
+    ///   6. `[w]` Account to receive a portion of fee as referral fees
+    ///   7. `[w]` Pool token mint account
+    ///   8. `[]` System program account
+    ///   9. `[]` Token program id
+    ///  10. `[s]` (Optional) Stake pool sol deposit authority.
+    DepositSol(u64),
+}
+
+pub fn deposit_sol(
+    program_id: &Pubkey,
+    stake_pool: &Pubkey,
+    stake_pool_withdraw_authority: &Pubkey,
+    reserve_stake_account: &Pubkey,
+    lamports_from: &Pubkey,
+    pool_tokens_to: &Pubkey,
+    manager_fee_account: &Pubkey,
+    referrer_pool_tokens_account: &Pubkey,
+    pool_mint: &Pubkey,
+    token_program_id: &Pubkey,
+    lamports_in: u64,
+) -> Instruction {
+    deposit_sol_internal(
+        program_id,
+        stake_pool,
+        stake_pool_withdraw_authority,
+        reserve_stake_account,
+        lamports_from,
+        pool_tokens_to,
+        manager_fee_account,
+        referrer_pool_tokens_account,
+        pool_mint,
+        token_program_id,
+        None,
+        lamports_in,
+        None,
+    )
+}
+
+fn deposit_sol_internal(
+    program_id: &Pubkey,
+    stake_pool: &Pubkey,
+    stake_pool_withdraw_authority: &Pubkey,
+    reserve_stake_account: &Pubkey,
+    lamports_from: &Pubkey,
+    pool_tokens_to: &Pubkey,
+    manager_fee_account: &Pubkey,
+    referrer_pool_tokens_account: &Pubkey,
+    pool_mint: &Pubkey,
+    token_program_id: &Pubkey,
+    sol_deposit_authority: Option<&Pubkey>,
+    lamports_in: u64,
+    minimum_pool_tokens_out: Option<u64>,
+) -> Instruction {
+    let mut accounts = vec![
+        AccountMeta::new(*stake_pool, false),
+        AccountMeta::new_readonly(*stake_pool_withdraw_authority, false),
+        AccountMeta::new(*reserve_stake_account, false),
+        AccountMeta::new(*lamports_from, true),
+        AccountMeta::new(*pool_tokens_to, false),
+        AccountMeta::new(*manager_fee_account, false),
+        AccountMeta::new(*referrer_pool_tokens_account, false),
+        AccountMeta::new(*pool_mint, false),
+        AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(*token_program_id, false),
+    ];
+    if let Some(sol_deposit_authority) = sol_deposit_authority {
+        accounts.push(AccountMeta::new_readonly(*sol_deposit_authority, true));
+    }
+    if let Some(minimum_pool_tokens_out) = minimum_pool_tokens_out {
+        Instruction {
+            program_id: *program_id,
+            accounts,
+            data: borsh::to_vec(&StakePoolInstruction::DepositSolWithSlippage {
+                lamports_in,
+                minimum_pool_tokens_out,
+            })
+            .unwrap(),
+        }
+    } else {
+        Instruction {
+            program_id: *program_id,
+            accounts,
+            data: borsh::to_vec(&StakePoolInstruction::DepositSol(lamports_in)).unwrap(),
         }
     }
 }

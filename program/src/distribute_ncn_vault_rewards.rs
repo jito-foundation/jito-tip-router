@@ -15,7 +15,6 @@ use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
     program_error::ProgramError, pubkey::Pubkey,
 };
-use spl_stake_pool::instruction::deposit_sol;
 
 /// Can be backfilled for previous epochs
 pub fn process_distribute_ncn_vault_rewards(
@@ -66,7 +65,7 @@ pub fn process_distribute_ncn_vault_rewards(
     )?;
     load_associated_token_account(vault_ata, vault.key, &JITOSOL_MINT)?;
 
-    if stake_pool_program.key.ne(&spl_stake_pool::id()) {
+    if stake_pool_program.key.ne(&crate::spl_stake_pool_id()) {
         msg!("Incorrect stake pool program ID");
         return Err(ProgramError::InvalidAccountData);
     }
@@ -97,7 +96,7 @@ pub fn process_distribute_ncn_vault_rewards(
             );
         ncn_reward_receiver_seeds.push(vec![ncn_reward_receiver_bump]);
 
-        let deposit_ix = deposit_sol(
+        let deposit_ix = crate::deposit_sol(
             stake_pool_program.key,
             stake_pool.key,
             stake_pool_withdraw_authority.key,

@@ -1,12 +1,11 @@
 use jito_bytemuck::AccountDeserialize;
 use jito_priority_fee_distribution_sdk::{
     derive_priority_fee_distribution_account_address,
-    instruction::upload_merkle_root_ix as pf_upload_merkle_root_ix, jito_priority_fee_distribution,
+    instruction::upload_merkle_root_ix as pf_upload_merkle_root_ix,
 };
 use jito_restaking_core::ncn::Ncn;
 use jito_tip_distribution_sdk::{
     derive_tip_distribution_account_address, instruction::upload_merkle_root_ix,
-    jito_tip_distribution,
 };
 use jito_tip_router_core::{
     ballot_box::BallotBox, config::Config as NcnConfig, epoch_state::EpochState,
@@ -40,8 +39,8 @@ pub fn process_set_merkle_root(
 
     let distribution_program_id = distribution_program.key;
     if [
-        jito_tip_distribution::ID,
-        jito_priority_fee_distribution::ID,
+        jito_tip_distribution_sdk::id(),
+        jito_priority_fee_distribution_sdk::id(),
     ]
     .iter()
     .all(|supported_program_id| distribution_program_id.ne(supported_program_id))
@@ -54,7 +53,7 @@ pub fn process_set_merkle_root(
         .checked_sub(1)
         .ok_or(TipRouterError::ArithmeticUnderflowError)?;
     let (distribution_account_address, _) =
-        if distribution_program_id.eq(&jito_tip_distribution::ID) {
+        if distribution_program_id.eq(&jito_tip_distribution_sdk::id()) {
             derive_tip_distribution_account_address(
                 distribution_program.key,
                 vote_account.key,
@@ -91,7 +90,7 @@ pub fn process_set_merkle_root(
     let (_, bump, mut ncn_config_seeds) = NcnConfig::find_program_address(program_id, ncn.key);
     ncn_config_seeds.push(vec![bump]);
 
-    let ix = if distribution_program_id.eq(&jito_tip_distribution::ID) {
+    let ix = if distribution_program_id.eq(&jito_tip_distribution_sdk::id()) {
         upload_merkle_root_ix(
             *distribution_config.key,
             *ncn_config.key,
