@@ -61,8 +61,7 @@ impl ReallocBaseRewardRouter {
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = borsh::to_vec(&ReallocBaseRewardRouterInstructionData::new())
-            .unwrap();
+        let mut data = borsh::to_vec(&ReallocBaseRewardRouterInstructionData::new()).unwrap();
         let mut args = borsh::to_vec(&args).unwrap();
         data.append(&mut args);
 
@@ -319,8 +318,7 @@ impl<'a, 'b> ReallocBaseRewardRouterCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = borsh::to_vec(&ReallocBaseRewardRouterInstructionData::new())
-            .unwrap();
+        let mut data = borsh::to_vec(&ReallocBaseRewardRouterInstructionData::new()).unwrap();
         let mut args = borsh::to_vec(&self.__args).unwrap();
         data.append(&mut args);
 

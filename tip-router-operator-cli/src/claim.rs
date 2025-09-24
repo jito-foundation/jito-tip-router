@@ -602,12 +602,9 @@ pub async fn get_unprocessed_claims_for_validators(
             .filter_map(|(pubkey, a)| Some((pubkey, a?)))
             .collect();
 
-    let deserialized_claim_statuses = claim_statuses.values().map(|a| {
-        (
-            ClaimStatus::try_from_slice(&a.data).unwrap(),
-            a,
-        )
-    });
+    let deserialized_claim_statuses = claim_statuses
+        .values()
+        .map(|a| (ClaimStatus::try_from_slice(&a.data).unwrap(), a));
 
     let unprocessed_claim_statuses = deserialized_claim_statuses
         .filter(|(c, _)| !c.is_claimed)

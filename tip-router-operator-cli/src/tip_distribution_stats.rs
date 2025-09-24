@@ -94,8 +94,7 @@ async fn get_tip_distribution_accounts_for_epoch(
 
     let mut result = Vec::new();
     for (pubkey, account) in accounts {
-        if let Ok(tip_distribution_account) =
-            TipDistributionAccount::try_from_slice(&account.data)
+        if let Ok(tip_distribution_account) = TipDistributionAccount::try_from_slice(&account.data)
         {
             if tip_distribution_account.epoch_created_at == epoch {
                 result.push((pubkey, tip_distribution_account));

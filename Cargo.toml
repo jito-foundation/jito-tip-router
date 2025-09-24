@@ -78,15 +78,15 @@ serde_with = "3.9.0"
 shank = "0.4.2"
 shank_idl = "0.4.2"
 solana-account-decoder = { package = "solana-account-decoder", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
-solana-address-lookup-table-interface = { version = "=3.0.0" }
 solana-account-info = { package = "solana-account-info", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-accounts-db = { package = "solana-accounts-db", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
+solana-address-lookup-table-interface = { version = "=3.0.0" }
 solana-clap-utils = { package = "solana-clap-utils", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-cli-config = { package = "solana-cli-config", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
-solana-commitment-config = "=3.0.0"
-solana-compute-budget-interface = { version = "=3.0.0" }
 solana-client = { package = "solana-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-clock = { package = "solana-clock", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
+solana-commitment-config = "=3.0.0"
+solana-compute-budget-interface = { version = "=3.0.0" }
 solana-core = { package = "solana-core", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-decode-error = "=2.3.0"
 solana-genesis-config = "=3.0.0"
@@ -107,21 +107,21 @@ solana-rpc-client-api = { git = "https://github.com/jito-foundation/jito-solana.
 solana-runtime = { package = "solana-runtime", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-sdk = "=3.0.0"
 solana-security-txt = "1.1.1"
-solana-stake-program = { package = "solana-stake-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-stake-interface = { version = "2.0.1", features = ["sysvar"] }
+solana-stake-program = { package = "solana-stake-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-streamer = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
+solana-system-interface = { version = "2.0.0", features = ["bincode"] }
 solana-transaction-status = { package = "solana-transaction-status", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-unified-scheduler-pool = { package = "solana-unified-scheduler-pool", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-vote = { package = "solana-vote", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
-solana-vote-interface = { version = "=4.0.2", features=["bincode"] }
+solana-vote-interface = { version = "=4.0.2", features = ["bincode"] }
 #solana-zk-sdk = { package = "solana-zk-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 #solana-zk-token-sdk = { package = "solana-zk-token-sdk", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 spl-associated-token-account-interface = { version = "2.0.0" }
 spl-math = { version = "0.3.0", features = ["no-entrypoint"] }
 spl-memo-interface = "2.0.0"
-spl-token-interface = { version = "2.0.0" }
 spl-token-2022-interface = { version = "=2.0.0" }
-solana-system-interface = { version = "2.0.0", features = ["bincode"] }
+spl-token-interface = { version = "2.0.0" }
 switchboard-on-demand = "0.9.0"
 syn = "2.0.72"
 thiserror = "2.0.16"
