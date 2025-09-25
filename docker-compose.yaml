@@ -82,3 +82,40 @@ services:
     volumes:
       - ./credentials:/credentials
     restart: on-failure:5
+
+  tip-router-operator-cli:
+    build:
+      context: ./tip-router-operator-cli
+      dockerfile: Dockerfile
+    container_name: tip-router-operator-cli
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+      - KEYPAIR_PATH=${KEYPAIR_PATH}
+      - LEDGER_PATH=${LEDGER_PATH}
+      - ACCOUNT_PATHS=${ACCOUNT_PATHS}
+      - FULL_SNAPSHOTS_PATH=${FULL_SNAPSHOTS_PATH}
+      - SNAPSHOT_OUTPUT_DIR=${SNAPSHOT_OUTPUT_DIR}
+      - OPERATOR_ADDRESS=${OPERATOR_ADDRESS}
+      - RPC_URL=${RPC_URL}
+      - NCN_ADDRESS=${NCN_ADDRESS}
+      - TIP_DISTRIBUTION_PROGRAM_ID=${TIP_DISTRIBUTION_PROGRAM_ID}
+      - TIP_PAYMENT_PROGRAM_ID=${TIP_PAYMENT_PROGRAM_ID}
+      - ENABLE_SNAPSHOTS=${ENABLE_SNAPSHOTS:-false}
+      - TIP_ROUTER_PROGRAM_ID=${TIP_ROUTER_PROGRAM_ID}
+      - NUM_MONITORED_EPOCHS=${NUM_MONITORED_EPOCHS:-3}
+      - START_NEXT_EPOCH=${START_NEXT_EPOCH:-false}
+      - SAVE_PATH=${SAVE_PATH}
+      - BACKUP_SNAPSHOTS_DIR=${BACKUP_SNAPSHOTS_DIR}
+      - SOLANA_METRICS_CONFIG=${SOLANA_METRICS_CONFIG}
+      - SET_MERKLE_ROOTS=${SET_MERKLE_ROOTS:-false}
+      - CLAIM_TIPS=${CLAIM_TIPS:-false}
+      - STARTING_STAGE=${STARTING_STAGE:-wait-for-next-epoch}
+    volumes:
+      - ./credentials:/credentials
+      - ${LEDGER_PATH}:${LEDGER_PATH}
+      - ${ACCOUNT_PATHS}:${ACCOUNT_PATHS}
+      - ${FULL_SNAPSHOTS_PATH}:${FULL_SNAPSHOTS_PATH}
+      - ${SNAPSHOT_OUTPUT_DIR}:${SNAPSHOT_OUTPUT_DIR}
+      - ${SAVE_PATH}:${SAVE_PATH}
+      - ${BACKUP_SNAPSHOTS_DIR}:${BACKUP_SNAPSHOTS_DIR}
+    restart: on-failure:5

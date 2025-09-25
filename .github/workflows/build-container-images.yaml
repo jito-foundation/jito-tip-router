@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - ncn-keeper
+          - operator
 
 env:
   REGISTRY: ghcr.io
@@ -32,14 +33,21 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Determine Docker target and image name
+    - name: Set image configuration
       id: config
       run: |
         case "${{ github.event.inputs.service_config }}" in
           "ncn-keeper")
             echo "target=jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
-            echo "service=jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
-            echo "image_name=${{ github.repository }}/jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
+            echo "image_name=jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
+            echo "dockerfile_path=./cli/Dockerfile" >> $GITHUB_OUTPUT
+            echo "context_path=./cli" >> $GITHUB_OUTPUT
+            ;;
+          "operator")
+            echo "target=tip-router-operator-cli" >> $GITHUB_OUTPUT
+            echo "image_name=tip-router-operator-cli" >> $GITHUB_OUTPUT
+            echo "dockerfile_path=./tip-router-operator-cli/Dockerfile" >> $GITHUB_OUTPUT
+            echo "context_path=./tip-router-operator-cli" >> $GITHUB_OUTPUT
             ;;
         esac
 
@@ -47,16 +55,16 @@ jobs:
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ${{ env.REGISTRY }}/${{ steps.config.outputs.image_name }}
+        images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ steps.config.outputs.image_name }}
         tags: |
-          type=raw,value={{sha}}
-          type=raw,value=latest
+          type=raw,value=${{ github.ref_name }}-${{ github.event.inputs.service_config }}-{{sha}}
+          type=raw,value=${{ github.ref_name }}-${{ github.event.inputs.service_config }}-latest
 
     - name: Build and push container
       uses: docker/build-push-action@v5
       with:
-        context: .
-        file: ./cli/Dockerfile
+        context: ${{ steps.config.outputs.context_path }}
+        file: ${{ steps.config.outputs.dockerfile_path }}
         target: ${{ steps.config.outputs.target }}
         platforms: linux/amd64
         push: true
