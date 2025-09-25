@@ -1,5 +1,56 @@
 # Jito Tip Router
 
+## Overview
+
+Jito Tip Router NCN will assume programmatic operations related to the distribution of MEV tips generated from the Jito Tip Distribution protocol every epoch, and, as part of these programmatic operations, will route some portion of all MEV tips collected to the DAO treasury and the NCN network participants.
+
+## Development Setup
+
+### Docker Services Management
+
+This project includes a Makefile for easy management of Docker services. Use `make help` to see all available commands.
+
+#### NCN Keeper Services
+
+```bash
+# Start services
+make ncn-keeper-start          # Main keeper service
+make ncn-keeper-start-metrics  # Metrics-only service  
+make ncn-keeper-start-migrate  # Migration-only service
+make ncn-keeper-start-all      # Start all NCN keeper services
+
+# View logs
+make ncn-keeper-logs           # Main keeper logs
+make ncn-keeper-logs-metrics   # Metrics service logs
+make ncn-keeper-logs-migrate   # Migration service logs
+
+# Stop services
+make ncn-keeper-stop           # Stop main keeper
+make ncn-keeper-stop-metrics   # Stop metrics service
+```
+
+#### Operator Services
+
+```bash
+# Operator management
+make start-operator # Start tip router operator
+make logs-operator  # View operator logs
+make stop-operator  # Stop operator service
+```
+
+#### Utility Commands
+
+```bash
+make help           # Show all available commands
+```
+
+### Container Images
+
+The project uses GitHub Actions to build container images for two main services:
+
+- **NCN Keeper**: `jito-tip-router-ncn-keeper` (built from `./cli/`)
+- **Operator**: `tip-router-operator-cli` (built from `./tip-router-operator-cli/`)
+
 ## Testing Setup
 
 ### Prerequisites
