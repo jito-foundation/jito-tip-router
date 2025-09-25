@@ -20,7 +20,7 @@ RUN cargo build --release --bin jito-tip-router-cli
 RUN cargo install --path ./cli --bin jito-tip-router-cli --locked
 
 ##### Final image
-FROM debian:bullseye-slim
+FROM debian:bullseye-slim as jito-tip-router-ncn-keeper
 
 RUN apt-get update && apt-get install -y \
     ca-certificates \
