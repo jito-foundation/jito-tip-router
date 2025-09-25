@@ -191,7 +191,7 @@ fn get_config(bank: &Arc<Bank>, config_pubkey: &Pubkey) -> Result<Config, StakeM
             StakeMetaGeneratorError::AnchorError(String::from("Config account not found in bank"))
         })
         .and_then(|config_account| {
-            Config::deserialize(&mut &config_account.data()[8..]).map_err(|_| {
+            Config::deserialize(&mut &config_account.data()).map_err(|_| {
                 StakeMetaGeneratorError::AnchorError(String::from("Failed to deserialize config"))
             })
         })

@@ -39,15 +39,15 @@ jito-vault-client = { workspace = true }
 jito-vault-core = { workspace = true }
 jito-vault-program = { workspace = true }
 jito-vault-sdk = { workspace = true }
+log = { workspace = true }
 num-derive.workspace = true
 num-traits.workspace = true
-log = { workspace = true }
 solana-account-decoder = { workspace = true }
 solana-address-lookup-table-interface = { workspace = true }
 solana-cli-config = { workspace = true }
 solana-client = { workspace = true }
-solana-compute-budget-interface = { workspace = true }
 solana-commitment-config = { workspace = true }
+solana-compute-budget-interface = { workspace = true }
 solana-genesis-config = { workspace = true }
 solana-metrics = { workspace = true }
 solana-program = { workspace = true }
