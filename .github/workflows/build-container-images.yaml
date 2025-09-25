@@ -41,13 +41,11 @@ jobs:
             echo "target=jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
             echo "image_name=jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
             echo "dockerfile_path=./cli/Dockerfile" >> $GITHUB_OUTPUT
-            echo "context_path=./cli" >> $GITHUB_OUTPUT
             ;;
           "operator")
             echo "target=tip-router-operator-cli" >> $GITHUB_OUTPUT
             echo "image_name=tip-router-operator-cli" >> $GITHUB_OUTPUT
             echo "dockerfile_path=./tip-router-operator-cli/Dockerfile" >> $GITHUB_OUTPUT
-            echo "context_path=./tip-router-operator-cli" >> $GITHUB_OUTPUT
             ;;
         esac
 
@@ -63,7 +61,7 @@ jobs:
     - name: Build and push container
       uses: docker/build-push-action@v5
       with:
-        context: ${{ steps.config.outputs.context_path }}
+        context: .
         file: ${{ steps.config.outputs.dockerfile_path }}
         target: ${{ steps.config.outputs.target }}
         platforms: linux/amd64
