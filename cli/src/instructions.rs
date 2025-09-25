@@ -45,7 +45,6 @@ use jito_tip_router_client::{
         ReallocBaseRewardRouterBuilder, ReallocEpochStateBuilder, ReallocOperatorSnapshotBuilder,
         ReallocVaultRegistryBuilder, ReallocWeightTableBuilder, RegisterVaultBuilder,
         RouteBaseRewardsBuilder, RouteNcnRewardsBuilder, SnapshotVaultOperatorDelegationBuilder,
-        SwitchboardSetWeightBuilder,
     },
     types::ConfigAdminRole,
 };
@@ -55,7 +54,7 @@ use jito_tip_router_core::{
     base_fee_group::BaseFeeGroup,
     base_reward_router::{BaseRewardReceiver, BaseRewardRouter},
     config::Config as TipRouterConfig,
-    constants::{MAX_REALLOC_BYTES, SWITCHBOARD_QUEUE},
+    constants::MAX_REALLOC_BYTES,
     epoch_marker::EpochMarker,
     epoch_snapshot::{EpochSnapshot, OperatorSnapshot},
     epoch_state::EpochState,
@@ -81,25 +80,24 @@ use jito_vault_core::{
 };
 use log::info;
 use solana_client::rpc_config::RpcSendTransactionConfig;
+use solana_compute_budget_interface::ComputeBudgetInstruction;
 #[allow(deprecated)]
 use solana_sdk::{
     clock::DEFAULT_SLOTS_PER_EPOCH,
-    compute_budget::ComputeBudgetInstruction,
     instruction::Instruction,
-    native_token::sol_to_lamports,
+    native_token::sol_str_to_lamports,
     program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,
     signature::{Keypair, Signature},
     signer::Signer,
-    system_instruction::{self, create_account, transfer},
-    system_program,
     transaction::Transaction,
 };
-use spl_associated_token_account::{
-    get_associated_token_address, instruction::create_associated_token_account_idempotent,
+use solana_system_interface::instruction::{self as system_instruction, create_account, transfer};
+use solana_system_interface::program as system_program;
+use spl_associated_token_account_interface::{
+    address::get_associated_token_address, instruction::create_associated_token_account_idempotent,
 };
-use switchboard_on_demand_client::{CrossbarClient, FetchUpdateParams, PullFeed, QueueAccountData};
 use tokio::time::sleep;
 
 use jito_priority_fee_distribution_sdk;
@@ -483,7 +481,11 @@ pub async fn admin_fund_account_payer(handler: &CliHandler, amount: f64) -> Resu
     let (account_payer, _, _) =
         AccountPayer::find_program_address(&handler.tip_router_program_id, &ncn);
 
-    let transfer_ix = transfer(&keypair.pubkey(), &account_payer, sol_to_lamports(amount));
+    let transfer_ix = transfer(
+        &keypair.pubkey(),
+        &account_payer,
+        sol_str_to_lamports(&amount.to_string()).unwrap(),
+    );
 
     let ixs = &[transfer_ix];
     if handler.print_tx {
@@ -850,7 +852,8 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     Ok(())
 }
 
-pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) -> Result<()> {
+// TODO: DO NOT COMMIT ME
+/*pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) -> Result<()> {
     async fn wait_for_x_slots_after_epoch(handler: &CliHandler, slots: u64) -> Result<()> {
         loop {
             let current_slot = handler.rpc_client().get_slot().await?;
@@ -909,15 +912,17 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
     .await?;
 
     Ok(())
-}
+}*/
 
-pub async fn set_weight(handler: &CliHandler, vault: &Pubkey, epoch: u64) -> Result<()> {
+// TODO: DO NOT COMMIT ME
+/*pub async fn set_weight(handler: &CliHandler, vault: &Pubkey, epoch: u64) -> Result<()> {
     let vault_account = get_vault(handler, vault).await?;
 
     set_weight_with_st_mint(handler, &vault_account.supported_mint, epoch).await
-}
+}*/
 
-pub async fn set_weight_with_st_mint(
+// TODO: DO NOT COMMIT ME
+/*pub async fn set_weight_with_st_mint(
     handler: &CliHandler,
     st_mint: &Pubkey,
     epoch: u64,
@@ -975,6 +980,7 @@ pub async fn set_weight_with_st_mint(
 
     Ok(())
 }
+*/
 
 pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
     let ncn = *handler.ncn()?;
@@ -1749,7 +1755,7 @@ pub async fn distribute_base_rewards(
         get_associated_token_address(base_fee_wallet, &stake_pool_accounts.stake_pool.pool_mint);
 
     let create_base_fee_wallet_ata_ix =
-        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+        spl_associated_token_account_interface::instruction::create_associated_token_account_idempotent(
             &keypair.pubkey(),
             base_fee_wallet,
             &stake_pool_accounts.stake_pool.pool_mint,
@@ -1848,7 +1854,7 @@ pub async fn distribute_ncn_vault_rewards(
     let vault_ata = get_associated_token_address(&vault, &stake_pool_accounts.stake_pool.pool_mint);
 
     let create_vault_ata_ix =
-        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+        spl_associated_token_account_interface::instruction::create_associated_token_account_idempotent(
             &keypair.pubkey(),
             &vault,
             &stake_pool_accounts.stake_pool.pool_mint,
@@ -1892,7 +1898,7 @@ pub async fn distribute_ncn_vault_rewards(
     let update_vault_balance_ix = UpdateVaultBalanceBuilder::new()
         .config(vault_config)
         .vault(vault)
-        .token_program(spl_token::id())
+        .token_program(spl_token_interface::id())
         .vault_fee_token_account(vault_fee_token_account)
         .vault_token_account(vault_token_account)
         .vrt_mint(vrt_mint)
@@ -1979,7 +1985,7 @@ pub async fn distribute_ncn_operator_rewards(
         get_associated_token_address(operator, &stake_pool_accounts.stake_pool.pool_mint);
 
     let create_operator_ata_ix =
-        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+        spl_associated_token_account_interface::instruction::create_associated_token_account_idempotent(
             &keypair.pubkey(),
             operator,
             &stake_pool_accounts.stake_pool.pool_mint,
@@ -2542,7 +2548,7 @@ pub async fn crank_register_vaults(handler: &CliHandler) -> Result<()> {
 }
 
 pub async fn crank_set_weight(handler: &CliHandler, epoch: u64) -> Result<()> {
-    let weight_table = get_or_create_weight_table(handler, epoch).await?;
+    /*let weight_table = get_or_create_weight_table(handler, epoch).await?;
 
     let st_mints = weight_table
         .table()
@@ -2562,7 +2568,7 @@ pub async fn crank_set_weight(handler: &CliHandler, epoch: u64) -> Result<()> {
                 err
             );
         }
-    }
+    }*/
 
     Ok(())
 }
@@ -2701,7 +2707,7 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
         if base_reward_receiver.is_none() {
             let keypair = handler.keypair();
 
-            let lamports = sol_to_lamports(0.1);
+            let lamports = sol_str_to_lamports("0.1").unwrap();
             let transfer_ix = transfer(&keypair.pubkey(), &base_reward_receiver_address, lamports);
 
             send_and_log_transaction(
@@ -3164,19 +3170,16 @@ pub async fn create_and_add_test_vault(
     let all_operators = get_all_operators_in_ncn(handler).await?;
 
     // -------------- Create Mint -----------------
-    let admin_ata = spl_associated_token_account::get_associated_token_address(
-        &keypair.pubkey(),
-        &token_mint.pubkey(),
-    );
+    let admin_ata = get_associated_token_address(&keypair.pubkey(), &token_mint.pubkey());
 
     let create_mint_account_ix = create_account(
         &keypair.pubkey(),
         &token_mint.pubkey(),
-        Rent::default().minimum_balance(spl_token::state::Mint::LEN),
-        spl_token::state::Mint::LEN as u64,
+        Rent::default().minimum_balance(spl_token_interface::state::Mint::LEN),
+        spl_token_interface::state::Mint::LEN as u64,
         &handler.token_program_id,
     );
-    let initialize_mint_ix = spl_token::instruction::initialize_mint2(
+    let initialize_mint_ix = spl_token_interface::instruction::initialize_mint2(
         &handler.token_program_id,
         &token_mint.pubkey(),
         &keypair.pubkey(),
@@ -3184,13 +3187,13 @@ pub async fn create_and_add_test_vault(
         9,
     )?;
     let create_admin_ata_ix =
-        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+        spl_associated_token_account_interface::instruction::create_associated_token_account_idempotent(
             &keypair.pubkey(),
             &keypair.pubkey(),
             &token_mint.pubkey(),
             &handler.token_program_id,
         );
-    let mint_to_ix = spl_token::instruction::mint_to(
+    let mint_to_ix = spl_token_interface::instruction::mint_to(
         &handler.token_program_id,
         &token_mint.pubkey(),
         &admin_ata,
@@ -3234,7 +3237,7 @@ pub async fn create_and_add_test_vault(
         .vault_st_token_account(vault_st_token_account)
         .burn_vault(burn_vault)
         .burn_vault_vrt_token_account(burn_vault_vrt_token_account)
-        .associated_token_program(spl_associated_token_account::id())
+        .associated_token_program(spl_associated_token_account_interface::program::id())
         .reward_fee_bps(reward_fee_bps)
         .withdrawal_fee_bps(withdrawal_fee_bps)
         .decimals(9)
@@ -3255,14 +3258,14 @@ pub async fn create_and_add_test_vault(
         &keypair.pubkey(),
         &keypair.pubkey(),
         &token_mint.pubkey(),
-        &spl_token::ID,
+        &spl_token_interface::ID,
     );
 
     let vault_st_token_account_ix = create_associated_token_account_idempotent(
         &keypair.pubkey(),
         &vault,
         &token_mint.pubkey(),
-        &spl_token::ID,
+        &spl_token_interface::ID,
     );
 
     let vault_token_ata = get_associated_token_address(&vault, &token_mint.pubkey());

@@ -17,11 +17,11 @@ use crate::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
         admin_set_config_fees, admin_set_new_admin, admin_set_parameters, admin_set_weight,
         crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
-        crank_snapshot, crank_switchboard, create_and_add_test_operator, create_and_add_test_vault,
-        create_ballot_box, create_base_reward_router, create_epoch_snapshot, create_epoch_state,
+        crank_snapshot, create_and_add_test_operator, create_and_add_test_vault, create_ballot_box,
+        create_base_reward_router, create_epoch_snapshot, create_epoch_state,
         create_ncn_reward_router, create_operator_snapshot, create_test_ncn, create_vault_registry,
         create_weight_table, distribute_base_ncn_rewards, full_vault_update, register_vault,
-        route_base_rewards, route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
+        route_base_rewards, route_ncn_rewards, snapshot_vault_operator_delegation,
         update_all_vaults_in_network,
     },
     keeper::keeper_loop::startup_keeper,
@@ -38,14 +38,16 @@ use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
 };
+use solana_commitment_config::CommitmentConfig;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
-    commitment_config::CommitmentConfig,
-    native_token::lamports_to_sol,
+    native_token::LAMPORTS_PER_SOL,
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
 };
-use switchboard_on_demand_client::SbContext;
+
+// TODO: DO NOT COMMIT ME
+pub struct SbContext;
 
 pub struct CliHandler {
     pub rpc_url: String,
@@ -59,7 +61,8 @@ pub struct CliHandler {
     ncn: Option<Pubkey>,
     pub epoch: u64,
     rpc_client: RpcClient,
-    switchboard_context: Arc<SbContext>,
+    // TODO: DO NOT COMMIT ME
+    switchboard_context: Option<Arc<SbContext>>,
     pub retries: u64,
     pub priority_fee_micro_lamports: u64,
     pub(crate) print_tx: bool,
@@ -106,7 +109,7 @@ impl CliHandler {
 
         let rpc_client = RpcClient::new_with_commitment(rpc_url.clone(), commitment);
 
-        let switchboard_context = SbContext::new();
+        //let switchboard_context = SbContext::new();
 
         let mut handler = Self {
             rpc_url,
@@ -118,7 +121,7 @@ impl CliHandler {
             tip_distribution_program_id,
             token_program_id,
             ncn,
-            switchboard_context,
+            switchboard_context: None,
             epoch: u64::MAX,
             rpc_client,
             retries: args.transaction_retries,
@@ -173,9 +176,9 @@ impl CliHandler {
         Ok(config)
     }
 
-    pub const fn switchboard_context(&self) -> &Arc<SbContext> {
+    /*pub const fn switchboard_context(&self) -> &Arc<SbContext> {
         &self.switchboard_context
-    }
+    }*/
 
     pub const fn keypair(&self) -> &Keypair {
         &self.keypair
@@ -358,13 +361,16 @@ impl CliHandler {
 
             ProgramCommand::CreateWeightTable => create_weight_table(self, self.epoch).await,
             ProgramCommand::CrankSwitchboard { switchboard_feed } => {
-                let switchboard_feed =
+                // TODO: DO NOT COMMIT ME
+                /*let switchboard_feed =
                     Pubkey::from_str(&switchboard_feed).expect("error parsing switchboard feed");
-                crank_switchboard(self, &switchboard_feed).await
+                crank_switchboard(self, &switchboard_feed).await*/
+                Ok(())
             }
             ProgramCommand::SetWeight { vault } => {
-                let vault = Pubkey::from_str(&vault).expect("error parsing vault");
-                set_weight(self, &vault, self.epoch).await
+                //let vault = Pubkey::from_str(&vault).expect("error parsing vault");
+                //set_weight(self, &vault, self.epoch).await
+                Ok(())
             }
 
             ProgramCommand::CreateEpochSnapshot => create_epoch_snapshot(self, self.epoch).await,
@@ -651,7 +657,7 @@ impl CliHandler {
                 info!(
                     "\n\n--- Account Payer ---\n{}\nBalance: {}\n",
                     account_payer_address,
-                    lamports_to_sol(account_payer.lamports)
+                    account_payer.lamports / LAMPORTS_PER_SOL
                 );
                 Ok(())
             }
@@ -659,7 +665,7 @@ impl CliHandler {
                 let total_epoch_rent_cost = get_total_epoch_rent_cost(self).await?;
                 info!(
                     "\n\n--- Total Epoch Rent Cost ---\nCost: {}\n",
-                    lamports_to_sol(total_epoch_rent_cost)
+                    total_epoch_rent_cost / LAMPORTS_PER_SOL
                 );
                 Ok(())
             }

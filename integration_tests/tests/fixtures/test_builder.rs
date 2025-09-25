@@ -97,7 +97,8 @@ pub fn token_mint_account(withdraw_authority: &Pubkey) -> Account {
 
 impl TestBuilder {
     pub async fn new() -> Self {
-        let run_as_bpf = std::env::vars().any(|(key, _)| key.eq("SBF_OUT_DIR"));
+        let run_as_bpf = std::env::vars().any(|(key, _)| key.eq("SBPF_OUT_DIR"));
+        std::env::set_var("BPF_OUT_DIR", "integration_tests/tests/fixtures/");
 
         let mut program_test = if run_as_bpf {
             let mut program_test = ProgramTest::new(
@@ -143,6 +144,9 @@ impl TestBuilder {
                 jito_restaking_program::id(),
                 processor!(jito_restaking_program::process_instruction),
             );
+
+            // While the spl_stake_pool_program is in-compatible with 3.0.0 we can still add its
+            // .so
             program_test.add_program(
                 "spl_stake_pool",
                 jito_tip_router_program::spl_stake_pool_id(),
