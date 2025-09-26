@@ -40,8 +40,8 @@ jito-vault-core = { workspace = true }
 jito-vault-program = { workspace = true }
 jito-vault-sdk = { workspace = true }
 log = { workspace = true }
-num-derive.workspace = true
-num-traits.workspace = true
+num-derive = { workspace = true }
+num-traits = { workspace = true }
 solana-account-decoder = { workspace = true }
 solana-address-lookup-table-interface = { workspace = true }
 solana-cli-config = { workspace = true }
