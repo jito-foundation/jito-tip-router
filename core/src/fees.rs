@@ -1127,7 +1127,7 @@ mod tests {
         assert_eq!(fee_config.block_engine_fee_bps(), 200);
 
         // Test error when exceeding MAX_FEE_BPS
-        let result = fee_config.set_block_engine_fee_bps(MAX_FEE_BPS as u16 + 1);
+        let result = fee_config.set_block_engine_fee_bps(MAX_FEE_BPS + 1);
         assert_eq!(result.unwrap_err(), TipRouterError::FeeCapExceeded);
     }
 
@@ -1244,14 +1244,14 @@ mod tests {
         let fee_config = FeeConfig::new(&dao_fee_wallet, block_engine_fee, 100, 100, 0).unwrap();
 
         let adjusted = fee_config.adjusted_fee_bps(200).unwrap();
-        let expected = ((200 as f64 * MAX_FEE_BPS as f64)
+        let expected = ((200_f64 * MAX_FEE_BPS as f64)
             / (MAX_FEE_BPS as f64 - (block_engine_fee as f64)).trunc())
             as u64;
         assert_eq!(adjusted, expected);
 
         // Test denominator zero
         // Check fees will throw an error if the denominator is zero
-        let fee_config = FeeConfig::new(&dao_fee_wallet, MAX_FEE_BPS as u16, 0, 0, 0);
+        let fee_config = FeeConfig::new(&dao_fee_wallet, MAX_FEE_BPS, 0, 0, 0);
         assert_eq!(fee_config.unwrap_err(), TipRouterError::DenominatorIsZero);
     }
 

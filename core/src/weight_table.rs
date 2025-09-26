@@ -478,8 +478,8 @@ mod tests {
 
         table.set_mint_entries(&mints).unwrap();
 
-        table.set_weight(&mint_entry.st_mint(), 100, 1).unwrap();
-        assert_eq!(table.get_weight(&mint_entry.st_mint()).unwrap(), 100);
+        table.set_weight(mint_entry.st_mint(), 100, 1).unwrap();
+        assert_eq!(table.get_weight(mint_entry.st_mint()).unwrap(), 100);
     }
 
     #[test]
@@ -506,11 +506,11 @@ mod tests {
 
         table.set_mint_entries(&mints).unwrap();
 
-        table.set_weight(&mint.st_mint(), 100, 1).unwrap();
-        assert_eq!(table.get_weight(&mint.st_mint()).unwrap(), 100);
+        table.set_weight(mint.st_mint(), 100, 1).unwrap();
+        assert_eq!(table.get_weight(mint.st_mint()).unwrap(), 100);
 
-        table.set_weight(&mint.st_mint(), 200, 2).unwrap();
-        assert_eq!(table.get_weight(&mint.st_mint()).unwrap(), 200);
+        table.set_weight(mint.st_mint(), 200, 2).unwrap();
+        assert_eq!(table.get_weight(mint.st_mint()).unwrap(), 200);
     }
 
     #[test]
@@ -523,11 +523,11 @@ mod tests {
 
         table.set_mint_entries(&mints).unwrap();
 
-        table.set_weight(&mint1.st_mint(), 100, 1).unwrap();
-        table.set_weight(&mint2.st_mint(), 200, 1).unwrap();
+        table.set_weight(mint1.st_mint(), 100, 1).unwrap();
+        table.set_weight(mint2.st_mint(), 200, 1).unwrap();
 
-        assert_eq!(table.get_weight(&mint1.st_mint()).unwrap(), 100);
-        assert_eq!(table.get_weight(&mint2.st_mint()).unwrap(), 200);
+        assert_eq!(table.get_weight(mint1.st_mint()).unwrap(), 100);
+        assert_eq!(table.get_weight(mint2.st_mint()).unwrap(), 200);
     }
 
     #[test]
@@ -539,10 +539,10 @@ mod tests {
 
         table.set_mint_entries(&mints).unwrap();
 
-        table.set_weight(&mint.st_mint(), 100, 1).unwrap();
-        assert_eq!(table.get_weight(&mint.st_mint()).unwrap(), 100);
+        table.set_weight(mint.st_mint(), 100, 1).unwrap();
+        assert_eq!(table.get_weight(mint.st_mint()).unwrap(), 100);
 
-        table.set_weight(&mint.st_mint(), 200, 5).unwrap();
-        assert_eq!(table.get_weight(&mint.st_mint()).unwrap(), 200);
+        table.set_weight(mint.st_mint(), 200, 5).unwrap();
+        assert_eq!(table.get_weight(mint.st_mint()).unwrap(), 200);
     }
 }

@@ -1,24 +1,24 @@
 use std::{fs, path::PathBuf};
 
-use anchor_lang::prelude::AnchorSerialize;
-use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID as PRIORITY_FEE_DISTRIBUTION_ID;
-use jito_tip_distribution_sdk::jito_tip_distribution::ID as TIP_DISTRIBUTION_ID;
-use jito_tip_payment_sdk::jito_tip_payment::ID as TIP_PAYMENT_ID;
-use jito_tip_router_program::ID as TIP_ROUTER_ID;
+use borsh::BorshSerialize;
+use jito_priority_fee_distribution_sdk::id as PRIORITY_FEE_DISTRIBUTION_ID;
+use jito_tip_distribution_sdk::id as TIP_DISTRIBUTION_ID;
+use jito_tip_payment_sdk::id as TIP_PAYMENT_ID;
+use jito_tip_router_core::ID as TIP_ROUTER_ID;
 use meta_merkle_tree::generated_merkle_tree::{
     Delegation, GeneratedMerkleTreeCollection, MerkleRootGeneratorError, StakeMeta,
     StakeMetaCollection, TipDistributionMeta,
 };
-use solana_program::stake::state::StakeStateV2;
 use solana_program_test::*;
 #[allow(deprecated)]
 use solana_sdk::{
     account::AccountSharedData,
     pubkey::Pubkey,
     signature::{Keypair, Signer},
-    system_instruction,
     transaction::Transaction,
 };
+use solana_stake_interface::state::StakeStateV2;
+use solana_system_interface::instruction as system_instruction;
 use std::str::FromStr;
 use tempfile::TempDir;
 use tip_router_operator_cli::TipAccountConfig;
@@ -46,21 +46,15 @@ impl TestContext {
 
         let mut context = program_test.start_with_context().await;
 
-        let payer = Keypair::from_bytes(&[
+        let payer = Keypair::new_from_array([
             150, 240, 104, 157, 252, 242, 234, 79, 21, 27, 145, 68, 254, 17, 186, 35, 13, 209, 129,
-            229, 55, 39, 221, 2, 10, 15, 172, 77, 153, 153, 104, 177, 139, 35, 180, 131, 48, 220,
-            136, 28, 111, 206, 79, 164, 184, 15, 55, 187, 195, 222, 117, 207, 143, 84, 114, 234,
-            214, 170, 73, 166, 23, 140, 14, 138,
-        ])
-        .unwrap();
+            229, 55, 39, 221, 2, 10, 15, 172, 77, 153, 153, 104, 177,
+        ]);
 
-        let vote_account = Keypair::from_bytes(&[
+        let vote_account = Keypair::new_from_array([
             82, 63, 68, 226, 112, 24, 184, 190, 189, 221, 199, 191, 113, 6, 183, 211, 49, 118, 207,
-            131, 38, 112, 192, 34, 209, 45, 157, 156, 33, 180, 25, 211, 171, 205, 243, 31, 145,
-            173, 120, 114, 64, 56, 53, 106, 167, 105, 39, 7, 29, 221, 214, 110, 30, 189, 102, 134,
-            182, 90, 143, 73, 233, 179, 44, 215,
-        ])
-        .unwrap();
+            131, 38, 112, 192, 34, 209, 45, 157, 156, 33, 180, 25, 211,
+        ]);
 
         // Fund payer account
         let tx = Transaction::new_signed_with_payer(
@@ -77,27 +71,18 @@ impl TestContext {
 
         // Create multiple stake accounts
         let stake_accounts = vec![
-            Keypair::from_bytes(&[
+            Keypair::new_from_array([
                 36, 145, 249, 6, 56, 206, 144, 159, 252, 235, 120, 107, 227, 51, 95, 155, 16, 93,
-                244, 249, 80, 188, 177, 237, 116, 119, 71, 26, 61, 226, 174, 9, 73, 94, 136, 174,
-                207, 186, 99, 252, 235, 4, 227, 102, 95, 202, 6, 191, 229, 155, 236, 132, 35, 200,
-                218, 165, 164, 223, 77, 9, 74, 55, 87, 167,
-            ])
-            .unwrap(),
-            Keypair::from_bytes(&[
+                244, 249, 80, 188, 177, 237, 116, 119, 71, 26, 61, 226, 174, 9,
+            ]),
+            Keypair::new_from_array([
                 171, 218, 192, 44, 77, 53, 91, 116, 35, 211, 6, 39, 143, 37, 139, 113, 125, 95, 21,
-                51, 238, 233, 23, 186, 6, 224, 117, 203, 24, 130, 12, 102, 184, 8, 146, 226, 205,
-                37, 237, 60, 24, 44, 119, 124, 26, 16, 34, 91, 30, 156, 166, 43, 70, 30, 42, 226,
-                84, 246, 174, 88, 117, 46, 140, 65,
-            ])
-            .unwrap(),
-            Keypair::from_bytes(&[
+                51, 238, 233, 23, 186, 6, 224, 117, 203, 24, 130, 12, 102,
+            ]),
+            Keypair::new_from_array([
                 69, 215, 21, 39, 99, 64, 106, 141, 233, 163, 199, 154, 22, 184, 130, 157, 255, 77,
-                25, 80, 243, 130, 18, 90, 221, 96, 45, 14, 189, 207, 193, 123, 189, 104, 24, 197,
-                242, 185, 90, 22, 166, 44, 253, 177, 199, 207, 211, 235, 146, 157, 84, 203, 205,
-                56, 142, 65, 79, 75, 247, 114, 151, 204, 190, 147,
-            ])
-            .unwrap(),
+                25, 80, 243, 130, 18, 90, 221, 96, 45, 14, 189, 207, 193, 123,
+            ]),
         ];
 
         // Get rent and space requirements
@@ -114,15 +99,15 @@ impl TestContext {
                         &stake_account.pubkey(),
                         stake_rent,
                         stake_space as u64,
-                        &solana_program::stake::program::id(),
+                        &solana_stake_interface::program::id(),
                     ),
-                    solana_program::stake::instruction::initialize(
+                    solana_stake_interface::instruction::initialize(
                         &stake_account.pubkey(),
-                        &(solana_sdk::stake::state::Authorized {
+                        &(solana_stake_interface::state::Authorized {
                             staker: payer.pubkey(),
                             withdrawer: payer.pubkey(),
                         }),
-                        &solana_sdk::stake::state::Lockup::default(),
+                        &solana_stake_interface::state::Lockup::default(),
                     ),
                 ],
                 Some(&payer.pubkey()),
@@ -140,9 +125,9 @@ impl TestContext {
 
         Ok(Self {
             context,
-            tip_distribution_program_id: TIP_DISTRIBUTION_ID,
-            priority_fee_distribution_program_id: PRIORITY_FEE_DISTRIBUTION_ID,
-            tip_payment_program_id: TIP_PAYMENT_ID,
+            tip_distribution_program_id: TIP_DISTRIBUTION_ID(),
+            priority_fee_distribution_program_id: PRIORITY_FEE_DISTRIBUTION_ID(),
+            tip_payment_program_id: TIP_PAYMENT_ID(),
             payer,
             stake_accounts, // Store all stake accounts instead of just one
             vote_account,
@@ -204,7 +189,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         .map_err(|_e| MerkleRootGeneratorError::MerkleTreeTestError)?;
 
     // Get config PDA
-    let (config_pda, bump) = Pubkey::find_program_address(&[b"config"], &TIP_DISTRIBUTION_ID);
+    let (config_pda, bump) = Pubkey::find_program_address(&[b"config"], &TIP_DISTRIBUTION_ID());
 
     // Create config account with protocol fee
     let config = TipAccountConfig {
@@ -219,7 +204,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
 
     // Create account data
     let mut account =
-        AccountSharedData::new(rent.minimum_balance(space), space, &TIP_DISTRIBUTION_ID);
+        AccountSharedData::new(rent.minimum_balance(space), space, &TIP_DISTRIBUTION_ID());
 
     let mut config_data = vec![0u8; space];
     let _ = config.serialize(&mut config_data);
@@ -244,7 +229,7 @@ async fn test_merkle_tree_generation() -> Result<(), Box<dyn std::error::Error>>
         epoch,
         PROTOCOL_FEE_BPS,
         0,
-        &jito_tip_router_program::id(),
+        &jito_tip_router_core::ID,
     )?;
 
     let generated_tree = &merkle_tree_coll.generated_merkle_trees[0];

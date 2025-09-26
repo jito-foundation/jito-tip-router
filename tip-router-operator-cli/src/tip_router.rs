@@ -1,9 +1,7 @@
 use anyhow::Result;
 use jito_bytemuck::AccountDeserialize;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
-use jito_tip_distribution_sdk::{
-    derive_config_account_address, jito_tip_distribution::accounts::TipDistributionAccount,
-};
+use jito_tip_distribution_sdk::{derive_config_account_address, TipDistributionAccount};
 use jito_tip_router_client::instructions::{CastVoteBuilder, SetMerkleRootBuilder};
 use jito_tip_router_core::{
     ballot_box::BallotBox,
@@ -72,7 +70,11 @@ pub async fn cast_vote(
     .0;
 
     let ix = if submit_as_memo {
-        spl_memo::build_memo(meta_merkle_root.as_ref(), &[&operator_voter.pubkey()])
+        spl_memo_interface::instruction::build_memo(
+            &spl_memo_interface::v3::id(),
+            meta_merkle_root.as_ref(),
+            &[&operator_voter.pubkey()],
+        )
     } else {
         CastVoteBuilder::new()
             .epoch_state(epoch_state)

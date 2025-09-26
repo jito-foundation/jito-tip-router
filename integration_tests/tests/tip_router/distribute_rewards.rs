@@ -159,7 +159,7 @@ mod tests {
 
         let dao_initial_lst_balance = fixture
             .get_associated_token_account(
-                &ncn_config
+                ncn_config
                     .fee_config
                     .base_fee_wallet(BaseFeeGroup::default())
                     .unwrap(),
@@ -266,7 +266,7 @@ mod tests {
         // Get final balances
         let dao_final_lst_balance = fixture
             .get_associated_token_account(
-                &ncn_config
+                ncn_config
                     .fee_config
                     .base_fee_wallet(BaseFeeGroup::default())
                     .unwrap(),

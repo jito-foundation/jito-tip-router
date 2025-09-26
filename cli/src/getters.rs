@@ -2,9 +2,10 @@ use std::mem::size_of;
 use std::str::FromStr;
 use std::{fmt, time::Duration};
 
+use super::spl_stake_pool::{find_withdraw_authority_program_address, StakePool};
 use crate::handler::CliHandler;
 use anyhow::Result;
-use borsh1::BorshDeserialize;
+use borsh::BorshDeserialize;
 use jito_bytemuck::{AccountDeserialize, Discriminator};
 use jito_jsm_core::slot_toggle::SlotToggleState;
 use jito_restaking_core::{
@@ -41,11 +42,10 @@ use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
 };
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
-use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::{account::Account, pubkey::Pubkey};
-use spl_associated_token_account::get_associated_token_address;
-use spl_stake_pool::{find_withdraw_authority_program_address, state::StakePool};
+use spl_associated_token_account_interface::address::get_associated_token_address;
 use tokio::time::sleep;
 
 // ---------------------- HELPERS ----------------------
@@ -728,12 +728,14 @@ pub struct StakePoolAccounts {
 }
 
 pub async fn get_stake_pool_accounts(handler: &CliHandler) -> Result<StakePoolAccounts> {
-    let stake_pool_program_id = spl_stake_pool::id();
+    let stake_pool_program_id = jito_tip_router_program::spl_stake_pool_id();
     let stake_pool_address = JITOSOL_POOL_ADDRESS;
     let stake_pool = get_stake_pool(handler).await?;
 
-    let (stake_pool_withdraw_authority, _) =
-        find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool_address);
+    let (stake_pool_withdraw_authority, _) = find_withdraw_authority_program_address(
+        &jito_tip_router_program::spl_stake_pool_id(),
+        &stake_pool_address,
+    );
 
     let referrer_pool_tokens_account = {
         let tip_router_config = get_tip_router_config(handler).await?;

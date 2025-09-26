@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anchor_lang::AccountDeserialize;
+use borsh::de::BorshDeserialize;
 use jito_priority_fee_distribution_sdk::{
     derive_priority_fee_distribution_account_address, PriorityFeeDistributionAccount,
 };
@@ -107,7 +107,7 @@ pub fn get_distribution_meta<DistributionAccount, DistMeta>(
     tip_receiver_info: Option<TipReceiverInfo>,
 ) -> Option<DistMeta>
 where
-    DistributionAccount: AccountDeserialize,
+    DistributionAccount: BorshDeserialize,
     DistMeta: DistributionMeta<DistributionAccountType = DistributionAccount>,
 {
     let distribution_account_pubkey =
@@ -118,7 +118,8 @@ where
             // DAs may be funded with lamports and therefore exist in the bank, but would fail the
             // deserialization step if the buffer is yet to be allocated thru the init call to the
             // program.
-            DistributionAccount::try_deserialize(&mut account_data.data()).map_or_else(
+            let distribution_account_data = account_data.data()[8..].to_vec();
+            DistributionAccount::deserialize(&mut distribution_account_data.as_ref()).map_or_else(
                 |_| None,
                 |distribution_account| {
                     // [TIp Distribution ONLY] this snapshot might have tips that weren't claimed

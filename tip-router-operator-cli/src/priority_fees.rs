@@ -1,4 +1,5 @@
-use solana_sdk::{compute_budget::ComputeBudgetInstruction, instruction::Instruction};
+use solana_compute_budget_interface::ComputeBudgetInstruction;
+use solana_sdk::instruction::Instruction;
 
 pub fn configure_instruction(
     instruction: Instruction,

@@ -7,7 +7,7 @@ use jito_tip_router_core::{
     ncn_fee_group::{NcnFeeGroup, NcnFeeGroupType},
 };
 use solana_metrics::datapoint_info;
-use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, native_token::lamports_to_sol};
+use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, native_token::LAMPORTS_PER_SOL};
 
 use crate::{
     getters::{
@@ -26,7 +26,7 @@ pub const fn format_stake_weight(value: u128) -> f64 {
 }
 
 pub fn format_token_amount(value: u64) -> f64 {
-    lamports_to_sol(value)
+    (value as f64) / (LAMPORTS_PER_SOL as f64)
 }
 
 pub async fn emit_error(
@@ -143,7 +143,7 @@ pub async fn emit_ncn_metrics_account_payer(
         ("current-slot", current_slot, i64),
         ("account-payer", account_payer_address.to_string(), String),
         ("balance", account_payer.lamports, i64),
-        ("balance-sol", lamports_to_sol(account_payer.lamports), f64),
+        ("balance-sol", (account_payer.lamports as f64 / LAMPORTS_PER_SOL as f64), f64),
         "cluster" => cluster_name,
     );
 
