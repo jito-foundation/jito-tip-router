@@ -446,7 +446,7 @@ pub async fn fetch_expired_distribution_accounts(
         .iter()
         .flat_map(|(pubkey, account)| {
             let tip_distribution_account =
-                TipDistributionAccount::try_from_slice(&mut account.data.as_slice());
+                TipDistributionAccount::try_from_slice(account.data.as_slice());
             tip_distribution_account.map_or_else(
                 |_| vec![],
                 |tip_distribution_account| vec![(*pubkey, tip_distribution_account)],
@@ -538,7 +538,7 @@ async fn fetch_expired_claim_statuses(
         .iter()
         .flat_map(|(pubkey, account)| {
             let tip_distribution_claim_status =
-                TipDistributionClaimStatus::try_from_slice(&mut account.data.as_slice());
+                TipDistributionClaimStatus::try_from_slice(account.data.as_slice());
             tip_distribution_claim_status.map_or_else(
                 |_| vec![],
                 |tip_distribution_claim_status| vec![(*pubkey, tip_distribution_claim_status)],

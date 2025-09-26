@@ -398,13 +398,13 @@ pub fn process_instruction(
 }
 
 // TODO: Remove all code below when spl-stake-pool-interface is released
-pub fn spl_stake_pool_id() -> Pubkey {
+pub const fn spl_stake_pool_id() -> Pubkey {
     pubkey!("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy")
 }
 
 // This code was copied from https://github.com/solana-program/stake-pool/blob/main/program/src/instruction.rs#L2019
 #[repr(C)]
-#[derive(Clone, Debug, PartialEq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum StakePoolInstruction {
     ///   Deposit SOL directly into the pool's reserve account, with a
     ///   specified slippage constraint. The output is a "pool" token
@@ -446,6 +446,7 @@ pub enum StakePoolInstruction {
     DepositSol(u64),
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn deposit_sol(
     program_id: &Pubkey,
     stake_pool: &Pubkey,
@@ -476,6 +477,7 @@ pub fn deposit_sol(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn deposit_sol_internal(
     program_id: &Pubkey,
     stake_pool: &Pubkey,

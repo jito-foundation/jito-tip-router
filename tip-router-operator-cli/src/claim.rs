@@ -9,7 +9,7 @@ use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
 use log::{info, warn};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, TreeNode};
-use rand::{prelude::SliceRandom, thread_rng};
+use rand::{prelude::SliceRandom, rng};
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSimulateTransactionConfig};
 use solana_commitment_config::CommitmentConfig;
 use solana_metrics::{datapoint_error, datapoint_info};
@@ -271,7 +271,7 @@ pub async fn handle_claim_mev_tips(
         ("claimer", keypair.pubkey().to_string(), String),
         ("epoch", epoch, i64),
         ("lamport_balance", claimer_balance, i64),
-        ("sol_balance", (claimer_balance / LAMPORTS_PER_SOL) as f64, f64),
+        ("sol_balance", (claimer_balance as f64 / LAMPORTS_PER_SOL as f64), f64),
         "cluster" => &cli.cluster,
     );
     Ok(())
@@ -356,7 +356,7 @@ pub async fn claim_mev_tips(
             return Ok(());
         }
 
-        claims_to_process.shuffle(&mut thread_rng());
+        claims_to_process.shuffle(&mut rng());
 
         for transactions in claims_to_process.chunks(2_000) {
             let transactions: Vec<_> = transactions.to_vec();
@@ -661,8 +661,7 @@ fn build_mev_claim_transactions(
         // of the chain to claim.
         let distribution_account = tdas.get(&tree.distribution_account).unwrap();
         if tree.distribution_program.eq(&tip_distribution_program_id) {
-            let tda =
-                TipDistributionAccount::deserialize(&mut distribution_account.data.as_slice());
+            let tda = TipDistributionAccount::deserialize(distribution_account.data.as_slice());
             match tda {
                 Ok(tda) => {
                     // can continue here, as there might be tip distribution accounts this account doesn't upload for
@@ -678,9 +677,8 @@ fn build_mev_claim_transactions(
             .distribution_program
             .eq(&priority_fee_distribution_program_id)
         {
-            let pfda = PriorityFeeDistributionAccount::deserialize(
-                &mut distribution_account.data.as_slice(),
-            );
+            let pfda =
+                PriorityFeeDistributionAccount::deserialize(distribution_account.data.as_slice());
             match pfda {
                 Ok(pfda) => {
                     // can continue here, as there might be tip distribution accounts this account doesn't upload for
