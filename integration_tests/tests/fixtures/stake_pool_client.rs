@@ -5,10 +5,7 @@ use super::spl_stake_pool::{
 };
 use jito_tip_router_core::constants::JITOSOL_MINT;
 use solana_commitment_config::CommitmentLevel;
-use solana_program::{
-    borsh1::{get_instance_packed_len, get_packed_len},
-    pubkey::Pubkey,
-};
+use solana_program::{borsh1::get_instance_packed_len, pubkey::Pubkey};
 use solana_program_test::BanksClient;
 use solana_sdk::{
     signature::{Keypair, Signer},

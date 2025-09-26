@@ -1,4 +1,3 @@
-use anyhow;
 use meta_merkle_tree::{error::MerkleTreeError, generated_merkle_tree::MerkleRootGeneratorError};
 use solana_program::{instruction::InstructionError, program_error::ProgramError};
 use solana_program_test::BanksClientError;
@@ -34,7 +33,7 @@ pub enum TestError {
 
 impl From<anyhow::Error> for TestError {
     fn from(err: anyhow::Error) -> Self {
-        TestError::ProgramError(ProgramError::Custom(err.to_string().parse().unwrap_or(0)))
+        Self::ProgramError(ProgramError::Custom(err.to_string().parse().unwrap_or(0)))
     }
 }
 

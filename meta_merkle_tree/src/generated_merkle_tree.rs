@@ -1127,7 +1127,7 @@ mod tests {
 
         let epoch = 761;
         let merkle_tree_collection = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
-            stake_meta_collection.clone(),
+            stake_meta_collection,
             &ncn_address,
             epoch,
             300,
@@ -1322,7 +1322,7 @@ mod tests {
             max_num_nodes: 4,
         };
 
-        let expected_generated_merkle_trees = vec![gmt_0];
+        let expected_generated_merkle_trees = [gmt_0];
         let actual_generated_merkle_trees = merkle_tree_collection.generated_merkle_trees;
         expected_generated_merkle_trees
             .iter()

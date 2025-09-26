@@ -78,9 +78,9 @@ impl PriorityFeeDistributionClient {
             .get_account(priority_fee_distribution_address)
             .await?
             .unwrap();
-        let mut priority_fee_distribution_data = priority_fee_distribution_account.data.as_slice();
+        let priority_fee_distribution_data = priority_fee_distribution_account.data.as_slice();
         let priority_fee_distribution =
-            PriorityFeeDistributionAccount::deserialize(&mut priority_fee_distribution_data)?;
+            PriorityFeeDistributionAccount::deserialize(priority_fee_distribution_data)?;
 
         Ok(priority_fee_distribution)
     }
@@ -101,8 +101,8 @@ impl PriorityFeeDistributionClient {
             .get_account(claim_status_address)
             .await?
             .unwrap();
-        let mut claim_status_data = claim_status_account.data.as_slice();
-        let claim_status = ClaimStatus::deserialize(&mut claim_status_data)?;
+        let claim_status_data = claim_status_account.data.as_slice();
+        let claim_status = ClaimStatus::deserialize(claim_status_data)?;
         Ok(claim_status)
     }
 

@@ -185,8 +185,7 @@ mod set_merkle_root {
             merkle_root_upload_authority,
             ncn_address,
             target_epoch,
-        )
-        .map_err(TestError::from)?;
+        )?;
 
         let meta_merkle_tree = MetaMerkleTree::new_from_generated_merkle_tree_collection(
             generated_merkle_tree_fixture.collection.clone(),

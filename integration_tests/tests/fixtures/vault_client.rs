@@ -311,7 +311,7 @@ impl VaultProgramClient {
 
         let vrt_mint = Keypair::new();
         let vault_admin = Keypair::new();
-        let token_mint = token_mint.unwrap_or_else(|| Keypair::new());
+        let token_mint = token_mint.unwrap_or_else(Keypair::new);
 
         self.airdrop(&vault_admin.pubkey(), 100.0).await?;
 

@@ -1124,11 +1124,11 @@ mod tests {
 
         router.route_reward_pool(&operator_snapshot, 5).unwrap();
 
-        assert_eq!(router.still_routing(), true);
+        assert!(router.still_routing());
 
         router.route_reward_pool(&operator_snapshot, 1000).unwrap();
 
-        assert_eq!(router.still_routing(), false);
+        assert!(!router.still_routing());
 
         for route in router
             .vault_reward_routes()

@@ -49,6 +49,7 @@ use solana_sdk::{
 // TODO: DO NOT COMMIT ME
 pub struct SbContext;
 
+#[allow(dead_code)]
 pub struct CliHandler {
     pub rpc_url: String,
     pub commitment: CommitmentConfig,
@@ -360,14 +361,17 @@ impl CliHandler {
             ProgramCommand::CreateEpochState => create_epoch_state(self, self.epoch).await,
 
             ProgramCommand::CreateWeightTable => create_weight_table(self, self.epoch).await,
-            ProgramCommand::CrankSwitchboard { switchboard_feed } => {
+            ProgramCommand::CrankSwitchboard {
+                switchboard_feed: _,
+            } => {
                 // TODO: DO NOT COMMIT ME
                 /*let switchboard_feed =
                     Pubkey::from_str(&switchboard_feed).expect("error parsing switchboard feed");
                 crank_switchboard(self, &switchboard_feed).await*/
                 Ok(())
             }
-            ProgramCommand::SetWeight { vault } => {
+            ProgramCommand::SetWeight { vault: _ } => {
+                // TODO: DO NOT COMMIT ME
                 //let vault = Pubkey::from_str(&vault).expect("error parsing vault");
                 //set_weight(self, &vault, self.epoch).await
                 Ok(())

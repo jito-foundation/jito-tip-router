@@ -56,12 +56,12 @@ mod tests {
                 Keypair::new(),
                 7_000,
                 None,
-                Some(1 * WEIGHT_PRECISION),
+                Some(WEIGHT_PRECISION),
                 NcnFeeGroup::lst(),
             ), // nSol
         ];
 
-        let delegations = vec![
+        let delegations = [
             1,
             sol_str_to_lamports("1000.0").unwrap(),
             sol_str_to_lamports("10000.0").unwrap(),
@@ -703,7 +703,7 @@ mod fuzz_tests {
                     keypair: Keypair::new(),
                     reward_multiplier: 7_000,
                     switchboard_feed: None,
-                    no_feed_weight: Some(1 * WEIGHT_PRECISION),
+                    no_feed_weight: Some(WEIGHT_PRECISION),
                     fee_group: NcnFeeGroup::lst(),
                     vault_count: 1,
                 },

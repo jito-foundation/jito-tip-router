@@ -78,8 +78,8 @@ impl TipDistributionClient {
             .get_account(tip_distribution_address)
             .await?
             .unwrap();
-        let mut tip_distribution_data = tip_distribution_account.data.as_slice();
-        let tip_distribution = TipDistributionAccount::deserialize(&mut tip_distribution_data)?;
+        let tip_distribution_data = tip_distribution_account.data.as_slice();
+        let tip_distribution = TipDistributionAccount::deserialize(tip_distribution_data)?;
 
         Ok(tip_distribution)
     }
@@ -100,8 +100,8 @@ impl TipDistributionClient {
             .get_account(claim_status_address)
             .await?
             .unwrap();
-        let mut claim_status_data = claim_status_account.data.as_slice();
-        let claim_status = ClaimStatus::deserialize(&mut claim_status_data)?;
+        let claim_status_data = claim_status_account.data.as_slice();
+        let claim_status = ClaimStatus::deserialize(claim_status_data)?;
         Ok(claim_status)
     }
 

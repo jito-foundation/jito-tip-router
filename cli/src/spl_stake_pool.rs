@@ -1,16 +1,12 @@
-use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use bytemuck::{Pod, Zeroable};
-use jito_bytemuck::types::{PodU32, PodU64};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use solana_program::pubkey::Pubkey;
 use solana_program::{
-    account_info::AccountInfo,
-    entrypoint::ProgramResult,
     instruction::{AccountMeta, Instruction},
-    msg,
     program_error::ProgramError,
-    program_pack::{IsInitialized, Pack, Sealed},
+    program_pack::{Pack, Sealed},
 };
 /// Seed for withdraw authority seed
 const AUTHORITY_WITHDRAW: &[u8] = b"withdraw";
@@ -26,7 +22,7 @@ pub fn find_withdraw_authority_program_address(
     )
 }
 
-#[derive(Clone, Debug, Default, PartialEq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct Lockup {
     pub unix_timestamp: u64,
     pub epoch: u64,
@@ -35,7 +31,7 @@ pub struct Lockup {
 
 /// Instructions supported by the `StakePool` program.
 #[repr(C)]
-#[derive(Clone, Debug, PartialEq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum StakePoolInstruction {
     ///   Initializes a new `StakePool`.
     ///
@@ -80,6 +76,7 @@ pub enum StakePoolInstruction {
 }
 
 /// Creates an `Initialize` instruction.
+#[allow(clippy::too_many_arguments)]
 pub fn initialize(
     program_id: &Pubkey,
     stake_pool: &Pubkey,
@@ -129,6 +126,7 @@ pub fn initialize(
 
 /// Creates `UpdateStakePoolBalance` instruction (pool balance from the stake
 /// account list balances)
+#[allow(clippy::too_many_arguments)]
 pub fn update_stake_pool_balance(
     program_id: &Pubkey,
     stake_pool: &Pubkey,
@@ -156,7 +154,7 @@ pub fn update_stake_pool_balance(
 }
 
 /// Enum representing the account type managed by the program
-#[derive(Clone, Debug, Default, PartialEq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum AccountType {
     /// If the account has not been initialized, the enum will be 0
     #[default]
@@ -169,7 +167,7 @@ pub enum AccountType {
 
 /// Initialized program details.
 #[repr(C)]
-#[derive(Clone, Debug, Default, PartialEq, BorshDeserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, BorshDeserialize)]
 pub struct StakePool {
     /// Account type, must be `StakePool` currently
     pub account_type: AccountType,
@@ -288,7 +286,7 @@ pub struct StakePool {
 
 /// Storage list for all validator stake accounts in the pool.
 #[repr(C)]
-#[derive(Clone, Debug, Default, PartialEq, BorshSerialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize)]
 pub struct ValidatorList {
     /// Data outside of the validator list, separated out for cheaper
     /// deserialization
@@ -300,7 +298,7 @@ pub struct ValidatorList {
 
 /// Helper type to deserialize just the start of a `ValidatorList`
 #[repr(C)]
-#[derive(Clone, Debug, Default, PartialEq, BorshSerialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize)]
 pub struct ValidatorListHeader {
     /// Account type, must be `ValidatorList` currently
     pub account_type: AccountType,
@@ -310,7 +308,7 @@ pub struct ValidatorListHeader {
 }
 
 /// Status of the stake account in the validator list, for accounting
-#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive, ToPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum StakeStatus {
     /// Stake account is active, there may be a transient stake as well
     Active,
@@ -337,7 +335,7 @@ impl Default for StakeStatus {
 /// `StakeStatus` underneath.
 #[repr(transparent)]
 #[derive(
-    Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable, BorshSerialize, BorshDeserialize,
+    Clone, Copy, Debug, Default, PartialEq, Eq, Pod, Zeroable, BorshSerialize, BorshDeserialize,
 )]
 pub struct PodStakeStatus(u8);
 impl PodStakeStatus {
@@ -376,23 +374,15 @@ impl TryFrom<PodStakeStatus> for StakeStatus {
         FromPrimitive::from_u8(pod.0).ok_or(ProgramError::InvalidAccountData)
     }
 }
+
+// Ignoring this because it is copied verbatim from the spl-stake-pool crate
+#[allow(clippy::fallible_impl_from)]
 impl From<StakeStatus> for PodStakeStatus {
     fn from(status: StakeStatus) -> Self {
         // unwrap is safe here because the variants of `StakeStatus` fit very
         // comfortably within a `u8`
-        PodStakeStatus(status.to_u8().unwrap())
+        Self(status.to_u8().unwrap())
     }
-}
-
-/// Withdrawal type, figured out during `process_withdraw_stake`
-#[derive(Debug, PartialEq)]
-pub(crate) enum StakeWithdrawSource {
-    /// Some of an active stake account, but not all
-    Active,
-    /// Some of a transient stake account
-    Transient,
-    /// Take a whole validator stake account
-    ValidatorRemoval,
 }
 
 /// Information about a validator in the pool
@@ -404,7 +394,9 @@ pub(crate) enum StakeWithdrawSource {
 /// `bytemuck` transmute, which means that this structure cannot have any
 /// undeclared alignment-padding in its representation.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Zeroable, BorshDeserialize, BorshSerialize)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Zeroable, BorshDeserialize, BorshSerialize,
+)]
 pub struct ValidatorStakeInfo {
     /// Amount of lamports on the validator stake account, including rent
     ///
@@ -470,7 +462,7 @@ impl ValidatorList {
 /// Wrapper type that "counts down" epochs, which is Borsh-compatible with the
 /// native `Option`
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, BorshDeserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshDeserialize)]
 pub enum FutureEpoch<T> {
     /// Nothing is set
     None,
@@ -486,7 +478,7 @@ impl<T> Default for FutureEpoch<T> {
 }
 impl<T> FutureEpoch<T> {
     /// Create a new value to be unlocked in a two epochs
-    pub fn new(value: T) -> Self {
+    pub const fn new(value: T) -> Self {
         Self::Two(value)
     }
 }
@@ -507,7 +499,7 @@ impl<T: Clone> FutureEpoch<T> {
     }
 
     /// Get the value if it's ready, which is only at `One` epoch remaining
-    pub fn get(&self) -> Option<&T> {
+    pub const fn get(&self) -> Option<&T> {
         match self {
             Self::None | Self::Two(_) => None,
             Self::One(v) => Some(v),
@@ -515,7 +507,7 @@ impl<T: Clone> FutureEpoch<T> {
     }
 }
 impl<T> From<FutureEpoch<T>> for Option<T> {
-    fn from(v: FutureEpoch<T>) -> Option<T> {
+    fn from(v: FutureEpoch<T>) -> Self {
         match v {
             FutureEpoch::None => None,
             FutureEpoch::One(inner) | FutureEpoch::Two(inner) => Some(inner),
@@ -528,7 +520,7 @@ impl<T> From<FutureEpoch<T>> for Option<T> {
 /// If either the numerator or the denominator is 0, the fee is considered to be
 /// 0
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct Fee {
     /// denominator of the fee ratio
     pub denominator: u64,

@@ -83,7 +83,6 @@ use solana_client::rpc_config::RpcSendTransactionConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
 #[allow(deprecated)]
 use solana_sdk::{
-    clock::DEFAULT_SLOTS_PER_EPOCH,
     instruction::Instruction,
     native_token::sol_str_to_lamports,
     program_pack::Pack,
@@ -2547,7 +2546,7 @@ pub async fn crank_register_vaults(handler: &CliHandler) -> Result<()> {
     Ok(())
 }
 
-pub async fn crank_set_weight(handler: &CliHandler, epoch: u64) -> Result<()> {
+pub async fn crank_set_weight(_handler: &CliHandler, _epoch: u64) -> Result<()> {
     /*let weight_table = get_or_create_weight_table(handler, epoch).await?;
 
     let st_mints = weight_table

@@ -14382,11 +14382,6 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "solana-address-lookup-table-program"
-version = "2.2.16"
-source = "git+https://github.com/jito-foundation/jito-solana.git?rev=902402111e031f6fa5b19081de5c4a70a328525d#902402111e031f6fa5b19081de5c4a70a328525d"
-
-[[patch.unused]]
 name = "solana-bench-tps"
 version = "3.0.0"
 source = "git+https://github.com/jito-foundation/jito-solana.git?rev=9873d386bbb570a017de8a5b5b1c8e8fce19acaa#9873d386bbb570a017de8a5b5b1c8e8fce19acaa"

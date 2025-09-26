@@ -141,7 +141,6 @@ codegen-units = 1
 solana-account-decoder = { package = "solana-account-decoder", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-account-decoder-client-types = { package = "solana-account-decoder-client-types", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-accounts-db = { package = "solana-accounts-db", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
-solana-address-lookup-table-program = { package = "solana-address-lookup-table-program", git = "https://github.com/jito-foundation/jito-solana.git", rev = "902402111e031f6fa5b19081de5c4a70a328525d" }
 solana-banks-client = { package = "solana-banks-client", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-banks-interface = { package = "solana-banks-interface", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }
 solana-banks-server = { package = "solana-banks-server", git = "https://github.com/jito-foundation/jito-solana.git", rev = "9873d386bbb570a017de8a5b5b1c8e8fce19acaa" }

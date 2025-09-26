@@ -729,7 +729,7 @@ impl TipRouterClient {
         ncn: &Pubkey,
     ) -> TestResult<()> {
         let (account_payer, _, _) =
-            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), ncn);
 
         let ix = InitializeVaultRegistryBuilder::new()
             .config(*ncn_config)
@@ -769,7 +769,7 @@ impl TipRouterClient {
         num_reallocations: u64,
     ) -> TestResult<()> {
         let (account_payer, _, _) =
-            AccountPayer::find_program_address(&jito_tip_router_program::id(), &ncn);
+            AccountPayer::find_program_address(&jito_tip_router_program::id(), ncn);
 
         let ix = ReallocVaultRegistryBuilder::new()
             .ncn(*ncn)
@@ -1891,10 +1891,10 @@ impl TipRouterClient {
             .fee_config
             .base_fee_wallet(base_fee_group)
             .unwrap();
-        let base_fee_wallet_ata = get_associated_token_address(&base_fee_wallet, &JITOSOL_MINT);
+        let base_fee_wallet_ata = get_associated_token_address(base_fee_wallet, &JITOSOL_MINT);
         let create_base_fee_wallet_ata_ix = create_associated_token_account_idempotent(
             &self.payer.pubkey(),
-            &base_fee_wallet,
+            base_fee_wallet,
             &JITOSOL_MINT,
             &spl_token_interface::id(),
         );
