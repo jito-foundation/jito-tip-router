@@ -12,8 +12,8 @@ readme = { workspace = true }
 [dependencies]
 jito-tip-router-client = { workspace = true }
 log = "0.4.21"
-num-derive.workspace = true
-num-traits.workspace = true
+num-derive = { workspace = true }
+num-traits = { workspace = true }
 spl-pod = "0.7.1"
 
 [dev-dependencies]
