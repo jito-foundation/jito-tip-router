@@ -25,7 +25,6 @@ edition = "2021"
 readme = "README.md"
 
 [workspace.dependencies]
-getrandom = "0.2.16"
 anyhow = "1.0.86"
 assert_matches = "1.5.0"
 base64 = "0.22.1"
@@ -42,6 +41,7 @@ env_logger = "0.10.2"
 envfile = "0.2.1"
 fast-math = "0.1"
 futures = "0.3.21"
+getrandom = "0.2.16"
 hex = "0.4.3"
 home = "=0.5.11" # Custom for compatibility with rust 1.75
 jito-account-traits-derive = { package = "jito-account-traits-derive", git = "https://github.com/jito-foundation/restaking", rev = "a1e3d8bf8f21f4c94592e2645dd6d38771394fbf" }
