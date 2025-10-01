@@ -27,8 +27,6 @@ pub enum TestError {
     MerkleRootGeneratorError(#[from] MerkleRootGeneratorError),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-    #[error("Failed to deserialize account data: {0}")]
-    AnchorError(String),
 }
 
 impl From<anyhow::Error> for TestError {

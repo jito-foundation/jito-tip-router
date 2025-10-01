@@ -152,6 +152,7 @@ pub enum AccountType {
     #[default]
     Uninitialized,
     /// Stake pool
+    #[allow(dead_code)]
     StakePool,
     /// Validator stake list
     ValidatorList,
@@ -333,6 +334,7 @@ pub struct PodStakeStatus(u8);
 impl PodStakeStatus {
     /// Downgrade the status towards ready for removal by removing the validator
     /// stake
+    #[allow(dead_code)]
     pub fn remove_validator_stake(&mut self) -> Result<(), ProgramError> {
         let status = StakeStatus::try_from(*self)?;
         let new_self = match status {
@@ -347,6 +349,7 @@ impl PodStakeStatus {
     }
     /// Downgrade the status towards ready for removal by removing the transient
     /// stake
+    #[allow(dead_code)]
     pub fn remove_transient_stake(&mut self) -> Result<(), ProgramError> {
         let status = StakeStatus::try_from(*self)?;
         let new_self = match status {
@@ -375,6 +378,7 @@ impl From<StakeStatus> for PodStakeStatus {
 }
 
 /// Withdrawal type, figured out during `process_withdraw_stake`
+#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 pub enum StakeWithdrawSource {
     /// Some of an active stake account, but not all
