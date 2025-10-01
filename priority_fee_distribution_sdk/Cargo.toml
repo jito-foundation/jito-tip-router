@@ -14,4 +14,3 @@ anyhow = { workspace = true }
 borsh = { workspace = true }
 solana-program = { workspace = true }
 solana-pubkey = { workspace = true }
-solana-sdk = { workspace = true }

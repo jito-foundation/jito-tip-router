@@ -9,7 +9,7 @@ use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
 use log::{info, warn};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, TreeNode};
-use rand::{prelude::SliceRandom, rng};
+use rand::{prelude::SliceRandom, thread_rng};
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSimulateTransactionConfig};
 use solana_commitment_config::CommitmentConfig;
 use solana_metrics::{datapoint_error, datapoint_info};
@@ -356,7 +356,7 @@ pub async fn claim_mev_tips(
             return Ok(());
         }
 
-        claims_to_process.shuffle(&mut rng());
+        claims_to_process.shuffle(&mut thread_rng());
 
         for transactions in claims_to_process.chunks(2_000) {
             let transactions: Vec<_> = transactions.to_vec();

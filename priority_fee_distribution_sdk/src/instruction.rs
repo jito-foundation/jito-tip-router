@@ -1,6 +1,6 @@
 use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::instruction::AccountMeta;
 use solana_program::{instruction::Instruction, pubkey::Pubkey};
-use solana_sdk::instruction::AccountMeta;
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 struct Initialize {

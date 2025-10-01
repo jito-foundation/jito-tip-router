@@ -1,8 +1,10 @@
+use crate::{merkle_tree::MerkleTree, utils::get_proof};
 use jito_vault_core::MAX_BPS;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use solana_program::{
     clock::{Epoch, Slot},
-    hash::{Hash, Hasher},
+    hash::hashv,
+    hash::Hash,
     pubkey::Pubkey,
 };
 use std::{
@@ -11,8 +13,6 @@ use std::{
     path::PathBuf,
 };
 use thiserror::Error;
-
-use crate::{merkle_tree::MerkleTree, utils::get_proof};
 
 pub const TIP_DISTRIBUTION_ID: Pubkey =
     Pubkey::from_str_const("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
@@ -456,10 +456,9 @@ impl TreeNode {
     }
 
     fn hash(&self) -> Hash {
-        let mut hasher = Hasher::default();
-        hasher.hash(self.claimant.as_ref());
-        hasher.hash(self.amount.to_le_bytes().as_ref());
-        hasher.result()
+        let amount_bytes = self.amount.to_le_bytes();
+        let hash_components = [self.claimant.as_ref(), &amount_bytes];
+        hashv(&hash_components)
     }
 }
 

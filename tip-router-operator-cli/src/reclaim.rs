@@ -121,7 +121,7 @@ pub async fn close_expired_claims(
 
         info!("Processing {} close claim transactions", transactions.len());
         let rpc_client = rpc_utils::new_rpc_client(rpc_url);
-        transactions.shuffle(&mut rand::rng());
+        transactions.shuffle(&mut rand::thread_rng());
         for batch in transactions.chunks_mut(100_000) {
             let start = Instant::now();
             let mut blockhash = rpc_client.get_latest_blockhash().await?;
@@ -217,7 +217,7 @@ pub async fn close_expired_distribution_accounts(
             transactions.len()
         );
         let rpc_client = rpc_utils::new_rpc_client(rpc_url);
-        transactions.shuffle(&mut rand::rng());
+        transactions.shuffle(&mut rand::thread_rng());
         for batch in transactions.chunks_mut(100_000) {
             let start = Instant::now();
             let mut blockhash = rpc_client.get_latest_blockhash().await?;
