@@ -91,7 +91,7 @@ jobs:
         run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
         # TODO: remove
       - name: Building programs
-        run: cargo-build-sbf
+        run: cd program && cargo-build-sbf && cd ..
         env:
           TIP_ROUTER_PROGRAM_ID: ${{ env.TIP_ROUTER_PROGRAM_ID }}
           SBF_OUT_PATH: ${{ github.workspace }}/target/sbf-solana-solana/release
