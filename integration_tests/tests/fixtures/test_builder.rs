@@ -1077,14 +1077,18 @@ impl TestBuilder {
     ) -> TestResult<()> {
         let mut stake_pool_client = self.stake_pool_client();
 
+        println!("Adding routers...");
         self.add_routers_for_test_ncn(test_ncn).await?;
 
+        println!("Updating stake pool balance...");
         stake_pool_client
             .update_stake_pool_balance(pool_root)
             .await?;
 
+        println!("Routing base rewards...");
         self.route_in_base_rewards_for_test_ncn(test_ncn, rewards, pool_root)
             .await?;
+        println!("Routing test ncn rewards...");
         self.route_in_ncn_rewards_for_test_ncn(test_ncn, pool_root)
             .await?;
 

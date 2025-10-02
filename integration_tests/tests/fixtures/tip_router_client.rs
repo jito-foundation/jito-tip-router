@@ -157,6 +157,9 @@ impl TipRouterClient {
         let config_pda =
             NcnConfig::find_program_address(&jito_tip_router_program::id(), &ncn_pubkey).0;
         let config = self.banks_client.get_account(config_pda).await?.unwrap();
+        println!("config data: {:?}", config.data);
+        println!("config data length: {}", config.data.len());
+        println!("Expected length: {}", NcnConfig::SIZE);
         Ok(*NcnConfig::try_from_slice_unchecked(config.data.as_slice()).unwrap())
     }
 
