@@ -17,11 +17,11 @@ use crate::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
         admin_set_config_fees, admin_set_new_admin, admin_set_parameters, admin_set_weight,
         crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
-        crank_snapshot, create_and_add_test_operator, create_and_add_test_vault, create_ballot_box,
-        create_base_reward_router, create_epoch_snapshot, create_epoch_state,
+        crank_snapshot, crank_switchboard, create_and_add_test_operator, create_and_add_test_vault,
+        create_ballot_box, create_base_reward_router, create_epoch_snapshot, create_epoch_state,
         create_ncn_reward_router, create_operator_snapshot, create_test_ncn, create_vault_registry,
         create_weight_table, distribute_base_ncn_rewards, full_vault_update, register_vault,
-        route_base_rewards, route_ncn_rewards, snapshot_vault_operator_delegation,
+        route_base_rewards, route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
         update_all_vaults_in_network,
     },
     keeper::keeper_loop::startup_keeper,
@@ -45,9 +45,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
 };
-
-// TODO: DO NOT COMMIT ME
-pub struct SbContext;
+use switchboard_on_demand_client::client::pull_feed::SbContext;
 
 #[allow(dead_code)]
 pub struct CliHandler {
@@ -62,8 +60,7 @@ pub struct CliHandler {
     ncn: Option<Pubkey>,
     pub epoch: u64,
     rpc_client: RpcClient,
-    // TODO: DO NOT COMMIT ME
-    switchboard_context: Option<Arc<SbContext>>,
+    switchboard_context: Arc<SbContext>,
     pub retries: u64,
     pub priority_fee_micro_lamports: u64,
     pub(crate) print_tx: bool,
@@ -110,7 +107,7 @@ impl CliHandler {
 
         let rpc_client = RpcClient::new_with_commitment(rpc_url.clone(), commitment);
 
-        //let switchboard_context = SbContext::new();
+        let switchboard_context = SbContext::new();
 
         let mut handler = Self {
             rpc_url,
@@ -122,7 +119,7 @@ impl CliHandler {
             tip_distribution_program_id,
             token_program_id,
             ncn,
-            switchboard_context: None,
+            switchboard_context,
             epoch: u64::MAX,
             rpc_client,
             retries: args.transaction_retries,
@@ -361,19 +358,15 @@ impl CliHandler {
             ProgramCommand::CreateEpochState => create_epoch_state(self, self.epoch).await,
 
             ProgramCommand::CreateWeightTable => create_weight_table(self, self.epoch).await,
-            ProgramCommand::CrankSwitchboard {
-                switchboard_feed: _,
-            } => {
-                // TODO: DO NOT COMMIT ME
-                /*let switchboard_feed =
+            ProgramCommand::CrankSwitchboard { switchboard_feed } => {
+                let switchboard_feed =
                     Pubkey::from_str(&switchboard_feed).expect("error parsing switchboard feed");
-                crank_switchboard(self, &switchboard_feed).await*/
+                crank_switchboard(self, &switchboard_feed).await;
                 Ok(())
             }
-            ProgramCommand::SetWeight { vault: _ } => {
-                // TODO: DO NOT COMMIT ME
-                //let vault = Pubkey::from_str(&vault).expect("error parsing vault");
-                //set_weight(self, &vault, self.epoch).await
+            ProgramCommand::SetWeight { vault } => {
+                let vault = Pubkey::from_str(&vault).expect("error parsing vault");
+                set_weight(self, &vault, self.epoch).await;
                 Ok(())
             }
 

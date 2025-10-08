@@ -42,6 +42,7 @@ jito-vault-sdk = { workspace = true }
 log = { workspace = true }
 num-derive = { workspace = true }
 num-traits = { workspace = true }
+solana-account-info = "3.0.0"
 solana-account-decoder = { workspace = true }
 solana-address-lookup-table-interface = { workspace = true }
 solana-cli-config = { workspace = true }
@@ -58,7 +59,7 @@ solana-system-interface = { workspace = true }
 solana-transaction-status = { workspace = true }
 spl-associated-token-account-interface = { workspace = true }
 spl-token-interface = { workspace = true }
-switchboard-on-demand = { version = "0.9.2", features = ["client", "solana-v3"] }
+switchboard-on-demand-client = { package="switchboard-on-demand", version = "0.10.0", default-features = false, features = ["solana-v3", "client-v3"] }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 

@@ -13,7 +13,6 @@ use crate::{
     handler::CliHandler,
     log::{boring_progress_bar, print_base58_tx},
 };
-
 use anyhow::{anyhow, Ok, Result};
 use jito_bytemuck::AccountDeserialize;
 use jito_restaking_client::instructions::{
@@ -30,6 +29,7 @@ use jito_tip_distribution_sdk::{
     derive_merkle_root_upload_authority_address,
     instruction::migrate_tda_merkle_root_upload_authority_ix,
 };
+use jito_tip_router_client::instructions::SwitchboardSetWeightBuilder;
 use jito_tip_router_client::{
     instructions::{
         AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
@@ -48,6 +48,7 @@ use jito_tip_router_client::{
     },
     types::ConfigAdminRole,
 };
+use jito_tip_router_core::constants::SWITCHBOARD_QUEUE;
 use jito_tip_router_core::{
     account_payer::AccountPayer,
     ballot_box::BallotBox,
@@ -79,8 +80,10 @@ use jito_vault_core::{
     vault_update_state_tracker::VaultUpdateStateTracker,
 };
 use log::info;
+use solana_account_info::AccountInfo;
 use solana_client::rpc_config::RpcSendTransactionConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
+use solana_sdk::epoch_schedule::DEFAULT_SLOTS_PER_EPOCH;
 #[allow(deprecated)]
 use solana_sdk::{
     instruction::Instruction,
@@ -97,6 +100,16 @@ use solana_system_interface::program as system_program;
 use spl_associated_token_account_interface::{
     address::get_associated_token_address, instruction::create_associated_token_account_idempotent,
 };
+use std::cell::RefCell;
+use std::rc::Rc;
+use switchboard_on_demand_client::{
+    client::{
+        pull_feed::{FetchUpdateParams, PullFeed},
+        CrossbarClient,
+    },
+    QueueAccountData,
+};
+use switchboard_on_demand_client::QueueAccountData;
 use tokio::time::sleep;
 
 use jito_priority_fee_distribution_sdk;
@@ -851,8 +864,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     Ok(())
 }
 
-// TODO: DO NOT COMMIT ME
-/*pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) -> Result<()> {
+pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) -> Result<()> {
     async fn wait_for_x_slots_after_epoch(handler: &CliHandler, slots: u64) -> Result<()> {
         loop {
             let current_slot = handler.rpc_client().get_slot().await?;
@@ -865,7 +877,6 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     }
 
     let client = handler.rpc_client();
-    let switchboard_context = handler.switchboard_context();
     let payer = handler.keypair();
 
     if switchboard_feed.eq(&Pubkey::default()) {
@@ -877,9 +888,28 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     // STATIC PUBKEY
     let queue_key = SWITCHBOARD_QUEUE;
 
-    let queue = QueueAccountData::load(client, &queue_key).await?;
-    let gateways = &queue.fetch_gateways(client).await?;
-    if gateways.is_empty() {
+    let mut queue_account = client
+        .get_account_with_commitment(&queue_key, handler.commitment)
+        .await?
+        .value
+        .map(|a| a)
+        .expect("Queue account not found");
+    let queue_account_info = AccountInfo {
+        key: &queue_key,
+        is_signer: false,
+        is_writable: true,
+        owner: &queue_account.owner,
+        lamports: Rc::new(RefCell::new(&mut queue_account.lamports)),
+        data: Rc::new(RefCell::new(&mut queue_account.data)),
+        executable: false,
+        _unused: 0,
+    };
+
+    let queue = *QueueAccountData::new(&queue_account_info)?;
+
+    //let gateways = &queue.fetch_gateways(client).await?;
+
+    /*if gateways.is_empty() {
         return Err(anyhow!("No gateways found"));
     }
 
@@ -908,20 +938,18 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
         "Crank Switchboard",
         &[format!("FEED: {:?}", switchboard_feed)],
     )
-    .await?;
+    .await?;*/
 
     Ok(())
-}*/
+}
 
-// TODO: DO NOT COMMIT ME
-/*pub async fn set_weight(handler: &CliHandler, vault: &Pubkey, epoch: u64) -> Result<()> {
+pub async fn set_weight(handler: &CliHandler, vault: &Pubkey, epoch: u64) -> Result<()> {
     let vault_account = get_vault(handler, vault).await?;
 
     set_weight_with_st_mint(handler, &vault_account.supported_mint, epoch).await
-}*/
+}
 
-// TODO: DO NOT COMMIT ME
-/*pub async fn set_weight_with_st_mint(
+pub async fn set_weight_with_st_mint(
     handler: &CliHandler,
     st_mint: &Pubkey,
     epoch: u64,
@@ -979,7 +1007,6 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
 
     Ok(())
 }
-*/
 
 pub async fn create_epoch_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
     let ncn = *handler.ncn()?;
