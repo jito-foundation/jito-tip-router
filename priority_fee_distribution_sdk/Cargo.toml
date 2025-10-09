@@ -10,4 +10,7 @@ edition = { workspace = true }
 readme = { workspace = true }
 
 [dependencies]
-anchor-lang = { workspace = true }
+anyhow = { workspace = true }
+borsh = { workspace = true }
+solana-program = { workspace = true }
+solana-pubkey = { workspace = true }

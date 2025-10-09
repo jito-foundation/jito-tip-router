@@ -1,10 +1,10 @@
+use crate::{constants::MAX_REALLOC_BYTES, loaders::check_load};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction, system_program,
-    sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
-
-use crate::{constants::MAX_REALLOC_BYTES, loaders::check_load};
+use solana_system_interface::instruction as system_instruction;
+use solana_system_interface::program as system_program;
 
 /// Uninitialized, no-data account used to hold SOL for ClaimStatus rent
 /// Must be empty and uninitialized to be used as a payer or `transfer` instructions fail
@@ -114,7 +114,7 @@ impl AccountPayer {
         }
 
         #[allow(deprecated)]
-        account.realloc(new_size, false)?;
+        account.resize(new_size)?;
         Ok(())
     }
 
@@ -136,9 +136,9 @@ impl AccountPayer {
             .ok_or(ProgramError::ArithmeticOverflow)?;
         **account_to_close.lamports.borrow_mut() = 0;
 
-        account_to_close.assign(&solana_program::system_program::id());
+        account_to_close.assign(&system_program::id());
         #[allow(deprecated)]
-        account_to_close.realloc(0, false)?;
+        account_to_close.resize(0)?;
 
         Ok(())
     }

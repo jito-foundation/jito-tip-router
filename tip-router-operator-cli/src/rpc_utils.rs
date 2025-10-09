@@ -9,9 +9,9 @@ use solana_client::{
     nonblocking::rpc_client::RpcClient, rpc_client::SerializableTransaction,
     rpc_config::RpcSendTransactionConfig, rpc_request::MAX_MULTIPLE_ACCOUNTS,
 };
+use solana_commitment_config::{CommitmentConfig, CommitmentLevel};
 use solana_sdk::{
     account::Account,
-    commitment_config::{CommitmentConfig, CommitmentLevel},
     hash::Hash,
     pubkey::Pubkey,
     signature::{Keypair, Signature},
@@ -28,7 +28,7 @@ pub fn new_high_timeout_rpc_client(rpc_url: &str) -> RpcClient {
     RpcClient::new_with_timeout_and_commitment(
         rpc_url.to_string(),
         std::time::Duration::from_secs(1800),
-        solana_sdk::commitment_config::CommitmentConfig::finalized(),
+        CommitmentConfig::finalized(),
     )
 }
 

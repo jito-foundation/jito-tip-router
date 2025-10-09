@@ -10,18 +10,14 @@ edition = { workspace = true }
 readme = { workspace = true }
 
 [dependencies]
-anchor-lang = {workspace = true}
 borsh = { workspace = true }
 bytemuck = { workspace = true }
 fast-math = { workspace = true }
 hex = { workspace = true }
 jito-bytemuck = { workspace = true }
 jito-jsm-core = { workspace = true }
-jito-priority-fee-distribution-sdk = { workspace = true }
 jito-restaking-core = { workspace = true }
 jito-restaking-sdk = { workspace = true }
-jito-tip-distribution-sdk = { workspace = true }
-jito-tip-payment-sdk = { workspace = true }
 jito-vault-core = { workspace = true }
 jito-vault-sdk = { workspace = true }
 log = { workspace = true }
@@ -30,9 +26,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 shank = { workspace = true }
 solana-program = { workspace = true }
-spl-associated-token-account = { workspace = true }
+spl-associated-token-account-interface = { workspace = true }
 spl-math = { workspace = true }
-spl-token = { workspace = true }
+spl-token-interface = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]

@@ -8,9 +8,10 @@ use jito_bytemuck::{
 use shank::{ShankAccount, ShankType};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction, system_program,
-    sysvar::Sysvar,
+    program_error::ProgramError, pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
+use solana_system_interface::instruction as system_instruction;
+use solana_system_interface::program as system_program;
 use spl_math::precise_number::PreciseNumber;
 
 use crate::{

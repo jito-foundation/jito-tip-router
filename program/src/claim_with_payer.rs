@@ -1,7 +1,8 @@
+use jito_priority_fee_distribution_sdk as jito_priority_fee_distribution;
 use jito_priority_fee_distribution_sdk::instruction::claim_ix as priority_fee_distribution_claim_ix;
-use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution;
 use jito_restaking_core::ncn::Ncn;
-use jito_tip_distribution_sdk::{instruction::claim_ix, jito_tip_distribution};
+use jito_tip_distribution_sdk as jito_tip_distribution;
+use jito_tip_distribution_sdk::instruction::claim_ix;
 use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
@@ -29,8 +30,8 @@ pub fn process_claim_with_payer(
     let distibution_program_id = distribution_program.key;
 
     if [
-        jito_tip_distribution::ID,
-        jito_priority_fee_distribution::ID,
+        jito_tip_distribution::id(),
+        jito_priority_fee_distribution::id(),
     ]
     .iter()
     .all(|supported_program_id| distibution_program_id.ne(supported_program_id))
@@ -45,7 +46,7 @@ pub fn process_claim_with_payer(
         AccountPayer::find_program_address(program_id, ncn.key);
     account_payer_seeds.push(vec![account_payer_bump]);
 
-    let ix = if distibution_program_id.eq(&jito_tip_distribution::ID) {
+    let ix = if distibution_program_id.eq(&jito_tip_distribution::id()) {
         claim_ix(
             *distribution_config.key,
             *distribution_account.key,

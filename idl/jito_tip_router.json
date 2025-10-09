@@ -2856,6 +2856,33 @@
   ],
   "types": [
     {
+      "name": "StakePoolInstruction",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "DepositSolWithSlippage",
+            "fields": [
+              {
+                "name": "lamports_in",
+                "type": "u64"
+              },
+              {
+                "name": "minimum_pool_tokens_out",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "DepositSol",
+            "fields": [
+              "u64"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "name": "Ballot",
       "type": {
         "kind": "struct",

@@ -54,28 +54,3 @@ impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for BallotBox {
         Self::deserialize(&mut data)
     }
 }
-
-#[cfg(feature = "anchor")]
-impl anchor_lang::AccountDeserialize for BallotBox {
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-        Ok(Self::deserialize(buf)?)
-    }
-}
-
-#[cfg(feature = "anchor")]
-impl anchor_lang::AccountSerialize for BallotBox {}
-
-#[cfg(feature = "anchor")]
-impl anchor_lang::Owner for BallotBox {
-    fn owner() -> Pubkey {
-        crate::JITO_TIP_ROUTER_ID
-    }
-}
-
-#[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::IdlBuild for BallotBox {}
-
-#[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::Discriminator for BallotBox {
-    const DISCRIMINATOR: &'static [u8] = &[0; 8];
-}
