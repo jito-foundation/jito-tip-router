@@ -99,7 +99,10 @@ use solana_sdk::{
 use spl_associated_token_account::{
     get_associated_token_address, instruction::create_associated_token_account_idempotent,
 };
-use switchboard_on_demand_client::{CrossbarClient, FetchUpdateParams, PullFeed, QueueAccountData};
+use switchboard_on_demand::{
+    client::{CrossbarClient, pull_feed::{FetchUpdateParams, PullFeed}},
+    QueueAccountData,
+};
 use tokio::time::sleep;
 
 use jito_priority_fee_distribution_sdk;
