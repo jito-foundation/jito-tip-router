@@ -45,7 +45,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
 };
-use switchboard_on_demand_client::SbContext;
+use switchboard_on_demand::client::pull_feed::SbContext;
 
 pub struct CliHandler {
     pub rpc_url: String,
