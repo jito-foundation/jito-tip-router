@@ -95,7 +95,7 @@ solana-instruction = { package = "solana-instruction", git = "https://github.com
 solana-ledger = { package = "solana-ledger", git = "https://github.com/jito-foundation/jito-solana.git", rev = "93c4da92ba1f2db5963a3ba678d6c34b123cca5a" }
 solana-measure = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "93c4da92ba1f2db5963a3ba678d6c34b123cca5a" }
 solana-metrics = { package = "solana-metrics", git = "https://github.com/jito-foundation/jito-solana.git", rev = "93c4da92ba1f2db5963a3ba678d6c34b123cca5a" }
-solana-program = { version = "3.0.0", default-features = false }
+solana-program = { version = "3.0.0", default-features = false, features = [] }
 solana-program-entrypoint = "3.0.0"
 solana-program-error = "=3.0.0"
 solana-program-test = { package = "solana-program-test", git = "https://github.com/jito-foundation/jito-solana.git", rev = "93c4da92ba1f2db5963a3ba678d6c34b123cca5a" }

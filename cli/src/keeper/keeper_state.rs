@@ -43,6 +43,7 @@ pub struct KeeperState {
     pub is_epoch_completed: bool,
 }
 
+#[allow(clippy::unnecessary_unwrap)]
 impl KeeperState {
     pub async fn fetch(&mut self, handler: &CliHandler, epoch: u64) -> Result<()> {
         // Fetch all vaults and operators

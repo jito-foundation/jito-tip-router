@@ -109,7 +109,6 @@ use switchboard_on_demand_client::{
     },
     QueueAccountData,
 };
-use switchboard_on_demand_client::QueueAccountData;
 use tokio::time::sleep;
 
 use jito_priority_fee_distribution_sdk;
@@ -876,6 +875,8 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
         Ok(())
     }
 
+    let switchboard_context = handler.switchboard_context();
+
     let client = handler.rpc_client();
     let payer = handler.keypair();
 
@@ -892,7 +893,6 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
         .get_account_with_commitment(&queue_key, handler.commitment)
         .await?
         .value
-        .map(|a| a)
         .expect("Queue account not found");
     let queue_account_info = AccountInfo {
         key: &queue_key,
@@ -902,14 +902,15 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
         lamports: Rc::new(RefCell::new(&mut queue_account.lamports)),
         data: Rc::new(RefCell::new(&mut queue_account.data)),
         executable: false,
+        #[allow(deprecated)]
         _unused: 0,
     };
 
     let queue = *QueueAccountData::new(&queue_account_info)?;
 
-    //let gateways = &queue.fetch_gateways(client).await?;
+    let gateways = &queue.fetch_gateways(client).await?;
 
-    /*if gateways.is_empty() {
+    if gateways.is_empty() {
         return Err(anyhow!("No gateways found"));
     }
 
@@ -938,7 +939,7 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
         "Crank Switchboard",
         &[format!("FEED: {:?}", switchboard_feed)],
     )
-    .await?;*/
+    .await?;
 
     Ok(())
 }

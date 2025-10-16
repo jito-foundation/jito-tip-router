@@ -286,6 +286,7 @@ pub async fn get_claimer_balance(
     Ok(balance)
 }
 
+#[allow(clippy::cognitive_complexity)]
 #[allow(clippy::too_many_arguments)]
 pub async fn claim_mev_tips(
     merkle_trees: &GeneratedMerkleTreeCollection,

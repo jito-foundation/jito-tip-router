@@ -1,3 +1,4 @@
+#![allow(clippy::cognitive_complexity)]
 #![allow(clippy::arithmetic_side_effects)]
 pub mod ledger_utils;
 pub mod stake_meta_generator;

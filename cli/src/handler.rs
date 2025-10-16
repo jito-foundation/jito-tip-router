@@ -60,7 +60,7 @@ pub struct CliHandler {
     ncn: Option<Pubkey>,
     pub epoch: u64,
     rpc_client: RpcClient,
-    switchboard_context: Arc<SbContext>,
+    pub switchboard_context: Arc<SbContext>,
     pub retries: u64,
     pub priority_fee_micro_lamports: u64,
     pub(crate) print_tx: bool,
@@ -174,9 +174,9 @@ impl CliHandler {
         Ok(config)
     }
 
-    /*pub const fn switchboard_context(&self) -> &Arc<SbContext> {
+    pub const fn switchboard_context(&self) -> &Arc<SbContext> {
         &self.switchboard_context
-    }*/
+    }
 
     pub const fn keypair(&self) -> &Keypair {
         &self.keypair
@@ -361,12 +361,12 @@ impl CliHandler {
             ProgramCommand::CrankSwitchboard { switchboard_feed } => {
                 let switchboard_feed =
                     Pubkey::from_str(&switchboard_feed).expect("error parsing switchboard feed");
-                crank_switchboard(self, &switchboard_feed).await;
+                let _ = crank_switchboard(self, &switchboard_feed).await;
                 Ok(())
             }
             ProgramCommand::SetWeight { vault } => {
                 let vault = Pubkey::from_str(&vault).expect("error parsing vault");
-                set_weight(self, &vault, self.epoch).await;
+                let _ = set_weight(self, &vault, self.epoch).await;
                 Ok(())
             }
 
