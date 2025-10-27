@@ -863,6 +863,7 @@ pub async fn create_weight_table(handler: &CliHandler, epoch: u64) -> Result<()>
     Ok(())
 }
 
+#[allow(deprecated)]
 pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) -> Result<()> {
     async fn wait_for_x_slots_after_epoch(handler: &CliHandler, slots: u64) -> Result<()> {
         loop {
@@ -902,7 +903,6 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
         lamports: Rc::new(RefCell::new(&mut queue_account.lamports)),
         data: Rc::new(RefCell::new(&mut queue_account.data)),
         executable: false,
-        #[allow(deprecated)]
         _unused: 0,
     };
 
