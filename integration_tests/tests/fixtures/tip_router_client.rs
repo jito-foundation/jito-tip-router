@@ -35,10 +35,10 @@ use jito_tip_router_core::{
     error::TipRouterError,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
+    spl_stake_pool::find_withdraw_authority_program_address,
     vault_registry::VaultRegistry,
     weight_table::WeightTable,
 };
-use jito_tip_router_program::find_withdraw_authority_program_address;
 use jito_vault_core::{
     vault_ncn_ticket::VaultNcnTicket, vault_operator_delegation::VaultOperatorDelegation,
 };

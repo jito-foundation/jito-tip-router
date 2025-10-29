@@ -14,9 +14,9 @@ use jito_tip_router_core::{
     epoch_state::EpochState,
     ncn_fee_group::NcnFeeGroup,
     ncn_reward_router::{NcnRewardReceiver, NcnRewardRouter},
+    spl_stake_pool::find_withdraw_authority_program_address,
     weight_table::WeightTable,
 };
-use jito_tip_router_program::find_withdraw_authority_program_address;
 use solana_commitment_config::CommitmentLevel;
 use solana_program::{
     clock::Clock, native_token::sol_str_to_lamports, program_pack::Pack, pubkey::Pubkey,
