@@ -954,7 +954,7 @@ impl TestBuilder {
         let base_reward_receiver =
             BaseRewardReceiver::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
 
-        let sol_rewards = (rewards / LAMPORTS_PER_SOL) as f64;
+        let sol_rewards = rewards as f64 / LAMPORTS_PER_SOL as f64;
 
         // send rewards to the base reward router
         println!("Airdropping {} SOL to base reward receiver", sol_rewards);
