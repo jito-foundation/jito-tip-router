@@ -892,6 +892,10 @@ mod tests {
 
         let mut config_data: [u8; CONFIG_SIZE] = [0u8; CONFIG_SIZE];
         let mut config_cursor = std::io::Cursor::new(&mut config_data[..]);
+        // Write discriminator first
+        Config::DISCRIMINATOR
+            .serialize(&mut config_cursor)
+            .unwrap();
         config.serialize(&mut config_cursor).unwrap();
         config_account_data.set_data(config_data.to_vec());
         account_datas.push((config_pda.0, config_account_data));

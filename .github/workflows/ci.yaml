@@ -170,7 +170,7 @@ jobs:
       - uses: taiki-e/install-action@nextest
       - run: cargo nextest run --all-features -E 'not test(ledger_utils::tests)'
         env:
-          SBF_OUT_DIR: ${{ github.workspace }}/integration_tests/tests/fixtures
+          SBPF_OUT_DIR: ${{ github.workspace }}/integration_tests/tests/fixtures
 
   # create_release:
   #   name: Create Release
