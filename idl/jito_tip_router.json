@@ -2861,6 +2861,223 @@
         "kind": "enum",
         "variants": [
           {
+            "name": "Initialize"
+          },
+          {
+            "name": "AddValidatorToPool",
+            "fields": [
+              "u32"
+            ]
+          },
+          {
+            "name": "RemoveValidatorFromPool"
+          },
+          {
+            "name": "DecreaseValidatorStake",
+            "fields": [
+              {
+                "name": "lamports",
+                "type": "u64"
+              },
+              {
+                "name": "transient_stake_seed",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "IncreaseValidatorStake",
+            "fields": [
+              {
+                "name": "lamports",
+                "type": "u64"
+              },
+              {
+                "name": "transient_stake_seed",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "SetPreferredValidator"
+          },
+          {
+            "name": "UpdateValidatorListBalance",
+            "fields": [
+              {
+                "name": "start_index",
+                "type": "u32"
+              },
+              {
+                "name": "no_merge",
+                "type": "bool"
+              }
+            ]
+          },
+          {
+            "name": "UpdateStakePoolBalance"
+          },
+          {
+            "name": "CleanupRemovedValidatorEntries"
+          },
+          {
+            "name": "DepositStake"
+          },
+          {
+            "name": "WithdrawStake",
+            "fields": [
+              "u64"
+            ]
+          },
+          {
+            "name": "SetManager"
+          },
+          {
+            "name": "SetFee"
+          },
+          {
+            "name": "SetStaker"
+          },
+          {
+            "name": "DepositSol",
+            "fields": [
+              "u64"
+            ]
+          },
+          {
+            "name": "SetFundingAuthority"
+          },
+          {
+            "name": "WithdrawSol",
+            "fields": [
+              "u64"
+            ]
+          },
+          {
+            "name": "CreateTokenMetadata",
+            "fields": [
+              {
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "name": "symbol",
+                "type": "string"
+              },
+              {
+                "name": "uri",
+                "type": "string"
+              }
+            ]
+          },
+          {
+            "name": "UpdateTokenMetadata",
+            "fields": [
+              {
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "name": "symbol",
+                "type": "string"
+              },
+              {
+                "name": "uri",
+                "type": "string"
+              }
+            ]
+          },
+          {
+            "name": "IncreaseAdditionalValidatorStake",
+            "fields": [
+              {
+                "name": "lamports",
+                "type": "u64"
+              },
+              {
+                "name": "transient_stake_seed",
+                "type": "u64"
+              },
+              {
+                "name": "ephemeral_stake_seed",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "DecreaseAdditionalValidatorStake",
+            "fields": [
+              {
+                "name": "lamports",
+                "type": "u64"
+              },
+              {
+                "name": "transient_stake_seed",
+                "type": "u64"
+              },
+              {
+                "name": "ephemeral_stake_seed",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "DecreaseValidatorStakeWithReserve",
+            "fields": [
+              {
+                "name": "lamports",
+                "type": "u64"
+              },
+              {
+                "name": "transient_stake_seed",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "Redelegate",
+            "fields": [
+              {
+                "name": "lamports",
+                "type": "u64"
+              },
+              {
+                "name": "source_transient_stake_seed",
+                "type": "u64"
+              },
+              {
+                "name": "ephemeral_stake_seed",
+                "type": "u64"
+              },
+              {
+                "name": "destination_transient_stake_seed",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "DepositStakeWithSlippage",
+            "fields": [
+              {
+                "name": "minimum_pool_tokens_out",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "WithdrawStakeWithSlippage",
+            "fields": [
+              {
+                "name": "pool_tokens_in",
+                "type": "u64"
+              },
+              {
+                "name": "minimum_lamports_out",
+                "type": "u64"
+              }
+            ]
+          },
+          {
             "name": "DepositSolWithSlippage",
             "fields": [
               {
@@ -2874,9 +3091,16 @@
             ]
           },
           {
-            "name": "DepositSol",
+            "name": "WithdrawSolWithSlippage",
             "fields": [
-              "u64"
+              {
+                "name": "pool_tokens_in",
+                "type": "u64"
+              },
+              {
+                "name": "minimum_lamports_out",
+                "type": "u64"
+              }
             ]
           }
         ]

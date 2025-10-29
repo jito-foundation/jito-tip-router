@@ -56,6 +56,13 @@ pub enum StakePoolInstruction {
         /// Maximum expected number of validators
         max_validators: u32,
     },
+    AddValidatorToPool,
+    RemoveValidatorFromPool,
+    DecreaseValidatorStake,
+    IncreaseValidatorStake,
+    SetPreferredValidator,
+    UpdateValidatorListBalance,
+
     ///   Updates total pool balance based on balances in the reserve and
     ///   validator list
     ///

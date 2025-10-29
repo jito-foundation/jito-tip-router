@@ -134,7 +134,7 @@ pub struct ClaimStatus {
 }
 
 impl ClaimStatus {
-    pub const DISCRIMINATOR: [u8; 8] = [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+    pub const DISCRIMINATOR: [u8; 8] = [22, 183, 249, 157, 247, 95, 150, 96];
 
     pub fn deserialize(data: &[u8]) -> Result<Self> {
         anyhow::ensure!(data.len() >= 8, "Account data too short");

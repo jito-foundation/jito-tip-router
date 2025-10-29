@@ -2,6 +2,18 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_pubkey::Pubkey;
 
+// Anchor discriminators from IDL
+const INITIALIZE_DISCRIMINATOR: [u8; 8] = [175, 175, 109, 31, 13, 152, 155, 237];
+const INITIALIZE_TIP_DISTRIBUTION_ACCOUNT_DISCRIMINATOR: [u8; 8] =
+    [120, 191, 25, 182, 111, 49, 179, 55];
+const CLAIM_DISCRIMINATOR: [u8; 8] = [62, 198, 214, 193, 213, 159, 108, 210];
+const UPLOAD_MERKLE_ROOT_DISCRIMINATOR: [u8; 8] = [70, 3, 110, 29, 199, 190, 205, 176];
+const CLOSE_CLAIM_STATUS_DISCRIMINATOR: [u8; 8] = [163, 214, 191, 165, 245, 188, 17, 185];
+const CLOSE_TIP_DISTRIBUTION_ACCOUNT_DISCRIMINATOR: [u8; 8] =
+    [47, 136, 208, 190, 125, 243, 74, 227];
+const MIGRATE_TDA_MERKLE_ROOT_UPLOAD_AUTHORITY_DISCRIMINATOR: [u8; 8] =
+    [13, 226, 163, 144, 56, 202, 214, 23];
+
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 struct Initialize {
     authority: Pubkey,
@@ -22,14 +34,9 @@ pub fn initialize_ix(
     max_validator_commission_bps: u16,
     bump: u8,
 ) -> Instruction {
-    Instruction {
-        program_id: crate::id(),
-        accounts: vec![
-            AccountMeta::new(config, false),
-            AccountMeta::new_readonly(system_program, false),
-            AccountMeta::new_readonly(initializer, true),
-        ],
-        data: borsh::to_vec(&Initialize {
+    let mut data = INITIALIZE_DISCRIMINATOR.to_vec();
+    data.extend_from_slice(
+        &borsh::to_vec(&Initialize {
             authority,
             expired_funds_account,
             num_epochs_valid,
@@ -37,6 +44,16 @@ pub fn initialize_ix(
             bump,
         })
         .expect("Failed to serialize instruction data"),
+    );
+
+    Instruction {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new(config, false),
+            AccountMeta::new_readonly(system_program, false),
+            AccountMeta::new(initializer, true),
+        ],
+        data,
     }
 }
 
@@ -58,29 +75,34 @@ pub fn initialize_tip_distribution_account_ix(
     validator_commission_bps: u16,
     bump: u8,
 ) -> Instruction {
-    Instruction {
-        program_id: crate::id(),
-        accounts: vec![
-            AccountMeta::new(config, false),
-            AccountMeta::new(tip_distribution_account, false),
-            AccountMeta::new_readonly(system_program, false),
-            AccountMeta::new_readonly(validator_vote_account, false),
-            AccountMeta::new_readonly(signer, true),
-        ],
-        data: borsh::to_vec(&InitializeTipDistributionAccount {
+    let mut data = INITIALIZE_TIP_DISTRIBUTION_ACCOUNT_DISCRIMINATOR.to_vec();
+    data.extend_from_slice(
+        &borsh::to_vec(&InitializeTipDistributionAccount {
             merkle_root_upload_authority,
             validator_commission_bps,
             bump,
         })
         .expect("Failed to serialize instruction data"),
+    );
+
+    Instruction {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new_readonly(config, false),
+            AccountMeta::new(tip_distribution_account, false),
+            AccountMeta::new_readonly(validator_vote_account, false),
+            AccountMeta::new(signer, true),
+            AccountMeta::new_readonly(system_program, false),
+        ],
+        data,
     }
 }
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 struct Claim {
-    proof: Vec<[u8; 32]>,
-    amount: u64,
     bump: u8,
+    amount: u64,
+    proof: Vec<[u8; 32]>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -96,23 +118,28 @@ pub fn claim_ix(
     amount: u64,
     bump: u8,
 ) -> Instruction {
+    let mut data = CLAIM_DISCRIMINATOR.to_vec();
+    data.extend_from_slice(
+        &borsh::to_vec(&Claim {
+            bump,
+            amount,
+            proof,
+        })
+        .expect("Failed to serialize instruction data"),
+    );
+
     Instruction {
         program_id: crate::id(),
         accounts: vec![
-            AccountMeta::new(config, false),
+            AccountMeta::new_readonly(config, false),
             AccountMeta::new(tip_distribution_account, false),
-            AccountMeta::new_readonly(merkle_root_upload_authority, false),
+            AccountMeta::new_readonly(merkle_root_upload_authority, true),
             AccountMeta::new(claim_status, false),
-            AccountMeta::new_readonly(claimant, true),
-            AccountMeta::new_readonly(payer, true),
+            AccountMeta::new(claimant, false),
+            AccountMeta::new(payer, true),
             AccountMeta::new_readonly(system_program, false),
         ],
-        data: borsh::to_vec(&Claim {
-            proof,
-            amount,
-            bump,
-        })
-        .expect("Failed to serialize instruction data"),
+        data,
     }
 }
 
@@ -131,19 +158,24 @@ pub fn upload_merkle_root_ix(
     max_total_claim: u64,
     max_num_nodes: u64,
 ) -> Instruction {
-    Instruction {
-        program_id: crate::id(),
-        accounts: vec![
-            AccountMeta::new(config, false),
-            AccountMeta::new_readonly(merkle_root_upload_authority, true),
-            AccountMeta::new(tip_distribution_account, false),
-        ],
-        data: borsh::to_vec(&UploadMerkleRoot {
+    let mut data = UPLOAD_MERKLE_ROOT_DISCRIMINATOR.to_vec();
+    data.extend_from_slice(
+        &borsh::to_vec(&UploadMerkleRoot {
             root,
             max_total_claim,
             max_num_nodes,
         })
         .expect("Failed to serialize instruction data"),
+    );
+
+    Instruction {
+        program_id: crate::id(),
+        accounts: vec![
+            AccountMeta::new_readonly(config, false),
+            AccountMeta::new(tip_distribution_account, false),
+            AccountMeta::new(merkle_root_upload_authority, true),
+        ],
+        data,
     }
 }
 
@@ -155,14 +187,19 @@ pub fn close_claim_status_ix(
     claim_status: Pubkey,
     claim_status_payer: Pubkey,
 ) -> Instruction {
+    let mut data = CLOSE_CLAIM_STATUS_DISCRIMINATOR.to_vec();
+    data.extend_from_slice(
+        &borsh::to_vec(&CloseClaimStatus {}).expect("Failed to serialize instruction data"),
+    );
+
     Instruction {
         program_id: crate::id(),
         accounts: vec![
-            AccountMeta::new(config, false),
+            AccountMeta::new_readonly(config, false),
             AccountMeta::new(claim_status, false),
-            AccountMeta::new_readonly(claim_status_payer, true),
+            AccountMeta::new(claim_status_payer, false),
         ],
-        data: borsh::to_vec(&CloseClaimStatus {}).expect("Failed to serialize instruction data"),
+        data,
     }
 }
 
@@ -179,17 +216,22 @@ pub fn close_tip_distribution_account_ix(
     signer: Pubkey,
     epoch: u64,
 ) -> Instruction {
+    let mut data = CLOSE_TIP_DISTRIBUTION_ACCOUNT_DISCRIMINATOR.to_vec();
+    data.extend_from_slice(
+        &borsh::to_vec(&CloseTipDistributionAccount { _epoch: epoch })
+            .expect("Failed to serialize instruction data"),
+    );
+
     Instruction {
         program_id: crate::id(),
         accounts: vec![
-            AccountMeta::new(config, false),
-            AccountMeta::new(tip_distribution_account, false),
+            AccountMeta::new_readonly(config, false),
             AccountMeta::new(expired_funds_account, false),
-            AccountMeta::new_readonly(validator_vote_account, false),
-            AccountMeta::new_readonly(signer, true),
+            AccountMeta::new(tip_distribution_account, false),
+            AccountMeta::new(validator_vote_account, false),
+            AccountMeta::new(signer, true),
         ],
-        data: borsh::to_vec(&CloseTipDistributionAccount { _epoch: epoch })
-            .expect("Failed to serialize instruction data"),
+        data,
     }
 }
 
@@ -200,13 +242,18 @@ pub fn migrate_tda_merkle_root_upload_authority_ix(
     tip_distribution_account: Pubkey,
     merkle_root_upload_config: Pubkey,
 ) -> Instruction {
+    let mut data = MIGRATE_TDA_MERKLE_ROOT_UPLOAD_AUTHORITY_DISCRIMINATOR.to_vec();
+    data.extend_from_slice(
+        &borsh::to_vec(&MigrateTdaMerkleRootUploadAuthority {})
+            .expect("Failed to serialize instruction data"),
+    );
+
     Instruction {
         program_id: crate::id(),
         accounts: vec![
             AccountMeta::new(tip_distribution_account, false),
-            AccountMeta::new_readonly(merkle_root_upload_config, true),
+            AccountMeta::new_readonly(merkle_root_upload_config, false),
         ],
-        data: borsh::to_vec(&MigrateTdaMerkleRootUploadAuthority {})
-            .expect("Failed to serialize instruction data"),
+        data,
     }
 }

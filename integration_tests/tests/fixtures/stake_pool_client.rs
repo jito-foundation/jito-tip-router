@@ -8,6 +8,7 @@ use solana_commitment_config::CommitmentLevel;
 use solana_program::{borsh1::get_instance_packed_len, pubkey::Pubkey};
 use solana_program_test::BanksClient;
 use solana_sdk::{
+    borsh1::get_packed_len,
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
@@ -154,7 +155,8 @@ impl StakePoolClient {
             &jito_tip_router_program::spl_stake_pool_id(),
         );
 
-        let packed_len = std::mem::size_of::<StakePool>();
+        // TODO replace with get_packed_len with borsh upgrade. StakePool struct can be assumed static.
+        let packed_len = 611;
         let create_pool_ix = system_instruction::create_account(
             &self.payer.pubkey(),
             &stake_pool.pubkey(),
