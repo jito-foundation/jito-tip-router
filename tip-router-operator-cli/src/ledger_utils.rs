@@ -481,10 +481,6 @@ pub fn get_bank_from_snapshot_at_slot(
 
 #[cfg(test)]
 mod tests {
-    use crate::load_and_process_ledger::LEDGER_TOOL_DIRECTORY;
-
-    use solana_sdk::pubkey::Pubkey;
-
     use super::*;
 
     #[test]

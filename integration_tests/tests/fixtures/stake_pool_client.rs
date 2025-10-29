@@ -1,14 +1,13 @@
 #![allow(deprecated)] // using deprecated borsh to align with mainnet stake pool version
 use super::spl_stake_pool::{
     find_withdraw_authority_program_address, initialize as stake_pool_initialize,
-    update_stake_pool_balance, Fee, StakePool, ValidatorList,
+    update_stake_pool_balance, Fee, ValidatorList,
 };
 use jito_tip_router_core::constants::JITOSOL_MINT;
 use solana_commitment_config::CommitmentLevel;
 use solana_program::{borsh1::get_instance_packed_len, pubkey::Pubkey};
 use solana_program_test::BanksClient;
 use solana_sdk::{
-    borsh1::get_packed_len,
     signature::{Keypair, Signer},
     transaction::Transaction,
 };

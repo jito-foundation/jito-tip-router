@@ -166,6 +166,7 @@ pub enum AccountType {
 }
 
 /// Initialized program details.
+#[allow(dead_code)]
 #[repr(C)]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct StakePool {

@@ -265,7 +265,6 @@ mod tests {
         account::{from_account, AccountSharedData},
         message::Message,
         signature::{Keypair, Signer},
-        sysvar,
         transaction::Transaction,
     };
     use solana_stake_interface::{
