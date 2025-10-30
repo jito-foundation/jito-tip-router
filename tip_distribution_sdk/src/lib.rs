@@ -12,9 +12,12 @@ pub const TIP_DISTRIBUTION_SEED: &[u8] = b"TIP_DISTRIBUTION_ACCOUNT";
 pub const MERKLE_ROOT_UPLOAD_CONFIG_SEED: &[u8] = b"ROOT_UPLOAD_CONFIG";
 
 pub const HEADER_SIZE: usize = 8;
+// Expected size: 168
 pub const TIP_DISTRIBUTION_SIZE: usize =
     HEADER_SIZE + std::mem::size_of::<TipDistributionAccount>();
+// Expected size: 104
 pub const CLAIM_STATUS_SIZE: usize = HEADER_SIZE + std::mem::size_of::<ClaimStatus>();
+// Expected size: 88
 pub const CONFIG_SIZE: usize = HEADER_SIZE + std::mem::size_of::<Config>();
 
 #[derive(BorshDeserialize, BorshSerialize)]

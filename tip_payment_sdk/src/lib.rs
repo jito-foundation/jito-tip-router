@@ -14,7 +14,9 @@ pub const TIP_ACCOUNT_SEED_6: &[u8] = b"TIP_ACCOUNT_6";
 pub const TIP_ACCOUNT_SEED_7: &[u8] = b"TIP_ACCOUNT_7";
 
 pub const HEADER_SIZE: usize = 8;
-pub const CONFIG_SIZE: usize = HEADER_SIZE + std::mem::size_of::<Config>();
+// Expected size: 89 (std::mem::size_of is off for Config, hardcode it for now)
+pub const CONFIG_SIZE: usize = HEADER_SIZE + 32 + 32 + 8 + 9;
+// Expected size: 8
 pub const TIP_PAYMENT_ACCOUNT_SIZE: usize = HEADER_SIZE + std::mem::size_of::<TipPaymentAccount>();
 
 #[derive(BorshSerialize, BorshDeserialize)]
@@ -44,7 +46,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub const DISCRIMINATOR: [u8; 8] = [0x9b, 0x0c, 0xaa, 0xe0, 0x1e, 0xfa, 0xcc, 0x82];
+    pub const DISCRIMINATOR: [u8; 8] = [155, 12, 170, 224, 30, 250, 204, 130];
 
     pub fn deserialize(data: &[u8]) -> Result<Self> {
         anyhow::ensure!(data.len() >= 8, "Account data too short");

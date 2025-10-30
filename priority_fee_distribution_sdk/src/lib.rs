@@ -10,9 +10,12 @@ pub const PF_DISTRIBUTION_SEED: &[u8] = b"PF_DISTRIBUTION_ACCOUNT";
 pub const MERKLE_ROOT_UPLOAD_CONFIG_SEED: &[u8] = b"ROOT_UPLOAD_CONFIG";
 
 pub const HEADER_SIZE: usize = 8;
+// Correct size: 176
 pub const PRIORITY_FEE_DISTRIBUTION_SIZE: usize =
     HEADER_SIZE + std::mem::size_of::<PriorityFeeDistributionAccount>();
+// Correct size: 48
 pub const CLAIM_STATUS_SIZE: usize = HEADER_SIZE + std::mem::size_of::<ClaimStatus>();
+// Correct size: 96
 pub const CONFIG_SIZE: usize = HEADER_SIZE + std::mem::size_of::<Config>();
 
 #[derive(BorshDeserialize, BorshSerialize)]
