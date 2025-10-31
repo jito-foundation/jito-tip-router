@@ -1,7 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
 use anyhow::Result;
-use borsh::de::BorshDeserialize;
 use jito_priority_fee_distribution_sdk::{
     instruction::{
         close_claim_status_ix as close_pf_claim_status_ix,
@@ -300,7 +299,7 @@ async fn close_tip_distribution_account_transactions(
         .value
         .ok_or_else(|| anyhow::anyhow!("Config account not found"))?;
 
-    let tip_distribution_config = TipDistributionConfig::try_from_slice(&config_account.data)?;
+    let tip_distribution_config = TipDistributionConfig::deserialize(&config_account.data)?;
 
     let instructions: Vec<_> = accounts
         .iter()
@@ -342,7 +341,7 @@ async fn close_priority_fee_distribution_account_transactions(
         .ok_or_else(|| anyhow::anyhow!("Config account not found"))?;
 
     let priority_fee_distribution_config =
-        PriorityFeeDistributionConfig::try_from_slice(&config_account.data)?;
+        PriorityFeeDistributionConfig::deserialize(&config_account.data)?;
 
     let instructions: Vec<_> = accounts
         .iter()
@@ -446,7 +445,7 @@ pub async fn fetch_expired_distribution_accounts(
         .iter()
         .flat_map(|(pubkey, account)| {
             let tip_distribution_account =
-                TipDistributionAccount::try_from_slice(account.data.as_slice());
+                TipDistributionAccount::deserialize(account.data.as_slice());
             tip_distribution_account.map_or_else(
                 |_| vec![],
                 |tip_distribution_account| vec![(*pubkey, tip_distribution_account)],
@@ -457,7 +456,7 @@ pub async fn fetch_expired_distribution_accounts(
         .iter()
         .flat_map(|(pubkey, account)| {
             let priority_fee_distribution_account =
-                PriorityFeeDistributionAccount::try_from_slice(&account.data);
+                PriorityFeeDistributionAccount::deserialize(&account.data);
             priority_fee_distribution_account.map_or_else(
                 |_| vec![],
                 |priority_fee_distribution_account| {
@@ -538,7 +537,7 @@ async fn fetch_expired_claim_statuses(
         .iter()
         .flat_map(|(pubkey, account)| {
             let tip_distribution_claim_status =
-                TipDistributionClaimStatus::try_from_slice(account.data.as_slice());
+                TipDistributionClaimStatus::deserialize(account.data.as_slice());
             tip_distribution_claim_status.map_or_else(
                 |_| vec![],
                 |tip_distribution_claim_status| vec![(*pubkey, tip_distribution_claim_status)],
@@ -550,7 +549,7 @@ async fn fetch_expired_claim_statuses(
         .iter()
         .flat_map(|(pubkey, account)| {
             let priority_fee_distribution_claim_status =
-                PriorityFeeDistributionClaimStatus::try_from_slice(&account.data);
+                PriorityFeeDistributionClaimStatus::deserialize(&account.data);
             priority_fee_distribution_claim_status.map_or_else(
                 |_| vec![],
                 |priority_fee_distribution_claim_status| {

@@ -1,4 +1,3 @@
-use borsh::de::BorshDeserialize;
 use jito_bytemuck::AccountDeserialize as JitoAccountDeserialize;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::TipDistributionAccount;
@@ -398,7 +397,7 @@ async fn get_priority_fee_distribution_accounts_to_upload(
         .into_iter()
         .filter_map(|(pubkey, account)| {
             let tip_distribution_account =
-                PriorityFeeDistributionAccount::try_from_slice(&account.data);
+                PriorityFeeDistributionAccount::deserialize(&account.data);
             tip_distribution_account.map_or(None, |tip_distribution_account| {
                 if tip_distribution_account.epoch_created_at == epoch
                     && tip_distribution_account.merkle_root_upload_authority

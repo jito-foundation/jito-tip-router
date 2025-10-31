@@ -1,4 +1,3 @@
-use borsh::de::BorshDeserialize;
 use itertools::Itertools;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::{
@@ -605,7 +604,7 @@ pub async fn get_unprocessed_claims_for_validators(
 
     let deserialized_claim_statuses = claim_statuses
         .values()
-        .map(|a| (ClaimStatus::try_from_slice(&a.data).unwrap(), a));
+        .map(|a| (ClaimStatus::deserialize(&a.data).unwrap(), a));
 
     let unprocessed_claim_statuses = deserialized_claim_statuses
         .filter(|(c, _)| !c.is_claimed)
