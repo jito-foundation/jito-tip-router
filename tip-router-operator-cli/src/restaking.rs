@@ -101,7 +101,7 @@ impl RestakingHandler {
                     let tx = Transaction::new_signed_with_payer(
                         &[ix],
                         Some(&self.keypair.pubkey()),
-                        &[self.keypair.clone()],
+                        &[&self.keypair.clone()],
                         blockhash,
                     );
                     let result = self.rpc_client.send_and_confirm_transaction(&tx).await?;

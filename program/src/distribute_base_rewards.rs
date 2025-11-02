@@ -13,7 +13,6 @@ use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
     program_error::ProgramError, pubkey::Pubkey,
 };
-use spl_stake_pool::instruction::deposit_sol;
 
 pub fn process_distribute_base_rewards(
     program_id: &Pubkey,
@@ -34,7 +33,9 @@ pub fn process_distribute_base_rewards(
     BaseRewardReceiver::load(program_id, base_reward_receiver, ncn.key, epoch, true)?;
     load_associated_token_account(base_fee_wallet_ata, base_fee_wallet.key, &JITOSOL_MINT)?;
 
-    if stake_pool_program.key.ne(&spl_stake_pool::id()) {
+    let spl_stake_pool_id = crate::spl_stake_pool_id();
+
+    if stake_pool_program.key.ne(&spl_stake_pool_id) {
         msg!("Incorrect stake pool program ID");
         return Err(ProgramError::InvalidAccountData);
     }
@@ -71,7 +72,7 @@ pub fn process_distribute_base_rewards(
             BaseRewardReceiver::find_program_address(program_id, ncn.key, epoch);
         base_reward_receiver_seeds.push(vec![base_reward_receiver_bump]);
 
-        let deposit_ix = deposit_sol(
+        let deposit_ix = crate::deposit_sol(
             stake_pool_program.key,
             stake_pool.key,
             stake_pool_withdraw_authority.key,

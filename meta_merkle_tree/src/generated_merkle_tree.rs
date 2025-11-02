@@ -1,12 +1,10 @@
-use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID as PRIORITY_FEE_DISTRIBUTION_ID;
-use jito_tip_distribution_sdk::{
-    jito_tip_distribution::ID as TIP_DISTRIBUTION_ID, CLAIM_STATUS_SEED,
-};
+use crate::{merkle_tree::MerkleTree, utils::get_proof};
 use jito_vault_core::MAX_BPS;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use solana_program::{
     clock::{Epoch, Slot},
-    hash::{Hash, Hasher},
+    hash::hashv,
+    hash::Hash,
     pubkey::Pubkey,
 };
 use std::{
@@ -16,7 +14,11 @@ use std::{
 };
 use thiserror::Error;
 
-use crate::{merkle_tree::MerkleTree, utils::get_proof};
+pub const TIP_DISTRIBUTION_ID: Pubkey =
+    Pubkey::from_str_const("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
+pub const PRIORITY_FEE_DISTRIBUTION_ID: Pubkey =
+    Pubkey::from_str_const("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3");
+pub const CLAIM_STATUS_SEED: &[u8] = b"CLAIM_STATUS";
 
 pub fn mul_div(a: u64, b: u64, q: u64) -> Result<u64, MerkleRootGeneratorError> {
     (a as u128)
@@ -454,10 +456,9 @@ impl TreeNode {
     }
 
     fn hash(&self) -> Hash {
-        let mut hasher = Hasher::default();
-        hasher.hash(self.claimant.as_ref());
-        hasher.hash(self.amount.to_le_bytes().as_ref());
-        hasher.result()
+        let amount_bytes = self.amount.to_le_bytes();
+        let hash_components = [self.claimant.as_ref(), &amount_bytes];
+        hashv(&hash_components)
     }
 }
 
@@ -644,7 +645,6 @@ where
 mod tests {
     use super::*;
     use crate::verify;
-    use jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::ID as PRIORITY_FEE_DISTRIBUTION_ID;
 
     #[test]
     fn test_merkle_tree_verify() {
@@ -1126,7 +1126,7 @@ mod tests {
 
         let epoch = 761;
         let merkle_tree_collection = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
-            stake_meta_collection.clone(),
+            stake_meta_collection,
             &ncn_address,
             epoch,
             300,
@@ -1321,7 +1321,7 @@ mod tests {
             max_num_nodes: 4,
         };
 
-        let expected_generated_merkle_trees = vec![gmt_0];
+        let expected_generated_merkle_trees = [gmt_0];
         let actual_generated_merkle_trees = merkle_tree_collection.generated_merkle_trees;
         expected_generated_merkle_trees
             .iter()

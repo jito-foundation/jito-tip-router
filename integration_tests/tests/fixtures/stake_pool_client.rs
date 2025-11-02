@@ -1,22 +1,18 @@
 #![allow(deprecated)] // using deprecated borsh to align with mainnet stake pool version
-use jito_tip_router_core::constants::JITOSOL_MINT;
-use solana_program::{
-    borsh1::{get_instance_packed_len, get_packed_len},
-    pubkey::Pubkey,
-    stake,
+use super::spl_stake_pool::{
+    find_withdraw_authority_program_address, initialize as stake_pool_initialize,
+    update_stake_pool_balance, Fee, ValidatorList,
 };
+use jito_tip_router_core::constants::JITOSOL_MINT;
+use solana_commitment_config::CommitmentLevel;
+use solana_program::{borsh1::get_instance_packed_len, pubkey::Pubkey};
 use solana_program_test::BanksClient;
 use solana_sdk::{
-    commitment_config::CommitmentLevel,
     signature::{Keypair, Signer},
-    system_instruction,
     transaction::Transaction,
 };
-use spl_associated_token_account::get_associated_token_address;
-use spl_stake_pool::{
-    find_withdraw_authority_program_address, instruction,
-    state::{Fee, StakePool, ValidatorList},
-};
+use solana_system_interface::instruction as system_instruction;
+use spl_associated_token_account_interface::address::get_associated_token_address;
 
 use crate::fixtures::TestResult;
 
@@ -114,8 +110,11 @@ impl StakePoolClient {
         let manager_fee_account = get_associated_token_address(&manager.pubkey(), &pool_mint);
         let referrer_pool_tokens_account = Keypair::new();
 
-        let withdraw_authority =
-            find_withdraw_authority_program_address(&spl_stake_pool::id(), &stake_pool.pubkey()).0;
+        let withdraw_authority = find_withdraw_authority_program_address(
+            &jito_tip_router_program::spl_stake_pool_id(),
+            &stake_pool.pubkey(),
+        )
+        .0;
 
         let reserve_stake_ix = vec![
             system_instruction::create_account(
@@ -123,24 +122,24 @@ impl StakePoolClient {
                 &reserve_stake.pubkey(),
                 MINIMUM_RESERVE_LAMPORTS,
                 STAKE_STATE_LEN as u64,
-                &stake::program::id(),
+                &solana_stake_interface::program::id(),
             ),
-            stake::instruction::initialize(
+            solana_stake_interface::instruction::initialize(
                 &reserve_stake.pubkey(),
-                &stake::state::Authorized {
+                &solana_stake_interface::state::Authorized {
                     staker: withdraw_authority,
                     withdrawer: withdraw_authority,
                 },
-                &stake::state::Lockup::default(),
+                &solana_stake_interface::state::Lockup::default(),
             ),
         ];
 
         let manager_fee_account_ix =
-            spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+            spl_associated_token_account_interface::instruction::create_associated_token_account_idempotent(
                 &self.payer.pubkey(),
                 &manager.pubkey(),
                 &pool_mint,
-                &spl_token::id(),
+                &spl_token_interface::id(),
             );
 
         let validator_list_size = get_instance_packed_len(&ValidatorList::new(max_validators))?;
@@ -152,22 +151,24 @@ impl StakePoolClient {
                 .await?
                 .minimum_balance(validator_list_size),
             validator_list_size as u64,
-            &spl_stake_pool::id(),
+            &jito_tip_router_program::spl_stake_pool_id(),
         );
 
+        // TODO replace with get_packed_len with borsh upgrade. StakePool struct can be assumed static.
+        let packed_len = 611;
         let create_pool_ix = system_instruction::create_account(
             &self.payer.pubkey(),
             &stake_pool.pubkey(),
             self.banks_client
                 .get_rent()
                 .await?
-                .minimum_balance(get_packed_len::<StakePool>()),
-            get_packed_len::<StakePool>() as u64,
-            &spl_stake_pool::id(),
+                .minimum_balance(packed_len),
+            packed_len as u64,
+            &jito_tip_router_program::spl_stake_pool_id(),
         );
 
-        let init_pool_ix = instruction::initialize(
-            &spl_stake_pool::id(),
+        let init_pool_ix = stake_pool_initialize(
+            &jito_tip_router_program::spl_stake_pool_id(),
             &stake_pool.pubkey(),
             &manager.pubkey(),
             staker,
@@ -176,7 +177,7 @@ impl StakePoolClient {
             &reserve_stake.pubkey(),
             &pool_mint,
             &manager_fee_account,
-            &spl_token::id(),
+            &spl_token_interface::id(),
             None,
             fee,
             withdrawal_fee,
@@ -215,15 +216,15 @@ impl StakePoolClient {
     }
 
     pub async fn update_stake_pool_balance(&mut self, pool_root: &PoolRoot) -> TestResult<()> {
-        let ix = instruction::update_stake_pool_balance(
-            &spl_stake_pool::id(),
+        let ix = update_stake_pool_balance(
+            &jito_tip_router_program::spl_stake_pool_id(),
             &pool_root.pool_address,
             &pool_root.withdraw_authority,
             &pool_root.validator_list,
             &pool_root.reserve_stake,
             &pool_root.manager_fee_account,
             &pool_root.pool_mint,
-            &spl_token::id(),
+            &spl_token_interface::id(),
         );
 
         let blockhash = self.banks_client.get_latest_blockhash().await?;

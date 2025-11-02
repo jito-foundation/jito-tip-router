@@ -1,3 +1,4 @@
+#![allow(clippy::cognitive_complexity)]
 #![allow(clippy::arithmetic_side_effects)]
 pub mod ledger_utils;
 pub mod stake_meta_generator;
@@ -25,7 +26,8 @@ use std::process::Command;
 use std::sync::Arc;
 use std::time::Instant;
 
-use anchor_lang::prelude::*;
+use anyhow::Result;
+use borsh::BorshSerialize;
 use cli::SnapshotPaths;
 use jito_tip_payment_sdk::{
     CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
@@ -445,7 +447,7 @@ pub struct TipPaymentPubkeys {
     tip_pdas: Vec<Pubkey>,
 }
 
-#[derive(Clone, Debug, AnchorSerialize, AnchorDeserialize)]
+#[derive(BorshSerialize, Clone, Debug, Default)]
 pub struct TipAccountConfig {
     pub authority: Pubkey,
     pub protocol_fee_bps: u64,

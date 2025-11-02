@@ -3433,6 +3433,33 @@
           }
         ]
       }
+    },
+    {
+      "name": "StakePoolInstruction",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "DepositSol",
+            "fields": [
+              "u64"
+            ]
+          },
+          {
+            "name": "DepositSolWithSlippage",
+            "fields": [
+              {
+                "name": "lamports_in",
+                "type": "u64"
+              },
+              {
+                "name": "minimum_pool_tokens_out",
+                "type": "u64"
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "errors": [

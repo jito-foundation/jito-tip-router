@@ -22,25 +22,21 @@ use jito_vault_sdk::{
     },
 };
 use log::info;
+use solana_commitment_config::CommitmentLevel;
 use solana_program::{
-    clock::Clock,
-    native_token::sol_to_lamports,
-    program_pack::Pack,
-    pubkey::Pubkey,
-    rent::Rent,
-    system_instruction::{create_account, transfer},
+    clock::Clock, native_token::sol_str_to_lamports, program_pack::Pack, pubkey::Pubkey, rent::Rent,
 };
 use solana_program_test::{BanksClient, BanksClientError, ProgramTestBanksClientExt};
 use solana_sdk::{
-    commitment_config::CommitmentLevel,
     instruction::InstructionError,
     signature::{Keypair, Signer},
     transaction::{Transaction, TransactionError},
 };
-use spl_associated_token_account::{
-    get_associated_token_address, instruction::create_associated_token_account_idempotent,
+use solana_system_interface::instruction::{create_account, transfer};
+use spl_associated_token_account_interface::{
+    address::get_associated_token_address, instruction::create_associated_token_account_idempotent,
 };
-use spl_token::state::Account as SPLTokenAccount;
+use spl_token_interface::state::Account as SPLTokenAccount;
 
 use crate::fixtures::{TestError, TestResult};
 
@@ -315,7 +311,7 @@ impl VaultProgramClient {
 
         let vrt_mint = Keypair::new();
         let vault_admin = Keypair::new();
-        let token_mint = token_mint.unwrap_or_else(|| Keypair::new());
+        let token_mint = token_mint.unwrap_or_else(Keypair::new);
 
         self.airdrop(&vault_admin.pubkey(), 100.0).await?;
 
@@ -324,7 +320,7 @@ impl VaultProgramClient {
             raw_account.is_none()
         };
         if should_create_mint {
-            self.create_token_mint(&token_mint, &spl_token::id())
+            self.create_token_mint(&token_mint, &spl_token_interface::id())
                 .await?;
         }
 
@@ -1127,7 +1123,7 @@ impl VaultProgramClient {
                 &get_associated_token_address(vault_pubkey, &vault.supported_mint),
                 &vault.vrt_mint,
                 &get_associated_token_address(&vault.fee_wallet, &vault.vrt_mint),
-                &spl_token::ID,
+                &spl_token_interface::ID,
             )],
             Some(&self.payer.pubkey()),
             &[&self.payer],
@@ -1525,7 +1521,11 @@ impl VaultProgramClient {
         self.banks_client
             .process_transaction_with_preflight_and_commitment(
                 Transaction::new_signed_with_payer(
-                    &[transfer(&self.payer.pubkey(), to, sol_to_lamports(sol))],
+                    &[transfer(
+                        &self.payer.pubkey(),
+                        to,
+                        sol_str_to_lamports(&sol.to_string()).unwrap(),
+                    )],
                     Some(&self.payer.pubkey()),
                     &[&self.payer],
                     new_blockhash,
@@ -1547,11 +1547,11 @@ impl VaultProgramClient {
             create_account(
                 &self.payer.pubkey(),
                 &mint.pubkey(),
-                rent.minimum_balance(spl_token::state::Mint::LEN),
-                spl_token::state::Mint::LEN as u64,
+                rent.minimum_balance(spl_token_interface::state::Mint::LEN),
+                spl_token_interface::state::Mint::LEN as u64,
                 token_program_id,
             ),
-            spl_token::instruction::initialize_mint2(
+            spl_token_interface::instruction::initialize_mint2(
                 token_program_id,
                 &mint.pubkey(),
                 &self.payer.pubkey(),
@@ -1583,7 +1583,7 @@ impl VaultProgramClient {
                         &self.payer.pubkey(),
                         owner,
                         mint,
-                        &spl_token::id(),
+                        &spl_token_interface::id(),
                     )],
                     Some(&self.payer.pubkey()),
                     &[&self.payer],
@@ -1611,10 +1611,10 @@ impl VaultProgramClient {
                             &self.payer.pubkey(),
                             to,
                             mint,
-                            &spl_token::id(),
+                            &spl_token_interface::id(),
                         ),
-                        spl_token::instruction::mint_to(
-                            &spl_token::id(),
+                        spl_token_interface::instruction::mint_to(
+                            &spl_token_interface::id(),
                             mint,
                             &get_associated_token_address(to, mint),
                             &self.payer.pubkey(),
@@ -1676,10 +1676,10 @@ impl VaultProgramClient {
                             &rewarder.pubkey(),
                             &vault_token_account,
                             &vault_account.supported_mint,
-                            &spl_token::id(),
+                            &spl_token_interface::id(),
                         ),
-                        spl_token::instruction::transfer(
-                            &spl_token::id(),
+                        spl_token_interface::instruction::transfer(
+                            &spl_token_interface::id(),
                             &rewarder_token_account,
                             &vault_token_account,
                             &rewarder.pubkey(),

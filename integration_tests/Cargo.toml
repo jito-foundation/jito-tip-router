@@ -12,9 +12,12 @@ readme = { workspace = true }
 [dependencies]
 jito-tip-router-client = { workspace = true }
 log = "0.4.21"
+num-derive = { workspace = true }
+num-traits = { workspace = true }
+spl-pod = "0.7.1"
 
 [dev-dependencies]
-anchor-lang = { workspace = true }
+anyhow = { workspace = true }
 borsh = { workspace = true }
 bytemuck = { workspace = true }
 jito-bytemuck = { workspace = true }
@@ -31,13 +34,17 @@ jito-vault-program = { workspace = true }
 jito-vault-sdk = { workspace = true }
 meta-merkle-tree = { workspace = true }
 shank = { workspace = true }
+solana-commitment-config = { workspace = true }
+solana-compute-budget-interface = { workspace = true }
 solana-program = { workspace = true }
 solana-program-test = { workspace = true }
 solana-sdk = { workspace = true }
 solana-security-txt = { workspace = true }
-spl-associated-token-account = { workspace = true }
-spl-stake-pool = { workspace = true }
-spl-token = { workspace = true }
+solana-stake-interface = { workspace = true }
+solana-system-interface = { workspace = true }
+solana-vote-interface = { workspace = true }
+spl-associated-token-account-interface = { workspace = true }
+spl-token-interface = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 

@@ -73,7 +73,7 @@ pub struct Args {
         long,
         global = true,
         env = "TIP_DISTRIBUTION_PROGRAM_ID",
-        default_value_t = jito_tip_distribution_sdk::jito_tip_distribution::ID.to_string(),
+        default_value_t = jito_tip_distribution_sdk::id().to_string(),
         help = "Tip distribution program ID"
     )]
     pub tip_distribution_program_id: String,
@@ -82,7 +82,7 @@ pub struct Args {
         long,
         global = true,
         env = "TOKEN_PROGRAM_ID",
-        default_value_t = spl_token::id().to_string(),
+        default_value_t = spl_token_interface::id().to_string(),
         help = "Token Program ID"
     )]
     pub token_program_id: String,

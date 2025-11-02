@@ -10,7 +10,7 @@ mod tests {
         ncn_fee_group::NcnFeeGroup,
     };
     use solana_sdk::{
-        native_token::sol_to_lamports, pubkey::Pubkey, signature::Keypair, signer::Signer,
+        native_token::sol_str_to_lamports, pubkey::Pubkey, signature::Keypair, signer::Signer,
     };
 
     use crate::fixtures::{test_builder::TestBuilder, TestResult};
@@ -56,18 +56,18 @@ mod tests {
                 Keypair::new(),
                 7_000,
                 None,
-                Some(1 * WEIGHT_PRECISION),
+                Some(WEIGHT_PRECISION),
                 NcnFeeGroup::lst(),
             ), // nSol
         ];
 
-        let delegations = vec![
+        let delegations = [
             1,
-            sol_to_lamports(1000.0),
-            sol_to_lamports(10000.0),
-            sol_to_lamports(100000.0),
-            sol_to_lamports(1000000.0),
-            sol_to_lamports(10000000.0),
+            sol_str_to_lamports("1000.0").unwrap(),
+            sol_str_to_lamports("10000.0").unwrap(),
+            sol_str_to_lamports("100000.0").unwrap(),
+            sol_str_to_lamports("1000000.0").unwrap(),
+            sol_str_to_lamports("10000000.0").unwrap(),
         ];
 
         // Setup NCN
@@ -367,7 +367,7 @@ mod fuzz_tests {
         ncn_fee_group::NcnFeeGroup,
     };
     use solana_sdk::{
-        native_token::sol_to_lamports, pubkey::Pubkey, signature::Keypair, signer::Signer,
+        native_token::sol_str_to_lamports, pubkey::Pubkey, signature::Keypair, signer::Signer,
     };
     use std::str::FromStr;
 
@@ -703,7 +703,7 @@ mod fuzz_tests {
                     keypair: Keypair::new(),
                     reward_multiplier: 7_000,
                     switchboard_feed: None,
-                    no_feed_weight: Some(1 * WEIGHT_PRECISION),
+                    no_feed_weight: Some(WEIGHT_PRECISION),
                     fee_group: NcnFeeGroup::lst(),
                     vault_count: 1,
                 },
@@ -711,11 +711,11 @@ mod fuzz_tests {
             delegations: vec![
                 // Need 7
                 1,
-                sol_to_lamports(1000.0),
-                sol_to_lamports(10000.0),
-                sol_to_lamports(100000.0),
-                sol_to_lamports(1000000.0),
-                sol_to_lamports(10000000.0),
+                sol_str_to_lamports("1000.0").unwrap(),
+                sol_str_to_lamports("10000.0").unwrap(),
+                sol_str_to_lamports("100000.0").unwrap(),
+                sol_str_to_lamports("1000000.0").unwrap(),
+                sol_str_to_lamports("10000000.0").unwrap(),
                 255,
             ],
             base_engine_fee_bps: 500,
@@ -723,7 +723,7 @@ mod fuzz_tests {
             operator_fee_bps: 100,
             lst_fee_bps: 15,
             jto_fee_bps: 15,
-            rewards_amount: sol_to_lamports(137000.0) + 1,
+            rewards_amount: sol_str_to_lamports("137000.0").unwrap() + 1,
         };
 
         run_simulation(config).await
@@ -746,7 +746,10 @@ mod fuzz_tests {
                 fee_group: NcnFeeGroup::lst(),
                 vault_count: 2,
             }],
-            delegations: vec![sol_to_lamports(1000.0), sol_to_lamports(1000.0)],
+            delegations: vec![
+                sol_str_to_lamports("1000.0").unwrap(),
+                sol_str_to_lamports("1000.0").unwrap(),
+            ],
             base_engine_fee_bps: 500,
             dao_fee_bps: 270,
             operator_fee_bps: 100,
@@ -789,16 +792,16 @@ mod fuzz_tests {
                     },
                 ],
                 delegations: vec![
-                    sol_to_lamports(500.0),
-                    sol_to_lamports(5000.0),
-                    sol_to_lamports(50000.0),
+                    sol_str_to_lamports("500.0").unwrap(),
+                    sol_str_to_lamports("5000.0").unwrap(),
+                    sol_str_to_lamports("50000.0").unwrap(),
                 ],
                 base_engine_fee_bps: 400,
                 dao_fee_bps: 250,
                 operator_fee_bps: 90,
                 lst_fee_bps: 12,
                 jto_fee_bps: 12,
-                rewards_amount: sol_to_lamports(50000.0),
+                rewards_amount: sol_str_to_lamports("50000.0").unwrap(),
             },
             // Test extreme delegation amounts
             SimConfig {
@@ -813,16 +816,16 @@ mod fuzz_tests {
                     vault_count: 3,
                 }],
                 delegations: vec![
-                    1, // Minimum delegation
-                    sol_to_lamports(1.0),
-                    sol_to_lamports(1_000_000.0), // Very large delegation
+                    1,                                         // Minimum delegation
+                    sol_str_to_lamports("1.0").unwrap(),       // Small delegation
+                    sol_str_to_lamports("1000000.0").unwrap(), // Very large delegation
                 ],
                 base_engine_fee_bps: 600,
                 dao_fee_bps: 300,
                 operator_fee_bps: 150,
                 lst_fee_bps: 20,
                 jto_fee_bps: 20,
-                rewards_amount: sol_to_lamports(900_000.0) - 1,
+                rewards_amount: sol_str_to_lamports("900000.0").unwrap() - 1,
             },
             // Test mixed fee groups and feeds
             SimConfig {
@@ -855,16 +858,16 @@ mod fuzz_tests {
                     },
                 ],
                 delegations: vec![
-                    sol_to_lamports(100.0),
-                    sol_to_lamports(1000.0),
-                    sol_to_lamports(10000.0),
+                    sol_str_to_lamports("100.0").unwrap(),
+                    sol_str_to_lamports("1000.0").unwrap(),
+                    sol_str_to_lamports("10000.0").unwrap(),
                 ],
                 base_engine_fee_bps: 450,
                 dao_fee_bps: 200,
                 operator_fee_bps: 80,
                 lst_fee_bps: 10,
                 jto_fee_bps: 10,
-                rewards_amount: sol_to_lamports(75000.0),
+                rewards_amount: sol_str_to_lamports("75000.0").unwrap(),
             },
         ];
 

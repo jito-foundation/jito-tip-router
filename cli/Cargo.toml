@@ -14,11 +14,9 @@ name = "jito-tip-router-cli"
 path = "src/bin/main.rs"
 
 [dependencies]
-anchor-lang = { workspace = true }
 anyhow = { workspace = true }
 base64 = { workspace = true }
 borsh = { workspace = true }
-borsh1 = { package = "borsh", version = "1.5.3" }
 bytemuck = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true }
@@ -42,18 +40,26 @@ jito-vault-core = { workspace = true }
 jito-vault-program = { workspace = true }
 jito-vault-sdk = { workspace = true }
 log = { workspace = true }
+num-derive = { workspace = true }
+num-traits = { workspace = true }
 solana-account-decoder = { workspace = true }
+solana-account-info = "3.0.0"
+solana-address-lookup-table-interface = { workspace = true }
 solana-cli-config = { workspace = true }
 solana-client = { workspace = true }
+solana-commitment-config = { workspace = true }
+solana-compute-budget-interface = { workspace = true }
+solana-genesis-config = { workspace = true }
 solana-metrics = { workspace = true }
 solana-program = { workspace = true }
 solana-rpc-client = { workspace = true }
 solana-sdk = { workspace = true }
+solana-stake-interface = { workspace = true }
+solana-system-interface = { workspace = true }
 solana-transaction-status = { workspace = true }
-spl-associated-token-account = { workspace = true }
-spl-stake-pool = { workspace = true }
-spl-token = { workspace = true }
-switchboard-on-demand-client = "0.2.12"
+spl-associated-token-account-interface = { workspace = true }
+spl-token-interface = { workspace = true }
+switchboard-on-demand-client = { package = "switchboard-on-demand", version = "0.10.1", default-features = false, features = ["solana-v3", "client-v3"] }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 

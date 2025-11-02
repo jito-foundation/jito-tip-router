@@ -45,10 +45,10 @@ jito-vault-sdk = { workspace = true }
 shank = { workspace = true }
 solana-program = { workspace = true }
 solana-security-txt = { workspace = true }
-spl-associated-token-account = { workspace = true }
-spl-stake-pool = { workspace = true }
-spl-token = { workspace = true }
-switchboard-on-demand = { workspace = true }
+solana-system-interface = { workspace = true }
+spl-associated-token-account-interface = { workspace = true }
+spl-token-interface = { workspace = true }
+switchboard-on-demand = { version = "0.10.0", default-features = false, features = ["solana-v3"] }
 thiserror = { workspace = true }
 
 [dev-dependencies]

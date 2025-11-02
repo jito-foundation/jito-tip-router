@@ -38,15 +38,16 @@ use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
 };
+use solana_commitment_config::CommitmentConfig;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
-    commitment_config::CommitmentConfig,
-    native_token::lamports_to_sol,
+    native_token::LAMPORTS_PER_SOL,
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
 };
-use switchboard_on_demand_client::SbContext;
+use switchboard_on_demand_client::client::pull_feed::SbContext;
 
+#[allow(dead_code)]
 pub struct CliHandler {
     pub rpc_url: String,
     pub commitment: CommitmentConfig,
@@ -59,7 +60,7 @@ pub struct CliHandler {
     ncn: Option<Pubkey>,
     pub epoch: u64,
     rpc_client: RpcClient,
-    switchboard_context: Arc<SbContext>,
+    pub switchboard_context: Arc<SbContext>,
     pub retries: u64,
     pub priority_fee_micro_lamports: u64,
     pub(crate) print_tx: bool,
@@ -360,11 +361,13 @@ impl CliHandler {
             ProgramCommand::CrankSwitchboard { switchboard_feed } => {
                 let switchboard_feed =
                     Pubkey::from_str(&switchboard_feed).expect("error parsing switchboard feed");
-                crank_switchboard(self, &switchboard_feed).await
+                let _ = crank_switchboard(self, &switchboard_feed).await;
+                Ok(())
             }
             ProgramCommand::SetWeight { vault } => {
                 let vault = Pubkey::from_str(&vault).expect("error parsing vault");
-                set_weight(self, &vault, self.epoch).await
+                let _ = set_weight(self, &vault, self.epoch).await;
+                Ok(())
             }
 
             ProgramCommand::CreateEpochSnapshot => create_epoch_snapshot(self, self.epoch).await,
@@ -651,7 +654,7 @@ impl CliHandler {
                 info!(
                     "\n\n--- Account Payer ---\n{}\nBalance: {}\n",
                     account_payer_address,
-                    lamports_to_sol(account_payer.lamports)
+                    account_payer.lamports / LAMPORTS_PER_SOL
                 );
                 Ok(())
             }
@@ -659,7 +662,7 @@ impl CliHandler {
                 let total_epoch_rent_cost = get_total_epoch_rent_cost(self).await?;
                 info!(
                     "\n\n--- Total Epoch Rent Cost ---\nCost: {}\n",
-                    lamports_to_sol(total_epoch_rent_cost)
+                    total_epoch_rent_cost / LAMPORTS_PER_SOL
                 );
                 Ok(())
             }

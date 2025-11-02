@@ -1,22 +1,19 @@
 use std::{sync::Arc, time::Instant};
 
-use anchor_lang::{AccountDeserialize, Discriminator};
 use anyhow::Result;
 use jito_priority_fee_distribution_sdk::{
     instruction::{
         close_claim_status_ix as close_pf_claim_status_ix,
         close_priority_fee_distribution_account_ix,
     },
-    jito_priority_fee_distribution::accounts::ClaimStatus as PriorityFeeDistributionClaimStatus,
-    jito_priority_fee_distribution::accounts::Config as PriorityFeeDistributionConfig,
+    ClaimStatus as PriorityFeeDistributionClaimStatus, Config as PriorityFeeDistributionConfig,
     PriorityFeeDistributionAccount,
 };
 use jito_tip_distribution_sdk::{
     instruction::{
         close_claim_status_ix as close_tip_claim_status_ix, close_tip_distribution_account_ix,
     },
-    jito_tip_distribution::accounts::ClaimStatus as TipDistributionClaimStatus,
-    jito_tip_distribution::accounts::Config as TipDistributionConfig,
+    ClaimStatus as TipDistributionClaimStatus, Config as TipDistributionConfig,
     TipDistributionAccount,
 };
 use log::{error, info};
@@ -42,6 +39,7 @@ pub async fn close_expired_accounts(
     signer: Arc<Keypair>,
     num_monitored_epochs: u64,
 ) -> Result<()> {
+    info!("Closing expired distribution accounts");
     close_expired_distribution_accounts(
         rpc_url,
         tip_distribution_program_id,
@@ -50,6 +48,7 @@ pub async fn close_expired_accounts(
         num_monitored_epochs,
     )
     .await?;
+    info!("Closing expired claim status accounts");
     close_expired_claims(
         rpc_url,
         tip_distribution_program_id,
@@ -187,6 +186,10 @@ pub async fn close_expired_distribution_accounts(
             "epoch" => epoch.to_string(),
         );
 
+        if tip_distribution_accounts.is_empty() && priority_fee_distribution_accounts.is_empty() {
+            info!("No expired distribution accounts found in epoch {}", epoch);
+            continue;
+        }
         let close_tip_claim_transactions = close_tip_distribution_account_transactions(
             &rpc_client,
             &tip_distribution_accounts,
@@ -296,8 +299,7 @@ async fn close_tip_distribution_account_transactions(
         .value
         .ok_or_else(|| anyhow::anyhow!("Config account not found"))?;
 
-    let tip_distribution_config =
-        TipDistributionConfig::try_deserialize(&mut config_account.data.as_slice())?;
+    let tip_distribution_config = TipDistributionConfig::deserialize(&config_account.data)?;
 
     let instructions: Vec<_> = accounts
         .iter()
@@ -339,7 +341,7 @@ async fn close_priority_fee_distribution_account_transactions(
         .ok_or_else(|| anyhow::anyhow!("Config account not found"))?;
 
     let priority_fee_distribution_config =
-        PriorityFeeDistributionConfig::try_deserialize(&mut config_account.data.as_slice())?;
+        PriorityFeeDistributionConfig::deserialize(&config_account.data)?;
 
     let instructions: Vec<_> = accounts
         .iter()
@@ -433,11 +435,17 @@ pub async fn fetch_expired_distribution_accounts(
 
     let (tda_accounts, pfda_accounts) = tokio::join!(tda_accounts, pfda_accounts);
 
+    info!(
+        "Fetched {} expired tip distribution accounts and {} expired priority fee distribution accounts",
+        tda_accounts.as_ref().map_or(0, |v| v.len()),
+        pfda_accounts.as_ref().map_or(0, |v| v.len()),
+    );
+
     let tda_accounts = tda_accounts?
         .iter()
         .flat_map(|(pubkey, account)| {
             let tip_distribution_account =
-                TipDistributionAccount::try_deserialize(&mut account.data.as_slice());
+                TipDistributionAccount::deserialize(account.data.as_slice());
             tip_distribution_account.map_or_else(
                 |_| vec![],
                 |tip_distribution_account| vec![(*pubkey, tip_distribution_account)],
@@ -448,7 +456,7 @@ pub async fn fetch_expired_distribution_accounts(
         .iter()
         .flat_map(|(pubkey, account)| {
             let priority_fee_distribution_account =
-                PriorityFeeDistributionAccount::try_deserialize(&mut account.data.as_slice());
+                PriorityFeeDistributionAccount::deserialize(&account.data);
             priority_fee_distribution_account.map_or_else(
                 |_| vec![],
                 |priority_fee_distribution_account| {
@@ -472,8 +480,7 @@ async fn fetch_expired_claim_statuses(
     let tip_distribution_claim_filters = vec![
         RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
             0,
-            jito_tip_distribution_sdk::jito_tip_distribution::accounts::ClaimStatus::DISCRIMINATOR
-                .to_vec(),
+            jito_tip_distribution_sdk::ClaimStatus::DISCRIMINATOR.to_vec(),
         )),
         RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
             8 // Discriminator
@@ -501,7 +508,7 @@ async fn fetch_expired_claim_statuses(
     let priority_fee_distribution_claim_filters = vec![
         RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
             0,
-            jito_priority_fee_distribution_sdk::jito_priority_fee_distribution::accounts::ClaimStatus::DISCRIMINATOR.to_vec(),
+            jito_priority_fee_distribution_sdk::ClaimStatus::DISCRIMINATOR.to_vec(),
         )),
         RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
             8 // Discriminator
@@ -530,7 +537,7 @@ async fn fetch_expired_claim_statuses(
         .iter()
         .flat_map(|(pubkey, account)| {
             let tip_distribution_claim_status =
-                TipDistributionClaimStatus::try_deserialize(&mut account.data.as_slice());
+                TipDistributionClaimStatus::deserialize(account.data.as_slice());
             tip_distribution_claim_status.map_or_else(
                 |_| vec![],
                 |tip_distribution_claim_status| vec![(*pubkey, tip_distribution_claim_status)],
@@ -542,7 +549,7 @@ async fn fetch_expired_claim_statuses(
         .iter()
         .flat_map(|(pubkey, account)| {
             let priority_fee_distribution_claim_status =
-                PriorityFeeDistributionClaimStatus::try_deserialize(&mut account.data.as_slice());
+                PriorityFeeDistributionClaimStatus::deserialize(&account.data);
             priority_fee_distribution_claim_status.map_or_else(
                 |_| vec![],
                 |priority_fee_distribution_claim_status| {

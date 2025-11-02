@@ -20,6 +20,7 @@ export * from './ncnFeeGroupWeight';
 export * from './ncnRewardRoute';
 export * from './operatorVote';
 export * from './progress';
+export * from './stakePoolInstruction';
 export * from './stakeWeights';
 export * from './stMintEntry';
 export * from './vaultEntry';
