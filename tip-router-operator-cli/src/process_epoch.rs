@@ -112,8 +112,30 @@ pub async fn loop_stages(
     save_stages: bool,
 ) -> Result<()> {
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
-    let mut current_epoch_info = rpc_client.get_epoch_info().await?;
-    let epoch_schedule = rpc_client.get_epoch_schedule().await?;
+    // This should attempt until it succeeds
+    let mut current_epoch_info = {
+        loop {
+            match rpc_client.get_epoch_info().await {
+                Ok(info) => break info,
+                Err(e) => {
+                    error!("Error getting epoch info. Retrying in 5 seconds...");
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
+            }
+        }
+    };
+    // This should attempt until it succeeds
+    let epoch_schedule = {
+        loop {
+            match rpc_client.get_epoch_schedule().await {
+                Ok(schedule) => break schedule,
+                Err(e) => {
+                    error!("Error getting epoch schedule. Retrying in 5 seconds...");
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
+            }
+        }
+    };
 
     // Track runs that are starting right at the beginning of a new epoch
     let operator_address = cli.operator_address.clone();
