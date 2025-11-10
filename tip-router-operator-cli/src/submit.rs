@@ -91,10 +91,27 @@ pub async fn submit_to_ncn(
     compute_unit_price: u64,
     cluster: &str,
 ) -> Result<(), anyhow::Error> {
-    let epoch_info = client.get_epoch_info().await?;
-    let meta_merkle_tree = MetaMerkleTree::new_from_file(meta_merkle_tree_path)?;
+    let epoch_info = client
+        .get_epoch_info()
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to fetch epoch info from RPC client: {:?}", e))?;
+    let meta_merkle_tree = MetaMerkleTree::new_from_file(meta_merkle_tree_path).map_err(|e| {
+        anyhow::anyhow!(
+            "Failed to load Meta Merkle Tree from file {:?}: {:?}",
+            meta_merkle_tree_path,
+            e
+        )
+    })?;
     let config_pda = Config::find_program_address(tip_router_program_id, ncn_address).0;
-    let config = get_ncn_config(client, tip_router_program_id, ncn_address).await?;
+    let config = get_ncn_config(client, tip_router_program_id, ncn_address)
+        .await
+        .map_err(|e| {
+            anyhow::anyhow!(
+                "Failed to fetch Tip Router config for NCN {}: {:?}",
+                ncn_address,
+                e
+            )
+        })?;
 
     // The meta merkle root files are tagged with the epoch they have created the snapshot for
     // Tip router accounts for that merkle root are created in the next epoch
@@ -119,12 +136,35 @@ pub async fn submit_to_ncn(
         }
     };
 
-    let ballot_box = BallotBox::try_from_slice_unchecked(&ballot_box_account.data)?;
+    let ballot_box =
+        BallotBox::try_from_slice_unchecked(&ballot_box_account.data).map_err(|e| {
+            datapoint_error!(
+                "tip_router_cli.ballot_box_deserialize_error",
+                ("operator_address", operator_address.to_string(), String),
+                ("epoch", tip_router_target_epoch, i64),
+                ("status", "error", String),
+                ("error", format!("{:?}", e), String),
+                "cluster" => cluster,
+            );
+            anyhow::anyhow!("Failed to deserialize ballot box: {:?}", e)
+        })?;
 
-    let is_voting_valid = ballot_box.is_voting_valid(
-        epoch_info.absolute_slot,
-        config.valid_slots_after_consensus(),
-    )?;
+    let is_voting_valid = ballot_box
+        .is_voting_valid(
+            epoch_info.absolute_slot,
+            config.valid_slots_after_consensus(),
+        )
+        .map_err(|e| {
+            datapoint_error!(
+                "tip_router_cli.voting_validity_error",
+                ("operator_address", operator_address.to_string(), String),
+                ("epoch", tip_router_target_epoch, i64),
+                ("status", "error", String),
+                ("error", format!("{:?}", e), String),
+                "cluster" => cluster,
+            );
+            anyhow::anyhow!("Failed to determine if voting is valid: {:?}", e)
+        })?;
 
     // If exists, look for vote from current operator
     let vote = ballot_box

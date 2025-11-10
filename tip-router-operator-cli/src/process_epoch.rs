@@ -112,8 +112,44 @@ pub async fn loop_stages(
     save_stages: bool,
 ) -> Result<()> {
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
-    let mut current_epoch_info = rpc_client.get_epoch_info().await?;
-    let epoch_schedule = rpc_client.get_epoch_schedule().await?;
+
+    let mut current_epoch_info = {
+        loop {
+            match rpc_client.get_epoch_info().await {
+                Ok(info) => break info,
+                Err(e) => {
+                    error!("Error getting epoch info from RPC. Retrying...");
+                    datapoint_error!(
+                        "tip_router_cli.get_epoch_info",
+                        ("operator_address", cli.operator_address.clone(), String),
+                        ("status", "error", String),
+                        ("error", e.to_string(), String),
+                        "cluster" => &cli.cluster,
+                    );
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
+            }
+        }
+    };
+
+    let epoch_schedule = {
+        loop {
+            match rpc_client.get_epoch_schedule().await {
+                Ok(schedule) => break schedule,
+                Err(e) => {
+                    error!("Error getting epoch schedule from RPC. Retrying...");
+                    datapoint_error!(
+                        "tip_router_cli.get_epoch_schedule",
+                        ("operator_address", cli.operator_address.clone(), String),
+                        ("status", "error", String),
+                        ("error", e.to_string(), String),
+                        "cluster" => &cli.cluster,
+                    );
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
+            }
+        }
+    };
 
     // Track runs that are starting right at the beginning of a new epoch
     let operator_address = cli.operator_address.clone();
@@ -289,7 +325,7 @@ pub async fn loop_stages(
                     meta_merkle_tree_path(epoch_to_process, &cli.get_save_path());
 
                 let operator_address = Pubkey::from_str(&cli.operator_address)?;
-                submit_to_ncn(
+                let submit_result = submit_to_ncn(
                     &rpc_client,
                     &keypair,
                     &operator_address,
@@ -305,7 +341,22 @@ pub async fn loop_stages(
                     cli.vote_microlamports,
                     &cli.cluster,
                 )
-                .await?;
+                .await;
+                if let Err(e) = submit_result {
+                    error!(
+                        "Failed to submit epoch {} to NCN: {:?}",
+                        epoch_to_process, e
+                    );
+                    datapoint_error!(
+                        "tip_router_cli.cast_vote",
+                        ("operator_address", operator_address.to_string(), String),
+                        ("epoch", epoch_to_process, i64),
+                        ("status", "error", String),
+                        ("error", e.to_string(), String),
+                        ("state", "cast_vote", String),
+                        "cluster" => &cli.cluster,
+                    );
+                }
                 stage = OperatorState::WaitForNextEpoch;
             }
             OperatorState::WaitForNextEpoch => {
