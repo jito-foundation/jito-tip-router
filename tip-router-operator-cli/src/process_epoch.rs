@@ -119,6 +119,13 @@ pub async fn loop_stages(
                 Ok(info) => break info,
                 Err(e) => {
                     error!("Error getting epoch info from RPC. Retrying...");
+                    datapoint_error!(
+                        "tip_router_cli.get_epoch_info",
+                        ("operator_address", cli.operator_address.clone(), String),
+                        ("status", "error", String),
+                        ("error", e.to_string(), String),
+                        "cluster" => &cli.cluster,
+                    );
                     tokio::time::sleep(Duration::from_secs(5)).await;
                 }
             }
@@ -131,6 +138,13 @@ pub async fn loop_stages(
                 Ok(schedule) => break schedule,
                 Err(e) => {
                     error!("Error getting epoch schedule from RPC. Retrying...");
+                    datapoint_error!(
+                        "tip_router_cli.get_epoch_schedule",
+                        ("operator_address", cli.operator_address.clone(), String),
+                        ("status", "error", String),
+                        ("error", e.to_string(), String),
+                        "cluster" => &cli.cluster,
+                    );
                     tokio::time::sleep(Duration::from_secs(5)).await;
                 }
             }
@@ -332,6 +346,15 @@ pub async fn loop_stages(
                     error!(
                         "Failed to submit epoch {} to NCN: {:?}",
                         epoch_to_process, e
+                    );
+                    datapoint_error!(
+                        "tip_router_cli.cast_vote",
+                        ("operator_address", operator_address.to_string(), String),
+                        ("epoch", epoch_to_process, i64),
+                        ("status", "error", String),
+                        ("error", e.to_string(), String),
+                        ("state", "cast_vote", String),
+                        "cluster" => &cli.cluster,
                     );
                 }
                 stage = OperatorState::WaitForNextEpoch;
