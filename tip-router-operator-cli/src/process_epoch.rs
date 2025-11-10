@@ -112,25 +112,25 @@ pub async fn loop_stages(
     save_stages: bool,
 ) -> Result<()> {
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
-    // This should attempt until it succeeds
+    
     let mut current_epoch_info = {
         loop {
             match rpc_client.get_epoch_info().await {
                 Ok(info) => break info,
                 Err(e) => {
-                    error!("Error getting epoch info. Retrying in 5 seconds...");
+                    error!("Error getting epoch info from RPC. Retrying...");
                     tokio::time::sleep(Duration::from_secs(5)).await;
                 }
             }
         }
     };
-    // This should attempt until it succeeds
+
     let epoch_schedule = {
         loop {
             match rpc_client.get_epoch_schedule().await {
                 Ok(schedule) => break schedule,
                 Err(e) => {
-                    error!("Error getting epoch schedule. Retrying in 5 seconds...");
+                    error!("Error getting epoch schedule from RPC. Retrying...");
                     tokio::time::sleep(Duration::from_secs(5)).await;
                 }
             }
@@ -311,7 +311,7 @@ pub async fn loop_stages(
                     meta_merkle_tree_path(epoch_to_process, &cli.get_save_path());
 
                 let operator_address = Pubkey::from_str(&cli.operator_address)?;
-                submit_to_ncn(
+                let submit_result = submit_to_ncn(
                     &rpc_client,
                     &keypair,
                     &operator_address,
@@ -327,7 +327,10 @@ pub async fn loop_stages(
                     cli.vote_microlamports,
                     &cli.cluster,
                 )
-                .await?;
+                .await;
+                if let Err(e) = submit_result {
+                    error!("Failed to submit epoch {} to NCN: {:?}", epoch_to_process, e);
+                }
                 stage = OperatorState::WaitForNextEpoch;
             }
             OperatorState::WaitForNextEpoch => {
