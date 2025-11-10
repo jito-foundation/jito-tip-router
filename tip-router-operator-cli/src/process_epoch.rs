@@ -112,7 +112,7 @@ pub async fn loop_stages(
     save_stages: bool,
 ) -> Result<()> {
     let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
-    
+
     let mut current_epoch_info = {
         loop {
             match rpc_client.get_epoch_info().await {
@@ -329,7 +329,10 @@ pub async fn loop_stages(
                 )
                 .await;
                 if let Err(e) = submit_result {
-                    error!("Failed to submit epoch {} to NCN: {:?}", epoch_to_process, e);
+                    error!(
+                        "Failed to submit epoch {} to NCN: {:?}",
+                        epoch_to_process, e
+                    );
                 }
                 stage = OperatorState::WaitForNextEpoch;
             }
