@@ -379,7 +379,7 @@ async fn get_tip_distribution_accounts_to_upload(
     let tip_distribution_accounts = tip_distribution_accounts
         .into_iter()
         .filter_map(|(pubkey, account)| {
-            let tip_distribution_account = TipDistributionAccount::deserialize(&account.data[8..]);
+            let tip_distribution_account = TipDistributionAccount::deserialize(&account.data);
             tip_distribution_account.map_or(None, |tip_distribution_account| {
                 if tip_distribution_account.epoch_created_at == epoch
                     && tip_distribution_account.merkle_root_upload_authority
