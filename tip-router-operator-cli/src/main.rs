@@ -14,8 +14,8 @@ use ::{
         cli::{Cli, Commands, SnapshotPaths},
         create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
         ledger_utils::get_bank_from_snapshot_at_slot,
-        load_bank_from_snapshot, meta_merkle_tree_path, process_epoch, read_merkle_tree_collection,
-        read_stake_meta_collection, reclaim,
+        load_bank_from_snapshot, meta_merkle_tree_file_name, process_epoch,
+        read_merkle_tree_collection, read_stake_meta_collection, reclaim,
         restaking::RestakingHandler,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         tip_distribution_stats::get_tip_distribution_stats,
@@ -431,7 +431,7 @@ async fn main() -> Result<()> {
             epoch,
             set_merkle_roots,
         } => {
-            let meta_merkle_tree_path = meta_merkle_tree_path(epoch, &cli.get_save_path());
+            let meta_merkle_tree_path = save_path.join(meta_merkle_tree_file_name(epoch));
 
             info!(
                 "Submitting epoch {} from {}...",
