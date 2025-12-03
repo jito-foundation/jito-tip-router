@@ -52,7 +52,10 @@ async fn main() -> Result<()> {
 
     let keypair =
         Arc::new(read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file"));
-    let rpc_client = Arc::new(RpcClient::new(cli.rpc_url.clone()));
+    let rpc_client = Arc::new(RpcClient::new_with_timeout(
+        cli.rpc_url.clone(),
+        Duration::from_secs(1800),
+    ));
 
     datapoint_info!(
         "tip_router_cli.version",
