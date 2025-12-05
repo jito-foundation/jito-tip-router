@@ -351,7 +351,7 @@ async fn emit_current_epoch_snapshot_metric(
 
     // Build GCS prefix path used by upload_file: {epoch}/{hostname}/snapshot-*.tar.zst
     // First, list objects under epoch/hostname and look for any snapshot-*.tar.zst
-    let list_output = Command::new("/opt/gcloud/google-cloud-sdk/bin/gcloud")
+    let list_output = Command::new("/usr/bin/gcloud")
         .args([
             "storage",
             "ls",
