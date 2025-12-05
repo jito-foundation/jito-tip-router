@@ -293,7 +293,7 @@ async fn upload_file(
     info!("To GCS bucket: {}, object: {}", bucket_name, object_name);
 
     // Check if object already exists
-    let check_output = Command::new("/opt/gcloud/google-cloud-sdk/bin/gcloud")
+    let check_output = Command::new("/usr/bin/gcloud")
         .args([
             "storage",
             "objects",
@@ -311,7 +311,7 @@ async fn upload_file(
     }
 
     // Upload to GCS
-    let upload_status = Command::new("/opt/gcloud/google-cloud-sdk/bin/gcloud")
+    let upload_status = Command::new("/usr/bin/gcloud")
         .args([
             "storage",
             "cp",
