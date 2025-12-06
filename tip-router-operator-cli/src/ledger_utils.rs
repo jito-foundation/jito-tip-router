@@ -202,6 +202,7 @@ pub fn get_bank_from_ledger(
 
     let process_options = ProcessOptions {
         halt_at_slot: Some(desired_slot.to_owned()),
+        no_block_cost_limits: true,
         ..Default::default()
     };
 
