@@ -75,6 +75,12 @@ async fn main() -> Result<()> {
         ));
     }
 
+    // Verify gcloud path exists
+    let gcloud_path = Path::new(&args.gcloud_path);
+    if !gcloud_path.exists() || !gcloud_path.is_file() {
+        return Err(anyhow!("gcloud binary not found: {}", args.gcloud_path));
+    }
+
     // Get hostname
     let hostname = get_hostname()?;
 
