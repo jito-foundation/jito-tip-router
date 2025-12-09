@@ -44,6 +44,10 @@ struct Args {
         default_value = "https://api.mainnet-beta.solana.com"
     )]
     rpc_url: String,
+
+    /// Path to gcloud executable
+    #[arg(long, env = "GCLOUD_PATH", default_value = "/usr/bin/gcloud")]
+    gcloud_path: String,
 }
 
 #[tokio::main]
@@ -105,6 +109,7 @@ async fn main() -> Result<()> {
             &hostname,
             &mut uploaded_files,
             &incremental_file_patterns,
+            &args.gcloud_path,
         )
         .await
         {
@@ -124,6 +129,7 @@ async fn main() -> Result<()> {
             &hostname,
             &mut uploaded_files,
             &[&snapshot_tar_zst_pattern],
+            &args.gcloud_path,
         )
         .await
         {
@@ -143,6 +149,7 @@ async fn main() -> Result<()> {
             &bucket_name,
             &hostname,
             &args.cluster,
+            &args.gcloud_path,
         )
         .await
         {
@@ -162,6 +169,7 @@ async fn scan_and_upload_files(
     hostname: &str,
     uploaded_files: &mut HashSet<String>,
     matching_patterns: &[&Regex],
+    gcloud_path: &str,
 ) -> Result<usize> {
     let mut uploaded_count = 0;
 
@@ -197,7 +205,7 @@ async fn scan_and_upload_files(
 
         if let Some(epoch) = try_epoch {
             // We found a matching file, upload it
-            if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname).await {
+            if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname, gcloud_path).await {
                 error!("Failed to upload {}: {}", filename, e);
                 continue;
             }
@@ -219,6 +227,7 @@ async fn scan_and_upload_snapshot_files(
     hostname: &str,
     uploaded_files: &mut HashSet<String>,
     matching_patterns: &[&Regex],
+    gcloud_path: &str,
 ) -> Result<usize> {
     let mut uploaded_count = 0;
 
@@ -265,7 +274,7 @@ async fn scan_and_upload_snapshot_files(
                 })?
                 .to_string();
             // We found a matching file, upload it
-            if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname).await {
+            if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname, gcloud_path).await {
                 error!("Failed to upload {}: {}", filename, e);
                 continue;
             }
@@ -285,6 +294,7 @@ async fn upload_file(
     epoch: &str,
     bucket_name: &str,
     hostname: &str,
+    gcloud_path: &str,
 ) -> Result<()> {
     // Create GCS object path (without bucket name)
     let filename = filename.replace("_", "-");
@@ -293,7 +303,7 @@ async fn upload_file(
     info!("To GCS bucket: {}, object: {}", bucket_name, object_name);
 
     // Check if object already exists
-    let check_output = Command::new("/opt/gcloud/google-cloud-sdk/bin/gcloud")
+    let check_output = Command::new(gcloud_path)
         .args([
             "storage",
             "objects",
@@ -311,7 +321,7 @@ async fn upload_file(
     }
 
     // Upload to GCS
-    let upload_status = Command::new("/opt/gcloud/google-cloud-sdk/bin/gcloud")
+    let upload_status = Command::new(gcloud_path)
         .args([
             "storage",
             "cp",
@@ -340,6 +350,7 @@ async fn emit_current_epoch_snapshot_metric(
     bucket_name: &str,
     hostname: &str,
     cluster: &str,
+    gcloud_path: &str,
 ) -> Result<()> {
     // Fetch current epoch via Solana RPC
     let client = RpcClient::new(rpc_url.to_string());
@@ -351,7 +362,7 @@ async fn emit_current_epoch_snapshot_metric(
 
     // Build GCS prefix path used by upload_file: {epoch}/{hostname}/snapshot-*.tar.zst
     // First, list objects under epoch/hostname and look for any snapshot-*.tar.zst
-    let list_output = Command::new("/usr/bin/gcloud")
+    let list_output = Command::new(gcloud_path)
         .args([
             "storage",
             "ls",
