@@ -205,7 +205,9 @@ async fn scan_and_upload_files(
 
         if let Some(epoch) = try_epoch {
             // We found a matching file, upload it
-            if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname, gcloud_path).await {
+            if let Err(e) =
+                upload_file(&path, &filename, &epoch, bucket_name, hostname, gcloud_path).await
+            {
                 error!("Failed to upload {}: {}", filename, e);
                 continue;
             }
@@ -274,7 +276,9 @@ async fn scan_and_upload_snapshot_files(
                 })?
                 .to_string();
             // We found a matching file, upload it
-            if let Err(e) = upload_file(&path, &filename, &epoch, bucket_name, hostname, gcloud_path).await {
+            if let Err(e) =
+                upload_file(&path, &filename, &epoch, bucket_name, hostname, gcloud_path).await
+            {
                 error!("Failed to upload {}: {}", filename, e);
                 continue;
             }
