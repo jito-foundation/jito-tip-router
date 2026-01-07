@@ -40,7 +40,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub const DISCRIMINATOR: [u8; 8] = [0x9b, 0x0c, 0xaa, 0xe0, 0x1e, 0xfa, 0xcc, 82];
+    pub const DISCRIMINATOR: [u8; 8] = [0x9b, 0x0c, 0xaa, 0xe0, 0x1e, 0xfa, 0xcc, 0x82];
 
     pub fn deserialize(data: &[u8]) -> Result<Self> {
         anyhow::ensure!(data.len() >= 8, "Account data too short");
