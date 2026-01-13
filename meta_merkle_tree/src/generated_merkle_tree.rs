@@ -77,12 +77,13 @@ impl GeneratedMerkleTree {
         stake_meta: &StakeMeta,
         tip_router_program_id: &Pubkey,
         distribution_program: &Pubkey,
+        tip_distribution_program_id: &Pubkey,
         ncn_address: &Pubkey,
         protocol_fee_bps: u64,
         epoch: u64,
     ) -> Result<Self, MerkleRootGeneratorError> {
         let (mut tree_nodes, tip_distribution_pubkey, merkle_root_upload_authority, total_tips) =
-            if distribution_program.eq(&TIP_DISTRIBUTION_ID) {
+            if distribution_program.eq(tip_distribution_program_id) {
                 let tip_distribution_meta =
                     stake_meta.maybe_tip_distribution_meta.as_ref().unwrap();
 
@@ -107,7 +108,7 @@ impl GeneratedMerkleTree {
                     tip_distribution_meta.merkle_root_upload_authority,
                     tip_distribution_meta.total_tips,
                 )
-            } else if distribution_program.eq(&PRIORITY_FEE_DISTRIBUTION_ID) {
+            } else {
                 let priority_fee_distribution_meta = stake_meta
                     .maybe_priority_fee_distribution_meta
                     .as_ref()
@@ -136,8 +137,6 @@ impl GeneratedMerkleTree {
                     priority_fee_distribution_meta.merkle_root_upload_authority,
                     priority_fee_distribution_meta.total_tips,
                 )
-            } else {
-                return Err(MerkleRootGeneratorError::UnknownDistributionProgram);
             };
 
         // Create merkle tree and add proofs
@@ -173,6 +172,18 @@ impl GeneratedMerkleTreeCollection {
         pf_distribution_protocol_fee_bps: u64,
         tip_router_program_id: &Pubkey,
     ) -> Result<Self, MerkleRootGeneratorError> {
+        // Extract program IDs from stake_meta_collection before consuming it
+        let tip_distribution_program_id = stake_meta_collection.tip_distribution_program_id;
+        let priority_fee_distribution_program_id =
+            stake_meta_collection.priority_fee_distribution_program_id;
+
+        log::info!(
+            "Creating GeneratedMerkleTreeCollection with tip_distribution_program_id={}, priority_fee_distribution_program_id={}, epoch={}",
+            tip_distribution_program_id,
+            priority_fee_distribution_program_id,
+            epoch
+        );
+
         let generated_merkle_trees = stake_meta_collection
             .stake_metas
             .into_iter()
@@ -187,7 +198,8 @@ impl GeneratedMerkleTreeCollection {
                         GeneratedMerkleTree::new_from_stake_meta_for_distribution_program(
                             &stake_meta,
                             tip_router_program_id,
-                            &TIP_DISTRIBUTION_ID,
+                            &tip_distribution_program_id,
+                            &tip_distribution_program_id,
                             ncn_address,
                             protocol_fee_bps,
                             epoch,
@@ -200,7 +212,8 @@ impl GeneratedMerkleTreeCollection {
                         GeneratedMerkleTree::new_from_stake_meta_for_distribution_program(
                             &stake_meta,
                             tip_router_program_id,
-                            &PRIORITY_FEE_DISTRIBUTION_ID,
+                            &priority_fee_distribution_program_id,
+                            &tip_distribution_program_id,
                             ncn_address,
                             pf_distribution_protocol_fee_bps,
                             epoch,
