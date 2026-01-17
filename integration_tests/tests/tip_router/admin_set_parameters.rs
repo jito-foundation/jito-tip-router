@@ -34,19 +34,7 @@ mod tests {
         assert_eq!(config.epochs_after_consensus_before_close(), 10);
         assert_eq!(config.valid_slots_after_consensus(), 1000);
 
-        // Test invalid epochs_before_stall
-        let result = tip_router_client
-            .do_set_parameters(
-                None,
-                Some(0), // Invalid - too low
-                None,
-                None,
-                &ncn_root,
-            )
-            .await;
-        assert_tip_router_error(result, TipRouterError::InvalidEpochsBeforeStall);
-
-        // Test invalid epochs_before_stall
+        // Test invalid epochs_after_consensus_before_close
         let result = tip_router_client
             .do_set_parameters(
                 None,

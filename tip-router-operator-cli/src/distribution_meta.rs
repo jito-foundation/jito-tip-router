@@ -121,10 +121,8 @@ where
             // DAs may be funded with lamports and therefore exist in the bank, but would fail the
             // deserialization step if the buffer is yet to be allocated thru the init call to the
             // program.
-            let Some(distribution_account_data) = account_data.data().get(8..) else {
-                return None;
-            };
-            DistributionAccount::deserialize(&mut distribution_account_data.as_ref()).map_or_else(
+            let distribution_account_data = account_data.data().get(8..)?;
+            DistributionAccount::deserialize(&mut &distribution_account_data[..]).map_or_else(
                 |_| None,
                 |distribution_account| {
                     // [TIp Distribution ONLY] this snapshot might have tips that weren't claimed
