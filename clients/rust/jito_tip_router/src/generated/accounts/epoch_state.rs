@@ -62,3 +62,28 @@ impl<'a> TryFrom<&solana_program::account_info::AccountInfo<'a>> for EpochState 
         Self::deserialize(&mut data)
     }
 }
+
+#[cfg(feature = "anchor")]
+impl anchor_lang::AccountDeserialize for EpochState {
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+        Ok(Self::deserialize(buf)?)
+    }
+}
+
+#[cfg(feature = "anchor")]
+impl anchor_lang::AccountSerialize for EpochState {}
+
+#[cfg(feature = "anchor")]
+impl anchor_lang::Owner for EpochState {
+    fn owner() -> Pubkey {
+        crate::JITO_TIP_ROUTER_ID
+    }
+}
+
+#[cfg(feature = "anchor-idl-build")]
+impl anchor_lang::IdlBuild for EpochState {}
+
+#[cfg(feature = "anchor-idl-build")]
+impl anchor_lang::Discriminator for EpochState {
+    const DISCRIMINATOR: &'static [u8] = &[0; 8];
+}

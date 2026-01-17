@@ -11,9 +11,9 @@ use borsh::BorshSerialize;
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum StakePoolInstruction {
+    DepositSol(u64),
     DepositSolWithSlippage {
         lamports_in: u64,
         minimum_pool_tokens_out: u64,
     },
-    DepositSol(u64),
 }

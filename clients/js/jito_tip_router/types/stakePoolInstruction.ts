@@ -24,23 +24,27 @@ import {
 } from '@solana/web3.js';
 
 export type StakePoolInstruction =
+  | { __kind: 'DepositSol'; fields: readonly [bigint] }
   | {
       __kind: 'DepositSolWithSlippage';
       lamportsIn: bigint;
       minimumPoolTokensOut: bigint;
-    }
-  | { __kind: 'DepositSol'; fields: readonly [bigint] };
+    };
 
 export type StakePoolInstructionArgs =
+  | { __kind: 'DepositSol'; fields: readonly [number | bigint] }
   | {
       __kind: 'DepositSolWithSlippage';
       lamportsIn: number | bigint;
       minimumPoolTokensOut: number | bigint;
-    }
-  | { __kind: 'DepositSol'; fields: readonly [number | bigint] };
+    };
 
 export function getStakePoolInstructionEncoder(): Encoder<StakePoolInstructionArgs> {
   return getDiscriminatedUnionEncoder([
+    [
+      'DepositSol',
+      getStructEncoder([['fields', getTupleEncoder([getU64Encoder()])]]),
+    ],
     [
       'DepositSolWithSlippage',
       getStructEncoder([
@@ -48,25 +52,21 @@ export function getStakePoolInstructionEncoder(): Encoder<StakePoolInstructionAr
         ['minimumPoolTokensOut', getU64Encoder()],
       ]),
     ],
-    [
-      'DepositSol',
-      getStructEncoder([['fields', getTupleEncoder([getU64Encoder()])]]),
-    ],
   ]);
 }
 
 export function getStakePoolInstructionDecoder(): Decoder<StakePoolInstruction> {
   return getDiscriminatedUnionDecoder([
     [
+      'DepositSol',
+      getStructDecoder([['fields', getTupleDecoder([getU64Decoder()])]]),
+    ],
+    [
       'DepositSolWithSlippage',
       getStructDecoder([
         ['lamportsIn', getU64Decoder()],
         ['minimumPoolTokensOut', getU64Decoder()],
       ]),
-    ],
-    [
-      'DepositSol',
-      getStructDecoder([['fields', getTupleDecoder([getU64Decoder()])]]),
     ],
   ]);
 }
@@ -83,18 +83,6 @@ export function getStakePoolInstructionCodec(): Codec<
 
 // Data Enum Helpers.
 export function stakePoolInstruction(
-  kind: 'DepositSolWithSlippage',
-  data: GetDiscriminatedUnionVariantContent<
-    StakePoolInstructionArgs,
-    '__kind',
-    'DepositSolWithSlippage'
-  >
-): GetDiscriminatedUnionVariant<
-  StakePoolInstructionArgs,
-  '__kind',
-  'DepositSolWithSlippage'
->;
-export function stakePoolInstruction(
   kind: 'DepositSol',
   data: GetDiscriminatedUnionVariantContent<
     StakePoolInstructionArgs,
@@ -105,6 +93,18 @@ export function stakePoolInstruction(
   StakePoolInstructionArgs,
   '__kind',
   'DepositSol'
+>;
+export function stakePoolInstruction(
+  kind: 'DepositSolWithSlippage',
+  data: GetDiscriminatedUnionVariantContent<
+    StakePoolInstructionArgs,
+    '__kind',
+    'DepositSolWithSlippage'
+  >
+): GetDiscriminatedUnionVariant<
+  StakePoolInstructionArgs,
+  '__kind',
+  'DepositSolWithSlippage'
 >;
 export function stakePoolInstruction<
   K extends StakePoolInstructionArgs['__kind'],
