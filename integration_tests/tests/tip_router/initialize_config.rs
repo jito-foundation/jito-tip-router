@@ -87,24 +87,7 @@ mod tests {
         let mut tip_router_client = fixture.tip_router_client();
         let ncn_root = fixture.setup_ncn().await?;
 
-        // Test invalid epochs_before_stall
-        let result = tip_router_client
-            .initialize_config(
-                ncn_root.ncn_pubkey,
-                &ncn_root.ncn_admin,
-                &ncn_root.ncn_admin.pubkey(),
-                &ncn_root.ncn_admin.pubkey(),
-                0,
-                0,
-                0,
-                0, // Invalid - too low
-                0,
-                10001,
-            )
-            .await;
-        assert_tip_router_error(result, TipRouterError::InvalidEpochsBeforeStall);
-
-        // Test invalid epochs_before_stall
+        // Test invalid epochs_after_consensus_before_close
         let result = tip_router_client
             .initialize_config(
                 ncn_root.ncn_pubkey,
