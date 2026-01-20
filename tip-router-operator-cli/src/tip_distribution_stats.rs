@@ -28,7 +28,10 @@ pub async fn get_tip_distribution_stats(
     priority_fee_distribution_program_id: &Pubkey,
     epoch: u64,
 ) -> Result<()> {
-    info!("=== Starting tip distribution stats for epoch {} ===", epoch);
+    info!(
+        "=== Starting tip distribution stats for epoch {} ===",
+        epoch
+    );
 
     let rpc_client_with_timeout =
         RpcClient::new_with_timeout(rpc_client.url(), std::time::Duration::from_secs(1800));
@@ -325,7 +328,11 @@ fn print_tip_distribution_summary(stats: &[TipDistributionStats], epoch: u64) {
         .collect();
 
     info!("\n=== Epoch {} Tip Distribution Statistics ===", epoch);
-    info!("Total TDAs: {}, Unclaimed TDAs: {}", stats.len(), unclaimed_stats.len());
+    info!(
+        "Total TDAs: {}, Unclaimed TDAs: {}",
+        stats.len(),
+        unclaimed_stats.len()
+    );
     info!("");
     info!(
         "{:<46} {:<12} {:<10} {:<18} {:<18} {:<12}",
@@ -347,7 +354,9 @@ fn print_tip_distribution_summary(stats: &[TipDistributionStats], epoch: u64) {
 
         let claimed_sol = stat.total_funds_claimed as f64 / 1_000_000_000.0;
         let max_sol = stat.max_total_claim as f64 / 1_000_000_000.0;
-        let unclaimed = stat.max_total_claim.saturating_sub(stat.total_funds_claimed);
+        let unclaimed = stat
+            .max_total_claim
+            .saturating_sub(stat.total_funds_claimed);
 
         info!(
             "{:<46} {:<12.6} {:<10} {:<18} {:<18} {:<12.2}%",
@@ -380,9 +389,16 @@ fn print_tip_distribution_summary(stats: &[TipDistributionStats], epoch: u64) {
     let no_merkle_root: Vec<_> = stats.iter().filter(|s| !s.has_merkle_root).collect();
     if !no_merkle_root.is_empty() {
         info!("");
-        info!("=== TDAs without merkle root (not yet uploaded): {} ===", no_merkle_root.len());
+        info!(
+            "=== TDAs without merkle root (not yet uploaded): {} ===",
+            no_merkle_root.len()
+        );
         for stat in &no_merkle_root {
-            let account_type = if stat.is_priority_fee { "Priority" } else { "Tip" };
+            let account_type = if stat.is_priority_fee {
+                "Priority"
+            } else {
+                "Tip"
+            };
             info!("  {} ({})", stat.account_pubkey, account_type);
         }
     }
