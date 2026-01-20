@@ -321,10 +321,12 @@ async fn process_priority_fee_distribution_account(
 }
 
 fn print_tip_distribution_summary(stats: &[TipDistributionStats], epoch: u64) {
-    // Filter for only unclaimed TDAs (has merkle root AND total_funds_claimed < max_total_claim)
+    // Filter for only unclaimed TDAs:
+    // - has merkle root
+    // - not all nodes have claimed yet (num_nodes_claimed < max_num_nodes)
     let unclaimed_stats: Vec<_> = stats
         .iter()
-        .filter(|s| s.has_merkle_root && s.total_funds_claimed < s.max_total_claim)
+        .filter(|s| s.has_merkle_root && s.num_nodes_claimed < s.max_num_nodes)
         .collect();
 
     info!("\n=== Epoch {} Tip Distribution Statistics ===", epoch);
