@@ -34,7 +34,7 @@ use {
         snapshot_config::SnapshotConfig,
         snapshot_controller::SnapshotController,
         snapshot_hash::StartingSnapshotHashes,
-        snapshot_utils::{self, clean_orphaned_account_snapshot_dirs},
+        snapshot_utils::{self, clean_orphaned_account_snapshot_dirs, BANK_SNAPSHOTS_DIR},
     },
     solana_sdk::{clock::Slot, pubkey::Pubkey, transaction::VersionedTransaction},
     solana_unified_scheduler_pool::DefaultSchedulerPool,
@@ -51,7 +51,7 @@ use {
 
 pub const LEDGER_TOOL_DIRECTORY: &str = "ledger_tool";
 
-const _PROCESS_SLOTS_HELP_STRING: &str =
+const PROCESS_SLOTS_HELP_STRING: &str =
     "The starting slot is either the latest found snapshot slot, or genesis (slot 0) if the \
      --no-snapshot flag was specified or if no snapshots were found. \
      The ending slot is the snapshot creation slot for create-snapshot, the value for \
@@ -65,7 +65,7 @@ pub enum LoadAndProcessLedgerError {
     #[error("failed to create all run and snapshot directories: {0}")]
     CreateAllAccountsRunAndSnapshotDirectories(#[source] std::io::Error),
 
-    #[error("custom accounts path is not supported with seconday blockstore access")]
+    #[error("custom accounts path is not supported with secondary blockstore access")]
     CustomAccountsPathUnsupported(#[source] BlockstoreError),
 
     #[error(
@@ -124,19 +124,15 @@ pub fn load_and_process_ledger(
     cluster: &str,
 ) -> Result<(Arc<RwLock<BankForks>>, Option<StartingSnapshotHashes>), LoadAndProcessLedgerError> {
     let bank_snapshots_dir = if blockstore.is_primary_access() {
-        blockstore.ledger_path().join("snapshot")
+        blockstore.ledger_path().join(BANK_SNAPSHOTS_DIR)
     } else {
         blockstore
             .ledger_path()
             .join(LEDGER_TOOL_DIRECTORY)
-            .join("snapshot")
+            .join(BANK_SNAPSHOTS_DIR)
     };
 
-    // ledger-tool has a flag that determines if this option is used.
-    // REVIEW: We may want to double check the externalities of having this set to None. Passing
-    // in the process_options.halt_at_slot forces the incremental snapshot to be <= the desired
-    // slot. Not 100% sure what happens when you have an incremental snapshot > than desired slot
-    let snapshot_halt_at_slot = None;
+    let snapshot_halt_at_slot = process_options.halt_at_slot;
 
     // Here we configure the SnapshotConfig. It uses the directories the operator has passed in to
     // find the best full and incremental snapshot files to use for a desired slot. TipRouter
@@ -149,7 +145,7 @@ pub fn load_and_process_ledger(
             incremental_snapshot_archive_path.unwrap_or_else(|| full_snapshot_archives_dir.clone());
         if let Some(full_snapshot_slot) = snapshot_utils::get_highest_full_snapshot_archive_slot(
             &full_snapshot_archives_dir,
-            None,
+            snapshot_halt_at_slot,
         ) {
             let incremental_snapshot_slot =
                 snapshot_utils::get_highest_incremental_snapshot_archive_slot(
@@ -169,31 +165,31 @@ pub fn load_and_process_ledger(
         }
     };
 
-    // match process_options.halt_at_slot {
-    //     // Skip the following checks for sentinel values of Some(0) and None.
-    //     // For Some(0), no slots will be be replayed after starting_slot.
-    //     // For None, all available children of starting_slot will be replayed.
-    //     None | Some(0) => {}
-    //     Some(halt_slot) => {
-    //         if halt_slot < starting_slot {
-    //             return Err(LoadAndProcessLedgerError::EndingSlotLessThanStartingSlot(
-    //                 starting_slot,
-    //                 halt_slot,
-    //                 PROCESS_SLOTS_HELP_STRING.to_string(),
-    //             ));
-    //         }
-    //         // Check if we have the slot data necessary to replay from starting_slot to >= halt_slot.
-    //         if !blockstore.slot_range_connected(starting_slot, halt_slot) {
-    //             return Err(
-    //                 LoadAndProcessLedgerError::EndingSlotNotReachableFromStartingSlot(
-    //                     starting_slot,
-    //                     halt_slot,
-    //                     PROCESS_SLOTS_HELP_STRING.to_string(),
-    //                 ),
-    //             );
-    //         }
-    //     }
-    // }
+    match process_options.halt_at_slot {
+        // Skip the following checks for sentinel values of Some(0) and None.
+        // For Some(0), no slots will be be replayed after starting_slot.
+        // For None, all available children of starting_slot will be replayed.
+        None | Some(0) => {}
+        Some(halt_slot) => {
+            if halt_slot < starting_slot {
+                return Err(LoadAndProcessLedgerError::EndingSlotLessThanStartingSlot(
+                    starting_slot,
+                    halt_slot,
+                    PROCESS_SLOTS_HELP_STRING.to_string(),
+                ));
+            }
+            // Check if we have the slot data necessary to replay from starting_slot to >= halt_slot.
+            if !blockstore.slot_range_connected(starting_slot, halt_slot) {
+                return Err(
+                    LoadAndProcessLedgerError::EndingSlotNotReachableFromStartingSlot(
+                        starting_slot,
+                        halt_slot,
+                        PROCESS_SLOTS_HELP_STRING.to_string(),
+                    ),
+                );
+            }
+        }
+    }
 
     let account_paths = if let Some(account_paths) = arg_matches.value_of("account_paths") {
         // If this blockstore access is Primary, no other process (agave-validator) can hold

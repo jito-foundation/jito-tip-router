@@ -486,13 +486,40 @@ mod tests {
     #[test]
     fn test_get_bank_from_snapshot_at_slot() {
         let ledger_path = PathBuf::from("./tests/fixtures/test-ledger");
-        let account_paths = vec![ledger_path.join("accounts/run")];
-        let full_snapshots_path = ledger_path.clone();
-        let snapshot_slot = 8301;
+        let genesis_config =
+            open_genesis_config(&ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE).unwrap();
+        let bank = Bank::new_for_tests(&genesis_config);
+        bank.fill_bank_with_ticks_for_tests();
+
+        let archive_temp_dir = tempfile::tempdir().unwrap();
+        let full_snapshots_path = archive_temp_dir.path().join("full-snapshot-archives");
+        let incremental_snapshots_path =
+            archive_temp_dir.path().join("incremental-snapshot-archives");
+        std::fs::create_dir_all(&full_snapshots_path).unwrap();
+        std::fs::create_dir_all(&incremental_snapshots_path).unwrap();
+
+        let write_bank_snapshots_dir = tempfile::tempdir().unwrap();
+        let full_snapshot_archive_info = snapshot_bank_utils::bank_to_full_snapshot_archive(
+            write_bank_snapshots_dir.path(),
+            &bank,
+            None,
+            &full_snapshots_path,
+            &incremental_snapshots_path,
+            SnapshotConfig::default().archive_format,
+        )
+        .unwrap();
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let account_run_path = temp_dir.path().join("accounts-run");
+        std::fs::create_dir_all(&account_run_path).unwrap();
+        let bank_snapshots_dir = temp_dir.path().join("bank-snapshots");
+        std::fs::create_dir_all(&bank_snapshots_dir).unwrap();
+        let account_paths = vec![account_run_path];
+        let snapshot_slot = full_snapshot_archive_info.slot();
         let bank = get_bank_from_snapshot_at_slot(
             snapshot_slot,
             &full_snapshots_path,
-            &full_snapshots_path,
+            &bank_snapshots_dir,
             account_paths,
             &ledger_path.as_path(),
         )
