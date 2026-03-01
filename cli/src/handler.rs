@@ -15,13 +15,14 @@ use crate::{
     },
     instructions::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
-        admin_set_config_fees, admin_set_new_admin, admin_set_parameters, admin_set_weight,
-        crank_close_epoch_accounts, crank_distribute, crank_register_vaults, crank_set_weight,
-        crank_snapshot, crank_switchboard, create_and_add_test_operator, create_and_add_test_vault,
-        create_ballot_box, create_base_reward_router, create_epoch_snapshot, create_epoch_state,
-        create_ncn_reward_router, create_operator_snapshot, create_test_ncn, create_vault_registry,
-        create_weight_table, distribute_base_ncn_rewards, full_vault_update, register_vault,
-        route_base_rewards, route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
+        admin_set_config_fees, admin_set_new_admin, admin_set_parameters, admin_set_tie_breaker,
+        admin_set_weight, crank_close_epoch_accounts, crank_distribute, crank_register_vaults,
+        crank_set_weight, crank_snapshot, crank_switchboard, create_and_add_test_operator,
+        create_and_add_test_vault, create_ballot_box, create_base_reward_router,
+        create_epoch_snapshot, create_epoch_state, create_ncn_reward_router,
+        create_operator_snapshot, create_test_ncn, create_vault_registry, create_weight_table,
+        distribute_base_ncn_rewards, full_vault_update, register_vault, route_base_rewards,
+        route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
         update_all_vaults_in_network,
     },
     keeper::keeper_loop::startup_keeper,
@@ -46,6 +47,56 @@ use solana_sdk::{
     signature::{read_keypair_file, Keypair},
 };
 use switchboard_on_demand_client::client::pull_feed::SbContext;
+
+fn parse_meta_merkle_root(meta_merkle_root: &str) -> Result<[u8; 32]> {
+    let trimmed = meta_merkle_root.trim();
+    if trimmed.starts_with('[') && trimmed.ends_with(']') {
+        let inner = &trimmed[1..trimmed.len() - 1];
+        let bytes = if inner.trim().is_empty() {
+            Vec::new()
+        } else {
+            inner
+                .split(',')
+                .map(|entry| {
+                    entry
+                        .trim()
+                        .parse::<u8>()
+                        .map_err(|e| anyhow!("invalid merkle root byte `{}`: {e}", entry.trim()))
+                })
+                .collect::<Result<Vec<_>>>()?
+        };
+
+        if bytes.len() != 32 {
+            return Err(anyhow!(
+                "meta merkle root array must contain exactly 32 bytes, found {}",
+                bytes.len()
+            ));
+        }
+        let mut root = [0u8; 32];
+        root.copy_from_slice(&bytes);
+        return Ok(root);
+    }
+
+    let hex_str = trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+        .unwrap_or(trimmed);
+    if hex_str.len() != 64 {
+        return Err(anyhow!(
+            "meta merkle root hex must decode to exactly 32 bytes, found {}",
+            hex_str.len() / 2
+        ));
+    }
+    let mut root = [0u8; 32];
+    for i in 0..32 {
+        let start = i * 2;
+        let end = start + 2;
+        let value = u8::from_str_radix(&hex_str[start..end], 16)
+            .map_err(|e| anyhow!("invalid hex at byte {i}: {e}"))?;
+        root[i] = value;
+    }
+    Ok(root)
+}
 
 #[allow(dead_code)]
 pub struct CliHandler {
@@ -281,14 +332,8 @@ impl CliHandler {
                 admin_set_weight(self, &vault, self.epoch, weight).await
             }
             ProgramCommand::AdminSetTieBreaker { meta_merkle_root } => {
-                todo!(
-                    "Create and implement admin set tie breaker: {}",
-                    meta_merkle_root
-                );
-                // let merkle_root = hex::decode(meta_merkle_root).expect("error parsing merkle root");
-                // let mut root = [0u8; 32];
-                // root.copy_from_slice(&merkle_root);
-                // admin_set_tie_breaker(self, root).await
+                let merkle_root = parse_meta_merkle_root(&meta_merkle_root)?;
+                admin_set_tie_breaker(self, self.epoch, merkle_root).await
             }
             ProgramCommand::AdminSetParameters {
                 epochs_before_stall,
