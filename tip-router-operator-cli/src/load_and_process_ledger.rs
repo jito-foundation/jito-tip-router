@@ -1,14 +1,22 @@
 use {
+    agave_snapshots::{
+        paths::{get_full_snapshot_archives, get_incremental_snapshot_archives},
+        snapshot_archive_info::{
+            FullSnapshotArchiveInfo, IncrementalSnapshotArchiveInfo, SnapshotArchiveInfoGetter,
+        },
+        snapshot_config::SnapshotConfig,
+        snapshot_hash::StartingSnapshotHashes,
+    },
     clap_old::ArgMatches,
     crossbeam_channel::unbounded,
     crossbeam_channel::{Receiver, Sender},
     log::*,
-    solana_accounts_db::{
-        hardened_unpack::open_genesis_config,
-        utils::{create_all_accounts_run_and_snapshot_dirs, move_and_async_delete_path_contents},
+    solana_accounts_db::utils::{
+        create_all_accounts_run_and_snapshot_dirs, move_and_async_delete_path_contents,
     },
     solana_core::validator::BlockVerificationMethod,
     solana_genesis_config::GenesisConfig,
+    solana_genesis_utils::open_genesis_config,
     solana_geyser_plugin_manager::geyser_plugin_service::{
         GeyserPluginService, GeyserPluginServiceError,
     },
@@ -31,9 +39,7 @@ use {
         },
         bank_forks::BankForks,
         prioritization_fee_cache::PrioritizationFeeCache,
-        snapshot_config::SnapshotConfig,
         snapshot_controller::SnapshotController,
-        snapshot_hash::StartingSnapshotHashes,
         snapshot_utils::{self, clean_orphaned_account_snapshot_dirs},
     },
     solana_sdk::{clock::Slot, pubkey::Pubkey, transaction::VersionedTransaction},
@@ -83,11 +89,42 @@ pub enum LoadAndProcessLedgerError {
     #[error("failed to setup geyser service: {0}")]
     GeyserServiceSetup(#[source] GeyserPluginServiceError),
 
+    #[error("failed to prepare selected snapshot archive directories: {0}")]
+    SnapshotArchiveSelection(#[source] std::io::Error),
+
+    #[error(
+        "no full snapshot archive at or before halt slot {halt_slot} in {full_snapshot_archives_dir}"
+    )]
+    NoSnapshotAtOrBeforeHaltSlot {
+        halt_slot: Slot,
+        full_snapshot_archives_dir: PathBuf,
+    },
+
+    #[error("no full snapshot archives found in {full_snapshot_archives_dir}")]
+    NoSnapshotArchivesFound { full_snapshot_archives_dir: PathBuf },
+
     #[error("failed to load bank forks: {0}")]
     LoadBankForks(#[source] BankForksUtilsError),
 
     #[error("failed to process blockstore from root: {0}")]
     ProcessBlockstoreFromRoot(#[source] BlockstoreProcessorError),
+}
+
+fn stage_snapshot_archive(src_path: &Path, dst_dir: &Path) -> std::io::Result<()> {
+    let file_name = src_path.file_name().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("snapshot path has no filename: {}", src_path.display()),
+        )
+    })?;
+    let dst_path = dst_dir.join(file_name);
+    match std::fs::hard_link(src_path, &dst_path) {
+        Ok(()) => Ok(()),
+        Err(_) => {
+            std::fs::copy(src_path, &dst_path)?;
+            Ok(())
+        }
+    }
 }
 
 // pub fn load_and_process_ledger_or_exit(
@@ -132,41 +169,100 @@ pub fn load_and_process_ledger(
             .join("snapshot")
     };
 
-    // ledger-tool has a flag that determines if this option is used.
-    // REVIEW: We may want to double check the externalities of having this set to None. Passing
-    // in the process_options.halt_at_slot forces the incremental snapshot to be <= the desired
-    // slot. Not 100% sure what happens when you have an incremental snapshot > than desired slot
-    let snapshot_halt_at_slot = None;
+    // Keep actual snapshot selection aligned with halt_at_slot, otherwise load_bank_forks may pick
+    // a newer snapshot than our target and replay zero slots.
+    let snapshot_halt_at_slot = process_options.halt_at_slot;
 
     // Here we configure the SnapshotConfig. It uses the directories the operator has passed in to
     // find the best full and incremental snapshot files to use for a desired slot. TipRouter
     // operators Directories often use different directories than their RPC node's.
-    let mut starting_slot = 0; // default start check with genesis
-    let snapshot_config = {
+    let (snapshot_config, starting_slot) = {
         let full_snapshot_archives_dir =
             snapshot_archive_path.unwrap_or_else(|| blockstore.ledger_path().to_path_buf());
         let incremental_snapshot_archives_dir =
             incremental_snapshot_archive_path.unwrap_or_else(|| full_snapshot_archives_dir.clone());
-        if let Some(full_snapshot_slot) = snapshot_utils::get_highest_full_snapshot_archive_slot(
-            &full_snapshot_archives_dir,
-            None,
-        ) {
-            let incremental_snapshot_slot =
-                snapshot_utils::get_highest_incremental_snapshot_archive_slot(
-                    &incremental_snapshot_archives_dir,
-                    full_snapshot_slot,
-                    snapshot_halt_at_slot,
-                )
-                .unwrap_or_default();
-            starting_slot = std::cmp::max(full_snapshot_slot, incremental_snapshot_slot);
+
+        let selected_full_snapshot_archive: Option<FullSnapshotArchiveInfo> =
+            get_full_snapshot_archives(&full_snapshot_archives_dir)
+                .into_iter()
+                .filter(|archive| {
+                    snapshot_halt_at_slot.is_none_or(|max_slot| archive.slot() <= max_slot)
+                })
+                .max_by_key(|archive| archive.slot());
+
+        let selected_full_snapshot_archive = match selected_full_snapshot_archive {
+            Some(selected_full_snapshot_archive) => selected_full_snapshot_archive,
+            None => {
+                return Err(if let Some(halt_slot) = snapshot_halt_at_slot {
+                    LoadAndProcessLedgerError::NoSnapshotAtOrBeforeHaltSlot {
+                        halt_slot,
+                        full_snapshot_archives_dir,
+                    }
+                } else {
+                    LoadAndProcessLedgerError::NoSnapshotArchivesFound {
+                        full_snapshot_archives_dir,
+                    }
+                });
+            }
+        };
+
+        let selected_incremental_snapshot_archive: Option<IncrementalSnapshotArchiveInfo> =
+            get_incremental_snapshot_archives(&incremental_snapshot_archives_dir)
+                .into_iter()
+                .filter(|archive| archive.base_slot() == selected_full_snapshot_archive.slot())
+                .filter(|archive| {
+                    snapshot_halt_at_slot.is_none_or(|max_slot| archive.slot() <= max_slot)
+                })
+                .max_by_key(|archive| archive.slot());
+
+        let starting_slot = std::cmp::max(
+            selected_full_snapshot_archive.slot(),
+            selected_incremental_snapshot_archive
+                .as_ref()
+                .map(|archive| archive.slot())
+                .unwrap_or_default(),
+        );
+
+        let selected_snapshot_archives_dir = blockstore
+            .ledger_path()
+            .join(LEDGER_TOOL_DIRECTORY)
+            .join("selected_snapshot_archives");
+        let selected_full_snapshot_archives_dir = selected_snapshot_archives_dir.join("full");
+        let selected_incremental_snapshot_archives_dir =
+            selected_snapshot_archives_dir.join("incremental");
+
+        if selected_snapshot_archives_dir.exists() {
+            std::fs::remove_dir_all(&selected_snapshot_archives_dir)
+                .map_err(LoadAndProcessLedgerError::SnapshotArchiveSelection)?;
+        }
+        std::fs::create_dir_all(&selected_full_snapshot_archives_dir)
+            .map_err(LoadAndProcessLedgerError::SnapshotArchiveSelection)?;
+        std::fs::create_dir_all(&selected_incremental_snapshot_archives_dir)
+            .map_err(LoadAndProcessLedgerError::SnapshotArchiveSelection)?;
+
+        stage_snapshot_archive(
+            selected_full_snapshot_archive.path(),
+            &selected_full_snapshot_archives_dir,
+        )
+        .map_err(LoadAndProcessLedgerError::SnapshotArchiveSelection)?;
+
+        if let Some(selected_incremental_snapshot_archive) = selected_incremental_snapshot_archive {
+            stage_snapshot_archive(
+                selected_incremental_snapshot_archive.path(),
+                &selected_incremental_snapshot_archives_dir,
+            )
+            .map_err(LoadAndProcessLedgerError::SnapshotArchiveSelection)?;
         }
 
-        SnapshotConfig {
-            full_snapshot_archives_dir,
-            incremental_snapshot_archives_dir,
-            bank_snapshots_dir: bank_snapshots_dir.clone(),
-            ..SnapshotConfig::new_load_only()
-        }
+        (
+            SnapshotConfig {
+                full_snapshot_archives_dir: selected_full_snapshot_archives_dir,
+                incremental_snapshot_archives_dir: selected_incremental_snapshot_archives_dir,
+                bank_snapshots_dir: bank_snapshots_dir.clone(),
+                ..SnapshotConfig::new_load_only()
+            },
+            starting_slot,
+        )
     };
 
     // match process_options.halt_at_slot {
@@ -335,7 +431,6 @@ pub fn load_and_process_ledger(
             None, // Maybe support this later, though
             accounts_update_notifier,
             exit.clone(),
-            false,
         )
         .map_err(LoadAndProcessLedgerError::LoadBankForks)?;
     let block_verification_method = BlockVerificationMethod::default();
@@ -451,14 +546,12 @@ pub fn open_blockstore(
         .value_of("wal_recovery_mode")
         .map(BlockstoreRecoveryMode::from);
     let force_update_to_open = matches.is_present("force_update_to_open");
-    let enforce_ulimit_nofile = !matches.is_present("ignore_ulimit_nofile_error");
 
     match Blockstore::open_with_options(
         ledger_path,
         BlockstoreOptions {
             access_type: access_type.clone(),
             recovery_mode: wal_recovery_mode.clone(),
-            enforce_ulimit_nofile,
             ..BlockstoreOptions::default()
         },
     ) {
@@ -532,7 +625,6 @@ fn open_blockstore_with_temporary_primary_access(
             BlockstoreOptions {
                 access_type: AccessType::PrimaryForMaintenance,
                 recovery_mode: wal_recovery_mode.clone(),
-                enforce_ulimit_nofile: true,
                 ..BlockstoreOptions::default()
             },
         )?;
@@ -547,7 +639,6 @@ fn open_blockstore_with_temporary_primary_access(
         BlockstoreOptions {
             access_type: original_access_type,
             recovery_mode: wal_recovery_mode,
-            enforce_ulimit_nofile: true,
             ..BlockstoreOptions::default()
         },
     )

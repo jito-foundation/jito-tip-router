@@ -1,6 +1,9 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
+use agave_snapshots::{
+    SnapshotVersion, DEFAULT_ARCHIVE_COMPRESSION, SUPPORTED_ARCHIVE_COMPRESSION,
+};
 use clap_old::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use solana_clap_utils::{
     hidden_unless_forced,
@@ -9,9 +12,6 @@ use solana_clap_utils::{
     },
 };
 use solana_ledger::use_snapshot_archives_at_startup;
-use solana_runtime::snapshot_utils::{
-    SnapshotVersion, DEFAULT_ARCHIVE_COMPRESSION, SUPPORTED_ARCHIVE_COMPRESSION,
-};
 use solana_sdk::{clock::Slot, rent::Rent};
 
 // pub fn create_snapshot_arg_matches<'a, 'b>(

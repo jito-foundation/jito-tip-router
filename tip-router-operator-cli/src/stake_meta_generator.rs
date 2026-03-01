@@ -4,8 +4,8 @@ use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{Config, CONFIG_ACCOUNT_SEED};
 use log::*;
 use meta_merkle_tree::generated_merkle_tree::{Delegation, StakeMeta, StakeMetaCollection};
-use solana_accounts_db::hardened_unpack::OpenGenesisConfigError;
 use solana_client::client_error::ClientError;
+use solana_genesis_utils::OpenGenesisConfigError;
 use solana_ledger::{
     bank_forks_utils::BankForksUtilsError, blockstore::BlockstoreError,
     blockstore_processor::BlockstoreProcessorError,
@@ -263,14 +263,13 @@ mod tests {
     use solana_sdk::{
         self,
         account::{from_account, AccountSharedData},
-        message::Message,
         signature::{Keypair, Signer},
-        transaction::Transaction,
     };
     use solana_stake_interface::{
         self,
+        stake_flags::StakeFlags,
         stake_history::StakeHistory,
-        state::{Authorized, Lockup},
+        state::{Authorized, Lockup, Meta, Stake, StakeStateV2},
     };
     use solana_stake_program::stake_state;
     use solana_system_interface::program as system_program;
@@ -756,7 +755,7 @@ mod tests {
         }
     }
 
-    /// Helper function that sends a delegate stake instruction to the bank.
+    /// Helper function that creates and stores a delegated stake account in the bank.
     /// Returns the created stake account pubkey.
     fn delegate_stake_helper(
         bank: &Bank,
@@ -785,28 +784,32 @@ mod tests {
         assert!(bank.get_account(vote_account).is_some());
 
         let stake_keypair = Keypair::new();
-        let instructions = solana_stake_interface::instruction::create_account_and_delegate_stake(
-            &from_keypair.pubkey(),
-            &stake_keypair.pubkey(),
-            vote_account,
-            &Authorized::auto(&from_keypair.pubkey()),
-            &Lockup::default(),
-            delegation_amount,
+        let rent_exempt_reserve =
+            bank.get_minimum_balance_for_rent_exemption(StakeStateV2::size_of());
+        let stake_state = StakeStateV2::Stake(
+            Meta {
+                authorized: Authorized::auto(&from_keypair.pubkey()),
+                lockup: Lockup::default(),
+                rent_exempt_reserve,
+            },
+            Stake {
+                delegation: solana_stake_interface::state::Delegation::new(
+                    vote_account,
+                    delegation_amount,
+                    bank.epoch(),
+                ),
+                credits_observed: 0,
+            },
+            StakeFlags::empty(),
         );
-
-        let message = Message::new(&instructions[..], Some(&from_keypair.pubkey()));
-        let transaction = Transaction::new(
-            &[from_keypair, &stake_keypair],
-            message,
-            bank.last_blockhash(),
-        );
-
-        bank.process_transaction(&transaction)
-            .map_err(|e| {
-                eprintln!("Error delegating stake [error={}]", e);
-                e
-            })
-            .unwrap();
+        let stake_account_data = AccountSharedData::new_data_with_space(
+            rent_exempt_reserve.checked_add(delegation_amount).unwrap(),
+            &stake_state,
+            StakeStateV2::size_of(),
+            &solana_stake_interface::program::id(),
+        )
+        .unwrap();
+        bank.store_account(&stake_keypair.pubkey(), &stake_account_data);
 
         stake_keypair.pubkey()
     }
