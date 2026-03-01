@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use std::{fs, path::PathBuf};
 
 use borsh::BorshSerialize;
