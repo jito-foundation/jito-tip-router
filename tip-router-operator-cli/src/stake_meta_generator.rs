@@ -803,9 +803,7 @@ mod tests {
             StakeFlags::empty(),
         );
         let stake_account_data = AccountSharedData::new_data_with_space(
-            rent_exempt_reserve
-                .checked_add(delegation_amount)
-                .unwrap(),
+            rent_exempt_reserve.checked_add(delegation_amount).unwrap(),
             &stake_state,
             StakeStateV2::size_of(),
             &solana_stake_interface::program::id(),
