@@ -88,12 +88,12 @@ fn parse_meta_merkle_root(meta_merkle_root: &str) -> Result<[u8; 32]> {
         ));
     }
     let mut root = [0u8; 32];
-    for i in 0..32 {
+    for (i, byte) in root.iter_mut().enumerate() {
         let start = i * 2;
         let end = start + 2;
         let value = u8::from_str_radix(&hex_str[start..end], 16)
             .map_err(|e| anyhow!("invalid hex at byte {i}: {e}"))?;
-        root[i] = value;
+        *byte = value;
     }
     Ok(root)
 }
