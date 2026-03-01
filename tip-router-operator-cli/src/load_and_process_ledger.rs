@@ -1,14 +1,20 @@
 use {
+    agave_snapshots::{
+        paths::{get_full_snapshot_archives, get_incremental_snapshot_archives},
+        snapshot_archive_info::SnapshotArchiveInfoGetter,
+        snapshot_config::SnapshotConfig,
+        snapshot_hash::StartingSnapshotHashes,
+    },
     clap_old::ArgMatches,
     crossbeam_channel::unbounded,
     crossbeam_channel::{Receiver, Sender},
     log::*,
     solana_accounts_db::{
-        hardened_unpack::open_genesis_config,
         utils::{create_all_accounts_run_and_snapshot_dirs, move_and_async_delete_path_contents},
     },
     solana_core::validator::BlockVerificationMethod,
     solana_genesis_config::GenesisConfig,
+    solana_genesis_utils::open_genesis_config,
     solana_geyser_plugin_manager::geyser_plugin_service::{
         GeyserPluginService, GeyserPluginServiceError,
     },
@@ -31,9 +37,7 @@ use {
         },
         bank_forks::BankForks,
         prioritization_fee_cache::PrioritizationFeeCache,
-        snapshot_config::SnapshotConfig,
         snapshot_controller::SnapshotController,
-        snapshot_hash::StartingSnapshotHashes,
         snapshot_utils::{self, clean_orphaned_account_snapshot_dirs},
     },
     solana_sdk::{clock::Slot, pubkey::Pubkey, transaction::VersionedTransaction},
@@ -147,17 +151,21 @@ pub fn load_and_process_ledger(
             snapshot_archive_path.unwrap_or_else(|| blockstore.ledger_path().to_path_buf());
         let incremental_snapshot_archives_dir =
             incremental_snapshot_archive_path.unwrap_or_else(|| full_snapshot_archives_dir.clone());
-        if let Some(full_snapshot_slot) = snapshot_utils::get_highest_full_snapshot_archive_slot(
-            &full_snapshot_archives_dir,
-            None,
-        ) {
-            let incremental_snapshot_slot =
-                snapshot_utils::get_highest_incremental_snapshot_archive_slot(
-                    &incremental_snapshot_archives_dir,
-                    full_snapshot_slot,
-                    snapshot_halt_at_slot,
-                )
-                .unwrap_or_default();
+        let full_snapshot_slot = get_full_snapshot_archives(&full_snapshot_archives_dir)
+            .into_iter()
+            .map(|archive| archive.slot())
+            .filter(|slot| snapshot_halt_at_slot.map_or(true, |max_slot| *slot <= max_slot))
+            .max();
+        if let Some(full_snapshot_slot) = full_snapshot_slot {
+            let incremental_snapshot_slot = get_incremental_snapshot_archives(
+                &incremental_snapshot_archives_dir,
+            )
+            .into_iter()
+            .filter(|archive| archive.base_slot() == full_snapshot_slot)
+            .map(|archive| archive.slot())
+            .filter(|slot| snapshot_halt_at_slot.map_or(true, |max_slot| *slot <= max_slot))
+            .max()
+            .unwrap_or_default();
             starting_slot = std::cmp::max(full_snapshot_slot, incremental_snapshot_slot);
         }
 
@@ -335,7 +343,6 @@ pub fn load_and_process_ledger(
             None, // Maybe support this later, though
             accounts_update_notifier,
             exit.clone(),
-            false,
         )
         .map_err(LoadAndProcessLedgerError::LoadBankForks)?;
     let block_verification_method = BlockVerificationMethod::default();
@@ -451,14 +458,12 @@ pub fn open_blockstore(
         .value_of("wal_recovery_mode")
         .map(BlockstoreRecoveryMode::from);
     let force_update_to_open = matches.is_present("force_update_to_open");
-    let enforce_ulimit_nofile = !matches.is_present("ignore_ulimit_nofile_error");
 
     match Blockstore::open_with_options(
         ledger_path,
         BlockstoreOptions {
             access_type: access_type.clone(),
             recovery_mode: wal_recovery_mode.clone(),
-            enforce_ulimit_nofile,
             ..BlockstoreOptions::default()
         },
     ) {
@@ -532,7 +537,6 @@ fn open_blockstore_with_temporary_primary_access(
             BlockstoreOptions {
                 access_type: AccessType::PrimaryForMaintenance,
                 recovery_mode: wal_recovery_mode.clone(),
-                enforce_ulimit_nofile: true,
                 ..BlockstoreOptions::default()
             },
         )?;
@@ -547,7 +551,6 @@ fn open_blockstore_with_temporary_primary_access(
         BlockstoreOptions {
             access_type: original_access_type,
             recovery_mode: wal_recovery_mode,
-            enforce_ulimit_nofile: true,
             ..BlockstoreOptions::default()
         },
     )

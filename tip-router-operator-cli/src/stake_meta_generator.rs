@@ -4,8 +4,8 @@ use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{Config, CONFIG_ACCOUNT_SEED};
 use log::*;
 use meta_merkle_tree::generated_merkle_tree::{Delegation, StakeMeta, StakeMetaCollection};
-use solana_accounts_db::hardened_unpack::OpenGenesisConfigError;
 use solana_client::client_error::ClientError;
+use solana_genesis_utils::OpenGenesisConfigError;
 use solana_ledger::{
     bank_forks_utils::BankForksUtilsError, blockstore::BlockstoreError,
     blockstore_processor::BlockstoreProcessorError,

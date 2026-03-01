@@ -30,6 +30,7 @@ meta-merkle-tree = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+agave-snapshots = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "c9205ba7712b5bfda97ace7fc9c354fabaa6457f" }
 solana-account-decoder = { workspace = true }
 solana-accounts-db = { workspace = true }
 solana-clap-utils = { workspace = true }
@@ -38,6 +39,7 @@ solana-commitment-config = { workspace = true }
 solana-compute-budget-interface = { workspace = true }
 solana-core = { workspace = true }
 solana-genesis-config = { workspace = true }
+solana-genesis-utils = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "c9205ba7712b5bfda97ace7fc9c354fabaa6457f" }
 solana-geyser-plugin-manager = { workspace = true }
 solana-gossip = { workspace = true }
 solana-ledger = { workspace = true }

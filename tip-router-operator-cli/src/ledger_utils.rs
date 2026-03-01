@@ -7,9 +7,16 @@ use std::{
     time::Instant,
 };
 
+use agave_snapshots::{
+    error::SnapshotError,
+    paths::{get_full_snapshot_archives, get_incremental_snapshot_archives},
+    snapshot_archive_info::SnapshotArchiveInfoGetter,
+    snapshot_config::SnapshotConfig,
+    SnapshotVersion,
+};
 use clap_old::ArgMatches;
 use log::{info, warn};
-use solana_accounts_db::hardened_unpack::{
+use solana_genesis_utils::{
     open_genesis_config, OpenGenesisConfigError, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
 };
 use solana_ledger::{
@@ -18,13 +25,7 @@ use solana_ledger::{
     blockstore_processor::ProcessOptions,
 };
 use solana_metrics::{datapoint_error, datapoint_info};
-use solana_runtime::{
-    bank::Bank,
-    snapshot_archive_info::SnapshotArchiveInfoGetter,
-    snapshot_bank_utils,
-    snapshot_config::SnapshotConfig,
-    snapshot_utils::{self, get_full_snapshot_archives, SnapshotError, SnapshotVersion},
-};
+use solana_runtime::{bank::Bank, snapshot_bank_utils};
 use solana_sdk::clock::Slot;
 use thiserror::Error;
 
@@ -206,16 +207,19 @@ pub fn get_bank_from_ledger(
     };
 
     let mut starting_slot = 0; // default start check with genesis
-    if let Some(full_snapshot_slot) = snapshot_utils::get_highest_full_snapshot_archive_slot(
-        &full_snapshots_path,
-        process_options.halt_at_slot,
-    ) {
-        let incremental_snapshot_slot =
-            snapshot_utils::get_highest_incremental_snapshot_archive_slot(
-                &incremental_snapshots_path,
-                full_snapshot_slot,
-                process_options.halt_at_slot,
-            )
+    let max_slot = process_options.halt_at_slot;
+    let full_snapshot_slot = get_full_snapshot_archives(&full_snapshots_path)
+        .into_iter()
+        .map(|archive| archive.slot())
+        .filter(|slot| max_slot.map_or(true, |max_slot| *slot <= max_slot))
+        .max();
+    if let Some(full_snapshot_slot) = full_snapshot_slot {
+        let incremental_snapshot_slot = get_incremental_snapshot_archives(&incremental_snapshots_path)
+            .into_iter()
+            .filter(|archive| archive.base_slot() == full_snapshot_slot)
+            .map(|archive| archive.slot())
+            .filter(|slot| max_slot.map_or(true, |max_slot| *slot <= max_slot))
+            .max()
             .unwrap_or_default();
         starting_slot = std::cmp::max(full_snapshot_slot, incremental_snapshot_slot);
     }
@@ -458,7 +462,7 @@ pub fn get_bank_from_snapshot_at_slot(
     };
     let exit = Arc::new(AtomicBool::new(false));
 
-    let (bank, _) = snapshot_bank_utils::bank_from_snapshot_archives(
+    let bank = snapshot_bank_utils::bank_from_snapshot_archives(
         &account_paths,
         bank_snapshots_dir,
         full_snapshot_archive_info,
@@ -466,7 +470,6 @@ pub fn get_bank_from_snapshot_at_slot(
         &genesis_config,
         &process_options.runtime_config,
         process_options.debug_keys.clone(),
-        None,
         process_options.limit_load_slot_count_from_snapshot,
         process_options.accounts_db_skip_shrink,
         process_options.accounts_db_force_initial_clean,
