@@ -5,6 +5,7 @@ edition = "2021"
 description = "CLI for Jito Tip Router"
 
 [dependencies]
+agave-snapshots = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "c9205ba7712b5bfda97ace7fc9c354fabaa6457f" }
 anyhow = { workspace = true }
 base64 = { workspace = true }
 borsh = { workspace = true }
@@ -30,7 +31,6 @@ meta-merkle-tree = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-agave-snapshots = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "c9205ba7712b5bfda97ace7fc9c354fabaa6457f" }
 solana-account-decoder = { workspace = true }
 solana-accounts-db = { workspace = true }
 solana-clap-utils = { workspace = true }

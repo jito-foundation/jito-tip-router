@@ -211,16 +211,17 @@ pub fn get_bank_from_ledger(
     let full_snapshot_slot = get_full_snapshot_archives(&full_snapshots_path)
         .into_iter()
         .map(|archive| archive.slot())
-        .filter(|slot| max_slot.map_or(true, |max_slot| *slot <= max_slot))
+        .filter(|slot| max_slot.is_none_or(|max_slot| *slot <= max_slot))
         .max();
     if let Some(full_snapshot_slot) = full_snapshot_slot {
-        let incremental_snapshot_slot = get_incremental_snapshot_archives(&incremental_snapshots_path)
-            .into_iter()
-            .filter(|archive| archive.base_slot() == full_snapshot_slot)
-            .map(|archive| archive.slot())
-            .filter(|slot| max_slot.map_or(true, |max_slot| *slot <= max_slot))
-            .max()
-            .unwrap_or_default();
+        let incremental_snapshot_slot =
+            get_incremental_snapshot_archives(&incremental_snapshots_path)
+                .into_iter()
+                .filter(|archive| archive.base_slot() == full_snapshot_slot)
+                .map(|archive| archive.slot())
+                .filter(|slot| max_slot.is_none_or(|max_slot| *slot <= max_slot))
+                .max()
+                .unwrap_or_default();
         starting_slot = std::cmp::max(full_snapshot_slot, incremental_snapshot_slot);
     }
     info!("Starting slot {}", starting_slot);

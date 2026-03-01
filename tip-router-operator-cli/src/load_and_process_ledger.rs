@@ -11,8 +11,8 @@ use {
     crossbeam_channel::unbounded,
     crossbeam_channel::{Receiver, Sender},
     log::*,
-    solana_accounts_db::{
-        utils::{create_all_accounts_run_and_snapshot_dirs, move_and_async_delete_path_contents},
+    solana_accounts_db::utils::{
+        create_all_accounts_run_and_snapshot_dirs, move_and_async_delete_path_contents,
     },
     solana_core::validator::BlockVerificationMethod,
     solana_genesis_config::GenesisConfig,
@@ -186,7 +186,7 @@ pub fn load_and_process_ledger(
             get_full_snapshot_archives(&full_snapshot_archives_dir)
                 .into_iter()
                 .filter(|archive| {
-                    snapshot_halt_at_slot.map_or(true, |max_slot| archive.slot() <= max_slot)
+                    snapshot_halt_at_slot.is_none_or(|max_slot| archive.slot() <= max_slot)
                 })
                 .max_by_key(|archive| archive.slot());
 
@@ -211,7 +211,7 @@ pub fn load_and_process_ledger(
                 .into_iter()
                 .filter(|archive| archive.base_slot() == selected_full_snapshot_archive.slot())
                 .filter(|archive| {
-                    snapshot_halt_at_slot.map_or(true, |max_slot| archive.slot() <= max_slot)
+                    snapshot_halt_at_slot.is_none_or(|max_slot| archive.slot() <= max_slot)
                 })
                 .max_by_key(|archive| archive.slot());
 
