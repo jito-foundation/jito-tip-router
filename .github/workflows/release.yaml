@@ -1,13 +1,13 @@
 # Release Workflow
 #
-# Builds statically-linked Linux binaries and publishes them as a GitHub Release.
+# Builds a statically-linked Linux binary and publishes it as a GitHub Release.
 #
 # Triggers:
 #   - Automatically on tag push matching 'v*' (e.g., v1.0.0)
 #   - Manually via workflow_dispatch (requires tag input)
 #
 # Outputs:
-#   - GitHub Release with tip-router-operator-cli binaries and per-binary SHA256SUMS files
+#   - GitHub Release with the tip-router-operator-cli binary and its SHA256SUMS file
 name: Release
 
 on:
@@ -28,7 +28,7 @@ env:
 
 # Prevent concurrent releases for the same ref
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -58,6 +58,21 @@ jobs:
           else
             VERSION="${{ inputs.tag }}"
           fi
+
+          # Validate tag format
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Invalid tag format '$VERSION'. Must match 'vX.Y.Z' (e.g., v1.0.0)"
+            exit 1
+          fi
+
+          # For manual triggers, verify the tag exists
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if ! git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
+              echo "::error::Tag '$VERSION' does not exist. Push the tag first: git tag $VERSION && git push origin $VERSION"
+              exit 1
+            fi
+          fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -88,6 +103,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.version }}
           name: Release ${{ steps.version.outputs.version }}
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
             release/${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }}
             release/SHA256SUMS.${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }}
