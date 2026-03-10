@@ -1,0 +1,93 @@
+# Release Workflow
+#
+# Builds statically-linked Linux binaries and publishes them as a GitHub Release.
+#
+# Triggers:
+#   - Automatically on tag push matching 'v*' (e.g., v1.0.0)
+#   - Manually via workflow_dispatch (requires tag input)
+#
+# Outputs:
+#   - GitHub Release with tip-router-operator-cli binaries and per-binary SHA256SUMS files
+name: Release
+
+on:
+  # Trigger on version tags (e.g., git push origin v1.0.0)
+  push:
+    tags: ["v*"]
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g., v1.0.0)"
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+  TARGET: x86_64-unknown-linux-musl
+  TIP_ROUTER_OPERATOR_CLI_BINARY: tip-router-operator-cli
+
+# Prevent concurrent releases for the same ref
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Run CI checks before building release
+  ci:
+    uses: ./.github/workflows/ci.yaml
+
+  build:
+    name: Build Release Binaries
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      # Extract version from tag push or manual input
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="${{ inputs.tag }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.89.0"
+          target: ${{ env.TARGET }}
+
+      # musl-tools required for static linking
+      - name: Install musl-tools
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Build release binaries
+        run: |
+          cargo build --release --target ${{ env.TARGET }} \
+            --package ${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }}
+
+      # Prepare release artifacts
+      - name: Prepare artifacts
+        run: |
+          mkdir -p release
+          cp target/${{ env.TARGET }}/release/${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }} release/
+          cd release
+          sha256sum ${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }} > SHA256SUMS.${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            release/${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }}
+            release/SHA256SUMS.${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }}
