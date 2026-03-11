@@ -2,11 +2,12 @@ name: ci
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
-    branches: [ master ]
+    branches: [master]
+  workflow_call:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -23,7 +24,7 @@ jobs:
         with:
           crate: cargo-audit
       - run: |
-          cargo audit --ignore RUSTSEC-2022-0093 --ignore RUSTSEC-2024-0344 --ignore RUSTSEC-2024-0421 --ignore RUSTSEC-2024-0375 --ignore RUSTSEC-2025-0009 --ignore RUSTSEC-2025-0022 --ignore RUSTSEC-2026-0001 --ignore RUSTSEC-2026-0007 --ignore RUSTSEC-2026-0009
+          cargo audit --ignore RUSTSEC-2022-0093 --ignore RUSTSEC-2024-0344 --ignore RUSTSEC-2024-0421 --ignore RUSTSEC-2024-0375 --ignore RUSTSEC-2025-0009 --ignore RUSTSEC-2025-0022 --ignore RUSTSEC-2026-0001 --ignore RUSTSEC-2026-0007 --ignore RUSTSEC-2026-0009 --ignore RUSTSEC-2026-0037
 
   code_gen:
     name: code generation
@@ -40,7 +41,7 @@ jobs:
         uses: tj-actions/verify-changed-files@v20
         with:
           fail-if-changed: true
-          fail-message: 'Unexpected changes in the shank IDL files. Please run `./target/release/jito-tip-router-shank-cli` to regenerate the files.'
+          fail-message: "Unexpected changes in the shank IDL files. Please run `./target/release/jito-tip-router-shank-cli` to regenerate the files."
 
   lint:
     name: lint
