@@ -20,11 +20,17 @@ on:
       tag:
         description: "Release tag (e.g., v1.0.0)"
         required: true
+      binary:
+        description: "Binary to release"
+        required: true
+        type: choice
+        options:
+          - tip-router-operator-cli
+          - gcp_uploader
 
 env:
   CARGO_TERM_COLOR: always
   TARGET: x86_64-unknown-linux-musl
-  TIP_ROUTER_OPERATOR_CLI_BINARY: tip-router-operator-cli
 
 # Prevent concurrent releases for the same ref
 concurrency:
@@ -84,26 +90,33 @@ jobs:
       - name: Install musl-tools
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Build release binaries
+      - name: Determine binary
+        id: binary
+        run: |
+          BINARY="${{ inputs.binary || 'tip-router-operator-cli' }}"
+          echo "name=$BINARY" >> $GITHUB_OUTPUT
+
+      - name: Build release binary
         run: |
           cargo build --release --target ${{ env.TARGET }} \
-            --package ${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }}
+            --package ${{ steps.binary.outputs.name }}
 
       # Prepare release artifacts
       - name: Prepare artifacts
         run: |
+          BINARY="${{ steps.binary.outputs.name }}"
           mkdir -p release
-          cp target/${{ env.TARGET }}/release/${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }} release/
+          cp target/${{ env.TARGET }}/release/$BINARY release/
           cd release
-          sha256sum ${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }} > SHA256SUMS.${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }}
+          sha256sum $BINARY > SHA256SUMS.$BINARY
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
-          name: Release ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }} (${{ steps.binary.outputs.name }})
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            release/${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }}
-            release/SHA256SUMS.${{ env.TIP_ROUTER_OPERATOR_CLI_BINARY }}
+            release/${{ steps.binary.outputs.name }}
+            release/SHA256SUMS.${{ steps.binary.outputs.name }}
