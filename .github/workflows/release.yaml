@@ -3,22 +3,27 @@
 # Builds a statically-linked Linux binary and publishes it as a GitHub Release.
 #
 # Triggers:
-#   - Automatically on tag push matching 'v*' (e.g., v1.0.0)
-#   - Manually via workflow_dispatch (requires tag input)
+#   - Automatically on tag push matching 'v*-operator' or 'v*-gcp_uploader'
+#   - Manually via workflow_dispatch (requires tag and binary inputs)
+#
+# Tag format:
+#   - tip-router-operator-cli: v3.1.0-operator
+#   - gcp_uploader:            v3.1.0-gcp_uploader
 #
 # Outputs:
-#   - GitHub Release with the tip-router-operator-cli binary and its SHA256SUMS file
+#   - GitHub Release with the selected binary and its SHA256SUMS file
 name: Release
 
 on:
-  # Trigger on version tags (e.g., git push origin v1.0.0)
   push:
-    tags: ["v*"]
+    tags:
+      - "v*-operator"
+      - "v*-gcp_uploader"
   # Manual trigger
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag (e.g., v1.0.0)"
+        description: "Release tag (e.g., v3.1.0-operator)"
         required: true
       binary:
         description: "Binary to release"
@@ -55,31 +60,54 @@ jobs:
           ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
 
-      # Extract version from tag push or manual input
-      - name: Determine version
-        id: version
+      # Determine version and binary from tag or manual input
+      - name: Determine version and binary
+        id: meta
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
-            VERSION="${GITHUB_REF#refs/tags/}"
+            TAG="${GITHUB_REF#refs/tags/}"
           else
-            VERSION="${{ inputs.tag }}"
+            TAG="${{ inputs.tag }}"
           fi
 
-          # Validate tag format
-          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-            echo "::error::Invalid tag format '$VERSION'. Must match 'vX.Y.Z' (e.g., v1.0.0)"
+          # Validate tag format: v<semver>-<suffix>
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(.+)$ ]]; then
+            echo "::error::Invalid tag format '$TAG'. Must match 'vX.Y.Z-<suffix>' (e.g., v3.1.0-operator or v3.1.0-gcp_uploader)"
             exit 1
           fi
 
-          # For manual triggers, verify the tag exists
+          SUFFIX="${BASH_REMATCH[1]}"
+
+          # Map tag suffix to binary/package name
+          case "$SUFFIX" in
+            operator)
+              BINARY="tip-router-operator-cli"
+              ;;
+            gcp_uploader)
+              BINARY="gcp_uploader"
+              ;;
+            *)
+              echo "::error::Unknown tag suffix '$SUFFIX'. Expected 'operator' or 'gcp_uploader'"
+              exit 1
+              ;;
+          esac
+
+          # For manual triggers, verify binary matches tag suffix
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if ! git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
-              echo "::error::Tag '$VERSION' does not exist. Push the tag first: git tag $VERSION && git push origin $VERSION"
+            INPUT_BINARY="${{ inputs.binary }}"
+            if [[ "$INPUT_BINARY" != "$BINARY" ]]; then
+              echo "::error::Binary '$INPUT_BINARY' does not match tag suffix '$SUFFIX' (expected '$BINARY')"
+              exit 1
+            fi
+
+            if ! git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
+              echo "::error::Tag '$TAG' does not exist. Push the tag first: git tag $TAG && git push origin $TAG"
               exit 1
             fi
           fi
 
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "binary=$BINARY" >> $GITHUB_OUTPUT
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -90,21 +118,15 @@ jobs:
       - name: Install musl-tools
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Determine binary
-        id: binary
-        run: |
-          BINARY="${{ inputs.binary || 'tip-router-operator-cli' }}"
-          echo "name=$BINARY" >> $GITHUB_OUTPUT
-
       - name: Build release binary
         run: |
           cargo build --release --target ${{ env.TARGET }} \
-            --package ${{ steps.binary.outputs.name }}
+            --package ${{ steps.meta.outputs.binary }}
 
       # Prepare release artifacts
       - name: Prepare artifacts
         run: |
-          BINARY="${{ steps.binary.outputs.name }}"
+          BINARY="${{ steps.meta.outputs.binary }}"
           mkdir -p release
           cp target/${{ env.TARGET }}/release/$BINARY release/
           cd release
@@ -113,10 +135,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: Release ${{ steps.version.outputs.version }} (${{ steps.binary.outputs.name }})
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: Release ${{ steps.meta.outputs.tag }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            release/${{ steps.binary.outputs.name }}
-            release/SHA256SUMS.${{ steps.binary.outputs.name }}
+            release/${{ steps.meta.outputs.binary }}
+            release/SHA256SUMS.${{ steps.meta.outputs.binary }}
