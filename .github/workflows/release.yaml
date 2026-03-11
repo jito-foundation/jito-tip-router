@@ -1,6 +1,8 @@
 # Release Workflow
 #
-# Builds a statically-linked Linux binary and publishes it as a GitHub Release.
+# Builds a Linux binary and publishes it as a GitHub Release.
+#   - tip-router-operator-cli: statically linked (musl)
+#   - gcp_uploader: dynamically linked (glibc) due to OpenSSL dependency
 #
 # Triggers:
 #   - Automatically on tag push matching 'v*-operator' or 'v*-gcp_uploader'
@@ -35,7 +37,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  TARGET: x86_64-unknown-linux-musl
 
 # Prevent concurrent releases for the same ref
 concurrency:
@@ -78,13 +79,15 @@ jobs:
 
           SUFFIX="${BASH_REMATCH[1]}"
 
-          # Map tag suffix to binary/package name
+          # Map tag suffix to binary/package name and target
           case "$SUFFIX" in
             operator)
               BINARY="tip-router-operator-cli"
+              TARGET="x86_64-unknown-linux-musl"
               ;;
             gcp_uploader)
               BINARY="gcp_uploader"
+              TARGET="x86_64-unknown-linux-gnu"
               ;;
             *)
               echo "::error::Unknown tag suffix '$SUFFIX'. Expected 'operator' or 'gcp_uploader'"
@@ -108,19 +111,21 @@ jobs:
 
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "binary=$BINARY" >> $GITHUB_OUTPUT
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: "1.89.0"
-          target: ${{ env.TARGET }}
+          target: ${{ steps.meta.outputs.target }}
 
-      # musl-tools required for static linking
+      # musl-tools required for static linking (only for musl targets)
       - name: Install musl-tools
+        if: contains(steps.meta.outputs.target, 'musl')
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Build release binary
         run: |
-          cargo build --release --target ${{ env.TARGET }} \
+          cargo build --release --target ${{ steps.meta.outputs.target }} \
             --package ${{ steps.meta.outputs.binary }}
 
       # Prepare release artifacts
@@ -128,7 +133,7 @@ jobs:
         run: |
           BINARY="${{ steps.meta.outputs.binary }}"
           mkdir -p release
-          cp target/${{ env.TARGET }}/release/$BINARY release/
+          cp target/${{ steps.meta.outputs.target }}/release/$BINARY release/
           cd release
           sha256sum $BINARY > SHA256SUMS.$BINARY
 
