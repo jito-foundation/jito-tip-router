@@ -139,6 +139,8 @@ mod set_merkle_root {
             slot: 0,
         };
 
+        let tip_distribution_program_id = jito_tip_distribution_sdk::id();
+        let priority_fee_distribution_program_id = jito_priority_fee_distribution_sdk::id();
         let collection = GeneratedMerkleTreeCollection::new_from_stake_meta_collection(
             stake_meta_collection,
             &ncn_address,
@@ -146,6 +148,8 @@ mod set_merkle_root {
             300,
             150,
             &jito_tip_router_program::id(),
+            &tip_distribution_program_id,
+            &priority_fee_distribution_program_id,
         )
         .map_err(TestError::from)?;
 

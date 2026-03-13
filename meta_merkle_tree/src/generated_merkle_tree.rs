@@ -80,9 +80,11 @@ impl GeneratedMerkleTree {
         ncn_address: &Pubkey,
         protocol_fee_bps: u64,
         epoch: u64,
+        tip_distribution_program_id: &Pubkey,
+        priority_fee_distribution_program_id: &Pubkey,
     ) -> Result<Self, MerkleRootGeneratorError> {
         let (mut tree_nodes, tip_distribution_pubkey, merkle_root_upload_authority, total_tips) =
-            if distribution_program.eq(&TIP_DISTRIBUTION_ID) {
+            if distribution_program.eq(tip_distribution_program_id) {
                 let tip_distribution_meta =
                     stake_meta.maybe_tip_distribution_meta.as_ref().unwrap();
 
@@ -107,7 +109,7 @@ impl GeneratedMerkleTree {
                     tip_distribution_meta.merkle_root_upload_authority,
                     tip_distribution_meta.total_tips,
                 )
-            } else if distribution_program.eq(&PRIORITY_FEE_DISTRIBUTION_ID) {
+            } else if distribution_program.eq(priority_fee_distribution_program_id) {
                 let priority_fee_distribution_meta = stake_meta
                     .maybe_priority_fee_distribution_meta
                     .as_ref()
@@ -172,6 +174,8 @@ impl GeneratedMerkleTreeCollection {
         protocol_fee_bps: u64,
         pf_distribution_protocol_fee_bps: u64,
         tip_router_program_id: &Pubkey,
+        tip_distribution_program_id: &Pubkey,
+        priority_fee_distribution_program_id: &Pubkey,
     ) -> Result<Self, MerkleRootGeneratorError> {
         let generated_merkle_trees = stake_meta_collection
             .stake_metas
@@ -187,10 +191,12 @@ impl GeneratedMerkleTreeCollection {
                         GeneratedMerkleTree::new_from_stake_meta_for_distribution_program(
                             &stake_meta,
                             tip_router_program_id,
-                            &TIP_DISTRIBUTION_ID,
+                            tip_distribution_program_id,
                             ncn_address,
                             protocol_fee_bps,
                             epoch,
+                            tip_distribution_program_id,
+                            priority_fee_distribution_program_id,
                         );
                     res.push(tip_distribution_tree);
                 }
@@ -200,10 +206,12 @@ impl GeneratedMerkleTreeCollection {
                         GeneratedMerkleTree::new_from_stake_meta_for_distribution_program(
                             &stake_meta,
                             tip_router_program_id,
-                            &PRIORITY_FEE_DISTRIBUTION_ID,
+                            priority_fee_distribution_program_id,
                             ncn_address,
                             pf_distribution_protocol_fee_bps,
                             epoch,
+                            tip_distribution_program_id,
+                            priority_fee_distribution_program_id,
                         );
                     res.push(priority_fee_distribution_tree);
                 }
@@ -801,6 +809,8 @@ mod tests {
             300,
             150,
             &tip_router_program_id,
+            &tip_distribution_program_id,
+            &priority_fee_distribution_program_id,
         )
         .unwrap();
 
@@ -1132,6 +1142,8 @@ mod tests {
             300,
             150,
             &tip_router_program_id,
+            &tip_distribution_program_id,
+            &priority_fee_distribution_program_id,
         )
         .unwrap();
         merkle_tree_collection
@@ -1223,6 +1235,8 @@ mod tests {
             300,
             150,
             &tip_router_program_id,
+            &tip_distribution_program_id,
+            &priority_fee_distribution_program_id,
         )
         .unwrap();
 
