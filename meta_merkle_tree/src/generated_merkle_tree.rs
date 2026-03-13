@@ -164,7 +164,6 @@ impl GeneratedMerkleTree {
 impl GeneratedMerkleTreeCollection {
     /// Create a collection of Generated Merkle Trees that includes both the MEV Tip Distributions
     /// and the Priority Fee Distributions.
-    #[allow(clippy::too_many_arguments)]
     pub fn new_from_stake_meta_collection(
         stake_meta_collection: StakeMetaCollection,
         ncn_address: &Pubkey,
@@ -172,9 +171,11 @@ impl GeneratedMerkleTreeCollection {
         protocol_fee_bps: u64,
         pf_distribution_protocol_fee_bps: u64,
         tip_router_program_id: &Pubkey,
-        tip_distribution_program_id: &Pubkey,
-        priority_fee_distribution_program_id: &Pubkey,
     ) -> Result<Self, MerkleRootGeneratorError> {
+        let tip_distribution_program_id = &stake_meta_collection.tip_distribution_program_id;
+        let priority_fee_distribution_program_id =
+            &stake_meta_collection.priority_fee_distribution_program_id;
+
         let generated_merkle_trees = stake_meta_collection
             .stake_metas
             .into_iter()
@@ -812,8 +813,6 @@ mod tests {
             300,
             150,
             &tip_router_program_id,
-            &tip_distribution_program_id,
-            &priority_fee_distribution_program_id,
         )
         .unwrap();
 
@@ -1145,8 +1144,6 @@ mod tests {
             300,
             150,
             &tip_router_program_id,
-            &tip_distribution_program_id,
-            &priority_fee_distribution_program_id,
         )
         .unwrap();
         merkle_tree_collection
@@ -1238,8 +1235,6 @@ mod tests {
             300,
             150,
             &tip_router_program_id,
-            &tip_distribution_program_id,
-            &priority_fee_distribution_program_id,
         )
         .unwrap();
 
