@@ -14,10 +14,6 @@ use std::{
 };
 use thiserror::Error;
 
-pub const TIP_DISTRIBUTION_ID: Pubkey =
-    Pubkey::from_str_const("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
-pub const PRIORITY_FEE_DISTRIBUTION_ID: Pubkey =
-    Pubkey::from_str_const("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3");
 pub const CLAIM_STATUS_SEED: &[u8] = b"CLAIM_STATUS";
 
 pub fn mul_div(a: u64, b: u64, q: u64) -> Result<u64, MerkleRootGeneratorError> {
@@ -73,6 +69,7 @@ pub struct GeneratedMerkleTree {
 }
 
 impl GeneratedMerkleTree {
+    #[allow(clippy::too_many_arguments)]
     fn new_from_stake_meta_for_distribution_program(
         stake_meta: &StakeMeta,
         tip_router_program_id: &Pubkey,
@@ -167,6 +164,7 @@ impl GeneratedMerkleTree {
 impl GeneratedMerkleTreeCollection {
     /// Create a collection of Generated Merkle Trees that includes both the MEV Tip Distributions
     /// and the Priority Fee Distributions.
+    #[allow(clippy::too_many_arguments)]
     pub fn new_from_stake_meta_collection(
         stake_meta_collection: StakeMetaCollection,
         ncn_address: &Pubkey,
@@ -653,6 +651,11 @@ where
 mod tests {
     use super::*;
     use crate::verify;
+
+    const TIP_DISTRIBUTION_ID: Pubkey =
+        Pubkey::from_str_const("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
+    const PRIORITY_FEE_DISTRIBUTION_ID: Pubkey =
+        Pubkey::from_str_const("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3");
 
     #[test]
     fn test_merkle_tree_verify() {
