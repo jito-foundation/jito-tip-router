@@ -189,6 +189,14 @@ pub fn derive_merkle_root_upload_authority_address(
     )
 }
 
+#[cfg(feature = "testnet")]
 pub fn id() -> Pubkey {
-    Pubkey::from_str("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3").unwrap()
+    Pubkey::from_str("9yw8YAKz16nFmA9EvHzKyVCYErHAJ6ZKtmK6adDBvmuU")
+        .expect("Failed to parse program id")
+}
+
+#[cfg(not(feature = "testnet"))]
+pub fn id() -> Pubkey {
+    Pubkey::from_str("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3")
+        .expect("Failed to parse program id")
 }
