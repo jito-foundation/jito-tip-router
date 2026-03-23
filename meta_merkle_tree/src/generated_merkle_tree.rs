@@ -14,10 +14,6 @@ use std::{
 };
 use thiserror::Error;
 
-pub const TIP_DISTRIBUTION_ID: Pubkey =
-    Pubkey::from_str_const("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
-pub const PRIORITY_FEE_DISTRIBUTION_ID: Pubkey =
-    Pubkey::from_str_const("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3");
 pub const CLAIM_STATUS_SEED: &[u8] = b"CLAIM_STATUS";
 
 pub fn mul_div(a: u64, b: u64, q: u64) -> Result<u64, MerkleRootGeneratorError> {
@@ -73,6 +69,7 @@ pub struct GeneratedMerkleTree {
 }
 
 impl GeneratedMerkleTree {
+    #[allow(clippy::too_many_arguments)]
     fn new_from_stake_meta_for_distribution_program(
         stake_meta: &StakeMeta,
         tip_router_program_id: &Pubkey,
@@ -80,9 +77,11 @@ impl GeneratedMerkleTree {
         ncn_address: &Pubkey,
         protocol_fee_bps: u64,
         epoch: u64,
+        tip_distribution_program_id: &Pubkey,
+        priority_fee_distribution_program_id: &Pubkey,
     ) -> Result<Self, MerkleRootGeneratorError> {
         let (mut tree_nodes, tip_distribution_pubkey, merkle_root_upload_authority, total_tips) =
-            if distribution_program.eq(&TIP_DISTRIBUTION_ID) {
+            if distribution_program.eq(tip_distribution_program_id) {
                 let tip_distribution_meta =
                     stake_meta.maybe_tip_distribution_meta.as_ref().unwrap();
 
@@ -107,7 +106,7 @@ impl GeneratedMerkleTree {
                     tip_distribution_meta.merkle_root_upload_authority,
                     tip_distribution_meta.total_tips,
                 )
-            } else if distribution_program.eq(&PRIORITY_FEE_DISTRIBUTION_ID) {
+            } else if distribution_program.eq(priority_fee_distribution_program_id) {
                 let priority_fee_distribution_meta = stake_meta
                     .maybe_priority_fee_distribution_meta
                     .as_ref()
@@ -173,6 +172,10 @@ impl GeneratedMerkleTreeCollection {
         pf_distribution_protocol_fee_bps: u64,
         tip_router_program_id: &Pubkey,
     ) -> Result<Self, MerkleRootGeneratorError> {
+        let tip_distribution_program_id = &stake_meta_collection.tip_distribution_program_id;
+        let priority_fee_distribution_program_id =
+            &stake_meta_collection.priority_fee_distribution_program_id;
+
         let generated_merkle_trees = stake_meta_collection
             .stake_metas
             .into_iter()
@@ -187,10 +190,12 @@ impl GeneratedMerkleTreeCollection {
                         GeneratedMerkleTree::new_from_stake_meta_for_distribution_program(
                             &stake_meta,
                             tip_router_program_id,
-                            &TIP_DISTRIBUTION_ID,
+                            tip_distribution_program_id,
                             ncn_address,
                             protocol_fee_bps,
                             epoch,
+                            tip_distribution_program_id,
+                            priority_fee_distribution_program_id,
                         );
                     res.push(tip_distribution_tree);
                 }
@@ -200,10 +205,12 @@ impl GeneratedMerkleTreeCollection {
                         GeneratedMerkleTree::new_from_stake_meta_for_distribution_program(
                             &stake_meta,
                             tip_router_program_id,
-                            &PRIORITY_FEE_DISTRIBUTION_ID,
+                            priority_fee_distribution_program_id,
                             ncn_address,
                             pf_distribution_protocol_fee_bps,
                             epoch,
+                            tip_distribution_program_id,
+                            priority_fee_distribution_program_id,
                         );
                     res.push(priority_fee_distribution_tree);
                 }
@@ -645,6 +652,11 @@ where
 mod tests {
     use super::*;
     use crate::verify;
+
+    const TIP_DISTRIBUTION_ID: Pubkey =
+        Pubkey::from_str_const("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
+    const PRIORITY_FEE_DISTRIBUTION_ID: Pubkey =
+        Pubkey::from_str_const("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3");
 
     #[test]
     fn test_merkle_tree_verify() {
