@@ -92,7 +92,7 @@ jobs:
         run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
         # TODO: remove
       - name: Building programs
-        run: cd program && cargo-build-sbf && cd ..
+        run: cd program && cargo-build-sbf -- --features mainnet-beta && cd ..
         env:
           TIP_ROUTER_PROGRAM_ID: ${{ env.TIP_ROUTER_PROGRAM_ID }}
           SBF_OUT_PATH: ${{ github.workspace }}/target/sbf-solana-solana/release
@@ -116,7 +116,7 @@ jobs:
         uses: baptiste0928/cargo-install@v3
         with:
           crate: solana-verify
-      - run: solana-verify build --library-name jito_tip_router_program --base-image solanafoundation/solana-verifiable-build:2.2.14
+      - run: solana-verify build --library-name jito_tip_router_program --base-image solanafoundation/solana-verifiable-build:2.2.14 --features mainnet-beta
       - name: Upload jito_tip_router_program.so
         uses: actions/upload-artifact@v4
         with:
