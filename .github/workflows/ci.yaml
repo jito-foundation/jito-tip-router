@@ -116,7 +116,7 @@ jobs:
         uses: baptiste0928/cargo-install@v3
         with:
           crate: solana-verify
-      - run: solana-verify build --library-name jito_tip_router_program --base-image solanafoundation/solana-verifiable-build:2.2.14 --features mainnet-beta
+      - run: solana-verify build --library-name jito_tip_router_program --base-image solanafoundation/solana-verifiable-build:2.2.14 -- --features mainnet-beta
       - name: Upload jito_tip_router_program.so
         uses: actions/upload-artifact@v4
         with:
