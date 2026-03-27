@@ -106,7 +106,7 @@ pub fn get_bank_from_ledger(
         "cluster" => cluster
     );
 
-    let access_type = AccessType::Secondary;
+    let access_type = AccessType::ReadOnly;
     // Error handling is a modified copy pasta from ledger utils
     let blockstore = match Blockstore::open_with_options(
         ledger_path,
@@ -128,7 +128,7 @@ pub fn get_bank_from_ledger(
             // The blockstore settings with Primary access can resolve the
             // above issues automatically, so only emit the help messages
             // if access type is Secondary
-            let is_secondary = access_type == AccessType::Secondary;
+            let is_secondary = access_type == AccessType::ReadOnly;
 
             let error_str = if missing_blockstore && is_secondary {
                 format!(

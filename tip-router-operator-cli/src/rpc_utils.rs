@@ -5,9 +5,11 @@ use std::{
 };
 
 use log::{info, warn};
+use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
     nonblocking::rpc_client::RpcClient, rpc_client::SerializableTransaction,
-    rpc_config::RpcSendTransactionConfig, rpc_request::MAX_MULTIPLE_ACCOUNTS,
+    rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig},
+    rpc_request::MAX_MULTIPLE_ACCOUNTS,
 };
 use solana_commitment_config::{CommitmentConfig, CommitmentLevel};
 use solana_sdk::{
@@ -43,6 +45,34 @@ pub async fn get_batched_accounts(
         batched_accounts.extend(pubkeys_chunk.iter().cloned().zip(accounts));
     }
     Ok(batched_accounts)
+}
+
+pub async fn get_program_accounts_with_config(
+    rpc_client: &RpcClient,
+    program_id: &Pubkey,
+    mut config: RpcProgramAccountsConfig,
+) -> solana_rpc_client_api::client_error::Result<Vec<(Pubkey, Account)>> {
+    config.account_config = RpcAccountInfoConfig {
+        encoding: Some(UiAccountEncoding::Base64),
+        ..config.account_config
+    };
+
+    rpc_client
+        .get_program_ui_accounts_with_config(program_id, config)
+        .await
+        .map(|accounts| {
+            accounts
+                .into_iter()
+                .map(|(pubkey, ui_account)| {
+                    (
+                        pubkey,
+                        ui_account.to_account().expect(
+                            "binary program account fetch should always decode into Account",
+                        ),
+                    )
+                })
+                .collect()
+        })
 }
 
 pub async fn send_until_blockhash_expires(
