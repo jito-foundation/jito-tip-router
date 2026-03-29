@@ -77,6 +77,24 @@ pub async fn get_current_epoch_and_slot(handler: &CliHandler) -> Result<(u64, u6
     Ok((epoch, slot))
 }
 
+async fn get_program_accounts_with_config(
+    client: &RpcClient,
+    program_id: &Pubkey,
+    config: RpcProgramAccountsConfig,
+) -> Result<Vec<(Pubkey, Account)>> {
+    client
+        .get_program_ui_accounts_with_config(program_id, config)
+        .await?
+        .into_iter()
+        .map(|(pubkey, account)| {
+            let account = account.to_account().ok_or_else(|| {
+                anyhow::anyhow!("Expected binary account data for program account fetch")
+            })?;
+            Ok((pubkey, account))
+        })
+        .collect()
+}
+
 pub async fn get_guaranteed_epoch_and_slot(handler: &CliHandler) -> (u64, u64) {
     loop {
         let current_epoch_and_slot_result = get_current_epoch_and_slot(handler).await;
@@ -663,9 +681,9 @@ pub async fn get_all_opted_in_validators(
         sort_results: None,
     };
 
-    let results = client
-        .get_program_accounts_with_config(&handler.tip_distribution_program_id, config)
-        .await?;
+    let results =
+        get_program_accounts_with_config(&client, &handler.tip_distribution_program_id, config)
+            .await?;
 
     let vote_accounts: Vec<Pubkey> = results
         .iter()
@@ -763,9 +781,8 @@ pub async fn get_all_sorted_operators_for_vault(
     let client = handler.rpc_client();
     let config = handler.get_rpc_program_accounts_with_config::<VaultOperatorDelegation>(vault)?;
 
-    let results = client
-        .get_program_accounts_with_config(&handler.vault_program_id, config)
-        .await?;
+    let results =
+        get_program_accounts_with_config(client, &handler.vault_program_id, config).await?;
 
     let accounts: Vec<(Pubkey, VaultOperatorDelegation)> = results
         .iter()
@@ -801,9 +818,8 @@ pub async fn get_all_operators_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey
     let config =
         handler.get_rpc_program_accounts_with_config::<NcnOperatorState>(handler.ncn()?)?;
 
-    let results = client
-        .get_program_accounts_with_config(&handler.restaking_program_id, config)
-        .await?;
+    let results =
+        get_program_accounts_with_config(client, &handler.restaking_program_id, config).await?;
 
     let accounts: Vec<(Pubkey, NcnOperatorState)> = results
         .iter()
@@ -879,9 +895,8 @@ pub async fn get_all_vaults(handler: &CliHandler) -> Result<Vec<Pubkey>> {
         sort_results: None,
     };
 
-    let results = client
-        .get_program_accounts_with_config(&handler.vault_program_id, config)
-        .await?;
+    let results =
+        get_program_accounts_with_config(client, &handler.vault_program_id, config).await?;
 
     let vaults: Vec<Pubkey> = results.iter().map(|result| result.0).collect();
 
@@ -892,9 +907,8 @@ pub async fn get_all_vaults_in_ncn(handler: &CliHandler) -> Result<Vec<Pubkey>> 
     let client = handler.rpc_client();
     let config = handler.get_rpc_program_accounts_with_config::<NcnVaultTicket>(handler.ncn()?)?;
 
-    let results = client
-        .get_program_accounts_with_config(&handler.restaking_program_id, config)
-        .await?;
+    let results =
+        get_program_accounts_with_config(client, &handler.restaking_program_id, config).await?;
 
     let accounts: Vec<(Pubkey, NcnVaultTicket)> = results
         .iter()
@@ -1310,24 +1324,24 @@ pub async fn get_tip_distribution_accounts_to_migrate(
         )),
     ];
 
-    let tip_distribution_accounts = rpc_client
-        .get_program_accounts_with_config(
-            tip_distribution_program_id,
-            RpcProgramAccountsConfig {
-                filters: Some(filters),
-                account_config: RpcAccountInfoConfig {
-                    encoding: Some(UiAccountEncoding::Base64),
-                    data_slice: Some(UiDataSliceConfig {
-                        offset: 0,
-                        length: 0,
-                    }),
-                    commitment: Some(handler.commitment),
-                    min_context_slot: None,
-                },
-                ..RpcProgramAccountsConfig::default()
+    let tip_distribution_accounts = get_program_accounts_with_config(
+        &rpc_client,
+        tip_distribution_program_id,
+        RpcProgramAccountsConfig {
+            filters: Some(filters),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                data_slice: Some(UiDataSliceConfig {
+                    offset: 0,
+                    length: 0,
+                }),
+                commitment: Some(handler.commitment),
+                min_context_slot: None,
             },
-        )
-        .await?;
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
+    .await?;
 
     Ok(tip_distribution_accounts
         .into_iter()
