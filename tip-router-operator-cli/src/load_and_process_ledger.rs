@@ -15,7 +15,7 @@ use {
         create_all_accounts_run_and_snapshot_dirs, move_and_async_delete_path_contents,
     },
     solana_core::validator::{
-        BlockProductionMethod, BlockVerificationMethod, supported_scheduling_mode,
+        supported_scheduling_mode, BlockProductionMethod, BlockVerificationMethod,
     },
     solana_genesis_config::GenesisConfig,
     solana_genesis_utils::open_genesis_config,

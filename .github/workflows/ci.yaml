@@ -13,6 +13,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  RUST_VERSION: "1.93.1"
+
 jobs:
   security_audit:
     name: security_audit
@@ -34,7 +37,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt, clippy
-          toolchain: 1.84.1
+          toolchain: ${{ env.RUST_VERSION }}
       - name: Regenerate Shank IDL files
         run: cargo b --release -p jito-tip-router-shank-cli && ./target/release/jito-tip-router-shank-cli
       - name: Verify no changed files
@@ -55,7 +58,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt, clippy
-          toolchain: 1.86.0
+          toolchain: ${{ env.RUST_VERSION }}
       - name: Install cargo-sort from crates.io
         uses: baptiste0928/cargo-install@v3
         with:
@@ -86,6 +89,8 @@ jobs:
           path: .cargo
           filenames: programs.env
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
       - name: install solana toolsuite
         run: sh -c "$(curl -sSfL https://release.anza.xyz/v2.2.14/install)"
       - name: add to path
@@ -112,6 +117,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libudev-dev
       - run: docker pull --platform linux/amd64 solanafoundation/solana-verifiable-build:2.2.14
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
       - name: Install solana-verify from crates.io
         uses: baptiste0928/cargo-install@v3
         with:
@@ -162,6 +169,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler libudev-dev llvm-dev clang libclang-dev
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
       - name: Download MEV Tip Distribution NCN program
         uses: actions/download-artifact@v4
         with:

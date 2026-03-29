@@ -7,7 +7,8 @@ use std::{
 use log::{info, warn};
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
-    nonblocking::rpc_client::RpcClient, rpc_client::SerializableTransaction,
+    nonblocking::rpc_client::RpcClient,
+    rpc_client::SerializableTransaction,
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig},
     rpc_request::MAX_MULTIPLE_ACCOUNTS,
 };
