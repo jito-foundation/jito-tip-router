@@ -132,7 +132,10 @@ async fn main() -> Result<()> {
             info!("starting stage: {:?}", starting_stage);
 
             let rpc_client_clone = rpc_client.clone();
-            let full_snapshots_path = cli.full_snapshots_path.clone().unwrap();
+            let full_snapshots_path = cli
+                .full_snapshots_path
+                .clone()
+                .expect("full snapshots path should be set in daemon mode");
             let backup_snapshots_dir = cli.backup_snapshots_dir.clone();
             let rpc_url = cli.rpc_url.clone();
             let claim_tips_epoch_filepath = cli.claim_tips_epoch_filepath.clone();
@@ -147,7 +150,8 @@ async fn main() -> Result<()> {
                 restaking_program_id,
                 restaking_config_address,
                 ncn_address,
-                Pubkey::from_str(cli.operator_address.as_str()).unwrap(),
+                Pubkey::from_str(cli.operator_address.as_str())
+                    .expect("operator address should be a valid pubkey"),
                 keypair.clone(),
             );
             restaking_handler.warmup_operator().await?;
@@ -533,7 +537,9 @@ async fn main() -> Result<()> {
             // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
             //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
             //  use epoch + 1 here
-            let ballot_epoch = epoch.checked_add(1).unwrap();
+            let ballot_epoch = epoch
+                .checked_add(1)
+                .expect("ballot epoch should fit in u64");
             let fees = config.fee_config.current_fees(ballot_epoch);
             let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 

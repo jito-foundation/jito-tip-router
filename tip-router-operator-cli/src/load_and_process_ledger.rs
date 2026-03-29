@@ -445,8 +445,12 @@ pub fn load_and_process_ledger(
             )
         })
         .map_err(LoadAndProcessLedgerError::LoadBankForks)?;
-    let leader_schedule_cache =
-        LeaderScheduleCache::new_from_bank(&bank_forks.read().unwrap().root_bank());
+    let leader_schedule_cache = LeaderScheduleCache::new_from_bank(
+        &bank_forks
+            .read()
+            .expect("bank forks lock should not be poisoned when building leader schedule")
+            .root_bank(),
+    );
     let block_verification_method = BlockVerificationMethod::default();
     // let block_verification_method = value_t!(
     //     arg_matches,
@@ -471,7 +475,7 @@ pub fn load_and_process_ledger(
     );
     bank_forks
         .write()
-        .unwrap()
+        .expect("bank forks lock should not be poisoned when installing scheduler pool")
         .install_scheduler_pool(scheduler_pool);
 
     let (snapshot_request_sender, snapshot_request_receiver): (
@@ -530,11 +534,13 @@ pub fn load_and_process_ledger(
     exit.store(true, Ordering::Relaxed);
     // Non-blocking
     tokio::spawn(async move {
-        accounts_background_service.join().unwrap();
+        accounts_background_service
+            .join()
+            .expect("accounts background service should join cleanly");
         if let Some(service) = transaction_status_service {
             // NOTE: Was service.quiesce_and_join_for_tests(tss_exit);
             //  but this method is behind the "dev-context-only-utils" feature flag.
-            service.join().unwrap();
+            service.join().expect("service thread should join cleanly");
         }
     });
     result

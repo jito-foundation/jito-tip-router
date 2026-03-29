@@ -41,7 +41,10 @@ pub async fn submit_recent_epochs_to_ncn(
     let operator_address = Pubkey::from_str(&cli_args.operator_address)?;
 
     for i in 0..num_monitored_epochs {
-        let process_epoch = epoch.epoch.checked_sub(i).unwrap();
+        let process_epoch = epoch
+            .epoch
+            .checked_sub(i)
+            .expect("monitored epoch offset should not exceed current epoch");
 
         let meta_merkle_tree_dir = cli_args.get_save_path();
         let target_meta_merkle_tree_file = meta_merkle_tree_file_name(process_epoch);

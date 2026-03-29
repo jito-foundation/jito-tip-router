@@ -72,17 +72,11 @@ pub struct Cli {
 impl Cli {
     #[allow(deprecated)]
     pub fn get_save_path(&self) -> PathBuf {
-        self.save_path.to_owned().map_or_else(
-            || {
-                self.meta_merkle_tree_dir.to_owned().map_or_else(
-                    || {
-                        panic!("--save-path argument must be set");
-                    },
-                    |save_path| save_path,
-                )
-            },
-            |save_path| save_path,
-        )
+        self.save_path.to_owned().unwrap_or_else(|| {
+            self.meta_merkle_tree_dir
+                .to_owned()
+                .unwrap_or_else(|| panic!("--save-path argument must be set"))
+        })
     }
 
     pub fn create_save_path(&self) {
@@ -92,14 +86,14 @@ impl Cli {
                 "Creating Tip Router save directory at {}",
                 save_path.display()
             );
-            std::fs::create_dir_all(&save_path).unwrap();
+            std::fs::create_dir_all(&save_path)
+                .expect("failed to create tip router save directory");
         }
     }
 
     pub fn get_snapshot_paths(&self) -> SnapshotPaths {
         let ledger_path = self.ledger_path.clone();
-        let account_paths = None;
-        let account_paths = account_paths.map_or_else(|| vec![ledger_path.clone()], |paths| paths);
+        let account_paths = vec![ledger_path.clone()];
         let full_snapshots_path = self.full_snapshots_path.clone();
         let full_snapshots_path = full_snapshots_path.map_or(ledger_path.clone(), |path| path);
         let incremental_snapshots_path = self.backup_snapshots_dir.clone();

@@ -102,7 +102,7 @@ pub fn initialize(
         referral_fee,
         max_validators,
     };
-    let data = borsh::to_vec(&init_data).unwrap();
+    let data = borsh::to_vec(&init_data).expect("stake pool init instruction should serialize");
     let mut accounts = vec![
         AccountMeta::new(*stake_pool, false),
         AccountMeta::new_readonly(*manager, true),
@@ -149,7 +149,8 @@ pub fn update_stake_pool_balance(
     Instruction {
         program_id: *program_id,
         accounts,
-        data: borsh::to_vec(&StakePoolInstruction::UpdateStakePoolBalance).unwrap(),
+        data: borsh::to_vec(&StakePoolInstruction::UpdateStakePoolBalance)
+            .expect("stake pool balance instruction should serialize"),
     }
 }
 
@@ -308,9 +309,10 @@ pub struct ValidatorListHeader {
 }
 
 /// Status of the stake account in the validator list, for accounting
-#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum StakeStatus {
     /// Stake account is active, there may be a transient stake as well
+    #[default]
     Active,
     /// Only transient stake account exists, when a transient stake is
     /// deactivating during validator removal
@@ -324,11 +326,6 @@ pub enum StakeStatus {
     /// Both the transient and validator stake account are deactivating, when
     /// a validator is removed with a transient stake active
     DeactivatingAll,
-}
-impl Default for StakeStatus {
-    fn default() -> Self {
-        Self::Active
-    }
 }
 
 /// Wrapper struct that can be `Pod`, containing a byte that *should* be a valid
@@ -381,7 +378,11 @@ impl From<StakeStatus> for PodStakeStatus {
     fn from(status: StakeStatus) -> Self {
         // unwrap is safe here because the variants of `StakeStatus` fit very
         // comfortably within a `u8`
-        Self(status.to_u8().unwrap())
+        Self(
+            status
+                .to_u8()
+                .expect("stake status variants should always convert to u8"),
+        )
     }
 }
 
@@ -437,7 +438,7 @@ impl Pack for ValidatorStakeInfo {
     fn pack_into_slice(&self, data: &mut [u8]) {
         // Removing this unwrap would require changing from `Pack` to some other
         // trait or `bytemuck`, so it stays in for now
-        borsh::to_writer(data, self).unwrap();
+        borsh::to_writer(data, self).expect("validator stake info should serialize");
     }
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let unpacked = Self::try_from_slice(src)?;
@@ -462,19 +463,15 @@ impl ValidatorList {
 /// Wrapper type that "counts down" epochs, which is Borsh-compatible with the
 /// native `Option`
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshDeserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, BorshDeserialize)]
 pub enum FutureEpoch<T> {
     /// Nothing is set
+    #[default]
     None,
     /// Value is ready after the next epoch boundary
     One(T),
     /// Value is ready after two epoch boundaries
     Two(T),
-}
-impl<T> Default for FutureEpoch<T> {
-    fn default() -> Self {
-        Self::None
-    }
 }
 impl<T> FutureEpoch<T> {
     /// Create a new value to be unlocked in a two epochs

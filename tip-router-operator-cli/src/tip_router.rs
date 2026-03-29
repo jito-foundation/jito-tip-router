@@ -33,7 +33,8 @@ pub async fn get_ncn_config(
 ) -> Result<Config> {
     let config_pda = Config::find_program_address(tip_router_program_id, ncn_pubkey).0;
     let config = client.get_account(&config_pda).await?;
-    Ok(*Config::try_from_slice_unchecked(config.data.as_slice()).unwrap())
+    Ok(*Config::try_from_slice_unchecked(config.data.as_slice())
+        .expect("tip router config account should deserialize"))
 }
 
 /// Generate and send a CastVote instruction with the merkle root.
