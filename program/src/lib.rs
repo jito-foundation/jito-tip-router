@@ -478,13 +478,14 @@ fn deposit_sol_internal(
                 lamports_in,
                 minimum_pool_tokens_out,
             })
-            .unwrap(),
+            .expect("stake pool deposit with slippage instruction should serialize"),
         }
     } else {
         Instruction {
             program_id: *program_id,
             accounts,
-            data: borsh::to_vec(&StakePoolInstruction::DepositSol(lamports_in)).unwrap(),
+            data: borsh::to_vec(&StakePoolInstruction::DepositSol(lamports_in))
+                .expect("stake pool deposit instruction should serialize"),
         }
     }
 }

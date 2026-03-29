@@ -190,5 +190,6 @@ pub fn derive_merkle_root_upload_authority_address(
 }
 
 pub fn id() -> Pubkey {
-    Pubkey::from_str("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3").unwrap()
+    Pubkey::from_str("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3")
+        .expect("priority fee distribution program id is a valid pubkey")
 }

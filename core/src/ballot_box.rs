@@ -527,7 +527,7 @@ impl BallotBox {
             .ballot_tallies
             .iter()
             .max_by_key(|t| t.stake_weights().stake_weight())
-            .unwrap();
+            .ok_or(TipRouterError::BallotTallyNotFoundFull)?;
 
         let ballot_stake_weight = max_tally.stake_weights().stake_weight();
         let precise_ballot_stake_weight =

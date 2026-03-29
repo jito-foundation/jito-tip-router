@@ -1,4 +1,5 @@
 #![allow(clippy::all)]
+#![allow(clippy::unwrap_used)]
 #![allow(deprecated)]
 #![allow(clippy::nursery)]
 #![allow(clippy::integer_division)]
