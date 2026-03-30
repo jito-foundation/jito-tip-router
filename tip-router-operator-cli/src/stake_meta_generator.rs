@@ -261,6 +261,7 @@ mod tests {
     use meta_merkle_tree::generated_merkle_tree::{
         PriorityFeeDistributionMeta, TipDistributionMeta,
     };
+    use solana_account::state_traits::StateMut;
     use solana_runtime::genesis_utils::{
         create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
     };
@@ -276,7 +277,6 @@ mod tests {
         stake_history::StakeHistory,
         state::{Authorized, Lockup, Meta, Stake, StakeStateV2},
     };
-    use solana_stake_program::stake_state;
     use solana_system_interface::program as system_program;
 
     #[test]
@@ -441,8 +441,9 @@ mod tests {
         /* 4. Run assertions */
         fn warmed_up(bank: &Bank, stake_pubkeys: &[Pubkey]) -> bool {
             for stake_pubkey in stake_pubkeys {
-                let stake =
-                    stake_state::stake_from(&bank.get_account(stake_pubkey).unwrap()).unwrap();
+                let stake_state: StakeStateV2 =
+                    bank.get_account(stake_pubkey).unwrap().state().unwrap();
+                let stake = stake_state.stake().unwrap();
 
                 if stake.delegation.stake
                     != stake.stake(
@@ -768,7 +769,7 @@ mod tests {
         vote_account: &Pubkey,
         delegation_amount: u64,
     ) -> Pubkey {
-        let minimum_delegation = solana_stake_program::get_minimum_delegation(
+        let minimum_delegation = solana_runtime::stake_utils::get_minimum_delegation(
             bank.feature_set
                 .runtime_features()
                 .stake_raise_minimum_delegation_to_1_sol,
