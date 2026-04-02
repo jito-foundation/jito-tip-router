@@ -113,6 +113,7 @@ pub async fn emit_claim_mev_tips_metrics(
         ncn,
         0,
         Pubkey::new_unique(),
+        cli.min_claim_amount,
         &cli.operator_address,
         &cli.cluster,
     )
@@ -225,6 +226,7 @@ pub async fn handle_claim_mev_tips(
         keypair,
         max_loop_duration,
         cli.claim_microlamports,
+        cli.min_claim_amount,
         file_path,
         file_mutex,
         &cli.operator_address,
@@ -298,6 +300,7 @@ pub async fn claim_mev_tips(
     keypair: &Arc<Keypair>,
     max_loop_duration: Duration,
     micro_lamports: u64,
+    min_claim_amount: u64,
     file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
     operator_address: &String,
@@ -328,6 +331,7 @@ pub async fn claim_mev_tips(
                 ncn,
                 micro_lamports,
                 keypair.pubkey(),
+                min_claim_amount,
                 operator_address,
                 cluster,
             )
@@ -397,6 +401,7 @@ pub async fn claim_mev_tips(
         ncn,
         micro_lamports,
         keypair.pubkey(),
+        min_claim_amount,
         operator_address,
         cluster,
     )
@@ -465,6 +470,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     ncn: Pubkey,
     micro_lamports: u64,
     payer_pubkey: Pubkey,
+    min_claim_amount: u64,
     operator_address: &String,
     cluster: &str,
 ) -> Result<(Vec<Transaction>, bool), ClaimMevError> {
@@ -580,6 +586,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         micro_lamports,
         payer_pubkey,
         ncn,
+        min_claim_amount,
         cluster,
     );
 
@@ -635,6 +642,7 @@ fn build_mev_claim_transactions(
     micro_lamports: u64,
     payer_pubkey: Pubkey,
     ncn_address: Pubkey,
+    min_claim_amount: u64,
     cluster: &str,
 ) -> Vec<Transaction> {
     let epoch = merkle_trees.epoch;
@@ -698,9 +706,11 @@ fn build_mev_claim_transactions(
             // doesn't make sense to claim for claimants that don't exist anymore
             // can't claim for something already claimed
             // don't need to claim for claimants that get 0 MEV
+            // skip claims below min_claim_amount threshold
             if !claimants.contains_key(&node.claimant)
                 || claim_statuses.contains_key(&node.claim_status_pubkey)
                 || node.amount == 0
+                || node.amount < min_claim_amount
             {
                 if node.amount == 0 {
                     zero_amount_claimants += 1;
