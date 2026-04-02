@@ -927,7 +927,6 @@ pub async fn add_completed_epoch(
 
 #[cfg(test)]
 mod tests {
-    use borsh::BorshSerialize;
     use jito_tip_distribution_sdk::{MerkleRoot, TipDistributionAccount};
     use jito_tip_router_core::config::Config;
     use meta_merkle_tree::generated_merkle_tree::{
