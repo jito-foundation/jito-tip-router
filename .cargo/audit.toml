@@ -1,0 +1,29 @@
+[advisories]
+ignore = [
+    # Vulnerabilities (transitive deps from jito-solana/switchboard)
+    "RUSTSEC-2022-0093", # ed25519-dalek - double public key signing
+    "RUSTSEC-2024-0344", # curve25519-dalek - timing variability
+    "RUSTSEC-2024-0375", # atty - potential unaligned read
+    "RUSTSEC-2024-0421", # idna - IDNA 2003 compatibility
+    "RUSTSEC-2025-0009", # ring 0.16 - vulnerability
+    "RUSTSEC-2026-0001", # rkyv - unsound
+    "RUSTSEC-2026-0007", # bytes - vulnerability
+    "RUSTSEC-2026-0009", # time - vulnerability
+    "RUSTSEC-2026-0037", # quinn-proto - vulnerability
+    "RUSTSEC-2026-0049", # rustls-webpki - CRL matching
+    "RUSTSEC-2026-0067", # tar - symlink chmod
+    "RUSTSEC-2026-0068", # tar - PAX size headers
+    # Unmaintained/unsound (transitive deps)
+    "RUSTSEC-2020-0016", # net2 - deprecated
+    "RUSTSEC-2021-0139", # ansi_term - unmaintained
+    "RUSTSEC-2021-0141", # dotenv - unmaintained
+    "RUSTSEC-2021-0145", # atty - unsound
+    "RUSTSEC-2024-0384", # instant - unmaintained
+    "RUSTSEC-2024-0388", # derivative - unmaintained
+    "RUSTSEC-2024-0436", # paste - unmaintained
+    "RUSTSEC-2025-0010", # ring 0.16 - unmaintained
+    "RUSTSEC-2025-0012", # backoff - unmaintained
+    "RUSTSEC-2025-0134", # rustls-pemfile - unmaintained
+    "RUSTSEC-2025-0141", # bincode - unmaintained
+    "RUSTSEC-2026-0012", # keccak - unsound ARMv8 backend
+]
