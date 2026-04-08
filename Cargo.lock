@@ -13580,6 +13580,7 @@ dependencies = [
  "solana-metrics",
  "solana-program 3.0.0",
  "solana-program-test",
+ "solana-pubkey 3.0.0",
  "solana-rpc",
  "solana-rpc-client",
  "solana-rpc-client-api",
