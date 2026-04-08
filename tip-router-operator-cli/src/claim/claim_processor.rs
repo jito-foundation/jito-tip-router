@@ -78,6 +78,7 @@ impl<'a> ClaimProcessor<'a> {
     ///
     /// Initializes RPC clients with a 30-minute timeout and confirmed commitment.
     /// The same RPC client is used for both reading and sending by default.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         rpc_url: String,
         merkle_trees: &'a GeneratedMerkleTreeCollection,
@@ -226,7 +227,6 @@ impl<'a> ClaimProcessor<'a> {
     ///
     /// After the loop expires, a final check is performed. If claims still
     /// remain, returns `ClaimMevError::NotFinished` with the remaining count.
-    #[allow(clippy::cognitive_complexity)]
     pub async fn claim_mev_tips(
         &self,
         keypair: Arc<Keypair>,
