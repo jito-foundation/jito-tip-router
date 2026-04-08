@@ -657,7 +657,7 @@ fn build_mev_claim_transactions(
     let priority_fee_distribution_config =
         Pubkey::find_program_address(&[CONFIG_SEED], &priority_fee_distribution_program_id).0;
 
-    let mut zero_amount_claimants = 0;
+    let mut under_min_amount_claimants = 0;
 
     let mut instructions = Vec::with_capacity(claimants.len());
     for tree in &merkle_trees.generated_merkle_trees {
@@ -713,7 +713,7 @@ fn build_mev_claim_transactions(
                 || node.amount < min_claim_amount
             {
                 if node.amount == 0 {
-                    zero_amount_claimants += 1;
+                    under_min_amount_claimants += 1;
                 }
                 continue;
             }
@@ -761,7 +761,8 @@ fn build_mev_claim_transactions(
         })
         .collect();
 
-    info!("zero amount claimants: {}", zero_amount_claimants);
+    info!("Under min amount claimants: {under_min_amount_claimants}");
+
     datapoint_info!(
         "tip_router_cli.build_mev_claim_transactions",
         ("distribution_accounts", tdas.len(), i64),

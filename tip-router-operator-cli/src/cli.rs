@@ -39,7 +39,7 @@ pub struct Cli {
 
     /// Minimum claim amount in lamports. Claims below this threshold will be
     /// skipped to avoid spending more on transaction fees than the claim is worth.
-    #[arg(long, env, default_value_t = 0)]
+    #[arg(long, env, default_value_t = 5000)]
     pub min_claim_amount: u64,
 
     /// The price to pay for priority fee when voting
