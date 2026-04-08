@@ -214,8 +214,8 @@ pub async fn handle_claim_mev_tips(
         priority_fee_distribution_program_id,
         tip_router_program_id,
         ncn,
-        0,
-        Pubkey::new_unique(),
+        cli.claim_microlamports,
+        keypair.pubkey(),
         cli.operator_address.clone(),
         cli.cluster.clone(),
     );

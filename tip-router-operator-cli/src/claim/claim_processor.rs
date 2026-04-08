@@ -10,8 +10,7 @@ use rand::{seq::SliceRandom, thread_rng};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_commitment_config::CommitmentConfig;
 use solana_metrics::datapoint_info;
-use solana_pubkey::Pubkey;
-use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
+use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction};
 use tokio::sync::Mutex;
 
 use crate::{
@@ -128,7 +127,7 @@ impl<'a> ClaimProcessor<'a> {
             self.ncn,
             self.micro_lamports,
             self.payer_pubkey,
-            &self.operator_address.to_string(),
+            &self.operator_address,
             &self.cluster,
         )
         .await
@@ -172,7 +171,7 @@ impl<'a> ClaimProcessor<'a> {
             )
             .await
             {
-                info!("send_until_blockhash_expires failed: {:?}", e);
+                info!("send_until_blockhash_expires failed: {e:?}");
             }
         }
         Ok(())
@@ -250,7 +249,7 @@ impl<'a> ClaimProcessor<'a> {
                         "tip_router_cli.claim_mev_tips-send_summary",
                         ("claim_transactions_left", claims_to_process.len(), i64),
                         ("epoch", epoch, i64),
-                        ("operator", self.operator_address.to_string(), String),
+                        ("operator", self.operator_address, String),
                         ("epoch_percentage", epoch_percentage, f64),
                         "cluster" => self.cluster,
                     );
@@ -290,16 +289,12 @@ impl<'a> ClaimProcessor<'a> {
                 )
                 .await?
             {
-                info!(
-                    "All claims confirmed on-chain for epoch {}, marking complete",
-                    epoch
-                );
+                info!("All claims confirmed on-chain for epoch {epoch}, marking complete");
                 return Ok(());
             }
 
             info!(
-                "Epoch {}: {} claims still pending after verification, retrying",
-                epoch,
+                "Epoch {epoch}: {} claims still pending after verification, retrying",
                 remaining.len()
             );
         }
@@ -321,8 +316,7 @@ impl<'a> ClaimProcessor<'a> {
         }
 
         info!(
-            "Not finished claiming for epoch {}, transactions left {}",
-            epoch,
+            "Not finished claiming for epoch {epoch}, transactions left {}",
             transactions.len()
         );
         Err(ClaimMevError::NotFinished {
