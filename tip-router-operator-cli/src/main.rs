@@ -291,7 +291,6 @@ async fn main() -> Result<()> {
                                     );
                                 }
                             }
-
                         }
 
                         info!("Sleeping for 30 minutes before next emit claim cycle");
