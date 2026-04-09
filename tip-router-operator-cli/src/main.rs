@@ -292,9 +292,10 @@ async fn main() -> Result<()> {
                                 }
                             }
 
-                            info!("Sleeping for 30 minutes before next emit claim cycle");
-                            sleep(Duration::from_secs(1800)).await;
                         }
+
+                        info!("Sleeping for 30 minutes before next emit claim cycle");
+                        sleep(Duration::from_secs(1800)).await;
                     }
                 });
             }
