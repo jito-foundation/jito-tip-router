@@ -122,7 +122,7 @@ pub async fn emit_claim_mev_tips_metrics(
         match get_epoch_percentage(&rpc_client).await {
             Ok(epoch_percentage) => {
                 datapoint_info!(
-                    "tip_router_cli.claim_mev_tips-send_summary",
+                    "tip_router_cli.claim_mev_tips-metrics_only",
                     ("claim_transactions_left", claims_to_process.len(), i64),
                     ("epoch", epoch, i64),
                     ("epoch_percentage", epoch_percentage, f64),
@@ -130,7 +130,7 @@ pub async fn emit_claim_mev_tips_metrics(
                 );
             }
             Err(e) => {
-                warn!("Failed to fetch epoch percentage for claims: {:?}", e);
+                warn!("Failed to fetch epoch percentage for claims: {e:?}");
             }
         }
     }
