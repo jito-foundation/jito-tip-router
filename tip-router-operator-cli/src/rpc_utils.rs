@@ -7,7 +7,8 @@ use std::{
 use log::{info, warn};
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
-    nonblocking::rpc_client::RpcClient, rpc_client::SerializableTransaction,
+    nonblocking::rpc_client::RpcClient,
+    rpc_client::SerializableTransaction,
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig},
     rpc_request::MAX_MULTIPLE_ACCOUNTS,
 };
@@ -57,22 +58,24 @@ pub async fn get_program_accounts_with_config(
         ..config.account_config
     };
 
-    rpc_client
+    let accounts = rpc_client
         .get_program_ui_accounts_with_config(program_id, config)
-        .await
-        .map(|accounts| {
-            accounts
-                .into_iter()
-                .map(|(pubkey, ui_account)| {
-                    (
-                        pubkey,
-                        ui_account.to_account().expect(
-                            "binary program account fetch should always decode into Account",
-                        ),
-                    )
-                })
-                .collect()
+        .await?;
+
+    accounts
+        .into_iter()
+        .map(|(pubkey, ui_account)| {
+            let account = ui_account.to_account().ok_or_else(|| {
+                solana_rpc_client_api::client_error::Error::new_with_request(
+                    solana_rpc_client_api::client_error::ErrorKind::Custom(
+                        "Expected binary account data for program account fetch".to_string(),
+                    ),
+                    solana_rpc_client_api::request::RpcRequest::GetProgramAccounts,
+                )
+            })?;
+            Ok((pubkey, account))
         })
+        .collect()
 }
 
 pub async fn send_until_blockhash_expires(
