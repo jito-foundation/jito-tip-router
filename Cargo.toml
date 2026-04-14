@@ -139,6 +139,7 @@ incremental = false
 codegen-units = 1
 
 [patch.crates-io]
+switchboard-on-demand = { path = "vendor/switchboard-on-demand" }
 solana-account-decoder = { package = "solana-account-decoder", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0ecd70f3bdaed01d6b2b371422d3ec874c87486f" }
 solana-account-decoder-client-types = { package = "solana-account-decoder-client-types", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0ecd70f3bdaed01d6b2b371422d3ec874c87486f" }
 solana-accounts-db = { package = "solana-accounts-db", git = "https://github.com/jito-foundation/jito-solana.git", rev = "0ecd70f3bdaed01d6b2b371422d3ec874c87486f" }
