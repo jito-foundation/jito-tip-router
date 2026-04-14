@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use jito_priority_fee_distribution_sdk::{
     instruction::{
         close_claim_status_ix as close_pf_claim_status_ix,
@@ -290,7 +290,9 @@ async fn close_tip_distribution_account_transactions(
     let config_account = rpc_client
         .get_account(&config_pubkey)
         .await
-        .map_err(|_| anyhow::anyhow!("Config account not found"))?;
+        .with_context(|| {
+            format!("Failed to fetch tip distribution config account {config_pubkey}")
+        })?;
 
     let tip_distribution_config = TipDistributionConfig::deserialize(&config_account.data)?;
 
@@ -324,7 +326,9 @@ async fn close_priority_fee_distribution_account_transactions(
     let config_account = rpc_client
         .get_account(&config_pubkey)
         .await
-        .map_err(|_| anyhow::anyhow!("Config account not found"))?;
+        .with_context(|| {
+            format!("Failed to fetch priority fee distribution config account {config_pubkey}")
+        })?;
 
     let priority_fee_distribution_config =
         PriorityFeeDistributionConfig::deserialize(&config_account.data)?;
