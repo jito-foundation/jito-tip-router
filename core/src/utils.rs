@@ -18,5 +18,10 @@ pub fn assert_tip_router_error<T>(
     tip_router_error: TipRouterError,
 ) {
     assert!(test_error.is_err());
-    assert_eq!(test_error.err().unwrap(), tip_router_error);
+    assert_eq!(
+        test_error
+            .err()
+            .expect("test_error should be an error when asserting tip router errors"),
+        tip_router_error
+    );
 }

@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 use std::mem::size_of;
 use std::str::FromStr;
 use std::{fmt, time::Duration};

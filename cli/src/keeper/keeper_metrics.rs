@@ -884,7 +884,9 @@ pub async fn emit_epoch_metrics_ballot_box(
 
             let (winning_ballot_string, winning_stake_weight, winning_tally) = {
                 if ballot_box.has_winning_ballot() {
-                    let ballot_tally = ballot_box.get_winning_ballot_tally().unwrap();
+                    let ballot_tally = ballot_box.get_winning_ballot_tally().expect(
+                        "winning ballot tally should exist when a winning ballot is present",
+                    );
                     (
                         format!("{:?}", ballot_tally.ballot().root()),
                         ballot_tally.stake_weights().stake_weight(),

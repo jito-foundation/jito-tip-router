@@ -136,7 +136,7 @@ pub async fn send_until_blockhash_expires(
 
     let num_landed = txs_requesting_send
         .checked_sub(claim_transactions.len())
-        .unwrap();
+        .expect("landed transaction count should not exceed sent transaction count");
     info!("num_landed: {:?}", num_landed);
 
     Ok(())

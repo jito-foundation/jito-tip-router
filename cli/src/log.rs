@@ -86,7 +86,7 @@ pub async fn boring_progress_bar(duration_ms: u64) {
             "\x1B[u\x1B[2K{} {} {} ",
             clock_faces[clock_idx], progress_bar, time_str,
         );
-        std::io::Write::flush(&mut std::io::stdout()).unwrap();
+        let _ = std::io::stdout().flush();
 
         sleep(Duration::from_millis(10)).await;
     }
@@ -154,7 +154,7 @@ pub async fn progress_bar(duration_ms: u64) {
             "\x1B[u\x1B[2K{} {} {} ",
             clock_faces[clock_idx], progress_bar, time_str,
         );
-        std::io::Write::flush(&mut std::io::stdout()).unwrap();
+        let _ = std::io::stdout().flush();
 
         sleep(Duration::from_millis(10)).await;
     }

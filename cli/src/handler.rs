@@ -129,7 +129,11 @@ impl CliHandler {
 
         // Load config - either from specified file or default
         let config = match &args.config_file {
-            Some(config_file) => Config::load(config_file.as_os_str().to_str().unwrap())?,
+            Some(config_file) => Config::load(
+                config_file
+                    .to_str()
+                    .ok_or_else(|| anyhow!("config file path must be valid UTF-8"))?,
+            )?,
             None => {
                 let config_file = solana_cli_config::CONFIG_FILE
                     .as_ref()
@@ -178,10 +182,9 @@ impl CliHandler {
             print_tx: args.print_tx,
         };
 
-        handler.epoch = {
-            if args.epoch.is_some() {
-                args.epoch.unwrap()
-            } else {
+        handler.epoch = match args.epoch {
+            Some(epoch) => epoch,
+            None => {
                 let client = handler.rpc_client();
                 let epoch_info = client.get_epoch_info().await?;
                 epoch_info.epoch
@@ -430,18 +433,11 @@ impl CliHandler {
             ProgramCommand::OperatorCastVote {
                 operator,
                 meta_merkle_root,
-            } => {
-                todo!(
-                    "Create and implement admin cast vote: {} {}",
-                    operator,
-                    meta_merkle_root
-                );
-                // let operator = Pubkey::from_str(&operator).expect("error parsing operator");
-                // let merkle_root = hex::decode(meta_merkle_root).expect("error parsing merkle root");
-                // let mut root = [0u8; 32];
-                // root.copy_from_slice(&merkle_root);
-                // admin_cast_vote(self, &operator, root).await
-            }
+            } => Err(anyhow!(
+                "OperatorCastVote is not implemented yet for operator {} and root {}",
+                operator,
+                meta_merkle_root
+            )),
 
             ProgramCommand::CreateBaseRewardRouter => {
                 create_base_reward_router(self, self.epoch).await

@@ -368,7 +368,10 @@ pub fn get_bank_from_ledger(
 
     // STEP 5: Save snapshot //
 
-    let working_bank = bank_forks.read().unwrap().working_bank();
+    let working_bank = bank_forks
+        .read()
+        .expect("bank forks lock should not be poisoned when building snapshot")
+        .working_bank();
 
     datapoint_info!(
         "tip_router_cli.get_bank",
@@ -457,10 +460,7 @@ pub fn get_bank_from_snapshot_at_slot(
         halt_at_slot: Some(snapshot_slot.to_owned()),
         ..Default::default()
     };
-    let genesis_config = match open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE) {
-        Ok(genesis_config) => genesis_config,
-        Err(e) => return Err(e.into()),
-    };
+    let genesis_config = open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE)?;
     let exit = Arc::new(AtomicBool::new(false));
 
     let bank = snapshot_bank_utils::bank_from_snapshot_archives(

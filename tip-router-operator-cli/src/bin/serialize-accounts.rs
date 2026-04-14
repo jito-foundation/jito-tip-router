@@ -54,7 +54,8 @@ fn main() {
     };
 
     let tip_distribution_program_id =
-        Pubkey::from_str("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7").unwrap();
+        Pubkey::from_str("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7")
+            .expect("hard-coded tip distribution program id should be valid");
     let current_epoch = args.epoch_created_at; // Use the epoch from args or another source
     let tip_distribution_pubkey = derive_tip_distribution_account_address(
         &tip_distribution_program_id,
@@ -92,8 +93,9 @@ fn main() {
     let filename = format!("{}/{}.json", args.tda_accounts_dir, tip_distribution_pubkey);
 
     // Write the JSON data to a unique file
-    let mut file = File::create(&filename).unwrap();
-    file.write_all(json_data.to_string().as_bytes()).unwrap();
+    let mut file = File::create(&filename).expect("failed to create serialized account file");
+    file.write_all(json_data.to_string().as_bytes())
+        .expect("failed to write serialized account JSON");
 
     info!(
         "Serialized TipDistributionAccount to JSON format in file: {}",

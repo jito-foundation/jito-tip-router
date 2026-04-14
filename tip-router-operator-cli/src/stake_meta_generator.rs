@@ -139,7 +139,8 @@ pub fn generate_stake_meta_collection(
                 None
             }, |mut delegations| {
                 let total_delegated = delegations.iter().fold(0u64, |sum, delegation| {
-                    sum.checked_add(delegation.lamports_delegated).unwrap()
+                    sum.checked_add(delegation.lamports_delegated)
+                        .expect("total delegated lamports should not overflow u64")
                 });
 
                 let maybe_tip_distribution_meta = get_distribution_meta::<TipDistributionAccount, WrappedTipDistributionMeta>(
@@ -206,8 +207,12 @@ fn group_delegations_by_voter_pubkey(
         .filter(|(_stake_pubkey, stake_account)| {
             stake_account.delegation().stake(
                 bank.epoch(),
-                &from_account::<StakeHistory, _>(&bank.get_account(&stake_history::id()).unwrap())
-                    .unwrap(),
+                &from_account::<StakeHistory, _>(
+                    &bank.get_account(&stake_history::id()).expect(
+                        "stake history sysvar account should be present in the loaded bank",
+                    ),
+                )
+                .expect("stake history sysvar account should deserialize"),
                 bank.new_warmup_cooldown_rate_epoch(),
             ) > 0
         })

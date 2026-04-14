@@ -609,9 +609,12 @@ pub async fn get_unprocessed_claims_for_validators(
             .filter_map(|(pubkey, a)| Some((pubkey, a?)))
             .collect();
 
-    let deserialized_claim_statuses = claim_statuses
-        .values()
-        .map(|a| (ClaimStatus::deserialize(&a.data).unwrap(), a));
+    let deserialized_claim_statuses = claim_statuses.values().map(|a| {
+        (
+            ClaimStatus::deserialize(&a.data).expect("claim status account should deserialize"),
+            a,
+        )
+    });
 
     let unprocessed_claim_statuses = deserialized_claim_statuses
         .filter(|(c, _)| !c.is_claimed)
@@ -667,7 +670,9 @@ fn build_mev_claim_transactions(
 
         // if unwrap panics, there's a bug in the merkle tree code because the merkle tree code relies on the state
         // of the chain to claim.
-        let distribution_account = tdas.get(&tree.distribution_account).unwrap();
+        let distribution_account = tdas
+            .get(&tree.distribution_account)
+            .expect("merkle tree distribution account should exist in fetched account set");
         if tree.distribution_program.eq(&tip_distribution_program_id) {
             let tda = TipDistributionAccount::deserialize(distribution_account.data.as_slice());
             match tda {
@@ -727,7 +732,11 @@ fn build_mev_claim_transactions(
                 .claim_status(node.claim_status_pubkey)
                 .claimant(node.claimant)
                 .system_program(system_program::id())
-                .proof(node.proof.clone().unwrap())
+                .proof(
+                    node.proof
+                        .clone()
+                        .expect("claimable merkle tree node should include a proof"),
+                )
                 .amount(node.amount)
                 .bump(node.claim_status_bump)
                 .tip_distribution_program(tree.distribution_program);
@@ -795,19 +804,19 @@ async fn is_sufficient_balance(
         .checked_mul(
             min_rent_per_claim
                 .checked_add(DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE)
-                .unwrap(),
+                .expect("rent plus signature target should fit in u64"),
         )
-        .unwrap();
+        .expect("desired claim balance should fit in u64");
     if start_balance < desired_balance {
         let sol_to_deposit = desired_balance
             .checked_sub(start_balance)
-            .unwrap()
+            .expect("desired balance should exceed start balance in insufficient branch")
             .checked_add(LAMPORTS_PER_SOL)
-            .unwrap()
+            .expect("buffered deposit should fit in u64")
             .checked_sub(1)
-            .unwrap()
+            .expect("buffered deposit should be at least one lamport")
             .checked_div(LAMPORTS_PER_SOL)
-            .unwrap(); // rounds up to nearest sol
+            .expect("deposit rounding division should succeed"); // rounds up to nearest sol
         Some((start_balance, desired_balance, sol_to_deposit))
     } else {
         None
