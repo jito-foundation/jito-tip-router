@@ -48,7 +48,7 @@ solana-security-txt = { workspace = true }
 solana-system-interface = { workspace = true }
 spl-associated-token-account-interface = { workspace = true }
 spl-token-interface = { workspace = true }
-switchboard-on-demand = { version = "0.10.0", default-features = false, features = ["solana-v3"] }
+switchboard-on-demand = { version = "0.11.3", default-features = false, features = ["solana-v3"] }
 thiserror = { workspace = true }
 
 [dev-dependencies]

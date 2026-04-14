@@ -87,8 +87,8 @@ pub fn generate_stake_meta_collection(
                 bank.epoch(),
             ))?;
 
-    let l_stakes = bank.stakes_cache.stakes();
-    let delegations = l_stakes.stake_delegations();
+    let top_epoch_stakes = bank.get_top_epoch_stakes();
+    let delegations = top_epoch_stakes.stake_delegations();
     let voter_pubkey_to_delegations = group_delegations_by_voter_pubkey(delegations, bank);
 
     // Get config PDA

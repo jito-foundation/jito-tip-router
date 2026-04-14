@@ -16,7 +16,7 @@ use std::sync::Arc;
 use std::{path::PathBuf, str::FromStr};
 
 use crate::tip_router::send_set_merkle_root_txs;
-use crate::{get_epoch_percentage, meta_merkle_tree_file_name, Version};
+use crate::{get_epoch_percentage, meta_merkle_tree_file_name, rpc_utils, Version};
 use crate::{
     tip_router::{
         cast_vote, get_ncn_config, set_merkle_root_instructions,
@@ -128,132 +128,146 @@ pub async fn submit_to_ncn(
     )
     .0;
 
-    let ballot_box_account = match client.get_account(&ballot_box_address).await {
-        Ok(account) => account,
+    // COMMENTED OUT: Make ballot box optional to allow merkle root submission even if ballot box doesn't exist
+    let ballot_box_account_result = client.get_account(&ballot_box_address).await;
+    let ballot_box_opt: Option<BallotBox> = match ballot_box_account_result {
+        Ok(account) => {
+            // Clone the data to ensure it lives long enough for the deserialization
+            let account_data = account.data.clone();
+            BallotBox::try_from_slice_unchecked(&account_data)
+                .map(|bb| Some(*bb)) // Dereference to get owned BallotBox since it's Copy
+                .unwrap_or_else(|e| {
+                    datapoint_error!(
+                        "tip_router_cli.ballot_box_deserialize_error",
+                        ("operator_address", operator_address.to_string(), String),
+                        ("epoch", tip_router_target_epoch, i64),
+                        ("status", "error", String),
+                        ("error", format!("{:?}", e), String),
+                        "cluster" => cluster,
+                    );
+                    warn!("Failed to deserialize ballot box, skipping voting but will still try to set merkle roots: {:?}", e);
+                    None
+                })
+        }
         Err(e) => {
             debug!(
                 "Ballot box not created yet for epoch {}: {:?}",
                 tip_router_target_epoch, e
             );
-            return Ok(());
+            // COMMENTED OUT: Don't return early - allow merkle root submission even if ballot box doesn't exist
+            None
         }
     };
 
-    let ballot_box =
-        BallotBox::try_from_slice_unchecked(&ballot_box_account.data).map_err(|e| {
-            datapoint_error!(
-                "tip_router_cli.ballot_box_deserialize_error",
-                ("operator_address", operator_address.to_string(), String),
-                ("epoch", tip_router_target_epoch, i64),
-                ("status", "error", String),
-                ("error", format!("{:?}", e), String),
-                "cluster" => cluster,
-            );
-            anyhow::anyhow!("Failed to deserialize ballot box: {:?}", e)
-        })?;
-
-    let is_voting_valid = ballot_box
-        .is_voting_valid(
-            epoch_info.absolute_slot,
-            config.valid_slots_after_consensus(),
-        )
-        .map_err(|e| {
-            datapoint_error!(
-                "tip_router_cli.voting_validity_error",
-                ("operator_address", operator_address.to_string(), String),
-                ("epoch", tip_router_target_epoch, i64),
-                ("status", "error", String),
-                ("error", format!("{:?}", e), String),
-                "cluster" => cluster,
-            );
-            anyhow::anyhow!("Failed to determine if voting is valid: {:?}", e)
-        })?;
-
-    // If exists, look for vote from current operator
-    let vote = ballot_box
-        .operator_votes()
-        .iter()
-        .find(|vote| vote.operator() == operator_address);
-
-    let should_cast_vote = match vote {
-        Some(vote) => {
-            // If vote exists, cast_vote if different from current meta_merkle_root
-            let tally = ballot_box
-                .ballot_tallies()
-                .get(vote.ballot_index() as usize)
-                .ok_or_else(|| anyhow::anyhow!("Ballot tally not found"))?;
-
-            tally.ballot().root() != meta_merkle_tree.merkle_root
-        }
-        None => true,
-    };
-
-    info!(
-        "Determining if operator needs to vote...\n\
-        should_cast_vote: {}\n\
-        is_voting_valid: {}
-        ",
-        should_cast_vote, is_voting_valid
-    );
-
-    if should_cast_vote && is_voting_valid {
-        let res = cast_vote(
-            client,
-            keypair,
-            tip_router_program_id,
-            ncn_address,
-            operator_address,
-            keypair,
-            meta_merkle_tree.merkle_root,
-            tip_router_target_epoch,
-            submit_as_memo,
-            compute_unit_price,
-        )
-        .await;
-
-        match res {
-            Ok(signature) => {
-                datapoint_info!(
-                    "tip_router_cli.vote_cast",
-                    ("operator_address", operator_address.to_string(), String),
-                    ("epoch", tip_router_target_epoch, i64),
-                    (
-                        "merkle_root",
-                        format!("{:?}", meta_merkle_tree.merkle_root),
-                        String
-                    ),
-                    ("version", Version::default().to_string(), String),
-                    ("tx_sig", format!("{:?}", signature), String),
-                    "cluster" => cluster,
-                );
-                info!(
-                    "Cast vote for epoch {} with signature {:?}",
-                    tip_router_target_epoch, signature
-                )
-            }
-            Err(e) => {
+    // Only attempt voting if ballot box exists
+    if let Some(ballot_box) = &ballot_box_opt {
+        let is_voting_valid = ballot_box
+            .is_voting_valid(
+                epoch_info.absolute_slot,
+                config.valid_slots_after_consensus(),
+            )
+            .map_err(|e| {
                 datapoint_error!(
-                    "tip_router_cli.vote_cast",
+                    "tip_router_cli.voting_validity_error",
                     ("operator_address", operator_address.to_string(), String),
                     ("epoch", tip_router_target_epoch, i64),
-                    (
-                        "merkle_root",
-                        format!("{:?}", meta_merkle_tree.merkle_root),
-                        String
-                    ),
                     ("status", "error", String),
                     ("error", format!("{:?}", e), String),
                     "cluster" => cluster,
                 );
-                info!(
-                    "Failed to cast vote for epoch {}: {:?}",
-                    tip_router_target_epoch, e
-                )
+                anyhow::anyhow!("Failed to determine if voting is valid: {:?}", e)
+            })?;
+
+        // If exists, look for vote from current operator
+        let vote = ballot_box
+            .operator_votes()
+            .iter()
+            .find(|vote| vote.operator() == operator_address);
+
+        let should_cast_vote = match vote {
+            Some(vote) => {
+                // If vote exists, cast_vote if different from current meta_merkle_root
+                let tally = ballot_box
+                    .ballot_tallies()
+                    .get(vote.ballot_index() as usize)
+                    .ok_or_else(|| anyhow::anyhow!("Ballot tally not found"))?;
+
+                tally.ballot().root() != meta_merkle_tree.merkle_root
+            }
+            None => true,
+        };
+
+        info!(
+            "Determining if operator needs to vote...\n\
+            should_cast_vote: {}\n\
+            is_voting_valid: {}
+            ",
+            should_cast_vote, is_voting_valid
+        );
+
+        if should_cast_vote && is_voting_valid {
+            let res = cast_vote(
+                client,
+                keypair,
+                tip_router_program_id,
+                ncn_address,
+                operator_address,
+                keypair,
+                meta_merkle_tree.merkle_root,
+                tip_router_target_epoch,
+                submit_as_memo,
+                compute_unit_price,
+            )
+            .await;
+
+            match res {
+                Ok(signature) => {
+                    datapoint_info!(
+                        "tip_router_cli.vote_cast",
+                        ("operator_address", operator_address.to_string(), String),
+                        ("epoch", tip_router_target_epoch, i64),
+                        (
+                            "merkle_root",
+                            format!("{:?}", meta_merkle_tree.merkle_root),
+                            String
+                        ),
+                        ("version", Version::default().to_string(), String),
+                        ("tx_sig", format!("{:?}", signature), String),
+                        "cluster" => cluster,
+                    );
+                    info!(
+                        "Cast vote for epoch {} with signature {:?}",
+                        tip_router_target_epoch, signature
+                    )
+                }
+                Err(e) => {
+                    datapoint_error!(
+                        "tip_router_cli.vote_cast",
+                        ("operator_address", operator_address.to_string(), String),
+                        ("epoch", tip_router_target_epoch, i64),
+                        (
+                            "merkle_root",
+                            format!("{:?}", meta_merkle_tree.merkle_root),
+                            String
+                        ),
+                        ("status", "error", String),
+                        ("error", format!("{:?}", e), String),
+                        "cluster" => cluster,
+                    );
+                    info!(
+                        "Failed to cast vote for epoch {}: {:?}",
+                        tip_router_target_epoch, e
+                    )
+                }
             }
         }
+    } else {
+        info!("Ballot box not found, skipping voting but will proceed with merkle root submission if requested");
     }
 
-    if ballot_box.is_consensus_reached() && set_merkle_roots {
+    // COMMENTED OUT: Consensus check - allow merkle root submission regardless of consensus
+    // if ballot_box.is_consensus_reached() && set_merkle_roots {
+    if set_merkle_roots {
         // Fetch TipDistributionAccounts filtered by epoch and upload authority
         // Tip distribution accounts are derived from the epoch they are for
         let tip_distribution_accounts = get_tip_distribution_accounts_to_upload(
@@ -365,19 +379,19 @@ async fn get_tip_distribution_accounts_to_upload(
         )),
     ];
 
-    let tip_distribution_accounts = client
-        .get_program_accounts_with_config(
-            tip_distribution_program_id,
-            RpcProgramAccountsConfig {
-                filters: Some(filters),
-                account_config: RpcAccountInfoConfig {
-                    encoding: Some(UiAccountEncoding::Base64),
-                    ..RpcAccountInfoConfig::default()
-                },
-                ..RpcProgramAccountsConfig::default()
+    let tip_distribution_accounts = rpc_utils::get_program_accounts_with_config(
+        client,
+        tip_distribution_program_id,
+        RpcProgramAccountsConfig {
+            filters: Some(filters),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
             },
-        )
-        .await?;
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
+    .await?;
 
     let tip_distribution_accounts = tip_distribution_accounts
         .into_iter()
@@ -422,19 +436,19 @@ async fn get_priority_fee_distribution_accounts_to_upload(
         )),
     ];
 
-    let tip_distribution_accounts = client
-        .get_program_accounts_with_config(
-            tip_distribution_program_id,
-            RpcProgramAccountsConfig {
-                filters: Some(filters),
-                account_config: RpcAccountInfoConfig {
-                    encoding: Some(UiAccountEncoding::Base64),
-                    ..RpcAccountInfoConfig::default()
-                },
-                ..RpcProgramAccountsConfig::default()
+    let tip_distribution_accounts = rpc_utils::get_program_accounts_with_config(
+        client,
+        tip_distribution_program_id,
+        RpcProgramAccountsConfig {
+            filters: Some(filters),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
             },
-        )
-        .await?;
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
+    .await?;
 
     let tip_distribution_accounts = tip_distribution_accounts
         .into_iter()
