@@ -288,16 +288,9 @@ async fn close_tip_distribution_account_transactions(
         jito_tip_distribution_sdk::derive_config_account_address(&tip_distribution_program_id).0;
 
     let config_account = rpc_client
-        .get_account_with_config(
-            &config_pubkey,
-            RpcAccountInfoConfig {
-                encoding: Some(UiAccountEncoding::Base64),
-                ..RpcAccountInfoConfig::default()
-            },
-        )
-        .await?
-        .value
-        .ok_or_else(|| anyhow::anyhow!("Config account not found"))?;
+        .get_account(&config_pubkey)
+        .await
+        .map_err(|_| anyhow::anyhow!("Config account not found"))?;
 
     let tip_distribution_config = TipDistributionConfig::deserialize(&config_account.data)?;
 
@@ -329,16 +322,9 @@ async fn close_priority_fee_distribution_account_transactions(
     )
     .0;
     let config_account = rpc_client
-        .get_account_with_config(
-            &config_pubkey,
-            RpcAccountInfoConfig {
-                encoding: Some(UiAccountEncoding::Base64),
-                ..RpcAccountInfoConfig::default()
-            },
-        )
-        .await?
-        .value
-        .ok_or_else(|| anyhow::anyhow!("Config account not found"))?;
+        .get_account(&config_pubkey)
+        .await
+        .map_err(|_| anyhow::anyhow!("Config account not found"))?;
 
     let priority_fee_distribution_config =
         PriorityFeeDistributionConfig::deserialize(&config_account.data)?;
@@ -389,7 +375,8 @@ pub async fn fetch_expired_distribution_accounts(
             target_epoch.to_le_bytes().to_vec(),
         )),
     ];
-    let tda_accounts = rpc_client.get_program_accounts_with_config(
+    let tda_accounts = rpc_utils::get_program_accounts_with_config(
+        rpc_client,
         &tip_distribution_program_id,
         RpcProgramAccountsConfig {
             filters: Some(tda_filter),
@@ -421,7 +408,8 @@ pub async fn fetch_expired_distribution_accounts(
             target_epoch.to_le_bytes().to_vec(),
         )),
     ];
-    let pfda_accounts = rpc_client.get_program_accounts_with_config(
+    let pfda_accounts = rpc_utils::get_program_accounts_with_config(
+        rpc_client,
         &priority_fee_distribution_program_id,
         RpcProgramAccountsConfig {
             filters: Some(pfda_filter),
@@ -493,7 +481,8 @@ async fn fetch_expired_claim_statuses(
         )),
     ];
 
-    let tip_distribution_claim_accounts = rpc_client.get_program_accounts_with_config(
+    let tip_distribution_claim_accounts = rpc_utils::get_program_accounts_with_config(
+        rpc_client,
         &tip_distribution_program_id,
         RpcProgramAccountsConfig {
             filters: Some(tip_distribution_claim_filters),
@@ -516,7 +505,8 @@ async fn fetch_expired_claim_statuses(
             target_epoch.to_le_bytes().to_vec(),
         )),
     ];
-    let priority_fee_distribution_claim_accounts = rpc_client.get_program_accounts_with_config(
+    let priority_fee_distribution_claim_accounts = rpc_utils::get_program_accounts_with_config(
+        rpc_client,
         &priority_fee_distribution_program_id,
         RpcProgramAccountsConfig {
             filters: Some(priority_fee_distribution_claim_filters),

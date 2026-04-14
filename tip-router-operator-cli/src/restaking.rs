@@ -18,6 +18,8 @@ use solana_client::{
 };
 use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction};
 
+use crate::rpc_utils;
+
 /// Handles jito-restaking-program operation
 pub struct RestakingHandler {
     /// RPC Client
@@ -148,10 +150,12 @@ impl RestakingHandler {
                 sort_results: Some(false),
             }
         };
-        let ncn_vault_tickets = self
-            .rpc_client
-            .get_program_accounts_with_config(&self.restaking_program_id, config)
-            .await?;
+        let ncn_vault_tickets = rpc_utils::get_program_accounts_with_config(
+            &self.rpc_client,
+            &self.restaking_program_id,
+            config,
+        )
+        .await?;
 
         for (_ncn_vault_ticket_addr, ncn_vault_ticket_acc) in ncn_vault_tickets {
             let keypair = self.keypair.clone();
