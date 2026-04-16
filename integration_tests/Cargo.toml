@@ -37,7 +37,7 @@ shank = { workspace = true }
 solana-commitment-config = { workspace = true }
 solana-compute-budget-interface = { workspace = true }
 solana-program = { workspace = true }
-solana-program-test = { workspace = true }
+solana-program-test = { workspace = true, features = ["agave-unstable-api"] }
 solana-sdk = { workspace = true }
 solana-security-txt = { workspace = true }
 solana-stake-interface = { workspace = true }
@@ -47,4 +47,3 @@ spl-associated-token-account-interface = { workspace = true }
 spl-token-interface = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
-

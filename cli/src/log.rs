@@ -130,7 +130,7 @@ pub async fn progress_bar(duration_ms: u64) {
         progress_bar.push('🦕');
 
         // Add fire (each 🔥 counts as 2 spaces)
-        if dino_position % 2 != 0 {
+        if !dino_position.is_multiple_of(2) {
             progress_bar.push(' ');
         }
         progress_bar.push_str(&"🔥".repeat((bar_width - 2 - dino_position) / 2));

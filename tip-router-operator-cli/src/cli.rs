@@ -100,7 +100,7 @@ impl Cli {
         let ledger_path = self.ledger_path.clone();
         let account_paths = vec![ledger_path.clone()];
         let full_snapshots_path = self.full_snapshots_path.clone();
-        let full_snapshots_path = full_snapshots_path.map_or(ledger_path.clone(), |path| path);
+        let full_snapshots_path = full_snapshots_path.unwrap_or_else(|| ledger_path.clone());
         let incremental_snapshots_path = self.backup_snapshots_dir.clone();
         SnapshotPaths {
             ledger_path,
