@@ -1,19 +1,31 @@
 use anyhow::Result;
-use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
-use jito_tip_distribution_sdk::TipDistributionAccount;
+use jito_priority_fee_distribution_sdk::{
+    ClaimStatus as PriorityFeeClaimStatus, PriorityFeeDistributionAccount,
+};
+use jito_tip_distribution_sdk::{ClaimStatus as TipClaimStatus, TipDistributionAccount};
 use log::info;
+use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
     nonblocking::rpc_client::RpcClient,
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
+    rpc_filter::{Memcmp, RpcFilterType},
 };
 use solana_sdk::pubkey::Pubkey;
+
+use crate::rpc_utils;
 
 pub struct TipDistributionStats {
     pub account_pubkey: Pubkey,
     pub validator_vote_account: Pubkey,
+    pub merkle_root_upload_authority: Pubkey,
     pub total_lamports: u64,
     pub is_priority_fee: bool,
     pub validator_commission_bps: u16,
+}
+
+struct ClaimStatusTotals {
+    tip_claim_status_accounts: usize,
+    priority_fee_claim_status_accounts: usize,
 }
 
 pub async fn get_tip_distribution_stats(
@@ -47,6 +59,15 @@ pub async fn get_tip_distribution_stats(
         priority_fee_distribution_accounts.len()
     );
 
+    info!("Fetching claim status account totals...");
+    let claim_status_totals = get_claim_status_totals(
+        &rpc_client_with_timeout,
+        tip_distribution_program_id,
+        priority_fee_distribution_program_id,
+        epoch,
+    )
+    .await?;
+
     let mut all_stats = Vec::new();
 
     for (pubkey, account) in tip_distribution_accounts {
@@ -67,7 +88,7 @@ pub async fn get_tip_distribution_stats(
         all_stats.push(stats);
     }
 
-    print_tip_distribution_summary(&all_stats, epoch);
+    print_tip_distribution_summary(&all_stats, epoch, &claim_status_totals);
 
     Ok(())
 }
@@ -77,19 +98,19 @@ async fn get_tip_distribution_accounts_for_epoch(
     tip_distribution_program_id: &Pubkey,
     epoch: u64,
 ) -> Result<Vec<(Pubkey, TipDistributionAccount)>> {
-    let accounts = rpc_client
-        .get_program_accounts_with_config(
-            tip_distribution_program_id,
-            RpcProgramAccountsConfig {
-                filters: None,
-                account_config: RpcAccountInfoConfig {
-                    encoding: Some(solana_account_decoder::UiAccountEncoding::Base64),
-                    ..RpcAccountInfoConfig::default()
-                },
-                ..RpcProgramAccountsConfig::default()
+    let accounts = rpc_utils::get_program_accounts_with_config(
+        rpc_client,
+        tip_distribution_program_id,
+        RpcProgramAccountsConfig {
+            filters: None,
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(solana_account_decoder::UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
             },
-        )
-        .await?;
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
+    .await?;
 
     let mut result = Vec::new();
     for (pubkey, account) in accounts {
@@ -108,19 +129,19 @@ async fn get_priority_fee_distribution_accounts_for_epoch(
     priority_fee_distribution_program_id: &Pubkey,
     epoch: u64,
 ) -> Result<Vec<(Pubkey, PriorityFeeDistributionAccount)>> {
-    let accounts = rpc_client
-        .get_program_accounts_with_config(
-            priority_fee_distribution_program_id,
-            RpcProgramAccountsConfig {
-                filters: None,
-                account_config: RpcAccountInfoConfig {
-                    encoding: Some(solana_account_decoder::UiAccountEncoding::Base64),
-                    ..RpcAccountInfoConfig::default()
-                },
-                ..RpcProgramAccountsConfig::default()
+    let accounts = rpc_utils::get_program_accounts_with_config(
+        rpc_client,
+        priority_fee_distribution_program_id,
+        RpcProgramAccountsConfig {
+            filters: None,
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(solana_account_decoder::UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
             },
-        )
-        .await?;
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
+    .await?;
 
     let mut result = Vec::new();
     for (pubkey, account) in accounts {
@@ -152,6 +173,7 @@ async fn process_tip_distribution_account(
     Ok(TipDistributionStats {
         account_pubkey: *account_pubkey,
         validator_vote_account: tip_distribution_account.validator_vote_account,
+        merkle_root_upload_authority: tip_distribution_account.merkle_root_upload_authority,
         total_lamports,
         is_priority_fee,
         validator_commission_bps: tip_distribution_account.validator_commission_bps,
@@ -174,19 +196,103 @@ async fn process_priority_fee_distribution_account(
     Ok(TipDistributionStats {
         account_pubkey: *account_pubkey,
         validator_vote_account: priority_fee_distribution_account.validator_vote_account,
+        merkle_root_upload_authority: priority_fee_distribution_account
+            .merkle_root_upload_authority,
         total_lamports,
         is_priority_fee,
         validator_commission_bps: priority_fee_distribution_account.validator_commission_bps,
     })
 }
 
-fn print_tip_distribution_summary(stats: &[TipDistributionStats], epoch: u64) {
+async fn get_claim_status_totals(
+    rpc_client: &RpcClient,
+    tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
+    epoch: u64,
+) -> Result<ClaimStatusTotals> {
+    // Fetch tip distribution claim status accounts for the target epoch.
+    let tip_claim_filters = vec![
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            0,
+            TipClaimStatus::DISCRIMINATOR.to_vec(),
+        )),
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            8 // discriminator
+        + 1 // is_claimed
+        + 32 // claimant
+        + 32 // claim_status_payer
+        + 8 // slot_claimed_at
+        + 8, // amount
+            epoch.to_le_bytes().to_vec(),
+        )),
+    ];
+
+    let tip_claim_accounts = rpc_utils::get_program_accounts_with_config(
+        rpc_client,
+        tip_distribution_program_id,
+        RpcProgramAccountsConfig {
+            filters: Some(tip_claim_filters),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
+            },
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
+    .await?;
+
+    // Fetch priority fee distribution claim status accounts for the target epoch.
+    let pf_claim_filters = vec![
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            0,
+            PriorityFeeClaimStatus::DISCRIMINATOR.to_vec(),
+        )),
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            8 // discriminator
+        + 32, // claim_status_payer
+            epoch.to_le_bytes().to_vec(),
+        )),
+    ];
+
+    let pf_claim_accounts = rpc_utils::get_program_accounts_with_config(
+        rpc_client,
+        priority_fee_distribution_program_id,
+        RpcProgramAccountsConfig {
+            filters: Some(pf_claim_filters),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
+            },
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
+    .await?;
+
+    Ok(ClaimStatusTotals {
+        tip_claim_status_accounts: tip_claim_accounts.len(),
+        priority_fee_claim_status_accounts: pf_claim_accounts.len(),
+    })
+}
+
+fn print_tip_distribution_summary(
+    stats: &[TipDistributionStats],
+    epoch: u64,
+    claim_status_totals: &ClaimStatusTotals,
+) {
     info!("\n=== Epoch {} Tip Distribution Statistics ===", epoch);
     info!(
-        "{:<50} {:<15} {:<10} {:<10}",
-        "Account", "Total (SOL)", "Type", "Commission"
+        "Claim status totals: tip={}, priority_fee={}",
+        claim_status_totals.tip_claim_status_accounts,
+        claim_status_totals.priority_fee_claim_status_accounts
     );
-    info!("{:-<85}", "");
+    info!(
+        "Per-account claim counts are omitted because ClaimStatus PDAs cannot be attributed to a single distribution account without claimant data."
+    );
+    info!(
+        "{:<50} {:<50} {:<15} {:<10} {:<10}",
+        "Account", "Merkle Root Upload Authority", "Total (SOL)", "Type", "Commission"
+    );
+    info!("{:-<133}", "");
 
     let mut total_total = 0u64;
 
@@ -200,21 +306,22 @@ fn print_tip_distribution_summary(stats: &[TipDistributionStats], epoch: u64) {
         let commission_pct = stat.validator_commission_bps as f64 / 100.0;
 
         info!(
-            "{:<50} {:<15.6} {:<10} {:<10.2}",
+            "{:<50} {:<50} {:<15.6} {:<10} {:<10.2}",
             format!("{}", stat.account_pubkey),
+            format!("{}", stat.merkle_root_upload_authority),
             total_sol,
             account_type,
-            commission_pct
+            commission_pct,
         );
 
         total_total += stat.total_lamports;
     }
 
-    info!("{:-<85}", "");
+    info!("{:-<133}", "");
     let total_total_sol = total_total as f64 / 1_000_000_000.0;
 
     info!(
-        "{:<50} {:<15.6} {:<10} {:<10}",
-        "TOTAL", total_total_sol, "ALL", ""
+        "{:<50} {:<50} {:<15.6} {:<10} {:<10}",
+        "TOTAL", "", total_total_sol, "ALL", ""
     );
 }

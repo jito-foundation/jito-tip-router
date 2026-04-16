@@ -14,7 +14,9 @@ use {
     solana_accounts_db::utils::{
         create_all_accounts_run_and_snapshot_dirs, move_and_async_delete_path_contents,
     },
-    solana_core::validator::BlockVerificationMethod,
+    solana_core::validator::{
+        supported_scheduling_mode, BlockProductionMethod, BlockVerificationMethod,
+    },
     solana_genesis_config::GenesisConfig,
     solana_genesis_utils::open_genesis_config,
     solana_geyser_plugin_manager::geyser_plugin_service::{
@@ -27,6 +29,7 @@ use {
         blockstore_processor::{
             self, BlockstoreProcessorError, ProcessOptions, TransactionStatusSender,
         },
+        leader_schedule_cache::LeaderScheduleCache,
         use_snapshot_archives_at_startup::UseSnapshotArchivesAtStartup,
     },
     solana_measure::measure_time,
@@ -38,7 +41,6 @@ use {
             PrunedBanksRequestHandler, SnapshotRequest, SnapshotRequestHandler,
         },
         bank_forks::BankForks,
-        prioritization_fee_cache::PrioritizationFeeCache,
         snapshot_controller::SnapshotController,
         snapshot_utils::{self, clean_orphaned_account_snapshot_dirs},
     },
@@ -420,19 +422,35 @@ pub fn load_and_process_ledger(
             (None, None)
         };
 
-    let (bank_forks, leader_schedule_cache, starting_snapshot_hashes, ..) =
-        bank_forks_utils::load_bank_forks(
+    let (bank_forks, starting_snapshot_hashes) =
+        bank_forks_utils::try_load_bank_forks_from_snapshot(
             genesis_config,
-            blockstore.as_ref(),
-            account_paths,
+            &account_paths,
             &snapshot_config,
             &process_options,
-            transaction_status_sender.as_ref(),
-            None, // Maybe support this later, though
-            accounts_update_notifier,
+            accounts_update_notifier.clone(),
             exit.clone(),
         )
+        .transpose()
+        .unwrap_or_else(|| {
+            bank_forks_utils::load_bank_forks_from_genesis(
+                genesis_config,
+                blockstore.as_ref(),
+                account_paths,
+                &process_options,
+                transaction_status_sender.as_ref(),
+                None,
+                accounts_update_notifier,
+                exit.clone(),
+            )
+        })
         .map_err(LoadAndProcessLedgerError::LoadBankForks)?;
+    let leader_schedule_cache = LeaderScheduleCache::new_from_bank(
+        &bank_forks
+            .read()
+            .expect("bank forks lock should not be poisoned when building leader schedule")
+            .root_bank(),
+    );
     let block_verification_method = BlockVerificationMethod::default();
     // let block_verification_method = value_t!(
     //     arg_matches,
@@ -444,32 +462,21 @@ pub fn load_and_process_ledger(
         "Using: block-verification-method: {}",
         block_verification_method,
     );
+    let block_production_method = BlockProductionMethod::default();
     let unified_scheduler_handler_threads = None;
-    match block_verification_method {
-        BlockVerificationMethod::BlockstoreProcessor => {
-            info!("no scheduler pool is installed for block verification...");
-            if let Some(count) = unified_scheduler_handler_threads {
-                warn!(
-                    "--unified-scheduler-handler-threads={count} is ignored because unified \
-                     scheduler isn't enabled"
-                );
-            }
-        }
-        BlockVerificationMethod::UnifiedScheduler => {
-            let no_replay_vote_sender = None;
-            let ignored_prioritization_fee_cache = Arc::new(PrioritizationFeeCache::new(0u64));
-            bank_forks
-                .write()
-                .unwrap()
-                .install_scheduler_pool(DefaultSchedulerPool::new_dyn(
-                    unified_scheduler_handler_threads,
-                    process_options.runtime_config.log_messages_bytes_limit,
-                    None,
-                    no_replay_vote_sender,
-                    ignored_prioritization_fee_cache,
-                ));
-        }
-    }
+    let no_replay_vote_sender = None;
+    let scheduler_pool = DefaultSchedulerPool::new(
+        supported_scheduling_mode((&block_verification_method, &block_production_method)),
+        unified_scheduler_handler_threads,
+        process_options.runtime_config.log_messages_bytes_limit,
+        transaction_status_sender.clone(),
+        no_replay_vote_sender,
+        None,
+    );
+    bank_forks
+        .write()
+        .expect("bank forks lock should not be poisoned when installing scheduler pool")
+        .install_scheduler_pool(scheduler_pool);
 
     let (snapshot_request_sender, snapshot_request_receiver): (
         Sender<SnapshotRequest>,
@@ -527,11 +534,13 @@ pub fn load_and_process_ledger(
     exit.store(true, Ordering::Relaxed);
     // Non-blocking
     tokio::spawn(async move {
-        accounts_background_service.join().unwrap();
+        accounts_background_service
+            .join()
+            .expect("accounts background service should join cleanly");
         if let Some(service) = transaction_status_service {
             // NOTE: Was service.quiesce_and_join_for_tests(tss_exit);
             //  but this method is behind the "dev-context-only-utils" feature flag.
-            service.join().unwrap();
+            service.join().expect("service thread should join cleanly");
         }
     });
     result
@@ -568,7 +577,7 @@ pub fn open_blockstore(
             // The blockstore settings with Primary access can resolve the
             // above issues automatically, so only emit the help messages
             // if access type is Secondary
-            let is_secondary = access_type == AccessType::Secondary;
+            let is_secondary = access_type == AccessType::ReadOnly;
 
             if missing_blockstore && is_secondary {
                 eprintln!(
@@ -667,7 +676,7 @@ pub fn get_program_ids(tx: &VersionedTransaction) -> impl Iterator<Item = &Pubke
 /// Get the AccessType required, based on `process_options`
 pub(crate) const fn _get_access_type(process_options: &ProcessOptions) -> AccessType {
     match process_options.use_snapshot_archives_at_startup {
-        UseSnapshotArchivesAtStartup::Always => AccessType::Secondary,
+        UseSnapshotArchivesAtStartup::Always => AccessType::ReadOnly,
         UseSnapshotArchivesAtStartup::Never => AccessType::PrimaryForMaintenance,
         UseSnapshotArchivesAtStartup::WhenNewest => AccessType::PrimaryForMaintenance,
     }

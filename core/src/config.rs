@@ -146,19 +146,44 @@ impl fmt::Display for Config {
         writeln!(f, "  Fees:")?;
         writeln!(f, "    Block Engine Fee:           {}", self.fee_config.block_engine_fee_bps())?;
         for group in BaseFeeGroup::all_groups() {
-            writeln!(f, "    Base Fee Wallet [{:?}]:        {:?}", group.group, self.fee_config.base_fee_wallet(group).unwrap())?;
+            let wallet = self
+                .fee_config
+                .base_fee_wallet(group)
+                .map(|wallet| format!("{wallet:?}"))
+                .unwrap_or_else(|err| format!("<error: {err}>"));
+            writeln!(f, "    Base Fee Wallet [{:?}]:        {}", group.group, wallet)?;
         }
         for group in BaseFeeGroup::all_groups() {
-            writeln!(f, "    Late Base Fee [{:?}]:          {}", group.group, self.fee_config.base_fee_bps(group, u64::MAX).unwrap())?;
+            let fee = self
+                .fee_config
+                .base_fee_bps(group, u64::MAX)
+                .map(|fee| fee.to_string())
+                .unwrap_or_else(|err| format!("<error: {err}>"));
+            writeln!(f, "    Late Base Fee [{:?}]:          {}", group.group, fee)?;
         }
         for group in NcnFeeGroup::all_groups() {
-            writeln!(f, "    Late NCN Fee [{:?}]:           {}", group.group, self.fee_config.ncn_fee_bps(group, u64::MAX).unwrap())?;
+            let fee = self
+                .fee_config
+                .ncn_fee_bps(group, u64::MAX)
+                .map(|fee| fee.to_string())
+                .unwrap_or_else(|err| format!("<error: {err}>"));
+            writeln!(f, "    Late NCN Fee [{:?}]:           {}", group.group, fee)?;
         }
         for group in BaseFeeGroup::all_groups() {
-            writeln!(f, "    Current Base Fee [{:?}]:       {}", group.group, self.fee_config.base_fee_bps(group, 0).unwrap())?;
+            let fee = self
+                .fee_config
+                .base_fee_bps(group, 0)
+                .map(|fee| fee.to_string())
+                .unwrap_or_else(|err| format!("<error: {err}>"));
+            writeln!(f, "    Current Base Fee [{:?}]:       {}", group.group, fee)?;
         }
         for group in NcnFeeGroup::all_groups() {
-            writeln!(f, "    Current NCN Fee [{:?}]:        {}", group.group, self.fee_config.ncn_fee_bps(group, 0).unwrap())?;
+            let fee = self
+                .fee_config
+                .ncn_fee_bps(group, 0)
+                .map(|fee| fee.to_string())
+                .unwrap_or_else(|err| format!("<error: {err}>"));
+            writeln!(f, "    Current NCN Fee [{:?}]:        {}", group.group, fee)?;
         }
 
         Ok(())

@@ -95,9 +95,12 @@ async fn main() -> Result<()> {
     let mut uploaded_files = HashSet::new();
 
     // Compile regex patterns for epoch files
-    let merkle_pattern = Regex::new(r"^(\d+)_merkle_tree_collection\.json$").unwrap();
-    let stake_pattern = Regex::new(r"^(\d+)_stake_meta_collection\.json$").unwrap();
-    let snapshot_tar_zst_pattern = Regex::new(r"^snapshot-(\d+).*\.tar\.zst$").unwrap();
+    let merkle_pattern =
+        Regex::new(r"^(\d+)_merkle_tree_collection\.json$").expect("merkle file regex is valid");
+    let stake_pattern =
+        Regex::new(r"^(\d+)_stake_meta_collection\.json$").expect("stake meta file regex is valid");
+    let snapshot_tar_zst_pattern =
+        Regex::new(r"^snapshot-(\d+).*\.tar\.zst$").expect("snapshot tarball regex is valid");
 
     let incremental_file_patterns = vec![&merkle_pattern, &stake_pattern];
 

@@ -58,9 +58,15 @@ pub struct Version {
 impl Default for Version {
     fn default() -> Self {
         Self {
-            major: env!("CARGO_PKG_VERSION_MAJOR").parse().unwrap(),
-            minor: env!("CARGO_PKG_VERSION_MINOR").parse().unwrap(),
-            patch: env!("CARGO_PKG_VERSION_PATCH").parse().unwrap(),
+            major: env!("CARGO_PKG_VERSION_MAJOR")
+                .parse()
+                .expect("crate major version should parse as u16"),
+            minor: env!("CARGO_PKG_VERSION_MINOR")
+                .parse()
+                .expect("crate minor version should parse as u16"),
+            patch: env!("CARGO_PKG_VERSION_PATCH")
+                .parse()
+                .expect("crate patch version should parse as u16"),
         }
     }
 }
