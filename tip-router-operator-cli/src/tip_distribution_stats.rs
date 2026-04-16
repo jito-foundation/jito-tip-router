@@ -64,6 +64,7 @@ pub async fn get_tip_distribution_stats(
         &rpc_client_with_timeout,
         tip_distribution_program_id,
         priority_fee_distribution_program_id,
+        epoch,
     )
     .await?;
 
@@ -207,12 +208,24 @@ async fn get_claim_status_totals(
     rpc_client: &RpcClient,
     tip_distribution_program_id: &Pubkey,
     priority_fee_distribution_program_id: &Pubkey,
+    epoch: u64,
 ) -> Result<ClaimStatusTotals> {
-    // Fetch all tip distribution claim status accounts
-    let tip_claim_filters = vec![RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-        0,
-        TipClaimStatus::DISCRIMINATOR.to_vec(),
-    ))];
+    // Fetch tip distribution claim status accounts for the target epoch.
+    let tip_claim_filters = vec![
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            0,
+            TipClaimStatus::DISCRIMINATOR.to_vec(),
+        )),
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            8 // discriminator
+        + 1 // is_claimed
+        + 32 // claimant
+        + 32 // claim_status_payer
+        + 8 // slot_claimed_at
+        + 8, // amount
+            epoch.to_le_bytes().to_vec(),
+        )),
+    ];
 
     let tip_claim_accounts = rpc_utils::get_program_accounts_with_config(
         rpc_client,
@@ -228,11 +241,18 @@ async fn get_claim_status_totals(
     )
     .await?;
 
-    // Fetch all priority fee distribution claim status accounts
-    let pf_claim_filters = vec![RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-        0,
-        PriorityFeeClaimStatus::DISCRIMINATOR.to_vec(),
-    ))];
+    // Fetch priority fee distribution claim status accounts for the target epoch.
+    let pf_claim_filters = vec![
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            0,
+            PriorityFeeClaimStatus::DISCRIMINATOR.to_vec(),
+        )),
+        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+            8 // discriminator
+        + 32, // claim_status_payer
+            epoch.to_le_bytes().to_vec(),
+        )),
+    ];
 
     let pf_claim_accounts = rpc_utils::get_program_accounts_with_config(
         rpc_client,
