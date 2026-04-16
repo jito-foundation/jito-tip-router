@@ -340,7 +340,7 @@ pub async fn submit_to_ncn(
     Ok(())
 }
 
-async fn get_tip_distribution_accounts_to_upload(
+pub async fn get_tip_distribution_accounts_to_upload(
     client: &AsyncRpcClient,
     epoch: u64,
     tip_router_config_address: &Pubkey,
@@ -374,7 +374,13 @@ async fn get_tip_distribution_accounts_to_upload(
                 ..RpcProgramAccountsConfig::default()
             },
         )
-        .await?;
+        .await
+        .unwrap();
+
+    println!(
+        "Tip distribution accounts: {}",
+        tip_distribution_accounts.len()
+    );
 
     let tip_distribution_accounts = tip_distribution_accounts
         .into_iter()

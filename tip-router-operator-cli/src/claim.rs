@@ -657,11 +657,19 @@ fn build_mev_claim_transactions(
     let priority_fee_distribution_config =
         Pubkey::find_program_address(&[CONFIG_SEED], &priority_fee_distribution_program_id).0;
 
-    let mut under_min_amount_claimants = 0;
+    let mut skipped_zero_max_claim_nodes = 0usize;
+    let mut skipped_no_merkle_root_nodes = 0usize;
+    let mut skipped_wrong_upload_authority_nodes = 0usize;
+    let mut skipped_deserialize_error_nodes = 0usize;
+    let mut skipped_missing_claimant = 0usize;
+    let mut skipped_already_claimed = 0usize;
+    let mut skipped_zero_amount = 0usize;
+    let mut skipped_below_min_amount = 0usize;
 
     let mut instructions = Vec::with_capacity(claimants.len());
     for tree in &merkle_trees.generated_merkle_trees {
         if tree.max_total_claim == 0 {
+            skipped_zero_max_claim_nodes += tree.tree_nodes.len();
             continue;
         }
 
@@ -673,13 +681,19 @@ fn build_mev_claim_transactions(
             match tda {
                 Ok(tda) => {
                     // can continue here, as there might be tip distribution accounts this account doesn't upload for
-                    if tda.merkle_root.is_none()
-                        || tda.merkle_root_upload_authority != tip_router_config_address
-                    {
+                    if tda.merkle_root.is_none() {
+                        skipped_no_merkle_root_nodes += tree.tree_nodes.len();
+                        continue;
+                    }
+                    if tda.merkle_root_upload_authority != tip_router_config_address {
+                        skipped_wrong_upload_authority_nodes += tree.tree_nodes.len();
                         continue;
                     }
                 }
-                Err(_) => continue,
+                Err(_) => {
+                    skipped_deserialize_error_nodes += tree.tree_nodes.len();
+                    continue;
+                }
             }
         } else if tree
             .distribution_program
@@ -690,13 +704,19 @@ fn build_mev_claim_transactions(
             match pfda {
                 Ok(pfda) => {
                     // can continue here, as there might be tip distribution accounts this account doesn't upload for
-                    if pfda.merkle_root.is_none()
-                        || pfda.merkle_root_upload_authority != tip_router_config_address
-                    {
+                    if pfda.merkle_root.is_none() {
+                        skipped_no_merkle_root_nodes += tree.tree_nodes.len();
+                        continue;
+                    }
+                    if pfda.merkle_root_upload_authority != tip_router_config_address {
+                        skipped_wrong_upload_authority_nodes += tree.tree_nodes.len();
                         continue;
                     }
                 }
-                Err(_) => continue,
+                Err(_) => {
+                    skipped_deserialize_error_nodes += tree.tree_nodes.len();
+                    continue;
+                }
             }
         } else {
             panic!("Unknown distribution program for tree");
@@ -707,14 +727,20 @@ fn build_mev_claim_transactions(
             // can't claim for something already claimed
             // don't need to claim for claimants that get 0 MEV
             // skip claims below min_claim_amount threshold
-            if !claimants.contains_key(&node.claimant)
-                || claim_statuses.contains_key(&node.claim_status_pubkey)
-                || node.amount == 0
-                || node.amount < min_claim_amount
-            {
-                if node.amount == 0 {
-                    under_min_amount_claimants += 1;
-                }
+            if !claimants.contains_key(&node.claimant) {
+                skipped_missing_claimant += 1;
+                continue;
+            }
+            if claim_statuses.contains_key(&node.claim_status_pubkey) {
+                skipped_already_claimed += 1;
+                continue;
+            }
+            if node.amount == 0 {
+                skipped_zero_amount += 1;
+                continue;
+            }
+            if node.amount < min_claim_amount {
+                skipped_below_min_amount += 1;
                 continue;
             }
 
@@ -761,7 +787,9 @@ fn build_mev_claim_transactions(
         })
         .collect();
 
-    info!("Under min amount claimants: {under_min_amount_claimants}");
+    info!(
+        "Skipped nodes — zero_max_claim: {skipped_zero_max_claim_nodes}, no_merkle_root: {skipped_no_merkle_root_nodes}, wrong_upload_authority: {skipped_wrong_upload_authority_nodes}, deserialize_error: {skipped_deserialize_error_nodes}, missing_claimant: {skipped_missing_claimant}, already_claimed: {skipped_already_claimed}, zero_amount: {skipped_zero_amount}, below_min_amount: {skipped_below_min_amount}"
+    );
 
     datapoint_info!(
         "tip_router_cli.build_mev_claim_transactions",
@@ -769,6 +797,14 @@ fn build_mev_claim_transactions(
         ("claim_statuses", claim_statuses.len(), i64),
         ("claim_transactions", transactions.len(), i64),
         ("epoch", epoch, i64),
+        ("skipped_zero_max_claim_nodes", skipped_zero_max_claim_nodes, i64),
+        ("skipped_no_merkle_root_nodes", skipped_no_merkle_root_nodes, i64),
+        ("skipped_wrong_upload_authority_nodes", skipped_wrong_upload_authority_nodes, i64),
+        ("skipped_deserialize_error_nodes", skipped_deserialize_error_nodes, i64),
+        ("skipped_missing_claimant", skipped_missing_claimant, i64),
+        ("skipped_already_claimed", skipped_already_claimed, i64),
+        ("skipped_zero_amount", skipped_zero_amount, i64),
+        ("skipped_below_min_amount", skipped_below_min_amount, i64),
         "cluster" => cluster,
     );
 
