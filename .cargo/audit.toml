@@ -13,6 +13,8 @@ ignore = [
     "RUSTSEC-2026-0049", # rustls-webpki - CRL matching
     "RUSTSEC-2026-0067", # tar - symlink chmod
     "RUSTSEC-2026-0068", # tar - PAX size headers
+    "RUSTSEC-2026-0098", # rustls-webpki - URI name constraints
+    "RUSTSEC-2026-0099", # rustls-webpki - wildcard name constraints
     # Unmaintained/unsound (transitive deps)
     "RUSTSEC-2020-0016", # net2 - deprecated
     "RUSTSEC-2021-0139", # ansi_term - unmaintained
