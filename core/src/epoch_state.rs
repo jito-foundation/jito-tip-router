@@ -906,11 +906,36 @@ impl fmt::Display for EpochState {
        writeln!(f, "  Vault Count:                  {}", self.vault_count())?;
 
        writeln!(f, "\nAccount Status:")?;
-       writeln!(f, "  Epoch State:                  {:?}", self.account_status.epoch_state().unwrap())?;
-       writeln!(f, "  Weight Table:                 {:?}", self.account_status.weight_table().unwrap())?;
-       writeln!(f, "  Epoch Snapshot:               {:?}", self.account_status.epoch_snapshot().unwrap())?;
-       writeln!(f, "  Ballot Box:                   {:?}", self.account_status.ballot_box().unwrap())?;
-       writeln!(f, "  Base Reward Router:           {:?}", self.account_status.base_reward_router().unwrap())?;
+       let epoch_state = self
+           .account_status
+           .epoch_state()
+           .map(|status| format!("{status:?}"))
+           .unwrap_or_else(|err| format!("<error: {err}>"));
+       writeln!(f, "  Epoch State:                  {}", epoch_state)?;
+       let weight_table = self
+           .account_status
+           .weight_table()
+           .map(|status| format!("{status:?}"))
+           .unwrap_or_else(|err| format!("<error: {err}>"));
+       writeln!(f, "  Weight Table:                 {}", weight_table)?;
+       let epoch_snapshot = self
+           .account_status
+           .epoch_snapshot()
+           .map(|status| format!("{status:?}"))
+           .unwrap_or_else(|err| format!("<error: {err}>"));
+       writeln!(f, "  Epoch Snapshot:               {}", epoch_snapshot)?;
+       let ballot_box = self
+           .account_status
+           .ballot_box()
+           .map(|status| format!("{status:?}"))
+           .unwrap_or_else(|err| format!("<error: {err}>"));
+       writeln!(f, "  Ballot Box:                   {}", ballot_box)?;
+       let base_reward_router = self
+           .account_status
+           .base_reward_router()
+           .map(|status| format!("{status:?}"))
+           .unwrap_or_else(|err| format!("<error: {err}>"));
+       writeln!(f, "  Base Reward Router:           {}", base_reward_router)?;
        
        writeln!(f, "\nOperator Snapshots:")?;
        for i in 0..MAX_OPERATORS {

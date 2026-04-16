@@ -258,15 +258,17 @@ pub async fn loop_stages(
                 // Tip Router looks backwards in time (typically current_epoch - 1) to calculated
                 //  distributions. Meanwhile the NCN's Ballot is for the current_epoch. So we
                 //  use epoch + 1 here
-                let ballot_epoch = epoch_to_process.checked_add(1).unwrap();
+                let ballot_epoch = epoch_to_process
+                    .checked_add(1)
+                    .expect("ballot epoch should fit in u64");
                 let fees = config.fee_config.current_fees(ballot_epoch);
                 let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 
                 // Generate the merkle tree collection
-                let some_stake_meta_collection = stake_meta_collection.to_owned().map_or_else(
-                    || read_stake_meta_collection(epoch_to_process, &cli.get_save_path()),
-                    |collection| collection,
-                );
+                let some_stake_meta_collection =
+                    stake_meta_collection.to_owned().unwrap_or_else(|| {
+                        read_stake_meta_collection(epoch_to_process, &cli.get_save_path())
+                    });
                 merkle_tree_collection = Some(create_merkle_tree_collection(
                     cli.operator_address.clone(),
                     tip_router_program_id,
@@ -287,10 +289,9 @@ pub async fn loop_stages(
             OperatorState::CreateMetaMerkleTree => {
                 let merkle_root = {
                     let some_merkle_tree_collection =
-                        merkle_tree_collection.to_owned().map_or_else(
-                            || read_merkle_tree_collection(epoch_to_process, &cli.get_save_path()),
-                            |collection| collection,
-                        );
+                        merkle_tree_collection.to_owned().unwrap_or_else(|| {
+                            read_merkle_tree_collection(epoch_to_process, &cli.get_save_path())
+                        });
                     let merkle_tree = create_meta_merkle_tree(
                         cli.operator_address.clone(),
                         some_merkle_tree_collection,

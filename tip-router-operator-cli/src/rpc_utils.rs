@@ -5,9 +5,12 @@ use std::{
 };
 
 use log::{info, warn};
+use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
-    nonblocking::rpc_client::RpcClient, rpc_client::SerializableTransaction,
-    rpc_config::RpcSendTransactionConfig, rpc_request::MAX_MULTIPLE_ACCOUNTS,
+    nonblocking::rpc_client::RpcClient,
+    rpc_client::SerializableTransaction,
+    rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig},
+    rpc_request::MAX_MULTIPLE_ACCOUNTS,
 };
 use solana_commitment_config::{CommitmentConfig, CommitmentLevel};
 use solana_sdk::{
@@ -43,6 +46,36 @@ pub async fn get_batched_accounts(
         batched_accounts.extend(pubkeys_chunk.iter().cloned().zip(accounts));
     }
     Ok(batched_accounts)
+}
+
+pub async fn get_program_accounts_with_config(
+    rpc_client: &RpcClient,
+    program_id: &Pubkey,
+    mut config: RpcProgramAccountsConfig,
+) -> solana_rpc_client_api::client_error::Result<Vec<(Pubkey, Account)>> {
+    config.account_config = RpcAccountInfoConfig {
+        encoding: Some(UiAccountEncoding::Base64),
+        ..config.account_config
+    };
+
+    let accounts = rpc_client
+        .get_program_ui_accounts_with_config(program_id, config)
+        .await?;
+
+    accounts
+        .into_iter()
+        .map(|(pubkey, ui_account)| {
+            let account = ui_account.to_account().ok_or_else(|| {
+                solana_rpc_client_api::client_error::Error::new_with_request(
+                    solana_rpc_client_api::client_error::ErrorKind::Custom(
+                        "Expected binary account data for program account fetch".to_string(),
+                    ),
+                    solana_rpc_client_api::request::RpcRequest::GetProgramAccounts,
+                )
+            })?;
+            Ok((pubkey, account))
+        })
+        .collect()
 }
 
 pub async fn send_until_blockhash_expires(
@@ -136,7 +169,7 @@ pub async fn send_until_blockhash_expires(
 
     let num_landed = txs_requesting_send
         .checked_sub(claim_transactions.len())
-        .unwrap();
+        .expect("landed transaction count should not exceed sent transaction count");
     info!("num_landed: {:?}", num_landed);
 
     Ok(())

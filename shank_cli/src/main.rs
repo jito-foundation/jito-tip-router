@@ -27,7 +27,6 @@ fn main() -> Result<()> {
         paths: vec!["core", "program"],
     }];
 
-    let crate_root = std::env::current_dir().unwrap();
     let out_dir = crate_root.join("idl");
     for idl in idl_configs {
         let mut idls = Vec::new();
@@ -60,7 +59,9 @@ fn main() -> Result<()> {
             idls.push(idl);
         }
 
-        let mut accumulator = idls.pop().unwrap();
+        let mut accumulator = idls
+            .pop()
+            .ok_or_else(|| anyhow!("No IDLs were extracted for {}", idl.name))?;
         for other_idls in idls {
             accumulator.constants.extend(other_idls.constants);
             accumulator.instructions.extend(other_idls.instructions);

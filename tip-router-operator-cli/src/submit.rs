@@ -16,7 +16,7 @@ use std::sync::Arc;
 use std::{path::PathBuf, str::FromStr};
 
 use crate::tip_router::send_set_merkle_root_txs;
-use crate::{get_epoch_percentage, meta_merkle_tree_file_name, Version};
+use crate::{get_epoch_percentage, meta_merkle_tree_file_name, rpc_utils, Version};
 use crate::{
     tip_router::{
         cast_vote, get_ncn_config, set_merkle_root_instructions,
@@ -41,7 +41,10 @@ pub async fn submit_recent_epochs_to_ncn(
     let operator_address = Pubkey::from_str(&cli_args.operator_address)?;
 
     for i in 0..num_monitored_epochs {
-        let process_epoch = epoch.epoch.checked_sub(i).unwrap();
+        let process_epoch = epoch
+            .epoch
+            .checked_sub(i)
+            .expect("monitored epoch offset should not exceed current epoch");
 
         let meta_merkle_tree_dir = cli_args.get_save_path();
         let target_meta_merkle_tree_file = meta_merkle_tree_file_name(process_epoch);
@@ -335,6 +338,11 @@ pub async fn submit_to_ncn(
                 error!("Failed to set merkle roots: {:?}", e);
             }
         }
+    } else if set_merkle_roots {
+        info!(
+            "Skipping merkle root submission for epoch {} because consensus has not been reached",
+            tip_router_target_epoch
+        );
     }
 
     Ok(())
@@ -362,19 +370,19 @@ async fn get_tip_distribution_accounts_to_upload(
         )),
     ];
 
-    let tip_distribution_accounts = client
-        .get_program_accounts_with_config(
-            tip_distribution_program_id,
-            RpcProgramAccountsConfig {
-                filters: Some(filters),
-                account_config: RpcAccountInfoConfig {
-                    encoding: Some(UiAccountEncoding::Base64),
-                    ..RpcAccountInfoConfig::default()
-                },
-                ..RpcProgramAccountsConfig::default()
+    let tip_distribution_accounts = rpc_utils::get_program_accounts_with_config(
+        client,
+        tip_distribution_program_id,
+        RpcProgramAccountsConfig {
+            filters: Some(filters),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
             },
-        )
-        .await?;
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
+    .await?;
 
     let tip_distribution_accounts = tip_distribution_accounts
         .into_iter()
@@ -419,19 +427,19 @@ async fn get_priority_fee_distribution_accounts_to_upload(
         )),
     ];
 
-    let tip_distribution_accounts = client
-        .get_program_accounts_with_config(
-            tip_distribution_program_id,
-            RpcProgramAccountsConfig {
-                filters: Some(filters),
-                account_config: RpcAccountInfoConfig {
-                    encoding: Some(UiAccountEncoding::Base64),
-                    ..RpcAccountInfoConfig::default()
-                },
-                ..RpcProgramAccountsConfig::default()
+    let tip_distribution_accounts = rpc_utils::get_program_accounts_with_config(
+        client,
+        tip_distribution_program_id,
+        RpcProgramAccountsConfig {
+            filters: Some(filters),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
             },
-        )
-        .await?;
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
+    .await?;
 
     let tip_distribution_accounts = tip_distribution_accounts
         .into_iter()

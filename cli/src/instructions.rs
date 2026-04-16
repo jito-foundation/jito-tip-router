@@ -495,7 +495,8 @@ pub async fn admin_fund_account_payer(handler: &CliHandler, amount: f64) -> Resu
     let transfer_ix = transfer(
         &keypair.pubkey(),
         &account_payer,
-        sol_str_to_lamports(&amount.to_string()).unwrap(),
+        sol_str_to_lamports(&amount.to_string())
+            .ok_or_else(|| anyhow!("invalid SOL amount: {amount}"))?,
     );
 
     let ixs = &[transfer_ix];
@@ -2289,12 +2290,12 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
         )
         .await;
 
-        if result.is_err() {
+        if let Err(err) = result {
             log::error!(
                 "Failed to initialize Vault Update State Tracker for Vault: {:?} at NCN Epoch: {:?} with error: {:?}",
                 vault,
                 ncn_epoch,
-                result.err().unwrap()
+                err
             );
         }
     }
@@ -2317,7 +2318,9 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
 
         for index in 0..all_operators.len() {
             let current_index = (starting_index as usize + index) % all_operators.len();
-            let operator = all_operators.get(current_index).unwrap();
+            let operator = all_operators
+                .get(current_index)
+                .expect("current operator index should be in range");
 
             let (vault_operator_delegation, _, _) = VaultOperatorDelegation::find_program_address(
                 &handler.vault_program_id,
@@ -2346,13 +2349,13 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
             )
             .await;
 
-            if result.is_err() {
+            if let Err(err) = result {
                 log::error!(
                 "Failed to crank Vault Update State Tracker for Vault: {:?} and Operator: {:?} at NCN Epoch: {:?} with error: {:?}",
                 vault,
                 operator,
                 ncn_epoch,
-                result.err().unwrap()
+                err
             );
             }
         }
@@ -2383,12 +2386,12 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
         )
         .await;
 
-        if result.is_err() {
+        if let Err(err) = result {
             log::error!(
                 "Failed to close Vault Update State Tracker for Vault: {:?} at NCN Epoch: {:?} with error: {:?}",
                 vault,
                 ncn_epoch,
-                result.err().unwrap()
+                err
             );
         }
     }
@@ -2623,12 +2626,12 @@ pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
         // Create Vault Operator Delegation
         let result = get_or_create_operator_snapshot(handler, operator, epoch).await;
 
-        if result.is_err() {
+        if let Err(err) = result {
             log::error!(
                 "Failed to get or create operator snapshot for operator: {:?} in epoch: {:?} with error: {:?}",
                 operator,
                 epoch,
-                result.err().unwrap()
+                err
             );
             continue;
         };
@@ -2734,7 +2737,8 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
         if base_reward_receiver.is_none() {
             let keypair = handler.keypair();
 
-            let lamports = sol_str_to_lamports("0.1").unwrap();
+            let lamports =
+                sol_str_to_lamports("0.1").expect("hard-coded SOL amount should be valid");
             let transfer_ix = transfer(&keypair.pubkey(), &base_reward_receiver_address, lamports);
 
             send_and_log_transaction(
@@ -3602,7 +3606,8 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
     epoch: u64,
 ) -> Result<()> {
     let old_merkle_root_upload_authority =
-        Pubkey::from_str("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib").unwrap();
+        Pubkey::from_str("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib")
+            .expect("hard-coded old merkle root upload authority should be valid");
 
     // Get tip distribution accounts to migrate
     let tip_distribution_accounts = get_tip_distribution_accounts_to_migrate(
@@ -3665,11 +3670,8 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
             .collect::<Vec<_>>();
 
         let result = send_and_log_transaction(handler, &tx_ixs, &[], "Migrated TDA", &[]).await;
-        if result.is_err() {
-            log::error!(
-                "Failed to migrate TDA with error: {:?}",
-                result.err().unwrap()
-            );
+        if let Err(err) = result {
+            log::error!("Failed to migrate TDA with error: {:?}", err);
         }
     }
     Ok(())
