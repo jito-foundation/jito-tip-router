@@ -21,12 +21,8 @@ use solana_commitment_config::CommitmentConfig;
 use solana_metrics::{datapoint_error, datapoint_info};
 #[allow(deprecated)]
 use solana_sdk::{
-    account::Account,
-    fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
-    native_token::LAMPORTS_PER_SOL,
-    pubkey::Pubkey,
-    signature::Keypair,
-    signer::Signer,
+    account::Account, fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
+    native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::Keypair, signer::Signer,
     transaction::Transaction,
 };
 use solana_system_interface::program as system_program;
