@@ -571,17 +571,18 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         cluster,
     );
 
-    let mut none_claimants: HashSet<Pubkey> = HashSet::new();
-    if transactions.is_empty() {
+    let none_claimants: HashSet<Pubkey> = if transactions.is_empty() {
         // Collect claimants not found on-chain this iteration. We do NOT write to
         // skipped_claimants here — the caller promotes these only when 0 claims
         // remain, ensuring a single RPC drop doesn't permanently blacklist a valid
         // account.
-        none_claimants = fetched_claimants
+        fetched_claimants
             .iter()
             .filter_map(|(pk, acct)| acct.is_none().then_some(*pk))
-            .collect();
-    }
+            .collect()
+    } else {
+        HashSet::new()
+    };
 
     Ok((transactions, validators_processed, none_claimants))
 }

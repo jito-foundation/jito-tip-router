@@ -14,23 +14,7 @@ use crate::{
     Cli,
 };
 
-/// Encapsulates the state and logic for processing MEV tip claims.
-///
-/// `ClaimProcessor` is cheaply cloneable — all fields are either `Copy` or
-/// wrapped in `Arc`.  This lets the outer loop hand each epoch task its own
-/// clone without a `HashMap<u64, ClaimProcessor>`.  The `skipped_claimants`
-/// map is shared across clones via `Arc<Mutex<...>>`, so per-epoch state
-/// survives across the 30-minute outer-loop sleep.
-///
-/// # Claim Flow
-///
-/// The processor follows a fetch → send → verify → complete cycle:
-///
-/// 1. **Fetch**: Query on-chain state to build claim transactions for unclaimed tips
-/// 2. **Send**: Submit claim transactions in batches of 2,000
-/// 3. **Verify**: Re-fetch on-chain state to confirm which claims landed
-/// 4. **Complete**: If all claims are confirmed, mark the epoch as done
-/// 5. **Retry**: If claims remain, loop back to step 1
+/// Encapsulates the config and per-epoch state needed to claim MEV tips.
 #[derive(Clone)]
 pub struct ClaimProcessor {
     /// Shared CLI config. Stored behind Arc so cloning ClaimProcessor is a
@@ -77,8 +61,8 @@ impl ClaimProcessor {
         }
     }
 
-    pub fn rpc_client(&self) -> &Arc<RpcClient> {
-        &self.rpc_client
+    pub fn rpc_client(&self) -> Arc<RpcClient> {
+        self.rpc_client.clone()
     }
 
     /// Returns a snapshot of the skipped pubkeys for `epoch`.
@@ -122,6 +106,7 @@ impl ClaimProcessor {
         Ok(())
     }
 
+    /// Claim MEV tips
     pub async fn claim_mev_tips_with_emit(
         &self,
         epoch: u64,
@@ -133,20 +118,15 @@ impl ClaimProcessor {
             .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {:?}", e))?;
         let keypair = Arc::new(keypair);
         let rpc_url = self.cli.rpc_url.clone();
-        // Arc::clone is a cheap refcount bump — no deep copy of Cli fields.
-        let cli = Arc::clone(&self.cli);
-        let tip_distribution_program_id = self.tip_distribution_program_id;
-        let priority_fee_distribution_program_id = self.priority_fee_distribution_program_id;
-        let tip_router_program_id = self.tip_router_program_id;
-        let ncn = self.ncn;
+        let cli = self.cli.clone();
 
         handle_claim_mev_tips(
             &cli,
             epoch,
-            tip_distribution_program_id,
-            priority_fee_distribution_program_id,
-            tip_router_program_id,
-            ncn,
+            self.tip_distribution_program_id,
+            self.priority_fee_distribution_program_id,
+            self.tip_router_program_id,
+            self.ncn,
             max_loop_duration,
             file_path,
             file_mutex,

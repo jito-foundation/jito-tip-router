@@ -337,8 +337,6 @@ async fn main() -> Result<()> {
                                 .checked_sub(1)
                                 .expect("Epoch overflow");
 
-                            // ClaimProcessor is cheap to clone: all fields are Arc or Copy.
-                            // skipped_claimants is Arc<Mutex<...>>, so state is shared.
                             let proc = processor.clone();
                             let fp = file_path_ref.clone();
                             let fm = file_mutex_ref.clone();
