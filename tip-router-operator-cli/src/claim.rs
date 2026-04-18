@@ -85,6 +85,7 @@ pub async fn emit_claim_mev_tips_metrics(
     ncn: Pubkey,
     file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
+    epoch_skipped: &HashSet<Pubkey>,
 ) -> Result<(), anyhow::Error> {
     let meta_merkle_tree_dir = cli.get_save_path().clone();
     let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
@@ -116,7 +117,7 @@ pub async fn emit_claim_mev_tips_metrics(
         cli.min_claim_amount,
         &cli.operator_address,
         &cli.cluster,
-        &HashSet::new(),
+        epoch_skipped,
     )
     .await?;
 

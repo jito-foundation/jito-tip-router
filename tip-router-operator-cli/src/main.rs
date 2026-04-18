@@ -244,20 +244,27 @@ async fn main() -> Result<()> {
             // Claim tips and emit metrics
             let file_mutex = Arc::new(Mutex::new(()));
 
-            // Run claims if enabled
+            // One processor shared between the metrics task and the claim task so
+            // both see the same skipped_claimants state.
+            let processor = ClaimProcessor::new(
+                cli.clone(),
+                rpc_client.clone(),
+                tip_distribution_program_id,
+                priority_fee_distribution_program_id,
+                tip_router_program_id,
+                ncn_address,
+            );
+
             if claim_tips_metrics {
-                let cli_clone = cli.clone();
-                let rpc_client_clone = rpc_client.clone();
+                let processor = processor.clone();
                 let file_path_ref = claim_tips_epoch_filepath.clone();
                 let file_mutex_ref = file_mutex.clone();
 
                 tokio::spawn(async move {
                     loop {
-                        // Get current epoch
-                        let current_epoch = match rpc_client_clone.get_epoch_info().await {
+                        let current_epoch = match processor.rpc_client().get_epoch_info().await {
                             Ok(epoch_info) => epoch_info.epoch,
                             Err(_) => {
-                                // If we can't get the epoch, wait and retry
                                 sleep(Duration::from_secs(60)).await;
                                 continue;
                             }
@@ -270,9 +277,9 @@ async fn main() -> Result<()> {
                                 .expect("Epoch overflow");
 
                             info!("Emitting Claim Metrics for epoch {}", epoch_to_emit);
-                            let cli_ref = cli_clone.clone();
+                            let epoch_skipped = processor.get_epoch_skipped(epoch_to_emit);
                             match emit_claim_mev_tips_metrics(
-                                &cli_ref,
+                                processor.cli(),
                                 epoch_to_emit,
                                 tip_distribution_program_id,
                                 priority_fee_distribution_program_id,
@@ -280,21 +287,18 @@ async fn main() -> Result<()> {
                                 ncn_address,
                                 &file_path_ref,
                                 &file_mutex_ref,
+                                &epoch_skipped,
                             )
                             .await
                             {
-                                Ok(_) => {
-                                    info!(
-                                        "Successfully emitted claim metrics for epoch {}",
-                                        epoch_to_emit
-                                    );
-                                }
-                                Err(e) => {
-                                    error!(
-                                        "Error emitting claim metrics for epoch {}: {}",
-                                        epoch_to_emit, e
-                                    );
-                                }
+                                Ok(_) => info!(
+                                    "Successfully emitted claim metrics for epoch {}",
+                                    epoch_to_emit
+                                ),
+                                Err(e) => error!(
+                                    "Error emitting claim metrics for epoch {}: {}",
+                                    epoch_to_emit, e
+                                ),
                             }
                         }
 
@@ -305,21 +309,11 @@ async fn main() -> Result<()> {
             }
 
             if claim_tips {
-                let cli_clone = cli.clone();
-                let rpc_client_clone = rpc_client.clone();
+                let processor = processor.clone();
                 let file_path_ref = claim_tips_epoch_filepath.clone();
                 let file_mutex_ref = file_mutex.clone();
 
                 tokio::spawn(async move {
-                    let processor = ClaimProcessor::new(
-                        cli_clone,
-                        rpc_client_clone,
-                        tip_distribution_program_id,
-                        priority_fee_distribution_program_id,
-                        tip_router_program_id,
-                        ncn_address,
-                    );
-
                     loop {
                         let current_epoch = match processor.rpc_client().get_epoch_info().await {
                             Ok(epoch_info) => epoch_info.epoch,

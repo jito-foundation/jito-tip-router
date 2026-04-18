@@ -61,6 +61,10 @@ impl ClaimProcessor {
         }
     }
 
+    pub fn cli(&self) -> &Cli {
+        &self.cli
+    }
+
     pub fn rpc_client(&self) -> Arc<RpcClient> {
         self.rpc_client.clone()
     }
