@@ -253,7 +253,7 @@ async fn main() -> Result<()> {
                 priority_fee_distribution_program_id,
                 tip_router_program_id,
                 ncn_address,
-            );
+            )?;
 
             if claim_tips_metrics {
                 let processor = processor.clone();
@@ -457,7 +457,7 @@ async fn main() -> Result<()> {
                 priority_fee_distribution_program_id,
                 tip_router_program_id,
                 ncn_address,
-            );
+            )?;
             processor
                 .claim_mev_tips_with_emit(
                     epoch,

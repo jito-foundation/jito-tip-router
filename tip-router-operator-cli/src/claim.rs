@@ -332,6 +332,7 @@ pub async fn claim_mev_tips(
         if validators_processed && claims_to_process.is_empty() {
             processor.extend_epoch_skipped(epoch, none_claimants);
             add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
+            processor.remove_epoch(epoch, current_epoch)?;
             return Ok(());
         }
 
@@ -388,6 +389,7 @@ pub async fn claim_mev_tips(
     if validators_processed && transactions.is_empty() {
         processor.extend_epoch_skipped(epoch, none_claimants);
         add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
+        processor.remove_epoch(epoch, current_epoch)?;
         return Ok(());
     }
 
