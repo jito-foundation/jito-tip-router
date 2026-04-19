@@ -412,7 +412,7 @@ pub async fn claim_mev_tips(
         return Ok(());
     }
 
-    // if more transactions left, we'll simulate them all to make sure its not an uncaught error
+    // if more transactions left, simulate them all to make sure it's not an uncaught error
     let mut is_error = false;
     let mut error_str = String::new();
     for tx in &transactions {
@@ -428,11 +428,22 @@ pub async fn claim_mev_tips(
             )
             .await
         {
-            Ok(_) => {}
+            Ok(result) => {
+                if let Some(tx_err) = result.value.err {
+                    error_str = tx_err.to_string();
+                    is_error = true;
+                    warn!(
+                        "simulation failed tx: {:?} error: {:?} logs: {:?}",
+                        tx,
+                        tx_err,
+                        result.value.logs,
+                    );
+                    break;
+                }
+            }
             Err(e) => {
                 error_str = e.to_string();
                 is_error = true;
-
                 match e.get_transaction_error() {
                     None => {
                         break;
@@ -477,30 +488,67 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     let epoch = merkle_trees.epoch;
     let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
 
+    let start = Instant::now();
+
+    // Fetch TDAs first so we can use the on-chain merkle_root_upload_authority to filter
+    // tree nodes. Using the file's authority caused a mismatch: trees whose file authority
+    // differed from the on-chain authority were excluded from the claim-status fetch but
+    // included in transaction building, so already-claimed accounts were never filtered out.
+    let tda_pubkeys = merkle_trees
+        .generated_merkle_trees
+        .iter()
+        .map(|tree| tree.distribution_account)
+        .collect_vec();
+
+    let tdas: HashMap<Pubkey, Account> = get_batched_accounts(rpc_client, &tda_pubkeys)
+        .await?
+        .into_iter()
+        .filter_map(|(pubkey, a)| Some((pubkey, a?)))
+        .collect();
+
+    // Returns true if the on-chain TDA has a merkle root and the expected upload authority.
+    let qualifies = |tree: &meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTree| -> bool {
+        let Some(tda_account) = tdas.get(&tree.distribution_account) else {
+            return false;
+        };
+        if tree.distribution_program.eq(&tip_distribution_program_id) {
+            match TipDistributionAccount::deserialize(tda_account.data.as_slice()) {
+                Ok(tda) => {
+                    !tda.merkle_root.is_none()
+                        && tda.merkle_root_upload_authority == tip_router_config_address
+                }
+                Err(_) => false,
+            }
+        } else if tree
+            .distribution_program
+            .eq(&priority_fee_distribution_program_id)
+        {
+            match jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount::deserialize(
+                tda_account.data.as_slice(),
+            ) {
+                Ok(pfda) => {
+                    !pfda.merkle_root.is_none()
+                        && pfda.merkle_root_upload_authority == tip_router_config_address
+                }
+                Err(_) => false,
+            }
+        } else {
+            false
+        }
+    };
+
     let all_tree_nodes = merkle_trees
         .generated_merkle_trees
         .iter()
-        .filter_map(|tree| {
-            if tree.merkle_root_upload_authority != tip_router_config_address {
-                return None;
-            }
-
-            Some(&tree.tree_nodes)
-        })
-        .flatten()
+        .filter(|tree| qualifies(tree))
+        .flat_map(|tree| tree.tree_nodes.iter())
         .collect_vec();
 
     let validator_tree_nodes = merkle_trees
         .generated_merkle_trees
         .iter()
-        .filter_map(|tree| {
-            if tree.merkle_root_upload_authority != tip_router_config_address {
-                return None;
-            }
-
-            Some(vec![&tree.tree_nodes[1]])
-        })
-        .flatten()
+        .filter(|tree| qualifies(tree))
+        .filter_map(|tree| tree.tree_nodes.get(1))
         .collect_vec();
 
     let remaining_validator_claims =
@@ -518,20 +566,6 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         all_tree_nodes.len(),
         epoch
     );
-
-    let start = Instant::now();
-
-    let tda_pubkeys = merkle_trees
-        .generated_merkle_trees
-        .iter()
-        .map(|tree| tree.distribution_account)
-        .collect_vec();
-
-    let tdas: HashMap<Pubkey, Account> = get_batched_accounts(rpc_client, &tda_pubkeys)
-        .await?
-        .into_iter()
-        .filter_map(|(pubkey, a)| Some((pubkey, a?)))
-        .collect();
 
     let claimant_pubkeys = tree_nodes
         .iter()

@@ -16,6 +16,7 @@ use solana_commitment_config::{CommitmentConfig, CommitmentLevel};
 use solana_sdk::{
     account::Account,
     hash::Hash,
+    instruction::InstructionError,
     pubkey::Pubkey,
     signature::{Keypair, Signature},
     transaction::{Transaction, TransactionError},
@@ -125,6 +126,19 @@ pub async fn send_until_blockhash_expires(
                         break;
                     }
                     Some(TransactionError::AlreadyProcessed) => {
+                        already_processed.insert(*tx.get_signature());
+                    }
+                    // SystemError::AccountAlreadyInUse (0x0) — the ClaimStatus PDA was
+                    // created by another operator between our fetch and submission.
+                    // Treat as already-done: drop from retry queue.
+                    Some(TransactionError::InstructionError(
+                        _,
+                        InstructionError::Custom(0),
+                    )) => {
+                        info!(
+                            "ClaimStatus already created by another operator, skipping: {}",
+                            tx.get_signature()
+                        );
                         already_processed.insert(*tx.get_signature());
                     }
                     Some(e) => {
