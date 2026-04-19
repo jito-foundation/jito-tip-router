@@ -512,7 +512,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         if tree.distribution_program.eq(&tip_distribution_program_id) {
             match TipDistributionAccount::deserialize(tda_account.data.as_slice()) {
                 Ok(tda) => {
-                    !tda.merkle_root.is_none()
+                    tda.merkle_root.is_some()
                         && tda.merkle_root_upload_authority == tip_router_config_address
                 }
                 Err(_) => false,
@@ -525,7 +525,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
                 tda_account.data.as_slice(),
             ) {
                 Ok(pfda) => {
-                    !pfda.merkle_root.is_none()
+                    pfda.merkle_root.is_some()
                         && pfda.merkle_root_upload_authority == tip_router_config_address
                 }
                 Err(_) => false,
