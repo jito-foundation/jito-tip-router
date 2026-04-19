@@ -131,10 +131,7 @@ pub async fn send_until_blockhash_expires(
                     // SystemError::AccountAlreadyInUse (0x0) — the ClaimStatus PDA was
                     // created by another operator between our fetch and submission.
                     // Treat as already-done: drop from retry queue.
-                    Some(TransactionError::InstructionError(
-                        _,
-                        InstructionError::Custom(0),
-                    )) => {
+                    Some(TransactionError::InstructionError(_, InstructionError::Custom(0))) => {
                         info!(
                             "ClaimStatus already created by another operator, skipping: {}",
                             tx.get_signature()

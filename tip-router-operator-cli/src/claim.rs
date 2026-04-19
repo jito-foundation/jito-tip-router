@@ -434,9 +434,7 @@ pub async fn claim_mev_tips(
                     is_error = true;
                     warn!(
                         "simulation failed tx: {:?} error: {:?} logs: {:?}",
-                        tx,
-                        tx_err,
-                        result.value.logs,
+                        tx, tx_err, result.value.logs,
                     );
                     break;
                 }

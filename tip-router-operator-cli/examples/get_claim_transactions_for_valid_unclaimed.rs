@@ -144,37 +144,36 @@ async fn main() -> anyhow::Result<()> {
     println!("TDAs found on-chain: {}", tdas.len());
 
     // ── Step 2: filter trees using the ON-CHAIN TDA authority (the fix) ──
-    let qualifies =
-        |tree: &meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTree| -> bool {
-            let Some(tda_account) = tdas.get(&tree.distribution_account) else {
-                return false;
-            };
-            if tree
-                .distribution_program
-                .eq(&args.tip_distribution_program_id)
-            {
-                match TipDistributionAccount::deserialize(tda_account.data.as_slice()) {
-                    Ok(tda) => {
-                        tda.merkle_root.is_some()
-                            && tda.merkle_root_upload_authority == tip_router_config_address
-                    }
-                    Err(_) => false,
-                }
-            } else if tree
-                .distribution_program
-                .eq(&args.priority_fee_distribution_program_id)
-            {
-                match PriorityFeeDistributionAccount::deserialize(tda_account.data.as_slice()) {
-                    Ok(pfda) => {
-                        pfda.merkle_root.is_some()
-                            && pfda.merkle_root_upload_authority == tip_router_config_address
-                    }
-                    Err(_) => false,
-                }
-            } else {
-                false
-            }
+    let qualifies = |tree: &meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTree| -> bool {
+        let Some(tda_account) = tdas.get(&tree.distribution_account) else {
+            return false;
         };
+        if tree
+            .distribution_program
+            .eq(&args.tip_distribution_program_id)
+        {
+            match TipDistributionAccount::deserialize(tda_account.data.as_slice()) {
+                Ok(tda) => {
+                    tda.merkle_root.is_some()
+                        && tda.merkle_root_upload_authority == tip_router_config_address
+                }
+                Err(_) => false,
+            }
+        } else if tree
+            .distribution_program
+            .eq(&args.priority_fee_distribution_program_id)
+        {
+            match PriorityFeeDistributionAccount::deserialize(tda_account.data.as_slice()) {
+                Ok(pfda) => {
+                    pfda.merkle_root.is_some()
+                        && pfda.merkle_root_upload_authority == tip_router_config_address
+                }
+                Err(_) => false,
+            }
+        } else {
+            false
+        }
+    };
 
     let qualifying_nodes: Vec<_> = merkle_trees
         .generated_merkle_trees
@@ -183,7 +182,10 @@ async fn main() -> anyhow::Result<()> {
         .flat_map(|t| t.tree_nodes.iter())
         .collect();
 
-    println!("Qualifying nodes (on-chain TDA filter): {}", qualifying_nodes.len());
+    println!(
+        "Qualifying nodes (on-chain TDA filter): {}",
+        qualifying_nodes.len()
+    );
 
     // ── Step 3: fetch claimants and claim-status accounts ──
     let claimant_pubkeys: Vec<Pubkey> = qualifying_nodes.iter().map(|n| n.claimant).collect_vec();
@@ -193,14 +195,16 @@ async fn main() -> anyhow::Result<()> {
         .collect_vec();
 
     println!("Fetching {} claimant accounts...", claimant_pubkeys.len());
-    let claimants: HashMap<Pubkey, Account> =
-        get_batched_accounts(&rpc_client, &claimant_pubkeys)
-            .await?
-            .into_iter()
-            .filter_map(|(k, v)| Some((k, v?)))
-            .collect();
+    let claimants: HashMap<Pubkey, Account> = get_batched_accounts(&rpc_client, &claimant_pubkeys)
+        .await?
+        .into_iter()
+        .filter_map(|(k, v)| Some((k, v?)))
+        .collect();
 
-    println!("Fetching {} claim-status accounts...", claim_status_pubkeys.len());
+    println!(
+        "Fetching {} claim-status accounts...",
+        claim_status_pubkeys.len()
+    );
     let claim_statuses: HashMap<Pubkey, Account> =
         get_batched_accounts(&rpc_client, &claim_status_pubkeys)
             .await?
@@ -348,7 +352,10 @@ async fn main() -> anyhow::Result<()> {
         args.min_claim_amount
     );
     println!("  ──────────────────────────────────────────");
-    println!("  candidates (would be sent)              : {}", candidates.len());
+    println!(
+        "  candidates (would be sent)              : {}",
+        candidates.len()
+    );
     println!();
 
     if candidates.is_empty() {
@@ -357,10 +364,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // ── Step 5: simulate each candidate to expose the actual program error ──
-    println!(
-        "Simulating {} transactions...",
-        candidates.len()
-    );
+    println!("Simulating {} transactions...", candidates.len());
     println!();
 
     let mut ok_count = 0usize;
