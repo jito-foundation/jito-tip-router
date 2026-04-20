@@ -21,9 +21,9 @@ use crate::{
         create_and_add_test_vault, create_ballot_box, create_base_reward_router,
         create_epoch_snapshot, create_epoch_state, create_ncn_reward_router,
         create_operator_snapshot, create_test_ncn, create_vault_registry, create_weight_table,
-        distribute_base_ncn_rewards, full_vault_update, register_vault, route_base_rewards,
-        route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
-        update_all_vaults_in_network,
+        distribute_base_ncn_rewards, full_vault_update, migrate_tda_merkle_root_upload_authorities,
+        register_vault, route_base_rewards, route_ncn_rewards, set_weight,
+        snapshot_vault_operator_delegation, update_all_vaults_in_network,
     },
     keeper::keeper_loop::startup_keeper,
 };
@@ -278,6 +278,9 @@ impl CliHandler {
             ProgramCommand::CrankDistribute {} => crank_distribute(self, self.epoch).await,
             ProgramCommand::CrankCloseEpochAccounts {} => {
                 crank_close_epoch_accounts(self, self.epoch).await
+            }
+            ProgramCommand::MigrateTdaMerkleRootUploadAuthorities => {
+                migrate_tda_merkle_root_upload_authorities(self, self.epoch).await
             }
 
             // Admin

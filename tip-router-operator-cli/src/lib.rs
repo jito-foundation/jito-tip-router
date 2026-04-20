@@ -44,8 +44,7 @@ use meta_merkle_tree::{
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_runtime::bank::Bank;
-use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
-use solana_sdk::pubkey::Pubkey;
+use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, pubkey::Pubkey};
 use stake_meta_generator::generate_stake_meta_collection;
 
 #[derive(Clone, PartialEq, Eq)]

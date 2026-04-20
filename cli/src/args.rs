@@ -63,7 +63,7 @@ pub struct Args {
     #[arg(
         long,
         global = true,
-        env = "VAULT_PROGRAM_ID", 
+        env = "VAULT_PROGRAM_ID",
         default_value_t = jito_vault_program::id().to_string(),
         help = "Vault program ID"
     )]
@@ -169,6 +169,7 @@ pub enum ProgramCommand {
     CrankSnapshot {},
     CrankDistribute {},
     CrankCloseEpochAccounts {},
+    MigrateTdaMerkleRootUploadAuthorities,
 
     /// Admin
     AdminCreateConfig {
