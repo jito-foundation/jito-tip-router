@@ -8,6 +8,7 @@ members = [
     "priority_fee_distribution_sdk",
     "program",
     "shank_cli",
+    "meta_merkle_tree",
     "tip-router-operator-cli",
     "tip_distribution_sdk",
     "tip_payment_sdk",
@@ -127,6 +128,7 @@ spl-token-interface = { version = "2.0.0" }
 syn = "2.0.72"
 thiserror = "2.0.16"
 tokio = { version = "1.47.1", features = ["full"] }
+wincode = { version = "0.5", features = ["derive"] }
 
 [profile.release]
 overflow-checks = true
