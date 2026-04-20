@@ -45,5 +45,8 @@ pub const JITOSOL_RESERVE_STAKE: Pubkey = pubkey!("BgKUXdS29YcHCFrPm5M8oLHiTzZaM
 // There is only one of these
 pub const SWITCHBOARD_QUEUE: Pubkey = pubkey!("A43DyUGA7s8eXPxqEjJY6EBu1KKbNgfxF8h17VAHn13w");
 
+// Legacy authority from the older Merkle root upload flow. It is still accepted for
+// backward compatibility with uploads/state created before the authority rotation.
+// Remove once support for those legacy uploads/state is no longer required.
 pub const OLD_MERKLE_ROOT_UPLOAD_AUTHORITY: Pubkey =
     pubkey!("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib");

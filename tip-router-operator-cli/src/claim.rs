@@ -1322,4 +1322,168 @@ mod tests {
 
         assert_eq!(txs.len(), 0);
     }
+
+    fn setup_test_fixture_with_authority(
+        tree_nodes: Vec<TreeNode>,
+        max_total_claim: u64,
+        tda_authority: Pubkey,
+    ) -> (
+        GeneratedMerkleTreeCollection,
+        HashMap<Pubkey, Account>,
+        HashMap<Pubkey, Account>,
+        HashMap<Pubkey, Account>,
+        Pubkey,
+        Pubkey,
+        Pubkey,
+        Pubkey,
+        Pubkey,
+    ) {
+        let tip_distribution_program_id = jito_tip_distribution_sdk::id();
+        let priority_fee_distribution_program_id = jito_priority_fee_distribution_sdk::id();
+        let tip_router_program_id = Pubkey::new_unique();
+        let ncn = Pubkey::new_unique();
+        let payer = Pubkey::new_unique();
+        let distribution_account_pubkey = Pubkey::new_unique();
+
+        let tda = TipDistributionAccount {
+            validator_vote_account: Pubkey::new_unique(),
+            merkle_root_upload_authority: tda_authority,
+            merkle_root: Some(MerkleRoot {
+                root: [1u8; 32],
+                max_total_claim,
+                max_num_nodes: tree_nodes.len() as u64,
+                total_funds_claimed: 0,
+                num_nodes_claimed: 0,
+            }),
+            epoch_created_at: 100,
+            validator_commission_bps: 0,
+            expires_at: 200,
+            bump: 0,
+        };
+
+        let tda_data = serialize_tda(&tda);
+        let tda_account = Account {
+            lamports: 1_000_000,
+            data: tda_data,
+            owner: tip_distribution_program_id,
+            executable: false,
+            rent_epoch: 0,
+        };
+
+        let mut tdas = HashMap::new();
+        tdas.insert(distribution_account_pubkey, tda_account);
+
+        let mut claimants = HashMap::new();
+        for node in &tree_nodes {
+            claimants.insert(
+                node.claimant,
+                Account {
+                    lamports: 1_000_000,
+                    data: vec![],
+                    owner: Pubkey::new_unique(),
+                    executable: false,
+                    rent_epoch: 0,
+                },
+            );
+        }
+
+        let tree = GeneratedMerkleTree {
+            distribution_program: tip_distribution_program_id,
+            distribution_account: distribution_account_pubkey,
+            merkle_root_upload_authority: tda_authority,
+            merkle_root: Hash::new_unique(),
+            tree_nodes,
+            max_total_claim,
+            max_num_nodes: 0,
+        };
+
+        let merkle_trees = GeneratedMerkleTreeCollection {
+            generated_merkle_trees: vec![tree],
+            bank_hash: "test".to_string(),
+            epoch: 100,
+            slot: 1000,
+        };
+
+        (
+            merkle_trees,
+            tdas,
+            claimants,
+            HashMap::new(),
+            tip_distribution_program_id,
+            priority_fee_distribution_program_id,
+            tip_router_program_id,
+            ncn,
+            payer,
+        )
+    }
+
+    #[test]
+    fn test_old_authority_builds_claim_transactions() {
+        let nodes = vec![make_tree_node(10_000), make_tree_node(20_000)];
+        let total = nodes.iter().map(|n| n.amount).sum();
+
+        let (
+            merkle_trees,
+            tdas,
+            claimants,
+            claim_statuses,
+            tip_dist_id,
+            pf_dist_id,
+            router_id,
+            ncn,
+            payer,
+        ) = setup_test_fixture_with_authority(nodes, total, OLD_MERKLE_ROOT_UPLOAD_AUTHORITY);
+
+        let txs = build_mev_claim_transactions(
+            tip_dist_id,
+            pf_dist_id,
+            router_id,
+            &merkle_trees,
+            tdas,
+            claimants,
+            claim_statuses,
+            0,
+            payer,
+            ncn,
+            0,
+            "test",
+        );
+
+        assert_eq!(txs.len(), 2);
+    }
+
+    #[test]
+    fn test_unknown_authority_skips_all() {
+        let nodes = vec![make_tree_node(10_000), make_tree_node(20_000)];
+        let total = nodes.iter().map(|n| n.amount).sum();
+
+        let (
+            merkle_trees,
+            tdas,
+            claimants,
+            claim_statuses,
+            tip_dist_id,
+            pf_dist_id,
+            router_id,
+            ncn,
+            payer,
+        ) = setup_test_fixture_with_authority(nodes, total, Pubkey::new_unique());
+
+        let txs = build_mev_claim_transactions(
+            tip_dist_id,
+            pf_dist_id,
+            router_id,
+            &merkle_trees,
+            tdas,
+            claimants,
+            claim_statuses,
+            0,
+            payer,
+            ncn,
+            0,
+            "test",
+        );
+
+        assert_eq!(txs.len(), 0);
+    }
 }
