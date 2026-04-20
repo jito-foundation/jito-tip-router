@@ -44,3 +44,6 @@ pub const JITOSOL_RESERVE_STAKE: Pubkey = pubkey!("BgKUXdS29YcHCFrPm5M8oLHiTzZaM
 
 // There is only one of these
 pub const SWITCHBOARD_QUEUE: Pubkey = pubkey!("A43DyUGA7s8eXPxqEjJY6EBu1KKbNgfxF8h17VAHn13w");
+
+pub const OLD_MERKLE_ROOT_UPLOAD_AUTHORITY: Pubkey =
+    pubkey!("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib");

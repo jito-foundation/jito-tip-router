@@ -5,7 +5,9 @@ use jito_tip_distribution_sdk::{
     CONFIG_SEED,
 };
 use jito_tip_router_client::instructions::ClaimWithPayerBuilder;
-use jito_tip_router_core::{account_payer::AccountPayer, config::Config};
+use jito_tip_router_core::{
+    account_payer::AccountPayer, config::Config, constants::OLD_MERKLE_ROOT_UPLOAD_AUTHORITY,
+};
 use log::{info, warn};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, TreeNode};
 use rand::{prelude::SliceRandom, thread_rng};
@@ -23,12 +25,12 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use solana_system_interface::program as system_program;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::{
     collections::HashMap,
     time::{Duration, Instant},
 };
-use std::{path::PathBuf, str::FromStr};
 use thiserror::Error;
 use tokio::fs::File;
 use tokio::fs::OpenOptions;
@@ -477,15 +479,12 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     let epoch = merkle_trees.epoch;
     let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
 
-    let old_merkle_root_upload_authority: Pubkey =
-        Pubkey::from_str("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib").unwrap();
-
     let all_tree_nodes = merkle_trees
         .generated_merkle_trees
         .iter()
         .filter_map(|tree| {
             if tree.merkle_root_upload_authority != tip_router_config_address
-                && tree.merkle_root_upload_authority != old_merkle_root_upload_authority
+                && tree.merkle_root_upload_authority != OLD_MERKLE_ROOT_UPLOAD_AUTHORITY
             {
                 return None;
             }
@@ -500,7 +499,7 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .iter()
         .filter_map(|tree| {
             if tree.merkle_root_upload_authority != tip_router_config_address
-                && tree.merkle_root_upload_authority != old_merkle_root_upload_authority
+                && tree.merkle_root_upload_authority != OLD_MERKLE_ROOT_UPLOAD_AUTHORITY
             {
                 return None;
             }
@@ -667,9 +666,6 @@ fn build_mev_claim_transactions(
     let priority_fee_distribution_config =
         Pubkey::find_program_address(&[CONFIG_SEED], &priority_fee_distribution_program_id).0;
 
-    let old_merkle_root_upload_authority: Pubkey =
-        Pubkey::from_str("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib").unwrap();
-
     let mut under_min_amount_claimants = 0;
 
     let mut instructions = Vec::with_capacity(claimants.len());
@@ -690,7 +686,7 @@ fn build_mev_claim_transactions(
                     // can continue here, as there might be tip distribution accounts this account doesn't upload for
                     if tda.merkle_root.is_none()
                         || (tda.merkle_root_upload_authority != tip_router_config_address
-                            && tda.merkle_root_upload_authority != old_merkle_root_upload_authority)
+                            && tda.merkle_root_upload_authority != OLD_MERKLE_ROOT_UPLOAD_AUTHORITY)
                     {
                         continue;
                     }
@@ -709,7 +705,7 @@ fn build_mev_claim_transactions(
                     if pfda.merkle_root.is_none()
                         || (pfda.merkle_root_upload_authority != tip_router_config_address
                             && pfda.merkle_root_upload_authority
-                                != old_merkle_root_upload_authority)
+                                != OLD_MERKLE_ROOT_UPLOAD_AUTHORITY)
                     {
                         continue;
                     }

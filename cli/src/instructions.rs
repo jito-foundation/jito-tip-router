@@ -3674,6 +3674,5 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
             log::error!("Failed to migrate TDA with error: {:?}", err);
         }
     }
-
     Ok(())
 }
