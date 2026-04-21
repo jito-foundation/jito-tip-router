@@ -7,7 +7,7 @@ use jito_tip_router_core::{
     ncn_fee_group::{NcnFeeGroup, NcnFeeGroupType},
 };
 use solana_metrics::datapoint_info;
-use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey};
+use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, native_token::LAMPORTS_PER_SOL};
 
 use crate::{
     getters::{
@@ -483,10 +483,16 @@ macro_rules! emit_epoch_datapoint {
     };
 }
 
+/// Emits all per-epoch metrics for the given epoch.
+///
+/// `emit_tda_metrics` gates the TDA migration check, which issues two expensive
+/// `getProgramAccounts` RPC calls. The caller is responsible for throttling this
+/// flag (e.g. only once every 30 minutes via `--tda-metrics-interval-secs`).
 #[allow(clippy::large_stack_frames)]
 pub async fn emit_epoch_metrics(
     handler: &CliHandler,
     epoch: u64,
+    emit_tda_metrics: bool,
     cluster_name: &str,
 ) -> Result<()> {
     emit_epoch_metrics_state(handler, epoch, cluster_name).await?;
@@ -496,7 +502,10 @@ pub async fn emit_epoch_metrics(
     emit_epoch_metrics_ballot_box(handler, epoch, cluster_name).await?;
     emit_epoch_metrics_base_rewards(handler, epoch, cluster_name).await?;
     emit_epoch_metrics_ncn_rewards(handler, epoch, cluster_name).await?;
-    emit_epoch_metrics_tda_migration(handler, epoch, cluster_name).await?;
+
+    if emit_tda_metrics {
+        emit_epoch_metrics_tda_migration(handler, epoch, cluster_name).await?;
+    }
 
     Ok(())
 }
@@ -1309,6 +1318,10 @@ pub async fn emit_epoch_metrics_state(
     Ok(())
 }
 
+/// Queries how many TDAs still have the old `merkle_root_upload_authority` for the given epoch
+/// and emits the remaining counts for both tip distribution and priority fee distribution programs.
+///
+/// When `total-remaining` reaches zero, all TDAs for that epoch have migrated to the new authority.
 pub async fn emit_epoch_metrics_tda_migration(
     handler: &CliHandler,
     epoch: u64,
@@ -1337,9 +1350,9 @@ pub async fn emit_epoch_metrics_tda_migration(
     .len();
 
     datapoint_info!(
-        "tr-beta-em-tda-migration",
+        "tr-beta-ee-tda-migration",
         ("current-epoch", current_epoch, i64),
-        ("epoch", epoch, i64),
+        ("keeper-epoch", epoch, i64),
         ("epoch-percentage", epoch_percentage, f64),
         ("tip-tda-remaining", tip_remaining as i64, i64),
         ("pf-tda-remaining", pf_remaining as i64, i64),

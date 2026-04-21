@@ -254,6 +254,7 @@ impl CliHandler {
                 run_migration,
                 cluster,
                 region,
+                tda_metrics_interval_secs,
             } => {
                 startup_keeper(
                     self,
@@ -266,6 +267,7 @@ impl CliHandler {
                     run_migration,
                     cluster.to_string(),
                     region.to_string(),
+                    tda_metrics_interval_secs,
                 )
                 .await
             }
