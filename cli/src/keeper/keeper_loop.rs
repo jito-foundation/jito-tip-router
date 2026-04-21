@@ -349,8 +349,7 @@ pub async fn startup_keeper(
             info!("\n\nD. Emit Epoch Metrics - {}\n", current_keeper_epoch);
 
             let emit_tda_metrics = end_of_loop
-                && last_tda_metrics_emit
-                    .map_or(true, |t| t.elapsed() >= tda_metrics_interval);
+                && last_tda_metrics_emit.map_or(true, |t| t.elapsed() >= tda_metrics_interval);
 
             let result =
                 emit_epoch_metrics(handler, state.epoch, emit_tda_metrics, &cluster_name).await;
