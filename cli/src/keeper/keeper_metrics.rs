@@ -2,12 +2,12 @@ use anyhow::Result;
 use jito_tip_router_core::{
     account_payer::AccountPayer,
     base_fee_group::{BaseFeeGroup, BaseFeeGroupType},
-    constants::MAX_OPERATORS,
+    constants::{MAX_OPERATORS, OLD_MERKLE_ROOT_UPLOAD_AUTHORITY},
     epoch_state::AccountStatus,
     ncn_fee_group::{NcnFeeGroup, NcnFeeGroupType},
 };
 use solana_metrics::datapoint_info;
-use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, native_token::LAMPORTS_PER_SOL};
+use solana_sdk::{clock::DEFAULT_SLOTS_PER_EPOCH, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey};
 
 use crate::{
     getters::{
@@ -15,8 +15,8 @@ use crate::{
         get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver, get_base_reward_router,
         get_current_epoch_and_slot, get_epoch_snapshot, get_epoch_state, get_is_epoch_completed,
         get_ncn_reward_receiver, get_ncn_reward_router, get_operator, get_operator_snapshot,
-        get_tip_router_config, get_vault, get_vault_config, get_vault_operator_delegation,
-        get_vault_registry, get_weight_table,
+        get_tip_distribution_accounts_to_migrate, get_tip_router_config, get_vault,
+        get_vault_config, get_vault_operator_delegation, get_vault_registry, get_weight_table,
     },
     handler::CliHandler,
 };
@@ -496,6 +496,7 @@ pub async fn emit_epoch_metrics(
     emit_epoch_metrics_ballot_box(handler, epoch, cluster_name).await?;
     emit_epoch_metrics_base_rewards(handler, epoch, cluster_name).await?;
     emit_epoch_metrics_ncn_rewards(handler, epoch, cluster_name).await?;
+    emit_epoch_metrics_tda_migration(handler, epoch, cluster_name).await?;
 
     Ok(())
 }
@@ -1302,6 +1303,47 @@ pub async fn emit_epoch_metrics_state(
         ("ncn-reward-router-account-dne", ncn_router_dne, i64),
         ("ncn-reward-router-account-open", ncn_router_open, i64),
         ("ncn-reward-router-account-closed", ncn_router_closed, i64),
+        "cluster" => cluster_name,
+    );
+
+    Ok(())
+}
+
+pub async fn emit_epoch_metrics_tda_migration(
+    handler: &CliHandler,
+    epoch: u64,
+    cluster_name: &str,
+) -> Result<()> {
+    let (current_epoch, current_slot) = get_current_epoch_and_slot(handler).await?;
+    let epoch_percentage =
+        (current_slot as f64 % DEFAULT_SLOTS_PER_EPOCH as f64) / DEFAULT_SLOTS_PER_EPOCH as f64;
+
+    let tip_remaining = get_tip_distribution_accounts_to_migrate(
+        handler,
+        &jito_tip_distribution_sdk::id(),
+        &OLD_MERKLE_ROOT_UPLOAD_AUTHORITY,
+        epoch,
+    )
+    .await?
+    .len();
+
+    let pf_remaining = get_tip_distribution_accounts_to_migrate(
+        handler,
+        &jito_priority_fee_distribution_sdk::id(),
+        &OLD_MERKLE_ROOT_UPLOAD_AUTHORITY,
+        epoch,
+    )
+    .await?
+    .len();
+
+    datapoint_info!(
+        "tr-beta-em-tda-migration",
+        ("current-epoch", current_epoch, i64),
+        ("epoch", epoch, i64),
+        ("epoch-percentage", epoch_percentage, f64),
+        ("tip-tda-remaining", tip_remaining as i64, i64),
+        ("pf-tda-remaining", pf_remaining as i64, i64),
+        ("total-remaining", (tip_remaining + pf_remaining) as i64, i64),
         "cluster" => cluster_name,
     );
 
