@@ -344,6 +344,7 @@ pub async fn startup_keeper(
         // Emits metrics for the Epoch State
         if emit_metrics {
             info!("\n\nD. Emit Epoch Metrics - {}\n", current_keeper_epoch);
+
             let result = emit_epoch_metrics(handler, state.epoch, &cluster_name).await;
 
             check_and_timeout_error(
