@@ -492,7 +492,6 @@ macro_rules! emit_epoch_datapoint {
 pub async fn emit_epoch_metrics(
     handler: &CliHandler,
     epoch: u64,
-    emit_tda_metrics: bool,
     cluster_name: &str,
 ) -> Result<()> {
     emit_epoch_metrics_state(handler, epoch, cluster_name).await?;
@@ -502,10 +501,7 @@ pub async fn emit_epoch_metrics(
     emit_epoch_metrics_ballot_box(handler, epoch, cluster_name).await?;
     emit_epoch_metrics_base_rewards(handler, epoch, cluster_name).await?;
     emit_epoch_metrics_ncn_rewards(handler, epoch, cluster_name).await?;
-
-    if emit_tda_metrics {
-        emit_epoch_metrics_tda_migration(handler, epoch, cluster_name).await?;
-    }
+    emit_epoch_metrics_tda_migration(handler, epoch, cluster_name).await?;
 
     Ok(())
 }
@@ -1340,23 +1336,12 @@ pub async fn emit_epoch_metrics_tda_migration(
     .await?
     .len();
 
-    let pf_remaining = get_tip_distribution_accounts_to_migrate(
-        handler,
-        &jito_priority_fee_distribution_sdk::id(),
-        &OLD_MERKLE_ROOT_UPLOAD_AUTHORITY,
-        epoch,
-    )
-    .await?
-    .len();
-
     datapoint_info!(
         "tr-beta-ee-tda-migration",
         ("current-epoch", current_epoch, i64),
         ("keeper-epoch", epoch, i64),
         ("epoch-percentage", epoch_percentage, f64),
         ("tip-tda-remaining", tip_remaining as i64, i64),
-        ("pf-tda-remaining", pf_remaining as i64, i64),
-        ("total-remaining", (tip_remaining + pf_remaining) as i64, i64),
         "cluster" => cluster_name,
     );
 

@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::{
     getters::get_guaranteed_epoch_and_slot,
@@ -92,7 +92,6 @@ pub async fn startup_keeper(
     run_migration: bool,
     cluster_name: String,
     region: String,
-    tda_metrics_interval_secs: u64,
 ) -> Result<()> {
     assert!(handler.ncn().is_ok(), "missing NCN address!");
 
@@ -105,8 +104,6 @@ pub async fn startup_keeper(
 
     let mut start_of_loop;
     let mut end_of_loop;
-    let mut last_tda_metrics_emit: Option<Instant> = None;
-    let tda_metrics_interval = Duration::from_secs(tda_metrics_interval_secs);
 
     let run_operations = !metrics_only && !run_migration;
     let emit_metrics = emit_metrics || metrics_only;
@@ -348,15 +345,7 @@ pub async fn startup_keeper(
         if emit_metrics {
             info!("\n\nD. Emit Epoch Metrics - {}\n", current_keeper_epoch);
 
-            let emit_tda_metrics = end_of_loop
-                && last_tda_metrics_emit.is_none_or(|t| t.elapsed() >= tda_metrics_interval);
-
-            let result =
-                emit_epoch_metrics(handler, state.epoch, emit_tda_metrics, &cluster_name).await;
-
-            if emit_tda_metrics && result.is_ok() {
-                last_tda_metrics_emit = Some(Instant::now());
-            }
+            let result = emit_epoch_metrics(handler, state.epoch, &cluster_name).await;
 
             check_and_timeout_error(
                 "Emit NCN Metrics".to_string(),

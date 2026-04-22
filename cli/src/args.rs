@@ -161,14 +161,6 @@ pub enum ProgramCommand {
             help = "Region for metrics purposes"
         )]
         region: String,
-
-        #[arg(
-            long,
-            env,
-            default_value_t = 1800, // 30 minutes
-            help = "Interval in seconds between TDA migration metrics emissions"
-        )]
-        tda_metrics_interval_secs: u64,
     },
     /// Crank Functions
     CrankUpdateAllVaults {},
