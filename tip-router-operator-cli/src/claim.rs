@@ -1,3 +1,10 @@
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+    sync::Arc,
+    time::{Duration, Instant},
+};
+
 use itertools::Itertools;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::{
@@ -16,21 +23,11 @@ use solana_commitment_config::CommitmentConfig;
 use solana_metrics::{datapoint_error, datapoint_info};
 #[allow(deprecated)]
 use solana_sdk::{
-    account::Account,
-    fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
-    native_token::LAMPORTS_PER_SOL,
-    pubkey::Pubkey,
-    signature::{read_keypair_file, Keypair},
-    signer::Signer,
+    account::Account, fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
+    native_token::LAMPORTS_PER_SOL, pubkey::Pubkey, signature::Keypair, signer::Signer,
     transaction::Transaction,
 };
 use solana_system_interface::program as system_program;
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::{
-    collections::HashMap,
-    time::{Duration, Instant},
-};
 use thiserror::Error;
 use tokio::fs::File;
 use tokio::fs::OpenOptions;
@@ -40,10 +37,13 @@ use tokio::io::BufReader;
 use tokio::sync::Mutex;
 
 use crate::{
+    claim::claim_processor::ClaimProcessor,
     get_epoch_percentage, merkle_tree_collection_file_name, priority_fees,
     rpc_utils::{get_batched_accounts, send_until_blockhash_expires},
     Cli,
 };
+
+pub mod claim_processor;
 
 #[derive(Error, Debug)]
 pub enum ClaimMevError {
@@ -87,6 +87,7 @@ pub async fn emit_claim_mev_tips_metrics(
     ncn: Pubkey,
     file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
+    epoch_skipped: &HashSet<Pubkey>,
 ) -> Result<(), anyhow::Error> {
     let meta_merkle_tree_dir = cli.get_save_path().clone();
     let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
@@ -106,7 +107,7 @@ pub async fn emit_claim_mev_tips_metrics(
         return Ok(());
     }
 
-    let (claims_to_process, validators_processed) = get_claim_transactions_for_valid_unclaimed(
+    let (claims_to_process, validators_processed, _) = get_claim_transactions_for_valid_unclaimed(
         &rpc_client,
         &merkle_trees,
         tip_distribution_program_id,
@@ -118,6 +119,7 @@ pub async fn emit_claim_mev_tips_metrics(
         cli.min_claim_amount,
         &cli.operator_address,
         &cli.cluster,
+        epoch_skipped,
     )
     .await?;
 
@@ -146,40 +148,7 @@ pub async fn emit_claim_mev_tips_metrics(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn claim_mev_tips_with_emit(
-    cli: &Cli,
-    epoch: u64,
-    tip_distribution_program_id: Pubkey,
-    priority_fee_distribution_program_id: Pubkey,
-    tip_router_program_id: Pubkey,
-    ncn: Pubkey,
-    max_loop_duration: Duration,
-    file_path: &PathBuf,
-    file_mutex: &Arc<Mutex<()>>,
-) -> Result<(), anyhow::Error> {
-    let keypair = read_keypair_file(cli.keypair_path.clone())
-        .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {:?}", e))?;
-    let keypair = Arc::new(keypair);
-    let rpc_url = cli.rpc_url.clone();
-    handle_claim_mev_tips(
-        cli,
-        epoch,
-        tip_distribution_program_id,
-        priority_fee_distribution_program_id,
-        tip_router_program_id,
-        ncn,
-        max_loop_duration,
-        file_path,
-        file_mutex,
-        &keypair,
-        rpc_url,
-    )
-    .await?;
-    Ok(())
-}
-
-#[allow(clippy::too_many_arguments)]
-pub async fn handle_claim_mev_tips(
+pub(crate) async fn handle_claim_mev_tips(
     cli: &Cli,
     epoch: u64,
     tip_distribution_program_id: Pubkey,
@@ -191,6 +160,7 @@ pub async fn handle_claim_mev_tips(
     file_mutex: &Arc<Mutex<()>>,
     keypair: &Arc<Keypair>,
     rpc_url: String,
+    processor: &ClaimProcessor,
 ) -> Result<(), anyhow::Error> {
     let meta_merkle_tree_dir = cli.get_save_path().clone();
     let merkle_tree_coll_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
@@ -233,6 +203,7 @@ pub async fn handle_claim_mev_tips(
         file_mutex,
         &cli.operator_address,
         &cli.cluster,
+        processor,
     )
     .await
     {
@@ -307,12 +278,13 @@ pub async fn claim_mev_tips(
     file_mutex: &Arc<Mutex<()>>,
     operator_address: &String,
     cluster: &str,
+    processor: &ClaimProcessor,
 ) -> Result<(), ClaimMevError> {
-    let rpc_client = RpcClient::new_with_timeout_and_commitment(
+    let rpc_client = Arc::new(RpcClient::new_with_timeout_and_commitment(
         rpc_url,
         Duration::from_secs(1800),
         CommitmentConfig::confirmed(),
-    );
+    ));
     let rpc_sender_client = RpcClient::new(rpc_sender_url);
 
     let epoch = merkle_trees.epoch;
@@ -323,7 +295,8 @@ pub async fn claim_mev_tips(
 
     let start = Instant::now();
     while start.elapsed() <= max_loop_duration {
-        let (mut claims_to_process, validators_processed) =
+        let epoch_skipped = processor.get_epoch_skipped(epoch);
+        let (mut claims_to_process, validators_processed, none_claimants) =
             get_claim_transactions_for_valid_unclaimed(
                 &rpc_client,
                 merkle_trees,
@@ -336,6 +309,7 @@ pub async fn claim_mev_tips(
                 min_claim_amount,
                 operator_address,
                 cluster,
+                &epoch_skipped,
             )
             .await?;
 
@@ -358,7 +332,9 @@ pub async fn claim_mev_tips(
         }
 
         if validators_processed && claims_to_process.is_empty() {
+            processor.extend_epoch_skipped(epoch, none_claimants);
             add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
+            processor.remove_epoch(epoch, current_epoch)?;
             return Ok(());
         }
 
@@ -394,23 +370,28 @@ pub async fn claim_mev_tips(
         }
     }
 
-    let (transactions, validators_processed) = get_claim_transactions_for_valid_unclaimed(
-        &rpc_client,
-        merkle_trees,
-        tip_distribution_program_id,
-        priority_fee_distribution_program_id,
-        tip_router_program_id,
-        ncn,
-        micro_lamports,
-        keypair.pubkey(),
-        min_claim_amount,
-        operator_address,
-        cluster,
-    )
-    .await?;
+    let epoch_skipped = processor.get_epoch_skipped(epoch);
+    let (transactions, validators_processed, none_claimants) =
+        get_claim_transactions_for_valid_unclaimed(
+            &rpc_client,
+            merkle_trees,
+            tip_distribution_program_id,
+            priority_fee_distribution_program_id,
+            tip_router_program_id,
+            ncn,
+            micro_lamports,
+            keypair.pubkey(),
+            min_claim_amount,
+            operator_address,
+            cluster,
+            &epoch_skipped,
+        )
+        .await?;
 
     if validators_processed && transactions.is_empty() {
+        processor.extend_epoch_skipped(epoch, none_claimants);
         add_completed_epoch(epoch, current_epoch, file_path, file_mutex).await?;
+        processor.remove_epoch(epoch, current_epoch)?;
         return Ok(());
     }
 
@@ -475,7 +456,8 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
     min_claim_amount: u64,
     operator_address: &String,
     cluster: &str,
-) -> Result<(Vec<Transaction>, bool), ClaimMevError> {
+    epoch_skipped: &HashSet<Pubkey>,
+) -> Result<(Vec<Transaction>, bool, HashSet<Pubkey>), ClaimMevError> {
     let epoch = merkle_trees.epoch;
     let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
 
@@ -539,15 +521,17 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         .filter_map(|(pubkey, a)| Some((pubkey, a?)))
         .collect();
 
-    let claimant_pubkeys = tree_nodes
+    let claimant_pubkeys: Vec<Pubkey> = tree_nodes
         .iter()
         .map(|tree_node| tree_node.claimant)
+        .filter(|pk| !epoch_skipped.contains(pk))
         .collect_vec();
 
-    let claimants: HashMap<Pubkey, Account> = get_batched_accounts(rpc_client, &claimant_pubkeys)
-        .await?
-        .into_iter()
-        .filter_map(|(pubkey, a)| Some((pubkey, a?)))
+    let fetched_claimants = get_batched_accounts(rpc_client, &claimant_pubkeys).await?;
+
+    let claimants: HashMap<Pubkey, Account> = fetched_claimants
+        .iter()
+        .filter_map(|(pubkey, a)| Some((*pubkey, a.clone()?)))
         .collect();
 
     let claim_status_pubkeys = tree_nodes
@@ -596,7 +580,20 @@ pub async fn get_claim_transactions_for_valid_unclaimed(
         cluster,
     );
 
-    Ok((transactions, validators_processed))
+    let none_claimants: HashSet<Pubkey> = if transactions.is_empty() {
+        // Collect claimants not found on-chain this iteration. We do NOT write to
+        // skipped_claimants here — the caller promotes these only when 0 claims
+        // remain, ensuring a single RPC drop doesn't permanently blacklist a valid
+        // account.
+        fetched_claimants
+            .iter()
+            .filter_map(|(pk, acct)| acct.is_none().then_some(*pk))
+            .collect()
+    } else {
+        HashSet::new()
+    };
+
+    Ok((transactions, validators_processed, none_claimants))
 }
 
 pub async fn get_unprocessed_claims_for_validators(
