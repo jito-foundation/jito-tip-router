@@ -92,20 +92,23 @@ pub async fn emit_claim_mev_tips_metrics(
     let merkle_tree_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
     let merkle_tree_wincode_path =
         meta_merkle_tree_dir.join(merkle_tree_collection_wincode_file_name(epoch));
-    if !merkle_tree_wincode_path.exists() {
-        let merkle_trees = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_path)
-            .map_err(|e| anyhow::anyhow!("Failed to load merkle tree: {e}"))?;
-        let wincode_path =
-            meta_merkle_tree_dir.join(merkle_tree_collection_wincode_file_name(epoch));
-        merkle_trees
-            .write_wincode_to_file(&wincode_path)
-            .map_err(|e| anyhow::anyhow!("Failed to write wincode: {e}"))?;
-        info!("Wrote wincode to {}", wincode_path.display());
-    };
+    let merkle_trees = {
+        let _file_guard = file_mutex.lock().await;
 
-    let merkle_trees =
+        if !merkle_tree_wincode_path.exists() {
+            let merkle_trees = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_path)
+                .map_err(|e| anyhow::anyhow!("Failed to load merkle tree: {e}"))?;
+            let wincode_path =
+                meta_merkle_tree_dir.join(merkle_tree_collection_wincode_file_name(epoch));
+            merkle_trees
+                .write_wincode_to_file(&wincode_path)
+                .map_err(|e| anyhow::anyhow!("Failed to write wincode: {e}"))?;
+            info!("Wrote wincode to {}", wincode_path.display());
+        };
+
         GeneratedMerkleTreeCollection::new_from_file_wincode(&merkle_tree_wincode_path)
-            .map_err(|e| anyhow::anyhow!(e))?;
+            .map_err(|e| anyhow::anyhow!(e))?
+    };
 
     let rpc_url = cli.rpc_url.clone();
     let rpc_client = RpcClient::new_with_timeout_and_commitment(
@@ -210,20 +213,24 @@ pub async fn handle_claim_mev_tips(
     let merkle_tree_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
     let merkle_tree_wincode_path =
         meta_merkle_tree_dir.join(merkle_tree_collection_wincode_file_name(epoch));
-    if !merkle_tree_wincode_path.exists() {
-        let merkle_trees = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_path)
-            .map_err(|e| anyhow::anyhow!("Failed to load merkle tree: {e}"))?;
-        let wincode_path =
-            meta_merkle_tree_dir.join(merkle_tree_collection_wincode_file_name(epoch));
-        merkle_trees
-            .write_wincode_to_file(&wincode_path)
-            .map_err(|e| anyhow::anyhow!("Failed to write wincode: {e}"))?;
-        info!("Wrote wincode to {}", wincode_path.display());
-    };
 
-    let mut merkle_tree_coll =
+    let mut merkle_tree_coll = {
+        let _file_lock = file_mutex.lock().await;
+
+        if !merkle_tree_wincode_path.exists() {
+            let merkle_trees = GeneratedMerkleTreeCollection::new_from_file(&merkle_tree_path)
+                .map_err(|e| anyhow::anyhow!("Failed to load merkle tree: {e}"))?;
+            let wincode_path =
+                meta_merkle_tree_dir.join(merkle_tree_collection_wincode_file_name(epoch));
+            merkle_trees
+                .write_wincode_to_file(&wincode_path)
+                .map_err(|e| anyhow::anyhow!("Failed to write wincode: {e}"))?;
+            info!("Wrote wincode to {}", wincode_path.display());
+        };
+
         GeneratedMerkleTreeCollection::new_from_file_wincode(&merkle_tree_wincode_path)
-            .map_err(|e| anyhow::anyhow!(e))?;
+            .map_err(|e| anyhow::anyhow!(e))?
+    };
 
     let tip_router_config_address = Config::find_program_address(&tip_router_program_id, &ncn).0;
 

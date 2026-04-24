@@ -267,12 +267,14 @@ impl GeneratedMerkleTreeCollection {
     /// Write the collection out as a wincode file.
     pub fn write_wincode_to_file(&self, path: &PathBuf) -> Result<(), MerkleRootGeneratorError> {
         let config = wincode::config::Configuration::default().disable_preallocation_size_limit();
-        let file = File::create(path)?;
+        let tmp_path = path.with_extension("wincode.tmp");
+        let file = File::create(&tmp_path)?;
         let writer = BufWriter::new(file);
         let mut adapter = wincode::io::std_write::WriteAdapter::new(writer);
         <CollectionW as wincode::config::Serialize<_>>::serialize_into(&mut adapter, self, config)?;
 
         adapter.finish()?;
+        std::fs::rename(&tmp_path, path)?;
 
         Ok(())
     }
