@@ -6,3 +6,4 @@ pub mod meta_merkle_tree;
 pub mod tree_node;
 pub mod utils;
 pub mod verify;
+pub mod wincode_schema;

@@ -1,4 +1,9 @@
-use crate::{merkle_tree::MerkleTree, utils::get_proof};
+use std::{
+    fs::File,
+    io::{BufReader, BufWriter, Write},
+    path::PathBuf,
+};
+
 use jito_vault_core::MAX_BPS;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use solana_program::{
@@ -7,12 +12,10 @@ use solana_program::{
     hash::Hash,
     pubkey::Pubkey,
 };
-use std::{
-    fs::File,
-    io::{BufReader, Write},
-    path::PathBuf,
-};
 use thiserror::Error;
+use wincode::io::Writer;
+
+use crate::{merkle_tree::MerkleTree, utils::get_proof, wincode_schema::CollectionW};
 
 pub const CLAIM_STATUS_SEED: &[u8] = b"CLAIM_STATUS";
 
@@ -42,6 +45,15 @@ pub enum MerkleRootGeneratorError {
     CheckedMathError,
     #[error("Distribution program not known")]
     UnknownDistributionProgram,
+
+    #[error(transparent)]
+    WincodeWriteError(#[from] wincode::WriteError),
+
+    #[error(transparent)]
+    WincodeReadError(#[from] wincode::ReadError),
+
+    #[error(transparent)]
+    WincodeIoWriteError(#[from] wincode::io::WriteError),
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -240,6 +252,30 @@ impl GeneratedMerkleTreeCollection {
         let serialized = serde_json::to_string_pretty(&self)?;
         let mut file = File::create(path)?;
         file.write_all(serialized.as_bytes())?;
+        Ok(())
+    }
+
+    /// Load from a wincode file (bincode 1.x-compatible wire format, zero-copy friendly).
+    pub fn new_from_file_wincode(path: &PathBuf) -> Result<Self, MerkleRootGeneratorError> {
+        let bytes = std::fs::read(path)?;
+        let config = wincode::config::Configuration::default().disable_preallocation_size_limit();
+        let collection =
+            <CollectionW as wincode::config::Deserialize<'_, _>>::deserialize(&bytes, config)?;
+        Ok(collection)
+    }
+
+    /// Write the collection out as a wincode file.
+    pub fn write_wincode_to_file(&self, path: &PathBuf) -> Result<(), MerkleRootGeneratorError> {
+        let config = wincode::config::Configuration::default().disable_preallocation_size_limit();
+        let tmp_path = path.with_extension("wincode.tmp");
+        let file = File::create(&tmp_path)?;
+        let writer = BufWriter::new(file);
+        let mut adapter = wincode::io::std_write::WriteAdapter::new(writer);
+        <CollectionW as wincode::config::Serialize<_>>::serialize_into(&mut adapter, self, config)?;
+
+        adapter.finish()?;
+        std::fs::rename(&tmp_path, path)?;
+
         Ok(())
     }
 }
