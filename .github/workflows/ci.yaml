@@ -181,6 +181,7 @@ jobs:
       - run: cargo nextest run --all-features -E 'not test(ledger_utils::tests)'
         env:
           SBPF_OUT_DIR: ${{ github.workspace }}/integration_tests/tests/fixtures
+          PROTOC: /usr/bin/protoc
 
   # create_release:
   #   name: Create Release
