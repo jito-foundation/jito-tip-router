@@ -321,7 +321,7 @@ async fn main() -> Result<()> {
 
                         for epoch_offset in 0..claim_tips_epoch_lookback {
                             let Some(epoch_to_process) =
-                                current_epoch.checked_sub(epoch_offset + 1)
+                                current_epoch.checked_sub(epoch_offset.saturating_add(1))
                             else {
                                 continue;
                             };
