@@ -320,11 +320,11 @@ async fn main() -> Result<()> {
                         };
 
                         for epoch_offset in 0..claim_tips_epoch_lookback {
-                            let epoch_to_process = current_epoch
-                                .checked_sub(epoch_offset)
-                                .expect("Epoch underflow")
-                                .checked_sub(1)
-                                .expect("Epoch overflow");
+                            let Some(epoch_to_process) =
+                                current_epoch.checked_sub(epoch_offset + 1)
+                            else {
+                                continue;
+                            };
 
                             info!("Processing claims for epoch {epoch_to_process}");
 
