@@ -319,69 +319,36 @@ async fn main() -> Result<()> {
                             }
                         };
 
-                        // Create a vector to hold all our handles
-                        let mut join_handles = Vec::new();
-
-                        // Process current epoch and the previous two epochs
                         for epoch_offset in 0..claim_tips_epoch_lookback {
-                            let epoch_to_process = current_epoch
-                                .checked_sub(epoch_offset)
-                                .expect("Epoch underflow")
-                                .checked_sub(1)
-                                .expect("Epoch overflow");
-                            let cli_ref = cli_clone.clone();
-                            let file_path_ref = claim_tips_epoch_filepath.clone();
-                            let file_mutex_ref = file_mutex.clone();
+                            let Some(epoch_to_process) =
+                                current_epoch.checked_sub(epoch_offset.saturating_add(1))
+                            else {
+                                continue;
+                            };
 
-                            // Create a task for each epoch and add its handle to our vector
-                            let handle = tokio::spawn(async move {
-                                info!("Processing claims for epoch {}", epoch_to_process);
-                                let result = claim_mev_tips_with_emit(
-                                    &cli_ref,
-                                    epoch_to_process,
-                                    tip_distribution_program_id,
-                                    priority_fee_distribution_program_id,
-                                    tip_router_program_id,
-                                    ncn_address,
-                                    Duration::from_secs(3600),
-                                    &file_path_ref,
-                                    &file_mutex_ref,
-                                )
-                                .await;
+                            info!("Processing claims for epoch {epoch_to_process}");
 
-                                match result {
-                                    Err(e) => {
-                                        error!(
-                                            "Error claiming tips for epoch {}: {}",
-                                            epoch_to_process, e
-                                        );
-                                    }
-                                    Ok(_) => {
-                                        info!(
-                                            "Successfully processed claims for epoch {}",
-                                            epoch_to_process
-                                        );
-                                    }
+                            match claim_mev_tips_with_emit(
+                                &cli_clone,
+                                epoch_to_process,
+                                tip_distribution_program_id,
+                                priority_fee_distribution_program_id,
+                                tip_router_program_id,
+                                ncn_address,
+                                Duration::from_secs(3600),
+                                &claim_tips_epoch_filepath,
+                                &file_mutex,
+                            )
+                            .await
+                            {
+                                Err(e) => {
+                                    error!("Error claiming tips for epoch {epoch_to_process}: {e}");
                                 }
-
-                                epoch_to_process
-                            });
-
-                            join_handles.push(handle);
-                        }
-
-                        // Wait for all tasks to complete
-                        let mut completed_epochs = Vec::new();
-                        for handle in join_handles {
-                            if let Ok(epoch) = handle.await {
-                                completed_epochs.push(epoch);
+                                Ok(_) => {
+                                    info!("Successfully processed claims for epoch {epoch_to_process}");
+                                }
                             }
                         }
-
-                        info!(
-                            "Completed processing claims for epochs: {:?}",
-                            completed_epochs
-                        );
 
                         // Sleep before the next iteration
                         info!("Sleeping for 30 minutes before next claim cycle");
