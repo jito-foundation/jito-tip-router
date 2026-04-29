@@ -125,6 +125,7 @@ jobs:
         with:
           name: jito_tip_router_program.so
           path: target/deploy/jito_tip_router_program.so
+          if-no-files-found: error
 
   # coverage:
   #   name: coverage
