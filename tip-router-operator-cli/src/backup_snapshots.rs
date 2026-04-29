@@ -6,8 +6,10 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::time;
 
-use crate::process_epoch::get_previous_epoch_last_slot;
-use crate::{merkle_tree_collection_file_name, meta_merkle_tree_file_name, stake_meta_file_name};
+use crate::{
+    merkle_tree_collection_file_name, merkle_tree_collection_wincode_file_name,
+    meta_merkle_tree_file_name, process_epoch::get_previous_epoch_last_slot, stake_meta_file_name,
+};
 
 const MAXIMUM_BACKUP_INCREMENTAL_SNAPSHOTS_PER_EPOCH: usize = 3;
 
@@ -67,6 +69,9 @@ pub struct SavedTipRouterFile {
 
 impl SavedTipRouterFile {
     /// Try to parse a TipRouter saved filename with epoch information
+    ///
+    /// NOTE: If you add a new TipRouter file type (new *_file_name() fn in lib.rs),
+    /// add it here or files of that type will never be evicted.
     pub fn from_path(path: PathBuf) -> Option<Self> {
         let file_name = path.file_name()?.to_str()?;
 
@@ -77,6 +82,7 @@ impl SavedTipRouterFile {
         let is_tip_router_file = [
             stake_meta_file_name(epoch),
             merkle_tree_collection_file_name(epoch),
+            merkle_tree_collection_wincode_file_name(epoch),
             meta_merkle_tree_file_name(epoch),
         ]
         .iter()
@@ -535,13 +541,19 @@ mod tests {
         for i in first_epoch..current_epoch {
             File::create(&monitor.save_path.join(stake_meta_file_name(i))).unwrap();
             File::create(&monitor.save_path.join(merkle_tree_collection_file_name(i))).unwrap();
+            File::create(
+                &monitor
+                    .save_path
+                    .join(merkle_tree_collection_wincode_file_name(i)),
+            )
+            .unwrap();
             File::create(&monitor.save_path.join(meta_merkle_tree_file_name(i))).unwrap();
         }
         let dir_entries: Vec<PathBuf> = std::fs::read_dir(&monitor.save_path)
             .unwrap()
             .map(|x| x.unwrap().path())
             .collect();
-        assert_eq!(dir_entries.len(), 5 * 3);
+        assert_eq!(dir_entries.len(), 5 * 4);
 
         monitor
             .evict_saved_files(current_epoch - monitor.num_monitored_epochs)
@@ -550,7 +562,7 @@ mod tests {
             .unwrap()
             .map(|x| x.unwrap().path())
             .collect();
-        assert_eq!(dir_entries.len(), 6);
+        assert_eq!(dir_entries.len(), 8);
 
         // test not evicting some other similar file in the same directory
         let file_path = monitor

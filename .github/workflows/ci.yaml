@@ -63,7 +63,7 @@ jobs:
         uses: baptiste0928/cargo-install@v3
         with:
           crate: cargo-sort
-          version: 2.1.1
+          version: 2.1.3
       - run: cargo sort --workspace --check
       - run: cargo fmt --all --check
       - run: |
@@ -181,6 +181,7 @@ jobs:
       - run: cargo nextest run --all-features -E 'not test(ledger_utils::tests)'
         env:
           SBPF_OUT_DIR: ${{ github.workspace }}/integration_tests/tests/fixtures
+          PROTOC: /usr/bin/protoc
 
   # create_release:
   #   name: Create Release

@@ -131,6 +131,10 @@ pub fn merkle_tree_collection_file_name(epoch: u64) -> String {
     format!("{}_merkle_tree_collection.json", epoch)
 }
 
+pub fn merkle_tree_collection_wincode_file_name(epoch: u64) -> String {
+    format!("{epoch}_merkle_tree_collection.wincode")
+}
+
 fn merkle_tree_collection_file_candidates(epoch: u64) -> [String; 2] {
     [
         format!("{}_merkle_tree_collection.json", epoch),

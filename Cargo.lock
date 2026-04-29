@@ -75,7 +75,7 @@ dependencies = [
  "solana-bls-signatures",
  "solana-signer-store",
  "thiserror 2.0.18",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -356,7 +356,7 @@ dependencies = [
  "solana-vote",
  "solana-vote-program",
  "thiserror 2.0.18",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -375,7 +375,7 @@ dependencies = [
  "solana-pubkey 4.1.0",
  "solana-signer-store",
  "thiserror 2.0.18",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -5067,6 +5067,7 @@ dependencies = [
  "spl-math",
  "spl-token-interface",
  "thiserror 2.0.18",
+ "wincode 0.5.2",
 ]
 
 [[package]]
@@ -6863,7 +6864,7 @@ dependencies = [
  "once_cell",
  "ring 0.17.14",
  "rustls-pki-types",
- "rustls-webpki 0.103.10",
+ "rustls-webpki 0.103.13",
  "subtle",
  "zeroize",
 ]
@@ -6913,7 +6914,7 @@ dependencies = [
  "rustls 0.23.37",
  "rustls-native-certs",
  "rustls-platform-verifier-android",
- "rustls-webpki 0.103.10",
+ "rustls-webpki 0.103.13",
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
@@ -6938,9 +6939,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.10"
+version = "0.103.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df33b2b81ac578cabaf06b89b0631153a3f416b0a886e8a7a1707fb51abbd1ef"
+checksum = "61c429a8649f110dddef65e2a5ad240f747e85f7758a6bccc7e5777bd33f756e"
 dependencies = [
  "ring 0.17.14",
  "rustls-pki-types",
@@ -7748,7 +7749,7 @@ dependencies = [
  "solana-program-error 3.0.1",
  "solana-sanitize 3.0.1",
  "solana-sha256-hasher 3.1.0",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -8603,7 +8604,7 @@ dependencies = [
  "tonic",
  "tonic-build",
  "trees",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -8809,7 +8810,7 @@ dependencies = [
  "solana-transaction 4.0.0",
  "solana-transaction-error 3.1.0",
  "thiserror 2.0.18",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -9346,7 +9347,7 @@ dependencies = [
  "serde_derive",
  "solana-atomic-u64 3.0.1",
  "solana-sanitize 3.0.1",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -9401,7 +9402,7 @@ dependencies = [
  "solana-define-syscall 5.0.0",
  "solana-instruction-error",
  "solana-pubkey 4.1.0",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -9657,7 +9658,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "trees",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -9856,7 +9857,7 @@ dependencies = [
  "solana-sdk-ids 3.1.0",
  "solana-short-vec 3.2.0",
  "solana-transaction-error 3.1.0",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -10300,7 +10301,6 @@ dependencies = [
  "solana-account-info 3.1.1",
  "solana-big-mod-exp 3.0.0",
  "solana-blake3-hasher 3.1.0",
- "solana-borsh 3.0.2",
  "solana-clock 3.0.1",
  "solana-cpi 3.1.0",
  "solana-define-syscall 3.0.0",
@@ -11149,7 +11149,7 @@ dependencies = [
  "symlink",
  "tempfile",
  "thiserror 2.0.18",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -11657,7 +11657,7 @@ dependencies = [
  "serde-big-array",
  "serde_derive",
  "solana-sanitize 3.0.1",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -12051,7 +12051,7 @@ dependencies = [
  "solana-instruction 3.3.0",
  "solana-msg 3.1.0",
  "solana-program-error 3.0.1",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -12359,7 +12359,7 @@ dependencies = [
  "solana-signature 3.3.0",
  "solana-signer 3.0.0",
  "solana-transaction-error 3.1.0",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -12525,7 +12525,7 @@ dependencies = [
  "solana-time-utils 3.0.0",
  "solana-transaction-error 3.1.0",
  "thiserror 2.0.18",
- "wincode",
+ "wincode 0.4.9",
 ]
 
 [[package]]
@@ -13182,7 +13182,7 @@ dependencies = [
  "sha2 0.10.9",
  "solana-account-decoder",
  "solana-client",
- "solana-program 3.0.0",
+ "solana-program 4.0.0",
  "solana-sdk 2.3.1",
  "solana-sdk 4.0.1",
  "switchboard-protos",
@@ -14543,6 +14543,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "solana-short-vec 3.2.0",
+ "thiserror 2.0.18",
+ "wincode-derive",
+]
+
+[[package]]
+name = "wincode"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2f42dd20febad683d07044c5f543e57f822512ebebaf2c827705c99a0ad4575"
+dependencies = [
+ "pastey",
+ "proc-macro2",
+ "quote",
  "thiserror 2.0.18",
  "wincode-derive",
 ]
