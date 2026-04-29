@@ -96,7 +96,7 @@ jobs:
       - name: add to path
         run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       - name: Building programs
-        run: cd program && cargo-build-sbf && cd ..
+        run: cd program && cargo-build-sbf -- --features mainnet-beta && cd ..
         env:
           TIP_ROUTER_PROGRAM_ID: ${{ env.TIP_ROUTER_PROGRAM_ID }}
           SBF_OUT_PATH: ${{ github.workspace }}/target/sbpf-solana-solana/release
@@ -178,7 +178,7 @@ jobs:
           path: ${{ github.workspace }}/integration_tests/tests/fixtures/
           if-no-files-found: error
       - uses: taiki-e/install-action@nextest
-      - run: cargo nextest run --all-features -E 'not test(ledger_utils::tests)'
+      - run: cargo nextest run -E 'not test(ledger_utils::tests)'
         env:
           SBPF_OUT_DIR: ${{ github.workspace }}/integration_tests/tests/fixtures
           PROTOC: /usr/bin/protoc
