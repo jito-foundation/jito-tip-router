@@ -56,7 +56,17 @@ pub fn process_snapshot_vault_operator_delegation(
         )?;
     }
 
-    if !vault_operator_delegation.data_is_empty() {
+    if vault_operator_delegation.data_is_empty() {
+        let expected = VaultOperatorDelegation::find_program_address(
+            &jito_vault_program::id(),
+            vault.key,
+            operator.key,
+        )
+        .0;
+        if vault_operator_delegation.key.ne(&expected) {
+            return Err(ProgramError::InvalidAccountData);
+        }
+    } else {
         VaultOperatorDelegation::load(
             &jito_vault_program::id(),
             vault_operator_delegation,

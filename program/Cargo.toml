@@ -1,7 +1,7 @@
 [package]
 name = "jito-tip-router-program"
 description = "Jito's MEV Tip Distribution NCN Program"
-version = { workspace = true }
+version = "0.1.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
