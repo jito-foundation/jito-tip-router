@@ -277,4 +277,14 @@ pub enum Commands {
         #[arg(long, env)]
         epoch: Option<u64>,
     },
+    ReclaimExpiredAccounts {
+        #[arg(long, env)]
+        tip_distribution_program_id: Pubkey,
+
+        #[arg(long, env)]
+        priority_fee_distribution_program_id: Pubkey,
+
+        #[arg(long, env, default_value = "3")]
+        num_monitored_epochs: u64,
+    },
 }

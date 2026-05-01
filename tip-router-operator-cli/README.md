@@ -2,11 +2,28 @@
 
 ## Commands
 
+## ReclaimExpiredAccounts
+
+```bash
+RUST_LOG=info cargo r --bin tip-router-operator-cli -- \
+  --keypair-path ~/.config/solana/id.json \
+  --operator-address "GmWQyzNGzMGQySvNCADu9pynAQfUjQm6tJL9cuN5Y3D6" \
+  --rpc-url <MAINNET_RPC_URL> \
+  --ledger-path /tmp/ledger \
+  --backup-snapshots-dir /tmp/backup-snapshots \
+  --snapshot-output-dir /tmp/snapshot-output \
+  --save-path /tmp/save \
+  reclaim-expired-accounts \
+  --tip-distribution-program-id <TIP_DIST_PROGRAM_ID> \
+  --priority-fee-distribution-program-id <PF_DIST_PROGRAM_ID> \
+  --num-monitored-epochs 3
+```
+
 ### Claim
 
 ```bash
-RUST_LOG=info /tmp/tip-router-operator-cli \
-  --keypair-path PATH_TO_KEYPAIR \
+RUST_LOG=info cargo r --bin tip-router-operator-cli -- \
+  --keypair-path ~/.config/solana/id.json \
   --operator-address "GmWQyzNGzMGQySvNCADu9pynAQfUjQm6tJL9cuN5Y3D6" \
   --rpc-url <MAINNET_RPC_URL> \
   --ledger-path /tmp/tip-router/ledger \

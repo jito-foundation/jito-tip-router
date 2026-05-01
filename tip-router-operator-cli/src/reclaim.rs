@@ -251,7 +251,12 @@ fn close_tip_claim_transactions(
     let instructions: Vec<_> = accounts
         .iter()
         .map(|(pubkey, account)| {
-            close_tip_claim_status_ix(config_pubkey, *pubkey, account.claim_status_payer)
+            close_tip_claim_status_ix(
+                tip_distribution_program_id,
+                config_pubkey,
+                *pubkey,
+                account.claim_status_payer,
+            )
         })
         .collect();
 
@@ -263,15 +268,14 @@ fn close_priority_fee_claim_transactions(
     priority_fee_distribution_program_id: Pubkey,
     payer: Pubkey,
 ) -> Vec<Transaction> {
-    let config_pubkey = jito_priority_fee_distribution_sdk::derive_config_account_address(
-        &priority_fee_distribution_program_id,
-    )
-    .0;
-
     let instructions: Vec<_> = accounts
         .iter()
         .map(|(pubkey, account)| {
-            close_pf_claim_status_ix(config_pubkey, *pubkey, account.claim_status_payer)
+            close_pf_claim_status_ix(
+                priority_fee_distribution_program_id,
+                *pubkey,
+                account.claim_status_payer,
+            )
         })
         .collect();
 
@@ -300,6 +304,7 @@ async fn close_tip_distribution_account_transactions(
         .iter()
         .map(|(pubkey, account)| {
             close_tip_distribution_account_ix(
+                tip_distribution_program_id,
                 config_pubkey,
                 *pubkey,
                 tip_distribution_config.expired_funds_account,
@@ -337,6 +342,7 @@ async fn close_priority_fee_distribution_account_transactions(
         .iter()
         .map(|(pubkey, account)| {
             close_priority_fee_distribution_account_ix(
+                priority_fee_distribution_program_id,
                 config_pubkey,
                 *pubkey,
                 priority_fee_distribution_config.expired_funds_account,
