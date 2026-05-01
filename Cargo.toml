@@ -59,7 +59,7 @@ jito-tip-distribution-sdk = { path = "./tip_distribution_sdk", version = "=0.0.1
 jito-tip-payment-sdk = { path = "./tip_payment_sdk", version = "=0.0.1" }
 jito-tip-router-client = { path = "./clients/rust/jito_tip_router", version = "0.0.1" }
 jito-tip-router-core = { path = "./core", version = "=0.0.1" }
-jito-tip-router-program = { path = "./program", version = "=0.0.1" }
+jito-tip-router-program = { path = "./program", version = "=0.1.1" }
 jito-tip-router-shank-cli = { path = "./shank_cli", version = "=0.0.1" }
 jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", rev = "58df1582c474e9c5f534a7dcb0388b82437aa78e" }
 jito-vault-core = { package = "jito-vault-core", git = "https://github.com/jito-foundation/restaking", rev = "58df1582c474e9c5f534a7dcb0388b82437aa78e" }

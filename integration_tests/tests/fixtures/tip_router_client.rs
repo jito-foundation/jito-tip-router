@@ -1129,6 +1129,30 @@ impl TipRouterClient {
         ncn: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
+        let vault_operator_delegation = VaultOperatorDelegation::find_program_address(
+            &jito_vault_program::id(),
+            &vault,
+            &operator,
+        )
+        .0;
+        self.snapshot_vault_operator_delegation_with_override(
+            vault,
+            operator,
+            ncn,
+            epoch,
+            vault_operator_delegation,
+        )
+        .await
+    }
+
+    pub async fn snapshot_vault_operator_delegation_with_override(
+        &mut self,
+        vault: Pubkey,
+        operator: Pubkey,
+        ncn: Pubkey,
+        epoch: u64,
+        vault_operator_delegation: Pubkey,
+    ) -> TestResult<()> {
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
         let restaking_config = Config::find_program_address(&jito_restaking_program::id()).0;
@@ -1150,13 +1174,6 @@ impl TipRouterClient {
 
         let ncn_vault_ticket =
             NcnVaultTicket::find_program_address(&jito_restaking_program::id(), &ncn, &vault).0;
-
-        let vault_operator_delegation = VaultOperatorDelegation::find_program_address(
-            &jito_vault_program::id(),
-            &vault,
-            &operator,
-        )
-        .0;
 
         let weight_table =
             WeightTable::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
