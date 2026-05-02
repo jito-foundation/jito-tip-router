@@ -183,6 +183,7 @@ pub fn upload_merkle_root_ix(
 struct CloseClaimStatus {}
 
 pub fn close_claim_status_ix(
+    program_id: Pubkey,
     config: Pubkey,
     claim_status: Pubkey,
     claim_status_payer: Pubkey,
@@ -193,7 +194,7 @@ pub fn close_claim_status_ix(
     );
 
     Instruction {
-        program_id: crate::id(),
+        program_id,
         accounts: vec![
             AccountMeta::new_readonly(config, false),
             AccountMeta::new(claim_status, false),
@@ -209,6 +210,7 @@ struct CloseTipDistributionAccount {
 }
 
 pub fn close_tip_distribution_account_ix(
+    program_id: Pubkey,
     config: Pubkey,
     tip_distribution_account: Pubkey,
     expired_funds_account: Pubkey,
@@ -223,7 +225,7 @@ pub fn close_tip_distribution_account_ix(
     );
 
     Instruction {
-        program_id: crate::id(),
+        program_id,
         accounts: vec![
             AccountMeta::new_readonly(config, false),
             AccountMeta::new(expired_funds_account, false),

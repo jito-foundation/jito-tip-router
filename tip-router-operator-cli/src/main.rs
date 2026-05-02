@@ -559,6 +559,21 @@ async fn main() -> Result<()> {
             )
             .await?;
         }
+        Commands::ReclaimExpiredAccounts {
+            tip_distribution_program_id,
+            priority_fee_distribution_program_id,
+            num_monitored_epochs,
+        } => {
+            info!("Reclaiming expired accounts...");
+            reclaim::close_expired_accounts(
+                &cli.rpc_url,
+                tip_distribution_program_id,
+                priority_fee_distribution_program_id,
+                keypair.clone(),
+                num_monitored_epochs,
+            )
+            .await?;
+        }
     }
     Ok(())
 }
