@@ -363,7 +363,7 @@ pub async fn claim_mev_tips(
     while start.elapsed() <= max_loop_duration {
         let (mut claims_to_process, validators_processed) =
             get_claim_transactions_for_valid_unclaimed(
-                &rpc_client,
+                rpc_client,
                 merkle_trees,
                 tip_distribution_program_id,
                 priority_fee_distribution_program_id,
@@ -378,7 +378,7 @@ pub async fn claim_mev_tips(
             .await?;
 
         if validators_processed {
-            match get_epoch_percentage(&rpc_client).await {
+            match get_epoch_percentage(rpc_client).await {
                 Ok(epoch_percentage) => {
                     datapoint_info!(
                         "tip_router_cli.claim_mev_tips-send_summary",
@@ -406,7 +406,7 @@ pub async fn claim_mev_tips(
             let transactions: Vec<_> = transactions.to_vec();
             // only check balance for the ones we need to currently send since reclaim rent running in parallel
             if let Some((start_balance, desired_balance, sol_to_deposit)) =
-                is_sufficient_balance(&keypair.pubkey(), &rpc_client, transactions.len() as u64)
+                is_sufficient_balance(&keypair.pubkey(), rpc_client, transactions.len() as u64)
                     .await
             {
                 return Err(ClaimMevError::InsufficientBalance {
@@ -419,8 +419,8 @@ pub async fn claim_mev_tips(
 
             let blockhash = rpc_client.get_latest_blockhash().await?;
             if let Err(e) = send_until_blockhash_expires(
-                &rpc_client,
-                &rpc_sender_client,
+                rpc_client,
+                rpc_sender_client,
                 transactions,
                 blockhash,
                 keypair,
@@ -433,7 +433,7 @@ pub async fn claim_mev_tips(
     }
 
     let (transactions, validators_processed) = get_claim_transactions_for_valid_unclaimed(
-        &rpc_client,
+        rpc_client,
         merkle_trees,
         tip_distribution_program_id,
         priority_fee_distribution_program_id,
