@@ -89,6 +89,17 @@ pub async fn emit_claim_mev_tips_metrics(
     file_path: &PathBuf,
     file_mutex: &Arc<Mutex<()>>,
 ) -> Result<(), anyhow::Error> {
+    let rpc_url = cli.rpc_url.clone();
+    let rpc_client = RpcClient::new_with_timeout_and_commitment(
+        rpc_url,
+        Duration::from_secs(1800),
+        CommitmentConfig::confirmed(),
+    );
+    let current_epoch = rpc_client.get_epoch_info().await?.epoch;
+    if is_epoch_completed(epoch, current_epoch, file_path, file_mutex).await? {
+        return Ok(());
+    }
+
     let meta_merkle_tree_dir = cli.get_save_path().clone();
 
     let merkle_tree_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
@@ -111,19 +122,6 @@ pub async fn emit_claim_mev_tips_metrics(
         GeneratedMerkleTreeCollection::new_from_file_wincode(&merkle_tree_wincode_path)
             .map_err(|e| anyhow::anyhow!(e))?
     };
-
-    let rpc_url = cli.rpc_url.clone();
-    let rpc_client = RpcClient::new_with_timeout_and_commitment(
-        rpc_url,
-        Duration::from_secs(1800),
-        CommitmentConfig::confirmed(),
-    );
-
-    let epoch = merkle_trees.epoch;
-    let current_epoch = rpc_client.get_epoch_info().await?.epoch;
-    if is_epoch_completed(epoch, current_epoch, file_path, file_mutex).await? {
-        return Ok(());
-    }
 
     let (claims_to_process, validators_processed) = get_claim_transactions_for_valid_unclaimed(
         &rpc_client,
@@ -211,6 +209,18 @@ pub async fn handle_claim_mev_tips(
     keypair: &Arc<Keypair>,
     rpc_url: String,
 ) -> Result<(), anyhow::Error> {
+    let rpc_client = RpcClient::new_with_timeout_and_commitment(
+        rpc_url.clone(),
+        Duration::from_secs(1800),
+        CommitmentConfig::confirmed(),
+    );
+    let rpc_sender_client = RpcClient::new(rpc_url.clone());
+
+    let current_epoch = rpc_client.get_epoch_info().await?.epoch;
+    if is_epoch_completed(epoch, current_epoch, file_path, file_mutex).await? {
+        return Ok(());
+    }
+
     let meta_merkle_tree_dir = cli.get_save_path().clone();
     let merkle_tree_path = meta_merkle_tree_dir.join(merkle_tree_collection_file_name(epoch));
     let merkle_tree_wincode_path =
@@ -256,8 +266,9 @@ pub async fn handle_claim_mev_tips(
 
     match claim_mev_tips(
         &merkle_tree_coll,
-        rpc_url.clone(),
-        rpc_url.clone(),
+        &rpc_client,
+        &rpc_sender_client,
+        current_epoch,
         tip_distribution_program_id,
         priority_fee_distribution_program_id,
         tip_router_program_id,
@@ -330,8 +341,9 @@ pub async fn get_claimer_balance(
 #[allow(clippy::too_many_arguments)]
 pub async fn claim_mev_tips(
     merkle_trees: &GeneratedMerkleTreeCollection,
-    rpc_url: String,
-    rpc_sender_url: String,
+    rpc_client: &RpcClient,
+    rpc_sender_client: &RpcClient,
+    current_epoch: u64,
     tip_distribution_program_id: Pubkey,
     priority_fee_distribution_program_id: Pubkey,
     tip_router_program_id: Pubkey,
@@ -345,20 +357,9 @@ pub async fn claim_mev_tips(
     operator_address: &String,
     cluster: &str,
 ) -> Result<(), ClaimMevError> {
-    let rpc_client = RpcClient::new_with_timeout_and_commitment(
-        rpc_url,
-        Duration::from_secs(1800),
-        CommitmentConfig::confirmed(),
-    );
-    let rpc_sender_client = RpcClient::new(rpc_sender_url);
-
     let epoch = merkle_trees.epoch;
-    let current_epoch = rpc_client.get_epoch_info().await?.epoch;
-    if is_epoch_completed(epoch, current_epoch, file_path, file_mutex).await? {
-        return Ok(());
-    }
-
     let start = Instant::now();
+
     while start.elapsed() <= max_loop_duration {
         let (mut claims_to_process, validators_processed) =
             get_claim_transactions_for_valid_unclaimed(
