@@ -6,12 +6,15 @@ use std::{
 };
 
 use crate::{
-    backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
-    create_meta_merkle_tree, create_stake_meta,
+    backup_snapshots::SnapshotInfo,
+    cli::SnapshotPaths,
+    create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
     ledger_utils::{get_bank_from_snapshot_at_slot, LedgerUtilsError},
     load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
-    read_stake_meta_collection, submit::submit_to_ncn, tip_router::get_ncn_config, Cli,
-    OperatorState, Version,
+    read_stake_meta_collection,
+    submit::submit_to_ncn,
+    tip_router::get_ncn_config,
+    Cli, OperatorState, Version,
 };
 use anyhow::Result;
 use log::{error, info, warn};
