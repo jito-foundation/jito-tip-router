@@ -208,13 +208,7 @@ pub async fn loop_stages(
                         if blockstore_retries < MAX_BLOCKSTORE_OPEN_RETRIES =>
                     {
                         blockstore_retries += 1;
-                        warn!(
-                            "Transient blockstore error (retry {}/{}), retrying in {}s: {}",
-                            blockstore_retries,
-                            MAX_BLOCKSTORE_OPEN_RETRIES,
-                            BLOCKSTORE_RETRY_DELAY_SECS,
-                            e
-                        );
+                        warn!("Transient blockstore error (retry {blockstore_retries}/{MAX_BLOCKSTORE_OPEN_RETRIES}), retrying in {BLOCKSTORE_RETRY_DELAY_SECS}s: {e}");
                         datapoint_error!(
                             "tip_router_cli.load_bank_from_snapshot",
                             ("operator_address", operator_address, String),
@@ -226,7 +220,6 @@ pub async fn loop_stages(
                             "cluster" => &cli.cluster,
                         );
                         tokio::time::sleep(Duration::from_secs(BLOCKSTORE_RETRY_DELAY_SECS)).await;
-                        // stay in LoadBankFromSnapshot stage
                     }
                     Err(e) => return Err(e.into()),
                 }
