@@ -39,7 +39,7 @@ pub enum LedgerUtilsError {
     #[error("Missing snapshot at slot {0}")]
     MissingSnapshotAtSlot(u64),
 
-    #[error("BankFromSnapshot error: {0}")]
+    #[error(transparent)]
     OpenGenesisConfigError(#[from] OpenGenesisConfigError),
 
     #[error("{0}")]
