@@ -35,13 +35,32 @@ use crate::{arg_matches, load_and_process_ledger, Version};
 pub enum LedgerUtilsError {
     #[error("BankFromSnapshot error: {0}")]
     BankFromSnapshotError(#[from] SnapshotError),
+
     #[error("Missing snapshot at slot {0}")]
     MissingSnapshotAtSlot(u64),
+
     #[error("BankFromSnapshot error: {0}")]
     OpenGenesisConfigError(#[from] OpenGenesisConfigError),
+
+    #[error("{0}")]
+    GenesisConfigError(String),
+
+    #[error("{0}")]
+    BlockstoreOpenError(String),
+
+    #[error("{0}")]
+    BlockstoreRangeError(String),
+
+    #[error("{0}")]
+    LoadBankForksError(String),
+
+    #[error("{0}")]
+    SnapshotCreationError(String),
+
+    #[error("Expected bank at slot {expected}, found {found}")]
+    BankSlotMismatch { expected: u64, found: u64 },
 }
 
-// TODO: Use Result and propagate errors more gracefully
 /// Create the Bank for a desired slot for given file paths.
 #[allow(clippy::cognitive_complexity, clippy::too_many_arguments)]
 pub fn get_bank_from_ledger(
@@ -54,7 +73,7 @@ pub fn get_bank_from_ledger(
     save_snapshot: bool,
     snapshot_save_path: PathBuf,
     cluster: &str,
-) -> Arc<Bank> {
+) -> Result<Arc<Bank>, LedgerUtilsError> {
     let start_time = Instant::now();
 
     // Start validation
@@ -82,16 +101,17 @@ pub fn get_bank_from_ledger(
     let genesis_config = match open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE) {
         Ok(genesis_config) => genesis_config,
         Err(e) => {
+            let error_str = format!("Failed to load genesis config: {}", e);
             datapoint_error!(
                 "tip_router_cli.get_bank",
                 ("operator", operator_address, String),
                 ("status", "error", String),
                 ("state", "load_genesis", String),
                 ("step", 1, i64),
-                ("error", format!("{:?}", e), String),
+                ("error", error_str, String),
                 "cluster" => cluster,
             );
-            panic!("Failed to load genesis config: {}", e); // TODO should panic here?
+            return Err(LedgerUtilsError::GenesisConfigError(error_str));
         }
     };
 
@@ -153,7 +173,7 @@ pub fn get_bank_from_ledger(
                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
                 "cluster" => cluster,
             );
-            panic!("{}", error_str);
+            return Err(LedgerUtilsError::BlockstoreOpenError(error_str));
         }
         Err(err) => {
             let error_str = format!("Failed to open blockstore at {ledger_path:?}: {err:?}");
@@ -167,7 +187,7 @@ pub fn get_bank_from_ledger(
                 ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
                 "cluster" => cluster,
             );
-            panic!("{}", error_str);
+            return Err(LedgerUtilsError::BlockstoreOpenError(error_str));
         }
     };
 
@@ -244,7 +264,7 @@ pub fn get_bank_from_ledger(
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
                     "cluster" => cluster,
                 );
-                panic!("{}", error_str);
+                return Err(LedgerUtilsError::BlockstoreRangeError(error_str));
             }
             // Check if we have the slot data necessary to replay from starting_slot to >= halt_slot.
             if !blockstore.slot_range_connected(starting_slot, halt_slot) {
@@ -260,7 +280,7 @@ pub fn get_bank_from_ledger(
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
                     "cluster" => cluster,
                 );
-                panic!("{}", error_str);
+                return Err(LedgerUtilsError::BlockstoreRangeError(error_str));
             }
         }
     }
@@ -288,17 +308,18 @@ pub fn get_bank_from_ledger(
         ) {
             Ok(res) => res,
             Err(e) => {
+                let error_str = format!("Failed to load bank forks: {}", e);
                 datapoint_error!(
                     "tip_router_cli.get_bank",
                     ("operator", operator_address, String),
                     ("state", "load_bank_forks", String),
                     ("status", "error", String),
                     ("step", 4, i64),
-                    ("error", format!("{:?}", e), String),
+                    ("error", error_str, String),
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
                     "cluster" => cluster,
                 );
-                panic!("Failed to load bank forks: {}", e);
+                return Err(LedgerUtilsError::LoadBankForksError(error_str));
             }
         };
 
@@ -398,17 +419,18 @@ pub fn get_bank_from_ledger(
         ) {
             Ok(res) => res,
             Err(e) => {
+                let error_str = format!("Failed to create snapshot: {}", e);
                 datapoint_error!(
                     "tip_router_cli.get_bank",
                     ("operator", operator_address, String),
                     ("status", "error", String),
                     ("state", "bank_to_full_snapshot_archive", String),
                     ("step", 6, i64),
-                    ("error", format!("{:?}", e), String),
+                    ("error", error_str, String),
                     ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
                     "cluster" => cluster,
                 );
-                panic!("Failed to create snapshot: {}", e);
+                return Err(LedgerUtilsError::SnapshotCreationError(error_str));
             }
         };
 
@@ -421,13 +443,12 @@ pub fn get_bank_from_ledger(
     }
     // STEP 6: Complete //
 
-    assert_eq!(
-        working_bank.slot(),
-        *desired_slot,
-        "expected working bank slot {}, found {}",
-        desired_slot,
-        working_bank.slot()
-    );
+    if working_bank.slot() != *desired_slot {
+        return Err(LedgerUtilsError::BankSlotMismatch {
+            expected: *desired_slot,
+            found: working_bank.slot(),
+        });
+    }
 
     datapoint_info!(
         "tip_router_cli.get_bank",
@@ -437,7 +458,7 @@ pub fn get_bank_from_ledger(
         ("duration_ms", start_time.elapsed().as_millis() as i64, i64),
         "cluster" => cluster,
     );
-    working_bank
+    Ok(working_bank)
 }
 
 /// Loads the bank from the snapshot at the exact slot. If the snapshot doesn't exist, result is

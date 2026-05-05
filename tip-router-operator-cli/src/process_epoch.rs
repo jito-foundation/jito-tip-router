@@ -7,13 +7,14 @@ use std::{
 
 use crate::{
     backup_snapshots::SnapshotInfo, cli::SnapshotPaths, create_merkle_tree_collection,
-    create_meta_merkle_tree, create_stake_meta, ledger_utils::get_bank_from_snapshot_at_slot,
+    create_meta_merkle_tree, create_stake_meta,
+    ledger_utils::{get_bank_from_snapshot_at_slot, LedgerUtilsError},
     load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
     read_stake_meta_collection, submit::submit_to_ncn, tip_router::get_ncn_config, Cli,
     OperatorState, Version,
 };
 use anyhow::Result;
-use log::{error, info};
+use log::{error, info, warn};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
@@ -23,6 +24,8 @@ use tokio::time;
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
 const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined
+const MAX_BLOCKSTORE_OPEN_RETRIES: u32 = 5;
+const BLOCKSTORE_RETRY_DELAY_SECS: u64 = 10;
 
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> EpochInfo {
     loop {
@@ -154,6 +157,7 @@ pub async fn loop_stages(
     // Track runs that are starting right at the beginning of a new epoch
     let operator_address = cli.operator_address.clone();
     let mut stage = starting_stage;
+    let mut blockstore_retries: u32 = 0;
     let mut bank: Option<Arc<Bank>> = None;
     let mut stake_meta_collection: Option<StakeMetaCollection> = None;
     let mut merkle_tree_collection: Option<GeneratedMerkleTreeCollection> = None;
@@ -191,13 +195,38 @@ pub async fn loop_stages(
                 wait_for_optimal_incremental_snapshot(incremental_snapshots_path, slot_to_process)
                     .await?;
 
-                bank = Some(load_bank_from_snapshot(
-                    cli.clone(),
-                    slot_to_process,
-                    enable_snapshots,
-                ));
-                // Transition to the next stage
-                stage = OperatorState::CreateStakeMeta;
+                match load_bank_from_snapshot(cli.clone(), slot_to_process, enable_snapshots) {
+                    Ok(loaded_bank) => {
+                        blockstore_retries = 0;
+                        bank = Some(loaded_bank);
+                        stage = OperatorState::CreateStakeMeta;
+                    }
+                    Err(LedgerUtilsError::BlockstoreOpenError(ref e))
+                        if blockstore_retries < MAX_BLOCKSTORE_OPEN_RETRIES =>
+                    {
+                        blockstore_retries += 1;
+                        warn!(
+                            "Transient blockstore error (retry {}/{}), retrying in {}s: {}",
+                            blockstore_retries,
+                            MAX_BLOCKSTORE_OPEN_RETRIES,
+                            BLOCKSTORE_RETRY_DELAY_SECS,
+                            e
+                        );
+                        datapoint_error!(
+                            "tip_router_cli.load_bank_from_snapshot",
+                            ("operator_address", operator_address, String),
+                            ("epoch", epoch_to_process, i64),
+                            ("status", "error", String),
+                            ("error", e.to_string(), String),
+                            ("state", "blockstore_open_retry", String),
+                            ("retry", blockstore_retries, i64),
+                            "cluster" => &cli.cluster,
+                        );
+                        tokio::time::sleep(Duration::from_secs(BLOCKSTORE_RETRY_DELAY_SECS)).await;
+                        // stay in LoadBankFromSnapshot stage
+                    }
+                    Err(e) => return Err(e.into()),
+                }
             }
             OperatorState::CreateStakeMeta => {
                 let start = Instant::now();

@@ -395,7 +395,7 @@ async fn main() -> Result<()> {
         Commands::SnapshotSlot { slot } => {
             info!("Snapshotting slot...");
 
-            load_bank_from_snapshot(cli, slot, true);
+            load_bank_from_snapshot(cli, slot, true)?;
         }
         Commands::SubmitEpoch {
             ncn_address,

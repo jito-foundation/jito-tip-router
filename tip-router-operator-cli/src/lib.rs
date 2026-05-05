@@ -35,7 +35,7 @@ use jito_tip_payment_sdk::{
     TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
     TIP_ACCOUNT_SEED_7,
 };
-use ledger_utils::get_bank_from_ledger;
+use ledger_utils::{get_bank_from_ledger, LedgerUtilsError};
 use log::info;
 use meta_merkle_tree::generated_merkle_tree::StakeMetaCollection;
 use meta_merkle_tree::{
@@ -205,7 +205,11 @@ pub fn meta_merkle_tree_path(epoch: u64, save_path: &Path) -> PathBuf {
 }
 
 // STAGE 1 LoadBankFromSnapshot
-pub fn load_bank_from_snapshot(cli: Cli, slot: u64, save_snapshot: bool) -> Arc<Bank> {
+pub fn load_bank_from_snapshot(
+    cli: Cli,
+    slot: u64,
+    save_snapshot: bool,
+) -> Result<Arc<Bank>, LedgerUtilsError> {
     let SnapshotPaths {
         ledger_path,
         account_paths,
