@@ -11,7 +11,7 @@ use crate::{
     create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
     ledger_utils::{get_bank_from_snapshot_at_slot, LedgerUtilsError},
     load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
-    read_stake_meta_collection,
+    read_stake_meta_collection, reclaim,
     submit::submit_to_ncn,
     tip_router::get_ncn_config,
     Cli, OperatorState, Version,
@@ -22,7 +22,7 @@ use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, Sta
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_runtime::bank::Bank;
-use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::read_keypair_file};
+use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::Keypair};
 use tokio::time;
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
@@ -105,6 +105,7 @@ pub async fn wait_for_optimal_incremental_snapshot(
 
 #[allow(clippy::too_many_arguments)]
 pub async fn loop_stages(
+    keypair: Arc<Keypair>,
     rpc_client: Arc<RpcClient>,
     cli: Cli,
     starting_stage: OperatorState,
@@ -116,9 +117,9 @@ pub async fn loop_stages(
     ncn_address: &Pubkey,
     enable_snapshots: bool,
     save_stages: bool,
+    reclaim_expired_accounts: bool,
+    num_monitored_epochs: u64,
 ) -> Result<()> {
-    let keypair = read_keypair_file(&cli.keypair_path).expect("Failed to read keypair file");
-
     let mut current_epoch_info = {
         loop {
             match rpc_client.get_epoch_info().await {
@@ -383,6 +384,24 @@ pub async fn loop_stages(
                         "cluster" => &cli.cluster,
                     );
                 }
+                stage = OperatorState::ReclaimExpiredAccounts;
+            }
+            OperatorState::ReclaimExpiredAccounts => {
+                if reclaim_expired_accounts {
+                    info!("Checking for expired accounts to close...");
+                    if let Err(e) = reclaim::close_expired_accounts(
+                        &cli.rpc_url,
+                        *tip_distribution_program_id,
+                        *priority_fee_distribution_program_id,
+                        keypair.clone(),
+                        num_monitored_epochs,
+                    )
+                    .await
+                    {
+                        error!("Error closing expired accounts: {e}");
+                    }
+                }
+
                 stage = OperatorState::WaitForNextEpoch;
             }
             OperatorState::WaitForNextEpoch => {

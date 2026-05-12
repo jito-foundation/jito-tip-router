@@ -197,8 +197,11 @@ async fn main() -> Result<()> {
             });
 
             let keypair_arc = Arc::clone(&keypair);
+
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
+                let keypair_arc = keypair.clone();
+
                 loop {
                     if let Err(e) = submit_recent_epochs_to_ncn(
                         &rpc_client_clone,
@@ -357,27 +360,9 @@ async fn main() -> Result<()> {
                 });
             }
 
-            if reclaim_expired_accounts {
-                let rpc_url = cli.rpc_url.clone();
-                tokio::spawn(async move {
-                    loop {
-                        info!("Checking for expired accounts to close...");
-                        if let Err(e) = reclaim::close_expired_accounts(
-                            &rpc_url,
-                            tip_distribution_program_id,
-                            priority_fee_distribution_program_id,
-                            Arc::clone(&keypair),
-                            num_monitored_epochs,
-                        )
-                        .await
-                        {
-                            error!("Error closing expired accounts: {}", e);
-                        }
-                        sleep(Duration::from_secs(1800)).await;
-                    }
-                });
-            } // Endless loop that transitions between stages of the operator process.
+            // Endless loop that transitions between stages of the operator process.
             process_epoch::loop_stages(
+                keypair_arc.clone(),
                 rpc_client,
                 cli,
                 starting_stage,
@@ -389,6 +374,8 @@ async fn main() -> Result<()> {
                 &ncn_address,
                 save_snapshot,
                 save_stages,
+                reclaim_expired_accounts,
+                num_monitored_epochs,
             )
             .await?;
         }
