@@ -86,6 +86,7 @@ pub enum OperatorState {
     CreateMetaMerkleTree,
     CastVote,
     WaitForNextEpoch,
+    ReclaimExpiredAccounts,
 }
 
 pub fn stake_meta_file_name(epoch: u64) -> String {

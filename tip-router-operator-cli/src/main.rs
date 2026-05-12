@@ -357,26 +357,7 @@ async fn main() -> Result<()> {
                 });
             }
 
-            if reclaim_expired_accounts {
-                let rpc_url = cli.rpc_url.clone();
-                tokio::spawn(async move {
-                    loop {
-                        info!("Checking for expired accounts to close...");
-                        if let Err(e) = reclaim::close_expired_accounts(
-                            &rpc_url,
-                            tip_distribution_program_id,
-                            priority_fee_distribution_program_id,
-                            Arc::clone(&keypair),
-                            num_monitored_epochs,
-                        )
-                        .await
-                        {
-                            error!("Error closing expired accounts: {}", e);
-                        }
-                        sleep(Duration::from_secs(1800)).await;
-                    }
-                });
-            } // Endless loop that transitions between stages of the operator process.
+            // Endless loop that transitions between stages of the operator process.
             process_epoch::loop_stages(
                 rpc_client,
                 cli,
@@ -389,6 +370,8 @@ async fn main() -> Result<()> {
                 &ncn_address,
                 save_snapshot,
                 save_stages,
+                reclaim_expired_accounts,
+                num_monitored_epochs,
             )
             .await?;
         }
