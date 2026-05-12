@@ -197,8 +197,11 @@ async fn main() -> Result<()> {
             });
 
             let keypair_arc = Arc::clone(&keypair);
+
             // Check for new meta merkle trees and submit to NCN periodically
             tokio::spawn(async move {
+                let keypair_arc = keypair.clone();
+
                 loop {
                     if let Err(e) = submit_recent_epochs_to_ncn(
                         &rpc_client_clone,
@@ -359,6 +362,7 @@ async fn main() -> Result<()> {
 
             // Endless loop that transitions between stages of the operator process.
             process_epoch::loop_stages(
+                keypair_arc.clone(),
                 rpc_client,
                 cli,
                 starting_stage,
