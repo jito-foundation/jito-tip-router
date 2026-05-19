@@ -19,6 +19,7 @@ use crate::{
 use anyhow::Result;
 use log::{error, info, warn};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
+use rand::Rng;
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_runtime::bank::Bank;
@@ -27,8 +28,9 @@ use tokio::time;
 
 const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
 const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined
-const MAX_BLOCKSTORE_OPEN_RETRIES: u32 = 5;
+const MAX_BLOCKSTORE_OPEN_RETRIES: u32 = 60;
 const BLOCKSTORE_RETRY_DELAY_SECS: u64 = 10;
+const BLOCKSTORE_RETRY_JITTER_SECS: u64 = 10;
 
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> EpochInfo {
     loop {
@@ -209,7 +211,9 @@ pub async fn loop_stages(
                         if blockstore_retries < MAX_BLOCKSTORE_OPEN_RETRIES =>
                     {
                         blockstore_retries += 1;
-                        warn!("Transient blockstore error (retry {blockstore_retries}/{MAX_BLOCKSTORE_OPEN_RETRIES}), retrying in {BLOCKSTORE_RETRY_DELAY_SECS}s: {e}");
+                        let retry_delay_secs = BLOCKSTORE_RETRY_DELAY_SECS
+                            + rand::thread_rng().gen_range(0..=BLOCKSTORE_RETRY_JITTER_SECS);
+                        warn!("Transient blockstore error (retry {blockstore_retries}/{MAX_BLOCKSTORE_OPEN_RETRIES}), retrying in {retry_delay_secs}s: {e}");
                         datapoint_error!(
                             "tip_router_cli.load_bank_from_snapshot",
                             ("operator_address", operator_address, String),
@@ -218,9 +222,10 @@ pub async fn loop_stages(
                             ("error", e.to_string(), String),
                             ("state", "blockstore_open_retry", String),
                             ("retry", blockstore_retries, i64),
+                            ("retry_delay_secs", retry_delay_secs, i64),
                             "cluster" => &cli.cluster,
                         );
-                        tokio::time::sleep(Duration::from_secs(BLOCKSTORE_RETRY_DELAY_SECS)).await;
+                        tokio::time::sleep(Duration::from_secs(retry_delay_secs)).await;
                     }
                     Err(e) => return Err(e.into()),
                 }
