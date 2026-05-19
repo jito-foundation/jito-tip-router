@@ -219,6 +219,9 @@ pub enum ProgramCommand {
     AdminSetTieBreaker {
         #[arg(long, help = "Meta merkle root")]
         meta_merkle_root: String,
+
+        #[arg(long, help = "Tie breaker admin pubkey (defaults to keypair pubkey)")]
+        tie_breaker_admin: Option<String>,
     },
     AdminSetParameters {
         #[arg(long, help = "Epochs before tie breaker can set consensus")]

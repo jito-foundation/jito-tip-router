@@ -36,6 +36,47 @@ JAAgQEBRyA5Jx6UGWsLNGicohE57cDFsZ58vT9MMDpd9  W
 When using this flag, the transaction will not be processed - only printed for inspection.
 Note that instruction data shown in the output is **base58** encoded, which provides a compact text representation of binary data.
 
+### Admin Set Tie Breaker
+
+When voting reaches a stall (no consensus after the configured epoch window), the tie-breaker admin can manually set the winning merkle root.
+
+The `--meta-merkle-root` accepts either a bracketed byte array or a 64-character hex string:
+
+```bash
+# byte array format
+jito-tip-router-cli --ncn <NCN_ADDRESS> --keypair-path <KEYPAIR_PATH> \
+  admin-set-tie-breaker \
+  --meta-merkle-root "[172, 209, 53, 243, 16, 133, 81, 178, 15, 61, 0, 1, 80, 230, 29, 46, 236, 162, 155, 4, 183, 213, 241, 201, 14, 128, 161, 188, 128, 137, 0, 132]"
+
+# hex format
+jito-tip-router-cli --ncn <NCN_ADDRESS> --keypair-path <KEYPAIR_PATH> \
+  admin-set-tie-breaker \
+  --meta-merkle-root "acd135f3108551b20f3d00015...0e80a1bc808900..."
+```
+
+#### Using with a Squads Multisig
+
+When the tie-breaker admin is a Squads vault rather than a local keypair, pass the vault address via `--tie-breaker-admin` and use `--print-tx` to get the base58-encoded transaction to submit through Squads:
+
+```bash
+jito-tip-router-cli --ncn <NCN_ADDRESS> --keypair-path <KEYPAIR_PATH> \
+  --print-tx \
+  admin-set-tie-breaker \
+  --meta-merkle-root "[172, 209, ...]" \
+  --tie-breaker-admin <SQUADS_VAULT_PUBKEY>
+```
+
+The accounts in the printed instruction are:
+
+| # | Account | Flags | Description |
+|---|---------|-------|-------------|
+| 1 | Program ID | | Tip Router program being invoked |
+| 2 | `epoch_state` | W | PDA tracking epoch progress; updated when tie-breaker fires |
+| 3 | `config` | | `TipRouterConfig` PDA; used to validate the tie-breaker admin |
+| 4 | `ballot_box` | W | PDA storing operator votes; winning ballot is forced here |
+| 5 | `ncn` | | NCN address used to derive the other PDAs |
+| 6 | `tie_breaker_admin` | S | Must match the admin stored in `config`; signs the transaction |
+
 ## Official Accounts
 
 | Account                    | Address                                      |
