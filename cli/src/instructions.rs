@@ -333,6 +333,14 @@ pub async fn admin_set_tie_breaker(
 
     let admin = tie_breaker_admin.unwrap_or_else(|| keypair.pubkey());
 
+    if admin != keypair.pubkey() && !handler.print_tx {
+        return Err(anyhow!(
+            "--tie-breaker-admin differs from the local keypair; \
+             the CLI cannot sign on behalf of that account. \
+             Add --print-tx to export the transaction for signing externally (e.g. Squads)."
+        ));
+    }
+
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
 
