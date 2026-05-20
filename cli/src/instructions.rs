@@ -325,10 +325,21 @@ pub async fn admin_set_tie_breaker(
     handler: &CliHandler,
     epoch: u64,
     meta_merkle_root: [u8; 32],
+    tie_breaker_admin: Option<Pubkey>,
 ) -> Result<()> {
     let keypair = handler.keypair();
 
     let ncn = *handler.ncn()?;
+
+    let admin = tie_breaker_admin.unwrap_or_else(|| keypair.pubkey());
+
+    if admin != keypair.pubkey() && !handler.print_tx {
+        return Err(anyhow!(
+            "--tie-breaker-admin differs from the local keypair; \
+             the CLI cannot sign on behalf of that account. \
+             Add --print-tx to export the transaction for signing externally (e.g. Squads)."
+        ));
+    }
 
     let (epoch_state, _, _) =
         EpochState::find_program_address(&handler.tip_router_program_id, &ncn, epoch);
@@ -344,7 +355,7 @@ pub async fn admin_set_tie_breaker(
         .config(ncn_config)
         .ballot_box(ballot_box)
         .ncn(ncn)
-        .tie_breaker_admin(keypair.pubkey())
+        .tie_breaker_admin(admin)
         .meta_merkle_root(meta_merkle_root)
         .epoch(epoch)
         .instruction();

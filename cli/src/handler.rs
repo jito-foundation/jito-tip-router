@@ -337,9 +337,18 @@ impl CliHandler {
                 let vault = Pubkey::from_str(&vault).expect("error parsing vault");
                 admin_set_weight(self, &vault, self.epoch, weight).await
             }
-            ProgramCommand::AdminSetTieBreaker { meta_merkle_root } => {
+            ProgramCommand::AdminSetTieBreaker {
+                meta_merkle_root,
+                tie_breaker_admin,
+            } => {
                 let merkle_root = parse_meta_merkle_root(&meta_merkle_root)?;
-                admin_set_tie_breaker(self, self.epoch, merkle_root).await
+                let admin = tie_breaker_admin
+                    .map(|s| {
+                        Pubkey::from_str(&s)
+                            .map_err(|e| anyhow!("invalid tie_breaker_admin pubkey: {e}"))
+                    })
+                    .transpose()?;
+                admin_set_tie_breaker(self, self.epoch, merkle_root, admin).await
             }
             ProgramCommand::AdminSetParameters {
                 epochs_before_stall,
