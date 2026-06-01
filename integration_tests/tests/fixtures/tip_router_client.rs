@@ -1129,18 +1129,8 @@ impl TipRouterClient {
         ncn: Pubkey,
         epoch: u64,
     ) -> TestResult<()> {
-        let vault_operator_delegation = VaultOperatorDelegation::find_program_address(
-            &jito_vault_program::id(),
-            &vault,
-            &operator,
-        )
-        .0;
         self.snapshot_vault_operator_delegation_with_override(
-            vault,
-            operator,
-            ncn,
-            epoch,
-            vault_operator_delegation,
+            vault, operator, ncn, epoch, None, None,
         )
         .await
     }
@@ -1151,7 +1141,8 @@ impl TipRouterClient {
         operator: Pubkey,
         ncn: Pubkey,
         epoch: u64,
-        vault_operator_delegation: Pubkey,
+        vault_operator_delegation_opt: Option<Pubkey>,
+        vault_ncn_ticket_opt: Option<Pubkey>,
     ) -> TestResult<()> {
         let epoch_state =
             EpochState::find_program_address(&jito_tip_router_program::id(), &ncn, epoch).0;
@@ -1169,8 +1160,23 @@ impl TipRouterClient {
         )
         .0;
 
-        let vault_ncn_ticket =
-            VaultNcnTicket::find_program_address(&jito_vault_program::id(), &vault, &ncn).0;
+        let vault_ncn_ticket = if let Some(vault_ncn_ticket) = vault_ncn_ticket_opt {
+            vault_ncn_ticket
+        } else {
+            VaultNcnTicket::find_program_address(&jito_vault_program::id(), &vault, &ncn).0
+        };
+
+        let vault_operator_delegation =
+            if let Some(vault_operator_delegation) = vault_operator_delegation_opt {
+                vault_operator_delegation
+            } else {
+                VaultOperatorDelegation::find_program_address(
+                    &jito_vault_program::id(),
+                    &vault,
+                    &operator,
+                )
+                .0
+            };
 
         let ncn_vault_ticket =
             NcnVaultTicket::find_program_address(&jito_restaking_program::id(), &ncn, &vault).0;
