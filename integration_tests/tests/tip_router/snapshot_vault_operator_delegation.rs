@@ -109,10 +109,27 @@ mod tests {
                 operator,
                 ncn,
                 epoch,
-                wrong_delegation,
+                Some(wrong_delegation),
+                None,
             )
             .await;
 
+        assert_ix_error(result, InstructionError::InvalidAccountData);
+
+        // This tests the same issue as above but for the VaultNcnTicket account as opposed to the
+        // VaultOperatorDelegation account
+        // Empty + Incorrect account
+        let wrong_vault_ncn_ticket = Pubkey::new_unique();
+        let result = tip_router_client
+            .snapshot_vault_operator_delegation_with_override(
+                vault_address,
+                operator,
+                ncn,
+                epoch,
+                None,
+                Some(wrong_vault_ncn_ticket),
+            )
+            .await;
         assert_ix_error(result, InstructionError::InvalidAccountData);
     }
 
@@ -232,7 +249,8 @@ mod tests {
                 operator,
                 ncn,
                 epoch,
-                correct_empty_pda,
+                Some(correct_empty_pda),
+                None,
             )
             .await
             .unwrap();
