@@ -46,7 +46,13 @@ pub fn process_snapshot_vault_operator_delegation(
         false,
     )?;
 
-    if !vault_ncn_ticket.data_is_empty() {
+    if vault_ncn_ticket.data_is_empty() {
+        let expected =
+            VaultNcnTicket::find_program_address(&jito_vault_program::id(), vault.key, ncn.key).0;
+        if vault_ncn_ticket.key.ne(&expected) {
+            return Err(ProgramError::InvalidAccountData);
+        }
+    } else {
         VaultNcnTicket::load(
             &jito_vault_program::id(),
             vault_ncn_ticket,
