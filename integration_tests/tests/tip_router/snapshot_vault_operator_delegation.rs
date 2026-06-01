@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use jito_vault_core::vault_operator_delegation::VaultOperatorDelegation;
+    use jito_vault_core::{
+        vault_ncn_ticket::VaultNcnTicket, vault_operator_delegation::VaultOperatorDelegation,
+    };
     use solana_program::instruction::InstructionError;
-    use solana_sdk::pubkey::Pubkey;
+    use solana_sdk::{account::Account, pubkey::Pubkey};
 
     use crate::fixtures::{assert_ix_error, test_builder::TestBuilder, TestResult};
 
@@ -133,11 +135,13 @@ mod tests {
         assert_ix_error(result, InstructionError::InvalidAccountData);
     }
 
-    // Operator added after vault setup has no VaultOperatorDelegation, so the
-    // correct PDA exists on-chain as an empty (uninitialized) account.
-    // The instruction should succeed, recording zero stake weight.
+    // Two correct-PDA-but-empty cases — both must succeed with stake_weight=0:
+    //   1. operator[1] added after vault setup → no VaultOperatorDelegation
+    //      (empty delegation account).
+    //   2. VaultNcnTicket wiped to mimic "vault never reciprocated NCN's opt-in"
+    //      (empty ticket account).
     #[tokio::test]
-    async fn test_snapshot_vault_operator_delegation_correct_pda_empty() {
+    async fn test_snapshot_vault_operator_delegation_correct_pda_empty_accounts() {
         let mut fixture = TestBuilder::new().await;
         let mut vault_client = fixture.vault_program_client();
         let mut tip_router_client = fixture.tip_router_client();
@@ -261,5 +265,41 @@ mod tests {
             .unwrap();
         assert_eq!(snapshot.stake_weights().stake_weight(), 0);
         assert_eq!(snapshot.valid_operator_vault_delegations(), 0);
+
+        // Same shape for VaultNcnTicket: correct PDA, empty data, real
+        // delegation.
+        let correct_empty_ticket =
+            VaultNcnTicket::find_program_address(&jito_vault_program::id(), &vault_address, &ncn).0;
+
+        let operator_0 = test_ncn.operators[0].operator_pubkey;
+        tip_router_client
+            .do_full_initialize_operator_snapshot(operator_0, ncn, epoch)
+            .await
+            .unwrap();
+
+        // Wipe the ticket immediately before the ix under test so no other
+        // helper observes the synthesized state.
+        fixture
+            .set_account(correct_empty_ticket, Account::default())
+            .await;
+
+        tip_router_client
+            .snapshot_vault_operator_delegation_with_override(
+                vault_address,
+                operator_0,
+                ncn,
+                epoch,
+                None,
+                Some(correct_empty_ticket),
+            )
+            .await
+            .unwrap();
+
+        let snapshot_0 = tip_router_client
+            .get_operator_snapshot(operator_0, ncn, epoch)
+            .await
+            .unwrap();
+        assert_eq!(snapshot_0.stake_weights().stake_weight(), 0);
+        assert_eq!(snapshot_0.valid_operator_vault_delegations(), 0);
     }
 }
