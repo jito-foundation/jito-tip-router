@@ -926,20 +926,51 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
         return Err(anyhow!("No gateways found"));
     }
 
-    let gw = &gateways[0];
     let crossbar = CrossbarClient::default();
-    let (ix, _, _, _) = PullFeed::fetch_update_ix(
-        switchboard_context.clone(),
-        client,
-        FetchUpdateParams {
-            feed: *switchboard_feed,
-            payer: payer.pubkey(),
-            gateway: gw.clone(),
-            crossbar: Some(crossbar),
-            ..Default::default()
-        },
-    )
-    .await?;
+    let mut update_ix = None;
+    let mut last_error = None;
+    for (index, gateway) in gateways.iter().enumerate() {
+        log::info!(
+            "Fetching Switchboard update from gateway {}/{}: {}",
+            index + 1,
+            gateways.len(),
+            gateway.url()
+        );
+
+        match PullFeed::fetch_update_ix(
+            switchboard_context.clone(),
+            client,
+            FetchUpdateParams {
+                feed: *switchboard_feed,
+                payer: payer.pubkey(),
+                gateway: gateway.clone(),
+                crossbar: Some(crossbar.clone()),
+                ..Default::default()
+            },
+        )
+        .await
+        {
+            std::result::Result::Ok((ix, _, _, _)) => {
+                update_ix = Some(ix);
+                break;
+            }
+            Err(error) => {
+                log::warn!(
+                    "Failed to fetch Switchboard update from gateway {}: {:?}",
+                    gateway.url(),
+                    error
+                );
+                last_error = Some(error);
+            }
+        }
+    }
+    let ix = update_ix.ok_or_else(|| {
+        anyhow!(
+            "Failed to fetch Switchboard update from all {} gateways. Last error: {:?}",
+            gateways.len(),
+            last_error
+        )
+    })?;
 
     send_and_log_transaction(
         handler,
