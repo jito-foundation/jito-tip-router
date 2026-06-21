@@ -10,7 +10,6 @@ on:
         type: choice
         options:
           - ncn-keeper
-          - operator
 
 env:
   REGISTRY: ghcr.io
@@ -41,11 +40,6 @@ jobs:
             echo "target=jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
             echo "image_name=jito-tip-router-ncn-keeper" >> $GITHUB_OUTPUT
             echo "dockerfile_path=./cli/Dockerfile" >> $GITHUB_OUTPUT
-            ;;
-          "operator")
-            echo "target=tip-router-operator-cli" >> $GITHUB_OUTPUT
-            echo "image_name=tip-router-operator-cli" >> $GITHUB_OUTPUT
-            echo "dockerfile_path=./tip-router-operator-cli/Dockerfile" >> $GITHUB_OUTPUT
             ;;
         esac
 
