@@ -179,6 +179,10 @@ impl Gateway {
         }
     }
 
+    pub fn url(&self) -> &str {
+        &self.gateway_url
+    }
+
     /// Fetches signatures from the gateway
     /// # Arguments
     /// * `params` - FetchSignaturesParams
@@ -213,10 +217,10 @@ impl Gateway {
             .header(CONTENT_TYPE, "application/json")
             .json(&body)
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
-        let raw = res.text().await?;
-        let res = serde_json::from_str::<FeedEvalResponseSingle>(&raw).unwrap();
+        let res = res.json::<FeedEvalResponseSingle>().await?;
 
         Ok(res)
     }
@@ -353,6 +357,10 @@ impl Gateway {
 
         // Process response
         if let Ok(resp) = response {
+            if !resp.status().is_success() {
+                return false;
+            }
+
             if let Ok(text) = resp.text().await {
                 !text.is_empty()
             } else {
