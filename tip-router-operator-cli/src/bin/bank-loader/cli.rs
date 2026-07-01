@@ -1,6 +1,6 @@
 use {
     clap::{Args, Parser, Subcommand},
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
 };
 
 #[derive(Debug, Parser)]
@@ -69,6 +69,9 @@ pub(crate) struct LoadBankCacheArgs {
     #[command(flatten)]
     pub(crate) cache: BankCacheConfig,
 
+    #[command(flatten)]
+    pub(crate) stake_meta: StakeMetaArgs,
+
     /// Skip the post-load accounts hash verification pass.
     #[arg(long, env, default_value_t = true)]
     pub(crate) skip_initial_hash_calc: bool,
@@ -76,4 +79,23 @@ pub(crate) struct LoadBankCacheArgs {
     /// Run the startup accounts index verification pass.
     #[arg(long, env, default_value_t = false)]
     pub(crate) verify_index: bool,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct StakeMetaArgs {
+    /// Generate and write a StakeMetaCollection after the bank is loaded.
+    #[arg(long, env, default_value_t = true)]
+    pub(crate) generate_stake_meta: bool,
+
+    /// Output directory for the generated StakeMetaCollection file. Defaults to --output-dir.
+    #[arg(long, env, value_name = "DIR")]
+    pub(crate) stake_meta_output_dir: Option<PathBuf>,
+}
+
+impl StakeMetaArgs {
+    pub(crate) fn output_dir_or_default(&self, default_output_dir: &Path) -> PathBuf {
+        self.stake_meta_output_dir
+            .clone()
+            .unwrap_or_else(|| default_output_dir.to_path_buf())
+    }
 }

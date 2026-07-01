@@ -30,9 +30,11 @@ use {
 
 mod bankcache;
 mod cli;
+mod stake_meta;
 
 use bankcache::BankCachePaths;
 use cli::{BankCacheConfig, BankCacheFromSnapshotArgs, Cli, Commands, LoadBankCacheArgs};
+use stake_meta::StakeMetaConfig;
 
 fn main() -> Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
@@ -73,6 +75,7 @@ fn handle_create_bank_cache(args: &BankCacheFromSnapshotArgs) -> Result<()> {
         full_snapshot_archive.path().display()
     );
     log_loaded_bank_context(config, &bank, &cache_paths, load_duration_ms);
+
     Ok(())
 }
 
@@ -92,7 +95,25 @@ fn handle_load_bankcache(args: &LoadBankCacheArgs) -> Result<()> {
         "mode: load-bank-cache skip_initial_hash_calc: {} verify_index: {}",
         args.skip_initial_hash_calc, args.verify_index
     );
+    ensure_bank_is_frozen(&bank)?;
     log_loaded_bank_context(config, &bank, &cache_paths, load_duration_ms);
+    maybe_run_stake_meta_generation(bank, &args.stake_meta, &config.output_dir)?;
+    Ok(())
+}
+
+fn maybe_run_stake_meta_generation(
+    bank: Bank,
+    args: &cli::StakeMetaArgs,
+    default_output_dir: &Path,
+) -> Result<()> {
+    if !args.generate_stake_meta {
+        return Ok(());
+    }
+
+    let config = StakeMetaConfig {
+        output_dir: args.output_dir_or_default(default_output_dir),
+    };
+    stake_meta::generate(bank, &config)?;
     Ok(())
 }
 

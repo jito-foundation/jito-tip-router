@@ -1,3 +1,4 @@
+use borsh::de::BorshDeserialize;
 use itertools::Itertools;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::TipDistributionAccount;
@@ -12,7 +13,7 @@ use solana_ledger::{
 };
 use solana_runtime::{bank::Bank, stakes::StakeAccount};
 use solana_sdk::{
-    account::{from_account, ReadableAccount},
+    account::{from_account, ReadableAccount, WritableAccount},
     pubkey::Pubkey,
 };
 use solana_stake_interface::stake_history::StakeHistory;
@@ -20,15 +21,17 @@ use solana_stake_interface::sysvar::stake_history;
 use std::{
     collections::HashMap,
     fmt::{Debug, Display, Formatter},
+    mem::size_of,
     sync::Arc,
+    time::{Duration, Instant},
 };
 use thiserror::Error;
 
 use crate::{
     derive_tip_payment_pubkeys,
     distribution_meta::{
-        get_distribution_meta, TipReceiverInfo, WrappedPriorityFeeDistributionMeta,
-        WrappedTipDistributionMeta,
+        get_distribution_meta, DistributionMeta, TipReceiverInfo,
+        WrappedPriorityFeeDistributionMeta, WrappedTipDistributionMeta,
     },
 };
 
@@ -68,6 +71,312 @@ impl Display for StakeMetaGeneratorError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Debug::fmt(&self, f)
     }
+}
+
+#[derive(Default, Debug)]
+struct GenerateStakeMetaStats {
+    total_duration: Duration,
+    epoch_vote_accounts_duration: Duration,
+    num_vote_accounts: usize,
+    get_top_epoch_stakes_duration: Duration,
+    stake_delegations_count: usize,
+    group_delegations_duration: Duration,
+    active_delegations_count: usize,
+    inactive_delegations_count: usize,
+    validators_with_delegations_count: usize,
+    stake_history_loads: usize,
+    stake_history_load_duration: Duration,
+    stake_history_deserialize_duration: Duration,
+    config_load_duration: Duration,
+    tip_payment_balance_duration: Duration,
+    tip_payment_pda_count: usize,
+    stake_meta_loop_duration: Duration,
+    validators_without_delegations_count: usize,
+    generated_stake_metas_count: usize,
+    total_delegated_duration: Duration,
+    tip_distribution_meta_duration: Duration,
+    priority_fee_distribution_meta_duration: Duration,
+    delegations_sort_duration: Duration,
+    tip_distribution_found_count: usize,
+    tip_distribution_missing_count: usize,
+    tip_distribution_wrong_owner_count: usize,
+    tip_distribution_deserialize_failed_count: usize,
+    tip_distribution_meta_build_failed_count: usize,
+    priority_fee_distribution_found_count: usize,
+    priority_fee_distribution_missing_count: usize,
+    priority_fee_distribution_wrong_owner_count: usize,
+    priority_fee_distribution_deserialize_failed_count: usize,
+    priority_fee_distribution_meta_build_failed_count: usize,
+    max_delegations_per_validator: usize,
+    avg_delegations_per_validator: f64,
+    final_stake_metas_sort_duration: Duration,
+}
+
+#[derive(Clone, Copy)]
+enum DistributionMetaKind {
+    Tip,
+    PriorityFee,
+}
+
+impl GenerateStakeMetaStats {
+    fn record_distribution_found(&mut self, kind: DistributionMetaKind) {
+        match kind {
+            DistributionMetaKind::Tip => self.tip_distribution_found_count += 1,
+            DistributionMetaKind::PriorityFee => self.priority_fee_distribution_found_count += 1,
+        }
+    }
+
+    fn record_distribution_missing(&mut self, kind: DistributionMetaKind) {
+        match kind {
+            DistributionMetaKind::Tip => self.tip_distribution_missing_count += 1,
+            DistributionMetaKind::PriorityFee => self.priority_fee_distribution_missing_count += 1,
+        }
+    }
+
+    fn record_distribution_wrong_owner(&mut self, kind: DistributionMetaKind) {
+        match kind {
+            DistributionMetaKind::Tip => self.tip_distribution_wrong_owner_count += 1,
+            DistributionMetaKind::PriorityFee => {
+                self.priority_fee_distribution_wrong_owner_count += 1;
+            }
+        }
+    }
+
+    fn record_distribution_deserialize_failed(&mut self, kind: DistributionMetaKind) {
+        match kind {
+            DistributionMetaKind::Tip => self.tip_distribution_deserialize_failed_count += 1,
+            DistributionMetaKind::PriorityFee => {
+                self.priority_fee_distribution_deserialize_failed_count += 1;
+            }
+        }
+    }
+
+    fn record_distribution_meta_build_failed(&mut self, kind: DistributionMetaKind) {
+        match kind {
+            DistributionMetaKind::Tip => self.tip_distribution_meta_build_failed_count += 1,
+            DistributionMetaKind::PriorityFee => {
+                self.priority_fee_distribution_meta_build_failed_count += 1;
+            }
+        }
+    }
+
+    fn log(&self) {
+        info!(
+            "stake_meta_stats total_duration_ms={} epoch_vote_accounts_duration_ms={} num_vote_accounts={} get_top_epoch_stakes_duration_ms={} stake_delegations_count={} group_delegations_duration_ms={} active_delegations_count={} inactive_delegations_count={} validators_with_delegations_count={} validators_without_delegations_count={} generated_stake_metas_count={} final_stake_metas_sort_duration_ms={}",
+            self.total_duration.as_millis(),
+            self.epoch_vote_accounts_duration.as_millis(),
+            self.num_vote_accounts,
+            self.get_top_epoch_stakes_duration.as_millis(),
+            self.stake_delegations_count,
+            self.group_delegations_duration.as_millis(),
+            self.active_delegations_count,
+            self.inactive_delegations_count,
+            self.validators_with_delegations_count,
+            self.validators_without_delegations_count,
+            self.generated_stake_metas_count,
+            self.final_stake_metas_sort_duration.as_millis(),
+        );
+        info!(
+            "stake_meta_loop_stats stake_history_loads={} stake_history_load_duration_ms={} stake_history_deserialize_duration_ms={} config_load_duration_ms={} tip_payment_balance_duration_ms={} tip_payment_pda_count={} stake_meta_loop_duration_ms={} total_delegated_duration_ms={} tip_distribution_meta_duration_ms={} priority_fee_distribution_meta_duration_ms={} delegations_sort_duration_ms={} max_delegations_per_validator={} avg_delegations_per_validator={:.2}",
+            self.stake_history_loads,
+            self.stake_history_load_duration.as_millis(),
+            self.stake_history_deserialize_duration.as_millis(),
+            self.config_load_duration.as_millis(),
+            self.tip_payment_balance_duration.as_millis(),
+            self.tip_payment_pda_count,
+            self.stake_meta_loop_duration.as_millis(),
+            self.total_delegated_duration.as_millis(),
+            self.tip_distribution_meta_duration.as_millis(),
+            self.priority_fee_distribution_meta_duration.as_millis(),
+            self.delegations_sort_duration.as_millis(),
+            self.max_delegations_per_validator,
+            self.avg_delegations_per_validator,
+        );
+        info!(
+            "stake_meta_distribution_stats tip_found={} tip_missing={} tip_wrong_owner={} tip_deserialize_failed={} tip_meta_build_failed={} priority_fee_found={} priority_fee_missing={} priority_fee_wrong_owner={} priority_fee_deserialize_failed={} priority_fee_meta_build_failed={}",
+            self.tip_distribution_found_count,
+            self.tip_distribution_missing_count,
+            self.tip_distribution_wrong_owner_count,
+            self.tip_distribution_deserialize_failed_count,
+            self.tip_distribution_meta_build_failed_count,
+            self.priority_fee_distribution_found_count,
+            self.priority_fee_distribution_missing_count,
+            self.priority_fee_distribution_wrong_owner_count,
+            self.priority_fee_distribution_deserialize_failed_count,
+            self.priority_fee_distribution_meta_build_failed_count,
+        );
+    }
+}
+
+/// Creates a collection of [StakeMeta]'s from the given bank.
+#[allow(clippy::significant_drop_tightening)]
+pub fn generate_stake_meta_collection_with_stats(
+    bank: &Arc<Bank>,
+    tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
+    tip_payment_program_id: &Pubkey,
+) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
+    assert!(bank.is_frozen());
+
+    let total_started = Instant::now();
+    let mut stats = GenerateStakeMetaStats::default();
+
+    let phase_started = Instant::now();
+    let epoch_vote_accounts =
+        bank.epoch_vote_accounts(bank.epoch())
+            .ok_or(StakeMetaGeneratorError::NoVoteAccounts(
+                bank.slot(),
+                bank.epoch(),
+            ))?;
+    stats.epoch_vote_accounts_duration = phase_started.elapsed();
+
+    stats.num_vote_accounts = epoch_vote_accounts.len();
+
+    let phase_started = Instant::now();
+    let top_epoch_stakes = bank.get_top_epoch_stakes();
+    stats.get_top_epoch_stakes_duration = phase_started.elapsed();
+    let delegations = top_epoch_stakes.stake_delegations();
+    stats.stake_delegations_count = delegations.len();
+
+    let phase_started = Instant::now();
+    let voter_pubkey_to_delegations =
+        group_delegations_by_voter_pubkey_with_stats(delegations, bank, &mut stats);
+    stats.group_delegations_duration = phase_started.elapsed();
+    stats.validators_with_delegations_count = voter_pubkey_to_delegations.len();
+
+    // Get config PDA
+    let phase_started = Instant::now();
+    let (config_pda, _) =
+        Pubkey::find_program_address(&[CONFIG_ACCOUNT_SEED], tip_payment_program_id);
+    let config = get_config(bank, &config_pda)?;
+    stats.config_load_duration = phase_started.elapsed();
+
+    let bb_commission_pct: u64 = config.block_builder_commission_pct;
+    let tip_receiver: Pubkey = config.tip_receiver;
+
+    // the last leader in an epoch may not crank the tip program before the epoch is over, which
+    // would result in MEV rewards for epoch N not being cranked until epoch N + 1. This means that
+    // the account balance in the snapshot could be incorrect.
+    // We assume that the rewards sitting in the tip program PDAs are cranked out by the time all of
+    // the rewards are claimed.
+    let phase_started = Instant::now();
+    let tip_accounts = derive_tip_payment_pubkeys(tip_payment_program_id);
+    stats.tip_payment_pda_count = tip_accounts.tip_pdas.len();
+
+    // includes the block builder fee
+    let excess_tip_balances: u64 = tip_accounts
+        .tip_pdas
+        .iter()
+        .map(|pubkey| {
+            let tip_account = bank.get_account(pubkey).expect("tip account exists");
+            tip_account
+                .lamports()
+                .checked_sub(bank.get_minimum_balance_for_rent_exemption(tip_account.data().len()))
+                .expect("tip balance underflow")
+        })
+        .sum();
+    // matches math in tip payment program
+    let block_builder_tips = excess_tip_balances
+        .checked_mul(bb_commission_pct)
+        .expect("block_builder_tips overflow")
+        .checked_div(100)
+        .expect("block_builder_tips division error");
+    let tip_receiver_fee = excess_tip_balances
+        .checked_sub(block_builder_tips)
+        .expect("tip_receiver_fee doesnt underflow");
+    stats.tip_payment_balance_duration = phase_started.elapsed();
+
+    let phase_started = Instant::now();
+    let mut total_delegations_in_stake_metas = 0usize;
+    let mut stake_metas: Vec<StakeMeta> = Vec::with_capacity(epoch_vote_accounts.len());
+    for (vote_pubkey, (_, vote_account)) in epoch_vote_accounts.iter() {
+        let Some(mut delegations) = voter_pubkey_to_delegations.get(vote_pubkey).cloned() else {
+            stats.validators_without_delegations_count += 1;
+            warn!(
+                "voter_pubkey not found in voter_pubkey_to_delegations map [validator_vote_pubkey={}]",
+                vote_pubkey
+            );
+            continue;
+        };
+
+        stats.max_delegations_per_validator =
+            stats.max_delegations_per_validator.max(delegations.len());
+        total_delegations_in_stake_metas += delegations.len();
+
+        let subphase_started = Instant::now();
+        let total_delegated = delegations.iter().fold(0u64, |sum, delegation| {
+            sum.checked_add(delegation.lamports_delegated)
+                .expect("total delegated lamports should not overflow u64")
+        });
+        stats.total_delegated_duration += subphase_started.elapsed();
+
+        let subphase_started = Instant::now();
+        let maybe_tip_distribution_meta =
+            get_distribution_meta_with_stats::<TipDistributionAccount, WrappedTipDistributionMeta>(
+                bank,
+                tip_distribution_program_id,
+                vote_pubkey,
+                Some(TipReceiverInfo {
+                    tip_receiver,
+                    tip_receiver_fee,
+                }),
+                &mut stats,
+                DistributionMetaKind::Tip,
+            );
+        stats.tip_distribution_meta_duration += subphase_started.elapsed();
+
+        let subphase_started = Instant::now();
+        let maybe_priority_fee_distribution_meta = get_distribution_meta_with_stats::<
+            PriorityFeeDistributionAccount,
+            WrappedPriorityFeeDistributionMeta,
+        >(
+            bank,
+            priority_fee_distribution_program_id,
+            vote_pubkey,
+            None,
+            &mut stats,
+            DistributionMetaKind::PriorityFee,
+        );
+        stats.priority_fee_distribution_meta_duration += subphase_started.elapsed();
+
+        let vote_state = vote_account.vote_state_view();
+        let subphase_started = Instant::now();
+        delegations.sort();
+        stats.delegations_sort_duration += subphase_started.elapsed();
+
+        stake_metas.push(StakeMeta {
+            maybe_tip_distribution_meta: maybe_tip_distribution_meta.map(|x| x.0),
+            maybe_priority_fee_distribution_meta: maybe_priority_fee_distribution_meta.map(|x| x.0),
+            validator_node_pubkey: *vote_state.node_pubkey(),
+            validator_vote_account: *vote_pubkey,
+            delegations,
+            total_delegated,
+            commission: vote_state.commission(),
+        });
+    }
+    stats.stake_meta_loop_duration = phase_started.elapsed();
+    stats.generated_stake_metas_count = stake_metas.len();
+    if stats.generated_stake_metas_count > 0 {
+        stats.avg_delegations_per_validator =
+            total_delegations_in_stake_metas as f64 / stats.generated_stake_metas_count as f64;
+    }
+
+    let phase_started = Instant::now();
+    stake_metas.sort();
+    stats.final_stake_metas_sort_duration = phase_started.elapsed();
+
+    let stake_meta_collection = StakeMetaCollection {
+        stake_metas,
+        tip_distribution_program_id: tip_distribution_program_id.to_owned(),
+        priority_fee_distribution_program_id: priority_fee_distribution_program_id.to_owned(),
+        bank_hash: bank.hash().to_string(),
+        epoch: bank.epoch(),
+        slot: bank.slot(),
+    };
+    stats.total_duration = total_started.elapsed();
+    stats.log();
+
+    Ok(stake_meta_collection)
 }
 
 /// Creates a collection of [StakeMeta]'s from the given bank.
@@ -184,6 +493,77 @@ pub fn generate_stake_meta_collection(
     })
 }
 
+fn get_distribution_meta_with_stats<DistributionAccount, DistMeta>(
+    bank: &Arc<Bank>,
+    program_id: &Pubkey,
+    vote_pubkey: &Pubkey,
+    tip_receiver_info: Option<TipReceiverInfo>,
+    stats: &mut GenerateStakeMetaStats,
+    kind: DistributionMetaKind,
+) -> Option<DistMeta>
+where
+    DistributionAccount: BorshDeserialize,
+    DistMeta: DistributionMeta<DistributionAccountType = DistributionAccount>,
+{
+    let distribution_account_pubkey =
+        DistMeta::derive_distribution_account_address(program_id, vote_pubkey, bank.epoch());
+    let Some(mut account_data) = bank.get_account(&distribution_account_pubkey) else {
+        stats.record_distribution_missing(kind);
+        return None;
+    };
+
+    if account_data.owner() != program_id {
+        stats.record_distribution_wrong_owner(kind);
+        return None;
+    }
+
+    let Some(distribution_account_data) = account_data.data().get(8..) else {
+        stats.record_distribution_deserialize_failed(kind);
+        return None;
+    };
+    let distribution_account =
+        DistributionAccount::deserialize(&mut &distribution_account_data[..]).ok();
+    let Some(distribution_account) = distribution_account else {
+        stats.record_distribution_deserialize_failed(kind);
+        return None;
+    };
+
+    // [Tip Distribution ONLY] This mirrors get_distribution_meta: credit excess tip receiver fees
+    // if the derived tip distribution account is also the configured tip receiver.
+    if let Some(tip_receiver_info) = tip_receiver_info {
+        if distribution_account_pubkey == tip_receiver_info.tip_receiver {
+            account_data.set_lamports(
+                account_data
+                    .lamports()
+                    .checked_add(tip_receiver_info.tip_receiver_fee)
+                    .expect("tip overflow"),
+            );
+        }
+    }
+
+    let actual_len = account_data.data().len();
+    let expected_len = 8_usize.saturating_add(size_of::<DistributionAccount>());
+    if actual_len != expected_len {
+        warn!("len mismatch actual={actual_len}, expected={expected_len}");
+    }
+    let rent_exempt_amount = bank.get_minimum_balance_for_rent_exemption(account_data.data().len());
+
+    let distribution_meta = DistMeta::new_from_account(
+        distribution_account,
+        account_data,
+        distribution_account_pubkey,
+        rent_exempt_amount,
+    )
+    .ok();
+    if distribution_meta.is_some() {
+        stats.record_distribution_found(kind);
+    } else {
+        stats.record_distribution_meta_build_failed(kind);
+    }
+
+    distribution_meta
+}
+
 /// Load and deserialize config from Bank. If it does not exist, propagate error.
 fn get_config(bank: &Arc<Bank>, config_pubkey: &Pubkey) -> Result<Config, StakeMetaGeneratorError> {
     bank.get_account(config_pubkey)
@@ -195,6 +575,60 @@ fn get_config(bank: &Arc<Bank>, config_pubkey: &Pubkey) -> Result<Config, StakeM
                 StakeMetaGeneratorError::AnchorError(String::from("Failed to deserialize config"))
             })
         })
+}
+
+/// Stats-aware copy of [group_delegations_by_voter_pubkey].
+fn group_delegations_by_voter_pubkey_with_stats(
+    delegations: &im::HashMap<Pubkey, StakeAccount>,
+    bank: &Bank,
+    stats: &mut GenerateStakeMetaStats,
+) -> HashMap<Pubkey, Vec<Delegation>> {
+    let mut delegations_by_voter_pubkey = HashMap::<Pubkey, Vec<Delegation>>::new();
+
+    for (stake_pubkey, stake_account) in delegations {
+        stats.stake_history_loads += 1;
+        let phase_started = Instant::now();
+        let stake_history_account = bank
+            .get_account(&stake_history::id())
+            .expect("stake history sysvar account should be present in the loaded bank");
+        stats.stake_history_load_duration += phase_started.elapsed();
+
+        let phase_started = Instant::now();
+        let stake_history = from_account::<StakeHistory, _>(&stake_history_account)
+            .expect("stake history sysvar account should deserialize");
+        stats.stake_history_deserialize_duration += phase_started.elapsed();
+
+        let active_stake = stake_account.delegation().stake(
+            bank.epoch(),
+            &stake_history,
+            bank.new_warmup_cooldown_rate_epoch(),
+        );
+        if active_stake == 0 {
+            stats.inactive_delegations_count += 1;
+            continue;
+        }
+
+        stats.active_delegations_count += 1;
+        delegations_by_voter_pubkey
+            .entry(stake_account.delegation().voter_pubkey)
+            .or_default()
+            .push(Delegation {
+                stake_account_pubkey: *stake_pubkey,
+                staker_pubkey: stake_account
+                    .stake_state()
+                    .authorized()
+                    .map(|a| a.staker)
+                    .unwrap_or_default(),
+                withdrawer_pubkey: stake_account
+                    .stake_state()
+                    .authorized()
+                    .map(|a| a.withdrawer)
+                    .unwrap_or_default(),
+                lamports_delegated: stake_account.delegation().stake,
+            });
+    }
+
+    delegations_by_voter_pubkey
 }
 
 /// Given an [EpochStakes] object, return delegations grouped by voter_pubkey (validator delegated to).
