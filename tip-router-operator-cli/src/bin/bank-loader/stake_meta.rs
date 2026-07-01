@@ -85,7 +85,7 @@ fn write_stake_meta_collection(
             output_path.display()
         )
     })?;
-    serde_json::to_writer_pretty(file, stake_meta_collection).with_context(|| {
+    serde_json::to_writer(file, stake_meta_collection).with_context(|| {
         format!(
             "failed to write stake meta collection to {}",
             output_path.display()
