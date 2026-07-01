@@ -15,29 +15,33 @@ use {
     },
 };
 
-const TESTNET_TIP_DISTRIBUTION_PROGRAM_ID: &str = "DzvGET57TAgEDxvm3ERUM4GNcsAJdqjDLCne9sdfY4wf";
-const TESTNET_PRIORITY_FEE_DISTRIBUTION_PROGRAM_ID: &str =
-    "9yw8YAKz16nFmA9EvHzKyVCYErHAJ6ZKtmK6adDBvmuU";
-const TESTNET_TIP_PAYMENT_PROGRAM_ID: &str = "GJHtFqM9agxPmkeKjHny6qiRKrXZALvvFGiKf11QE7hy";
+use crate::cli::StakeMetaCluster;
 
 #[derive(Debug)]
 pub(crate) struct StakeMetaConfig {
     pub(crate) output_dir: PathBuf,
+    pub(crate) cluster: StakeMetaCluster,
+    pub(crate) tip_distribution_program_id: Pubkey,
+    pub(crate) priority_fee_distribution_program_id: Pubkey,
+    pub(crate) tip_payment_program_id: Pubkey,
 }
 
 pub(crate) fn generate(bank: Bank, config: &StakeMetaConfig) -> Result<StakeMetaCollection> {
     let bank = Arc::new(bank);
     let started = Instant::now();
-    let tip_distribution_program_id = testnet_program_id(TESTNET_TIP_DISTRIBUTION_PROGRAM_ID)?;
-    let priority_fee_distribution_program_id =
-        testnet_program_id(TESTNET_PRIORITY_FEE_DISTRIBUTION_PROGRAM_ID)?;
-    let tip_payment_program_id = testnet_program_id(TESTNET_TIP_PAYMENT_PROGRAM_ID)?;
+    info!(
+        "stake_meta_cluster: {} tip_distribution_program_id: {} priority_fee_distribution_program_id: {} tip_payment_program_id: {}",
+        config.cluster,
+        config.tip_distribution_program_id,
+        config.priority_fee_distribution_program_id,
+        config.tip_payment_program_id
+    );
 
     let stake_meta_collection = generate_stake_meta_collection_with_stats(
         &bank,
-        &tip_distribution_program_id,
-        &priority_fee_distribution_program_id,
-        &tip_payment_program_id,
+        &config.tip_distribution_program_id,
+        &config.priority_fee_distribution_program_id,
+        &config.tip_payment_program_id,
     )
     .map_err(|error| anyhow!("{error:?}"))?;
 
@@ -59,12 +63,6 @@ pub(crate) fn generate(bank: Bank, config: &StakeMetaConfig) -> Result<StakeMeta
     );
 
     Ok(stake_meta_collection)
-}
-
-fn testnet_program_id(program_id: &str) -> Result<Pubkey> {
-    program_id
-        .parse()
-        .with_context(|| format!("invalid testnet program id {program_id}"))
 }
 
 fn write_stake_meta_collection(

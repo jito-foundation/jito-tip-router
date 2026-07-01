@@ -1,6 +1,10 @@
 use {
-    clap::{Args, Parser, Subcommand},
-    std::path::{Path, PathBuf},
+    clap::{Args, Parser, Subcommand, ValueEnum},
+    solana_sdk::pubkey::Pubkey,
+    std::{
+        path::{Path, PathBuf},
+        str::FromStr,
+    },
 };
 
 #[derive(Debug, Parser)]
@@ -90,6 +94,10 @@ pub(crate) struct StakeMetaArgs {
     /// Output directory for the generated StakeMetaCollection file. Defaults to --output-dir.
     #[arg(long, env, value_name = "DIR")]
     pub(crate) stake_meta_output_dir: Option<PathBuf>,
+
+    /// Program id set to use for StakeMetaCollection generation.
+    #[arg(long, env, value_enum, default_value_t = StakeMetaCluster::Mainnet)]
+    pub(crate) stake_meta_cluster: StakeMetaCluster,
 }
 
 impl StakeMetaArgs {
@@ -98,4 +106,51 @@ impl StakeMetaArgs {
             .clone()
             .unwrap_or_else(|| default_output_dir.to_path_buf())
     }
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub(crate) enum StakeMetaCluster {
+    Mainnet,
+    Testnet,
+}
+
+impl std::fmt::Display for StakeMetaCluster {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Mainnet => write!(f, "mainnet"),
+            Self::Testnet => write!(f, "testnet"),
+        }
+    }
+}
+
+impl StakeMetaCluster {
+    pub(crate) fn program_ids(self) -> StakeMetaProgramIds {
+        match self {
+            Self::Mainnet => StakeMetaProgramIds {
+                tip_distribution_program_id: pubkey("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7"),
+                priority_fee_distribution_program_id: pubkey(
+                    "Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3",
+                ),
+                tip_payment_program_id: pubkey("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"),
+            },
+            Self::Testnet => StakeMetaProgramIds {
+                tip_distribution_program_id: pubkey("DzvGET57TAgEDxvm3ERUM4GNcsAJdqjDLCne9sdfY4wf"),
+                priority_fee_distribution_program_id: pubkey(
+                    "9yw8YAKz16nFmA9EvHzKyVCYErHAJ6ZKtmK6adDBvmuU",
+                ),
+                tip_payment_program_id: pubkey("GJHtFqM9agxPmkeKjHny6qiRKrXZALvvFGiKf11QE7hy"),
+            },
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct StakeMetaProgramIds {
+    pub(crate) tip_distribution_program_id: Pubkey,
+    pub(crate) priority_fee_distribution_program_id: Pubkey,
+    pub(crate) tip_payment_program_id: Pubkey,
+}
+
+fn pubkey(value: &str) -> Pubkey {
+    Pubkey::from_str(value).expect("stake meta program id constant is a valid pubkey")
 }

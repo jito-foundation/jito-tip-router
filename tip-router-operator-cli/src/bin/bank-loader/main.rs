@@ -110,8 +110,13 @@ fn maybe_run_stake_meta_generation(
         return Ok(());
     }
 
+    let program_ids = args.stake_meta_cluster.program_ids();
     let config = StakeMetaConfig {
         output_dir: args.output_dir_or_default(default_output_dir),
+        cluster: args.stake_meta_cluster,
+        tip_distribution_program_id: program_ids.tip_distribution_program_id,
+        priority_fee_distribution_program_id: program_ids.priority_fee_distribution_program_id,
+        tip_payment_program_id: program_ids.tip_payment_program_id,
     };
     stake_meta::generate(bank, &config)?;
     Ok(())
