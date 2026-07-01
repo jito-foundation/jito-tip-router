@@ -473,7 +473,6 @@ pub fn get_bank_from_snapshot_at_slot(
     let mut full_snapshot_archives = get_full_snapshot_archives(full_snapshots_path);
     full_snapshot_archives.retain(|archive| archive.snapshot_archive_info().slot == snapshot_slot);
 
-    // TODO: Log if more than 1
     if full_snapshot_archives.len() != 1 {
         return Err(LedgerUtilsError::MissingSnapshotAtSlot(snapshot_slot));
     }
