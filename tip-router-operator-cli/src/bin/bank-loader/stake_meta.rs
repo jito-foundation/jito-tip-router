@@ -43,7 +43,13 @@ pub(crate) fn generate(bank: Bank, config: &StakeMetaConfig) -> Result<StakeMeta
 
     info!("stake_meta_duration_ms: {}", started.elapsed().as_millis());
 
-    let _output_path = write_stake_meta_collection(&stake_meta_collection, &config.output_dir)?;
+    let write_started = Instant::now();
+    let output_path = write_stake_meta_collection(&stake_meta_collection, &config.output_dir)?;
+    info!(
+        "stake_meta_write_duration_ms: {} output_path: {}",
+        write_started.elapsed().as_millis(),
+        output_path.display()
+    );
     info!(
         "Created StakeMetaCollection: epoch: {} slot: {} num_stake_metas: {} bank_hash: {}",
         stake_meta_collection.epoch,
