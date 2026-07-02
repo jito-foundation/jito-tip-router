@@ -17,17 +17,17 @@ use {
 Build and reuse a durable Agave fastboot bank cache for rapid testing of bank-processing code.
 
 Summary:
-  create-bank-cache loads a full snapshot archive once, writes a durable fastboot bank snapshot dir,
-  and hard-links account storages into the cache.
+  create-bank-cache loads a full snapshot archive, optionally layers an incremental snapshot archive,
+  writes a durable fastboot bank snapshot dir, and hard-links account storages into the cache.
 
   load-bank-cache loads a fresh Bank from that cache repeatedly, skipping archive untar/decompression
-  while still rebuilding the in-memory accounts index.
+  while still rebuilding the in-memory accounts index. The cached slot is detected from the cache.
 
 The ledger path is used only to read genesis. Snapshot archives and one output cache root are supplied separately.",
     after_long_help = "\
 Canonical examples:
-  bank-loader create-bank-cache --ledger-path <LEDGER_DIR> --slot <SLOT> --output-dir <CACHE_DIR> --snapshot-archive-dir <SNAPSHOT_DIR>
-  bank-loader load-bank-cache --ledger-path <LEDGER_DIR> --slot <SLOT> --output-dir <CACHE_DIR> --skip-initial-hash-calc"
+  bank-loader create-bank-cache --ledger-path <LEDGER_DIR> --output-dir <CACHE_DIR> --full-snapshot <FULL_SNAPSHOT_FILE> [--incremental-snapshot <INCREMENTAL_SNAPSHOT_FILE>]
+  bank-loader load-bank-cache --ledger-path <LEDGER_DIR> --output-dir <CACHE_DIR>"
 )]
 pub(crate) struct Cli {
     #[command(subcommand)]
@@ -39,10 +39,6 @@ pub(crate) struct BankCacheConfig {
     /// Validator ledger directory used; solely to read genesis.
     #[arg(long, env, value_name = "LEDGER_DIR")]
     pub(crate) ledger_path: PathBuf,
-
-    /// Bank slot to prepare or load from the durable cache.
-    #[arg(long, env, value_name = "SLOT")]
-    pub(crate) slot: u64,
 
     /// Output root for the durable bank cache.
     #[arg(long, env, value_name = "CACHE_DIR")]
@@ -63,9 +59,14 @@ pub(crate) struct BankCacheFromSnapshotArgs {
     #[command(flatten)]
     pub(crate) cache: BankCacheConfig,
 
-    /// Directory containing the source full snapshot archive.
-    #[arg(long, env, value_name = "SNAPSHOT_DIR")]
-    pub(crate) snapshot_archive_dir: PathBuf,
+    /// Full snapshot archive file to load. Required; its slot is the base slot.
+    #[arg(long, env, value_name = "FULL_SNAPSHOT_FILE")]
+    pub(crate) full_snapshot: PathBuf,
+
+    /// Optional incremental snapshot archive file to layer on the full. When set, the resulting
+    /// bank (and cache) slot is the incremental's tip slot, and its base slot must match the full.
+    #[arg(long, env, value_name = "INCREMENTAL_SNAPSHOT_FILE")]
+    pub(crate) incremental_snapshot: Option<PathBuf>,
 }
 
 #[derive(Debug, Args)]

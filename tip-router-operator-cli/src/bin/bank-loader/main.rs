@@ -1,10 +1,11 @@
 use {
     agave_snapshots::{
-        paths::get_full_snapshot_archives,
-        snapshot_archive_info::{FullSnapshotArchiveInfo, SnapshotArchiveInfoGetter},
+        snapshot_archive_info::{
+            FullSnapshotArchiveInfo, IncrementalSnapshotArchiveInfo, SnapshotArchiveInfoGetter,
+        },
         SnapshotArchiveKind, SnapshotKind, SnapshotVersion,
     },
-    anyhow::{anyhow, ensure, Context, Result},
+    anyhow::{ensure, Context, Result},
     clap::Parser,
     env_logger::Env,
     log::info,
@@ -51,16 +52,31 @@ fn main() -> Result<()> {
 
 fn handle_create_bank_cache(args: &BankCacheFromSnapshotArgs) -> Result<()> {
     let config = &args.cache;
-    let cache_paths = BankCachePaths::new(config.output_dir.clone(), config.slot);
-    let full_snapshot_archive =
-        full_snapshot_archive_at_slot(&args.snapshot_archive_dir, config.slot)?;
+    let full_snapshot_archive = FullSnapshotArchiveInfo::new_from_path(args.full_snapshot.clone())?;
 
+    let incremental_snapshot_archive = args
+        .incremental_snapshot
+        .as_ref()
+        .map(|path| IncrementalSnapshotArchiveInfo::new_from_path(path.clone()))
+        .transpose()?;
+
+    let slot = cache_slot_from_snapshot_archives(
+        &full_snapshot_archive,
+        incremental_snapshot_archive.as_ref(),
+    )?;
+
+    let cache_paths = BankCachePaths::new(config.output_dir.clone(), slot);
     cache_paths.prepare_empty_dirs()?;
 
     let load_started = Instant::now();
-    let bank = load_bank_from_snapshot_archive(config, &cache_paths, &full_snapshot_archive)?;
+    let bank = load_bank_from_snapshot_archive(
+        config,
+        &cache_paths,
+        &full_snapshot_archive,
+        incremental_snapshot_archive.as_ref(),
+    )?;
     let load_duration_ms = load_started.elapsed().as_millis();
-    ensure_loaded_slot(&bank, config.slot)?;
+    ensure_loaded_slot(&bank, slot)?;
     ensure_bank_is_frozen(&bank)?;
 
     let cache_write_started = Instant::now();
@@ -70,9 +86,12 @@ fn handle_create_bank_cache(args: &BankCacheFromSnapshotArgs) -> Result<()> {
     // This cache is intentionally disk-heavy. Keep the account run and snapshot
     // directories on one filesystem so Agave can hard-link account storage.
     info!(
-        "mode: create-bank-cache snapshot_archive_dir: {} snapshot_archive: {} cache_write_duration_ms: {cache_write_duration_ms}",
-        args.snapshot_archive_dir.display(),
-        full_snapshot_archive.path().display()
+        "mode: create-bank-cache slot: {slot} full_snapshot: {} incremental_snapshot: {} cache_write_duration_ms: {cache_write_duration_ms}",
+        full_snapshot_archive.path().display(),
+        incremental_snapshot_archive
+            .as_ref()
+            .map(|incremental| incremental.path().display().to_string())
+            .unwrap_or_else(|| "<none>".to_string()),
     );
     log_loaded_bank_context(config, &bank, &cache_paths, load_duration_ms);
 
@@ -81,24 +100,41 @@ fn handle_create_bank_cache(args: &BankCacheFromSnapshotArgs) -> Result<()> {
 
 fn handle_load_bankcache(args: &LoadBankCacheArgs) -> Result<()> {
     let config = &args.cache;
-    let cache_paths = BankCachePaths::new(config.output_dir.clone(), config.slot);
+    let bank_snapshot = detect_cached_bank_snapshot(&config.output_dir)?;
+    let slot = bank_snapshot.slot;
+    let cache_paths = BankCachePaths::new(config.output_dir.clone(), slot);
     let load_started = Instant::now();
     let bank = load_bank_from_dir(
         config,
         args.skip_initial_hash_calc,
         args.verify_index,
         &cache_paths,
+        &bank_snapshot,
     )?;
     let load_duration_ms = load_started.elapsed().as_millis();
 
     info!(
-        "mode: load-bank-cache skip_initial_hash_calc: {} verify_index: {}",
+        "mode: load-bank-cache slot: {slot} skip_initial_hash_calc: {} verify_index: {}",
         args.skip_initial_hash_calc, args.verify_index
     );
     ensure_bank_is_frozen(&bank)?;
     log_loaded_bank_context(config, &bank, &cache_paths, load_duration_ms);
     maybe_run_stake_meta_generation(bank, &args.stake_meta, &config.output_dir)?;
     Ok(())
+}
+
+/// Locate the single fastboot bank snapshot in a cache dir. Errors unless exactly one exists.
+fn detect_cached_bank_snapshot(output_dir: &Path) -> Result<BankSnapshotInfo> {
+    let root = output_dir.join("bank-snapshots");
+    let mut snapshots = snapshot_utils::get_bank_snapshots(&root);
+
+    ensure!(
+        snapshots.len() == 1,
+        "expected exactly one bank snapshot under {}, found {}",
+        root.display(),
+        snapshots.len()
+    );
+    Ok(snapshots.pop().expect("snapshot count checked before pop"))
 }
 
 fn maybe_run_stake_meta_generation(
@@ -125,11 +161,35 @@ fn maybe_run_stake_meta_generation(
 fn ensure_loaded_slot(bank: &Bank, requested_slot: u64) -> Result<()> {
     ensure!(
         bank.slot() == requested_slot,
-        "loaded bank slot {} does not match requested slot {}",
+        "loaded bank slot {} does not match expected slot {}",
         bank.slot(),
         requested_slot
     );
     Ok(())
+}
+
+fn cache_slot_from_snapshot_archives(
+    full_snapshot_archive: &FullSnapshotArchiveInfo,
+    incremental_snapshot_archive: Option<&IncrementalSnapshotArchiveInfo>,
+) -> Result<u64> {
+    let Some(incremental_snapshot_archive) = incremental_snapshot_archive else {
+        return Ok(full_snapshot_archive.slot());
+    };
+
+    ensure!(
+        incremental_snapshot_archive.base_slot() == full_snapshot_archive.slot(),
+        "incremental base slot {} does not match full snapshot slot {}; not a matching pair",
+        incremental_snapshot_archive.base_slot(),
+        full_snapshot_archive.slot()
+    );
+    ensure!(
+        incremental_snapshot_archive.slot() > full_snapshot_archive.slot(),
+        "incremental tip slot {} must be greater than full snapshot slot {}",
+        incremental_snapshot_archive.slot(),
+        full_snapshot_archive.slot()
+    );
+
+    Ok(incremental_snapshot_archive.slot())
 }
 
 fn ensure_bank_is_frozen(bank: &Bank) -> Result<()> {
@@ -149,34 +209,18 @@ fn log_loaded_bank_context(
 ) {
     info!("ledger_path: {}", config.ledger_path.display());
     info!("output_dir: {}", config.output_dir.display());
-    info!("slot: {}", config.slot);
+    info!("slot: {}", bank.slot());
     info!("bank_hash: {}", bank.hash());
     info!("epoch: {}", bank.epoch());
     info!("load_duration_ms: {load_duration_ms}");
     info!("{paths:?}");
 }
 
-fn full_snapshot_archive_at_slot(
-    snapshot_archive_dir: &Path,
-    slot: u64,
-) -> Result<FullSnapshotArchiveInfo> {
-    let full_archives = get_full_snapshot_archives(snapshot_archive_dir);
-
-    // There can technically be more than one for a single slot, but we will ignore this for now bc
-    // it seems like an extreme edge case
-    let snapshot = full_archives.iter().find(|archive| archive.slot() == slot);
-
-    snapshot.cloned().ok_or(anyhow!(
-        "no full snapshot archive for slot {} found in {}",
-        slot,
-        snapshot_archive_dir.display()
-    ))
-}
-
 fn load_bank_from_snapshot_archive(
     config: &BankCacheConfig,
     paths: &BankCachePaths,
     full_snapshot_archive: &FullSnapshotArchiveInfo,
+    incremental_snapshot_archive: Option<&IncrementalSnapshotArchiveInfo>,
 ) -> Result<Bank> {
     let genesis_config = open_genesis(&config.ledger_path)?;
     let exit = Arc::new(AtomicBool::new(false));
@@ -185,7 +229,7 @@ fn load_bank_from_snapshot_archive(
         &[paths.accounts_run_dir().to_path_buf()],
         paths.bank_snapshot_cache_dir(),
         full_snapshot_archive,
-        None,
+        incremental_snapshot_archive,
         &genesis_config,
         &RuntimeConfig::default(),
         None,
@@ -252,25 +296,17 @@ fn load_bank_from_dir(
     skip_initial_hash_calc: bool,
     verify_index: bool,
     paths: &BankCachePaths,
+    bank_snapshot_info: &BankSnapshotInfo,
 ) -> Result<Bank> {
     paths.ensure_accounts_run_dir()?;
 
-    let bank_snapshot_info =
-        BankSnapshotInfo::new_from_dir(paths.bank_snapshot_cache_dir(), config.slot).with_context(
-            || {
-                format!(
-                    "failed to read bank snapshot dir {}",
-                    paths.bank_snapshot_dir().display()
-                )
-            },
-        )?;
     let genesis_config = open_genesis(&config.ledger_path)?;
     let exit = Arc::new(AtomicBool::new(false));
     let account_paths = vec![paths.accounts_run_dir().to_path_buf()];
 
     let bank = snapshot_bank_utils::bank_from_snapshot_dir(
         &account_paths,
-        &bank_snapshot_info,
+        bank_snapshot_info,
         &genesis_config,
         &RuntimeConfig::default(),
         None,
@@ -290,7 +326,7 @@ fn load_bank_from_dir(
         )
     })?;
     exit.store(true, Ordering::Relaxed);
-    ensure_loaded_slot(&bank, config.slot)?;
+    ensure_loaded_slot(&bank, bank_snapshot_info.slot)?;
     ensure_bank_is_frozen(&bank)?;
 
     Ok(bank)
