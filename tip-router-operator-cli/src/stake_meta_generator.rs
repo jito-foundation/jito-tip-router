@@ -1,5 +1,4 @@
 use borsh::de::BorshDeserialize;
-use itertools::Itertools;
 use jito_priority_fee_distribution_sdk::PriorityFeeDistributionAccount;
 use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{Config, CONFIG_ACCOUNT_SEED};
@@ -34,6 +33,8 @@ use crate::{
         WrappedPriorityFeeDistributionMeta, WrappedTipDistributionMeta,
     },
 };
+
+const MISSING_VOTER_PUBKEY_SAMPLE_LIMIT: usize = 10;
 
 #[derive(Error, Debug)]
 pub enum StakeMetaGeneratorError {
@@ -208,6 +209,28 @@ impl GenerateStakeMetaStats {
     }
 }
 
+fn record_missing_voter_pubkey_sample(sample: &mut Vec<Pubkey>, vote_pubkey: &Pubkey) {
+    if sample.len() < MISSING_VOTER_PUBKEY_SAMPLE_LIMIT {
+        sample.push(*vote_pubkey);
+    }
+}
+
+fn warn_missing_voter_pubkeys(missing_count: usize, sample: &[Pubkey]) {
+    if missing_count == 0 {
+        return;
+    }
+
+    let sample = sample
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    warn!(
+        "voter_pubkeys not found in voter_pubkey_to_delegations map count={} sample_validator_vote_pubkeys=[{}]",
+        missing_count, sample
+    );
+}
+
 /// Creates a collection of [StakeMeta]'s from the given bank.
 #[allow(clippy::significant_drop_tightening)]
 pub fn generate_stake_meta_collection_with_stats(
@@ -239,7 +262,7 @@ pub fn generate_stake_meta_collection_with_stats(
     stats.stake_delegations_count = delegations.len();
 
     let phase_started = Instant::now();
-    let voter_pubkey_to_delegations =
+    let mut voter_pubkey_to_delegations =
         group_delegations_by_voter_pubkey_with_stats(delegations, bank, &mut stats);
     stats.group_delegations_duration = phase_started.elapsed();
     stats.validators_with_delegations_count = voter_pubkey_to_delegations.len();
@@ -288,14 +311,12 @@ pub fn generate_stake_meta_collection_with_stats(
 
     let phase_started = Instant::now();
     let mut total_delegations_in_stake_metas = 0usize;
+    let mut missing_voter_pubkey_sample = Vec::new();
     let mut stake_metas: Vec<StakeMeta> = Vec::with_capacity(epoch_vote_accounts.len());
     for (vote_pubkey, (_, vote_account)) in epoch_vote_accounts.iter() {
-        let Some(mut delegations) = voter_pubkey_to_delegations.get(vote_pubkey).cloned() else {
+        let Some(mut delegations) = voter_pubkey_to_delegations.remove(vote_pubkey) else {
             stats.validators_without_delegations_count += 1;
-            warn!(
-                "voter_pubkey not found in voter_pubkey_to_delegations map [validator_vote_pubkey={}]",
-                vote_pubkey
-            );
+            record_missing_voter_pubkey_sample(&mut missing_voter_pubkey_sample, vote_pubkey);
             continue;
         };
 
@@ -355,6 +376,10 @@ pub fn generate_stake_meta_collection_with_stats(
         });
     }
     stats.stake_meta_loop_duration = phase_started.elapsed();
+    warn_missing_voter_pubkeys(
+        stats.validators_without_delegations_count,
+        &missing_voter_pubkey_sample,
+    );
     stats.generated_stake_metas_count = stake_metas.len();
     if stats.generated_stake_metas_count > 0 {
         stats.avg_delegations_per_validator =
@@ -398,7 +423,7 @@ pub fn generate_stake_meta_collection(
 
     let top_epoch_stakes = bank.get_top_epoch_stakes();
     let delegations = top_epoch_stakes.stake_delegations();
-    let voter_pubkey_to_delegations = group_delegations_by_voter_pubkey(delegations, bank);
+    let mut voter_pubkey_to_delegations = group_delegations_by_voter_pubkey(delegations, bank);
 
     // Get config PDA
     let (config_pda, _) =
@@ -437,49 +462,56 @@ pub fn generate_stake_meta_collection(
         .checked_sub(block_builder_tips)
         .expect("tip_receiver_fee doesnt underflow");
 
-    let mut stake_metas: Vec<StakeMeta> = epoch_vote_accounts
-        .iter()
-        .filter_map(|(vote_pubkey, (_, vote_account))| {
-            voter_pubkey_to_delegations.get(vote_pubkey).cloned().map_or_else(|| {
-                warn!(
-                    "voter_pubkey not found in voter_pubkey_to_delegations map [validator_vote_pubkey={}]",
-                    vote_pubkey
-                );
-                None
-            }, |mut delegations| {
-                let total_delegated = delegations.iter().fold(0u64, |sum, delegation| {
-                    sum.checked_add(delegation.lamports_delegated)
-                        .expect("total delegated lamports should not overflow u64")
-                });
+    let mut missing_voter_pubkey_count = 0usize;
+    let mut missing_voter_pubkey_sample = Vec::new();
+    let mut stake_metas: Vec<StakeMeta> = Vec::with_capacity(epoch_vote_accounts.len());
+    for (vote_pubkey, (_, vote_account)) in epoch_vote_accounts.iter() {
+        let Some(mut delegations) = voter_pubkey_to_delegations.remove(vote_pubkey) else {
+            missing_voter_pubkey_count += 1;
+            record_missing_voter_pubkey_sample(&mut missing_voter_pubkey_sample, vote_pubkey);
+            continue;
+        };
 
-                let maybe_tip_distribution_meta = get_distribution_meta::<TipDistributionAccount, WrappedTipDistributionMeta>(
-                    bank,
-                    tip_distribution_program_id,
-                    vote_pubkey,
-                    Some(TipReceiverInfo {
-                        tip_receiver,
-                        tip_receiver_fee,
-                    }));
+        let total_delegated = delegations.iter().fold(0u64, |sum, delegation| {
+            sum.checked_add(delegation.lamports_delegated)
+                .expect("total delegated lamports should not overflow u64")
+        });
 
-                let maybe_priority_fee_distribution_meta = get_distribution_meta::<PriorityFeeDistributionAccount, WrappedPriorityFeeDistributionMeta>(
-                    bank,
-                    priority_fee_distribution_program_id,
-                    vote_pubkey,
-                    None);
+        let maybe_tip_distribution_meta =
+            get_distribution_meta::<TipDistributionAccount, WrappedTipDistributionMeta>(
+                bank,
+                tip_distribution_program_id,
+                vote_pubkey,
+                Some(TipReceiverInfo {
+                    tip_receiver,
+                    tip_receiver_fee,
+                }),
+            );
 
-                let vote_state = vote_account.vote_state_view();
-                delegations.sort();
-                Some(StakeMeta {
-                    maybe_tip_distribution_meta: maybe_tip_distribution_meta.map(|x| x.0),
-                    maybe_priority_fee_distribution_meta: maybe_priority_fee_distribution_meta.map(|x| x.0),
-                    validator_node_pubkey: *vote_state.node_pubkey(),
-                    validator_vote_account: *vote_pubkey,
-                    delegations,
-                    total_delegated,
-                    commission: vote_state.commission(),
-                })
-            })})
-        .collect();
+        let maybe_priority_fee_distribution_meta = get_distribution_meta::<
+            PriorityFeeDistributionAccount,
+            WrappedPriorityFeeDistributionMeta,
+        >(
+            bank,
+            priority_fee_distribution_program_id,
+            vote_pubkey,
+            None,
+        );
+
+        let vote_state = vote_account.vote_state_view();
+        delegations.sort();
+        stake_metas.push(StakeMeta {
+            maybe_tip_distribution_meta: maybe_tip_distribution_meta.map(|x| x.0),
+            maybe_priority_fee_distribution_meta: maybe_priority_fee_distribution_meta.map(|x| x.0),
+            validator_node_pubkey: *vote_state.node_pubkey(),
+            validator_vote_account: *vote_pubkey,
+            delegations,
+            total_delegated,
+            commission: vote_state.commission(),
+        });
+    }
+
+    warn_missing_voter_pubkeys(missing_voter_pubkey_count, &missing_voter_pubkey_sample);
 
     stake_metas.sort();
 
@@ -600,32 +632,23 @@ fn group_delegations_by_voter_pubkey_with_stats(
     stats.stake_history_deserialize_duration += phase_started.elapsed();
 
     for (stake_pubkey, stake_account) in delegations {
-        let active_stake =
-            stake_account
-                .delegation()
-                .stake(epoch, &stake_history, new_rate_activation_epoch);
+        let delegation = stake_account.delegation();
+        let active_stake = delegation.stake(epoch, &stake_history, new_rate_activation_epoch);
         if active_stake == 0 {
             stats.inactive_delegations_count += 1;
             continue;
         }
 
         stats.active_delegations_count += 1;
+        let authorized = stake_account.stake_state().authorized().unwrap_or_default();
         delegations_by_voter_pubkey
-            .entry(stake_account.delegation().voter_pubkey)
+            .entry(delegation.voter_pubkey)
             .or_default()
             .push(Delegation {
                 stake_account_pubkey: *stake_pubkey,
-                staker_pubkey: stake_account
-                    .stake_state()
-                    .authorized()
-                    .map(|a| a.staker)
-                    .unwrap_or_default(),
-                withdrawer_pubkey: stake_account
-                    .stake_state()
-                    .authorized()
-                    .map(|a| a.withdrawer)
-                    .unwrap_or_default(),
-                lamports_delegated: stake_account.delegation().stake,
+                staker_pubkey: authorized.staker,
+                withdrawer_pubkey: authorized.withdrawer,
+                lamports_delegated: delegation.stake,
             });
     }
 
@@ -649,39 +672,26 @@ fn group_delegations_by_voter_pubkey(
     )
     .expect("stake history sysvar account should deserialize");
 
-    delegations
-        .into_iter()
-        .filter(|(_stake_pubkey, stake_account)| {
-            stake_account
-                .delegation()
-                .stake(epoch, &stake_history, new_rate_activation_epoch)
-                > 0
-        })
-        .into_group_map_by(|(_stake_pubkey, stake_account)| stake_account.delegation().voter_pubkey)
-        .into_iter()
-        .map(|(voter_pubkey, group)| {
-            (
-                voter_pubkey,
-                group
-                    .into_iter()
-                    .map(|(stake_pubkey, stake_account)| Delegation {
-                        stake_account_pubkey: *stake_pubkey,
-                        staker_pubkey: stake_account
-                            .stake_state()
-                            .authorized()
-                            .map(|a| a.staker)
-                            .unwrap_or_default(),
-                        withdrawer_pubkey: stake_account
-                            .stake_state()
-                            .authorized()
-                            .map(|a| a.withdrawer)
-                            .unwrap_or_default(),
-                        lamports_delegated: stake_account.delegation().stake,
-                    })
-                    .collect::<Vec<Delegation>>(),
-            )
-        })
-        .collect()
+    let mut delegations_by_voter_pubkey = HashMap::<Pubkey, Vec<Delegation>>::new();
+    for (stake_pubkey, stake_account) in delegations {
+        let delegation = stake_account.delegation();
+        if delegation.stake(epoch, &stake_history, new_rate_activation_epoch) == 0 {
+            continue;
+        }
+
+        let authorized = stake_account.stake_state().authorized().unwrap_or_default();
+        delegations_by_voter_pubkey
+            .entry(delegation.voter_pubkey)
+            .or_default()
+            .push(Delegation {
+                stake_account_pubkey: *stake_pubkey,
+                staker_pubkey: authorized.staker,
+                withdrawer_pubkey: authorized.withdrawer,
+                lamports_delegated: delegation.stake,
+            });
+    }
+
+    delegations_by_voter_pubkey
 }
 
 #[cfg(test)]
