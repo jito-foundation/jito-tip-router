@@ -341,7 +341,7 @@ pub fn generate_stake_meta_collection_with_stats(
 
         let vote_state = vote_account.vote_state_view();
         let subphase_started = Instant::now();
-        delegations.sort_unstable();
+        delegations.sort();
         stats.delegations_sort_duration += subphase_started.elapsed();
 
         stake_metas.push(StakeMeta {
@@ -468,7 +468,7 @@ pub fn generate_stake_meta_collection(
                     None);
 
                 let vote_state = vote_account.vote_state_view();
-                delegations.sort_unstable();
+                delegations.sort();
                 Some(StakeMeta {
                     maybe_tip_distribution_meta: maybe_tip_distribution_meta.map(|x| x.0),
                     maybe_priority_fee_distribution_meta: maybe_priority_fee_distribution_meta.map(|x| x.0),
