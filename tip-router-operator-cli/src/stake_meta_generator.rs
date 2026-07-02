@@ -584,26 +584,25 @@ fn group_delegations_by_voter_pubkey_with_stats(
     stats: &mut GenerateStakeMetaStats,
 ) -> HashMap<Pubkey, Vec<Delegation>> {
     let mut delegations_by_voter_pubkey = HashMap::<Pubkey, Vec<Delegation>>::new();
-    let epoch = bank.epoch();
-    let new_rate_activation_epoch = bank.new_warmup_cooldown_rate_epoch();
-
-    stats.stake_history_loads += 1;
-    let phase_started = Instant::now();
-    let stake_history_account = bank
-        .get_account(&stake_history::id())
-        .expect("stake history sysvar account should be present in the loaded bank");
-    stats.stake_history_load_duration += phase_started.elapsed();
-
-    let phase_started = Instant::now();
-    let stake_history = from_account::<StakeHistory, _>(&stake_history_account)
-        .expect("stake history sysvar account should deserialize");
-    stats.stake_history_deserialize_duration += phase_started.elapsed();
 
     for (stake_pubkey, stake_account) in delegations {
-        let active_stake =
-            stake_account
-                .delegation()
-                .stake(epoch, &stake_history, new_rate_activation_epoch);
+        stats.stake_history_loads += 1;
+        let phase_started = Instant::now();
+        let stake_history_account = bank
+            .get_account(&stake_history::id())
+            .expect("stake history sysvar account should be present in the loaded bank");
+        stats.stake_history_load_duration += phase_started.elapsed();
+
+        let phase_started = Instant::now();
+        let stake_history = from_account::<StakeHistory, _>(&stake_history_account)
+            .expect("stake history sysvar account should deserialize");
+        stats.stake_history_deserialize_duration += phase_started.elapsed();
+
+        let active_stake = stake_account.delegation().stake(
+            bank.epoch(),
+            &stake_history,
+            bank.new_warmup_cooldown_rate_epoch(),
+        );
         if active_stake == 0 {
             stats.inactive_delegations_count += 1;
             continue;
@@ -637,25 +636,19 @@ fn group_delegations_by_voter_pubkey(
     delegations: &im::HashMap<Pubkey, StakeAccount>,
     bank: &Bank,
 ) -> HashMap<Pubkey, Vec<Delegation>> {
-    let epoch = bank.epoch();
-    let new_rate_activation_epoch = bank.new_warmup_cooldown_rate_epoch();
-    // Load and deserialize the StakeHistory sysvar once instead of once per delegation.
-    // It's the same account on every iteration, so reading it inside the filter closure
-    // meant N redundant get_account + deserialize calls (N = number of delegations).
-    let stake_history = from_account::<StakeHistory, _>(
-        &bank
-            .get_account(&stake_history::id())
-            .expect("stake history sysvar account should be present in the loaded bank"),
-    )
-    .expect("stake history sysvar account should deserialize");
-
     delegations
         .into_iter()
         .filter(|(_stake_pubkey, stake_account)| {
-            stake_account
-                .delegation()
-                .stake(epoch, &stake_history, new_rate_activation_epoch)
-                > 0
+            stake_account.delegation().stake(
+                bank.epoch(),
+                &from_account::<StakeHistory, _>(
+                    &bank.get_account(&stake_history::id()).expect(
+                        "stake history sysvar account should be present in the loaded bank",
+                    ),
+                )
+                .expect("stake history sysvar account should deserialize"),
+                bank.new_warmup_cooldown_rate_epoch(),
+            ) > 0
         })
         .into_group_map_by(|(_stake_pubkey, stake_account)| stake_account.delegation().voter_pubkey)
         .into_iter()
