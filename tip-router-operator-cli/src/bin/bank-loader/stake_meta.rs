@@ -11,12 +11,12 @@ use {
         sync::Arc,
         time::Instant,
     },
-    tip_router_operator_cli::stake_meta_file_name,
+    tip_router_operator_cli::{
+        stake_meta_file_name, stake_meta_generator::generate_stake_meta_collection_with_stats,
+    },
 };
 
-use crate::{
-    cli::StakeMetaCluster, stake_meta_generator::generate_stake_meta_collection_with_stats,
-};
+use crate::cli::StakeMetaCluster;
 
 #[derive(Debug)]
 pub(crate) struct StakeMetaConfig {

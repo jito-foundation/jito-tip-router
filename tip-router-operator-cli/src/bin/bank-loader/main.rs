@@ -32,7 +32,6 @@ use {
 mod bankcache;
 mod cli;
 mod stake_meta;
-mod stake_meta_generator;
 
 use bankcache::BankCachePaths;
 use cli::{BankCacheConfig, BankCacheFromSnapshotArgs, Cli, Commands, LoadBankCacheArgs};
