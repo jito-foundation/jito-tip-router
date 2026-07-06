@@ -4,6 +4,7 @@ use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{Config, CONFIG_ACCOUNT_SEED};
 use log::*;
 use meta_merkle_tree::generated_merkle_tree::{Delegation, StakeMeta, StakeMetaCollection};
+use rayon::{prelude::*, ThreadPool, ThreadPoolBuilder};
 use solana_client::client_error::ClientError;
 use solana_genesis_utils::OpenGenesisConfigError;
 use solana_pubkey::PubkeyHasherBuilder;
@@ -30,8 +31,8 @@ use thiserror::Error;
 use crate::{
     derive_tip_payment_pubkeys,
     distribution_meta::{
-        get_distribution_meta, DistributionMeta, TipReceiverInfo,
-        WrappedPriorityFeeDistributionMeta, WrappedTipDistributionMeta,
+        DistributionMeta, TipReceiverInfo, WrappedPriorityFeeDistributionMeta,
+        WrappedTipDistributionMeta,
     },
 };
 
@@ -44,6 +45,21 @@ type DelegationsByVoterPubkey = HashMap<Pubkey, Vec<Delegation>, PubkeyHasherBui
 
 /// Mainnet has fewer than ~1k validators with active stake; pre-size to skip growth rehashes.
 const DELEGATIONS_BY_VOTER_PUBKEY_CAPACITY: usize = 1024;
+
+/// Threads in the dedicated stake-meta pool. Parallel work saturates around 4 threads: beyond
+/// that, the serial HAMT ref-collect in the grouping phase dominates the wall time.
+const STAKE_META_THREAD_POOL_THREADS: usize = 4;
+
+/// Chunks per thread when fanning delegation grouping out; >1 smooths uneven chunk costs.
+const GROUPING_CHUNKS_PER_THREAD: usize = 4;
+
+fn build_stake_meta_thread_pool() -> ThreadPool {
+    ThreadPoolBuilder::new()
+        .num_threads(STAKE_META_THREAD_POOL_THREADS)
+        .thread_name(|i| format!("stakeMeta{i:02}"))
+        .build()
+        .expect("stake meta thread pool should build")
+}
 
 #[derive(Error, Debug)]
 pub enum StakeMetaGeneratorError {
@@ -91,6 +107,7 @@ struct GenerateStakeMetaStats {
     get_top_epoch_stakes_duration: Duration,
     stake_delegations_count: usize,
     group_delegations_duration: Duration,
+    group_collect_refs_duration: Duration,
     active_delegations_count: usize,
     inactive_delegations_count: usize,
     validators_with_delegations_count: usize,
@@ -128,7 +145,36 @@ enum DistributionMetaKind {
     PriorityFee,
 }
 
+/// How a distribution-account load ended, returned from worker threads and merged into
+/// [GenerateStakeMetaStats] on the main thread.
+#[derive(Clone, Copy)]
+enum DistributionMetaOutcome {
+    Found,
+    Missing,
+    WrongOwner,
+    DeserializeFailed,
+    MetaBuildFailed,
+}
+
 impl GenerateStakeMetaStats {
+    fn record_distribution_outcome(
+        &mut self,
+        kind: DistributionMetaKind,
+        outcome: DistributionMetaOutcome,
+    ) {
+        match outcome {
+            DistributionMetaOutcome::Found => self.record_distribution_found(kind),
+            DistributionMetaOutcome::Missing => self.record_distribution_missing(kind),
+            DistributionMetaOutcome::WrongOwner => self.record_distribution_wrong_owner(kind),
+            DistributionMetaOutcome::DeserializeFailed => {
+                self.record_distribution_deserialize_failed(kind);
+            }
+            DistributionMetaOutcome::MetaBuildFailed => {
+                self.record_distribution_meta_build_failed(kind);
+            }
+        }
+    }
+
     fn record_distribution_found(&mut self, kind: DistributionMetaKind) {
         match kind {
             DistributionMetaKind::Tip => self.tip_distribution_found_count += 1,
@@ -172,13 +218,14 @@ impl GenerateStakeMetaStats {
 
     fn log(&self) {
         info!(
-            "stake_meta_stats total_duration_ms={} epoch_vote_accounts_duration_ms={} num_vote_accounts={} get_top_epoch_stakes_duration_ms={} stake_delegations_count={} group_delegations_duration_ms={} active_delegations_count={} inactive_delegations_count={} validators_with_delegations_count={} validators_without_delegations_count={} generated_stake_metas_count={} final_stake_metas_sort_duration_ms={}",
+            "stake_meta_stats total_duration_ms={} epoch_vote_accounts_duration_ms={} num_vote_accounts={} get_top_epoch_stakes_duration_ms={} stake_delegations_count={} group_delegations_duration_ms={} group_collect_refs_duration_ms={} active_delegations_count={} inactive_delegations_count={} validators_with_delegations_count={} validators_without_delegations_count={} generated_stake_metas_count={} final_stake_metas_sort_duration_ms={}",
             self.total_duration.as_millis(),
             self.epoch_vote_accounts_duration.as_millis(),
             self.num_vote_accounts,
             self.get_top_epoch_stakes_duration.as_millis(),
             self.stake_delegations_count,
             self.group_delegations_duration.as_millis(),
+            self.group_collect_refs_duration.as_millis(),
             self.active_delegations_count,
             self.inactive_delegations_count,
             self.validators_with_delegations_count,
@@ -252,6 +299,7 @@ pub fn generate_stake_meta_collection_with_stats(
 
     let total_started = Instant::now();
     let mut stats = GenerateStakeMetaStats::default();
+    let thread_pool = build_stake_meta_thread_pool();
 
     let phase_started = Instant::now();
     let epoch_vote_accounts =
@@ -272,7 +320,7 @@ pub fn generate_stake_meta_collection_with_stats(
 
     let phase_started = Instant::now();
     let mut voter_pubkey_to_delegations =
-        group_delegations_by_voter_pubkey_with_stats(delegations, bank, &mut stats);
+        group_delegations_by_voter_pubkey_with_stats(delegations, bank, &thread_pool, &mut stats);
     stats.group_delegations_duration = phase_started.elapsed();
     stats.validators_with_delegations_count = voter_pubkey_to_delegations.len();
 
@@ -321,9 +369,9 @@ pub fn generate_stake_meta_collection_with_stats(
     let phase_started = Instant::now();
     let mut total_delegations_in_stake_metas = 0usize;
     let mut missing_voter_pubkey_sample = Vec::new();
-    let mut stake_metas: Vec<StakeMeta> = Vec::with_capacity(epoch_vote_accounts.len());
+    let mut tasks: Vec<StakeMetaTask> = Vec::with_capacity(voter_pubkey_to_delegations.len());
     for (vote_pubkey, (_, vote_account)) in epoch_vote_accounts.iter() {
-        let Some(mut delegations) = voter_pubkey_to_delegations.remove(vote_pubkey) else {
+        let Some(delegations) = voter_pubkey_to_delegations.remove(vote_pubkey) else {
             stats.validators_without_delegations_count += 1;
             record_missing_voter_pubkey_sample(&mut missing_voter_pubkey_sample, vote_pubkey);
             continue;
@@ -333,59 +381,46 @@ pub fn generate_stake_meta_collection_with_stats(
             stats.max_delegations_per_validator.max(delegations.len());
         total_delegations_in_stake_metas += delegations.len();
 
-        let subphase_started = Instant::now();
-        let total_delegated = delegations.iter().fold(0u64, |sum, delegation| {
-            sum.checked_add(delegation.lamports_delegated)
-                .expect("total delegated lamports should not overflow u64")
+        let vote_state = vote_account.vote_state_view();
+        tasks.push(StakeMetaTask {
+            vote_pubkey: *vote_pubkey,
+            node_pubkey: *vote_state.node_pubkey(),
+            commission: vote_state.commission(),
+            delegations,
         });
-        stats.total_delegated_duration += subphase_started.elapsed();
+    }
 
-        let subphase_started = Instant::now();
-        let maybe_tip_distribution_meta =
-            get_distribution_meta_with_stats::<TipDistributionAccount, WrappedTipDistributionMeta>(
-                bank,
-                tip_distribution_program_id,
-                vote_pubkey,
-                Some(TipReceiverInfo {
+    let results: Vec<StakeMetaTaskResult> = thread_pool.install(|| {
+        tasks
+            .into_par_iter()
+            .map(|task| {
+                build_stake_meta_task(
+                    bank,
+                    tip_distribution_program_id,
+                    priority_fee_distribution_program_id,
                     tip_receiver,
                     tip_receiver_fee,
-                }),
-                &mut stats,
-                DistributionMetaKind::Tip,
-            );
-        stats.tip_distribution_meta_duration += subphase_started.elapsed();
+                    task,
+                )
+            })
+            .collect()
+    });
 
-        let subphase_started = Instant::now();
-        let maybe_priority_fee_distribution_meta = get_distribution_meta_with_stats::<
-            PriorityFeeDistributionAccount,
-            WrappedPriorityFeeDistributionMeta,
-        >(
-            bank,
-            priority_fee_distribution_program_id,
-            vote_pubkey,
-            None,
-            &mut stats,
+    // Per-task durations are summed across worker threads (CPU time, comparable to the old
+    // serial numbers); stake_meta_loop_duration is the wall time of the whole phase.
+    let mut stake_metas: Vec<StakeMeta> = Vec::with_capacity(results.len());
+    for result in results {
+        stats.total_delegated_duration += result.total_delegated_duration;
+        stats.tip_distribution_meta_duration += result.tip_distribution_meta_duration;
+        stats.priority_fee_distribution_meta_duration +=
+            result.priority_fee_distribution_meta_duration;
+        stats.delegations_sort_duration += result.delegations_sort_duration;
+        stats.record_distribution_outcome(DistributionMetaKind::Tip, result.tip_outcome);
+        stats.record_distribution_outcome(
             DistributionMetaKind::PriorityFee,
+            result.priority_fee_outcome,
         );
-        stats.priority_fee_distribution_meta_duration += subphase_started.elapsed();
-
-        let vote_state = vote_account.vote_state_view();
-        let subphase_started = Instant::now();
-        // Each stake_account_pubkey appears at most once (the delegations map is keyed by it),
-        // so comparing it alone is a total order with no ties: the result is identical to a
-        // stable sort on the full Delegation Ord, which builds two 104-byte tuples per comparison.
-        delegations.sort_unstable_by(|a, b| a.stake_account_pubkey.cmp(&b.stake_account_pubkey));
-        stats.delegations_sort_duration += subphase_started.elapsed();
-
-        stake_metas.push(StakeMeta {
-            maybe_tip_distribution_meta: maybe_tip_distribution_meta.map(|x| x.0),
-            maybe_priority_fee_distribution_meta: maybe_priority_fee_distribution_meta.map(|x| x.0),
-            validator_node_pubkey: *vote_state.node_pubkey(),
-            validator_vote_account: *vote_pubkey,
-            delegations,
-            total_delegated,
-            commission: vote_state.commission(),
-        });
+        stake_metas.push(result.stake_meta);
     }
     stats.stake_meta_loop_duration = phase_started.elapsed();
     warn_missing_voter_pubkeys(
@@ -426,6 +461,8 @@ pub fn generate_stake_meta_collection(
 ) -> Result<StakeMetaCollection, StakeMetaGeneratorError> {
     assert!(bank.is_frozen());
 
+    let thread_pool = build_stake_meta_thread_pool();
+
     let epoch_vote_accounts =
         bank.epoch_vote_accounts(bank.epoch())
             .ok_or(StakeMetaGeneratorError::NoVoteAccounts(
@@ -435,7 +472,8 @@ pub fn generate_stake_meta_collection(
 
     let top_epoch_stakes = bank.get_top_epoch_stakes();
     let delegations = top_epoch_stakes.stake_delegations();
-    let mut voter_pubkey_to_delegations = group_delegations_by_voter_pubkey(delegations, bank);
+    let mut voter_pubkey_to_delegations =
+        group_delegations_by_voter_pubkey(delegations, bank, &thread_pool);
 
     // Get config PDA
     let (config_pda, _) =
@@ -476,55 +514,39 @@ pub fn generate_stake_meta_collection(
 
     let mut missing_voter_pubkey_count = 0usize;
     let mut missing_voter_pubkey_sample = Vec::new();
-    let mut stake_metas: Vec<StakeMeta> = Vec::with_capacity(epoch_vote_accounts.len());
+    let mut tasks: Vec<StakeMetaTask> = Vec::with_capacity(voter_pubkey_to_delegations.len());
     for (vote_pubkey, (_, vote_account)) in epoch_vote_accounts.iter() {
-        let Some(mut delegations) = voter_pubkey_to_delegations.remove(vote_pubkey) else {
+        let Some(delegations) = voter_pubkey_to_delegations.remove(vote_pubkey) else {
             missing_voter_pubkey_count += 1;
             record_missing_voter_pubkey_sample(&mut missing_voter_pubkey_sample, vote_pubkey);
             continue;
         };
 
-        let total_delegated = delegations.iter().fold(0u64, |sum, delegation| {
-            sum.checked_add(delegation.lamports_delegated)
-                .expect("total delegated lamports should not overflow u64")
-        });
-
-        let maybe_tip_distribution_meta =
-            get_distribution_meta::<TipDistributionAccount, WrappedTipDistributionMeta>(
-                bank,
-                tip_distribution_program_id,
-                vote_pubkey,
-                Some(TipReceiverInfo {
-                    tip_receiver,
-                    tip_receiver_fee,
-                }),
-            );
-
-        let maybe_priority_fee_distribution_meta = get_distribution_meta::<
-            PriorityFeeDistributionAccount,
-            WrappedPriorityFeeDistributionMeta,
-        >(
-            bank,
-            priority_fee_distribution_program_id,
-            vote_pubkey,
-            None,
-        );
-
         let vote_state = vote_account.vote_state_view();
-        // Each stake_account_pubkey appears at most once (the delegations map is keyed by it),
-        // so comparing it alone is a total order with no ties: the result is identical to a
-        // stable sort on the full Delegation Ord, which builds two 104-byte tuples per comparison.
-        delegations.sort_unstable_by(|a, b| a.stake_account_pubkey.cmp(&b.stake_account_pubkey));
-        stake_metas.push(StakeMeta {
-            maybe_tip_distribution_meta: maybe_tip_distribution_meta.map(|x| x.0),
-            maybe_priority_fee_distribution_meta: maybe_priority_fee_distribution_meta.map(|x| x.0),
-            validator_node_pubkey: *vote_state.node_pubkey(),
-            validator_vote_account: *vote_pubkey,
-            delegations,
-            total_delegated,
+        tasks.push(StakeMetaTask {
+            vote_pubkey: *vote_pubkey,
+            node_pubkey: *vote_state.node_pubkey(),
             commission: vote_state.commission(),
+            delegations,
         });
     }
+
+    let mut stake_metas: Vec<StakeMeta> = thread_pool.install(|| {
+        tasks
+            .into_par_iter()
+            .map(|task| {
+                build_stake_meta_task(
+                    bank,
+                    tip_distribution_program_id,
+                    priority_fee_distribution_program_id,
+                    tip_receiver,
+                    tip_receiver_fee,
+                    task,
+                )
+                .stake_meta
+            })
+            .collect()
+    });
 
     warn_missing_voter_pubkeys(missing_voter_pubkey_count, &missing_voter_pubkey_sample);
 
@@ -540,14 +562,100 @@ pub fn generate_stake_meta_collection(
     })
 }
 
-fn get_distribution_meta_with_stats<DistributionAccount, DistMeta>(
+/// A validator's inputs for building one [StakeMeta], prepared serially so the builds can run
+/// on the stake-meta thread pool.
+struct StakeMetaTask {
+    vote_pubkey: Pubkey,
+    node_pubkey: Pubkey,
+    commission: u8,
+    delegations: Vec<Delegation>,
+}
+
+struct StakeMetaTaskResult {
+    stake_meta: StakeMeta,
+    total_delegated_duration: Duration,
+    tip_distribution_meta_duration: Duration,
+    priority_fee_distribution_meta_duration: Duration,
+    delegations_sort_duration: Duration,
+    tip_outcome: DistributionMetaOutcome,
+    priority_fee_outcome: DistributionMetaOutcome,
+}
+
+fn build_stake_meta_task(
+    bank: &Arc<Bank>,
+    tip_distribution_program_id: &Pubkey,
+    priority_fee_distribution_program_id: &Pubkey,
+    tip_receiver: Pubkey,
+    tip_receiver_fee: u64,
+    task: StakeMetaTask,
+) -> StakeMetaTaskResult {
+    let StakeMetaTask {
+        vote_pubkey,
+        node_pubkey,
+        commission,
+        mut delegations,
+    } = task;
+
+    let started = Instant::now();
+    let total_delegated = delegations.iter().fold(0u64, |sum, delegation| {
+        sum.checked_add(delegation.lamports_delegated)
+            .expect("total delegated lamports should not overflow u64")
+    });
+    let total_delegated_duration = started.elapsed();
+
+    let started = Instant::now();
+    let (maybe_tip_distribution_meta, tip_outcome) =
+        get_distribution_meta_with_outcome::<TipDistributionAccount, WrappedTipDistributionMeta>(
+            bank,
+            tip_distribution_program_id,
+            &vote_pubkey,
+            Some(TipReceiverInfo {
+                tip_receiver,
+                tip_receiver_fee,
+            }),
+        );
+    let tip_distribution_meta_duration = started.elapsed();
+
+    let started = Instant::now();
+    let (maybe_priority_fee_distribution_meta, priority_fee_outcome) =
+        get_distribution_meta_with_outcome::<
+            PriorityFeeDistributionAccount,
+            WrappedPriorityFeeDistributionMeta,
+        >(bank, priority_fee_distribution_program_id, &vote_pubkey, None);
+    let priority_fee_distribution_meta_duration = started.elapsed();
+
+    let started = Instant::now();
+    // Each stake_account_pubkey appears at most once (the delegations map is keyed by it),
+    // so comparing it alone is a total order with no ties: the result is identical to a
+    // stable sort on the full Delegation Ord, which builds two 104-byte tuples per comparison.
+    delegations.sort_unstable_by(|a, b| a.stake_account_pubkey.cmp(&b.stake_account_pubkey));
+    let delegations_sort_duration = started.elapsed();
+
+    StakeMetaTaskResult {
+        stake_meta: StakeMeta {
+            maybe_tip_distribution_meta: maybe_tip_distribution_meta.map(|x| x.0),
+            maybe_priority_fee_distribution_meta: maybe_priority_fee_distribution_meta.map(|x| x.0),
+            validator_node_pubkey: node_pubkey,
+            validator_vote_account: vote_pubkey,
+            delegations,
+            total_delegated,
+            commission,
+        },
+        total_delegated_duration,
+        tip_distribution_meta_duration,
+        priority_fee_distribution_meta_duration,
+        delegations_sort_duration,
+        tip_outcome,
+        priority_fee_outcome,
+    }
+}
+
+fn get_distribution_meta_with_outcome<DistributionAccount, DistMeta>(
     bank: &Arc<Bank>,
     program_id: &Pubkey,
     vote_pubkey: &Pubkey,
     tip_receiver_info: Option<TipReceiverInfo>,
-    stats: &mut GenerateStakeMetaStats,
-    kind: DistributionMetaKind,
-) -> Option<DistMeta>
+) -> (Option<DistMeta>, DistributionMetaOutcome)
 where
     DistributionAccount: BorshDeserialize,
     DistMeta: DistributionMeta<DistributionAccountType = DistributionAccount>,
@@ -555,28 +663,24 @@ where
     let distribution_account_pubkey =
         DistMeta::derive_distribution_account_address(program_id, vote_pubkey, bank.epoch());
     let Some(mut account_data) = bank.get_account(&distribution_account_pubkey) else {
-        stats.record_distribution_missing(kind);
-        return None;
+        return (None, DistributionMetaOutcome::Missing);
     };
 
     if account_data.owner() != program_id {
-        stats.record_distribution_wrong_owner(kind);
-        return None;
+        return (None, DistributionMetaOutcome::WrongOwner);
     }
 
     let Some(distribution_account_data) = account_data.data().get(8..) else {
-        stats.record_distribution_deserialize_failed(kind);
-        return None;
+        return (None, DistributionMetaOutcome::DeserializeFailed);
     };
     let distribution_account =
         DistributionAccount::deserialize(&mut &distribution_account_data[..]).ok();
     let Some(distribution_account) = distribution_account else {
-        stats.record_distribution_deserialize_failed(kind);
-        return None;
+        return (None, DistributionMetaOutcome::DeserializeFailed);
     };
 
-    // [Tip Distribution ONLY] This mirrors get_distribution_meta: credit excess tip receiver fees
-    // if the derived tip distribution account is also the configured tip receiver.
+    // [Tip Distribution ONLY] Credit excess tip receiver fees if the derived tip distribution
+    // account is also the configured tip receiver.
     if let Some(tip_receiver_info) = tip_receiver_info {
         if distribution_account_pubkey == tip_receiver_info.tip_receiver {
             account_data.set_lamports(
@@ -602,13 +706,13 @@ where
         rent_exempt_amount,
     )
     .ok();
-    if distribution_meta.is_some() {
-        stats.record_distribution_found(kind);
+    let outcome = if distribution_meta.is_some() {
+        DistributionMetaOutcome::Found
     } else {
-        stats.record_distribution_meta_build_failed(kind);
-    }
+        DistributionMetaOutcome::MetaBuildFailed
+    };
 
-    distribution_meta
+    (distribution_meta, outcome)
 }
 
 /// Load and deserialize config from Bank. If it does not exist, propagate error.
@@ -628,12 +732,9 @@ fn get_config(bank: &Arc<Bank>, config_pubkey: &Pubkey) -> Result<Config, StakeM
 fn group_delegations_by_voter_pubkey_with_stats(
     delegations: &im::HashMap<Pubkey, StakeAccount>,
     bank: &Bank,
+    thread_pool: &ThreadPool,
     stats: &mut GenerateStakeMetaStats,
 ) -> DelegationsByVoterPubkey {
-    let mut delegations_by_voter_pubkey = DelegationsByVoterPubkey::with_capacity_and_hasher(
-        DELEGATIONS_BY_VOTER_PUBKEY_CAPACITY,
-        PubkeyHasherBuilder::default(),
-    );
     let epoch = bank.epoch();
     let new_rate_activation_epoch = bank.new_warmup_cooldown_rate_epoch();
 
@@ -649,26 +750,19 @@ fn group_delegations_by_voter_pubkey_with_stats(
         .expect("stake history sysvar account should deserialize");
     stats.stake_history_deserialize_duration += phase_started.elapsed();
 
-    for (stake_pubkey, stake_account) in delegations {
-        let delegation = stake_account.delegation();
-        let active_stake = delegation.stake(epoch, &stake_history, new_rate_activation_epoch);
-        if active_stake == 0 {
-            stats.inactive_delegations_count += 1;
-            continue;
-        }
+    let phase_started = Instant::now();
+    let delegation_refs = collect_delegation_refs(delegations);
+    stats.group_collect_refs_duration = phase_started.elapsed();
 
-        stats.active_delegations_count += 1;
-        let authorized = stake_account.stake_state().authorized().unwrap_or_default();
-        delegations_by_voter_pubkey
-            .entry(delegation.voter_pubkey)
-            .or_default()
-            .push(Delegation {
-                stake_account_pubkey: *stake_pubkey,
-                staker_pubkey: authorized.staker,
-                withdrawer_pubkey: authorized.withdrawer,
-                lamports_delegated: delegation.stake,
-            });
-    }
+    let (delegations_by_voter_pubkey, active_count, inactive_count) = group_delegation_refs(
+        &delegation_refs,
+        epoch,
+        &stake_history,
+        new_rate_activation_epoch,
+        thread_pool,
+    );
+    stats.active_delegations_count += active_count;
+    stats.inactive_delegations_count += inactive_count;
 
     delegations_by_voter_pubkey
 }
@@ -677,6 +771,7 @@ fn group_delegations_by_voter_pubkey_with_stats(
 fn group_delegations_by_voter_pubkey(
     delegations: &im::HashMap<Pubkey, StakeAccount>,
     bank: &Bank,
+    thread_pool: &ThreadPool,
 ) -> DelegationsByVoterPubkey {
     let epoch = bank.epoch();
     let new_rate_activation_epoch = bank.new_warmup_cooldown_rate_epoch();
@@ -690,29 +785,102 @@ fn group_delegations_by_voter_pubkey(
     )
     .expect("stake history sysvar account should deserialize");
 
-    let mut delegations_by_voter_pubkey = DelegationsByVoterPubkey::with_capacity_and_hasher(
+    let delegation_refs = collect_delegation_refs(delegations);
+    let (delegations_by_voter_pubkey, _, _) = group_delegation_refs(
+        &delegation_refs,
+        epoch,
+        &stake_history,
+        new_rate_activation_epoch,
+        thread_pool,
+    );
+
+    delegations_by_voter_pubkey
+}
+
+/// Serially collects delegation entry refs into a `Vec` so downstream work can fan out to the
+/// thread pool. The stakes map is an im::HashMap (a HAMT) that only supports sequential
+/// traversal — this walk is the irreducible serial cost (agave makes the same tradeoff in
+/// `Stakes::stake_delegations_vec`, which measures it at ~200ms on mainnet).
+fn collect_delegation_refs(
+    delegations: &im::HashMap<Pubkey, StakeAccount>,
+) -> Vec<(&Pubkey, &StakeAccount)> {
+    delegations.iter().collect()
+}
+
+/// Filters out inactive delegations and groups the rest by voter pubkey, fanning chunks out to
+/// the thread pool. Returns the grouped map plus (active, inactive) delegation counts.
+fn group_delegation_refs(
+    delegation_refs: &[(&Pubkey, &StakeAccount)],
+    epoch: u64,
+    stake_history: &StakeHistory,
+    new_rate_activation_epoch: Option<u64>,
+    thread_pool: &ThreadPool,
+) -> (DelegationsByVoterPubkey, usize, usize) {
+    let chunk_size = delegation_refs
+        .len()
+        .div_ceil(STAKE_META_THREAD_POOL_THREADS * GROUPING_CHUNKS_PER_THREAD)
+        .max(1);
+
+    let partials: Vec<(DelegationsByVoterPubkey, usize, usize)> = thread_pool.install(|| {
+        delegation_refs
+            .par_chunks(chunk_size)
+            .map(|chunk| {
+                let mut grouped = DelegationsByVoterPubkey::with_capacity_and_hasher(
+                    DELEGATIONS_BY_VOTER_PUBKEY_CAPACITY,
+                    PubkeyHasherBuilder::default(),
+                );
+                let mut active_count = 0usize;
+                let mut inactive_count = 0usize;
+                for (stake_pubkey, stake_account) in chunk.iter().copied() {
+                    let delegation = stake_account.delegation();
+                    let active_stake =
+                        delegation.stake(epoch, stake_history, new_rate_activation_epoch);
+                    if active_stake == 0 {
+                        inactive_count += 1;
+                        continue;
+                    }
+
+                    active_count += 1;
+                    let authorized = stake_account.stake_state().authorized().unwrap_or_default();
+                    grouped
+                        .entry(delegation.voter_pubkey)
+                        .or_default()
+                        .push(Delegation {
+                            stake_account_pubkey: *stake_pubkey,
+                            staker_pubkey: authorized.staker,
+                            withdrawer_pubkey: authorized.withdrawer,
+                            lamports_delegated: delegation.stake,
+                        });
+                }
+                (grouped, active_count, inactive_count)
+            })
+            .collect()
+    });
+
+    // Order within each validator's vector varies with chunk boundaries, which is fine: vectors
+    // are sorted by stake_account_pubkey before landing in a StakeMeta.
+    let mut merged = DelegationsByVoterPubkey::with_capacity_and_hasher(
         DELEGATIONS_BY_VOTER_PUBKEY_CAPACITY,
         PubkeyHasherBuilder::default(),
     );
-    for (stake_pubkey, stake_account) in delegations {
-        let delegation = stake_account.delegation();
-        if delegation.stake(epoch, &stake_history, new_rate_activation_epoch) == 0 {
-            continue;
+    let mut active_count = 0usize;
+    let mut inactive_count = 0usize;
+    for (partial, partial_active, partial_inactive) in partials {
+        active_count += partial_active;
+        inactive_count += partial_inactive;
+        for (voter_pubkey, mut delegations) in partial {
+            match merged.entry(voter_pubkey) {
+                std::collections::hash_map::Entry::Occupied(mut entry) => {
+                    entry.get_mut().append(&mut delegations);
+                }
+                std::collections::hash_map::Entry::Vacant(entry) => {
+                    entry.insert(delegations);
+                }
+            }
         }
-
-        let authorized = stake_account.stake_state().authorized().unwrap_or_default();
-        delegations_by_voter_pubkey
-            .entry(delegation.voter_pubkey)
-            .or_default()
-            .push(Delegation {
-                stake_account_pubkey: *stake_pubkey,
-                staker_pubkey: authorized.staker,
-                withdrawer_pubkey: authorized.withdrawer,
-                lamports_delegated: delegation.stake,
-            });
     }
 
-    delegations_by_voter_pubkey
+    (merged, active_count, inactive_count)
 }
 
 #[cfg(test)]

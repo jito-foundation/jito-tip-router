@@ -73,6 +73,7 @@ num-traits = "0.2.19"
 proc-macro2 = "1.0.86"
 quote = "1.0.36"
 rand = "0.8.5"
+rayon = "1.11.0"
 serde = { version = "^1.0", features = ["derive"] }
 serde-big-array = "0.5.1"
 serde_json = "1.0.102"

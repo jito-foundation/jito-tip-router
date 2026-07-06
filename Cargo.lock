@@ -13589,6 +13589,7 @@ dependencies = [
  "log",
  "meta-merkle-tree",
  "rand 0.8.5",
+ "rayon",
  "serde",
  "serde_json",
  "solana-account-decoder",
