@@ -6,6 +6,7 @@ use log::*;
 use meta_merkle_tree::generated_merkle_tree::{Delegation, StakeMeta, StakeMetaCollection};
 use solana_client::client_error::ClientError;
 use solana_genesis_utils::OpenGenesisConfigError;
+use solana_pubkey::PubkeyHasherBuilder;
 use solana_ledger::{
     bank_forks_utils::BankForksUtilsError, blockstore::BlockstoreError,
     blockstore_processor::BlockstoreProcessorError,
@@ -35,6 +36,14 @@ use crate::{
 };
 
 const MISSING_VOTER_PUBKEY_SAMPLE_LIMIT: usize = 10;
+
+/// Groups delegations by validator vote pubkey. Keyed with [PubkeyHasherBuilder] (an 8-byte
+/// slice of the pubkey) instead of SipHash: vote pubkeys are uniformly distributed and not
+/// attacker-controlled at scale, so collision resistance is not a concern.
+type DelegationsByVoterPubkey = HashMap<Pubkey, Vec<Delegation>, PubkeyHasherBuilder>;
+
+/// Mainnet has fewer than ~1k validators with active stake; pre-size to skip growth rehashes.
+const DELEGATIONS_BY_VOTER_PUBKEY_CAPACITY: usize = 1024;
 
 #[derive(Error, Debug)]
 pub enum StakeMetaGeneratorError {
@@ -624,8 +633,11 @@ fn group_delegations_by_voter_pubkey_with_stats(
     delegations: &im::HashMap<Pubkey, StakeAccount>,
     bank: &Bank,
     stats: &mut GenerateStakeMetaStats,
-) -> HashMap<Pubkey, Vec<Delegation>> {
-    let mut delegations_by_voter_pubkey = HashMap::<Pubkey, Vec<Delegation>>::new();
+) -> DelegationsByVoterPubkey {
+    let mut delegations_by_voter_pubkey = DelegationsByVoterPubkey::with_capacity_and_hasher(
+        DELEGATIONS_BY_VOTER_PUBKEY_CAPACITY,
+        PubkeyHasherBuilder::default(),
+    );
     let epoch = bank.epoch();
     let new_rate_activation_epoch = bank.new_warmup_cooldown_rate_epoch();
 
@@ -673,7 +685,7 @@ fn group_delegations_by_voter_pubkey_with_stats(
 fn group_delegations_by_voter_pubkey(
     delegations: &im::HashMap<Pubkey, StakeAccount>,
     bank: &Bank,
-) -> HashMap<Pubkey, Vec<Delegation>> {
+) -> DelegationsByVoterPubkey {
     let epoch = bank.epoch();
     let new_rate_activation_epoch = bank.new_warmup_cooldown_rate_epoch();
     // Load and deserialize the StakeHistory sysvar once instead of once per delegation.
@@ -686,7 +698,10 @@ fn group_delegations_by_voter_pubkey(
     )
     .expect("stake history sysvar account should deserialize");
 
-    let mut delegations_by_voter_pubkey = HashMap::<Pubkey, Vec<Delegation>>::new();
+    let mut delegations_by_voter_pubkey = DelegationsByVoterPubkey::with_capacity_and_hasher(
+        DELEGATIONS_BY_VOTER_PUBKEY_CAPACITY,
+        PubkeyHasherBuilder::default(),
+    );
     for (stake_pubkey, stake_account) in delegations {
         let delegation = stake_account.delegation();
         if delegation.stake(epoch, &stake_history, new_rate_activation_epoch) == 0 {
