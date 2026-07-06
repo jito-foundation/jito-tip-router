@@ -6,6 +6,7 @@ use {
     solana_sdk::pubkey::Pubkey,
     std::{
         fs::File,
+        io::{BufWriter, Write},
         path::{Path, PathBuf},
         sync::Arc,
         time::Instant,
@@ -83,9 +84,18 @@ fn write_stake_meta_collection(
             output_path.display()
         )
     })?;
-    serde_json::to_writer(file, stake_meta_collection).with_context(|| {
+    // serde_json streams each JSON token as a separate write call; without buffering every
+    // token is its own write(2) syscall (~tens of millions for 1.5M delegations).
+    let mut writer = BufWriter::with_capacity(1 << 20, file);
+    serde_json::to_writer(&mut writer, stake_meta_collection).with_context(|| {
         format!(
             "failed to write stake meta collection to {}",
+            output_path.display()
+        )
+    })?;
+    writer.flush().with_context(|| {
+        format!(
+            "failed to flush stake meta collection to {}",
             output_path.display()
         )
     })?;
