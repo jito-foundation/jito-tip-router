@@ -91,8 +91,6 @@ struct GenerateStakeMetaStats {
     get_top_epoch_stakes_duration: Duration,
     stake_delegations_count: usize,
     group_delegations_duration: Duration,
-    group_stake_filter_duration: Duration,
-    group_insert_duration: Duration,
     active_delegations_count: usize,
     inactive_delegations_count: usize,
     validators_with_delegations_count: usize,
@@ -174,15 +172,13 @@ impl GenerateStakeMetaStats {
 
     fn log(&self) {
         info!(
-            "stake_meta_stats total_duration_ms={} epoch_vote_accounts_duration_ms={} num_vote_accounts={} get_top_epoch_stakes_duration_ms={} stake_delegations_count={} group_delegations_duration_ms={} group_stake_filter_duration_ms={} group_insert_duration_ms={} active_delegations_count={} inactive_delegations_count={} validators_with_delegations_count={} validators_without_delegations_count={} generated_stake_metas_count={} final_stake_metas_sort_duration_ms={}",
+            "stake_meta_stats total_duration_ms={} epoch_vote_accounts_duration_ms={} num_vote_accounts={} get_top_epoch_stakes_duration_ms={} stake_delegations_count={} group_delegations_duration_ms={} active_delegations_count={} inactive_delegations_count={} validators_with_delegations_count={} validators_without_delegations_count={} generated_stake_metas_count={} final_stake_metas_sort_duration_ms={}",
             self.total_duration.as_millis(),
             self.epoch_vote_accounts_duration.as_millis(),
             self.num_vote_accounts,
             self.get_top_epoch_stakes_duration.as_millis(),
             self.stake_delegations_count,
             self.group_delegations_duration.as_millis(),
-            self.group_stake_filter_duration.as_millis(),
-            self.group_insert_duration.as_millis(),
             self.active_delegations_count,
             self.inactive_delegations_count,
             self.validators_with_delegations_count,
@@ -654,17 +650,14 @@ fn group_delegations_by_voter_pubkey_with_stats(
     stats.stake_history_deserialize_duration += phase_started.elapsed();
 
     for (stake_pubkey, stake_account) in delegations {
-        let subphase_started = Instant::now();
         let delegation = stake_account.delegation();
         let active_stake = delegation.stake(epoch, &stake_history, new_rate_activation_epoch);
-        stats.group_stake_filter_duration += subphase_started.elapsed();
         if active_stake == 0 {
             stats.inactive_delegations_count += 1;
             continue;
         }
 
         stats.active_delegations_count += 1;
-        let subphase_started = Instant::now();
         let authorized = stake_account.stake_state().authorized().unwrap_or_default();
         delegations_by_voter_pubkey
             .entry(delegation.voter_pubkey)
@@ -675,7 +668,6 @@ fn group_delegations_by_voter_pubkey_with_stats(
                 withdrawer_pubkey: authorized.withdrawer,
                 lamports_delegated: delegation.stake,
             });
-        stats.group_insert_duration += subphase_started.elapsed();
     }
 
     delegations_by_voter_pubkey
