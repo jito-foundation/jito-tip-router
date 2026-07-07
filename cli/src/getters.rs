@@ -1301,6 +1301,20 @@ impl fmt::Display for NcnTickets {
     }
 }
 
+/// Returns the addresses of all [`TipDistributionAccount`]s that need their
+/// `merkle_root_upload_authority` migrated away from `old_merkle_root_upload_authority`.
+///
+/// Only accounts for `epoch` whose `merkle_root` is still `None` are included,
+/// because accounts that already have a merkle root uploaded cannot be migrated.
+///
+/// # Implementation note
+/// `getProgramAccounts` with memcmp filters is excluded from the secondary index on
+/// many RPC nodes (`KEY_EXCLUDED_FROM_SECONDARY_INDEX`). To avoid that error this
+/// function instead:
+/// 1. Fetches all current and delinquent vote accounts via `getVoteAccounts`.
+/// 2. Derives each validator's TDA address for `epoch` deterministically.
+/// 3. Batch-fetches the accounts (`getMultipleAccounts`, 100 at a time) and
+///    filters client-side.
 pub async fn get_tip_distribution_accounts_to_migrate(
     handler: &CliHandler,
     tip_distribution_program_id: &Pubkey,
@@ -1308,45 +1322,52 @@ pub async fn get_tip_distribution_accounts_to_migrate(
     epoch: u64,
 ) -> Result<Vec<Pubkey>> {
     let rpc_client = handler.rpc_client();
-    let rpc_client = RpcClient::new_with_timeout(rpc_client.url(), Duration::from_secs(3600));
+    let rpc_client = RpcClient::new_with_timeout_and_commitment(
+        rpc_client.url(),
+        Duration::from_secs(3600),
+        handler.commitment,
+    );
 
-    // Filters assume merkle root is None
-    let filters = vec![
-        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-            8     // Discriminator
-                + 32, // Pubkey - validator_vote_account
-            old_merkle_root_upload_authority.to_bytes().to_vec(),
-        )),
-        RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
-            8    // Discriminator
-                + 32 // Pubkey - validator_vote_account
-                + 32 // Pubkey - merkle_root_upload_authority
-                + 1, // Option - "None" merkle_root
-            epoch.to_le_bytes().to_vec(),
-        )),
-    ];
+    let vote_accounts = rpc_client.get_vote_accounts().await?;
+    let all_vote_pubkeys: Vec<Pubkey> = vote_accounts
+        .current
+        .iter()
+        .chain(vote_accounts.delinquent.iter())
+        .filter_map(|v| v.vote_pubkey.parse().ok())
+        .collect();
 
-    let tip_distribution_accounts = get_program_accounts_with_config(
-        &rpc_client,
-        tip_distribution_program_id,
-        RpcProgramAccountsConfig {
-            filters: Some(filters),
-            account_config: RpcAccountInfoConfig {
-                encoding: Some(UiAccountEncoding::Base64),
-                data_slice: Some(UiDataSliceConfig {
-                    offset: 0,
-                    length: 0,
-                }),
-                commitment: Some(handler.commitment),
-                min_context_slot: None,
-            },
-            ..RpcProgramAccountsConfig::default()
-        },
-    )
-    .await?;
+    let tda_addresses: Vec<Pubkey> = all_vote_pubkeys
+        .iter()
+        .map(|vote_pubkey| {
+            jito_tip_distribution_sdk::derive_tip_distribution_account_address(
+                tip_distribution_program_id,
+                vote_pubkey,
+                epoch,
+            )
+            .0
+        })
+        .collect();
 
-    Ok(tip_distribution_accounts
-        .into_iter()
-        .map(|(pubkey, _)| pubkey)
-        .collect())
+    let mut result = Vec::new();
+    for chunk in tda_addresses.chunks(100) {
+        let accounts = rpc_client
+            .get_multiple_accounts_with_commitment(chunk, handler.commitment)
+            .await?
+            .value;
+        for (pubkey, maybe_account) in chunk.iter().zip(accounts.into_iter()) {
+            let Some(account) = maybe_account else {
+                continue;
+            };
+            let Ok(tda) = TipDistributionAccount::deserialize(&account.data) else {
+                continue;
+            };
+            if tda.merkle_root_upload_authority == *old_merkle_root_upload_authority
+                && tda.merkle_root.is_none()
+            {
+                result.push(*pubkey);
+            }
+        }
+    }
+
+    Ok(result)
 }
