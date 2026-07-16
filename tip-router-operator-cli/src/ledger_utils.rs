@@ -465,7 +465,7 @@ pub fn get_bank_from_ledger(
 pub fn get_bank_from_snapshot_at_slot(
     snapshot_slot: u64,
     full_snapshots_path: &PathBuf,
-    bank_snapshots_dir: &PathBuf,
+    bank_snapshots_dir: &Path,
     account_paths: Vec<PathBuf>,
     ledger_path: &Path,
 ) -> Result<Bank, LedgerUtilsError> {
@@ -487,7 +487,7 @@ pub fn get_bank_from_snapshot_at_slot(
     let snapshot_config = SnapshotConfig {
         full_snapshot_archives_dir: full_snapshots_path.clone(),
         incremental_snapshot_archives_dir: full_snapshots_path.clone(),
-        bank_snapshots_dir: bank_snapshots_dir.clone(),
+        bank_snapshots_dir: bank_snapshots_dir.to_path_buf(),
         ..SnapshotConfig::new_load_only()
     };
     let bank = snapshot_bank_utils::bank_from_snapshot_archives(

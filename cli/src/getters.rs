@@ -733,7 +733,7 @@ pub async fn get_all_opted_in_validators(
         }
     }
 
-    validator_infos.sort_by(|a, b| a.identity.cmp(&b.identity));
+    validator_infos.sort_by_key(|a| a.identity);
     validator_infos.dedup_by(|a, b| a.identity.eq(&b.identity));
 
     Ok(validator_infos)
@@ -1354,7 +1354,7 @@ pub async fn get_tip_distribution_accounts_to_migrate(
             .get_multiple_accounts_with_commitment(chunk, handler.commitment)
             .await?
             .value;
-        for (pubkey, maybe_account) in chunk.iter().zip(accounts.into_iter()) {
+        for (pubkey, maybe_account) in chunk.iter().zip(accounts) {
             let Some(account) = maybe_account else {
                 continue;
             };
