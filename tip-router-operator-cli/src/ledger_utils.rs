@@ -409,6 +409,8 @@ pub fn get_bank_from_ledger(
     exit.store(true, Ordering::Relaxed);
 
     if save_snapshot {
+        Bank::calculate_and_set_block_id_for_dcou(&working_bank);
+
         // Use the snapshot_save_path path so the snapshot is stored in a directory different
         // than the node's primary snapshot directory. The bank snapshot (serialized bank state)
         // is staged in a temp dir under the ledger path, matching the previous behavior of
