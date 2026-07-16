@@ -14,7 +14,7 @@ clap_old = { workspace = true }
 crossbeam-channel = "0.5.15"
 env_logger = { workspace = true }
 hex = "0.4"
-im = "15.1"
+imbl = "7.0.0"
 itertools = "0.11"
 jito-bytemuck = { workspace = true }
 jito-priority-fee-distribution-sdk = { workspace = true }
@@ -62,7 +62,7 @@ thiserror = { workspace = true }
 tokio = { workspace = true }
 
 [dev-dependencies]
-solana-program-test = { workspace = true }
+solana-program-test = { workspace = true, features = ["agave-unstable-api"] }
 solana-runtime = { workspace = true, features = ["dev-context-only-utils"] }
 solana-sdk = { workspace = true, features = ["dev-context-only-utils"] }
 tempfile = "3.2"

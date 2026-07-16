@@ -9,13 +9,14 @@ use std::{
 
 use agave_snapshots::{
     error::SnapshotError,
-    paths::{get_full_snapshot_archives, get_incremental_snapshot_archives},
+    paths::{full_snapshot_archives_iter, incremental_snapshot_archives_iter},
     snapshot_archive_info::SnapshotArchiveInfoGetter,
     snapshot_config::SnapshotConfig,
-    SnapshotVersion,
 };
 use clap_old::ArgMatches;
 use log::{info, warn};
+use solana_accounts_db::accounts_db::TOTAL_IO_URING_BUFFERS_SIZE_LIMIT;
+use solana_core::resource_limits;
 use solana_genesis_utils::{
     open_genesis_config, OpenGenesisConfigError, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
 };
@@ -218,6 +219,9 @@ pub fn get_bank_from_ledger(
         full_snapshot_archives_dir: full_snapshots_path.clone(),
         incremental_snapshot_archives_dir: incremental_snapshots_path.clone(),
         bank_snapshots_dir: full_snapshots_path.clone(),
+        use_registered_io_uring_buffers: resource_limits::check_memlock_limit_for_disk_io(
+            TOTAL_IO_URING_BUFFERS_SIZE_LIMIT,
+        ),
         ..SnapshotConfig::new_load_only()
     };
 
@@ -228,15 +232,13 @@ pub fn get_bank_from_ledger(
 
     let mut starting_slot = 0; // default start check with genesis
     let max_slot = process_options.halt_at_slot;
-    let full_snapshot_slot = get_full_snapshot_archives(&full_snapshots_path)
-        .into_iter()
+    let full_snapshot_slot = full_snapshot_archives_iter(&full_snapshots_path)
         .map(|archive| archive.slot())
         .filter(|slot| max_slot.is_none_or(|max_slot| *slot <= max_slot))
         .max();
     if let Some(full_snapshot_slot) = full_snapshot_slot {
         let incremental_snapshot_slot =
-            get_incremental_snapshot_archives(&incremental_snapshots_path)
-                .into_iter()
+            incremental_snapshot_archives_iter(&incremental_snapshots_path)
                 .filter(|archive| archive.base_slot() == full_snapshot_slot)
                 .map(|archive| archive.slot())
                 .filter(|slot| max_slot.is_none_or(|max_slot| *slot <= max_slot))
@@ -407,15 +409,18 @@ pub fn get_bank_from_ledger(
     exit.store(true, Ordering::Relaxed);
 
     if save_snapshot {
+        // Use the snapshot_save_path path so the snapshot is stored in a directory different
+        // than the node's primary snapshot directory. The bank snapshot (serialized bank state)
+        // is staged in a temp dir under the ledger path, matching the previous behavior of
+        // passing ledger_path as the bank snapshots dir.
+        let save_snapshot_config = SnapshotConfig {
+            full_snapshot_archives_dir: snapshot_save_path,
+            bank_snapshots_dir: ledger_path.to_path_buf(),
+            ..snapshot_config
+        };
         let full_snapshot_archive_info = match snapshot_bank_utils::bank_to_full_snapshot_archive(
-            ledger_path,
+            &save_snapshot_config,
             &working_bank,
-            Some(SnapshotVersion::default()),
-            // Use the snapshot_save_path path so the snapshot is stored in a directory different
-            // than the node's primary snapshot directory
-            snapshot_save_path,
-            snapshot_config.incremental_snapshot_archives_dir,
-            snapshot_config.archive_format,
         ) {
             Ok(res) => res,
             Err(e) => {
@@ -470,8 +475,9 @@ pub fn get_bank_from_snapshot_at_slot(
     account_paths: Vec<PathBuf>,
     ledger_path: &Path,
 ) -> Result<Bank, LedgerUtilsError> {
-    let mut full_snapshot_archives = get_full_snapshot_archives(full_snapshots_path);
-    full_snapshot_archives.retain(|archive| archive.snapshot_archive_info().slot == snapshot_slot);
+    let full_snapshot_archives: Vec<_> = full_snapshot_archives_iter(full_snapshots_path)
+        .filter(|archive| archive.snapshot_archive_info().slot == snapshot_slot)
+        .collect();
 
     if full_snapshot_archives.len() != 1 {
         return Err(LedgerUtilsError::MissingSnapshotAtSlot(snapshot_slot));
@@ -481,17 +487,27 @@ pub fn get_bank_from_snapshot_at_slot(
         halt_at_slot: Some(snapshot_slot.to_owned()),
         ..Default::default()
     };
+    let snapshot_config = SnapshotConfig {
+        full_snapshot_archives_dir: full_snapshots_path.clone(),
+        incremental_snapshot_archives_dir: full_snapshots_path.clone(),
+        bank_snapshots_dir: bank_snapshots_dir.clone(),
+        use_registered_io_uring_buffers: resource_limits::check_memlock_limit_for_disk_io(
+            TOTAL_IO_URING_BUFFERS_SIZE_LIMIT,
+        ),
+        ..SnapshotConfig::new_load_only()
+    };
     let genesis_config = open_genesis_config(ledger_path, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE)?;
     let exit = Arc::new(AtomicBool::new(false));
 
     let bank = snapshot_bank_utils::bank_from_snapshot_archives(
         &account_paths,
-        bank_snapshots_dir,
         full_snapshot_archive_info,
         None,
+        &snapshot_config,
         &genesis_config,
         &process_options.runtime_config,
         process_options.debug_keys.clone(),
+        None, // leader_for_tests
         process_options.limit_load_slot_count_from_snapshot,
         process_options.accounts_db_skip_shrink,
         process_options.accounts_db_force_initial_clean,
