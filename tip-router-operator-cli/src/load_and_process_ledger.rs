@@ -1,6 +1,6 @@
 use {
     agave_snapshots::{
-        paths::{get_full_snapshot_archives, get_incremental_snapshot_archives},
+        paths::{full_snapshot_archives_iter, incremental_snapshot_archives_iter},
         snapshot_archive_info::{
             FullSnapshotArchiveInfo, IncrementalSnapshotArchiveInfo, SnapshotArchiveInfoGetter,
         },
@@ -11,12 +11,11 @@ use {
     crossbeam_channel::unbounded,
     crossbeam_channel::{Receiver, Sender},
     log::*,
-    solana_accounts_db::utils::{
-        create_all_accounts_run_and_snapshot_dirs, move_and_async_delete_path_contents,
+    solana_accounts_db::{
+        accounts_db::TOTAL_IO_URING_BUFFERS_SIZE_LIMIT,
+        utils::{create_all_accounts_run_and_snapshot_dirs, move_and_async_delete_path_contents},
     },
-    solana_core::validator::{
-        supported_scheduling_mode, BlockProductionMethod, BlockVerificationMethod,
-    },
+    solana_core::{resource_limits, validator::BlockVerificationMethod},
     solana_genesis_config::GenesisConfig,
     solana_genesis_utils::open_genesis_config,
     solana_geyser_plugin_manager::geyser_plugin_service::{
@@ -185,8 +184,7 @@ pub fn load_and_process_ledger(
             incremental_snapshot_archive_path.unwrap_or_else(|| full_snapshot_archives_dir.clone());
 
         let selected_full_snapshot_archive: Option<FullSnapshotArchiveInfo> =
-            get_full_snapshot_archives(&full_snapshot_archives_dir)
-                .into_iter()
+            full_snapshot_archives_iter(&full_snapshot_archives_dir)
                 .filter(|archive| {
                     snapshot_halt_at_slot.is_none_or(|max_slot| archive.slot() <= max_slot)
                 })
@@ -209,8 +207,7 @@ pub fn load_and_process_ledger(
         };
 
         let selected_incremental_snapshot_archive: Option<IncrementalSnapshotArchiveInfo> =
-            get_incremental_snapshot_archives(&incremental_snapshot_archives_dir)
-                .into_iter()
+            incremental_snapshot_archives_iter(&incremental_snapshot_archives_dir)
                 .filter(|archive| archive.base_slot() == selected_full_snapshot_archive.slot())
                 .filter(|archive| {
                     snapshot_halt_at_slot.is_none_or(|max_slot| archive.slot() <= max_slot)
@@ -261,6 +258,9 @@ pub fn load_and_process_ledger(
                 full_snapshot_archives_dir: selected_full_snapshot_archives_dir,
                 incremental_snapshot_archives_dir: selected_incremental_snapshot_archives_dir,
                 bank_snapshots_dir: bank_snapshots_dir.clone(),
+                use_registered_io_uring_buffers: resource_limits::check_memlock_limit_for_disk_io(
+                    TOTAL_IO_URING_BUFFERS_SIZE_LIMIT,
+                ),
                 ..SnapshotConfig::new_load_only()
             },
             starting_slot,
@@ -462,21 +462,24 @@ pub fn load_and_process_ledger(
         "Using: block-verification-method: {}",
         block_verification_method,
     );
-    let block_production_method = BlockProductionMethod::default();
     let unified_scheduler_handler_threads = None;
-    let no_replay_vote_sender = None;
-    let scheduler_pool = DefaultSchedulerPool::new(
-        supported_scheduling_mode((&block_verification_method, &block_production_method)),
-        unified_scheduler_handler_threads,
-        process_options.runtime_config.log_messages_bytes_limit,
-        transaction_status_sender.clone(),
-        no_replay_vote_sender,
-        None,
-    );
-    bank_forks
-        .write()
-        .expect("bank forks lock should not be poisoned when installing scheduler pool")
-        .install_scheduler_pool(scheduler_pool);
+    match block_verification_method {
+        BlockVerificationMethod::UnifiedScheduler => {
+            let no_replay_vote_sender = None;
+            let no_prioritization_fee_cache = None;
+            let scheduler_pool = DefaultSchedulerPool::new(
+                unified_scheduler_handler_threads,
+                process_options.runtime_config.log_messages_bytes_limit,
+                transaction_status_sender.clone(),
+                no_replay_vote_sender,
+                no_prioritization_fee_cache,
+            );
+            bank_forks
+                .write()
+                .expect("bank forks lock should not be poisoned when installing scheduler pool")
+                .install_scheduler_pool(scheduler_pool);
+        }
+    }
 
     let (snapshot_request_sender, snapshot_request_receiver): (
         Sender<SnapshotRequest>,
