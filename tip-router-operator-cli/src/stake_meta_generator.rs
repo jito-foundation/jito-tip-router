@@ -199,7 +199,7 @@ fn get_config(bank: &Arc<Bank>, config_pubkey: &Pubkey) -> Result<Config, StakeM
 
 /// Given an [EpochStakes] object, return delegations grouped by voter_pubkey (validator delegated to).
 fn group_delegations_by_voter_pubkey(
-    delegations: &im::HashMap<Pubkey, StakeAccount>,
+    delegations: &imbl::HashMap<Pubkey, StakeAccount>,
     bank: &Bank,
 ) -> HashMap<Pubkey, Vec<Delegation>> {
     delegations
@@ -468,7 +468,7 @@ mod tests {
 
             Arc::new(Bank::new_from_parent(
                 bank.clone(),
-                &Pubkey::default(),
+                Default::default(),
                 bank.get_slots_in_epoch(bank.epoch()) + bank.slot(),
             ))
         }
@@ -772,9 +772,7 @@ mod tests {
         delegation_amount: u64,
     ) -> Pubkey {
         let minimum_delegation = solana_runtime::stake_utils::get_minimum_delegation(
-            bank.feature_set
-                .runtime_features()
-                .stake_raise_minimum_delegation_to_1_sol,
+            bank.feature_set.snapshot().upgrade_bpf_stake_program_to_v5,
         );
         assert!(
             delegation_amount >= minimum_delegation,

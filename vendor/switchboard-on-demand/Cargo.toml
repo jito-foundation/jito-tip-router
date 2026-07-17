@@ -215,7 +215,7 @@ package = "solana-account-decoder"
 git = "https://github.com/jito-foundation/jito-solana.git"
 optional = true
 package = "solana-account-decoder"
-rev = "623eceb50d7200f418d38a04926e6b47037214e6"
+rev = "bdf2e1d844b6453819ce6d4a24bc15df830908a4"
 
 [dependencies.solana-client-v2]
 version = ">=2,<3"
@@ -226,7 +226,7 @@ package = "solana-client"
 git = "https://github.com/jito-foundation/jito-solana.git"
 optional = true
 package = "solana-client"
-rev = "623eceb50d7200f418d38a04926e6b47037214e6"
+rev = "bdf2e1d844b6453819ce6d4a24bc15df830908a4"
 
 [dependencies.solana-program-v2]
 version = ">=2,<3"
