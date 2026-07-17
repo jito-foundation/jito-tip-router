@@ -36,8 +36,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   TARGET: x86_64-unknown-linux-musl
-  CC_x86_64_unknown_linux_musl: musl-gcc
-  CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
 
 # Prevent concurrent releases for the same ref
 concurrency:
@@ -51,10 +49,19 @@ jobs:
 
   build:
     name: Build Release Binaries
-    needs: ci
     runs-on: ubuntu-latest
+    container:
+      # Complete musl C/C++ toolchain, pinned to the linux/amd64 image digest.
+      image: ghcr.io/cross-rs/x86_64-unknown-linux-musl@sha256:af7d706a9043d4ab7f9662c8f39af8360ee6d6df7c34672dec6aac4619c827c9
+    defaults:
+      run:
+        # Container jobs default to sh, while tag validation uses bash syntax.
+        shell: bash
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      binary: ${{ steps.meta.outputs.binary }}
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - uses: actions/checkout@v5
@@ -113,16 +120,9 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
+          components: rustfmt
           toolchain: "1.95.0"
           target: ${{ env.TARGET }}
-
-      # musl-tools required for static linking
-      - name: Install musl-tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y musl-tools
-          command -v musl-gcc
-          musl-gcc --version
 
       - name: Build release binary
         run: |
@@ -138,13 +138,37 @@ jobs:
           cd release
           sha256sum $BINARY > SHA256SUMS.$BINARY
 
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ steps.meta.outputs.tag }}
+          if-no-files-found: error
+          path: |
+            release/${{ steps.meta.outputs.binary }}
+            release/SHA256SUMS.${{ steps.meta.outputs.binary }}
+
+  publish:
+    name: Publish GitHub Release
+    needs:
+      - ci
+      - build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: release-${{ needs.build.outputs.tag }}
+          path: release
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          name: Release ${{ steps.meta.outputs.tag }}
+          tag_name: ${{ needs.build.outputs.tag }}
+          name: Release ${{ needs.build.outputs.tag }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            release/${{ steps.meta.outputs.binary }}
-            release/SHA256SUMS.${{ steps.meta.outputs.binary }}
+            release/${{ needs.build.outputs.binary }}
+            release/SHA256SUMS.${{ needs.build.outputs.binary }}
