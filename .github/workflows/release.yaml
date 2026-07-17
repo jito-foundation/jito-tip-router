@@ -38,7 +38,7 @@ env:
   TARGET: x86_64-unknown-linux-musl
   CC_x86_64_unknown_linux_musl: musl-gcc
   CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
-  CFLAGS_x86_64_unknown_linux_musl: "-I/usr/include"
+  CFLAGS_x86_64_unknown_linux_musl: "-idirafter /usr/include"
 
 # Prevent concurrent releases for the same ref
 concurrency:
