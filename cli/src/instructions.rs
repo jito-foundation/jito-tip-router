@@ -2619,8 +2619,8 @@ pub async fn crank_register_vaults(handler: &CliHandler) -> Result<()> {
     Ok(())
 }
 
-pub async fn crank_set_weight(_handler: &CliHandler, _epoch: u64) -> Result<()> {
-    /*let weight_table = get_or_create_weight_table(handler, epoch).await?;
+pub async fn crank_set_weight(handler: &CliHandler, epoch: u64) -> Result<()> {
+    let weight_table = get_or_create_weight_table(handler, epoch).await?;
 
     let st_mints = weight_table
         .table()
@@ -2640,7 +2640,7 @@ pub async fn crank_set_weight(_handler: &CliHandler, _epoch: u64) -> Result<()> 
                 err
             );
         }
-    }*/
+    }
 
     Ok(())
 }
