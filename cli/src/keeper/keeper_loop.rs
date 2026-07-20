@@ -70,13 +70,11 @@ pub async fn check_and_timeout_error<T>(
 pub async fn timeout_error(duration_ms: u64) {
     info!("Error Timeout for {}s", duration_ms as f64 / 1000.0);
     sleep(Duration::from_millis(duration_ms)).await;
-    // progress_bar(duration_ms).await;
 }
 
 pub async fn timeout_keeper(duration_ms: u64) {
     info!("Keeper Timeout for {}s", duration_ms as f64 / 1000.0);
     sleep(Duration::from_millis(duration_ms)).await;
-    // boring_progress_bar(duration_ms).await;
 }
 
 #[allow(clippy::large_stack_frames)]
