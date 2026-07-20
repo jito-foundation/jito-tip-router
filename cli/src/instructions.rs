@@ -3599,7 +3599,7 @@ pub async fn send_transactions(
                 retries
             );
 
-            sleep(Duration::from_secs(1 + iteration )).await;
+            sleep(Duration::from_secs(1 + iteration)).await;
             continue;
         }
 
