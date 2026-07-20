@@ -17,13 +17,12 @@ fn format_log_message(buf: &mut Formatter, record: &Record) -> std::io::Result<(
     let mut style = buf.style();
     let level = colored_level(&mut style, record.level());
 
-    let _timestamp = Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
 
     writeln!(
         buf,
-        // "[{} {} {}] {}",
-        "[{} {}] {}",
-        // timestamp,
+        "[{} {} {}] {}",
+        timestamp,
         level,
         record.target(),
         record.args()
@@ -42,21 +41,19 @@ fn colored_level(style: &mut Style, level: log::Level) -> StyledValue<'_, &'stat
 
 pub(crate) fn print_base58_tx(ixs: &[Instruction]) {
     ixs.iter().for_each(|ix| {
-        log::info!("\n------ IX ------\n");
+        log::info!("------ IX ------");
 
-        println!("{}\n", ix.program_id);
+        log::info!("{}", ix.program_id);
 
         ix.accounts.iter().for_each(|account| {
             let pubkey = format!("{}", account.pubkey);
             let writable = if account.is_writable { "W" } else { "" };
             let signer = if account.is_signer { "S" } else { "" };
 
-            println!("{:<44} {:>2} {:>1}", pubkey, writable, signer);
+            log::info!("{:<44} {:>2} {:>1}", pubkey, writable, signer);
         });
 
-        println!("\n");
-
         let base58_string = bs58::encode(&ix.data).into_string();
-        println!("{}\n", base58_string);
+        log::info!("{}", base58_string);
     });
 }

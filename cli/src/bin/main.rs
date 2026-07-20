@@ -7,11 +7,18 @@ use jito_tip_router_cli::{args::Args, handler::CliHandler, log::init_logger};
 use log::info;
 
 #[tokio::main]
-#[allow(clippy::large_stack_frames)]
-async fn main() -> Result<()> {
+async fn main() {
     dotenv().ok();
     init_logger();
 
+    if let Err(error) = run().await {
+        log::error!("{error:#}");
+        std::process::exit(1);
+    }
+}
+
+#[allow(clippy::large_stack_frames)]
+async fn run() -> Result<()> {
     let args: Args = Args::parse();
 
     if args.markdown_help {
