@@ -11,7 +11,7 @@ use crate::{
         get_vault_update_state_tracker, get_weight_table,
     },
     handler::CliHandler,
-    log::{boring_progress_bar, print_base58_tx},
+    log::print_base58_tx,
     vault_instruction_abi::VaultUpdateInstruction,
 };
 use anyhow::{anyhow, Ok, Result};
@@ -3603,7 +3603,7 @@ pub async fn send_transactions(
             ..RpcSendTransactionConfig::default()
         };
         let result = client
-            .send_and_confirm_transaction_with_spinner_and_config(&tx, client.commitment(), config)
+            .send_and_confirm_transaction_with_config(&tx, client.commitment(), config)
             .await;
 
         if result.is_err() {
@@ -3614,7 +3614,7 @@ pub async fn send_transactions(
                 retries
             );
 
-            boring_progress_bar((1 + iteration) * 1000).await;
+            sleep(Duration::from_secs(1 + iteration)).await;
             continue;
         }
 
