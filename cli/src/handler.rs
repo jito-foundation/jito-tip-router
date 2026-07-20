@@ -26,6 +26,7 @@ use crate::{
         snapshot_vault_operator_delegation, update_all_vaults_in_network,
     },
     keeper::keeper_loop::startup_keeper,
+    vault_instruction_abi::VaultInstructionAbi,
 };
 use anyhow::{anyhow, Result};
 use base64::{engine::general_purpose, Engine};
@@ -105,6 +106,7 @@ pub struct CliHandler {
     keypair: Keypair,
     pub restaking_program_id: Pubkey,
     pub vault_program_id: Pubkey,
+    pub(crate) vault_instruction_abi: VaultInstructionAbi,
     pub tip_router_program_id: Pubkey,
     pub tip_distribution_program_id: Pubkey,
     pub token_program_id: Pubkey,
@@ -170,6 +172,11 @@ impl CliHandler {
             keypair,
             restaking_program_id,
             vault_program_id,
+            vault_instruction_abi: if args.use_legacy_vault_instruction_abi {
+                VaultInstructionAbi::LegacyPreRevoke
+            } else {
+                VaultInstructionAbi::Current
+            },
             tip_router_program_id,
             tip_distribution_program_id,
             token_program_id,

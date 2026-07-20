@@ -9,4 +9,5 @@ pub mod instructions;
 pub mod keeper;
 pub mod log;
 pub mod spl_stake_pool;
+mod vault_instruction_abi;
 // pub mod ported;

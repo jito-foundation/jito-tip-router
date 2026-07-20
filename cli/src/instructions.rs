@@ -12,6 +12,7 @@ use crate::{
     },
     handler::CliHandler,
     log::{boring_progress_bar, print_base58_tx},
+    vault_instruction_abi::VaultUpdateInstruction,
 };
 use anyhow::{anyhow, Ok, Result};
 use jito_bytemuck::AccountDeserialize;
@@ -2310,15 +2311,19 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
         get_account(handler, &vault_update_state_tracker).await?;
 
     if vault_update_state_tracker_account.is_none() {
-        let initialize_vault_update_state_tracker_ix =
-            InitializeVaultUpdateStateTrackerBuilder::new()
-                .vault(*vault)
-                .vault_update_state_tracker(vault_update_state_tracker)
-                .system_program(system_program::id())
-                .withdrawal_allocation_method(WithdrawalAllocationMethod::Greedy)
-                .payer(payer.pubkey())
-                .config(vault_config)
-                .instruction();
+        let initialize_vault_update_state_tracker_ix = handler
+            .vault_instruction_abi
+            .adapt_vault_update_instruction(
+                InitializeVaultUpdateStateTrackerBuilder::new()
+                    .vault(*vault)
+                    .vault_update_state_tracker(vault_update_state_tracker)
+                    .system_program(system_program::id())
+                    .withdrawal_allocation_method(WithdrawalAllocationMethod::Greedy)
+                    .payer(payer.pubkey())
+                    .config(vault_config)
+                    .instruction(),
+                VaultUpdateInstruction::Initialize,
+            )?;
 
         let result = send_and_log_transaction(
             handler,
@@ -2370,13 +2375,18 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
                 operator,
             );
 
-            let crank_vault_update_state_tracker_ix = CrankVaultUpdateStateTrackerBuilder::new()
-                .vault(*vault)
-                .operator(*operator)
-                .config(vault_config)
-                .vault_operator_delegation(vault_operator_delegation)
-                .vault_update_state_tracker(vault_update_state_tracker)
-                .instruction();
+            let crank_vault_update_state_tracker_ix = handler
+                .vault_instruction_abi
+                .adapt_vault_update_instruction(
+                    CrankVaultUpdateStateTrackerBuilder::new()
+                        .vault(*vault)
+                        .operator(*operator)
+                        .config(vault_config)
+                        .vault_operator_delegation(vault_operator_delegation)
+                        .vault_update_state_tracker(vault_update_state_tracker)
+                        .instruction(),
+                    VaultUpdateInstruction::Crank,
+                )?;
 
             let result = send_and_log_transaction(
                 handler,
@@ -2408,13 +2418,18 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
         get_account(handler, &vault_update_state_tracker).await?;
 
     if vault_update_state_tracker_account.is_some() {
-        let close_vault_update_state_tracker_ix = CloseVaultUpdateStateTrackerBuilder::new()
-            .vault(*vault)
-            .vault_update_state_tracker(vault_update_state_tracker)
-            .payer(payer.pubkey())
-            .config(vault_config)
-            .ncn_epoch(ncn_epoch)
-            .instruction();
+        let close_vault_update_state_tracker_ix = handler
+            .vault_instruction_abi
+            .adapt_vault_update_instruction(
+                CloseVaultUpdateStateTrackerBuilder::new()
+                    .vault(*vault)
+                    .vault_update_state_tracker(vault_update_state_tracker)
+                    .payer(payer.pubkey())
+                    .config(vault_config)
+                    .ncn_epoch(ncn_epoch)
+                    .instruction(),
+                VaultUpdateInstruction::Close,
+            )?;
 
         let result = send_and_log_transaction(
             handler,

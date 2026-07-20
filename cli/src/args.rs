@@ -72,6 +72,15 @@ pub struct Args {
     #[arg(
         long,
         global = true,
+        env = "USE_LEGACY_VAULT_INSTRUCTION_ABI",
+        default_value_t = false,
+        help = "Use the legacy pre-RevokeDelegateTokenAccount Vault instruction ABI"
+    )]
+    pub use_legacy_vault_instruction_abi: bool,
+
+    #[arg(
+        long,
+        global = true,
         env = "TIP_DISTRIBUTION_PROGRAM_ID",
         default_value_t = jito_tip_distribution_sdk::id().to_string(),
         help = "Tip distribution program ID"
@@ -448,6 +457,7 @@ impl fmt::Display for Args {
         writeln!(f, "  • Tip Router:        {}", self.tip_router_program_id)?;
         writeln!(f, "  • Restaking:         {}", self.restaking_program_id)?;
         writeln!(f, "  • Vault:             {}", self.vault_program_id)?;
+        writeln!(f, "  • Legacy Vault ABI:  {}", if self.use_legacy_vault_instruction_abi { "Enabled" } else { "Disabled" })?;
         writeln!(f, "  • Token:             {}", self.token_program_id)?;
         writeln!(f, "  • Tip Distribution:  {}", self.tip_distribution_program_id)?;
 

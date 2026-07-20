@@ -42,6 +42,7 @@ async fn main() -> anyhow::Result<()> {
         tip_router_program_id: jito_tip_router_program::id().to_string(),
         restaking_program_id: jito_restaking_program::id().to_string(),
         vault_program_id: jito_vault_program::id().to_string(),
+        use_legacy_vault_instruction_abi: false,
         tip_distribution_program_id: jito_tip_distribution_sdk::id().to_string(),
         token_program_id: spl_token_interface::id().to_string(),
         ncn: None,
