@@ -8,10 +8,18 @@ use log::info;
 
 #[tokio::main]
 #[allow(clippy::large_stack_frames)]
-async fn main() -> Result<()> {
+async fn main() {
     dotenv().ok();
     init_logger();
 
+    if let Err(error) = run().await {
+        log::error!("{error:#}");
+        std::process::exit(1);
+    }
+}
+
+#[allow(clippy::large_stack_frames, clippy::future_not_send)]
+async fn run() -> Result<()> {
     let args: Args = Args::parse();
 
     if args.markdown_help {
