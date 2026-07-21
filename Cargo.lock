@@ -5020,7 +5020,6 @@ dependencies = [
  "fast-math",
  "hex",
  "jito-stake-meta-types",
- "jito-vault-core",
  "log",
  "serde",
  "serde_json",

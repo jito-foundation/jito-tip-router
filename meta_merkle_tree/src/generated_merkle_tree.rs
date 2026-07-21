@@ -4,7 +4,6 @@ use std::{
     path::PathBuf,
 };
 
-use jito_vault_core::MAX_BPS;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use solana_program::{
     clock::{Epoch, Slot},
@@ -24,6 +23,12 @@ pub use jito_stake_meta_types::{
     pubkey_string_conversion, Delegation, PriorityFeeDistributionMeta, StakeMeta,
     StakeMetaCollection, TipDistributionMeta,
 };
+
+/// Basis-points denominator. Inlined from `jito_vault_core::MAX_BPS` so this
+/// crate no longer depends on the restaking git tree (keeps the dependency
+/// footprint light enough to import from other repos, e.g. the jito-solana
+/// snapshot service).
+const MAX_BPS: u16 = 10_000;
 
 pub const CLAIM_STATUS_SEED: &[u8] = b"CLAIM_STATUS";
 
