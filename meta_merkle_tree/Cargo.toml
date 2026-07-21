@@ -18,6 +18,7 @@ jito-bytemuck = { workspace = true }
 jito-jsm-core = { workspace = true }
 jito-restaking-core = { workspace = true }
 jito-restaking-sdk = { workspace = true }
+jito-stake-meta-types = { workspace = true }
 jito-vault-core = { workspace = true }
 jito-vault-sdk = { workspace = true }
 log = { workspace = true }
