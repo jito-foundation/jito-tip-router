@@ -56,7 +56,10 @@ pub async fn check_and_timeout_error<T>(
 ) -> bool {
     if let Err(e) = result {
         let error = format!("{:?}", e);
-        let message = format!("Error: [{}] \n{}\n\n", title, error);
+        let message = format!(
+            "Operation failed operation=\"{}\" epoch={}: {:#}",
+            title, keeper_epoch, e
+        );
 
         log::error!("{}", message);
         emit_error(title, error, message, keeper_epoch, cluster_name).await;
@@ -68,12 +71,18 @@ pub async fn check_and_timeout_error<T>(
 }
 
 pub async fn timeout_error(duration_ms: u64) {
-    info!("Error Timeout for {}s", duration_ms as f64 / 1000.0);
+    info!(
+        "Sleeping after error seconds={}",
+        duration_ms as f64 / 1000.0
+    );
     sleep(Duration::from_millis(duration_ms)).await;
 }
 
 pub async fn timeout_keeper(duration_ms: u64) {
-    info!("Keeper Timeout for {}s", duration_ms as f64 / 1000.0);
+    info!(
+        "Sleeping keeper loop seconds={}",
+        duration_ms as f64 / 1000.0
+    );
     sleep(Duration::from_millis(duration_ms)).await;
 }
 
@@ -123,7 +132,10 @@ pub async fn startup_keeper(
         // If there is a new epoch, this will do a full vault update on *all* vaults
         // created with restaking - this adds some extra redundancy
         if is_new_epoch && all_vault_update && run_operations {
-            info!("-2. Update Vaults - {}", current_keeper_epoch);
+            info!(
+                "Updating all vaults step=update_all_vaults epoch={}",
+                current_keeper_epoch
+            );
             let result = update_all_vaults_in_network(handler).await;
 
             if check_and_timeout_error(
@@ -145,7 +157,10 @@ pub async fn startup_keeper(
         // If there is still work to be done on the given epoch, it will stay
         // Note: This will loop around and start back at the beginning
         {
-            info!("A. Progress Epoch - {}", current_keeper_epoch);
+            info!(
+                "Progressing epoch step=progress_epoch epoch={}",
+                current_keeper_epoch
+            );
             let starting_epoch = handler.epoch;
             let keeper_epoch = current_keeper_epoch;
 
@@ -161,7 +176,10 @@ pub async fn startup_keeper(
             .await;
 
             if current_keeper_epoch != result {
-                info!("PROGRESS EPOCH: {} -> {}", current_keeper_epoch, result);
+                info!(
+                    "Progressing to next epoch old_epoch={} new_epoch={}",
+                    current_keeper_epoch, result
+                );
             }
 
             is_new_epoch = set_is_new_epoch;
@@ -175,7 +193,10 @@ pub async fn startup_keeper(
         // Emits metrics for the NCN state
         // This includes validators info, epoch info, ticket states and more
         if emit_metrics {
-            info!("B. Emit NCN Metrics - {}", current_keeper_epoch);
+            info!(
+                "Emitting NCN metrics step=emit_ncn_metrics epoch={}",
+                current_keeper_epoch
+            );
             let result = emit_ncn_metrics(handler, start_of_loop, &cluster_name).await;
 
             check_and_timeout_error(
@@ -192,7 +213,10 @@ pub async fn startup_keeper(
         // that need to be registered, this will do it. Since vaults are registered
         // with the Global Vault Registry, timing does not matter
         if run_operations {
-            info!("-1. Register Vaults - {}", current_keeper_epoch);
+            info!(
+                "Registering vaults step=register_vaults epoch={}",
+                current_keeper_epoch
+            );
             let result = crank_register_vaults(handler).await;
 
             if check_and_timeout_error(
@@ -211,7 +235,10 @@ pub async fn startup_keeper(
         // Fetches the current state of the keeper, which holds the Epoch State
         // and other helpful information for the keeper to function
         {
-            info!("0. Fetch Keeper State - {}", current_keeper_epoch);
+            info!(
+                "Fetching keeper state step=fetch_keeper_state epoch={}",
+                current_keeper_epoch
+            );
             if state.epoch != current_keeper_epoch {
                 let result = state.fetch(handler, current_keeper_epoch).await;
 
@@ -232,7 +259,10 @@ pub async fn startup_keeper(
         // Updates the Epoch State - pulls from the Epoch State account from on chain
         // and further updates the keeper state
         {
-            info!("1. Update Epoch State - {}", current_keeper_epoch);
+            info!(
+                "Updating epoch state step=update_epoch_state epoch={}",
+                current_keeper_epoch
+            );
             let result = state.update_epoch_state(handler).await;
 
             if check_and_timeout_error(
@@ -251,11 +281,14 @@ pub async fn startup_keeper(
         // If there is no state found for the given epoch, this will create it, or
         // detect if its already been closed. Then the epoch will progress to the next
         if run_operations {
-            info!("2. Create or Complete State - {}", current_keeper_epoch);
+            info!(
+                "Creating or completing epoch state step=create_or_complete_state epoch={}",
+                current_keeper_epoch
+            );
 
             // If complete, reset loop
             if state.is_epoch_completed {
-                info!("Epoch {} is complete", state.epoch);
+                info!("Epoch complete epoch={}", state.epoch);
                 continue;
             }
 
@@ -280,7 +313,7 @@ pub async fn startup_keeper(
         // Calls the migrate TDA Merkle Root
         if run_migration {
             info!(
-                "C. Migrate TDA Merkle Root Upload Authorities - {}",
+                "Migrating TDA merkle root upload authorities step=migrate_tda epoch={}",
                 current_keeper_epoch
             );
 
@@ -321,7 +354,7 @@ pub async fn startup_keeper(
                 }
             };
             info!(
-                "3. Crank State [{:?}] - {}",
+                "Cranking state step=crank_state state={:?} epoch={}",
                 current_state, current_keeper_epoch
             );
 
@@ -349,7 +382,10 @@ pub async fn startup_keeper(
 
         // Emits metrics for the Epoch State
         if emit_metrics {
-            info!("D. Emit Epoch Metrics - {}", current_keeper_epoch);
+            info!(
+                "Emitting epoch metrics step=emit_epoch_metrics epoch={}",
+                current_keeper_epoch
+            );
 
             let result = emit_epoch_metrics(handler, state.epoch, &cluster_name).await;
 
@@ -368,7 +404,10 @@ pub async fn startup_keeper(
         // Waiting for voting to finish
         // Not enough rewards to distribute
         {
-            info!("E. Detect Stall - {}", current_keeper_epoch);
+            info!(
+                "Detecting stall step=detect_stall epoch={}",
+                current_keeper_epoch
+            );
 
             let result = state.detect_stall(handler).await;
 
@@ -396,13 +435,16 @@ pub async fn startup_keeper(
             .await;
 
             if epoch_stall {
-                info!("STALL DETECTED FOR {}", current_keeper_epoch);
+                info!("Stall detected epoch={}", current_keeper_epoch);
             }
         }
 
         // Times out the keeper - this is the main loop timeout
         if end_of_loop && epoch_stall {
-            info!("F. Timeout - {}", current_keeper_epoch);
+            info!(
+                "Sleeping until next loop step=loop_timeout epoch={}",
+                current_keeper_epoch
+            );
 
             timeout_keeper(loop_timeout_ms).await;
             tick += 1;
