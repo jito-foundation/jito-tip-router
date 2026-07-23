@@ -3589,7 +3589,7 @@ pub async fn send_transactions(
         if result.is_err() {
             info!(
                 "Retrying transaction attempt={}/{} sleep_seconds={}",
-                iteration,
+                iteration + 1,
                 retries,
                 (1 + iteration)
             );
