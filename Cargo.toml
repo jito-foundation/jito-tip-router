@@ -9,6 +9,7 @@ members = [
     "priority_fee_distribution_sdk",
     "program",
     "shank_cli",
+    "stake_meta_types",
     "tip-router-operator-cli",
     "tip_distribution_sdk",
     "tip_payment_sdk",
@@ -55,6 +56,7 @@ jito-restaking-client = { package = "jito-restaking-client", git = "https://gith
 jito-restaking-core = { package = "jito-restaking-core", git = "https://github.com/jito-foundation/restaking", rev = "58df1582c474e9c5f534a7dcb0388b82437aa78e" }
 jito-restaking-program = { package = "jito-restaking-program", git = "https://github.com/jito-foundation/restaking", rev = "58df1582c474e9c5f534a7dcb0388b82437aa78e", features = ["no-entrypoint"] }
 jito-restaking-sdk = { package = "jito-restaking-sdk", git = "https://github.com/jito-foundation/restaking", rev = "58df1582c474e9c5f534a7dcb0388b82437aa78e" }
+jito-stake-meta-types = { path = "./stake_meta_types", version = "=0.0.1" }
 jito-tip-distribution-sdk = { path = "./tip_distribution_sdk", version = "=0.0.1" }
 jito-tip-payment-sdk = { path = "./tip_payment_sdk", version = "=0.0.1" }
 jito-tip-router-client = { path = "./clients/rust/jito_tip_router", version = "0.0.1" }
