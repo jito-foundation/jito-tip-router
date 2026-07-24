@@ -159,7 +159,7 @@ pub async fn admin_create_config(
     let program = client.get_account(&handler.tip_router_program_id).await?;
 
     info!(
-        "\n\n----------------------\nProgram: {:?}\n\nProgram Account:\n{:?}\n\nIX:\n{:?}\n----------------------\n",
+        "Creating config program={} program_account={:?} ix={:?}",
         &handler.tip_router_program_id, program, &initialize_config_ix
     );
 
@@ -931,7 +931,7 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
     let mut last_error = None;
     for (index, gateway) in gateways.iter().enumerate() {
         log::info!(
-            "Fetching Switchboard update from gateway {}/{}: {}",
+            "Fetching Switchboard update attempt={}/{} gateway={}",
             index + 1,
             gateways.len(),
             gateway.url()
@@ -956,7 +956,7 @@ pub async fn crank_switchboard(handler: &CliHandler, switchboard_feed: &Pubkey) 
             }
             Err(error) => {
                 log::warn!(
-                    "Failed to fetch Switchboard update from gateway {}: {:?}",
+                    "Failed to fetch Switchboard update gateway={}: {:?}",
                     gateway.url(),
                     error
                 );
@@ -1019,7 +1019,7 @@ pub async fn set_weight_with_st_mint(
             switchboard_feed
         );
         log::error!(
-            "\n\nFailed to crank switchboard - will need manual crank at {}\n\nError:\n{:?}\n",
+            "Failed to crank Switchboard, manual crank needed feed={}: {:#}",
             switchboard_feed,
             e
         );
@@ -2205,7 +2205,7 @@ pub async fn close_epoch_account(
         .await?
         .is_none_or(|account| account.data.is_empty() || account.lamports == 0);
     if account_already_closed {
-        info!("Account already closed: {:?}", account_to_close);
+        info!("Account already closed account={}", account_to_close);
         return Ok(());
     }
 
@@ -2334,7 +2334,7 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
 
         if let Err(err) = result {
             log::error!(
-                "Failed to initialize Vault Update State Tracker for Vault: {:?} at NCN Epoch: {:?} with error: {:?}",
+                "Failed to initialize vault update state tracker vault={} vault_epoch={}: {:#}",
                 vault,
                 ncn_epoch,
                 err
@@ -2393,12 +2393,12 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
 
             if let Err(err) = result {
                 log::error!(
-                "Failed to crank Vault Update State Tracker for Vault: {:?} and Operator: {:?} at NCN Epoch: {:?} with error: {:?}",
-                vault,
-                operator,
-                ncn_epoch,
-                err
-            );
+                    "Failed to crank vault update state tracker vault={} operator={} vault_epoch={}: {:#}",
+                    vault,
+                    operator,
+                    ncn_epoch,
+                    err
+                );
             }
         }
     }
@@ -2430,7 +2430,7 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
 
         if let Err(err) = result {
             log::error!(
-                "Failed to close Vault Update State Tracker for Vault: {:?} at NCN Epoch: {:?} with error: {:?}",
+                "Failed to close vault update state tracker vault={} vault_epoch={}: {:#}",
                 vault,
                 ncn_epoch,
                 err
@@ -2602,15 +2602,11 @@ pub async fn crank_register_vaults(handler: &CliHandler) -> Result<()> {
 
         if vault_registry.has_st_mint(&vault_acc.supported_mint) {
             if let Err(err) = register_vault(handler, vault).await {
-                log::error!(
-                    "Failed to register vault: {:?} with error: {:?}",
-                    vault,
-                    err
-                );
+                log::error!("Failed to register vault vault={}: {:#}", vault, err);
             }
         } else {
-            log::error!(
-                "Failed to register vault since st_mint has not registered yet: {}",
+            log::warn!(
+                "Skipping vault registration, st_mint not registered vault={}",
                 vault,
             );
         }
@@ -2634,7 +2630,7 @@ pub async fn crank_set_weight(handler: &CliHandler, epoch: u64) -> Result<()> {
 
         if let Err(err) = result {
             log::error!(
-                "Failed to set weight for st_mint: {:?} in epoch: {:?} with error: {:?}",
+                "Failed to set weight st_mint={} epoch={}: {:#}",
                 st_mint,
                 epoch,
                 err
@@ -2658,7 +2654,7 @@ pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
     let epoch_snapshot = get_or_create_epoch_snapshot(handler, epoch).await?;
     if epoch_snapshot.finalized() {
         log::info!(
-            "Epoch snapshot already finalized for epoch: {:?}. Skipping snapshotting.",
+            "Epoch snapshot already finalized, skipping snapshot epoch={}",
             epoch
         );
         return Ok(());
@@ -2670,7 +2666,7 @@ pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
 
         if let Err(err) = result {
             log::error!(
-                "Failed to get or create operator snapshot for operator: {:?} in epoch: {:?} with error: {:?}",
+                "Failed to get or create operator snapshot operator={} epoch={}: {:#}",
                 operator,
                 epoch,
                 err
@@ -2690,18 +2686,14 @@ pub async fn crank_snapshot(handler: &CliHandler, epoch: u64) -> Result<()> {
             let result = full_vault_update(handler, vault).await;
 
             if let Err(err) = result {
-                log::error!(
-                    "Failed to update the vault: {:?} with error: {:?}",
-                    vault,
-                    err
-                );
+                log::error!("Failed to update vault vault={}: {:#}", vault, err);
             }
 
             let result = snapshot_vault_operator_delegation(handler, vault, operator, epoch).await;
 
             if let Err(err) = result {
                 log::error!(
-                    "Failed to snapshot vault operator delegation for vault: {:?} and operator: {:?} in epoch: {:?} with error: {:?}",
+                    "Failed to snapshot vault operator delegation vault={} operator={} epoch={}: {:#}",
                     vault,
                     operator,
                     epoch,
@@ -2720,10 +2712,7 @@ pub async fn crank_vote(handler: &CliHandler, epoch: u64, test_vote: bool) -> Re
 
     let ballot_box = get_or_create_ballot_box(handler, epoch).await?;
     if ballot_box.is_consensus_reached() {
-        log::info!(
-            "Consensus already reached for epoch: {:?}. Skipping voting.",
-            epoch
-        );
+        log::info!("Consensus already reached, skipping voting epoch={}", epoch);
         return Ok(());
     }
 
@@ -2756,7 +2745,7 @@ pub async fn crank_test_vote(handler: &CliHandler, epoch: u64) -> Result<()> {
 
         if let Err(err) = result {
             log::error!(
-                "Failed to cast vote for operator: {:?} in epoch: {:?} with error: {:?}",
+                "Failed to cast vote operator={} epoch={}: {:#}",
                 operator,
                 epoch,
                 err
@@ -2821,11 +2810,11 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
             if let Err(err) = result {
                 log::error!(
-                "Failed to distribute base rewards for group: {:?} in epoch: {:?} with error: {:?}",
-                group,
-                epoch,
-                err
-            );
+                    "Failed to distribute base rewards group={:?} epoch={}: {:#}",
+                    group,
+                    epoch,
+                    err
+                );
             }
         }
     }
@@ -2839,8 +2828,9 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
             if let Err(err) = result {
                 log::info!(
-                    "Skipping ncn reward router: {:?} in epoch: {:?} ( {:?} )",
+                    "Skipping NCN reward router operator={} group={:?} epoch={}: {:#}",
                     operator,
+                    group,
                     epoch,
                     err
                 );
@@ -2851,7 +2841,7 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
             if result.is_err() {
                 log::info!(
-                    "Skipping route for operator: {:?} for group: {:?} in epoch: {:?} ( No Route )",
+                    "Skipping reward route, none exists operator={} group={:?} epoch={}",
                     operator,
                     group,
                     epoch,
@@ -2868,11 +2858,12 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
                 if let Err(err) = result {
                     log::error!(
-                    "Failed to distribute base ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
-                    operator,
-                    epoch,
-                    err
-                );
+                        "Failed to distribute base NCN rewards operator={} group={:?} epoch={}: {:#}",
+                        operator,
+                        group,
+                        epoch,
+                        err
+                    );
                     continue;
                 }
             }
@@ -2885,11 +2876,12 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
                 if let Err(err) = result {
                     log::error!(
-                    "Failed to route ncn rewards for operator: {:?} in epoch: {:?} with error: {:?}",
-                    operator,
-                    epoch,
-                    err
-                );
+                        "Failed to route NCN rewards operator={} group={:?} epoch={}: {:#}",
+                        operator,
+                        group,
+                        epoch,
+                        err
+                    );
                     continue;
                 }
             }
@@ -2897,8 +2889,9 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
             let result = get_or_create_ncn_reward_router(handler, group, operator, epoch).await;
             if let Err(err) = result {
                 log::info!(
-                    "Skipping ncn reward router: {:?} in epoch: {:?} ( {:?} )",
+                    "Skipping NCN reward router operator={} group={:?} epoch={}: {:#}",
                     operator,
+                    group,
                     epoch,
                     err
                 );
@@ -2911,8 +2904,9 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
                 if let Err(err) = result {
                     log::error!(
-                        "Failed to distribute ncn operator rewards for operator: {:?} in epoch: {:?} with error: {:?}",
+                        "Failed to distribute NCN operator rewards operator={} group={:?} epoch={}: {:#}",
                         operator,
+                        group,
                         epoch,
                         err
                     );
@@ -2933,9 +2927,10 @@ pub async fn crank_distribute(handler: &CliHandler, epoch: u64) -> Result<()> {
 
                 if let Err(err) = result {
                     log::error!(
-                        "Failed to distribute ncn vault rewards for vault: {:?} and operator: {:?} in epoch: {:?} with error: {:?}",
+                        "Failed to distribute NCN vault rewards vault={} operator={} group={:?} epoch={}: {:#}",
                         vault,
                         operator,
+                        group,
                         epoch,
                         err
                     );
@@ -2954,7 +2949,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
     let result = crank_distribute(handler, epoch).await;
     if let Err(err) = result {
         log::error!(
-            "Failed to distribute rewards before closing for epoch: {:?} with error: {:?}",
+            "Failed to distribute rewards before closing epoch={}: {:#}",
             epoch,
             err
         );
@@ -2991,7 +2986,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
             if let Err(err) = result {
                 log::error!(
-                    "Failed to close ncn reward router: {:?} in epoch: {:?} with error: {:?}",
+                    "Failed to close NCN reward router account={} epoch={}: {:#}",
                     ncn_reward_router,
                     epoch,
                     err
@@ -3018,7 +3013,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
     if let Err(err) = result {
         log::error!(
-            "Failed to close base reward router: {:?} in epoch: {:?} with error: {:?}",
+            "Failed to close base reward router account={} epoch={}: {:#}",
             base_reward_router,
             epoch,
             err
@@ -3033,7 +3028,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
     if let Err(err) = result {
         log::error!(
-            "Failed to close ballot box: {:?} in epoch: {:?} with error: {:?}",
+            "Failed to close ballot box account={} epoch={}: {:#}",
             ballot_box,
             epoch,
             err
@@ -3053,7 +3048,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
         if let Err(err) = result {
             log::error!(
-                "Failed to close operator snapshot: {:?} in epoch: {:?} with error: {:?}",
+                "Failed to close operator snapshot account={} epoch={}: {:#}",
                 operator_snapshot,
                 epoch,
                 err
@@ -3069,7 +3064,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
     if let Err(err) = result {
         log::error!(
-            "Failed to close epoch snapshot: {:?} in epoch: {:?} with error: {:?}",
+            "Failed to close epoch snapshot account={} epoch={}: {:#}",
             epoch_snapshot,
             epoch,
             err
@@ -3084,7 +3079,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
     if let Err(err) = result {
         log::error!(
-            "Failed to close weight table: {:?} in epoch: {:?} with error: {:?}",
+            "Failed to close weight table account={} epoch={}: {:#}",
             weight_table,
             epoch,
             err
@@ -3099,7 +3094,7 @@ pub async fn crank_close_epoch_accounts(handler: &CliHandler, epoch: u64) -> Res
 
     if let Err(err) = result {
         log::error!(
-            "Failed to close epoch state: {:?} in epoch: {:?} with error: {:?}",
+            "Failed to close epoch state account={} epoch={}: {:#}",
             epoch_state,
             epoch,
             err
@@ -3593,10 +3588,10 @@ pub async fn send_transactions(
 
         if result.is_err() {
             info!(
-                "Retrying transaction after {}s {}/{}",
-                (1 + iteration),
-                iteration,
-                retries
+                "Retrying transaction attempt={}/{} sleep_seconds={}",
+                iteration + 1,
+                retries,
+                (1 + iteration)
             );
 
             sleep(Duration::from_secs(1 + iteration)).await;
@@ -3623,7 +3618,7 @@ pub async fn send_transactions(
     let result = client.send_and_confirm_transaction(&tx).await;
 
     if let Err(e) = result {
-        return Err(anyhow!("\nError: \n\n{:?}\n\n", e));
+        return Err(anyhow!("Transaction failed: {:?}", e));
     }
 
     Ok(result?)
@@ -3631,15 +3626,14 @@ pub async fn send_transactions(
 
 pub fn log_transaction(title: &str, signature: Signature, log_items: &[String]) {
     let mut log_message = format!(
-        "\n\n---------- {} ----------\nSignature: {:?}",
+        "Transaction confirmed operation=\"{}\" signature={}",
         title, signature
     );
 
-    for item in log_items {
-        log_message.push_str(&format!("\n{}", item));
+    if !log_items.is_empty() {
+        log_message.push_str(&format!(" details=\"{}\"", log_items.join(", ")));
     }
 
-    log_message.push('\n');
     info!("{}", log_message);
 }
 
@@ -3700,7 +3694,7 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
     all_ixs.extend(pf_ixs);
 
     info!(
-        "Migrating TDA Merkle Root Upload Authorities: {} tip distribution accounts, {} priority fee distribution accounts",
+        "Migrating TDA merkle root upload authorities tip_distribution_accounts={} priority_fee_distribution_accounts={}",
         tip_ixs_len,
         pf_ixs_len
     );
@@ -3713,7 +3707,7 @@ pub async fn migrate_tda_merkle_root_upload_authorities(
 
         let result = send_and_log_transaction(handler, &tx_ixs, &[], "Migrated TDA", &[]).await;
         if let Err(err) = result {
-            log::error!("Failed to migrate TDA with error: {:?}", err);
+            log::error!("Failed to migrate TDA: {:#}", err);
         }
     }
     Ok(())
