@@ -202,20 +202,29 @@ fn group_delegations_by_voter_pubkey(
     delegations: &imbl::HashMap<Pubkey, StakeAccount>,
     bank: &Bank,
 ) -> HashMap<Pubkey, Vec<Delegation>> {
+    // Read the stake history sysvar and warmup/cooldown rate once, then use the
+    // epoch-effective stake for both the active-stake filter and the reported
+    // delegation amount. Using the raw `Delegation.stake` field for
+    // `lamports_delegated` would overestimate stake that is warming up or cooling
+    // down (see https://github.com/jito-foundation/jito-tip-router/issues/177).
+    let stake_history = from_account::<StakeHistory, _>(
+        &bank
+            .get_account(&stake_history::id())
+            .expect("stake history sysvar account should be present in the loaded bank"),
+    )
+    .expect("stake history sysvar account should deserialize");
+    let new_warmup_cooldown_rate_epoch = bank.new_warmup_cooldown_rate_epoch();
+    let effective_stake = |stake_account: &StakeAccount| {
+        stake_account.delegation().stake(
+            bank.epoch(),
+            &stake_history,
+            new_warmup_cooldown_rate_epoch,
+        )
+    };
+
     delegations
         .into_iter()
-        .filter(|(_stake_pubkey, stake_account)| {
-            stake_account.delegation().stake(
-                bank.epoch(),
-                &from_account::<StakeHistory, _>(
-                    &bank.get_account(&stake_history::id()).expect(
-                        "stake history sysvar account should be present in the loaded bank",
-                    ),
-                )
-                .expect("stake history sysvar account should deserialize"),
-                bank.new_warmup_cooldown_rate_epoch(),
-            ) > 0
-        })
+        .filter(|(_stake_pubkey, stake_account)| effective_stake(stake_account) > 0)
         .into_group_map_by(|(_stake_pubkey, stake_account)| stake_account.delegation().voter_pubkey)
         .into_iter()
         .map(|(voter_pubkey, group)| {
@@ -235,7 +244,7 @@ fn group_delegations_by_voter_pubkey(
                             .authorized()
                             .map(|a| a.withdrawer)
                             .unwrap_or_default(),
-                        lamports_delegated: stake_account.delegation().stake,
+                        lamports_delegated: effective_stake(stake_account),
                     })
                     .collect::<Vec<Delegation>>(),
             )
@@ -761,6 +770,111 @@ mod tests {
                 assert_eq!(expected_delegation, actual_delegation);
             }
         }
+    }
+
+    /// Regression test for #177: a delegation that is still warming up (or cooling
+    /// down) must be reported at its epoch-effective stake, not the raw
+    /// `Delegation.stake` field. Using the raw field overestimates the delegation's
+    /// weight in the tip-distribution merkle tree, letting a partially
+    /// warming-up/deactivating account claim more than its active stake warrants.
+    #[test]
+    fn test_group_delegations_uses_effective_stake_during_warmup() {
+        fn next_epoch(bank: &Arc<Bank>) -> Arc<Bank> {
+            bank.squash();
+            Arc::new(Bank::new_from_parent(
+                bank.clone(),
+                &Pubkey::default(),
+                bank.get_slots_in_epoch(bank.epoch()) + bank.slot(),
+            ))
+        }
+        fn read_stake_history(bank: &Bank) -> StakeHistory {
+            from_account::<StakeHistory, _>(&bank.get_account(&stake_history::id()).unwrap())
+                .unwrap()
+        }
+
+        // A single genesis validator gives us a tiny effective-stake base.
+        let validator_keypairs_0 = ValidatorVoteKeypairs::new_rand();
+        let validator_keypairs = vec![&validator_keypairs_0];
+        const INITIAL_VALIDATOR_STAKES: u64 = 2_000_000_000;
+        let GenesisConfigInfo { genesis_config, .. } =
+            create_genesis_config_with_alpenglow_vote_accounts(
+                1_000_000_000,
+                &validator_keypairs,
+                vec![INITIAL_VALIDATOR_STAKES; 1],
+            );
+
+        let (_, bank_forks) = Bank::new_with_bank_forks_for_tests(&genesis_config);
+        let mut bank = bank_forks.read().unwrap().working_bank();
+
+        // Delegate a large stake relative to the genesis base so warmup takes many
+        // epochs, guaranteeing a wide window where effective stake < raw stake.
+        let delegator = Keypair::new();
+        let delegator_data =
+            AccountSharedData::new(1_000_000_000_000_000, 0, &system_program::id());
+        bank.store_account(&delegator.pubkey(), &delegator_data);
+
+        const DELEGATION_AMOUNT: u64 = 100_000_000_000;
+        let stake_account_pubkey = delegate_stake_helper(
+            &bank,
+            &delegator,
+            &validator_keypairs_0.vote_keypair.pubkey(),
+            DELEGATION_AMOUNT,
+        );
+
+        // Advance a few epochs so the stake is part-way through warmup: active
+        // (passes the `> 0` filter) but with effective stake far below its raw
+        // delegated amount.
+        for _ in 0..3 {
+            bank = next_epoch(&bank);
+        }
+
+        // Precondition: the stake is active (passes the > 0 filter) but its
+        // epoch-effective stake is strictly less than the raw delegated amount.
+        let stake_state: StakeStateV2 = bank
+            .get_account(&stake_account_pubkey)
+            .unwrap()
+            .state()
+            .unwrap();
+        let stake = stake_state.stake().unwrap();
+        let effective_stake = stake.stake(
+            bank.epoch(),
+            &read_stake_history(&bank),
+            bank.new_warmup_cooldown_rate_epoch(),
+        );
+        assert_eq!(
+            stake.delegation.stake, DELEGATION_AMOUNT,
+            "raw delegation field should be the full delegated amount"
+        );
+        assert!(effective_stake > 0, "stake should be partially active");
+        assert!(
+            effective_stake < DELEGATION_AMOUNT,
+            "test precondition: stake must still be warming up (effective {effective_stake} < raw {DELEGATION_AMOUNT})"
+        );
+
+        // Build the delegations map the same way the runtime's epoch stakes would
+        // hold it (keyed by stake account pubkey), using the real warming-up stake
+        // account, then exercise the function under test against this bank.
+        let stake_account =
+            StakeAccount::try_from(bank.get_account(&stake_account_pubkey).unwrap()).unwrap();
+        let mut delegations: im::HashMap<Pubkey, StakeAccount> = im::HashMap::new();
+        delegations.insert(stake_account_pubkey, stake_account);
+
+        let grouped = group_delegations_by_voter_pubkey(&delegations, &bank);
+
+        let our_delegation = grouped
+            .values()
+            .flatten()
+            .find(|d| d.stake_account_pubkey == stake_account_pubkey)
+            .expect("warming-up delegation should be present in the grouped output");
+
+        assert_eq!(
+            our_delegation.lamports_delegated, effective_stake,
+            "delegation must be reported at epoch-effective stake, not the raw delegated amount"
+        );
+        assert!(
+            our_delegation.lamports_delegated < DELEGATION_AMOUNT,
+            "warming-up delegation must not be counted at its full raw stake"
+        );
     }
 
     /// Helper function that creates and stores a delegated stake account in the bank.
