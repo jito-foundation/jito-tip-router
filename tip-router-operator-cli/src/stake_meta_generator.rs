@@ -4,6 +4,7 @@ use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{Config, CONFIG_ACCOUNT_SEED};
 use log::*;
 use meta_merkle_tree::generated_merkle_tree::{Delegation, StakeMeta, StakeMetaCollection};
+use solana_accounts_db::accounts_index::IndexKey;
 use solana_client::client_error::ClientError;
 use solana_genesis_utils::OpenGenesisConfigError;
 use solana_ledger::{
@@ -95,9 +96,22 @@ pub fn generate_stake_meta_collection(
     // VAT-filtered `Stakes` whose `stake_delegations` map is unconditionally empty
     // (it is built only for the leader-schedule `EpochStakes`). Relying on it would
     // silently produce zero stake metas and crash meta-merkle-tree creation.
-    let stake_accounts: Vec<(Pubkey, StakeAccount)> = bank
-        .get_program_accounts(&solana_stake_interface::program::id())
-        .map_err(|e| StakeMetaGeneratorError::ScanError(format!("{e:?}")))?
+    //
+    // Prefer the `ProgramId` secondary index (enabled at bank load, see
+    // `ledger_utils::stake_program_account_indexes`) so this is a fast indexed lookup rather
+    // than a full-accounts scan of the whole snapshot. Fall back to a full program scan when
+    // the index is not present (e.g. tests, or a bank loaded without the index).
+    let stake_program_id = solana_stake_interface::program::id();
+    let mut raw_stake_accounts = bank
+        .get_filtered_indexed_accounts(&IndexKey::ProgramId(stake_program_id), |_| true, None)
+        .map_err(|e| StakeMetaGeneratorError::ScanError(format!("{e:?}")))?;
+    if raw_stake_accounts.is_empty() {
+        warn!("ProgramId index returned no stake accounts; falling back to full program scan");
+        raw_stake_accounts = bank
+            .get_program_accounts(&stake_program_id)
+            .map_err(|e| StakeMetaGeneratorError::ScanError(format!("{e:?}")))?;
+    }
+    let stake_accounts: Vec<(Pubkey, StakeAccount)> = raw_stake_accounts
         .into_iter()
         .filter_map(|(stake_pubkey, account)| {
             // `try_from` returns `Err` for non-delegated stake accounts (e.g. uninitialized
