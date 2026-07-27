@@ -4,6 +4,7 @@ use jito_tip_distribution_sdk::TipDistributionAccount;
 use jito_tip_payment_sdk::{Config, CONFIG_ACCOUNT_SEED};
 use log::*;
 use meta_merkle_tree::generated_merkle_tree::{Delegation, StakeMeta, StakeMetaCollection};
+use solana_accounts_db::accounts_index::IndexKey;
 use solana_client::client_error::ClientError;
 use solana_genesis_utils::OpenGenesisConfigError;
 use solana_ledger::{
@@ -62,6 +63,8 @@ pub enum StakeMetaGeneratorError {
     PanicError(String),
 
     NoVoteAccounts(u64, u64),
+
+    ScanError(String),
 }
 
 impl Display for StakeMetaGeneratorError {
@@ -87,9 +90,38 @@ pub fn generate_stake_meta_collection(
                 bank.epoch(),
             ))?;
 
-    let top_epoch_stakes = bank.get_top_epoch_stakes();
-    let delegations = top_epoch_stakes.stake_delegations();
-    let voter_pubkey_to_delegations = group_delegations_by_voter_pubkey(delegations, bank);
+    // Enumerate every stake account directly from the bank instead of using
+    // `bank.get_top_epoch_stakes()`. Once the validator-admission-ticket feature
+    // (VAT, SIMD-0357 / Alpenglow) is active, `get_top_epoch_stakes()` returns a
+    // VAT-filtered `Stakes` whose `stake_delegations` map is unconditionally empty
+    // (it is built only for the leader-schedule `EpochStakes`). Relying on it would
+    // silently produce zero stake metas and crash meta-merkle-tree creation.
+    //
+    // Prefer the `ProgramId` secondary index (enabled at bank load, see
+    // `ledger_utils::stake_program_account_indexes`) so this is a fast indexed lookup rather
+    // than a full-accounts scan of the whole snapshot. Fall back to a full program scan when
+    // the index is not present (e.g. tests, or a bank loaded without the index).
+    let stake_program_id = solana_stake_interface::program::id();
+    let mut raw_stake_accounts = bank
+        .get_filtered_indexed_accounts(&IndexKey::ProgramId(stake_program_id), |_| true, None)
+        .map_err(|e| StakeMetaGeneratorError::ScanError(format!("{e:?}")))?;
+    if raw_stake_accounts.is_empty() {
+        warn!("ProgramId index returned no stake accounts; falling back to full program scan");
+        raw_stake_accounts = bank
+            .get_program_accounts(&stake_program_id)
+            .map_err(|e| StakeMetaGeneratorError::ScanError(format!("{e:?}")))?;
+    }
+    let stake_accounts: Vec<(Pubkey, StakeAccount)> = raw_stake_accounts
+        .into_iter()
+        .filter_map(|(stake_pubkey, account)| {
+            // `try_from` returns `Err` for non-delegated stake accounts (e.g. uninitialized
+            // or rewards-pool accounts), so this keeps only delegated stake accounts.
+            StakeAccount::try_from(account)
+                .ok()
+                .map(|stake_account| (stake_pubkey, stake_account))
+        })
+        .collect();
+    let voter_pubkey_to_delegations = group_delegations_by_voter_pubkey(&stake_accounts, bank);
 
     // Get config PDA
     let (config_pda, _) =
@@ -197,13 +229,15 @@ fn get_config(bank: &Arc<Bank>, config_pubkey: &Pubkey) -> Result<Config, StakeM
         })
 }
 
-/// Given an [EpochStakes] object, return delegations grouped by voter_pubkey (validator delegated to).
+/// Given the bank's delegated stake accounts, return delegations grouped by voter_pubkey
+/// (validator delegated to), keeping only delegations with a positive activated stake.
 fn group_delegations_by_voter_pubkey(
-    delegations: &imbl::HashMap<Pubkey, StakeAccount>,
+    stake_accounts: &[(Pubkey, StakeAccount)],
     bank: &Bank,
 ) -> HashMap<Pubkey, Vec<Delegation>> {
-    delegations
-        .into_iter()
+    stake_accounts
+        .iter()
+        .map(|(stake_pubkey, stake_account)| (stake_pubkey, stake_account))
         .filter(|(_stake_pubkey, stake_account)| {
             stake_account.delegation().stake(
                 bank.epoch(),
