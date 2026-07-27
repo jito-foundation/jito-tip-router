@@ -10,7 +10,7 @@ mod tests {
         let mut fixture = TestBuilder::new().await;
         let mut tip_router_client = fixture.tip_router_client();
 
-        fixture.warp_epoch_incremental(1000).await?;
+        fixture.warp_epoch_incremental(10).await?;
 
         const OPERATOR_COUNT: usize = 1;
         const VAULT_COUNT: usize = 1;
