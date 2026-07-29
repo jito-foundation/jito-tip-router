@@ -7,6 +7,7 @@ use jito_tip_router_cli::{args::Args, handler::CliHandler, log::init_logger};
 use log::info;
 
 #[tokio::main]
+#[allow(clippy::large_stack_frames)]
 async fn main() {
     dotenv().ok();
     init_logger();
@@ -17,7 +18,7 @@ async fn main() {
     }
 }
 
-#[allow(clippy::large_stack_frames)]
+#[allow(clippy::large_stack_frames, clippy::future_not_send)]
 async fn run() -> Result<()> {
     let args: Args = Args::parse();
 
@@ -36,9 +37,11 @@ async fn run() -> Result<()> {
         return Ok(());
     }
 
-    // if let ProgramCommand::Keeper { .. } = args.command {
-    info!("\n{}", args);
-    // }
+    // Log the config one line at a time so every line carries a level and
+    // timestamp when shipped to a log aggregator
+    for line in args.to_string().lines().filter(|line| !line.is_empty()) {
+        info!("{}", line);
+    }
 
     let handler = CliHandler::from_args(&args).await?;
     handler.handle(args.command).await?;
