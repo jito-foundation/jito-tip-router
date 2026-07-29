@@ -113,6 +113,38 @@ use tokio::time::sleep;
 
 use jito_priority_fee_distribution_sdk;
 
+// -------- Deployed (pre-audit-#262) Jito Vault program discriminator fix --------
+//
+// The Jito Vault program deployed at `Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8` predates
+// restaking audit #262, which inserted `RevokeDelegateTokenAccount` at `VaultInstruction` enum
+// index 21. This repo builds vault instructions with `jito-vault-client` generated from a newer
+// SDK rev, so for every vault instruction at enum index >= 22 the client serializes a Borsh
+// discriminator one greater than what the on-chain program dispatches on (on_chain = client - 1).
+//
+// Until the vault SDK deps are pinned to the deployed rev, rewrite the discriminator byte to the
+// on-chain value before sending. Verified on mainnet: UpdateVaultBalance tx
+// `5bQam5ALwmHLxsyx1E1JA6Xcd9FLDqFemZvXtuo3iK8EgHdEk2i85158cQf2UuBTEjNC3onN3sSciJJPxP5uJRw9`
+// (data = 0x19 = 25, log "Instruction: UpdateVaultBalance", success).
+//
+// NOTE: `UpdateVaultBalance` additionally hits an isolated client-generation bug that already
+// emits 25, but we set it explicitly so the intent survives any future client regen / dep bump.
+mod onchain_vault_disc {
+    pub const UPDATE_VAULT_BALANCE: u8 = 25;
+    pub const INITIALIZE_UPDATE_STATE_TRACKER: u8 = 26;
+    pub const CRANK_UPDATE_STATE_TRACKER: u8 = 27;
+    pub const CLOSE_UPDATE_STATE_TRACKER: u8 = 28;
+}
+
+/// Rewrite a vault instruction's Borsh discriminator byte to the value the deployed
+/// (pre-audit-#262) Jito Vault program expects. See the module comment above for context.
+fn set_onchain_vault_discriminator(ix: &mut Instruction, on_chain_disc: u8) {
+    debug_assert!(
+        !ix.data.is_empty(),
+        "vault instruction must have a discriminator byte to override"
+    );
+    ix.data[0] = on_chain_disc;
+}
+
 // --------------------- ADMIN ------------------------------
 #[allow(clippy::too_many_arguments)]
 pub async fn admin_create_config(
@@ -1965,7 +1997,7 @@ pub async fn distribute_ncn_vault_rewards(
 
     let (vault_config, _, _) = VaultConfig::find_program_address(&handler.vault_program_id);
 
-    let update_vault_balance_ix = UpdateVaultBalanceBuilder::new()
+    let mut update_vault_balance_ix = UpdateVaultBalanceBuilder::new()
         .config(vault_config)
         .vault(vault)
         .token_program(spl_token_interface::id())
@@ -1973,6 +2005,10 @@ pub async fn distribute_ncn_vault_rewards(
         .vault_token_account(vault_token_account)
         .vrt_mint(vrt_mint)
         .instruction();
+    set_onchain_vault_discriminator(
+        &mut update_vault_balance_ix,
+        onchain_vault_disc::UPDATE_VAULT_BALANCE,
+    );
 
     let result = send_and_log_transaction(
         handler,
@@ -2310,7 +2346,7 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
         get_account(handler, &vault_update_state_tracker).await?;
 
     if vault_update_state_tracker_account.is_none() {
-        let initialize_vault_update_state_tracker_ix =
+        let mut initialize_vault_update_state_tracker_ix =
             InitializeVaultUpdateStateTrackerBuilder::new()
                 .vault(*vault)
                 .vault_update_state_tracker(vault_update_state_tracker)
@@ -2319,6 +2355,10 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
                 .payer(payer.pubkey())
                 .config(vault_config)
                 .instruction();
+        set_onchain_vault_discriminator(
+            &mut initialize_vault_update_state_tracker_ix,
+            onchain_vault_disc::INITIALIZE_UPDATE_STATE_TRACKER,
+        );
 
         let result = send_and_log_transaction(
             handler,
@@ -2370,13 +2410,18 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
                 operator,
             );
 
-            let crank_vault_update_state_tracker_ix = CrankVaultUpdateStateTrackerBuilder::new()
-                .vault(*vault)
-                .operator(*operator)
-                .config(vault_config)
-                .vault_operator_delegation(vault_operator_delegation)
-                .vault_update_state_tracker(vault_update_state_tracker)
-                .instruction();
+            let mut crank_vault_update_state_tracker_ix =
+                CrankVaultUpdateStateTrackerBuilder::new()
+                    .vault(*vault)
+                    .operator(*operator)
+                    .config(vault_config)
+                    .vault_operator_delegation(vault_operator_delegation)
+                    .vault_update_state_tracker(vault_update_state_tracker)
+                    .instruction();
+            set_onchain_vault_discriminator(
+                &mut crank_vault_update_state_tracker_ix,
+                onchain_vault_disc::CRANK_UPDATE_STATE_TRACKER,
+            );
 
             let result = send_and_log_transaction(
                 handler,
@@ -2408,13 +2453,17 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
         get_account(handler, &vault_update_state_tracker).await?;
 
     if vault_update_state_tracker_account.is_some() {
-        let close_vault_update_state_tracker_ix = CloseVaultUpdateStateTrackerBuilder::new()
+        let mut close_vault_update_state_tracker_ix = CloseVaultUpdateStateTrackerBuilder::new()
             .vault(*vault)
             .vault_update_state_tracker(vault_update_state_tracker)
             .payer(payer.pubkey())
             .config(vault_config)
             .ncn_epoch(ncn_epoch)
             .instruction();
+        set_onchain_vault_discriminator(
+            &mut close_vault_update_state_tracker_ix,
+            onchain_vault_disc::CLOSE_UPDATE_STATE_TRACKER,
+        );
 
         let result = send_and_log_transaction(
             handler,
