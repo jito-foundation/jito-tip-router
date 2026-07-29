@@ -113,21 +113,6 @@ use tokio::time::sleep;
 
 use jito_priority_fee_distribution_sdk;
 
-// -------- Deployed (pre-audit-#262) Jito Vault program discriminator fix --------
-//
-// The Jito Vault program deployed at `Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8` predates
-// restaking audit #262, which inserted `RevokeDelegateTokenAccount` at `VaultInstruction` enum
-// index 21. This repo builds vault instructions with `jito-vault-client` generated from a newer
-// SDK rev, so for every vault instruction at enum index >= 22 the client serializes a Borsh
-// discriminator one greater than what the on-chain program dispatches on (on_chain = client - 1).
-//
-// Until the vault SDK deps are pinned to the deployed rev, rewrite the discriminator byte to the
-// on-chain value before sending. Verified on mainnet: UpdateVaultBalance tx
-// `5bQam5ALwmHLxsyx1E1JA6Xcd9FLDqFemZvXtuo3iK8EgHdEk2i85158cQf2UuBTEjNC3onN3sSciJJPxP5uJRw9`
-// (data = 0x19 = 25, log "Instruction: UpdateVaultBalance", success).
-//
-// NOTE: `UpdateVaultBalance` additionally hits an isolated client-generation bug that already
-// emits 25, but we set it explicitly so the intent survives any future client regen / dep bump.
 mod onchain_vault_disc {
     pub const UPDATE_VAULT_BALANCE: u8 = 25;
     pub const INITIALIZE_UPDATE_STATE_TRACKER: u8 = 26;
