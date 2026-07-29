@@ -121,7 +121,7 @@ mod onchain_vault_disc {
 }
 
 /// Rewrite a vault instruction's Borsh discriminator byte to the value the deployed
-/// (pre-audit-#262) Jito Vault program expects. See the module comment above for context.
+/// Jito Vault program expects.
 fn set_onchain_vault_discriminator(ix: &mut Instruction, on_chain_disc: u8) {
     debug_assert!(
         !ix.data.is_empty(),
