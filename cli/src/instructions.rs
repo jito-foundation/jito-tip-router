@@ -122,12 +122,15 @@ mod onchain_vault_disc {
 
 /// Rewrite a vault instruction's Borsh discriminator byte to the value the deployed
 /// Jito Vault program expects.
-fn set_onchain_vault_discriminator(ix: &mut Instruction, on_chain_disc: u8) {
-    debug_assert!(
-        !ix.data.is_empty(),
-        "vault instruction must have a discriminator byte to override"
-    );
-    ix.data[0] = on_chain_disc;
+///
+/// Returns an error (rather than panicking) if the builder produced an instruction with no data
+/// byte — this runs in the long-lived keeper, so we propagate instead of aborting the process.
+fn set_onchain_vault_discriminator(ix: &mut Instruction, on_chain_disc: u8) -> Result<()> {
+    let discriminator = ix.data.first_mut().ok_or_else(|| {
+        anyhow!("vault instruction has empty data; expected a discriminator byte to override")
+    })?;
+    *discriminator = on_chain_disc;
+    Ok(())
 }
 
 // --------------------- ADMIN ------------------------------
@@ -1993,7 +1996,7 @@ pub async fn distribute_ncn_vault_rewards(
     set_onchain_vault_discriminator(
         &mut update_vault_balance_ix,
         onchain_vault_disc::UPDATE_VAULT_BALANCE,
-    );
+    )?;
 
     let result = send_and_log_transaction(
         handler,
@@ -2343,7 +2346,7 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
         set_onchain_vault_discriminator(
             &mut initialize_vault_update_state_tracker_ix,
             onchain_vault_disc::INITIALIZE_UPDATE_STATE_TRACKER,
-        );
+        )?;
 
         let result = send_and_log_transaction(
             handler,
@@ -2406,7 +2409,7 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
             set_onchain_vault_discriminator(
                 &mut crank_vault_update_state_tracker_ix,
                 onchain_vault_disc::CRANK_UPDATE_STATE_TRACKER,
-            );
+            )?;
 
             let result = send_and_log_transaction(
                 handler,
@@ -2448,7 +2451,7 @@ pub async fn full_vault_update(handler: &CliHandler, vault: &Pubkey) -> Result<(
         set_onchain_vault_discriminator(
             &mut close_vault_update_state_tracker_ix,
             onchain_vault_disc::CLOSE_UPDATE_STATE_TRACKER,
-        );
+        )?;
 
         let result = send_and_log_transaction(
             handler,
