@@ -395,7 +395,7 @@ pub async fn loop_stages(
                 if reclaim_expired_accounts {
                     info!("Checking for expired accounts to close...");
                     if let Err(e) = reclaim::close_expired_accounts(
-                        &cli.rpc_url,
+                        &cli,
                         *tip_distribution_program_id,
                         *priority_fee_distribution_program_id,
                         keypair.clone(),
