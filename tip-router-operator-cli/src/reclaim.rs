@@ -41,7 +41,7 @@ pub async fn close_expired_accounts(
 ) -> Result<()> {
     info!("Closing expired distribution accounts");
     close_expired_distribution_accounts(
-        &cli.rpc_url,
+        cli,
         tip_distribution_program_id,
         priority_fee_distribution_program_id,
         signer.clone(),
@@ -146,7 +146,7 @@ pub async fn close_expired_claims(
 }
 
 pub async fn close_expired_distribution_accounts(
-    rpc_url: &str,
+    cli: &Cli,
     tip_distribution_program_id: Pubkey,
     priority_fee_distribution_program_id: Pubkey,
     signer: Arc<Keypair>,
@@ -154,12 +154,12 @@ pub async fn close_expired_distribution_accounts(
 ) -> Result<()> {
     let epochs_to_process = {
         // Use default timeout and commitment config for fetching the current epoch
-        let rpc_client = rpc_utils::new_rpc_client(rpc_url);
+        let rpc_client = rpc_utils::new_rpc_client(&cli.rpc_url);
         let current_epoch = rpc_client.get_epoch_info().await?.epoch;
         (current_epoch - num_monitored_epochs)..current_epoch
     };
     for epoch in epochs_to_process {
-        let rpc_client = rpc_utils::new_high_timeout_rpc_client(rpc_url);
+        let rpc_client = rpc_utils::new_high_timeout_rpc_client(&cli.rpc_url);
         info!("Fetching distribution accounts expiring in epoch {}", epoch);
         let start = Instant::now();
         let (tip_distribution_accounts, priority_fee_distribution_accounts) =
@@ -185,6 +185,7 @@ pub async fn close_expired_distribution_accounts(
             ),
             ("duration", duration.as_secs(), i64),
             "epoch" => epoch.to_string(),
+            "cluster" => &cli.cluster,
         );
 
         if tip_distribution_accounts.is_empty() && priority_fee_distribution_accounts.is_empty() {
@@ -216,7 +217,7 @@ pub async fn close_expired_distribution_accounts(
             "Processing {} close distribution account transactions",
             transactions.len()
         );
-        let rpc_client = rpc_utils::new_rpc_client(rpc_url);
+        let rpc_client = rpc_utils::new_rpc_client(&cli.rpc_url);
         transactions.shuffle(&mut rand::thread_rng());
         for batch in transactions.chunks_mut(100_000) {
             let start = Instant::now();
