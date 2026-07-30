@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -16,6 +17,9 @@ use agave_snapshots::{
 use clap_old::ArgMatches;
 use log::{info, warn};
 use solana_accounts_db::accounts_db::TOTAL_IO_URING_BUFFERS_SIZE_LIMIT;
+use solana_accounts_db::accounts_index::{
+    AccountIndex, AccountSecondaryIndexes, AccountSecondaryIndexesIncludeExclude,
+};
 use solana_core::resource_limits;
 use solana_genesis_utils::{
     open_genesis_config, OpenGenesisConfigError, MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,
@@ -60,6 +64,21 @@ pub enum LedgerUtilsError {
 
     #[error("Expected bank at slot {expected}, found {found}")]
     BankSlotMismatch { expected: u64, found: u64 },
+}
+
+/// Build a `ProgramId` secondary index scoped to just the stake program. Enabling this at bank
+/// load lets stake-meta generation fetch all stake accounts via a fast indexed lookup
+/// (`Bank::get_filtered_indexed_accounts`) instead of a full-accounts scan of the whole
+/// snapshot. The include-key filter keeps the index cheap: only stake-program-owned accounts are
+/// indexed (insertion honors `include_key`), bounding it to the ~1-2M stake accounts.
+pub(crate) fn stake_program_account_indexes() -> AccountSecondaryIndexes {
+    AccountSecondaryIndexes {
+        keys: Some(AccountSecondaryIndexesIncludeExclude {
+            exclude: false,
+            keys: HashSet::from([solana_stake_interface::program::id()]),
+        }),
+        indexes: HashSet::from([AccountIndex::ProgramId]),
+    }
 }
 
 /// Create the Bank for a desired slot for given file paths.
@@ -225,10 +244,12 @@ pub fn get_bank_from_ledger(
         ..SnapshotConfig::new_load_only()
     };
 
-    let process_options = ProcessOptions {
+    let mut process_options = ProcessOptions {
         halt_at_slot: Some(desired_slot.to_owned()),
         ..Default::default()
     };
+    // Enable the stake-program ProgramId index so stake-meta generation avoids a full scan.
+    process_options.accounts_db_config.account_indexes = Some(stake_program_account_indexes());
 
     let mut starting_slot = 0; // default start check with genesis
     let max_slot = process_options.halt_at_slot;
@@ -485,10 +506,12 @@ pub fn get_bank_from_snapshot_at_slot(
         return Err(LedgerUtilsError::MissingSnapshotAtSlot(snapshot_slot));
     }
     let full_snapshot_archive_info = full_snapshot_archives.first().expect("unreachable");
-    let process_options = ProcessOptions {
+    let mut process_options = ProcessOptions {
         halt_at_slot: Some(snapshot_slot.to_owned()),
         ..Default::default()
     };
+    // Enable the stake-program ProgramId index so stake-meta generation avoids a full scan.
+    process_options.accounts_db_config.account_indexes = Some(stake_program_account_indexes());
     let snapshot_config = SnapshotConfig {
         full_snapshot_archives_dir: full_snapshots_path.clone(),
         incremental_snapshot_archives_dir: full_snapshots_path.clone(),

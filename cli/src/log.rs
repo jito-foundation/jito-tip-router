@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use chrono::Local;
+use chrono::{SecondsFormat, Utc};
 use env_logger::{
     fmt::{Color, Formatter, Style, StyledValue},
     Env,
@@ -17,7 +17,8 @@ fn format_log_message(buf: &mut Formatter, record: &Record) -> std::io::Result<(
     let mut style = buf.style();
     let level = colored_level(&mut style, record.level());
 
-    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+    // RFC3339 UTC so log aggregators can parse the timestamp
+    let timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
 
     writeln!(
         buf,

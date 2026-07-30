@@ -36,7 +36,6 @@ use jito_vault_core::{
     vault_operator_delegation::VaultOperatorDelegation,
     vault_update_state_tracker::VaultUpdateStateTracker,
 };
-use log::info;
 use solana_account_decoder::{UiAccountEncoding, UiDataSliceConfig};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcGetVoteAccountsConfig;
@@ -99,13 +98,13 @@ async fn get_program_accounts_with_config(
 
 pub async fn get_guaranteed_epoch_and_slot(handler: &CliHandler) -> (u64, u64) {
     loop {
-        let current_epoch_and_slot_result = get_current_epoch_and_slot(handler).await;
-
-        if let Ok(result) = current_epoch_and_slot_result {
-            return result;
+        match get_current_epoch_and_slot(handler).await {
+            Ok(result) => return result,
+            Err(e) => {
+                log::warn!("Failed to fetch current epoch and slot, retrying: {:#}", e);
+            }
         }
 
-        info!("Could not fetch current epoch and slot. Retrying...");
         sleep(Duration::from_secs(1)).await;
     }
 }
