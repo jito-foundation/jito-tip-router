@@ -24,7 +24,7 @@ use solana_client::{
 };
 use solana_sdk::signature::Signer;
 
-use crate::{rpc_utils, tx_utils::pack_transactions};
+use crate::{rpc_utils, tx_utils::pack_transactions, Cli};
 use rand::seq::SliceRandom;
 use solana_metrics::datapoint_info;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
@@ -33,7 +33,7 @@ use solana_sdk::{pubkey::Pubkey, signature::Keypair, transaction::Transaction};
 const MAX_TRANSACTION_SIZE: usize = 1232;
 
 pub async fn close_expired_accounts(
-    rpc_url: &str,
+    cli: &Cli,
     tip_distribution_program_id: Pubkey,
     priority_fee_distribution_program_id: Pubkey,
     signer: Arc<Keypair>,
@@ -41,7 +41,7 @@ pub async fn close_expired_accounts(
 ) -> Result<()> {
     info!("Closing expired distribution accounts");
     close_expired_distribution_accounts(
-        rpc_url,
+        &cli.rpc_url,
         tip_distribution_program_id,
         priority_fee_distribution_program_id,
         signer.clone(),
@@ -50,7 +50,7 @@ pub async fn close_expired_accounts(
     .await?;
     info!("Closing expired claim status accounts");
     close_expired_claims(
-        rpc_url,
+        cli,
         tip_distribution_program_id,
         priority_fee_distribution_program_id,
         signer.clone(),
@@ -61,7 +61,7 @@ pub async fn close_expired_accounts(
 }
 
 pub async fn close_expired_claims(
-    rpc_url: &str,
+    cli: &Cli,
     tip_distribution_program_id: Pubkey,
     priority_fee_distribution_program_id: Pubkey,
     signer: Arc<Keypair>,
@@ -69,12 +69,12 @@ pub async fn close_expired_claims(
 ) -> Result<()> {
     let epochs_to_process = {
         // Use default timeout and commitment config for fetching the current epoch
-        let rpc_client = rpc_utils::new_rpc_client(rpc_url);
+        let rpc_client = rpc_utils::new_rpc_client(&cli.rpc_url);
         let current_epoch = rpc_client.get_epoch_info().await?.epoch;
         (current_epoch - num_monitored_epochs)..current_epoch
     };
     for epoch in epochs_to_process {
-        let rpc_client = rpc_utils::new_high_timeout_rpc_client(rpc_url);
+        let rpc_client = rpc_utils::new_high_timeout_rpc_client(&cli.rpc_url);
         info!("Fetching claim status accounts expiring in epoch {}", epoch);
         let start = Instant::now();
         let (tip_distribution_claim_accounts, priority_fee_distribution_claim_accounts) =
@@ -100,6 +100,7 @@ pub async fn close_expired_claims(
             ),
             ("duration", duration.as_secs(), i64),
             "epoch" => epoch.to_string(),
+            "cluster" => &cli.cluster,
         );
 
         let close_tip_claim_transactions = close_tip_claim_transactions(
@@ -119,7 +120,7 @@ pub async fn close_expired_claims(
         .concat();
 
         info!("Processing {} close claim transactions", transactions.len());
-        let rpc_client = rpc_utils::new_rpc_client(rpc_url);
+        let rpc_client = rpc_utils::new_rpc_client(&cli.rpc_url);
         transactions.shuffle(&mut rand::thread_rng());
         for batch in transactions.chunks_mut(100_000) {
             let start = Instant::now();
