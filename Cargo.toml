@@ -49,22 +49,22 @@ hex = "0.4.3"
 home = "=0.5.11" # Custom for compatibility with rust 1.75
 jito-account-traits-derive = { git = "https://github.com/jito-foundation/jito-account-traits-derive.git", tag = "v0.0.5" }
 jito-bytemuck = { git = "https://github.com/jito-foundation/jito-bytemuck.git", tag = "v0.1.0" }
-jito-jsm-core = { package = "jito-jsm-core", git = "https://github.com/jito-foundation/restaking", rev = "ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8" }
+jito-jsm-core = { package = "jito-jsm-core", git = "https://github.com/jito-foundation/restaking", rev = "42722518b2e13bb795322367601123a63ad0a825" }
 jito-priority-fee-distribution-sdk = { path = "./priority_fee_distribution_sdk", version = "=0.0.1" }
-jito-restaking-client = { package = "jito-restaking-client", git = "https://github.com/jito-foundation/restaking", rev = "ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8" }
-jito-restaking-core = { package = "jito-restaking-core", git = "https://github.com/jito-foundation/restaking", rev = "ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8" }
-jito-restaking-program = { package = "jito-restaking-program", git = "https://github.com/jito-foundation/restaking", rev = "ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8", features = ["no-entrypoint"] }
-jito-restaking-sdk = { package = "jito-restaking-sdk", git = "https://github.com/jito-foundation/restaking", rev = "ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8" }
+jito-restaking-client = { package = "jito-restaking-client", git = "https://github.com/jito-foundation/restaking", rev = "42722518b2e13bb795322367601123a63ad0a825" }
+jito-restaking-core = { package = "jito-restaking-core", git = "https://github.com/jito-foundation/restaking", rev = "42722518b2e13bb795322367601123a63ad0a825" }
+jito-restaking-program = { package = "jito-restaking-program", git = "https://github.com/jito-foundation/restaking", rev = "42722518b2e13bb795322367601123a63ad0a825", features = ["no-entrypoint"] }
+jito-restaking-sdk = { package = "jito-restaking-sdk", git = "https://github.com/jito-foundation/restaking", rev = "42722518b2e13bb795322367601123a63ad0a825" }
 jito-tip-distribution-sdk = { path = "./tip_distribution_sdk", version = "=0.0.1" }
 jito-tip-payment-sdk = { path = "./tip_payment_sdk", version = "=0.0.1" }
 jito-tip-router-client = { path = "./clients/rust/jito_tip_router", version = "0.0.1" }
 jito-tip-router-core = { path = "./core", version = "=0.0.1" }
 jito-tip-router-program = { path = "./program", version = "=0.1.1" }
 jito-tip-router-shank-cli = { path = "./shank_cli", version = "=0.0.1" }
-jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", rev = "ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8" }
-jito-vault-core = { package = "jito-vault-core", git = "https://github.com/jito-foundation/restaking", rev = "ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8" }
-jito-vault-program = { package = "jito-vault-program", git = "https://github.com/jito-foundation/restaking", rev = "ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8", features = ["no-entrypoint"] }
-jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", rev = "ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8" }
+jito-vault-client = { package = "jito-vault-client", git = "https://github.com/jito-foundation/restaking", rev = "42722518b2e13bb795322367601123a63ad0a825" }
+jito-vault-core = { package = "jito-vault-core", git = "https://github.com/jito-foundation/restaking", rev = "42722518b2e13bb795322367601123a63ad0a825" }
+jito-vault-program = { package = "jito-vault-program", git = "https://github.com/jito-foundation/restaking", rev = "42722518b2e13bb795322367601123a63ad0a825", features = ["no-entrypoint"] }
+jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-foundation/restaking", rev = "42722518b2e13bb795322367601123a63ad0a825" }
 log = "0.4.22"
 matches = "0.1.10"
 meta-merkle-tree = { path = "./meta_merkle_tree", version = "=0.0.1" }

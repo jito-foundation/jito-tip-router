@@ -4144,7 +4144,7 @@ dependencies = [
 [[package]]
 name = "jito-jsm-core"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8#ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "bytemuck",
@@ -4186,7 +4186,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-client"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8#ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "anchor-lang",
  "borsh 1.8.0",
@@ -4203,12 +4203,12 @@ dependencies = [
 [[package]]
 name = "jito-restaking-client-common"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8#ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 
 [[package]]
 name = "jito-restaking-core"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8#ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "bytemuck",
@@ -4225,7 +4225,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-program"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8#ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "cfg-if 1.0.4",
@@ -4246,7 +4246,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-sdk"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8#ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "shank",
@@ -4461,7 +4461,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-client"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8#ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "anchor-lang",
  "borsh 1.8.0",
@@ -4478,7 +4478,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-core"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8#ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "bytemuck",
@@ -4497,7 +4497,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-program"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8#ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "cfg-if 1.0.4",
@@ -4519,7 +4519,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-sdk"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8#ac6e4445bcf7f1ba0c0e4d3b86b5afa0cb5ce8a8"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "shank",
