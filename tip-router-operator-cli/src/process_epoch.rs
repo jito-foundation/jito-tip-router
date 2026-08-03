@@ -1,17 +1,9 @@
-use std::{
-    path::PathBuf,
-    str::FromStr,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{str::FromStr, sync::Arc, time::Duration};
 
 use crate::{
-    backup_snapshots::SnapshotInfo,
-    cli::SnapshotPaths,
-    create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
-    ledger_utils::{get_bank_from_snapshot_at_slot, LedgerUtilsError},
-    load_bank_from_snapshot, meta_merkle_tree_path, read_merkle_tree_collection,
-    read_stake_meta_collection, reclaim,
+    create_merkle_tree_collection, create_meta_merkle_tree, meta_merkle_tree_path,
+    read_merkle_tree_collection, read_stake_meta_collection, reclaim,
+    stake_meta_watcher::{load_stake_meta, StakeMetaWatcher},
     submit::submit_to_ncn,
     tip_router::get_ncn_config,
     Cli, OperatorState, Version,
@@ -19,26 +11,117 @@ use crate::{
 use anyhow::Result;
 use log::{error, info, warn};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
-use rand::Rng;
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_runtime::bank::Bank;
 use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::Keypair};
-use tokio::time;
 
-const MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS: u64 = 1200; // Experimentally determined
-const OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE: u64 = 800; // Experimentally determined
-const MAX_BLOCKSTORE_OPEN_RETRIES: u32 = 60;
-const BLOCKSTORE_RETRY_DELAY_SECS: u64 = 10;
-const BLOCKSTORE_RETRY_JITTER_SECS: u64 = 10;
+enum PreviousEpochWaitOutcome {
+    StakeMetaReady(StakeMetaCollection),
+    EpochAdvanced(EpochInfo),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct MissingStakeMetaTransition {
+    missing_stake_meta_epoch: u64,
+    old_current_epoch: u64,
+    observed_current_epoch: u64,
+    new_previous_epoch: u64,
+}
+
+impl MissingStakeMetaTransition {
+    const fn new(
+        missing_stake_meta_epoch: u64,
+        old_current_epoch: u64,
+        observed_current_epoch: u64,
+    ) -> Self {
+        Self {
+            missing_stake_meta_epoch,
+            old_current_epoch,
+            observed_current_epoch,
+            new_previous_epoch: observed_current_epoch.saturating_sub(1),
+        }
+    }
+}
+
+async fn get_epoch_info_with_retry(rpc_client: &RpcClient, cli: &Cli) -> EpochInfo {
+    loop {
+        match rpc_client.get_epoch_info().await {
+            Ok(info) => return info,
+            Err(error) => {
+                error!("Error getting epoch info from RPC. Retrying...");
+                datapoint_error!(
+                    "tip_router_cli.get_epoch_info",
+                    ("operator_address", cli.operator_address.clone(), String),
+                    ("status", "error", String),
+                    ("error", error.to_string(), String),
+                    "cluster" => &cli.cluster,
+                );
+                tokio::time::sleep(Duration::from_secs(5)).await;
+            }
+        }
+    }
+}
+
+async fn wait_for_previous_epoch_input(
+    rpc_client: &RpcClient,
+    stake_meta_directory: std::path::PathBuf,
+    current_epoch_info: &EpochInfo,
+    expected_epoch: u64,
+    cli: &Cli,
+) -> Result<PreviousEpochWaitOutcome> {
+    let mut watcher = StakeMetaWatcher::new(stake_meta_directory, expected_epoch)?;
+    let mut epoch_poll = tokio::time::interval(Duration::from_secs(10));
+
+    loop {
+        tokio::select! {
+            stake_meta_path = watcher.next_path() => {
+                let stake_meta_path = stake_meta_path?;
+
+                // A filesystem event can race the epoch boundary. Confirm the
+                // artifact is still for the previous epoch before loading its
+                // potentially large JSON payload.
+                let fresh_epoch_info = get_epoch_info_with_retry(rpc_client, cli).await;
+                if fresh_epoch_info.epoch > current_epoch_info.epoch {
+                    return Ok(PreviousEpochWaitOutcome::EpochAdvanced(fresh_epoch_info));
+                }
+
+                let load_result = tokio::task::spawn_blocking(move || {
+                    load_stake_meta(stake_meta_path, expected_epoch)
+                })
+                .await?;
+
+                match load_result {
+                    Ok(collection) => return Ok(PreviousEpochWaitOutcome::StakeMetaReady(collection)),
+                    Err(error) if error.is_invalid_artifact() => {
+                        warn!(
+                            "Ignoring invalid stake-meta artifact for expected epoch {expected_epoch}: {error}"
+                        );
+                    }
+                    Err(error) => return Err(error.into()),
+                }
+            }
+            _ = epoch_poll.tick() => {
+                match rpc_client.get_epoch_info().await {
+                    Ok(epoch_info) if epoch_info.epoch > current_epoch_info.epoch => {
+                        return Ok(PreviousEpochWaitOutcome::EpochAdvanced(epoch_info));
+                    }
+                    Ok(_) => {}
+                    Err(error) => {
+                        error!("Error getting epoch info while waiting for stake meta: {error:?}");
+                    }
+                }
+            }
+        }
+    }
+}
 
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> EpochInfo {
     loop {
-        tokio::time::sleep(Duration::from_secs(10)).await; // Check every 10 seconds
+        tokio::time::sleep(Duration::from_secs(10)).await;
         let new_epoch_info = match rpc_client.get_epoch_info().await {
             Ok(info) => info,
-            Err(e) => {
-                error!("Error getting epoch info: {:?}", e);
+            Err(error) => {
+                error!("Error getting epoch info: {error:?}");
                 continue;
             }
         };
@@ -76,212 +159,91 @@ pub fn calc_prev_epoch_and_final_slot(epoch_info: &EpochInfo) -> Result<(u64, u6
     Ok((previous_epoch, previous_epoch_final_slot))
 }
 
-/// Wait for the optimal incremental snapshot to be available to speed up full snapshot generation
-/// Automatically returns after MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS seconds
-pub async fn wait_for_optimal_incremental_snapshot(
-    incremental_snapshots_dir: PathBuf,
-    target_slot: u64,
-) -> Result<()> {
-    let mut interval = time::interval(Duration::from_secs(1));
-    let mut ticks = 0;
-
-    while ticks < MAX_WAIT_FOR_INCREMENTAL_SNAPSHOT_TICKS {
-        let dir_entries = std::fs::read_dir(&incremental_snapshots_dir)?;
-
-        for entry in dir_entries {
-            if let Some(snapshot_info) = SnapshotInfo::from_path(entry?.path()) {
-                if target_slot - OPTIMAL_INCREMENTAL_SNAPSHOT_SLOT_RANGE < snapshot_info.end_slot
-                    && snapshot_info.end_slot <= target_slot
-                {
-                    return Ok(());
-                }
-            }
-        }
-
-        interval.tick().await;
-        ticks += 1;
-    }
-
-    Ok(())
-}
-
 #[allow(clippy::too_many_arguments)]
 pub async fn loop_stages(
     keypair: Arc<Keypair>,
     rpc_client: Arc<RpcClient>,
     cli: Cli,
     starting_stage: OperatorState,
-    override_target_slot: Option<u64>,
+    _override_target_slot: Option<u64>,
     tip_router_program_id: &Pubkey,
     tip_distribution_program_id: &Pubkey,
     priority_fee_distribution_program_id: &Pubkey,
-    tip_payment_program_id: &Pubkey,
+    _tip_payment_program_id: &Pubkey,
     ncn_address: &Pubkey,
-    enable_snapshots: bool,
+    _enable_snapshots: bool,
     save_stages: bool,
     reclaim_expired_accounts: bool,
     num_monitored_epochs: u64,
 ) -> Result<()> {
-    let mut current_epoch_info = {
-        loop {
-            match rpc_client.get_epoch_info().await {
-                Ok(info) => break info,
-                Err(e) => {
-                    error!("Error getting epoch info from RPC. Retrying...");
-                    datapoint_error!(
-                        "tip_router_cli.get_epoch_info",
-                        ("operator_address", cli.operator_address.clone(), String),
-                        ("status", "error", String),
-                        ("error", e.to_string(), String),
-                        "cluster" => &cli.cluster,
-                    );
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                }
-            }
-        }
-    };
+    let mut current_epoch_info = get_epoch_info_with_retry(&rpc_client, &cli).await;
 
-    let epoch_schedule = {
-        loop {
-            match rpc_client.get_epoch_schedule().await {
-                Ok(schedule) => break schedule,
-                Err(e) => {
-                    error!("Error getting epoch schedule from RPC. Retrying...");
-                    datapoint_error!(
-                        "tip_router_cli.get_epoch_schedule",
-                        ("operator_address", cli.operator_address.clone(), String),
-                        ("status", "error", String),
-                        ("error", e.to_string(), String),
-                        "cluster" => &cli.cluster,
-                    );
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                }
-            }
-        }
-    };
-
-    // Track runs that are starting right at the beginning of a new epoch
     let operator_address = cli.operator_address.clone();
     let mut stage = starting_stage;
-    let mut blockstore_retries: u32 = 0;
-    let mut bank: Option<Arc<Bank>> = None;
     let mut stake_meta_collection: Option<StakeMetaCollection> = None;
     let mut merkle_tree_collection: Option<GeneratedMerkleTreeCollection> = None;
     let mut epoch_to_process = current_epoch_info.epoch.saturating_sub(1);
-    let mut slot_to_process = if let Some(slot) = override_target_slot {
-        slot
-    } else {
-        let (_, prev_slot) = calc_prev_epoch_and_final_slot(&current_epoch_info)?;
-        prev_slot
-    };
     loop {
         match stage {
-            OperatorState::LoadBankFromSnapshot => {
-                info!("Ensuring localhost RPC is caught up with remote validator...");
-
-                let try_catchup =
-                    crate::solana_cli::catchup(cli.rpc_url.to_owned(), cli.localhost_port);
-                if let Err(ref e) = try_catchup {
-                    datapoint_error!(
-                        "tip_router_cli.load_bank_from_snapshot",
-                        ("operator_address", operator_address, String),
-                        ("epoch", epoch_to_process, i64),
-                        ("status", "error", String),
-                        ("error", e.to_string(), String),
-                        ("state", "load_bank_from_snapshot", String),
-                        "cluster" => &cli.cluster,
-                    );
-                    error!("Failed to catch up: {}", e);
-                }
-
-                if let Ok(command_output) = try_catchup {
-                    info!("{}", command_output);
-                }
-                let incremental_snapshots_path = cli.backup_snapshots_dir.clone();
-                wait_for_optimal_incremental_snapshot(incremental_snapshots_path, slot_to_process)
-                    .await?;
-
-                match load_bank_from_snapshot(cli.clone(), slot_to_process, enable_snapshots) {
-                    Ok(loaded_bank) => {
-                        blockstore_retries = 0;
-                        bank = Some(loaded_bank);
-                        stage = OperatorState::CreateStakeMeta;
+            OperatorState::WatchForStakeMeta => {
+                let stake_meta_directory = cli.get_save_path();
+                let watched_epoch = epoch_to_process;
+                info!(
+                    "Waiting for stake-meta collection for epoch {watched_epoch} in {}",
+                    stake_meta_directory.display()
+                );
+                match wait_for_previous_epoch_input(
+                    &rpc_client,
+                    stake_meta_directory,
+                    &current_epoch_info,
+                    watched_epoch,
+                    &cli,
+                )
+                .await?
+                {
+                    PreviousEpochWaitOutcome::StakeMetaReady(collection) => {
+                        stake_meta_collection = Some(collection);
+                        stage = OperatorState::CreateMerkleTreeCollection;
                     }
-                    Err(LedgerUtilsError::BlockstoreOpenError(ref e))
-                        if blockstore_retries < MAX_BLOCKSTORE_OPEN_RETRIES =>
-                    {
-                        blockstore_retries += 1;
-                        let retry_delay_secs = BLOCKSTORE_RETRY_DELAY_SECS
-                            + rand::thread_rng().gen_range(0..=BLOCKSTORE_RETRY_JITTER_SECS);
-                        warn!("Transient blockstore error (retry {blockstore_retries}/{MAX_BLOCKSTORE_OPEN_RETRIES}), retrying in {retry_delay_secs}s: {e}");
+                    PreviousEpochWaitOutcome::EpochAdvanced(epoch_info) => {
+                        let transition = MissingStakeMetaTransition::new(
+                            epoch_to_process,
+                            current_epoch_info.epoch,
+                            epoch_info.epoch,
+                        );
+
+                        current_epoch_info = epoch_info;
+                        epoch_to_process = transition.new_previous_epoch;
+
+                        warn!(
+                            "Stake meta for expected previous epoch {} was not published before the current epoch advanced from {} to {}; abandoning epoch {} and waiting for previous epoch {}",
+                            transition.missing_stake_meta_epoch,
+                            transition.old_current_epoch,
+                            transition.observed_current_epoch,
+                            transition.missing_stake_meta_epoch,
+                            transition.new_previous_epoch,
+                        );
                         datapoint_error!(
-                            "tip_router_cli.load_bank_from_snapshot",
-                            ("operator_address", operator_address, String),
-                            ("epoch", epoch_to_process, i64),
-                            ("status", "error", String),
-                            ("error", e.to_string(), String),
-                            ("state", "blockstore_open_retry", String),
-                            ("retry", blockstore_retries, i64),
-                            ("retry_delay_secs", retry_delay_secs, i64),
+                            "tip_router_cli.stake_meta_missing_at_epoch_transition",
+                            ("operator_address", operator_address.clone(), String),
+                            (
+                                "expected_stake_meta_epoch",
+                                transition.missing_stake_meta_epoch,
+                                i64
+                            ),
+                            ("old_current_epoch", transition.old_current_epoch, i64),
+                            (
+                                "observed_current_epoch",
+                                transition.observed_current_epoch,
+                                i64
+                            ),
+                            ("new_previous_epoch", transition.new_previous_epoch, i64),
+                            ("status", "missing_stake_meta", String),
+                            ("state", "watch_for_stake_meta", String),
                             "cluster" => &cli.cluster,
                         );
-                        tokio::time::sleep(Duration::from_secs(retry_delay_secs)).await;
-                    }
-                    Err(e) => return Err(e.into()),
-                }
-            }
-            OperatorState::CreateStakeMeta => {
-                let start = Instant::now();
-                if bank.is_none() {
-                    let SnapshotPaths {
-                        ledger_path,
-                        account_paths,
-                        full_snapshots_path: _,
-                        incremental_snapshots_path: _,
-                        backup_snapshots_dir,
-                    } = cli.get_snapshot_paths();
-                    // We can safely expect to use the backup_snapshots_dir as the full snapshot path because
-                    //  _get_bank_from_snapshot_at_slot_ expects the snapshot at the exact `slot` to have
-                    //  already been taken.
-                    let maybe_bank = get_bank_from_snapshot_at_slot(
-                        slot_to_process,
-                        &backup_snapshots_dir,
-                        &backup_snapshots_dir,
-                        account_paths,
-                        ledger_path.as_path(),
-                    );
-                    match maybe_bank {
-                        Ok(some_bank) => bank = Some(Arc::new(some_bank)),
-                        Err(e) => {
-                            datapoint_error!(
-                                "tip_router_cli.create_stake_meta",
-                                ("operator_address", operator_address, String),
-                                ("epoch", epoch_to_process, i64),
-                                ("status", "error", String),
-                                ("error", e.to_string(), String),
-                                ("state", "create_stake_meta", String),
-                                ("duration_ms", start.elapsed().as_millis() as i64, i64),
-                                "cluster" => &cli.cluster,
-                            );
-                            panic!("{}", e.to_string());
-                        }
                     }
                 }
-                stake_meta_collection = Some(create_stake_meta(
-                    operator_address.clone(),
-                    epoch_to_process,
-                    bank.as_ref().expect("Bank was not set"),
-                    tip_distribution_program_id,
-                    priority_fee_distribution_program_id,
-                    tip_payment_program_id,
-                    &cli.get_save_path(),
-                    save_stages,
-                    &cli.cluster,
-                ));
-                // we should be able to safely drop the bank in this loop
-                bank = None;
-                // Transition to the next stage
-                stage = OperatorState::CreateMerkleTreeCollection;
             }
             OperatorState::CreateMerkleTreeCollection => {
                 let config =
@@ -296,14 +258,13 @@ pub async fn loop_stages(
                 let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 
                 // Generate the merkle tree collection
-                let some_stake_meta_collection =
-                    stake_meta_collection.to_owned().unwrap_or_else(|| {
-                        read_stake_meta_collection(epoch_to_process, &cli.get_save_path())
-                    });
+                let stake_meta_collection = stake_meta_collection.take().unwrap_or_else(|| {
+                    read_stake_meta_collection(epoch_to_process, &cli.get_save_path())
+                });
                 merkle_tree_collection = Some(create_merkle_tree_collection(
                     cli.operator_address.clone(),
                     tip_router_program_id,
-                    some_stake_meta_collection,
+                    stake_meta_collection,
                     epoch_to_process,
                     ncn_address,
                     protocol_fee_bps,
@@ -313,19 +274,18 @@ pub async fn loop_stages(
                     &cli.cluster,
                 ));
 
-                stake_meta_collection = None;
                 // Transition to the next stage
                 stage = OperatorState::CreateMetaMerkleTree;
             }
             OperatorState::CreateMetaMerkleTree => {
                 let merkle_root = {
-                    let some_merkle_tree_collection =
-                        merkle_tree_collection.to_owned().unwrap_or_else(|| {
+                    let merkle_tree_collection =
+                        merkle_tree_collection.take().unwrap_or_else(|| {
                             read_merkle_tree_collection(epoch_to_process, &cli.get_save_path())
                         });
                     let merkle_tree = create_meta_merkle_tree(
                         cli.operator_address.clone(),
-                        some_merkle_tree_collection,
+                        merkle_tree_collection,
                         epoch_to_process,
                         &cli.get_save_path(),
                         // This is defaulted to true because the output file is required by the
@@ -412,11 +372,8 @@ pub async fn loop_stages(
             OperatorState::WaitForNextEpoch => {
                 current_epoch_info =
                     wait_for_next_epoch(&rpc_client, current_epoch_info.epoch).await;
-
-                epoch_to_process = current_epoch_info.epoch - 1;
-                slot_to_process = epoch_schedule.get_last_slot_in_epoch(epoch_to_process);
-
-                stage = OperatorState::LoadBankFromSnapshot;
+                epoch_to_process = current_epoch_info.epoch.saturating_sub(1);
+                stage = OperatorState::WatchForStakeMeta;
             }
         }
     }

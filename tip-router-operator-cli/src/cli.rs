@@ -186,10 +186,6 @@ pub enum Commands {
         )]
         save_snapshot: bool,
     },
-    SnapshotSlot {
-        #[arg(long, env)]
-        slot: u64,
-    },
     SubmitEpoch {
         #[arg(short, long, env)]
         ncn_address: Pubkey,
@@ -227,25 +223,6 @@ pub enum Commands {
         /// The epoch to Claim tips for
         #[arg(long, env)]
         epoch: u64,
-    },
-    CreateStakeMeta {
-        #[arg(long, env)]
-        slot: u64,
-
-        #[arg(long, env)]
-        epoch: u64,
-
-        #[arg(long, env)]
-        tip_distribution_program_id: Pubkey,
-
-        #[arg(long, env)]
-        priority_fee_distribution_program_id: Pubkey,
-
-        #[arg(long, env)]
-        tip_payment_program_id: Pubkey,
-
-        #[arg(long, env, default_value = "true")]
-        save: bool,
     },
     CreateMerkleTreeCollection {
         #[arg(long, env)]

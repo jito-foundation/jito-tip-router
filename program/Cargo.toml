@@ -28,28 +28,19 @@ localhost = []
 
 [dependencies]
 borsh = { workspace = true }
-bytemuck = { workspace = true }
-cfg-if = { workspace = true }
-const_str_to_pubkey = { workspace = true }
 jito-bytemuck = { workspace = true }
 jito-jsm-core = { workspace = true }
 jito-priority-fee-distribution-sdk = { workspace = true }
 jito-restaking-core = { workspace = true }
 jito-restaking-program = { workspace = true }
-jito-restaking-sdk = { workspace = true }
 jito-tip-distribution-sdk = { workspace = true }
 jito-tip-router-core = { workspace = true }
 jito-vault-core = { workspace = true }
 jito-vault-program = { workspace = true }
-jito-vault-sdk = { workspace = true }
-shank = { workspace = true }
 solana-program = { workspace = true }
 solana-security-txt = { workspace = true }
 solana-system-interface = { workspace = true }
-spl-associated-token-account-interface = { workspace = true }
-spl-token-interface = { workspace = true }
 switchboard-on-demand = { version = "0.11.3", default-features = false, features = ["solana-v3"] }
-thiserror = { workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }

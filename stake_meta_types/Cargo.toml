@@ -1,0 +1,16 @@
+[package]
+name = "jito-stake-meta-types"
+description = "Lightweight serde output types for stake-meta generation (StakeMetaCollection and friends)"
+version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+readme = { workspace = true }
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+solana-clock = { workspace = true }
+solana-pubkey = { workspace = true }
