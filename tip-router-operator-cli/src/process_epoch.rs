@@ -3,15 +3,117 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 use crate::{
     create_merkle_tree_collection, create_meta_merkle_tree, meta_merkle_tree_path,
     read_merkle_tree_collection, read_stake_meta_collection, reclaim,
-    stake_meta_watcher::wait_for_stake_meta, submit::submit_to_ncn, tip_router::get_ncn_config,
+    stake_meta_watcher::{load_stake_meta, StakeMetaWatcher},
+    submit::submit_to_ncn,
+    tip_router::get_ncn_config,
     Cli, OperatorState, Version,
 };
 use anyhow::Result;
-use log::{error, info};
+use log::{error, info, warn};
 use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::Keypair};
+
+enum PreviousEpochWaitOutcome {
+    StakeMetaReady(StakeMetaCollection),
+    EpochAdvanced(EpochInfo),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct MissingStakeMetaTransition {
+    missing_stake_meta_epoch: u64,
+    old_current_epoch: u64,
+    observed_current_epoch: u64,
+    new_previous_epoch: u64,
+}
+
+impl MissingStakeMetaTransition {
+    fn new(
+        missing_stake_meta_epoch: u64,
+        old_current_epoch: u64,
+        observed_current_epoch: u64,
+    ) -> Self {
+        Self {
+            missing_stake_meta_epoch,
+            old_current_epoch,
+            observed_current_epoch,
+            new_previous_epoch: observed_current_epoch.saturating_sub(1),
+        }
+    }
+}
+
+async fn get_epoch_info_with_retry(rpc_client: &RpcClient, cli: &Cli) -> EpochInfo {
+    loop {
+        match rpc_client.get_epoch_info().await {
+            Ok(info) => return info,
+            Err(error) => {
+                error!("Error getting epoch info from RPC. Retrying...");
+                datapoint_error!(
+                    "tip_router_cli.get_epoch_info",
+                    ("operator_address", cli.operator_address.clone(), String),
+                    ("status", "error", String),
+                    ("error", error.to_string(), String),
+                    "cluster" => &cli.cluster,
+                );
+                tokio::time::sleep(Duration::from_secs(5)).await;
+            }
+        }
+    }
+}
+
+async fn wait_for_previous_epoch_input(
+    rpc_client: &RpcClient,
+    stake_meta_directory: std::path::PathBuf,
+    current_epoch_info: &EpochInfo,
+    expected_epoch: u64,
+    cli: &Cli,
+) -> Result<PreviousEpochWaitOutcome> {
+    let mut watcher = StakeMetaWatcher::new(stake_meta_directory, expected_epoch)?;
+    let mut epoch_poll = tokio::time::interval(Duration::from_secs(10));
+
+    loop {
+        tokio::select! {
+            stake_meta_path = watcher.next_path() => {
+                let stake_meta_path = stake_meta_path?;
+
+                // A filesystem event can race the epoch boundary. Confirm the
+                // artifact is still for the previous epoch before loading its
+                // potentially large JSON payload.
+                let fresh_epoch_info = get_epoch_info_with_retry(rpc_client, cli).await;
+                if fresh_epoch_info.epoch > current_epoch_info.epoch {
+                    return Ok(PreviousEpochWaitOutcome::EpochAdvanced(fresh_epoch_info));
+                }
+
+                let load_result = tokio::task::spawn_blocking(move || {
+                    load_stake_meta(stake_meta_path, expected_epoch)
+                })
+                .await?;
+
+                match load_result {
+                    Ok(collection) => return Ok(PreviousEpochWaitOutcome::StakeMetaReady(collection)),
+                    Err(error) if error.is_invalid_artifact() => {
+                        warn!(
+                            "Ignoring invalid stake-meta artifact for expected epoch {expected_epoch}: {error}"
+                        );
+                    }
+                    Err(error) => return Err(error.into()),
+                }
+            }
+            _ = epoch_poll.tick() => {
+                match rpc_client.get_epoch_info().await {
+                    Ok(epoch_info) if epoch_info.epoch > current_epoch_info.epoch => {
+                        return Ok(PreviousEpochWaitOutcome::EpochAdvanced(epoch_info));
+                    }
+                    Ok(_) => {}
+                    Err(error) => {
+                        error!("Error getting epoch info while waiting for stake meta: {error:?}");
+                    }
+                }
+            }
+        }
+    }
+}
 
 pub async fn wait_for_next_epoch(rpc_client: &RpcClient, current_epoch: u64) -> EpochInfo {
     loop {
@@ -74,24 +176,7 @@ pub async fn loop_stages(
     reclaim_expired_accounts: bool,
     num_monitored_epochs: u64,
 ) -> Result<()> {
-    let mut current_epoch_info = {
-        loop {
-            match rpc_client.get_epoch_info().await {
-                Ok(info) => break info,
-                Err(e) => {
-                    error!("Error getting epoch info from RPC. Retrying...");
-                    datapoint_error!(
-                        "tip_router_cli.get_epoch_info",
-                        ("operator_address", cli.operator_address.clone(), String),
-                        ("status", "error", String),
-                        ("error", e.to_string(), String),
-                        "cluster" => &cli.cluster,
-                    );
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                }
-            }
-        }
-    };
+    let mut current_epoch_info = get_epoch_info_with_retry(&rpc_client, &cli).await;
 
     let operator_address = cli.operator_address.clone();
     let mut stage = starting_stage;
@@ -107,13 +192,58 @@ pub async fn loop_stages(
                     "Waiting for stake-meta collection for epoch {watched_epoch} in {}",
                     stake_meta_directory.display()
                 );
-                stake_meta_collection = Some(
-                    tokio::task::spawn_blocking(move || {
-                        wait_for_stake_meta(stake_meta_directory, watched_epoch)
-                    })
-                    .await??,
-                );
-                stage = OperatorState::CreateMerkleTreeCollection;
+                match wait_for_previous_epoch_input(
+                    &rpc_client,
+                    stake_meta_directory,
+                    &current_epoch_info,
+                    watched_epoch,
+                    &cli,
+                )
+                .await?
+                {
+                    PreviousEpochWaitOutcome::StakeMetaReady(collection) => {
+                        stake_meta_collection = Some(collection);
+                        stage = OperatorState::CreateMerkleTreeCollection;
+                    }
+                    PreviousEpochWaitOutcome::EpochAdvanced(epoch_info) => {
+                        let transition = MissingStakeMetaTransition::new(
+                            epoch_to_process,
+                            current_epoch_info.epoch,
+                            epoch_info.epoch,
+                        );
+
+                        current_epoch_info = epoch_info;
+                        epoch_to_process = transition.new_previous_epoch;
+
+                        warn!(
+                            "Stake meta for expected previous epoch {} was not published before the current epoch advanced from {} to {}; abandoning epoch {} and waiting for previous epoch {}",
+                            transition.missing_stake_meta_epoch,
+                            transition.old_current_epoch,
+                            transition.observed_current_epoch,
+                            transition.missing_stake_meta_epoch,
+                            transition.new_previous_epoch,
+                        );
+                        datapoint_error!(
+                            "tip_router_cli.stake_meta_missing_at_epoch_transition",
+                            ("operator_address", operator_address.clone(), String),
+                            (
+                                "expected_stake_meta_epoch",
+                                transition.missing_stake_meta_epoch,
+                                i64
+                            ),
+                            ("old_current_epoch", transition.old_current_epoch, i64),
+                            (
+                                "observed_current_epoch",
+                                transition.observed_current_epoch,
+                                i64
+                            ),
+                            ("new_previous_epoch", transition.new_previous_epoch, i64),
+                            ("status", "missing_stake_meta", String),
+                            ("state", "watch_for_stake_meta", String),
+                            "cluster" => &cli.cluster,
+                        );
+                    }
+                }
             }
             OperatorState::CreateMerkleTreeCollection => {
                 let config =
@@ -128,14 +258,13 @@ pub async fn loop_stages(
                 let protocol_fee_bps = config.fee_config.adjusted_total_fees_bps(ballot_epoch)?;
 
                 // Generate the merkle tree collection
-                let some_stake_meta_collection =
-                    stake_meta_collection.to_owned().unwrap_or_else(|| {
-                        read_stake_meta_collection(epoch_to_process, &cli.get_save_path())
-                    });
+                let stake_meta_collection = stake_meta_collection.take().unwrap_or_else(|| {
+                    read_stake_meta_collection(epoch_to_process, &cli.get_save_path())
+                });
                 merkle_tree_collection = Some(create_merkle_tree_collection(
                     cli.operator_address.clone(),
                     tip_router_program_id,
-                    some_stake_meta_collection,
+                    stake_meta_collection,
                     epoch_to_process,
                     ncn_address,
                     protocol_fee_bps,
@@ -145,19 +274,18 @@ pub async fn loop_stages(
                     &cli.cluster,
                 ));
 
-                stake_meta_collection = None;
                 // Transition to the next stage
                 stage = OperatorState::CreateMetaMerkleTree;
             }
             OperatorState::CreateMetaMerkleTree => {
                 let merkle_root = {
-                    let some_merkle_tree_collection =
-                        merkle_tree_collection.to_owned().unwrap_or_else(|| {
+                    let merkle_tree_collection =
+                        merkle_tree_collection.take().unwrap_or_else(|| {
                             read_merkle_tree_collection(epoch_to_process, &cli.get_save_path())
                         });
                     let merkle_tree = create_meta_merkle_tree(
                         cli.operator_address.clone(),
-                        some_merkle_tree_collection,
+                        merkle_tree_collection,
                         epoch_to_process,
                         &cli.get_save_path(),
                         // This is defaulted to true because the output file is required by the

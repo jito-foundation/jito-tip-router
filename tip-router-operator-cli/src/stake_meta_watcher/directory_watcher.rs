@@ -1,10 +1,14 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::VecDeque,
+    path::{Path, PathBuf},
+};
 
 use notify::{
     event::{ModifyKind, RenameMode},
     Event, EventKind, RecursiveMode, Watcher,
 };
 use thiserror::Error;
+use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 use crate::stake_meta_file_candidates;
 use meta_merkle_tree::generated_merkle_tree::StakeMetaCollection;
@@ -54,14 +58,15 @@ fn handle_file_event(event: Event, expected_file_names: &[String; 2]) -> Option<
     })
 }
 
-fn find_stake_meta_file(directory: &Path, expected_file_names: &[String; 2]) -> Option<PathBuf> {
+fn find_stake_meta_files(directory: &Path, expected_file_names: &[String; 2]) -> VecDeque<PathBuf> {
     expected_file_names
         .iter()
         .map(|file_name| directory.join(file_name))
-        .find(|path| path.is_file())
+        .filter(|path| path.is_file())
+        .collect()
 }
 
-fn load_stake_meta(
+pub(crate) fn load_stake_meta(
     stake_meta_path: PathBuf,
     expected_epoch: u64,
 ) -> Result<StakeMetaCollection, DirectoryWatcherError> {
@@ -84,23 +89,67 @@ fn load_stake_meta(
     Ok(stake_meta_collection)
 }
 
-pub fn wait_for_stake_meta(
-    directory: PathBuf,
-    expected_epoch: u64,
-) -> Result<StakeMetaCollection, DirectoryWatcherError> {
-    let (tx, rx) = std::sync::mpsc::channel();
-    let mut watcher = notify::recommended_watcher(tx)?;
-    watcher.watch(directory.as_path(), RecursiveMode::NonRecursive)?;
-    let expected_file_names = stake_meta_file_candidates(expected_epoch);
+impl DirectoryWatcherError {
+    pub(crate) fn is_invalid_artifact(&self) -> bool {
+        matches!(
+            self,
+            Self::StakeMetaLoad { .. } | Self::UnexpectedEpoch { .. }
+        )
+    }
+}
 
-    if let Some(stake_meta_path) = find_stake_meta_file(&directory, &expected_file_names) {
-        return load_stake_meta(stake_meta_path, expected_epoch);
+/// Watches for one exact previous-epoch stake-meta artifact.
+///
+/// The watcher is registered before the initial scan. This ensures a producer
+/// publication between construction and the scan is either found by the scan
+/// or already queued as an event. Dropping this wrapper drops the underlying
+/// watcher and cancels an outstanding `next_path` wait.
+pub(crate) struct StakeMetaWatcher {
+    expected_file_names: [String; 2],
+    existing_paths: VecDeque<PathBuf>,
+    events: UnboundedReceiver<notify::Result<Event>>,
+    _watcher: notify::RecommendedWatcher,
+}
+
+impl StakeMetaWatcher {
+    pub(crate) fn new(
+        directory: PathBuf,
+        expected_epoch: u64,
+    ) -> Result<Self, DirectoryWatcherError> {
+        let expected_file_names = stake_meta_file_candidates(expected_epoch);
+        let (event_sender, events) = mpsc::unbounded_channel();
+        let mut watcher = notify::recommended_watcher(move |event| {
+            // It is normal for the receiver to disappear when an epoch
+            // transition supersedes this watcher.
+            let _ = event_sender.send(event);
+        })?;
+        watcher.watch(directory.as_path(), RecursiveMode::NonRecursive)?;
+
+        let existing_paths = find_stake_meta_files(&directory, &expected_file_names);
+
+        Ok(Self {
+            expected_file_names,
+            existing_paths,
+            events,
+            _watcher: watcher,
+        })
     }
 
-    while let Ok(event) = rx.recv() {
-        if let Some(stake_meta_path) = handle_file_event(event?, &expected_file_names) {
-            return load_stake_meta(stake_meta_path, expected_epoch);
+    pub(crate) async fn next_path(&mut self) -> Result<PathBuf, DirectoryWatcherError> {
+        if let Some(path) = self.existing_paths.pop_front() {
+            return Ok(path);
+        }
+
+        loop {
+            let event = self
+                .events
+                .recv()
+                .await
+                .ok_or(DirectoryWatcherError::EventChannelClosed)??;
+
+            if let Some(stake_meta_path) = handle_file_event(event, &self.expected_file_names) {
+                return Ok(stake_meta_path);
+            }
         }
     }
-    Err(DirectoryWatcherError::EventChannelClosed)
 }
