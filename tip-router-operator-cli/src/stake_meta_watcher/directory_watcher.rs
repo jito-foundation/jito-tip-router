@@ -66,7 +66,7 @@ fn find_stake_meta_files(directory: &Path, expected_file_names: &[String; 2]) ->
         .collect()
 }
 
-pub(crate) fn load_stake_meta(
+pub fn load_stake_meta(
     stake_meta_path: PathBuf,
     expected_epoch: u64,
 ) -> Result<StakeMetaCollection, DirectoryWatcherError> {
@@ -90,7 +90,7 @@ pub(crate) fn load_stake_meta(
 }
 
 impl DirectoryWatcherError {
-    pub(crate) fn is_invalid_artifact(&self) -> bool {
+    pub const fn is_invalid_artifact(&self) -> bool {
         matches!(
             self,
             Self::StakeMetaLoad { .. } | Self::UnexpectedEpoch { .. }
@@ -104,7 +104,7 @@ impl DirectoryWatcherError {
 /// publication between construction and the scan is either found by the scan
 /// or already queued as an event. Dropping this wrapper drops the underlying
 /// watcher and cancels an outstanding `next_path` wait.
-pub(crate) struct StakeMetaWatcher {
+pub struct StakeMetaWatcher {
     expected_file_names: [String; 2],
     existing_paths: VecDeque<PathBuf>,
     events: UnboundedReceiver<notify::Result<Event>>,

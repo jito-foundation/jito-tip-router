@@ -29,7 +29,7 @@ struct MissingStakeMetaTransition {
 }
 
 impl MissingStakeMetaTransition {
-    fn new(
+    const fn new(
         missing_stake_meta_epoch: u64,
         old_current_epoch: u64,
         observed_current_epoch: u64,
