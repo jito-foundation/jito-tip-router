@@ -27,6 +27,7 @@ jito-tip-router-core = { workspace = true }
 #jito-tip-router-program = { workspace = true }
 log = { workspace = true }
 meta-merkle-tree = { workspace = true }
+notify = "6.1.1"
 rand = { workspace = true }
 serde_json = { workspace = true }
 solana-account-decoder = { workspace = true }

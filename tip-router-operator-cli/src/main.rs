@@ -11,11 +11,9 @@ use ::{
     tip_router_operator_cli::{
         backup_snapshots::BackupSnapshotMonitor,
         claim::{claim_mev_tips_with_emit, emit_claim_mev_tips_metrics},
-        cli::{Cli, Commands, SnapshotPaths},
-        create_merkle_tree_collection, create_meta_merkle_tree, create_stake_meta,
-        ledger_utils::get_bank_from_snapshot_at_slot,
-        load_bank_from_snapshot, meta_merkle_tree_file_name, process_epoch,
-        read_merkle_tree_collection, read_stake_meta_collection, reclaim,
+        cli::{Cli, Commands},
+        create_merkle_tree_collection, create_meta_merkle_tree, meta_merkle_tree_file_name,
+        process_epoch, read_merkle_tree_collection, read_stake_meta_collection, reclaim,
         restaking::RestakingHandler,
         submit::{submit_recent_epochs_to_ncn, submit_to_ncn},
         tip_distribution_stats::get_tip_distribution_stats,
@@ -379,11 +377,6 @@ async fn main() -> Result<()> {
             )
             .await?;
         }
-        Commands::SnapshotSlot { slot } => {
-            info!("Snapshotting slot...");
-
-            load_bank_from_snapshot(cli, slot, true)?;
-        }
         Commands::SubmitEpoch {
             ncn_address,
             tip_distribution_program_id,
@@ -439,45 +432,6 @@ async fn main() -> Result<()> {
                 &file_mutex,
             )
             .await?;
-        }
-        Commands::CreateStakeMeta {
-            epoch,
-            slot,
-            tip_distribution_program_id,
-            priority_fee_distribution_program_id,
-            tip_payment_program_id,
-            save,
-        } => {
-            let SnapshotPaths {
-                ledger_path,
-                account_paths,
-                full_snapshots_path: _,
-                incremental_snapshots_path: _,
-                backup_snapshots_dir,
-            } = cli.get_snapshot_paths();
-
-            // We can safely expect to use the backup_snapshots_dir as the full snapshot path because
-            //  _get_bank_from_snapshot_at_slot_ expects the snapshot at the exact `slot` to have
-            //  already been taken.
-            let bank = get_bank_from_snapshot_at_slot(
-                slot,
-                &backup_snapshots_dir,
-                &backup_snapshots_dir,
-                account_paths,
-                ledger_path.as_path(),
-            )?;
-
-            create_stake_meta(
-                cli.operator_address,
-                epoch,
-                &Arc::new(bank),
-                &tip_distribution_program_id,
-                &priority_fee_distribution_program_id,
-                &tip_payment_program_id,
-                &save_path,
-                save,
-                &cli.cluster,
-            );
         }
         Commands::CreateMerkleTreeCollection {
             tip_router_program_id,
