@@ -507,7 +507,7 @@ async fn main() -> Result<()> {
         } => {
             info!("Reclaiming expired accounts...");
             reclaim::close_expired_accounts(
-                &cli.rpc_url,
+                &cli,
                 tip_distribution_program_id,
                 priority_fee_distribution_program_id,
                 keypair.clone(),

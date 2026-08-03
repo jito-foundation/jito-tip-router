@@ -414,120 +414,116 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
 name = "anchor-attribute-access-control"
-version = "0.31.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f70fd141a4d18adf11253026b32504f885447048c7494faf5fa83b01af9c0cf"
+checksum = "9fc4b6b3c3f3e37a0b7d537e03a36bfb0415ee11b4443fa4190437cf26a874b6"
 dependencies = [
- "anchor-syn",
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.119",
 ]
 
 [[package]]
 name = "anchor-attribute-account"
-version = "0.31.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "715a261c57c7679581e06f07a74fa2af874ac30f86bd8ea07cca4a7e5388a064"
+checksum = "48e8b1468add67e6a69732883e58d23a18be51538994adaae69c9b3fe967e6be"
 dependencies = [
  "anchor-syn",
- "bs58 0.5.1",
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.119",
 ]
 
 [[package]]
 name = "anchor-attribute-constant"
-version = "0.31.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "730d6df8ae120321c5c25e0779e61789e4b70dc8297102248902022f286102e4"
+checksum = "80e1e3ade39ba05716ddc3b792859d838cccf43f5f4913ae8a163de7a2ed7f7e"
 dependencies = [
  "anchor-syn",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.119",
 ]
 
 [[package]]
 name = "anchor-attribute-error"
-version = "0.31.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27e6e449cc3a37b2880b74dcafb8e5a17b954c0e58e376432d7adc646fb333ef"
+checksum = "d4e026f0ff09d740fd1821bbf97d9ac649c123ff92f04b9197b002494af4acf1"
 dependencies = [
  "anchor-syn",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.119",
 ]
 
 [[package]]
 name = "anchor-attribute-event"
-version = "0.31.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7710e4c54adf485affcd9be9adec5ef8846d9c71d7f31e16ba86ff9fc1dd49f"
+checksum = "7aafc8e26eb16a0c4129661f6857c42f301859fc2ee10f4e5287d571f0ea07f5"
 dependencies = [
  "anchor-syn",
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.119",
 ]
 
 [[package]]
 name = "anchor-attribute-program"
-version = "0.31.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05ecfd49b2aeadeb32f35262230db402abed76ce87e27562b34f61318b2ec83c"
+checksum = "6844e657ffe049b073389efb843bb281d08579b8a47ef294365f729b35ed3dca"
 dependencies = [
  "anchor-lang-idl",
  "anchor-syn",
  "anyhow",
- "bs58 0.5.1",
  "heck 0.3.3",
  "proc-macro2",
  "quote",
- "serde_json",
- "syn 1.0.109",
+ "syn 2.0.119",
 ]
 
 [[package]]
 name = "anchor-derive-accounts"
-version = "0.31.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be89d160793a88495af462a7010b3978e48e30a630c91de47ce2c1d3cb7a6149"
+checksum = "2c87a6769d7cf2deed8d3351d6d1d8aa05a3a07751f1418ab6b34aaa307bd34b"
 dependencies = [
  "anchor-syn",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.119",
 ]
 
 [[package]]
 name = "anchor-derive-serde"
-version = "0.31.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abc6ee78acb7bfe0c2dd2abc677aaa4789c0281a0c0ef01dbf6fe85e0fd9e6e4"
+checksum = "1f014d99530ae48a81f710f150688c5c542fdeee3af8998010e147a64d7a697c"
 dependencies = [
  "anchor-syn",
- "borsh-derive-internal",
+ "proc-macro-crate 3.5.0",
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.119",
 ]
 
 [[package]]
 name = "anchor-derive-space"
-version = "0.31.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "134a01c0703f6fd355a0e472c033f6f3e41fac1ef6e370b20c50f4c8d022cea7"
+checksum = "33ba30c2d844e7440c491ad5f3e25f93115c6c9319df480eda460ce96030832b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.119",
 ]
 
 [[package]]
 name = "anchor-lang"
-version = "0.31.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6bab117055905e930f762c196e08f861f8dfe7241b92cee46677a3b15561a0a"
+checksum = "aa6708f356398752b8d7a08fb701c9c17395e103786fb1b33615a7267a6f4774"
 dependencies = [
  "anchor-attribute-access-control",
  "anchor-attribute-account",
@@ -538,13 +534,48 @@ dependencies = [
  "anchor-derive-accounts",
  "anchor-derive-serde",
  "anchor-derive-space",
+ "anchor-lang-error",
  "anchor-lang-idl",
  "base64 0.21.7",
  "bincode",
- "borsh 0.10.4",
+ "borsh 1.8.0",
  "bytemuck",
- "solana-program 2.3.0",
+ "const-crypto",
+ "solana-account-info 3.1.1",
+ "solana-clock 3.1.1",
+ "solana-cpi 3.1.0",
+ "solana-define-syscall 3.0.0",
+ "solana-feature-gate-interface 3.1.0",
+ "solana-instruction 3.4.0",
+ "solana-instructions-sysvar 3.0.1",
+ "solana-invoke",
+ "solana-loader-v3-interface 6.1.1",
+ "solana-msg 3.1.0",
+ "solana-program-entrypoint 3.1.1",
+ "solana-program-error 3.0.1",
+ "solana-program-memory 3.1.0",
+ "solana-program-option 3.1.0",
+ "solana-program-pack 3.1.0",
+ "solana-pubkey 3.0.0",
+ "solana-sdk-ids 3.1.0",
+ "solana-stake-interface 2.0.2",
+ "solana-system-interface 2.0.0",
+ "solana-sysvar 3.1.1",
+ "solana-sysvar-id 3.1.0",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "anchor-lang-error"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20760a8d5b7ddd1aea7a347c43c702ea4e962ccb7b9908c952e4b372b2d9e1f7"
+dependencies = [
+ "anchor-attribute-error",
+ "borsh 1.8.0",
+ "solana-msg 3.1.0",
+ "solana-program-error 3.0.1",
+ "solana-pubkey 3.0.0",
 ]
 
 [[package]]
@@ -574,20 +605,19 @@ dependencies = [
 
 [[package]]
 name = "anchor-syn"
-version = "0.31.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dc7a6d90cc643df0ed2744862cdf180587d1e5d28936538c18fc8908489ed67"
+checksum = "f8f6c61ef5b47db60700087bb6e419284b3461ba8f59040e1f6827aa9e9a5bc4"
 dependencies = [
  "anyhow",
  "bs58 0.5.1",
- "cargo_toml 0.19.2",
+ "cargo_toml 0.22.3",
  "heck 0.3.3",
  "proc-macro2",
  "quote",
  "serde",
- "serde_json",
- "sha2 0.10.9",
- "syn 1.0.109",
+ "sha2 0.11.0",
+ "syn 2.0.119",
  "thiserror 1.0.69",
 ]
 
@@ -1262,7 +1292,7 @@ dependencies = [
  "bitflags 2.13.1",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
+ "itertools 0.10.5",
  "lazy_static",
  "lazycell",
  "proc-macro2",
@@ -1644,12 +1674,12 @@ dependencies = [
 
 [[package]]
 name = "cargo_toml"
-version = "0.19.2"
+version = "0.22.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a98356df42a2eb1bd8f1793ae4ee4de48e384dd974ce5eac8eee802edb7492be"
+checksum = "374b7c592d9c00c1f4972ea58390ac6b18cbb6ab79011f3bdc90a0b82ca06b77"
 dependencies = [
  "serde",
- "toml 0.8.23",
+ "toml 0.9.12+spec-1.1.0",
 ]
 
 [[package]]
@@ -1926,6 +1956,16 @@ checksum = "e89f72f65e8501878b8a004d5a1afb780987e2ce2b4532c562e367a72c57499f"
 dependencies = [
  "log",
  "web-sys",
+]
+
+[[package]]
+name = "const-crypto"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c06f1eb05f06cf2e380fdded278fbf056a38974299d77960555a311dcf91a52"
+dependencies = [
+ "keccak-const",
+ "sha2-const-stable",
 ]
 
 [[package]]
@@ -4076,7 +4116,7 @@ dependencies = [
 [[package]]
 name = "jito-account-traits-derive"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+source = "git+https://github.com/jito-foundation/jito-account-traits-derive.git#3d9e124f033965a29c56fe31c9d1ae618211efe7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4085,19 +4125,19 @@ dependencies = [
 
 [[package]]
 name = "jito-bytemuck"
-version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+version = "0.1.0"
+source = "git+https://github.com/jito-foundation/jito-bytemuck.git?tag=v0.1.0#9fa7b231550904be4ad16cdb08817f79838024a7"
 dependencies = [
- "borsh 1.8.0",
+ "borsh 0.10.4",
  "bytemuck",
  "jito-account-traits-derive",
- "solana-program-error 3.0.1",
+ "solana-program 3.0.0",
 ]
 
 [[package]]
 name = "jito-jsm-core"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "bytemuck",
@@ -4107,6 +4147,8 @@ dependencies = [
  "solana-program 3.0.0",
  "solana-system-interface 3.2.0",
  "spl-associated-token-account-interface",
+ "spl-token-2022-interface",
+ "spl-token-interface",
  "thiserror 2.0.18",
 ]
 
@@ -4136,7 +4178,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-client"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "anchor-lang",
  "borsh 1.8.0",
@@ -4153,12 +4195,12 @@ dependencies = [
 [[package]]
 name = "jito-restaking-client-common"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 
 [[package]]
 name = "jito-restaking-core"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "bytemuck",
@@ -4175,7 +4217,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-program"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "cfg-if 1.0.4",
@@ -4196,7 +4238,7 @@ dependencies = [
 [[package]]
 name = "jito-restaking-sdk"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "shank",
@@ -4395,7 +4437,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-client"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "anchor-lang",
  "borsh 1.8.0",
@@ -4412,7 +4454,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-core"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "bytemuck",
@@ -4431,7 +4473,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-program"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "cfg-if 1.0.4",
@@ -4453,7 +4495,7 @@ dependencies = [
 [[package]]
 name = "jito-vault-sdk"
 version = "0.0.5"
-source = "git+https://github.com/jito-foundation/restaking?rev=58df1582c474e9c5f534a7dcb0388b82437aa78e#58df1582c474e9c5f534a7dcb0388b82437aa78e"
+source = "git+https://github.com/jito-foundation/restaking?rev=42722518b2e13bb795322367601123a63ad0a825#42722518b2e13bb795322367601123a63ad0a825"
 dependencies = [
  "borsh 1.8.0",
  "shank",
@@ -4682,6 +4724,12 @@ checksum = "cb26cec98cce3a3d96cbb7bced3c4b16e3d13f27ec56dbd62cbc8f39cfb9d653"
 dependencies = [
  "cpufeatures 0.2.17",
 ]
+
+[[package]]
+name = "keccak-const"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57d8d8ce877200136358e0bbff3a77965875db3af755a11e1fa6b1b3e2df13ea"
 
 [[package]]
 name = "kqueue"
@@ -5988,7 +6036,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -7173,6 +7221,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf41e0cfaf7226dca15e8197172c295a782857fcb97fad1808a166870dee75a3"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "serde_spanned"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6662b5879511e06e8999a8a235d848113e942c9124f211511b16466ee2995f26"
+dependencies = [
+ "serde_core",
 ]
 
 [[package]]
@@ -9069,6 +9126,17 @@ dependencies = [
 
 [[package]]
 name = "solana-feature-gate-interface"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75ca9b5cbb6f500f7fd73db5bd95640f71a83f04d6121a0e59a43b202dca2731"
+dependencies = [
+ "solana-program-error 3.0.1",
+ "solana-pubkey 4.2.0",
+ "solana-sdk-ids 3.1.0",
+]
+
+[[package]]
+name = "solana-feature-gate-interface"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd7545e02f91da1d6996f32b18f7796aa01e0682f8f3a7434b82cd1a10448add"
@@ -9517,6 +9585,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-invoke"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4065031f5c7dd29ef5f5003c1a353011eeabbafa6c5a5033da0cedbfca824b94"
+dependencies = [
+ "solana-account-info 3.1.1",
+ "solana-define-syscall 3.0.0",
+ "solana-instruction 3.4.0",
+ "solana-program-entrypoint 3.1.1",
+ "solana-stable-layout 3.0.1",
+]
+
+[[package]]
 name = "solana-keccak-hasher"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9765,6 +9846,21 @@ dependencies = [
  "solana-pubkey 2.4.0",
  "solana-sdk-ids 2.2.1",
  "solana-system-interface 1.0.0",
+]
+
+[[package]]
+name = "solana-loader-v3-interface"
+version = "6.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e0538d4dbc9022e01616f1c58f2db98ece739c5d5ed4a2ef8737a953e76a2d4"
+dependencies = [
+ "serde",
+ "serde_bytes",
+ "serde_derive",
+ "solana-instruction 3.4.0",
+ "solana-pubkey 4.2.0",
+ "solana-sdk-ids 3.1.0",
+ "solana-system-interface 3.2.0",
 ]
 
 [[package]]
@@ -10344,6 +10440,7 @@ dependencies = [
  "solana-account-info 3.1.1",
  "solana-big-mod-exp 3.0.0",
  "solana-blake3-hasher 3.1.0",
+ "solana-borsh 3.0.2",
  "solana-clock 3.1.1",
  "solana-cpi 3.1.0",
  "solana-define-syscall 3.0.0",
@@ -11860,6 +11957,25 @@ dependencies = [
  "solana-pubkey 2.4.0",
  "solana-system-interface 1.0.0",
  "solana-sysvar-id 2.2.1",
+]
+
+[[package]]
+name = "solana-stake-interface"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9bc26191b533f9a6e5a14cca05174119819ced680a80febff2f5051a713f0db"
+dependencies = [
+ "num-traits",
+ "serde",
+ "serde_derive",
+ "solana-clock 3.1.1",
+ "solana-cpi 3.1.0",
+ "solana-instruction 3.4.0",
+ "solana-program-error 3.0.1",
+ "solana-pubkey 3.0.0",
+ "solana-system-interface 2.0.0",
+ "solana-sysvar 3.1.1",
+ "solana-sysvar-id 3.1.0",
 ]
 
 [[package]]
@@ -13867,9 +13983,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc1beb996b9d83529a9e75c17a1686767d148d70663143c7854d8b4a09ced362"
 dependencies = [
  "serde",
- "serde_spanned",
+ "serde_spanned 0.6.9",
  "toml_datetime 0.6.11",
  "toml_edit 0.22.27",
+]
+
+[[package]]
+name = "toml"
+version = "0.9.12+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf92845e79fc2e2def6a5d828f0801e29a2f8acc037becc5ab08595c7d5e9863"
+dependencies = [
+ "indexmap 2.14.0",
+ "serde_core",
+ "serde_spanned 1.1.1",
+ "toml_datetime 0.7.5+spec-1.1.0",
+ "toml_parser",
+ "toml_writer",
+ "winnow 0.7.15",
 ]
 
 [[package]]
@@ -13879,6 +14010,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22cddaf88f4fbc13c51aebbf5f8eceb5c7c5a9da2ac40a13519eb5b0a0e8f11c"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "toml_datetime"
+version = "0.7.5+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92e1cfed4a3038bc5a127e35a2d360f145e1f4b971b551a2ba5fd7aedf7e1347"
+dependencies = [
+ "serde_core",
 ]
 
 [[package]]
@@ -13898,7 +14038,7 @@ checksum = "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
 dependencies = [
  "indexmap 2.14.0",
  "serde",
- "serde_spanned",
+ "serde_spanned 0.6.9",
  "toml_datetime 0.6.11",
  "toml_write",
  "winnow 0.7.15",
@@ -13930,6 +14070,12 @@ name = "toml_write"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
+
+[[package]]
+name = "toml_writer"
+version = "1.1.2+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d56353a2a665ad0f41a421187180aab746c8c325620617ad883a99a1cbe66d2"
 
 [[package]]
 name = "tonic"
