@@ -85,8 +85,8 @@ services:
 
   tip-router-operator-cli:
     build:
-      context: ./tip-router-operator-cli
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: tip-router-operator-cli/Dockerfile
     container_name: tip-router-operator-cli
     environment:
       - RUST_LOG=${RUST_LOG:-info}
