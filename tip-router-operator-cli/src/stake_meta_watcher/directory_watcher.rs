@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use jito_stake_meta_types::StakeMetaCollection;
 use notify::{
     event::{ModifyKind, RenameMode},
     Event, EventKind, RecursiveMode, Watcher,
@@ -10,8 +11,7 @@ use notify::{
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
-use crate::stake_meta_file_candidates;
-use meta_merkle_tree::generated_merkle_tree::StakeMetaCollection;
+use crate::stake_meta_file_name;
 
 #[derive(Debug, Error)]
 pub enum DirectoryWatcherError {
@@ -37,9 +37,9 @@ pub enum DirectoryWatcherError {
 
 /// Returns the published stake-meta path from a create or rename-to event.
 ///
-/// Stake-meta producers publish a temporary file before renaming it to its final name, so files
-/// containing `tmp` are deliberately ignored.
-fn handle_file_event(event: Event, expected_file_names: &[String; 2]) -> Option<PathBuf> {
+/// Stake-meta producers publish a temporary file before renaming it to the exact canonical name,
+/// so only the published artifact name is accepted.
+fn handle_file_event(event: Event, expected_file_name: &str) -> Option<PathBuf> {
     let is_file_created = matches!(
         event.kind,
         EventKind::Create(_)
@@ -54,15 +54,16 @@ fn handle_file_event(event: Event, expected_file_names: &[String; 2]) -> Option<
             return false;
         };
 
-        !file_name.contains("tmp") && expected_file_names.iter().any(|name| name == file_name)
+        file_name == expected_file_name
     })
 }
 
-fn find_stake_meta_files(directory: &Path, expected_file_names: &[String; 2]) -> VecDeque<PathBuf> {
-    expected_file_names
-        .iter()
-        .map(|file_name| directory.join(file_name))
-        .filter(|path| path.is_file())
+fn find_stake_meta_files(directory: &Path, expected_file_name: &str) -> VecDeque<PathBuf> {
+    let stake_meta_path = directory.join(expected_file_name);
+    stake_meta_path
+        .is_file()
+        .then_some(stake_meta_path)
+        .into_iter()
         .collect()
 }
 
@@ -105,7 +106,7 @@ impl DirectoryWatcherError {
 /// or already queued as an event. Dropping this wrapper drops the underlying
 /// watcher and cancels an outstanding `next_path` wait.
 pub struct StakeMetaWatcher {
-    expected_file_names: [String; 2],
+    expected_file_name: String,
     existing_paths: VecDeque<PathBuf>,
     events: UnboundedReceiver<notify::Result<Event>>,
     _watcher: notify::RecommendedWatcher,
@@ -116,7 +117,7 @@ impl StakeMetaWatcher {
         directory: PathBuf,
         expected_epoch: u64,
     ) -> Result<Self, DirectoryWatcherError> {
-        let expected_file_names = stake_meta_file_candidates(expected_epoch);
+        let expected_file_name = stake_meta_file_name(expected_epoch);
         let (event_sender, events) = mpsc::unbounded_channel();
         let mut watcher = notify::recommended_watcher(move |event| {
             // It is normal for the receiver to disappear when an epoch
@@ -125,10 +126,10 @@ impl StakeMetaWatcher {
         })?;
         watcher.watch(directory.as_path(), RecursiveMode::NonRecursive)?;
 
-        let existing_paths = find_stake_meta_files(&directory, &expected_file_names);
+        let existing_paths = find_stake_meta_files(&directory, &expected_file_name);
 
         Ok(Self {
-            expected_file_names,
+            expected_file_name,
             existing_paths,
             events,
             _watcher: watcher,
@@ -147,7 +148,7 @@ impl StakeMetaWatcher {
                 .await
                 .ok_or(DirectoryWatcherError::EventChannelClosed)??;
 
-            if let Some(stake_meta_path) = handle_file_event(event, &self.expected_file_names) {
+            if let Some(stake_meta_path) = handle_file_event(event, &self.expected_file_name) {
                 return Ok(stake_meta_path);
             }
         }

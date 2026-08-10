@@ -9,8 +9,9 @@ use crate::{
     Cli, OperatorState, Version,
 };
 use anyhow::Result;
+use jito_stake_meta_types::StakeMetaCollection;
 use log::{error, info, warn};
-use meta_merkle_tree::generated_merkle_tree::{GeneratedMerkleTreeCollection, StakeMetaCollection};
+use meta_merkle_tree::generated_merkle_tree::GeneratedMerkleTreeCollection;
 use solana_metrics::{datapoint_error, datapoint_info};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{epoch_info::EpochInfo, pubkey::Pubkey, signature::Keypair};

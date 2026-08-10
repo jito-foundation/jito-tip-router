@@ -20,6 +20,7 @@ jito-priority-fee-distribution-sdk = { workspace = true }
 jito-restaking-client = { workspace = true }
 jito-restaking-core = { workspace = true }
 jito-restaking-program = { workspace = true }
+jito-stake-meta-types = { workspace = true }
 jito-tip-distribution-sdk = { workspace = true }
 jito-tip-payment-sdk = { workspace = true }
 jito-tip-router-client = { workspace = true }

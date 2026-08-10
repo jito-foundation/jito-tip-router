@@ -13796,6 +13796,7 @@ dependencies = [
  "jito-restaking-client",
  "jito-restaking-core",
  "jito-restaking-program",
+ "jito-stake-meta-types",
  "jito-tip-distribution-sdk",
  "jito-tip-payment-sdk",
  "jito-tip-router-client",

@@ -29,13 +29,13 @@ use std::time::Instant;
 
 use anyhow::Result;
 use borsh::BorshSerialize;
+use jito_stake_meta_types::StakeMetaCollection;
 use jito_tip_payment_sdk::{
     CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
     TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
     TIP_ACCOUNT_SEED_7,
 };
 use log::info;
-use meta_merkle_tree::generated_merkle_tree::StakeMetaCollection;
 use meta_merkle_tree::{
     generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
 };
@@ -83,44 +83,25 @@ pub enum OperatorState {
     ReclaimExpiredAccounts,
 }
 
-pub const STAKE_META_COLLECTION_FILE_NAME: &str = "stake_meta_collection.json";
-pub(crate) const LEGACY_STAKE_META_COLLECTION_FILE_NAME: &str = "stake-meta-collection.json";
+/// Suffix used by the tip-router snapshot service for published stake-meta artifacts.
+pub const STAKE_META_ARTIFACT_SUFFIX: &str = "_stake_meta_collection.json";
 
 pub fn stake_meta_file_name(epoch: u64) -> String {
-    format!("{epoch}_{STAKE_META_COLLECTION_FILE_NAME}")
-}
-
-pub(crate) fn stake_meta_file_candidates(epoch: u64) -> [String; 2] {
-    [
-        stake_meta_file_name(epoch),
-        format!("{epoch}-{LEGACY_STAKE_META_COLLECTION_FILE_NAME}"),
-    ]
+    format!("{epoch}{STAKE_META_ARTIFACT_SUFFIX}")
 }
 
 pub fn read_stake_meta_collection(epoch: u64, save_path: &Path) -> StakeMetaCollection {
-    let stake_meta_file_candidates: &[String] = &stake_meta_file_candidates(epoch);
+    let stake_meta_file_path = save_path.join(stake_meta_file_name(epoch));
+    assert!(
+        stake_meta_file_path.is_file(),
+        "Failed to find stake meta collection file: {}",
+        stake_meta_file_path.display()
+    );
 
-    let candidate_paths = stake_meta_file_candidates
-        .iter()
-        .map(|filename| {
-            let path = save_path.join(filename);
-            PathBuf::from(&path)
-        })
-        .collect::<Vec<_>>();
-
-    let valid_stake_meta_file_names = candidate_paths
-        .iter()
-        .filter(|path| path.exists())
-        .collect::<Vec<_>>();
-
-    let stake_meta_file_name = valid_stake_meta_file_names
-        .first()
-        .expect("Failed to find a valid stake meta file");
-
-    StakeMetaCollection::new_from_file(stake_meta_file_name).unwrap_or_else(|_| {
+    StakeMetaCollection::new_from_file(&stake_meta_file_path).unwrap_or_else(|_| {
         panic!(
             "Failed to load stake meta collection from file: {}",
-            stake_meta_file_name.display()
+            stake_meta_file_path.display()
         )
     })
 }
@@ -554,6 +535,16 @@ pub fn cleanup_tmp_files(snapshot_output_dir: &Path) -> std::result::Result<(), 
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::stake_meta_file_name;
+
+    #[test]
+    fn stake_meta_artifact_name_matches_snapshot_service_contract() {
+        assert_eq!(stake_meta_file_name(42), "42_stake_meta_collection.json");
+    }
 }
 
 pub async fn get_epoch_percentage(client: &RpcClient) -> anyhow::Result<f64> {
