@@ -12,10 +12,7 @@ use solana_ledger::{
     blockstore_processor::BlockstoreProcessorError,
 };
 use solana_runtime::{bank::Bank, stakes::StakeAccount};
-use solana_sdk::{
-    account::{from_account, ReadableAccount},
-    pubkey::Pubkey,
-};
+use solana_sdk::{account::ReadableAccount, pubkey::Pubkey};
 use solana_stake_interface::stake_history::StakeHistory;
 use solana_stake_interface::sysvar::stake_history;
 use std::{
@@ -241,10 +238,10 @@ fn group_delegations_by_voter_pubkey(
         .filter(|(_stake_pubkey, stake_account)| {
             stake_account.delegation().stake(
                 bank.epoch(),
-                &from_account::<StakeHistory, _>(
-                    &bank.get_account(&stake_history::id()).expect(
-                        "stake history sysvar account should be present in the loaded bank",
-                    ),
+                &bincode::deserialize::<StakeHistory>(
+                    bank.get_account(&stake_history::id())
+                        .expect("stake history sysvar account should be present in the loaded bank")
+                        .data(),
                 )
                 .expect("stake history sysvar account should deserialize"),
                 bank.new_warmup_cooldown_rate_epoch(),
@@ -302,7 +299,7 @@ mod tests {
     #[allow(deprecated)]
     use solana_sdk::{
         self,
-        account::{from_account, AccountSharedData},
+        account::AccountSharedData,
         account_utils::StateMut,
         signature::{Keypair, Signer},
     };
@@ -484,8 +481,8 @@ mod tests {
                 if stake.delegation.stake
                     != stake.stake(
                         bank.epoch(),
-                        &from_account::<StakeHistory, _>(
-                            &bank.get_account(&stake_history::id()).unwrap(),
+                        &bincode::deserialize::<StakeHistory>(
+                            bank.get_account(&stake_history::id()).unwrap().data(),
                         )
                         .unwrap(),
                         bank.new_warmup_cooldown_rate_epoch(),
