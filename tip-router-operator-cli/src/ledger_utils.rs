@@ -493,7 +493,7 @@ pub fn get_bank_from_ledger(
 /// an error.
 pub fn get_bank_from_snapshot_at_slot(
     snapshot_slot: u64,
-    full_snapshots_path: &PathBuf,
+    full_snapshots_path: &Path,
     bank_snapshots_dir: &Path,
     account_paths: Vec<PathBuf>,
     ledger_path: &Path,
@@ -513,8 +513,8 @@ pub fn get_bank_from_snapshot_at_slot(
     // Enable the stake-program ProgramId index so stake-meta generation avoids a full scan.
     process_options.accounts_db_config.account_indexes = Some(stake_program_account_indexes());
     let snapshot_config = SnapshotConfig {
-        full_snapshot_archives_dir: full_snapshots_path.clone(),
-        incremental_snapshot_archives_dir: full_snapshots_path.clone(),
+        full_snapshot_archives_dir: full_snapshots_path.to_path_buf(),
+        incremental_snapshot_archives_dir: full_snapshots_path.to_path_buf(),
         bank_snapshots_dir: bank_snapshots_dir.to_path_buf(),
         use_registered_io_uring_buffers: resource_limits::check_memlock_limit_for_disk_io(
             TOTAL_IO_URING_BUFFERS_SIZE_LIMIT,
