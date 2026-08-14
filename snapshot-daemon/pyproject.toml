@@ -3,7 +3,7 @@ name = "snapshot-daemon"
 version = "0.1.0"
 description = "Create full Solana snapshots at finalized epoch boundaries"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "solana>=0.40.1",
 ]
