@@ -72,11 +72,9 @@ impl fmt::Display for LedgerToolVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.binary, self.version)?;
 
-        if let (Some(source_revision), Some(feature_set), Some(client)) = (
-            &self.source_revision,
-            &self.feature_set,
-            &self.client,
-        ) {
+        if let (Some(source_revision), Some(feature_set), Some(client)) =
+            (&self.source_revision, &self.feature_set, &self.client)
+        {
             write!(
                 f,
                 " (src:{source_revision}; feat:{feature_set}, client:{client})"
