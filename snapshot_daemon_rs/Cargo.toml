@@ -1,0 +1,21 @@
+[package]
+name = "snapshot_daemon_rs"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+env_logger.workspace = true
+log.workspace = true
+nom.workspace = true
+serde_json.workspace = true
+solana-commitment-config.workspace = true
+solana-rpc-client.workspace = true
+solana-rpc-client-api.workspace = true
+tokio.workspace = true
