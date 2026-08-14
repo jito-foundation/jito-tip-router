@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use nom::{
     bytes::complete::{tag, take_till1, take_until},
     character::complete::{digit1, space1},
-    combinator::{all_consuming, map_res},
+    combinator::{all_consuming, map_res, opt},
     sequence::{delimited, preceded},
     IResult, Parser,
 };
@@ -63,43 +63,94 @@ impl LedgerTool {
 pub struct LedgerToolVersion {
     pub binary: String,
     pub version: String,
-    pub source_revision: String,
-    pub feature_set: u64,
-    pub client: String,
+    pub source_revision: Option<String>,
+    pub feature_set: Option<u64>,
+    pub client: Option<String>,
 }
 
 impl fmt::Display for LedgerToolVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} {} (src:{}; feat:{}, client:{})",
-            self.binary, self.version, self.source_revision, self.feature_set, self.client
-        )
+        write!(f, "{} {}", self.binary, self.version)?;
+
+        if let (Some(source_revision), Some(feature_set), Some(client)) = (
+            &self.source_revision,
+            self.feature_set,
+            &self.client,
+        ) {
+            write!(
+                f,
+                " (src:{source_revision}; feat:{feature_set}, client:{client})"
+            )?;
+        }
+
+        Ok(())
     }
 }
 
 fn parse_ledger_tool_version(input: &str) -> IResult<&str, LedgerToolVersion> {
-    let (input, (binary, _, version, _, source_revision, feature_set, client)) = (
+    let (input, (binary, _, version, build_metadata)) = (
         take_till1(|c: char| c.is_whitespace()),
         space1,
         take_till1(|c: char| c.is_whitespace()),
-        space1,
-        preceded(tag("(src:"), take_until(";")),
-        preceded(tag("; feat:"), map_res(digit1, |s: &str| s.parse::<u64>())),
-        delimited(tag(", client:"), take_until(")"), tag(")")),
+        opt(preceded(
+            space1,
+            (
+                preceded(tag("(src:"), take_until(";")),
+                preceded(tag("; feat:"), map_res(digit1, |s: &str| s.parse::<u64>())),
+                delimited(tag(", client:"), take_until(")"), tag(")")),
+            ),
+        )),
     )
         .parse(input)?;
+
+    let (source_revision, feature_set, client) = match build_metadata {
+        Some((source_revision, feature_set, client)) => (
+            Some(source_revision.to_string()),
+            Some(feature_set),
+            Some(client.to_string()),
+        ),
+        None => (None, None, None),
+    };
 
     Ok((
         input,
         LedgerToolVersion {
             binary: binary.to_string(),
             version: version.to_string(),
-            source_revision: source_revision.to_string(),
+            source_revision,
             feature_set,
-            client: client.to_string(),
+            client,
         },
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::LedgerToolVersion;
+
+    #[test]
+    fn parses_version_without_build_metadata() {
+        let version: LedgerToolVersion = "agave-ledger-tool 4.2.1".parse().unwrap();
+
+        assert_eq!(version.binary, "agave-ledger-tool");
+        assert_eq!(version.version, "4.2.1");
+        assert_eq!(version.source_revision, None);
+        assert_eq!(version.feature_set, None);
+        assert_eq!(version.client, None);
+        assert_eq!(version.to_string(), "agave-ledger-tool 4.2.1");
+    }
+
+    #[test]
+    fn parses_version_with_build_metadata() {
+        let version: LedgerToolVersion =
+            "agave-ledger-tool 4.2.1 (src:20853fb1; feat:21, client:JitoLabs)"
+                .parse()
+                .unwrap();
+
+        assert_eq!(version.source_revision.as_deref(), Some("20853fb1"));
+        assert_eq!(version.feature_set, Some(21));
+        assert_eq!(version.client.as_deref(), Some("JitoLabs"));
+    }
 }
 
 impl FromStr for LedgerToolVersion {

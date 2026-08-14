@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 struct Cli {
-    #[clap(short, long)]
+    #[clap(short, long, default_value = "http://127.0.0.1:8899")]
     rpc_url: String,
 
     #[clap(short, long)]
