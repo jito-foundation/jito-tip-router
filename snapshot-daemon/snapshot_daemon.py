@@ -7,7 +7,7 @@ from solana_rpc import SolanaRpcClient
 
 
 BOUNDARY_SEARCH_SLOTS = 16
-POLL_INTERVAL_SECONDS = 2
+POLL_INTERVAL_SECONDS = 150
 
 LOGGER = logging.getLogger("snapshot-daemon")
 
