@@ -3,8 +3,8 @@ use std::{fmt, path::PathBuf, str::FromStr};
 use anyhow::{anyhow, Result};
 use nom::{
     bytes::complete::{tag, take_till1, take_until},
-    character::complete::{digit1, space1},
-    combinator::{all_consuming, map_res, opt},
+    character::complete::space1,
+    combinator::{all_consuming, opt},
     sequence::{delimited, preceded},
     IResult, Parser,
 };
@@ -64,7 +64,7 @@ pub struct LedgerToolVersion {
     pub binary: String,
     pub version: String,
     pub source_revision: Option<String>,
-    pub feature_set: Option<u64>,
+    pub feature_set: Option<String>,
     pub client: Option<String>,
 }
 
@@ -74,7 +74,7 @@ impl fmt::Display for LedgerToolVersion {
 
         if let (Some(source_revision), Some(feature_set), Some(client)) = (
             &self.source_revision,
-            self.feature_set,
+            &self.feature_set,
             &self.client,
         ) {
             write!(
@@ -96,7 +96,7 @@ fn parse_ledger_tool_version(input: &str) -> IResult<&str, LedgerToolVersion> {
             space1,
             (
                 preceded(tag("(src:"), take_until(";")),
-                preceded(tag("; feat:"), map_res(digit1, |s: &str| s.parse::<u64>())),
+                preceded(tag("; feat:"), take_until(", client:")),
                 delimited(tag(", client:"), take_until(")"), tag(")")),
             ),
         )),
@@ -106,7 +106,7 @@ fn parse_ledger_tool_version(input: &str) -> IResult<&str, LedgerToolVersion> {
     let (source_revision, feature_set, client) = match build_metadata {
         Some((source_revision, feature_set, client)) => (
             Some(source_revision.to_string()),
-            Some(feature_set),
+            Some(feature_set.to_string()),
             Some(client.to_string()),
         ),
         None => (None, None, None),
@@ -143,12 +143,12 @@ mod tests {
     #[test]
     fn parses_version_with_build_metadata() {
         let version: LedgerToolVersion =
-            "agave-ledger-tool 4.2.1 (src:20853fb1; feat:21, client:JitoLabs)"
+            "agave-ledger-tool 4.2.1 (src:20853fb1; feat:21b0d33a, client:JitoLabs)"
                 .parse()
                 .unwrap();
 
         assert_eq!(version.source_revision.as_deref(), Some("20853fb1"));
-        assert_eq!(version.feature_set, Some(21));
+        assert_eq!(version.feature_set.as_deref(), Some("21b0d33a"));
         assert_eq!(version.client.as_deref(), Some("JitoLabs"));
     }
 }
