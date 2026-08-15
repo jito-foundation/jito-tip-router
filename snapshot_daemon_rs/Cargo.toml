@@ -9,6 +9,7 @@ edition.workspace = true
 readme.workspace = true
 
 [dependencies]
+agave-snapshots = { workspace = true, features = ["agave-unstable-api"] }
 anyhow.workspace = true
 clap.workspace = true
 env_logger.workspace = true
@@ -18,4 +19,5 @@ serde_json.workspace = true
 solana-commitment-config.workspace = true
 solana-rpc-client.workspace = true
 solana-rpc-client-api.workspace = true
+tempfile = "3.2"
 tokio.workspace = true

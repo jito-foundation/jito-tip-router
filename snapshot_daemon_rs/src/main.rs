@@ -5,7 +5,7 @@ use anyhow::Result;
 use clap::Parser;
 use ledger_tool::LedgerTool;
 use solana_client::SolanaRpcClient;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
 struct Cli {
@@ -24,6 +24,14 @@ struct Cli {
 
     #[clap(long, default_value = "agave-ledger-tool")]
     ledger_tool_bin: PathBuf,
+
+    /// Directory containing full snapshot archives. Defaults to --ledger-path.
+    #[clap(long)]
+    full_snapshot_archive_path: Option<PathBuf>,
+
+    /// Directory containing incremental snapshot archives. Defaults to the full snapshot path.
+    #[clap(long)]
+    incremental_snapshot_archive_path: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -33,7 +41,18 @@ async fn main() -> Result<()> {
 
     log::info!("Starting snapshot daemon");
 
-    let ledger_tool = LedgerTool::new(cli.ledger_tool_bin, cli.ledger_path);
+    let full_snapshot_archive_path = cli
+        .full_snapshot_archive_path
+        .unwrap_or_else(|| cli.ledger_path.clone());
+    let incremental_snapshot_archive_path = cli
+        .incremental_snapshot_archive_path
+        .unwrap_or_else(|| full_snapshot_archive_path.clone());
+    let ledger_tool = LedgerTool::new(
+        cli.ledger_tool_bin,
+        cli.ledger_path,
+        full_snapshot_archive_path,
+        incremental_snapshot_archive_path,
+    );
     let version = ledger_tool.version().await?;
     log::info!("Ledger tool version: {version}");
     let solana_client = SolanaRpcClient::new(cli.rpc_url);
@@ -60,7 +79,7 @@ async fn main() -> Result<()> {
 
 async fn create_snapshot(
     ledger_tool: &LedgerTool,
-    output_dir: &PathBuf,
+    output_dir: &Path,
     boundary: solana_client::CompletedEpochBoundary,
 ) {
     let slot = boundary.snapshot_slot;
@@ -69,7 +88,7 @@ async fn create_snapshot(
         boundary.epoch
     );
     if let Err(error) = ledger_tool
-        .create_full_snapshot(output_dir.clone(), slot)
+        .create_full_snapshot(output_dir.to_path_buf(), slot)
         .await
     {
         log::error!(
