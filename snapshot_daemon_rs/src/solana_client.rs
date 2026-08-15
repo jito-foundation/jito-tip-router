@@ -12,9 +12,7 @@ const MAX_RPC_RETRY_DELAY: Duration = Duration::from_secs(30);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CompletedEpochBoundary {
     pub epoch: u64,
-    /// A finalized block in the epoch immediately following `epoch`.
-    ///
-    /// It is safe to snapshot at this slot without querying block history.
+    /// A snapshot target in the epoch immediately following `epoch`.
     pub snapshot_slot: u64,
 }
 
@@ -64,6 +62,44 @@ impl SolanaRpcClient {
                 );
             }
         }
+    }
+
+    /// Returns every completed epoch boundary strictly after `start_slot` that
+    /// has been reached by the current finalized slot. Each target is the
+    /// exact first slot of its following epoch and may be skipped.
+    pub async fn completed_epoch_boundaries_since(
+        &self,
+        start_slot: u64,
+    ) -> Result<Vec<CompletedEpochBoundary>> {
+        let current_epoch_position = self.fetch_finalized_epoch_position().await;
+        let mut retry_delay = INITIAL_RPC_RETRY_DELAY;
+        let epoch_schedule = loop {
+            match self.rpc.get_epoch_schedule().await {
+                Ok(epoch_schedule) => break epoch_schedule,
+                Err(error) => {
+                    log::warn!(
+                        "RPC getEpochSchedule failed: {error}; retrying in {}s",
+                        retry_delay.as_secs()
+                    );
+                    tokio::time::sleep(retry_delay).await;
+                    retry_delay = min(retry_delay.saturating_mul(2), MAX_RPC_RETRY_DELAY);
+                }
+            }
+        };
+        let start_epoch = epoch_schedule.get_epoch(start_slot);
+
+        let mut boundaries = Vec::new();
+        for epoch in start_epoch.saturating_add(1)..=current_epoch_position.epoch {
+            let snapshot_slot = epoch_schedule.get_first_slot_in_epoch(epoch);
+            if snapshot_slot > start_slot && snapshot_slot <= current_epoch_position.absolute_slot {
+                boundaries.push(CompletedEpochBoundary::from_finalized_epoch_info(
+                    epoch,
+                    snapshot_slot,
+                )?);
+            }
+        }
+
+        Ok(boundaries)
     }
 
     async fn fetch_finalized_epoch_position(&self) -> FinalizedEpochPosition {

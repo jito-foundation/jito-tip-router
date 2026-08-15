@@ -18,6 +18,10 @@ struct Cli {
     #[clap(short, long)]
     output_dir: PathBuf,
 
+    /// Create snapshots for epoch boundaries passed after this slot at startup.
+    #[clap(long)]
+    start_slot: Option<u64>,
+
     #[clap(long, default_value = "agave-ledger-tool")]
     ledger_tool_bin: PathBuf,
 }
@@ -34,22 +38,43 @@ async fn main() -> Result<()> {
     log::info!("Ledger tool version: {version}");
     let solana_client = SolanaRpcClient::new(cli.rpc_url);
 
+    if let Some(start_slot) = cli.start_slot {
+        let missed_boundaries = solana_client
+            .completed_epoch_boundaries_since(start_slot)
+            .await?;
+        log::info!(
+            "Found {} completed epoch boundaries after start slot {start_slot}",
+            missed_boundaries.len()
+        );
+
+        for boundary in missed_boundaries {
+            create_snapshot(&ledger_tool, &cli.output_dir, boundary).await;
+        }
+    }
+
     loop {
         let boundary = solana_client.wait_for_epoch_boundary_final().await?;
-        let slot = boundary.snapshot_slot;
+        create_snapshot(&ledger_tool, &cli.output_dir, boundary).await;
+    }
+}
 
-        log::info!(
-            "Creating snapshot after epoch {} at finalized slot {slot}",
+async fn create_snapshot(
+    ledger_tool: &LedgerTool,
+    output_dir: &PathBuf,
+    boundary: solana_client::CompletedEpochBoundary,
+) {
+    let slot = boundary.snapshot_slot;
+    log::info!(
+        "Creating snapshot after epoch {} at slot {slot}",
+        boundary.epoch
+    );
+    if let Err(error) = ledger_tool
+        .create_full_snapshot(output_dir.clone(), slot)
+        .await
+    {
+        log::error!(
+            "Failed to create epoch {} snapshot at slot {slot}: {error}",
             boundary.epoch
         );
-        if let Err(error) = ledger_tool
-            .create_full_snapshot(cli.output_dir.clone(), slot)
-            .await
-        {
-            log::error!(
-                "Failed to create epoch {} snapshot at slot {slot}: {error}",
-                boundary.epoch
-            );
-        }
     }
 }
