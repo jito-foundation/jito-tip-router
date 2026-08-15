@@ -64,6 +64,31 @@ impl SolanaRpcClient {
         }
     }
 
+    /// Waits until the finalized slot has advanced by at least `slots_ahead`
+    /// slot numbers, then returns the first observed finalized slot at or after
+    /// that target.
+    pub async fn wait_for_finalized_slots_ahead(&self, slots_ahead: u64) -> Result<u64> {
+        let initial_epoch_position = self.fetch_finalized_epoch_position().await;
+        let initial_slot = initial_epoch_position.absolute_slot;
+        let target_slot = finalized_slot_target(initial_slot, slots_ahead)?;
+        log::info!(
+            "Waiting for finalized slot {target_slot} ({slots_ahead} slots after startup finalized slot {initial_slot})"
+        );
+
+        if slots_ahead == 0 {
+            return Ok(initial_slot);
+        }
+
+        loop {
+            tokio::time::sleep(POLL_INTERVAL).await;
+
+            let current_epoch_position = self.fetch_finalized_epoch_position().await;
+            if current_epoch_position.absolute_slot >= target_slot {
+                return Ok(current_epoch_position.absolute_slot);
+            }
+        }
+    }
+
     /// Returns every completed epoch boundary strictly after `start_slot` that
     /// has been reached by the current finalized slot. Each target is the
     /// exact first slot of its following epoch and may be skipped.
@@ -131,9 +156,15 @@ struct FinalizedEpochPosition {
     absolute_slot: u64,
 }
 
+fn finalized_slot_target(initial_slot: u64, slots_ahead: u64) -> Result<u64> {
+    initial_slot.checked_add(slots_ahead).ok_or_else(|| {
+        anyhow!("cannot add test slot offset {slots_ahead} to finalized slot {initial_slot}")
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::CompletedEpochBoundary;
+    use super::{finalized_slot_target, CompletedEpochBoundary};
 
     #[test]
     fn uses_the_first_observed_finalized_slot_after_the_epoch_rollover() {
@@ -147,5 +178,18 @@ mod tests {
     #[test]
     fn rejects_an_epoch_zero_boundary() {
         assert!(CompletedEpochBoundary::from_finalized_epoch_info(0, 0).is_err());
+    }
+
+    #[test]
+    fn calculates_the_finalized_slot_test_target() {
+        assert_eq!(
+            finalized_slot_target(439_343_998, 100).unwrap(),
+            439_344_098
+        );
+    }
+
+    #[test]
+    fn rejects_a_finalized_slot_test_target_that_overflows() {
+        assert!(finalized_slot_target(u64::MAX, 1).is_err());
     }
 }

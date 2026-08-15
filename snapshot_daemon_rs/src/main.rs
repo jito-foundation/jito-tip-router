@@ -1,13 +1,11 @@
 pub mod ledger_tool;
 pub mod solana_client;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::Parser;
 use ledger_tool::LedgerTool;
 use solana_client::SolanaRpcClient;
 use std::path::{Path, PathBuf};
-
-const STARTUP_SNAPSHOT_SLOT_OFFSET: u64 = 100;
 
 #[derive(Parser)]
 struct Cli {
@@ -20,9 +18,13 @@ struct Cli {
     #[clap(short, long)]
     output_dir: PathBuf,
 
-    /// Create a startup test snapshot 100 slots after this slot.
-    #[clap(long)]
+    /// Create snapshots for epoch boundaries passed after this slot at startup.
+    #[clap(long, conflicts_with = "test_slot_ahead")]
     start_slot: Option<u64>,
+
+    /// Wait this many finalized slots after startup, then create a test snapshot.
+    #[clap(long, value_name = "N SLOTS", conflicts_with = "start_slot")]
+    test_slot_ahead: Option<u64>,
 
     #[clap(long, default_value = "agave-ledger-tool")]
     ledger_tool_bin: PathBuf,
@@ -59,16 +61,22 @@ async fn main() -> Result<()> {
     log::info!("Ledger tool version: {version}");
     let solana_client = SolanaRpcClient::new(cli.rpc_url);
 
-    if let Some(start_slot) = cli.start_slot {
-        let target_slot = startup_snapshot_target(start_slot)?;
+    if let Some(slots_ahead) = cli.test_slot_ahead {
+        let target_slot = solana_client
+            .wait_for_finalized_slots_ahead(slots_ahead)
+            .await?;
+        create_test_snapshot(&ledger_tool, &cli.output_dir, target_slot).await;
+    } else if let Some(start_slot) = cli.start_slot {
+        let missed_boundaries = solana_client
+            .completed_epoch_boundaries_since(start_slot)
+            .await?;
         log::info!(
-            "Creating startup test snapshot at slot {target_slot} ({STARTUP_SNAPSHOT_SLOT_OFFSET} slots after start slot {start_slot})"
+            "Found {} completed epoch boundaries after start slot {start_slot}",
+            missed_boundaries.len()
         );
-        if let Err(error) = ledger_tool
-            .create_full_snapshot(cli.output_dir.clone(), target_slot)
-            .await
-        {
-            log::error!("Failed to create startup test snapshot at slot {target_slot}: {error}");
+
+        for boundary in missed_boundaries {
+            create_snapshot(&ledger_tool, &cli.output_dir, boundary).await;
         }
     }
 
@@ -76,16 +84,6 @@ async fn main() -> Result<()> {
         let boundary = solana_client.wait_for_epoch_boundary_final().await?;
         create_snapshot(&ledger_tool, &cli.output_dir, boundary).await;
     }
-}
-
-fn startup_snapshot_target(start_slot: u64) -> Result<u64> {
-    start_slot
-        .checked_add(STARTUP_SNAPSHOT_SLOT_OFFSET)
-        .ok_or_else(|| {
-            anyhow!(
-                "cannot add startup snapshot offset {STARTUP_SNAPSHOT_SLOT_OFFSET} to slot {start_slot}"
-            )
-        })
 }
 
 async fn create_snapshot(
@@ -109,17 +107,12 @@ async fn create_snapshot(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn offsets_the_startup_snapshot_target_by_100_slots() {
-        assert_eq!(startup_snapshot_target(439_343_998).unwrap(), 439_344_098);
-    }
-
-    #[test]
-    fn rejects_a_startup_snapshot_target_that_overflows() {
-        assert!(startup_snapshot_target(u64::MAX).is_err());
+async fn create_test_snapshot(ledger_tool: &LedgerTool, output_dir: &Path, slot: u64) {
+    log::info!("Creating startup test snapshot at finalized slot {slot}");
+    if let Err(error) = ledger_tool
+        .create_full_snapshot(output_dir.to_path_buf(), slot)
+        .await
+    {
+        log::error!("Failed to create startup test snapshot at slot {slot}: {error}");
     }
 }
