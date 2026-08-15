@@ -15,7 +15,7 @@ pub struct LedgerTool {
 }
 
 impl LedgerTool {
-    pub fn new(ledger_tool_binary: PathBuf, ledger_path: PathBuf) -> Self {
+    pub const fn new(ledger_tool_binary: PathBuf, ledger_path: PathBuf) -> Self {
         Self {
             ledger_tool_binary,
             ledger_path,
