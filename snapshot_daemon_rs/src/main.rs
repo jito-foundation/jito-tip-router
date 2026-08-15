@@ -36,18 +36,12 @@ async fn main() -> Result<()> {
 
     loop {
         let boundary = solana_client.wait_for_epoch_boundary_final().await?;
-        let Some(slot) = solana_client
-            .find_latest_finalized_block_slot(&boundary)
-            .await?
-        else {
-            log::error!(
-                "No non-empty slot found near the end of epoch {}",
-                boundary.epoch
-            );
-            break Ok(());
-        };
+        let slot = boundary.snapshot_slot;
 
-        log::info!("Creating epoch {} snapshot at slot {slot}", boundary.epoch);
+        log::info!(
+            "Creating snapshot after epoch {} at finalized slot {slot}",
+            boundary.epoch
+        );
         if let Err(error) = ledger_tool
             .create_full_snapshot(cli.output_dir.clone(), slot)
             .await
