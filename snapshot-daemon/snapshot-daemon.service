@@ -17,7 +17,7 @@ Environment="SNAPSHOT_DAEMON_EXTRA_ARGS="
 Environment="RUST_LOG=info"
 EnvironmentFile=-/etc/default/snapshot-daemon
 
-ExecStart=/usr/local/bin/snapshot_daemon_rs \
+ExecStart=/usr/local/bin/snapshot-daemon \
     --rpc-url ${SNAPSHOT_DAEMON_RPC_URL} \
     --ledger-path ${SNAPSHOT_DAEMON_LEDGER_PATH} \
     --output-dir ${SNAPSHOT_DAEMON_OUTPUT_DIR} \

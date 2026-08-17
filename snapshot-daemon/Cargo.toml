@@ -1,5 +1,5 @@
 [package]
-name = "snapshot_daemon_rs"
+name = "snapshot-daemon"
 version.workspace = true
 authors.workspace = true
 repository.workspace = true

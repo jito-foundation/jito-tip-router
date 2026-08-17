@@ -8,7 +8,7 @@ members = [
     "meta_merkle_tree",
     "priority_fee_distribution_sdk",
     "program",
-    "shank_cli", "snapshot_daemon_rs",
+    "shank_cli", "snapshot-daemon",
     "tip-router-operator-cli",
     "tip_distribution_sdk",
     "tip_payment_sdk",

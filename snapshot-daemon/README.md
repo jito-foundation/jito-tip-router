@@ -1,6 +1,6 @@
 # Snapshot daemon
 
-`snapshot_daemon_rs` watches finalized Solana state and creates a full snapshot
+`snapshot-daemon` watches finalized Solana state and creates a full snapshot
 after each epoch rollover. Once the new epoch is finalized, it calculates the
 previous epoch's theoretical last slot and searches backward through at most 16
 slots for the latest finalized slot containing a block. This keeps polling
@@ -20,9 +20,9 @@ Build the release binary from the workspace root, then install it and the
 included unit file:
 
 ```sh
-cargo build --release -p snapshot_daemon_rs
-sudo install -m 0755 target/release/snapshot_daemon_rs /usr/local/bin/snapshot_daemon_rs
-sudo install -m 0644 snapshot_daemon_rs/snapshot-daemon.service /etc/systemd/system/snapshot-daemon.service
+cargo build --release -p snapshot-daemon
+sudo install -m 0755 target/release/snapshot-daemon /usr/local/bin/snapshot-daemon
+sudo install -m 0644 snapshot-daemon/snapshot-daemon.service /etc/systemd/system/snapshot-daemon.service
 ```
 
 The unit runs as the `solana` user by default. Change `User` and `Group` in the
