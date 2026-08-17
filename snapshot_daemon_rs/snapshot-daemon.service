@@ -1,0 +1,37 @@
+[Unit]
+Description=Solana epoch snapshot daemon
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=solana
+Group=solana
+
+# These defaults may be overridden in /etc/default/snapshot-daemon.
+Environment="SNAPSHOT_DAEMON_RPC_URL=http://127.0.0.1:8899"
+Environment="SNAPSHOT_DAEMON_LEDGER_PATH=/mnt/solana/ledger"
+Environment="SNAPSHOT_DAEMON_OUTPUT_DIR=/mnt/solana/snapshots"
+Environment="SNAPSHOT_DAEMON_LEDGER_TOOL=/usr/local/bin/agave-ledger-tool"
+Environment="SNAPSHOT_DAEMON_EXTRA_ARGS="
+Environment="RUST_LOG=info"
+EnvironmentFile=-/etc/default/snapshot-daemon
+
+ExecStart=/usr/local/bin/snapshot_daemon_rs \
+    --rpc-url ${SNAPSHOT_DAEMON_RPC_URL} \
+    --ledger-path ${SNAPSHOT_DAEMON_LEDGER_PATH} \
+    --output-dir ${SNAPSHOT_DAEMON_OUTPUT_DIR} \
+    --ledger-tool-bin ${SNAPSHOT_DAEMON_LEDGER_TOOL} \
+    $SNAPSHOT_DAEMON_EXTRA_ARGS
+
+# ledger-tool needs enough locked memory for Bank serialization and io_uring.
+LimitMEMLOCK=2000000000
+LimitNOFILE=1000000
+
+Restart=on-failure
+RestartSec=10s
+KillMode=control-group
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

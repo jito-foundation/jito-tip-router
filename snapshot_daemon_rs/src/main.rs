@@ -76,24 +76,45 @@ async fn main() -> Result<()> {
         );
 
         for boundary in missed_boundaries {
-            create_snapshot(&ledger_tool, &cli.output_dir, boundary).await;
+            create_boundary_snapshot(&solana_client, &ledger_tool, &cli.output_dir, boundary).await;
         }
     }
 
     loop {
         let boundary = solana_client.wait_for_epoch_boundary_final().await?;
-        create_snapshot(&ledger_tool, &cli.output_dir, boundary).await;
+        create_boundary_snapshot(&solana_client, &ledger_tool, &cli.output_dir, boundary).await;
     }
 }
 
-async fn create_snapshot(
+async fn create_boundary_snapshot(
+    solana_client: &SolanaRpcClient,
     ledger_tool: &LedgerTool,
     output_dir: &Path,
     boundary: solana_client::CompletedEpochBoundary,
 ) {
-    let slot = boundary.snapshot_slot;
+    let slot = match solana_client
+        .find_latest_finalized_block_slot(&boundary)
+        .await
+    {
+        Ok(Some(slot)) => slot,
+        Ok(None) => {
+            log::error!(
+                "No finalized boundary bank found near the end of epoch {}",
+                boundary.epoch
+            );
+            return;
+        }
+        Err(error) => {
+            log::error!(
+                "Failed to select a snapshot slot for epoch {}: {error}",
+                boundary.epoch
+            );
+            return;
+        }
+    };
+
     log::info!(
-        "Creating snapshot after epoch {} at slot {slot}",
+        "Creating epoch {} boundary snapshot at slot {slot}",
         boundary.epoch
     );
     if let Err(error) = ledger_tool

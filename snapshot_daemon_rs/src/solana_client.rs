@@ -1,9 +1,20 @@
 use std::{cmp::min, time::Duration};
 
 use anyhow::{anyhow, Result};
+use serde_json::{json, Value};
 use solana_commitment_config::CommitmentConfig;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
+use solana_rpc_client_api::{
+    client_error::{Error as ClientError, ErrorKind},
+    config::{RpcBlockConfig, TransactionDetails},
+    custom_error::{
+        JSON_RPC_SERVER_ERROR_BLOCK_NOT_AVAILABLE,
+        JSON_RPC_SERVER_ERROR_LONG_TERM_STORAGE_SLOT_SKIPPED, JSON_RPC_SERVER_ERROR_SLOT_SKIPPED,
+    },
+    request::{RpcError, RpcRequest},
+};
 
+const BOUNDARY_SEARCH_SLOTS: u64 = 16;
 const POLL_INTERVAL: Duration = Duration::from_secs(2);
 const RPC_TIMEOUT: Duration = Duration::from_secs(10);
 const INITIAL_RPC_RETRY_DELAY: Duration = Duration::from_secs(1);
@@ -12,17 +23,31 @@ const MAX_RPC_RETRY_DELAY: Duration = Duration::from_secs(30);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CompletedEpochBoundary {
     pub epoch: u64,
-    /// A snapshot target in the epoch immediately following `epoch`.
-    pub snapshot_slot: u64,
+    /// The theoretical final slot of `epoch`. The actual snapshot slot is the
+    /// latest finalized block at or before this slot.
+    pub theoretical_last_slot: u64,
 }
 
 impl CompletedEpochBoundary {
-    fn from_finalized_epoch_info(current_epoch: u64, snapshot_slot: u64) -> Result<Self> {
+    fn from_finalized_epoch_info(
+        current_epoch: u64,
+        absolute_slot: u64,
+        slot_index: u64,
+    ) -> Result<Self> {
+        let current_epoch_first_slot = absolute_slot
+            .checked_sub(slot_index)
+            .ok_or_else(|| anyhow!("cannot calculate the current epoch's first slot"))?;
+        Self::from_epoch_first_slot(current_epoch, current_epoch_first_slot)
+    }
+
+    fn from_epoch_first_slot(current_epoch: u64, current_epoch_first_slot: u64) -> Result<Self> {
         Ok(Self {
             epoch: current_epoch
                 .checked_sub(1)
                 .ok_or_else(|| anyhow!("epoch 0 has no previous epoch boundary"))?,
-            snapshot_slot,
+            theoretical_last_slot: current_epoch_first_slot
+                .checked_sub(1)
+                .ok_or_else(|| anyhow!("cannot calculate the previous epoch's last slot"))?,
         })
     }
 }
@@ -59,7 +84,66 @@ impl SolanaRpcClient {
                 return CompletedEpochBoundary::from_finalized_epoch_info(
                     current_epoch_position.epoch,
                     current_epoch_position.absolute_slot,
+                    current_epoch_position.slot_index,
                 );
+            }
+        }
+    }
+
+    /// Finds the latest finalized slot containing a block within the boundary
+    /// search window. Missing and skipped slots are valid candidates to skip.
+    pub async fn find_latest_finalized_block_slot(
+        &self,
+        boundary: &CompletedEpochBoundary,
+    ) -> Result<Option<u64>> {
+        let oldest_candidate = boundary
+            .theoretical_last_slot
+            .saturating_sub(BOUNDARY_SEARCH_SLOTS - 1);
+        log::info!(
+            "Searching for epoch {} boundary bank from slot {} through {oldest_candidate}",
+            boundary.epoch,
+            boundary.theoretical_last_slot,
+        );
+
+        for slot in boundary_candidate_slots(boundary.theoretical_last_slot) {
+            if self.finalized_block_exists(slot).await? {
+                return Ok(Some(slot));
+            }
+            log::info!("Boundary candidate slot {slot} has no finalized block");
+        }
+
+        Ok(None)
+    }
+
+    /// Returns false only for a null block or an RPC response that specifically
+    /// identifies the slot as missing or skipped. All other RPC failures are
+    /// retried indefinitely.
+    async fn finalized_block_exists(&self, slot: u64) -> Result<bool> {
+        let config = RpcBlockConfig {
+            transaction_details: Some(TransactionDetails::None),
+            rewards: Some(false),
+            commitment: Some(CommitmentConfig::finalized()),
+            ..RpcBlockConfig::default()
+        };
+        let mut retry_delay = INITIAL_RPC_RETRY_DELAY;
+
+        loop {
+            let response = self
+                .rpc
+                .send::<Option<Value>>(RpcRequest::GetBlock, json!([slot, config]))
+                .await;
+
+            match response {
+                Ok(block) => return Ok(block.is_some()),
+                Err(error) if is_missing_or_skipped_slot(&error) => return Ok(false),
+                Err(error) => {
+                    log::warn!(
+                        "RPC getBlock({slot}) failed: {error}; retrying in {}s",
+                        retry_delay.as_secs()
+                    );
+                    tokio::time::sleep(retry_delay).await;
+                    retry_delay = min(retry_delay.saturating_mul(2), MAX_RPC_RETRY_DELAY);
+                }
             }
         }
     }
@@ -91,7 +175,7 @@ impl SolanaRpcClient {
 
     /// Returns every completed epoch boundary strictly after `start_slot` that
     /// has been reached by the current finalized slot. Each target is the
-    /// exact first slot of its following epoch and may be skipped.
+    /// theoretical final slot of the completed epoch.
     pub async fn completed_epoch_boundaries_since(
         &self,
         start_slot: u64,
@@ -115,11 +199,13 @@ impl SolanaRpcClient {
 
         let mut boundaries = Vec::new();
         for epoch in start_epoch.saturating_add(1)..=current_epoch_position.epoch {
-            let snapshot_slot = epoch_schedule.get_first_slot_in_epoch(epoch);
-            if snapshot_slot > start_slot && snapshot_slot <= current_epoch_position.absolute_slot {
-                boundaries.push(CompletedEpochBoundary::from_finalized_epoch_info(
+            let epoch_first_slot = epoch_schedule.get_first_slot_in_epoch(epoch);
+            if epoch_first_slot > start_slot
+                && epoch_first_slot <= current_epoch_position.absolute_slot
+            {
+                boundaries.push(CompletedEpochBoundary::from_epoch_first_slot(
                     epoch,
-                    snapshot_slot,
+                    epoch_first_slot,
                 )?);
             }
         }
@@ -136,6 +222,7 @@ impl SolanaRpcClient {
                     return FinalizedEpochPosition {
                         epoch: epoch_info.epoch,
                         absolute_slot: epoch_info.absolute_slot,
+                        slot_index: epoch_info.slot_index,
                     };
                 }
                 Err(error) => {
@@ -154,6 +241,24 @@ impl SolanaRpcClient {
 struct FinalizedEpochPosition {
     epoch: u64,
     absolute_slot: u64,
+    slot_index: u64,
+}
+
+fn boundary_candidate_slots(theoretical_last_slot: u64) -> impl Iterator<Item = u64> {
+    (0..BOUNDARY_SEARCH_SLOTS).map_while(move |offset| theoretical_last_slot.checked_sub(offset))
+}
+
+fn is_missing_or_skipped_slot(error: &ClientError) -> bool {
+    matches!(
+        error.kind(),
+        ErrorKind::RpcError(RpcError::RpcResponseError { code, .. })
+            if matches!(
+                *code,
+                JSON_RPC_SERVER_ERROR_BLOCK_NOT_AVAILABLE
+                    | JSON_RPC_SERVER_ERROR_SLOT_SKIPPED
+                    | JSON_RPC_SERVER_ERROR_LONG_TERM_STORAGE_SLOT_SKIPPED
+            )
+    )
 }
 
 fn finalized_slot_target(initial_slot: u64, slots_ahead: u64) -> Result<u64> {
@@ -164,20 +269,35 @@ fn finalized_slot_target(initial_slot: u64, slots_ahead: u64) -> Result<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{finalized_slot_target, CompletedEpochBoundary};
+    use super::{boundary_candidate_slots, finalized_slot_target, CompletedEpochBoundary};
 
     #[test]
-    fn uses_the_first_observed_finalized_slot_after_the_epoch_rollover() {
+    fn calculates_previous_epoch_last_slot_after_late_rollover_observation() {
         let boundary =
-            CompletedEpochBoundary::from_finalized_epoch_info(1_234, 439_344_001).unwrap();
+            CompletedEpochBoundary::from_finalized_epoch_info(1_018, 439_776_004, 4).unwrap();
 
-        assert_eq!(boundary.epoch, 1_233);
-        assert_eq!(boundary.snapshot_slot, 439_344_001);
+        assert_eq!(boundary.epoch, 1_017);
+        assert_eq!(boundary.theoretical_last_slot, 439_775_999);
     }
 
     #[test]
     fn rejects_an_epoch_zero_boundary() {
-        assert!(CompletedEpochBoundary::from_finalized_epoch_info(0, 0).is_err());
+        assert!(CompletedEpochBoundary::from_finalized_epoch_info(0, 0, 0).is_err());
+    }
+
+    #[test]
+    fn searches_exactly_sixteen_boundary_slots() {
+        let slots = boundary_candidate_slots(100).collect::<Vec<_>>();
+
+        assert_eq!(slots, (85..=100).rev().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn boundary_search_does_not_underflow() {
+        assert_eq!(
+            boundary_candidate_slots(2).collect::<Vec<_>>(),
+            vec![2, 1, 0]
+        );
     }
 
     #[test]
