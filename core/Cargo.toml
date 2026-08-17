@@ -13,22 +13,14 @@ readme = { workspace = true }
 borsh = { workspace = true }
 bytemuck = { workspace = true }
 jito-bytemuck = { workspace = true }
-jito-jsm-core = { workspace = true }
 jito-restaking-core = { workspace = true }
-jito-restaking-sdk = { workspace = true }
-jito-tip-distribution-sdk = { workspace = true }
 jito-vault-core = { workspace = true }
-jito-vault-sdk = { workspace = true }
 meta-merkle-tree = { workspace = true }
-serde = { workspace = true }
-serde_with = { workspace = true }
 shank = { workspace = true }
 solana-decode-error = { workspace = true }
 solana-program = { workspace = true }
 solana-system-interface = { workspace = true }
-spl-associated-token-account-interface = { workspace = true }
 spl-math = { workspace = true }
-spl-token-interface = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]

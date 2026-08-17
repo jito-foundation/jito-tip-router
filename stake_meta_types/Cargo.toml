@@ -1,6 +1,6 @@
 [package]
-name = "meta-merkle-tree"
-description = "Meta Merkle Tree"
+name = "jito-stake-meta-types"
+description = "Lightweight serde output types for stake-meta generation (StakeMetaCollection and friends)"
 version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
@@ -10,15 +10,8 @@ edition = { workspace = true }
 readme = { workspace = true }
 
 [dependencies]
-fast-math = { workspace = true }
-hex = { workspace = true }
-jito-stake-meta-types = { workspace = true }
-log = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-solana-program = { workspace = true }
+solana-clock = { workspace = true }
+solana-pubkey = { workspace = true }
 thiserror = { workspace = true }
-wincode = { workspace = true }
-
-[dev-dependencies]
-solana-sdk = { workspace = true }
