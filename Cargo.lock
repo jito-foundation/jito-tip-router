@@ -13524,6 +13524,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
+name = "stake-meta-generator"
+version = "0.0.1"
+dependencies = [
+ "agave-snapshots",
+ "anyhow",
+ "bincode",
+ "borsh 1.8.0",
+ "clap 4.6.6",
+ "itertools 0.11.0",
+ "jito-priority-fee-distribution-sdk",
+ "jito-stake-meta-types",
+ "jito-tip-distribution-sdk",
+ "jito-tip-payment-sdk",
+ "log",
+ "serde_json",
+ "solana-accounts-db",
+ "solana-genesis-utils",
+ "solana-runtime",
+ "solana-sdk 4.0.1",
+ "solana-stake-interface 4.3.0",
+ "solana-vote",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
