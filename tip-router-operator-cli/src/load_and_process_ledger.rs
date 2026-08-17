@@ -41,9 +41,10 @@ use {
         },
         bank_forks::BankForks,
         snapshot_controller::SnapshotController,
-        snapshot_utils::{self, clean_orphaned_account_snapshot_dirs},
+        snapshot_utils,
     },
     solana_sdk::{clock::Slot, pubkey::Pubkey, transaction::VersionedTransaction},
+    solana_shred_version::compute_shred_version,
     solana_unified_scheduler_pool::DefaultSchedulerPool,
     std::{
         path::{Path, PathBuf},
@@ -66,9 +67,6 @@ const _PROCESS_SLOTS_HELP_STRING: &str =
 
 #[derive(Error, Debug)]
 pub enum LoadAndProcessLedgerError {
-    #[error("failed to clean orphaned account snapshot directories: {0}")]
-    CleanOrphanedAccountSnapshotDirectories(#[source] std::io::Error),
-
     #[error("failed to create all run and snapshot directories: {0}")]
     CreateAllAccountsRunAndSnapshotDirectories(#[source] std::io::Error),
 
@@ -352,8 +350,7 @@ pub fn load_and_process_ledger(
     snapshot_utils::purge_incomplete_bank_snapshots(&bank_snapshots_dir);
 
     info!("Cleaning contents of account snapshot paths: {account_snapshot_paths:?}");
-    clean_orphaned_account_snapshot_dirs(&bank_snapshots_dir, &account_snapshot_paths)
-        .map_err(LoadAndProcessLedgerError::CleanOrphanedAccountSnapshotDirectories)?;
+    snapshot_utils::wipe_account_snapshot_dirs(&account_paths);
 
     let geyser_plugin_active = arg_matches.is_present("geyser_plugin_config");
     let (accounts_update_notifier, transaction_notifier) = if geyser_plugin_active {
@@ -523,14 +520,19 @@ pub fn load_and_process_ledger(
         "cluster" => cluster,
     );
 
+    let shred_version = {
+        let root_bank = bank_forks.read().unwrap().root_bank();
+        compute_shred_version(&genesis_config.hash(), Some(&root_bank.hard_forks()))
+    };
     let result = blockstore_processor::process_blockstore_from_root(
         blockstore.as_ref(),
         &bank_forks,
+        shred_version,
         &leader_schedule_cache,
         &process_options,
         transaction_status_sender.as_ref(),
         None,
-        Some(&*snapshot_controller), // Maybe support this later, though
+        Some(&*snapshot_controller),
     )
     .map(|_| (bank_forks, starting_snapshot_hashes))
     .map_err(LoadAndProcessLedgerError::ProcessBlockstoreFromRoot);

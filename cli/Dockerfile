@@ -1,5 +1,5 @@
 ##### Builder image
-FROM rust:1.80.0-slim-bullseye as builder
+FROM rust:1.96.1-slim-bullseye as builder
 
 RUN apt-get update && apt-get install -y \
     libudev-dev \
