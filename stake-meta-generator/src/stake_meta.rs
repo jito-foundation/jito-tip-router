@@ -67,7 +67,7 @@ pub fn generate_stake_meta_collection(
     let epoch = bank.epoch();
     let vote_accounts = bank
         .epoch_vote_accounts(epoch)
-        .ok_or(StakeMetaError::NoVoteAccounts(bank.slot(), epoch))?;
+        .ok_or_else(|| StakeMetaError::NoVoteAccounts(bank.slot(), epoch))?;
     let stake_history = stake_history(&bank);
     let delegations = collect_delegations(&bank, &stake_history)?;
     let (tip_receiver, tip_receiver_fee) = tip_receiver_info(&bank, tip_payment_program_id)?;
@@ -275,7 +275,7 @@ where
             account_data.set_lamports(account_data.lamports().checked_add(fee)?);
         }
     }
-    let expected_len = 8 + size_of::<DistributionAccount>();
+    let expected_len = 8usize.checked_add(size_of::<DistributionAccount>())?;
     if account_data.data().len() != expected_len {
         warn!(
             "distribution account length mismatch: actual={}, expected={expected_len}",
