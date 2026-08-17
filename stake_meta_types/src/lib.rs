@@ -16,6 +16,16 @@ use std::{
 use serde::{Deserialize, Serialize};
 use solana_clock::{Epoch, Slot};
 use solana_pubkey::Pubkey;
+use thiserror::Error;
+
+/// Errors that can occur while reading a stake-meta collection.
+#[derive(Debug, Error)]
+pub enum StakeMetaCollectionError {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    SerdeJson(#[from] serde_json::Error),
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StakeMetaCollection {
@@ -42,10 +52,10 @@ pub struct StakeMetaCollection {
 
 impl StakeMetaCollection {
     /// Load a serialized [StakeMetaCollection] from a JSON file.
-    pub fn new_from_file(path: &PathBuf) -> std::io::Result<Self> {
+    pub fn new_from_file(path: &PathBuf) -> Result<Self, StakeMetaCollectionError> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
-        let tree: Self = serde_json::from_reader(reader).map_err(std::io::Error::other)?;
+        let tree = serde_json::from_reader(reader)?;
 
         Ok(tree)
     }

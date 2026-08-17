@@ -4305,6 +4305,7 @@ dependencies = [
  "serde_json",
  "solana-clock 3.1.1",
  "solana-pubkey 4.2.1",
+ "thiserror 2.0.20",
 ]
 
 [[package]]

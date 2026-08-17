@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use jito_stake_meta_types::StakeMetaCollection;
+use jito_stake_meta_types::{StakeMetaCollection, StakeMetaCollectionError};
 use notify::{
     event::{ModifyKind, RenameMode},
     Event, EventKind, RecursiveMode, Watcher,
@@ -21,7 +21,7 @@ pub enum DirectoryWatcherError {
     StakeMetaLoad {
         stake_meta_path: PathBuf,
         #[source]
-        source: std::io::Error,
+        source: StakeMetaCollectionError,
     },
     #[error(
         "stake-meta file {stake_meta_path} is for epoch {actual_epoch}, expected epoch {expected_epoch}"

@@ -21,7 +21,7 @@ use crate::{merkle_tree::MerkleTree, utils::get_proof, wincode_schema::Collectio
 // Re-exported here as the single source of truth for existing consumers.
 pub use jito_stake_meta_types::{
     pubkey_string_conversion, Delegation, PriorityFeeDistributionMeta, StakeMeta,
-    StakeMetaCollection, TipDistributionMeta,
+    StakeMetaCollection, StakeMetaCollectionError, TipDistributionMeta,
 };
 
 /// Basis-points denominator. Inlined from `jito_vault_core::MAX_BPS` so this
