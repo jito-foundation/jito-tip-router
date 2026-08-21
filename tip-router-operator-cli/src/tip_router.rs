@@ -232,14 +232,17 @@ pub fn set_priority_fee_merkle_root_instructions(
     let instructions = tip_distribution_accounts
         .iter()
         .filter_map(|(key, tip_distribution_account)| {
-            let meta_merkle_node = meta_merkle_tree
-                .get_node(key)
-                .expect("Node exists in meta merkle");
+            let meta_merkle_node = if let Some(node) = meta_merkle_tree.get_node(key) {
+                node
+            } else {
+                error!("No node found for priority fee distribution account, maybe the account has zero tips? {:?}", key);
+                return None;
+            };
 
             let proof = if let Some(proof) = meta_merkle_node.proof {
                 proof
             } else {
-                error!("No proof found for tip distribution account {:?}", key);
+                error!("No proof found for priority fee distribution account {:?}", key);
                 return None;
             };
 

@@ -30,4 +30,5 @@ ignore = [
     "RUSTSEC-2025-0134", # rustls-pemfile - unmaintained
     "RUSTSEC-2025-0141", # bincode - unmaintained
     "RUSTSEC-2026-0012", # keccak - unsound ARMv8 backend
+    "RUSTSEC-2026-0258"
 ]
