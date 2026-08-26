@@ -3,9 +3,9 @@
 `snapshot-daemon` watches finalized Solana state and creates a full snapshot
 after each epoch rollover. Once the new epoch is finalized, it calculates the
 previous epoch's theoretical last slot and searches backward through at most 16
-slots for the latest finalized slot containing a block. This keeps polling
-latency from moving the snapshot target into the new epoch and handles skipped
-slots at the boundary.
+slots for the latest slot that is rooted and full in the local Blockstore. This
+does not require RPC transaction history, keeps polling latency from moving the
+snapshot target into the new epoch, and handles skipped slots at the boundary.
 
 The daemon chooses only source archives that can reconstruct the requested
 target: the highest full snapshot at or before the target, plus the highest
@@ -119,6 +119,7 @@ completed epoch boundaries after `SLOT` before entering normal monitoring.
 
 Historical backfill uses the same boundary rule as normal monitoring: for each
 completed epoch, it searches backward from the theoretical last slot for the
-latest finalized slot containing a block. `--test-slot-ahead` remains different:
-it uses the first finalized slot observed at or beyond its test target. Snapshot
-compression remains the default single-stream zstd implementation.
+latest rooted, full slot in the local Blockstore. `--test-slot-ahead` remains
+different: it uses the first finalized slot observed at or beyond its test
+target. Snapshot compression remains the default single-stream zstd
+implementation.

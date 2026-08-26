@@ -7545,10 +7545,9 @@ dependencies = [
  "env_logger 0.10.2",
  "log",
  "nom 8.0.0",
- "serde_json",
  "solana-commitment-config 3.1.1",
+ "solana-ledger",
  "solana-rpc-client",
- "solana-rpc-client-api",
  "tempfile",
  "tokio",
 ]

@@ -61,6 +61,7 @@ async fn main() -> Result<()> {
     log::info!("Ledger tool version: {version}");
     let solana_client = SolanaRpcClient::new(cli.rpc_url);
 
+    // This branch is solely for testing purposes
     if let Some(slots_ahead) = cli.test_slot_ahead {
         let target_slot = solana_client
             .wait_for_finalized_slots_ahead(slots_ahead)
@@ -76,30 +77,29 @@ async fn main() -> Result<()> {
         );
 
         for boundary in missed_boundaries {
-            create_boundary_snapshot(&solana_client, &ledger_tool, &cli.output_dir, boundary).await;
+            create_boundary_snapshot(&ledger_tool, &cli.output_dir, boundary).await;
         }
     }
 
     loop {
         let boundary = solana_client.wait_for_epoch_boundary_final().await?;
-        create_boundary_snapshot(&solana_client, &ledger_tool, &cli.output_dir, boundary).await;
+        create_boundary_snapshot(&ledger_tool, &cli.output_dir, boundary).await;
     }
 }
 
 async fn create_boundary_snapshot(
-    solana_client: &SolanaRpcClient,
     ledger_tool: &LedgerTool,
     output_dir: &Path,
     boundary: solana_client::CompletedEpochBoundary,
 ) {
-    let slot = match solana_client
-        .find_latest_finalized_block_slot(&boundary)
+    let slot = match ledger_tool
+        .find_latest_rooted_full_slot(boundary.theoretical_last_slot)
         .await
     {
         Ok(Some(slot)) => slot,
         Ok(None) => {
             log::error!(
-                "No finalized boundary bank found near the end of epoch {}",
+                "No rooted, full boundary slot found near the end of epoch {}",
                 boundary.epoch
             );
             return;

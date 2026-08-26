@@ -17,6 +17,12 @@ use nom::{
     sequence::{delimited, preceded},
     IResult, Parser,
 };
+use solana_ledger::{
+    blockstore::Blockstore,
+    blockstore_options::{AccessType, BlockstoreOptions},
+};
+
+const BOUNDARY_SEARCH_SLOTS: u64 = 16;
 
 pub struct LedgerTool {
     ledger_tool_binary: PathBuf,
@@ -49,6 +55,43 @@ impl LedgerTool {
         version
             .parse()
             .map_err(|error| anyhow!("failed to parse ledger tool version: {error}"))
+    }
+
+    /// Finds the latest rooted slot with complete local ledger data in the
+    /// epoch-boundary search window.
+    pub async fn find_latest_rooted_full_slot(
+        &self,
+        theoretical_last_slot: u64,
+    ) -> Result<Option<u64>> {
+        let ledger_path = self.ledger_path.clone();
+
+        tokio::task::spawn_blocking(move || -> Result<Option<u64>> {
+            // ReadOnly is a static RocksDB view. Open it at selection time so
+            // it includes the roots written at the latest epoch boundary.
+            let blockstore = Blockstore::open_with_options(
+                &ledger_path,
+                BlockstoreOptions {
+                    access_type: AccessType::ReadOnly,
+                    ..BlockstoreOptions::default()
+                },
+            )?;
+            let oldest_candidate = theoretical_last_slot
+                .saturating_sub(BOUNDARY_SEARCH_SLOTS.saturating_sub(1));
+            log::info!(
+                "Searching local blockstore for a rooted, full boundary slot from {theoretical_last_slot} through {oldest_candidate}"
+            );
+
+            for slot in boundary_candidate_slots(theoretical_last_slot) {
+                if blockstore.is_root(slot) && blockstore.is_full(slot) {
+                    return Ok(Some(slot));
+                }
+                log::info!("Boundary candidate slot {slot} is not rooted and full");
+            }
+
+            Ok(None)
+        })
+        .await
+        .map_err(|error| anyhow!("local blockstore lookup task failed: {error}"))?
     }
 
     pub async fn create_full_snapshot(
@@ -103,6 +146,10 @@ impl LedgerTool {
             snapshot_output_dir.as_os_str().to_owned(),
         ]
     }
+}
+
+fn boundary_candidate_slots(theoretical_last_slot: u64) -> impl Iterator<Item = u64> {
+    (0..BOUNDARY_SEARCH_SLOTS).map_while(move |offset| theoretical_last_slot.checked_sub(offset))
 }
 
 struct SnapshotArchiveView {
@@ -260,6 +307,21 @@ mod tests {
     use {super::*, std::collections::HashSet};
 
     const SNAPSHOT_HASH: &str = "11111111111111111111111111111111";
+
+    #[test]
+    fn searches_exactly_sixteen_boundary_slots() {
+        let slots = boundary_candidate_slots(100).collect::<Vec<_>>();
+
+        assert_eq!(slots, (85..=100).rev().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn boundary_search_does_not_underflow() {
+        assert_eq!(
+            boundary_candidate_slots(2).collect::<Vec<_>>(),
+            vec![2, 1, 0]
+        );
+    }
 
     #[test]
     fn create_snapshot_args_place_global_flags_before_subcommand() {
