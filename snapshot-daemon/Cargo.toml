@@ -1,0 +1,22 @@
+[package]
+name = "snapshot-daemon"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+
+[dependencies]
+agave-snapshots = { workspace = true, features = ["agave-unstable-api"] }
+anyhow.workspace = true
+clap.workspace = true
+env_logger.workspace = true
+log.workspace = true
+nom.workspace = true
+solana-commitment-config.workspace = true
+solana-ledger = { workspace = true, features = ["agave-unstable-api"] }
+solana-rpc-client.workspace = true
+tempfile = "3.2"
+tokio.workspace = true

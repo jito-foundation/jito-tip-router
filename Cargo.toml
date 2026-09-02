@@ -8,7 +8,7 @@ members = [
     "meta_merkle_tree",
     "priority_fee_distribution_sdk",
     "program",
-    "shank_cli",
+    "shank_cli", "snapshot-daemon",
     "tip-router-operator-cli",
     "tip_distribution_sdk",
     "tip_payment_sdk",
@@ -69,6 +69,7 @@ jito-vault-sdk = { package = "jito-vault-sdk", git = "https://github.com/jito-fo
 log = "0.4.22"
 matches = "0.1.10"
 meta-merkle-tree = { path = "./meta_merkle_tree", version = "=0.0.1" }
+nom = "8.0.0"
 num-derive = "0.4.2"
 num-traits = "0.2.19"
 proc-macro2 = "1.0.86"
