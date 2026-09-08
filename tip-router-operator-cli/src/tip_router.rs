@@ -102,7 +102,19 @@ pub async fn cast_vote(
         &[payer, operator_voter],
         client.get_latest_blockhash().await?,
     );
-    Ok(client.send_and_confirm_transaction(&tx).await?)
+
+    match client.send_and_confirm_transaction(&tx).await {
+        Ok(signature) => Ok(signature),
+        Err(error) => {
+            error!(
+                "Failed to send cast vote transaction {}: transaction_error: {:?}, rpc_error: {:?}",
+                tx.signatures[0],
+                error.get_transaction_error(),
+                error,
+            );
+            Err(error.into())
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -4,12 +4,12 @@ use std::{fs, path::PathBuf};
 
 use borsh::BorshSerialize;
 use jito_priority_fee_distribution_sdk::id as PRIORITY_FEE_DISTRIBUTION_ID;
+use jito_stake_meta_types::{Delegation, StakeMeta, StakeMetaCollection, TipDistributionMeta};
 use jito_tip_distribution_sdk::id as TIP_DISTRIBUTION_ID;
 use jito_tip_payment_sdk::id as TIP_PAYMENT_ID;
 use jito_tip_router_core::ID as TIP_ROUTER_ID;
 use meta_merkle_tree::generated_merkle_tree::{
-    Delegation, GeneratedMerkleTreeCollection, MerkleRootGeneratorError, StakeMeta,
-    StakeMetaCollection, TipDistributionMeta,
+    GeneratedMerkleTreeCollection, MerkleRootGeneratorError,
 };
 use solana_program_test::*;
 #[allow(deprecated)]
