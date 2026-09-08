@@ -22,6 +22,8 @@ use solana_ledger::{
     blockstore_options::{AccessType, BlockstoreOptions},
 };
 
+use crate::snapshot_retention;
+
 const BOUNDARY_SEARCH_SLOTS: u64 = 16;
 
 pub struct LedgerTool {
@@ -114,6 +116,12 @@ impl LedgerTool {
             return Err(anyhow!(
                 "failed to create full snapshot at slot {slot}: ledger tool exited with {status}"
             ));
+        }
+
+        if let Err(error) = snapshot_retention::enforce_snapshot_retention(&snapshot_output_dir) {
+            log::error!(
+                "Snapshot at slot {slot} was created, but retention cleanup failed: {error:#}"
+            );
         }
 
         Ok(())
