@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 const MAX_RETAINED_FULL_SNAPSHOT_ARCHIVES: usize = 2;
 
 /// Keep the newest completed full archives by slot in the daemon's output directory.
-pub(crate) fn enforce_snapshot_retention(output_dir: &Path) -> Result<()> {
+pub fn enforce_snapshot_retention(output_dir: &Path) -> Result<()> {
     let mut archives_by_slot = find_completed_full_snapshot_archives(output_dir)?;
     archives_by_slot.sort_unstable();
     let expired_archive_count = archives_by_slot
