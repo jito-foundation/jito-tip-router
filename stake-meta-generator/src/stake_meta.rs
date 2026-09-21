@@ -19,7 +19,6 @@ use jito_tip_payment_sdk::{
     TIP_ACCOUNT_SEED_7,
 };
 use log::warn;
-use solana_accounts_db::accounts_index::IndexKey;
 use solana_runtime::{bank::Bank, stakes::StakeAccount};
 use solana_sdk::{
     account::{AccountSharedData, ReadableAccount, WritableAccount},
@@ -49,8 +48,6 @@ pub enum StakeMetaError {
     CheckedMathError,
     #[error("no vote accounts found at slot {0} in epoch {1}")]
     NoVoteAccounts(u64, u64),
-    #[error("failed to scan stake accounts: {0}")]
-    ScanError(String),
 }
 
 /// Generate the stake-meta artifact content for a frozen bank.
@@ -160,33 +157,8 @@ fn collect_delegations(
     bank: &Bank,
     stake_history: &StakeHistory,
 ) -> Result<HashMap<Pubkey, Vec<Delegation>>, StakeMetaError> {
-    // `unfiltered_stakes()` is unavailable in this workspace's v4.2 runtime.
-    // Use the snapshot-service calculation's direct-account fallback instead.
-    let stake_program_id = solana_stake_interface::program::id();
-    let mut accounts = bank
-        .get_filtered_indexed_accounts(&IndexKey::ProgramId(stake_program_id), |_| true, None)
-        .map_err(|error| StakeMetaError::ScanError(format!("{error:?}")))?;
-    if accounts.is_empty() {
-        warn!("ProgramId index returned no stake accounts; falling back to full program scan");
-        accounts = bank
-            .get_program_accounts(&stake_program_id)
-            .map_err(|error| StakeMetaError::ScanError(format!("{error:?}")))?;
-    }
-    let stake_accounts = accounts
-        .into_iter()
-        .filter_map(|(address, account)| {
-            StakeAccount::try_from(account)
-                .ok()
-                .map(|stake_account| (address, stake_account))
-        })
-        .collect::<Vec<_>>();
-    collect_delegations_from_accounts(
-        bank,
-        stake_history,
-        stake_accounts
-            .iter()
-            .map(|(stake_pubkey, stake_account)| (stake_pubkey, stake_account)),
-    )
+    let stakes = bank.unfiltered_stakes();
+    collect_delegations_from_accounts(bank, stake_history, stakes.stake_delegations.iter())
 }
 
 fn collect_delegations_from_accounts<'a>(

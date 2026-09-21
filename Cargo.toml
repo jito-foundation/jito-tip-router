@@ -10,12 +10,12 @@ members = [
     "program",
     "shank_cli",
     "snapshot-daemon",
-    "stake-meta-generator",
     "stake_meta_types",
     "tip-router-operator-cli",
     "tip_distribution_sdk",
     "tip_payment_sdk",
 ]
+exclude = ["stake-meta-generator"]
 
 resolver = "2"
 

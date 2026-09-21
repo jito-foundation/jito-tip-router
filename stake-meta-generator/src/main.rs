@@ -110,16 +110,18 @@ fn main() -> Result<()> {
         &args.tip_payment_program_id,
     )
     .context("failed to calculate stake metadata")?;
-    let output_parent = args
+    if let Some(output_parent) = args
         .output
         .parent()
-        .context("output path has no parent directory")?;
-    std::fs::create_dir_all(output_parent).with_context(|| {
-        format!(
-            "failed to create artifact output directory {}",
-            output_parent.display()
-        )
-    })?;
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        std::fs::create_dir_all(output_parent).with_context(|| {
+            format!(
+                "failed to create artifact output directory {}",
+                output_parent.display()
+            )
+        })?;
+    }
     let output_file = std::fs::File::create(&args.output)
         .with_context(|| format!("failed to create artifact {}", args.output.display()))?;
     serde_json::to_writer_pretty(output_file, &stake_meta)

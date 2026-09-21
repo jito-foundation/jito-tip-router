@@ -1,34 +1,37 @@
 [package]
 name = "stake-meta-generator"
 version = "0.0.1"
-edition = { workspace = true }
+edition = "2021"
 description = "Generate stake-meta artifacts from Solana snapshots"
-authors = { workspace = true }
-repository = { workspace = true }
-homepage = { workspace = true }
-license = { workspace = true }
+authors = ["Jito Network Maintainers <support@jito.network>"]
+repository = "https://github.com/jito-foundation/jito-tip-router"
+homepage = "https://jito.network/"
+license = "MIT OR Apache-2.0"
 
 [[bin]]
 name = "stake-meta-generator"
 path = "src/main.rs"
 
 [dependencies]
-agave-snapshots = { workspace = true }
-anyhow = { workspace = true }
-bincode = { workspace = true }
-borsh = { workspace = true }
-clap = { workspace = true }
+agave-snapshots = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "07270be44c712356d8fb94dff8e7a1edd425dbff", features = ["agave-unstable-api"] }
+anyhow = "1.0.86"
+bincode = "1.3.3"
+borsh = { version = "1.5.7", features = ["derive"] }
+clap = { version = "4.5.16", features = ["derive", "env", "cargo"] }
 itertools = "0.11"
-jito-priority-fee-distribution-sdk = { workspace = true }
-jito-stake-meta-types = { workspace = true }
-jito-tip-distribution-sdk = { workspace = true }
-jito-tip-payment-sdk = { workspace = true }
-log = { workspace = true }
-serde_json = { workspace = true }
-solana-accounts-db = { workspace = true }
-solana-genesis-utils = { workspace = true, features = ["agave-unstable-api"] }
-solana-runtime = { workspace = true }
-solana-sdk = { workspace = true }
-solana-stake-interface = { workspace = true }
-solana-vote = { workspace = true }
-thiserror = { workspace = true }
+jito-priority-fee-distribution-sdk = { path = "../priority_fee_distribution_sdk", version = "=0.0.1" }
+jito-stake-meta-types = { path = "../stake_meta_types", version = "=0.0.1" }
+jito-tip-distribution-sdk = { path = "../tip_distribution_sdk", version = "=0.0.1" }
+jito-tip-payment-sdk = { path = "../tip_payment_sdk", version = "=0.0.1" }
+log = "0.4.22"
+serde_json = "1.0.102"
+solana-accounts-db = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "07270be44c712356d8fb94dff8e7a1edd425dbff", features = ["agave-unstable-api"] }
+solana-genesis-utils = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "07270be44c712356d8fb94dff8e7a1edd425dbff", features = ["agave-unstable-api"] }
+solana-runtime = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "07270be44c712356d8fb94dff8e7a1edd425dbff", features = ["agave-unstable-api"] }
+solana-sdk = "=4.0.1"
+solana-stake-interface = { version = "=4.4.0", features = ["bincode", "serde", "sysvar"] }
+solana-vote = { git = "https://github.com/jito-foundation/jito-solana.git", rev = "07270be44c712356d8fb94dff8e7a1edd425dbff", features = ["agave-unstable-api"] }
+thiserror = "2.0.16"
+
+[workspace]
+resolver = "2"
