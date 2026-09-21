@@ -14,12 +14,14 @@ clap = { workspace = true }
 clap_old = { workspace = true }
 crossbeam-channel = "0.5.15"
 env_logger = { workspace = true }
+imbl = "7.0.0"
 itertools = "0.11"
 jito-bytemuck = { workspace = true }
 jito-priority-fee-distribution-sdk = { workspace = true }
 jito-restaking-client = { workspace = true }
 jito-restaking-core = { workspace = true }
 jito-restaking-program = { workspace = true }
+jito-stake-meta-types = { workspace = true }
 jito-tip-distribution-sdk = { workspace = true }
 jito-tip-payment-sdk = { workspace = true }
 jito-tip-router-client = { workspace = true }
@@ -27,6 +29,7 @@ jito-tip-router-core = { workspace = true }
 #jito-tip-router-program = { workspace = true }
 log = { workspace = true }
 meta-merkle-tree = { workspace = true }
+notify = "6.1.1"
 rand = { workspace = true }
 serde_json = { workspace = true }
 solana-account-decoder = { workspace = true }

@@ -17,6 +17,7 @@ pub mod reclaim;
 pub mod restaking;
 pub mod rpc_utils;
 pub mod solana_cli;
+pub mod stake_meta_watcher;
 pub mod submit;
 pub mod tip_distribution_stats;
 pub mod tx_utils;
@@ -24,29 +25,24 @@ pub mod tx_utils;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
 use borsh::BorshSerialize;
-use cli::SnapshotPaths;
+use jito_stake_meta_types::StakeMetaCollection;
 use jito_tip_payment_sdk::{
     CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2,
     TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6,
     TIP_ACCOUNT_SEED_7,
 };
-use ledger_utils::{get_bank_from_ledger, LedgerUtilsError};
 use log::info;
-use meta_merkle_tree::generated_merkle_tree::StakeMetaCollection;
 use meta_merkle_tree::{
     generated_merkle_tree::GeneratedMerkleTreeCollection, meta_merkle_tree::MetaMerkleTree,
 };
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_metrics::{datapoint_error, datapoint_info};
-use solana_runtime::bank::Bank;
 use solana_sdk::clock::DEFAULT_SLOTS_PER_EPOCH;
 use solana_sdk::pubkey::Pubkey;
-use stake_meta_generator::generate_stake_meta_collection;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Version {
@@ -79,51 +75,33 @@ impl std::fmt::Display for Version {
 
 #[derive(clap::ValueEnum, Clone, Copy, Debug)]
 pub enum OperatorState {
-    // Allows the operator to load from a snapshot created externally
-    LoadBankFromSnapshot,
-    CreateStakeMeta,
+    WaitForNextEpoch,
+    WatchForStakeMeta,
     CreateMerkleTreeCollection,
     CreateMetaMerkleTree,
     CastVote,
-    WaitForNextEpoch,
     ReclaimExpiredAccounts,
 }
 
-pub fn stake_meta_file_name(epoch: u64) -> String {
-    format!("{}_stake_meta_collection.json", epoch)
-}
+/// Suffix used by the tip-router snapshot service for published stake-meta artifacts.
+pub const STAKE_META_ARTIFACT_SUFFIX: &str = "_stake_meta_collection.json";
 
-fn stake_meta_file_candidates(epoch: u64) -> [String; 2] {
-    [
-        format!("{}_stake_meta_collection.json", epoch),
-        format!("{}-stake-meta-collection.json", epoch),
-    ]
+pub fn stake_meta_file_name(epoch: u64) -> String {
+    format!("{epoch}{STAKE_META_ARTIFACT_SUFFIX}")
 }
 
 pub fn read_stake_meta_collection(epoch: u64, save_path: &Path) -> StakeMetaCollection {
-    let stake_meta_file_candidates: &[String] = &stake_meta_file_candidates(epoch);
+    let stake_meta_file_path = save_path.join(stake_meta_file_name(epoch));
+    assert!(
+        stake_meta_file_path.is_file(),
+        "Failed to find stake meta collection file: {}",
+        stake_meta_file_path.display()
+    );
 
-    let candidate_paths = stake_meta_file_candidates
-        .iter()
-        .map(|filename| {
-            let path = save_path.join(filename);
-            PathBuf::from(&path)
-        })
-        .collect::<Vec<_>>();
-
-    let valid_stake_meta_file_names = candidate_paths
-        .iter()
-        .filter(|path| path.exists())
-        .collect::<Vec<_>>();
-
-    let stake_meta_file_name = valid_stake_meta_file_names
-        .first()
-        .expect("Failed to find a valid stake meta file");
-
-    StakeMetaCollection::new_from_file(stake_meta_file_name).unwrap_or_else(|_| {
+    StakeMetaCollection::new_from_file(&stake_meta_file_path).unwrap_or_else(|_| {
         panic!(
             "Failed to load stake meta collection from file: {}",
-            stake_meta_file_name.display()
+            stake_meta_file_path.display()
         )
     })
 }
@@ -203,98 +181,6 @@ pub fn meta_merkle_tree_path(epoch: u64, save_path: &Path) -> PathBuf {
         .expect("Failed to find a valid meta merkle tree file");
 
     PathBuf::from(meta_merkle_tree_filename)
-}
-
-// STAGE 1 LoadBankFromSnapshot
-pub fn load_bank_from_snapshot(
-    cli: Cli,
-    slot: u64,
-    save_snapshot: bool,
-) -> Result<Arc<Bank>, LedgerUtilsError> {
-    let SnapshotPaths {
-        ledger_path,
-        account_paths,
-        full_snapshots_path,
-        incremental_snapshots_path: _,
-        backup_snapshots_dir,
-    } = cli.get_snapshot_paths();
-
-    get_bank_from_ledger(
-        cli.operator_address,
-        &ledger_path,
-        account_paths,
-        full_snapshots_path,
-        backup_snapshots_dir.clone(),
-        &slot,
-        save_snapshot,
-        backup_snapshots_dir,
-        &cli.cluster,
-    )
-}
-
-// STAGE 2 CreateStakeMeta
-#[allow(clippy::too_many_arguments)]
-pub fn create_stake_meta(
-    operator_address: String,
-    epoch: u64,
-    bank: &Arc<Bank>,
-    tip_distribution_program_id: &Pubkey,
-    priority_fee_distribution_program_id: &Pubkey,
-    tip_payment_program_id: &Pubkey,
-    save_path: &Path,
-    save: bool,
-    cluster: &str,
-) -> StakeMetaCollection {
-    let start = Instant::now();
-
-    info!("Generating stake_meta_collection object...");
-    let stake_meta_coll = match generate_stake_meta_collection(
-        bank,
-        tip_distribution_program_id,
-        priority_fee_distribution_program_id,
-        tip_payment_program_id,
-    ) {
-        Ok(stake_meta) => stake_meta,
-        Err(e) => {
-            let error_str = format!("{:?}", e);
-            datapoint_error!(
-                "tip_router_cli.process_epoch",
-                ("operator_address", operator_address, String),
-                ("epoch", epoch, i64),
-                ("status", "error", String),
-                ("error", error_str, String),
-                ("state", "stake_meta_generation", String),
-                ("duration_ms", start.elapsed().as_millis() as i64, i64),
-                "cluster" => cluster,
-            );
-            panic!("{}", error_str);
-        }
-    };
-
-    info!(
-        "Created StakeMetaCollection:\n - epoch: {:?}\n - slot: {:?}\n - num stake metas: {:?}\n - bank_hash: {:?}",
-        stake_meta_coll.epoch,
-        stake_meta_coll.slot,
-        stake_meta_coll.stake_metas.len(),
-        stake_meta_coll.bank_hash
-    );
-    if save {
-        // Note: We have the epoch come before the file name so ordering is neat on a machine
-        //  with multiple epochs saved.
-        let file = save_path.join(stake_meta_file_name(epoch));
-        stake_meta_coll.write_to_file(&file);
-    }
-
-    datapoint_info!(
-        "tip_router_cli.process_epoch",
-        ("operator_address", operator_address, String),
-        ("state", "create_stake_meta", String),
-        ("step", 2, i64),
-        ("epoch", stake_meta_coll.epoch, i64),
-        ("duration_ms", start.elapsed().as_millis() as i64, i64),
-        "cluster" => cluster,
-    );
-    stake_meta_coll
 }
 
 // STAGE 3 CreateMerkleTreeCollection
@@ -649,6 +535,16 @@ pub fn cleanup_tmp_files(snapshot_output_dir: &Path) -> std::result::Result<(), 
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::stake_meta_file_name;
+
+    #[test]
+    fn stake_meta_artifact_name_matches_snapshot_service_contract() {
+        assert_eq!(stake_meta_file_name(42), "42_stake_meta_collection.json");
+    }
 }
 
 pub async fn get_epoch_percentage(client: &RpcClient) -> anyhow::Result<f64> {
