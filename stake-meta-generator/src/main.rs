@@ -74,6 +74,11 @@ fn main() -> Result<()> {
         full_snapshot_archives_dir: snapshot_archive_dir.clone(),
         incremental_snapshot_archives_dir: snapshot_archive_dir,
         bank_snapshots_dir: args.bank_snapshots_dir,
+        // Registered io_uring buffers require a roughly 2 GiB memlock limit.  The validator
+        // adjusts that limit before enabling them, but this standalone utility does not.  Keep
+        // asynchronous I/O enabled without fixed-buffer registration so snapshot loading also
+        // works under ordinary shell and systemd memlock limits.
+        use_registered_io_uring_buffers: false,
         ..SnapshotConfig::new_load_only()
     };
 
