@@ -17,6 +17,7 @@ ignore = [
     "RUSTSEC-2026-0098", # rustls-webpki - URI name constraints
     "RUSTSEC-2026-0099", # rustls-webpki - wildcard name constraints
     "RUSTSEC-2026-0104", # rustls-webpki
+    "RUSTSEC-2026-0292", # imbl-sized-chunks - dev-dependency of solana-runtime only, not in shipped binaries
     # Unmaintained/unsound (transitive deps)
     "RUSTSEC-2020-0016", # net2 - deprecated
     "RUSTSEC-2021-0139", # ansi_term - unmaintained
