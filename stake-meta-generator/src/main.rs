@@ -1,6 +1,7 @@
 use std::{
     path::PathBuf,
     sync::{atomic::AtomicBool, Arc},
+    time::Instant,
 };
 
 use {
@@ -82,6 +83,7 @@ fn main() -> Result<()> {
         ..SnapshotConfig::new_load_only()
     };
 
+    let bank_load_started = Instant::now();
     let bank = snapshot_bank_utils::bank_from_snapshot_archives(
         &args.account_paths,
         &full_snapshot,
@@ -101,8 +103,15 @@ fn main() -> Result<()> {
     )
     .context("failed to load bank from full snapshot archive")?;
 
-    println!("bank hash: {}", bank.hash());
+    eprintln!(
+        "Loaded bank at slot {} in {:.1?} (hash: {}).",
+        bank.slot(),
+        bank_load_started.elapsed(),
+        bank.hash()
+    );
 
+    eprintln!("Calculating stake metadata...");
+    let stake_meta_started = Instant::now();
     let stake_meta = generate_stake_meta_collection(
         Arc::new(bank),
         &args.tip_distribution_program_id,
@@ -110,6 +119,11 @@ fn main() -> Result<()> {
         &args.tip_payment_program_id,
     )
     .context("failed to calculate stake metadata")?;
+    eprintln!(
+        "Calculated metadata for {} validators in {:.1?}.",
+        stake_meta.stake_metas.len(),
+        stake_meta_started.elapsed()
+    );
     if let Some(output_parent) = args
         .output
         .parent()
@@ -124,6 +138,7 @@ fn main() -> Result<()> {
     }
     let output_file = std::fs::File::create(&args.output)
         .with_context(|| format!("failed to create artifact {}", args.output.display()))?;
+    eprintln!("Writing artifact to {}...", args.output.display());
     serde_json::to_writer_pretty(output_file, &stake_meta)
         .context("failed to serialize stake-meta artifact")?;
     println!("wrote stake-meta artifact: {}", args.output.display());

@@ -1,4 +1,5 @@
 /target
+/stake-meta-generator/target/
 
 .DS_Store
 .developer
