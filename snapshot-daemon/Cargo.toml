@@ -19,4 +19,5 @@ solana-commitment-config.workspace = true
 solana-ledger = { workspace = true, features = ["agave-unstable-api"] }
 solana-rpc-client.workspace = true
 tempfile = "3.2"
+thiserror.workspace = true
 tokio.workspace = true

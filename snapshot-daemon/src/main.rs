@@ -6,7 +6,13 @@ use anyhow::Result;
 use clap::Parser;
 use ledger_tool::LedgerTool;
 use solana_client::SolanaRpcClient;
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
+use tokio::time::Instant;
+
+const LEDGER_SELECTION_RETRY_DELAY: Duration = Duration::from_secs(5);
 
 #[derive(Parser)]
 struct Cli {
@@ -37,6 +43,14 @@ struct Cli {
     /// Directory containing incremental snapshot archives. Defaults to the full snapshot path.
     #[clap(long)]
     incremental_snapshot_archive_path: Option<PathBuf>,
+
+    /// Maximum time to retry ledger selection for one completed epoch, in seconds.
+    #[clap(
+        long = "ledger-selection-retry-window",
+        default_value_t = 600,
+        value_name = "SECONDS"
+    )]
+    ledger_selection_retry_window_secs: u64,
 }
 
 #[tokio::main]
@@ -61,6 +75,7 @@ async fn main() -> Result<()> {
     let version = ledger_tool.version().await?;
     log::info!("Ledger tool version: {version}");
     let solana_client = SolanaRpcClient::new(cli.rpc_url);
+    let ledger_selection_retry_window = Duration::from_secs(cli.ledger_selection_retry_window_secs);
 
     // This branch is solely for testing purposes
     if let Some(slots_ahead) = cli.test_slot_ahead {
@@ -78,13 +93,25 @@ async fn main() -> Result<()> {
         );
 
         for boundary in missed_boundaries {
-            create_boundary_snapshot(&ledger_tool, &cli.output_dir, boundary).await;
+            create_boundary_snapshot(
+                &ledger_tool,
+                &cli.output_dir,
+                boundary,
+                ledger_selection_retry_window,
+            )
+            .await;
         }
     }
 
     loop {
         let boundary = solana_client.wait_for_epoch_boundary_final().await?;
-        create_boundary_snapshot(&ledger_tool, &cli.output_dir, boundary).await;
+        create_boundary_snapshot(
+            &ledger_tool,
+            &cli.output_dir,
+            boundary,
+            ledger_selection_retry_window,
+        )
+        .await;
     }
 }
 
@@ -92,22 +119,13 @@ async fn create_boundary_snapshot(
     ledger_tool: &LedgerTool,
     output_dir: &Path,
     boundary: solana_client::CompletedEpochBoundary,
+    retry_window: Duration,
 ) {
-    let slot = match ledger_tool
-        .find_latest_rooted_full_slot(boundary.theoretical_last_slot)
-        .await
-    {
-        Ok(Some(slot)) => slot,
-        Ok(None) => {
-            log::error!(
-                "No rooted, full boundary slot found near the end of epoch {}",
-                boundary.epoch
-            );
-            return;
-        }
+    let slot = match find_boundary_slot_with_retries(ledger_tool, boundary, retry_window).await {
+        Ok(slot) => slot,
         Err(error) => {
             log::error!(
-                "Failed to select a snapshot slot for epoch {}: {error}",
+                "Failed to select a snapshot slot for epoch {}: {error:#}",
                 boundary.epoch
             );
             return;
@@ -126,6 +144,63 @@ async fn create_boundary_snapshot(
             "Failed to create epoch {} snapshot at slot {slot}: {error}",
             boundary.epoch
         );
+    }
+}
+
+async fn find_boundary_slot_with_retries(
+    ledger_tool: &LedgerTool,
+    boundary: solana_client::CompletedEpochBoundary,
+    retry_window: Duration,
+) -> Result<u64> {
+    let started_at = Instant::now();
+    let deadline = started_at + retry_window;
+    let mut attempts = 0_u64;
+
+    loop {
+        attempts = attempts.saturating_add(1);
+        match ledger_tool
+            .find_latest_rooted_full_slot(boundary.theoretical_last_slot)
+            .await
+        {
+            Ok(slot) => {
+                log::info!(
+                    "Selected epoch {} boundary slot {slot} after {attempts} attempt(s) and {:?}",
+                    boundary.epoch,
+                    started_at.elapsed()
+                );
+                return Ok(slot);
+            }
+            Err(error) if !error.is_retryable() => return Err(error.into()),
+            Err(error) => {
+                let error = anyhow::Error::new(error);
+                let remaining = deadline.saturating_duration_since(Instant::now());
+                if remaining.is_zero() {
+                    return Err(error.context(format!(
+                        "ledger selection retry window expired for epoch {} after {attempts} attempt(s) and {:?}",
+                        boundary.epoch,
+                        started_at.elapsed()
+                    )));
+                }
+
+                let delay = remaining.min(LEDGER_SELECTION_RETRY_DELAY);
+                log::warn!(
+                    "Ledger selection failed for epoch {} scheduled final slot {} on attempt {attempts} after {:?}: {:#}; retrying in {:?}",
+                    boundary.epoch,
+                    boundary.theoretical_last_slot,
+                    started_at.elapsed(),
+                    error,
+                    delay
+                );
+                tokio::time::sleep(delay).await;
+                if Instant::now() >= deadline {
+                    return Err(error.context(format!(
+                        "ledger selection retry window expired for epoch {} after {attempts} attempt(s) and {:?}",
+                        boundary.epoch,
+                        started_at.elapsed()
+                    )));
+                }
+            }
+        }
     }
 }
 

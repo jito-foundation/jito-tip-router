@@ -18,6 +18,7 @@ use nom::{
     IResult, Parser,
 };
 use solana_ledger::{
+    blockstore::error::BlockstoreError,
     blockstore::Blockstore,
     blockstore_options::{AccessType, BlockstoreOptions},
 };
@@ -25,6 +26,29 @@ use solana_ledger::{
 use crate::snapshot_retention;
 
 const BOUNDARY_SEARCH_SLOTS: u64 = 16;
+
+#[derive(Debug, thiserror::Error)]
+pub enum SlotSelectionError {
+    #[error("ledger {operation} failed")]
+    LedgerAccess {
+        operation: &'static str,
+        #[source]
+        source: BlockstoreError,
+    },
+    #[error("no rooted, full slot is available near scheduled final slot {theoretical_last_slot}")]
+    LocalSlotUnavailable { theoretical_last_slot: u64 },
+    #[error("ledger selection task failed")]
+    WorkerFailed(#[source] tokio::task::JoinError),
+}
+
+impl SlotSelectionError {
+    pub fn is_retryable(&self) -> bool {
+        matches!(
+            self,
+            Self::LedgerAccess { .. } | Self::LocalSlotUnavailable { .. }
+        )
+    }
+}
 
 pub struct LedgerTool {
     ledger_tool_binary: PathBuf,
@@ -64,10 +88,10 @@ impl LedgerTool {
     pub async fn find_latest_rooted_full_slot(
         &self,
         theoretical_last_slot: u64,
-    ) -> Result<Option<u64>> {
+    ) -> std::result::Result<u64, SlotSelectionError> {
         let ledger_path = self.ledger_path.clone();
 
-        tokio::task::spawn_blocking(move || -> Result<Option<u64>> {
+        tokio::task::spawn_blocking(move || {
             // ReadOnly is a static RocksDB view. Open it at selection time so
             // it includes the roots written at the latest epoch boundary.
             let blockstore = Blockstore::open_with_options(
@@ -76,24 +100,36 @@ impl LedgerTool {
                     access_type: AccessType::ReadOnly,
                     ..BlockstoreOptions::default()
                 },
-            )?;
+            )
+            .map_err(|source| SlotSelectionError::LedgerAccess {
+                operation: "open",
+                source,
+            })?;
             let oldest_candidate = theoretical_last_slot
                 .saturating_sub(BOUNDARY_SEARCH_SLOTS.saturating_sub(1));
-            log::info!(
+            log::debug!(
                 "Searching local blockstore for a rooted, full boundary slot from {theoretical_last_slot} through {oldest_candidate}"
             );
 
             for slot in boundary_candidate_slots(theoretical_last_slot) {
-                if blockstore.is_root(slot) && blockstore.is_full(slot) {
-                    return Ok(Some(slot));
+                let meta = blockstore.meta(slot).map_err(|source| {
+                    SlotSelectionError::LedgerAccess {
+                        operation: "read slot metadata",
+                        source,
+                    }
+                })?;
+                if meta.is_some_and(|meta| meta.is_full()) && blockstore.is_root(slot) {
+                    return Ok(slot);
                 }
-                log::info!("Boundary candidate slot {slot} is not rooted and full");
+                log::debug!("Boundary candidate slot {slot} is not rooted and full");
             }
 
-            Ok(None)
+            Err(SlotSelectionError::LocalSlotUnavailable {
+                theoretical_last_slot,
+            })
         })
         .await
-        .map_err(|error| anyhow!("local blockstore lookup task failed: {error}"))?
+        .map_err(SlotSelectionError::WorkerFailed)?
     }
 
     pub async fn create_full_snapshot(

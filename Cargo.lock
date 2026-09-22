@@ -7635,6 +7635,7 @@ dependencies = [
  "solana-ledger",
  "solana-rpc-client",
  "tempfile",
+ "thiserror 2.0.20",
  "tokio",
 ]
 
