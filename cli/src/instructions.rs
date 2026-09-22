@@ -4,7 +4,7 @@ use crate::{
     getters::{
         get_account, get_all_operators_in_ncn, get_all_sorted_operators_for_vault, get_all_vaults,
         get_all_vaults_in_ncn, get_ballot_box, get_base_reward_receiver_rewards,
-        get_base_reward_router, get_current_slot, get_epoch_snapshot,
+        get_base_reward_router, get_current_slot, get_epoch_snapshot, get_ncn,
         get_ncn_reward_receiver_rewards, get_ncn_reward_router, get_operator,
         get_operator_snapshot, get_stake_pool_accounts, get_tip_distribution_accounts_to_migrate,
         get_tip_router_config, get_vault, get_vault_config, get_vault_registry,
@@ -33,11 +33,11 @@ use jito_tip_router_client::instructions::SwitchboardSetWeightBuilder;
 use jito_tip_router_client::{
     instructions::{
         AdminRegisterStMintBuilder, AdminSetConfigFeesBuilder, AdminSetNewAdminBuilder,
-        AdminSetParametersBuilder, AdminSetTieBreakerBuilder, AdminSetWeightBuilder,
-        CastVoteBuilder, CloseEpochAccountBuilder, DistributeBaseNcnRewardRouteBuilder,
-        DistributeBaseRewardsBuilder, DistributeNcnOperatorRewardsBuilder,
-        DistributeNcnVaultRewardsBuilder, InitializeBallotBoxBuilder,
-        InitializeBaseRewardRouterBuilder,
+        AdminSetParametersBuilder, AdminSetStMintBuilder, AdminSetTieBreakerBuilder,
+        AdminSetWeightBuilder, CastVoteBuilder, CloseEpochAccountBuilder,
+        DistributeBaseNcnRewardRouteBuilder, DistributeBaseRewardsBuilder,
+        DistributeNcnOperatorRewardsBuilder, DistributeNcnVaultRewardsBuilder,
+        InitializeBallotBoxBuilder, InitializeBaseRewardRouterBuilder,
         InitializeConfigBuilder as InitializeTipRouterConfigBuilder,
         InitializeEpochSnapshotBuilder, InitializeEpochStateBuilder,
         InitializeNcnRewardRouterBuilder, InitializeOperatorSnapshotBuilder,
@@ -253,6 +253,150 @@ pub async fn admin_register_st_mint(
                     switchboard_feed.unwrap_or_default()
                 ),
                 format!("No Feed Weight: {:?}", no_feed_weight.unwrap_or_default()),
+            ],
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+/// Updates an already registered ST mint entry. Every field is optional - `None` leaves the
+/// on-chain value untouched.
+///
+/// Note that `switchboard_feed` wins over `no_feed_weight` when the weight is set: the program
+/// only falls back to `no_feed_weight` when the registered feed is `Pubkey::default()`. Moving a
+/// mint to a fixed weight therefore means clearing the feed and setting the weight together.
+pub async fn admin_set_st_mint(
+    handler: &CliHandler,
+    st_mint: &Pubkey,
+    ncn_fee_group: Option<u8>,
+    reward_multiplier_bps: Option<u64>,
+    switchboard_feed: Option<Pubkey>,
+    no_feed_weight: Option<u128>,
+) -> Result<()> {
+    if ncn_fee_group.is_none()
+        && reward_multiplier_bps.is_none()
+        && switchboard_feed.is_none()
+        && no_feed_weight.is_none()
+    {
+        return Err(anyhow!(
+            "nothing to update; pass at least one of --ncn-fee-group, --reward-multiplier-bps, \
+             --switchboard-feed, --clear-switchboard-feed, --no-feed-weight"
+        ));
+    }
+
+    let keypair = handler.keypair();
+    let ncn = *handler.ncn()?;
+
+    let (config, _, _) =
+        TipRouterConfig::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    let (vault_registry_pda, _, _) =
+        VaultRegistry::find_program_address(&handler.tip_router_program_id, &ncn);
+
+    // The program checks the signer against the NCN's program admin, which is often a multisig
+    // rather than the local keypair, so build the instruction for whoever is admin on-chain.
+    let admin = get_ncn(handler).await?.ncn_program_admin;
+
+    if admin != keypair.pubkey() && !handler.print_tx {
+        return Err(anyhow!(
+            "NCN program admin {} differs from the local keypair {}; \
+             the CLI cannot sign on behalf of that account. \
+             Add --print-tx to export the transaction for signing externally (e.g. Squads).",
+            admin,
+            keypair.pubkey()
+        ));
+    }
+
+    let vault_registry = get_vault_registry(handler).await?;
+    let mint_entry = vault_registry.get_mint_entry(st_mint).map_err(|_| {
+        anyhow!(
+            "ST mint {} is not in the vault registry; register it with admin-register-st-mint first",
+            st_mint
+        )
+    })?;
+
+    let updated_switchboard_feed =
+        switchboard_feed.unwrap_or_else(|| *mint_entry.switchboard_feed());
+    let updated_no_feed_weight = no_feed_weight.unwrap_or_else(|| mint_entry.no_feed_weight());
+
+    if updated_switchboard_feed.eq(&Pubkey::default()) && updated_no_feed_weight == 0 {
+        return Err(anyhow!(
+            "entry would have neither a Switchboard feed nor a no feed weight; \
+             pass --no-feed-weight in the same call that clears the feed"
+        ));
+    }
+
+    if !updated_switchboard_feed.eq(&Pubkey::default()) && updated_no_feed_weight != 0 {
+        log::warn!(
+            "No feed weight is ignored while a Switchboard feed is set st_mint={} switchboard_feed={} no_feed_weight={}",
+            st_mint,
+            updated_switchboard_feed,
+            updated_no_feed_weight
+        );
+    }
+
+    let mut set_st_mint_builder = AdminSetStMintBuilder::new();
+
+    set_st_mint_builder
+        .config(config)
+        .ncn(ncn)
+        .vault_registry(vault_registry_pda)
+        .admin(admin)
+        .st_mint(*st_mint);
+
+    if let Some(ncn_fee_group) = ncn_fee_group {
+        set_st_mint_builder.ncn_fee_group(ncn_fee_group);
+    }
+
+    if let Some(reward_multiplier_bps) = reward_multiplier_bps {
+        set_st_mint_builder.reward_multiplier_bps(reward_multiplier_bps);
+    }
+
+    if let Some(switchboard_feed) = switchboard_feed {
+        set_st_mint_builder.switchboard_feed(switchboard_feed);
+    }
+
+    if let Some(no_feed_weight) = no_feed_weight {
+        set_st_mint_builder.no_feed_weight(no_feed_weight);
+    }
+
+    let mut set_st_mint_ix = set_st_mint_builder.instruction();
+    set_st_mint_ix.program_id = handler.tip_router_program_id;
+
+    let ixs = &[set_st_mint_ix];
+    if handler.print_tx {
+        print_base58_tx(ixs);
+    } else {
+        send_and_log_transaction(
+            handler,
+            ixs,
+            &[],
+            "Set ST Mint",
+            &[
+                format!("NCN: {:?}", ncn),
+                format!("ST Mint: {:?}", st_mint),
+                format!(
+                    "NCN Fee Group: {:?} -> {:?}",
+                    mint_entry.ncn_fee_group().group,
+                    ncn_fee_group.unwrap_or_else(|| mint_entry.ncn_fee_group().group)
+                ),
+                format!(
+                    "Reward Multiplier BPS: {:?} -> {:?}",
+                    mint_entry.reward_multiplier_bps(),
+                    reward_multiplier_bps.unwrap_or_else(|| mint_entry.reward_multiplier_bps())
+                ),
+                format!(
+                    "Switchboard Feed: {:?} -> {:?}",
+                    mint_entry.switchboard_feed(),
+                    updated_switchboard_feed
+                ),
+                format!(
+                    "No Feed Weight: {:?} -> {:?}",
+                    mint_entry.no_feed_weight(),
+                    updated_no_feed_weight
+                ),
             ],
         )
         .await?;

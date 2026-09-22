@@ -15,15 +15,16 @@ use crate::{
     },
     instructions::{
         admin_create_config, admin_fund_account_payer, admin_register_st_mint,
-        admin_set_config_fees, admin_set_new_admin, admin_set_parameters, admin_set_tie_breaker,
-        admin_set_weight, crank_close_epoch_accounts, crank_distribute, crank_register_vaults,
-        crank_set_weight, crank_snapshot, crank_switchboard, create_and_add_test_operator,
-        create_and_add_test_vault, create_ballot_box, create_base_reward_router,
-        create_epoch_snapshot, create_epoch_state, create_ncn_reward_router,
-        create_operator_snapshot, create_test_ncn, create_vault_registry, create_weight_table,
-        distribute_base_ncn_rewards, full_vault_update, migrate_tda_merkle_root_upload_authorities,
-        register_vault, route_base_rewards, route_ncn_rewards, set_weight,
-        snapshot_vault_operator_delegation, update_all_vaults_in_network,
+        admin_set_config_fees, admin_set_new_admin, admin_set_parameters, admin_set_st_mint,
+        admin_set_tie_breaker, admin_set_weight, crank_close_epoch_accounts, crank_distribute,
+        crank_register_vaults, crank_set_weight, crank_snapshot, crank_switchboard,
+        create_and_add_test_operator, create_and_add_test_vault, create_ballot_box,
+        create_base_reward_router, create_epoch_snapshot, create_epoch_state,
+        create_ncn_reward_router, create_operator_snapshot, create_test_ncn, create_vault_registry,
+        create_weight_table, distribute_base_ncn_rewards, full_vault_update,
+        migrate_tda_merkle_root_upload_authorities, register_vault, route_base_rewards,
+        route_ncn_rewards, set_weight, snapshot_vault_operator_delegation,
+        update_all_vaults_in_network,
     },
     keeper::keeper_loop::startup_keeper,
 };
@@ -326,6 +327,36 @@ impl CliHandler {
                 admin_register_st_mint(
                     self,
                     &vault,
+                    ncn_fee_group,
+                    reward_multiplier_bps,
+                    switchboard,
+                    no_feed_weight,
+                )
+                .await
+            }
+            ProgramCommand::AdminSetStMint {
+                st_mint,
+                ncn_fee_group,
+                reward_multiplier_bps,
+                switchboard_feed,
+                clear_switchboard_feed,
+                no_feed_weight,
+            } => {
+                let st_mint = Pubkey::from_str(&st_mint).expect("error parsing st mint");
+                let ncn_fee_group = ncn_fee_group.map(|group| {
+                    NcnFeeGroup::try_from(group)
+                        .expect("error parsing fee group")
+                        .group
+                });
+                let switchboard = if clear_switchboard_feed {
+                    Some(Pubkey::default())
+                } else {
+                    switchboard_feed
+                        .map(|s| Pubkey::from_str(&s).expect("error parsing switchboard feed"))
+                };
+                admin_set_st_mint(
+                    self,
+                    &st_mint,
                     ncn_fee_group,
                     reward_multiplier_bps,
                     switchboard,

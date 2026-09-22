@@ -210,6 +210,29 @@ pub enum ProgramCommand {
         #[arg(long, help = "Weight when no feed is available")]
         no_feed_weight: Option<u128>,
     },
+    AdminSetStMint {
+        #[arg(long, help = "ST mint address")]
+        st_mint: String,
+
+        #[arg(long, help = "NCN fee group")]
+        ncn_fee_group: Option<u8>,
+
+        #[arg(long, help = "Reward multiplier in basis points")]
+        reward_multiplier_bps: Option<u64>,
+
+        #[arg(long, help = "Switchboard feed address")]
+        switchboard_feed: Option<String>,
+
+        #[arg(
+            long,
+            conflicts_with = "switchboard_feed",
+            help = "Clear the Switchboard feed so the weight comes from --no-feed-weight"
+        )]
+        clear_switchboard_feed: bool,
+
+        #[arg(long, help = "Weight when no feed is available")]
+        no_feed_weight: Option<u128>,
+    },
     AdminSetWeight {
         #[arg(long, help = "Vault address")]
         vault: String,
