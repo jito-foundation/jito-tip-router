@@ -317,10 +317,9 @@ pub async fn admin_set_st_mint(
         )
     })?;
 
-    // Mirror the on-chain check against the merged entry so an invalid combination fails here
-    // instead of coming back as an opaque custom program error.
-    let updated_switchboard_feed = switchboard_feed.unwrap_or(*mint_entry.switchboard_feed());
-    let updated_no_feed_weight = no_feed_weight.unwrap_or(mint_entry.no_feed_weight());
+    let updated_switchboard_feed =
+        switchboard_feed.unwrap_or_else(|| *mint_entry.switchboard_feed());
+    let updated_no_feed_weight = no_feed_weight.unwrap_or_else(|| mint_entry.no_feed_weight());
 
     if updated_switchboard_feed.eq(&Pubkey::default()) && updated_no_feed_weight == 0 {
         return Err(anyhow!(
@@ -381,12 +380,12 @@ pub async fn admin_set_st_mint(
                 format!(
                     "NCN Fee Group: {:?} -> {:?}",
                     mint_entry.ncn_fee_group().group,
-                    ncn_fee_group.unwrap_or(mint_entry.ncn_fee_group().group)
+                    ncn_fee_group.unwrap_or_else(|| mint_entry.ncn_fee_group().group)
                 ),
                 format!(
                     "Reward Multiplier BPS: {:?} -> {:?}",
                     mint_entry.reward_multiplier_bps(),
-                    reward_multiplier_bps.unwrap_or(mint_entry.reward_multiplier_bps())
+                    reward_multiplier_bps.unwrap_or_else(|| mint_entry.reward_multiplier_bps())
                 ),
                 format!(
                     "Switchboard Feed: {:?} -> {:?}",

@@ -343,6 +343,11 @@ impl CliHandler {
                 no_feed_weight,
             } => {
                 let st_mint = Pubkey::from_str(&st_mint).expect("error parsing st mint");
+                let ncn_fee_group = ncn_fee_group.map(|group| {
+                    NcnFeeGroup::try_from(group)
+                        .expect("error parsing fee group")
+                        .group
+                });
                 let switchboard = if clear_switchboard_feed {
                     Some(Pubkey::default())
                 } else {
