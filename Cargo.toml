@@ -137,6 +137,9 @@ thiserror = "2.0.16"
 tokio = { version = "1.47.1", features = ["full"] }
 wincode = { version = "0.5", features = ["derive"] }
 
+[workspace.metadata.cli]
+solana = "4.3.0"
+
 [profile.release]
 overflow-checks = true
 lto = "fat"

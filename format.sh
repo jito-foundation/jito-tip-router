@@ -13,7 +13,7 @@ print_executing "cargo fmt --all"
 cargo fmt --all
 
 print_executing "cargo nextest run --all-features"
-cargo build-sbf --sbf-out-dir integration_tests/tests/fixtures
+cargo build-sbf --arch v3 --sbf-out-dir integration_tests/tests/fixtures
 SBPF_OUT_DIR=integration_tests/tests/fixtures cargo nextest run --all-features -E 'not test(ledger_utils::tests::test_get_bank_from_ledger_success)'
 
 # Code coverage only runs with flag
@@ -28,5 +28,5 @@ cargo clippy --all-features -- -D warnings -D clippy::all -D clippy::nursery -D 
 print_executing "cargo b && ./target/debug/jito-tip-router-shank-cli && yarn install && yarn generate-clients && cargo b"
 cargo b && ./target/debug/jito-tip-router-shank-cli && yarn install && yarn generate-clients && cargo b
 
-print_executing "cargo-build-sbf"
-cargo-build-sbf
+print_executing "cargo-build-sbf --arch v3"
+cargo-build-sbf --arch v3

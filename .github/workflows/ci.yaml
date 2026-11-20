@@ -90,40 +90,36 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
       - name: install solana toolsuite
-        run: sh -c "$(curl -sSfL https://release.anza.xyz/v4.0.0-beta.5/install)"
+        run: sh -c "$(curl -sSfL https://release.anza.xyz/v4.3.0/install)"
       - name: add to path
         run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       - name: Building programs
-        run: cd program && cargo-build-sbf && cd ..
+        run: cd program && cargo-build-sbf --arch v3 && cd ..
         env:
           TIP_ROUTER_PROGRAM_ID: ${{ env.TIP_ROUTER_PROGRAM_ID }}
-          SBF_OUT_PATH: ${{ github.workspace }}/target/sbpf-solana-solana/release
+          SBF_OUT_PATH: ${{ github.workspace }}/target/sbpfv3-solana-solana/release
       # - name: Upload MEV Tip Distribution NCN program
       #   uses: actions/upload-artifact@v4
       #   with:
       #     name: jito_tip_router_program.so
-      #     path: ${{ github.workspace }}/target/sbpf-solana-solana/release/jito_tip_router_program.so
+      #     path: ${{ github.workspace }}/target/sbpfv3-solana-solana/release/jito_tip_router_program.so
       #     if-no-files-found: error
 
   verified_build:
     name: verified_build
     runs-on: big-runner-1
-    # Keep this job pinned to solanafoundation/solana-verifiable-build:3.1.9 for now.
-    # Upgrading to a 4.0.x verifiable-build image is still blocked until solana-verify
-    # supports Cargo.lock format version 4
+    # The base image is resolved from [workspace.metadata.cli] solana = "..." in Cargo.toml.
     steps:
       - uses: actions/checkout@v5
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libudev-dev
-      - run: docker pull --platform linux/amd64 solanafoundation/solana-verifiable-build:3.1.9
+      - run: docker pull --platform linux/amd64 solanafoundation/solana-verifiable-build:4.3.0
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: ${{ env.RUST_VERSION }}
-      - name: Install solana-verify from crates.io
-        uses: baptiste0928/cargo-install@v3
-        with:
-          crate: solana-verify
-      - run: solana-verify build --library-name jito_tip_router_program --base-image solanafoundation/solana-verifiable-build:3.1.9
+      - name: Install solana-verify from git
+        run: cargo install solana-verify --git https://github.com/solana-foundation/solana-verifiable-build.git --tag v0.5.2 --locked
+      - run: solana-verify build --library-name jito_tip_router_program --arch v3
       - name: Upload jito_tip_router_program.so
         uses: actions/upload-artifact@v7
         with:
