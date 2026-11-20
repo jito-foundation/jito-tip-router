@@ -56,7 +56,7 @@ The project uses GitHub Actions to build container images for two main services:
 ### Prerequisites
 
 1. Set up test-ledger: `./tip-router-operator-cli/scripts/setup-test-ledger.sh`
-2. Build the tip router program: `cargo build-sbf --manifest-path program/Cargo.toml --sbf-out-dir integration_tests/tests/fixtures`
+2. Build the tip router program: `cargo build-sbf --manifest-path program/Cargo.toml --arch v3 --sbf-out-dir integration_tests/tests/fixtures`
 3. Run tests: `SBPF_OUT_DIR=integration_tests/tests/fixtures cargo nextest run --all-features -E 'not test(ledger_utils::tests)'`
 
 To see more info on the Tip Router CLI check out the [CLI documentation](./cli/README.md)
@@ -73,7 +73,7 @@ To see more info on the Tip Router CLI check out the [CLI documentation](./cli/R
 
 ## Deploy and Upgrade
 
-- build .so file: `cargo-build-sbf`
+- build .so file: `cargo-build-sbf --arch v3`
 
 - create a new keypair: `solana-keygen new -o target/tmp/buffer.json`
 
